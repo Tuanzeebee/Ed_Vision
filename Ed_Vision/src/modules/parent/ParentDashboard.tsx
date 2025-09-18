@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import johnSmithAvatar from '../../assets/parent/avatar.png';
 import iconEducation from '../../assets/parent/iconEducation.svg';
 import iconNotification from '../../assets/parent/iconNotification.svg';
@@ -126,6 +127,7 @@ export default function ParentDashboard({
     }
   ]
 }: Props) {
+  const navigate = useNavigate();
   
   // Calendar data for September 2024
   const calendarDays = [
@@ -213,7 +215,8 @@ export default function ParentDashboard({
                         <img 
                           src={studentData.avatar} 
                           alt={studentData.name}
-                          className="w-12 h-12 rounded-full border-2 border-blue-200"
+                          className="w-12 h-12 rounded-full border-2 border-blue-200 cursor-pointer hover:border-blue-300 transition-colors"
+                          onClick={() => navigate('/parent/student-details')}
                         />
                       </div>
                       <div className="ml-3">
@@ -222,7 +225,12 @@ export default function ParentDashboard({
                         <p className="text-xs text-blue-600 mt-1">Student ID: {studentData.id}</p>
                       </div>
                     </div>
-                    <img src={iconChevronRight} alt="" className="w-5 h-5" />
+                    <img 
+                      src={iconChevronRight} 
+                      alt="" 
+                      className="w-5 h-5 cursor-pointer hover:opacity-75 transition-opacity"
+                      onClick={() => navigate('/parent/student-details')}
+                    />
                   </div>
                 </div>
 
@@ -334,7 +342,10 @@ export default function ParentDashboard({
                   </div>
                 ))}
 
-                <button className="w-full text-center py-3 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                <button 
+                  className="w-full text-center py-3 text-blue-600 hover:text-blue-700 font-medium text-sm cursor-pointer"
+                  onClick={() => navigate('/parent/appointments')}
+                >
                   View All Appointments
                 </button>
               </div>

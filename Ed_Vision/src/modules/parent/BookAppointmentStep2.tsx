@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/parent/Parent_card"
 import { Button } from "@/components/ui/parent/Parent_button"
 import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader"
-import ProgressStepper from "@/components/ui/parent/ProgressStepper"
+import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper"
 import ContinueButton from "@/components/ui/parent/Parent_ContinueButton"
 import { useState } from "react"
 

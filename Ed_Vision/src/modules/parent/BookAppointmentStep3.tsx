@@ -6,11 +6,11 @@ import { Select } from "@/components/ui/parent/Parent_Select"
 import { Textarea } from "@/components/ui/parent/Parent_Textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/parent/Parent_RadioGroup"
 import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader"
-import ProgressStepper from "@/components/ui/parent/ProgressStepper"
+import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper"
 import ContinueButton from "@/components/ui/parent/Parent_ContinueButton"
 
 // Import SVG assets
-import iconEducation from "@/assets/parent/iconEducation.svg"
+import iconEducation from "@/assets/parent/iconUserstep5.svg"
 import iconInfo from "@/assets/parent/iconInfo.svg"
 import iconArrowLeft from "@/assets/parent/iconArrowLeft.svg"
 

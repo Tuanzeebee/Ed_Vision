@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/parent/Parent_button";
 import ContinueButton from "@/components/ui/parent/Parent_ContinueButton";
 import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader";
-import ProgressStepper from "@/components/ui/parent/ProgressStepper";
+import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper";
 import iconMeeting from "@/assets/parent/iconMeeting.svg";
 import iconVideoCall from "@/assets/parent/iconVideoCall.svg";
 import iconPhone from "@/assets/parent/iconPhone.svg";
@@ -130,7 +130,8 @@ export default function BookAppointmentStep1({ onContinue, onBack, onClose }: Pr
             <Button
               variant="outline"
               onClick={onBack}
-              className="flex items-center"
+              disabled={!onBack}
+              className={`flex items-center ${!onBack ? 'opacity-50 cursor-not-allowed hover:cursor-not-allowed' : ''}`}
             >
               <img src={iconChevronLeft} alt="" className="w-4 h-4 mr-2" />
               Back

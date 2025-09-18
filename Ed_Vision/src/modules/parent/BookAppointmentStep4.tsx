@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Card } from "@/components/ui/parent/Parent_card"
 import { Button } from "@/components/ui/parent/Parent_button"
 import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader"
-import ProgressStepper from "@/components/ui/parent/ProgressStepper"
+import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper"
 import ConfirmButton from "@/components/ui/parent/Parent_ConfirmButton"
 
 // Import generated SVG assets for the component

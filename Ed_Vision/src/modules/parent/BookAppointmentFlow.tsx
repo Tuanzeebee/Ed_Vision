@@ -67,7 +67,7 @@ export default function BookAppointmentFlow({
   const updateStep = (step: number) => {
     setCurrentStep(step)
     if (location.pathname.includes('/step/')) {
-      navigate(`/book-appointment/step/${step}`, { replace: true })
+      navigate(`/parent/book-appointment/step/${step}`, { replace: true })
     }
   }
 
@@ -79,8 +79,8 @@ export default function BookAppointmentFlow({
     }
     
     // If URL doesn't have step parameter, redirect to step 1
-    if (location.pathname === '/book-appointment') {
-      navigate('/book-appointment/step/1', { replace: true })
+    if (location.pathname === '/parent/book-appointment') {
+      navigate('/parent/book-appointment/step/1', { replace: true })
     }
   }, [location.pathname, currentStep, navigate])
 

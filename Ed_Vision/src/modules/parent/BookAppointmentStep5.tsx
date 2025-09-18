@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from "@/components/ui/parent/Parent_card"
 import { Button } from "@/components/ui/parent/Parent_button"
 
@@ -50,6 +51,15 @@ export default function BookAppointmentStep5({
   }
 }: Props) {
   const [copied, setCopied] = useState(false)
+  const navigate = useNavigate()
+
+  const handleBackToDashboard = () => {
+    if (onBackToDashboard) {
+      onBackToDashboard()
+    } else {
+      navigate('/parent/dashboard')
+    }
+  }
 
   const handleCopyConfirmation = async () => {
     try {
@@ -188,7 +198,7 @@ export default function BookAppointmentStep5({
           {/* Action Buttons */}
           <div className="flex justify-center">
             <Button
-              onClick={onBackToDashboard}
+              onClick={handleBackToDashboard}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
             >
               <img src={iconDashboard} alt="" className="w-5 h-5 mr-2" />

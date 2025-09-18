@@ -1,20 +1,22 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import BookAppointmentFlow from "./BookAppointmentFlow";
 
 // Component wrapper để extract step number từ URL
 export default function BookAppointmentStepWrapper() {
   const { stepNumber } = useParams<{ stepNumber: string }>();
+  const navigate = useNavigate();
   const step = stepNumber ? parseInt(stepNumber, 10) : 1;
   
   const handleAppointmentComplete = (data: any) => {
     console.log('Appointment completed:', data)
-    alert('Appointment booked successfully!')
-    // Có thể thêm logic redirect về dashboard hoặc success page
+    // Điều hướng về parent dashboard sau khi hoàn thành appointment
+    navigate('/parent/dashboard')
   }
 
   const handleAppointmentCancel = () => {
     console.log('Appointment cancelled')
-    // Có thể thêm logic redirect về dashboard hoặc previous page
+    // Điều hướng về parent dashboard khi hủy appointment
+    navigate('/parent/dashboard')
   }
 
   return (
