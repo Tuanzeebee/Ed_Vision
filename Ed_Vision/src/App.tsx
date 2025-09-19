@@ -3,11 +3,21 @@ import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrap
 import ParentDashboard from "@/modules/parent/ParentDashboard";
 import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
 import StudentDetails from "@/modules/parent/Parent_StudentDetails";
+import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
+import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Default route redirect to student landing */}
+        <Route path="/" element={<Navigate to="/student/landing" replace />} />
+        
+        {/* Student routes */}
+        <Route path="/student/landing" element={<GradeForecastLanding />} />
+        <Route path="/student/course-overview" element={<StudentCourseOverview />} />
+        
+        {/* Parent routes */}
         {/* Redirect từ /book-appointment đến step 1 */}
         <Route 
           path="/parent/book-appointment" 
@@ -28,6 +38,7 @@ function App() {
         
         {/* Route cho student details */}
         <Route path="/parent/student-details" element={<StudentDetails />} />
+      
       </Routes>
     </Router>
   );
