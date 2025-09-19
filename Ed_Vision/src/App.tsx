@@ -5,6 +5,11 @@ import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
 import StudentDetails from "@/modules/parent/Parent_StudentDetails";
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
+import AcademicPlanningDashboard from "@/modules/student/AcademicPlanningDashboard";
+import CourseDetailView from "@/modules/student/CourseDetailView";
+import InstructionsPage from "@/modules/student/InstructionsPage";
+import UploadTranscript from "@/modules/student/UploadTranscript";
+import AdjustParameters from "@/modules/student/AdjustParameters";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
@@ -22,6 +27,11 @@ function App() {
         {/* Student routes */}
         <Route path="/student/landing" element={<GradeForecastLanding />} />
         <Route path="/student/course-overview" element={<StudentCourseOverview />} />
+        <Route path="/student/academic-planning" element={<AcademicPlanningDashboard />} />
+        <Route path="/student/instructions" element={<InstructionsPage />} />
+        <Route path="/student/course-detail" element={<CourseDetailView />} />
+        <Route path="/student/upload-transcript" element={<UploadTranscript />} />
+        <Route path="/student/adjust-parameters" element={<AdjustParameters />} />
 
         {/* Parent routes */}
         {/* Redirect từ /book-appointment đến step 1 */}
