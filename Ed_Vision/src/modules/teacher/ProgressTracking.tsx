@@ -1,32 +1,10 @@
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
+import { Button } from "@/components/ui/teacher/teacher_button"
 import { Input } from "@/components/ui/teacher/teacher_input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/teacher/teacher_table"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { useNavigate } from "react-router-dom"
-import {
-    RefreshCw,
-    FileText,
-    TrendingUp,
-    UserCheck,
-    UserX,
-    AlertTriangle,
-    BarChart3,
-    Search,
-    Filter,
-    Eye,
-    MessageSquare,
-    User,
-    ChevronLeft,
-    ChevronRight,
-    MoreHorizontal,
-    BookOpen,
-    ClipboardList,
-    Settings,
-    ChevronDown,
-    FileBarChart
-} from "lucide-react"
 
 import imgLogo from "@/assets/teacher/Avatar_View_Dashboard.png"
 import imgAvatar from "@/assets/teacher/Avatar_Teacher.png"
@@ -46,28 +24,28 @@ export default function ProgressTracking() {
         {
             title: "Tiến độ trung bình",
             value: "78%",
-            icon: TrendingUp,
+            icon: "fas fa-chart-line",
             color: "blue",
             progress: 78
         },
         {
             title: "SV hoàn thành",
             value: "24/32",
-            icon: UserCheck,
+            icon: "fas fa-user-check",
             color: "green",
             subtitle: "75% tỷ lệ hoàn thành"
         },
         {
             title: "SV chậm tiến độ",
             value: "5/32",
-            icon: UserX,
+            icon: "fas fa-user-times",
             color: "orange",
             subtitle: "16% cần hỗ trợ"
         },
         {
             title: "SV at-risk",
             value: "3/32",
-            icon: AlertTriangle,
+            icon: "fas fa-exclamation-triangle",
             color: "red",
             subtitle: "9% nguy cơ cao"
         }
@@ -155,7 +133,7 @@ export default function ProgressTracking() {
             await new Promise(resolve => setTimeout(resolve, 1500))
             // Show success message or update UI
             alert("Dữ liệu đã được cập nhật thành công!")
-        } catch (error) {
+        } catch {
             alert("Có lỗi xảy ra khi cập nhật dữ liệu!")
         } finally {
             setIsUpdating(false)
@@ -178,7 +156,7 @@ export default function ProgressTracking() {
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
             alert("Báo cáo đã được xuất thành công!")
-        } catch (error) {
+        } catch {
             alert("Có lỗi xảy ra khi xuất báo cáo!")
         } finally {
             setIsExporting(false)
@@ -197,18 +175,18 @@ export default function ProgressTracking() {
 
                     <div className="flex items-center space-x-4">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
                             <input
                                 placeholder="Tìm kiếm sinh viên..."
                                 className="pl-10 pr-4 py-2 w-80 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
 
-                        <Button variant="ghost" className="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg">
+                        <button className="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors">
                             <img src={imgAvatar} alt="Avatar" className="w-8 h-8 rounded-full" />
                             <span className="text-sm text-gray-700">TS. Nguyễn Văn A</span>
-                            <ChevronDown className="w-3 h-3 text-gray-500" />
-                        </Button>
+                            <i className="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
                     </div>
                 </div>
             </header>
@@ -218,31 +196,31 @@ export default function ProgressTracking() {
                 <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto">
                     <nav className="p-4 space-y-2">
                         <button onClick={() => handleNavigation('/teacher/dashboard')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <MoreHorizontal className="w-5 h-5" />
+                            <i className="fas fa-th-large w-5 h-5"></i>
                             <span>Dashboard</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/class-management')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <BookOpen className="w-5 h-5" />
+                            <i className="fas fa-book w-5 h-5"></i>
                             <span>Quản lý lớp học</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/grade-management')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <ClipboardList className="w-5 h-5" />
+                            <i className="fas fa-clipboard-list w-5 h-5"></i>
                             <span>Quản lý điểm</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/progress-tracking')} className="flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg w-full text-left">
-                            <TrendingUp className="w-5 h-5" />
+                            <i className="fas fa-chart-line w-5 h-5"></i>
                             <span>Theo dõi tiến độ</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/reports-alerts')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <FileBarChart className="w-5 h-5" />
+                            <i className="fas fa-chart-bar w-5 h-5"></i>
                             <span>Báo cáo & Cảnh báo</span>
                         </button>
                         <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <MessageSquare className="w-5 h-5" />
+                            <i className="fas fa-comments w-5 h-5"></i>
                             <span>Tin nhắn/Thông báo</span>
                         </a>
                         <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <Settings className="w-5 h-5" />
+                            <i className="fas fa-cog w-5 h-5"></i>
                             <span>Cài đặt tài khoản</span>
                         </a>
                     </nav>
@@ -295,19 +273,19 @@ export default function ProgressTracking() {
                             </div>
                             <div className="flex gap-3">
                                 <Button
-                                    className="bg-blue-600 hover:bg-blue-700"
+                                    className="bg-blue-600 hover:bg-blue-700 flex items-center"
                                     onClick={handleUpdateData}
                                     disabled={isUpdating}
                                 >
-                                    <RefreshCw className={`w-4 h-4 mr-2 ${isUpdating ? 'animate-spin' : ''}`} />
+                                    <i className={`fas fa-sync-alt mr-2 ${isUpdating ? 'animate-spin' : ''}`}></i>
                                     {isUpdating ? 'Đang cập nhật...' : 'Cập nhật dữ liệu'}
                                 </Button>
                                 <Button
-                                    className="bg-green-600 hover:bg-green-700"
+                                    className="bg-green-600 hover:bg-green-700 flex items-center"
                                     onClick={handleExportReport}
                                     disabled={isExporting}
                                 >
-                                    <FileText className="w-4 h-4 mr-2" />
+                                    <i className="fas fa-file-alt mr-2"></i>
                                     {isExporting ? 'Đang xuất...' : 'Xuất báo cáo'}
                                 </Button>
                             </div>
@@ -317,7 +295,6 @@ export default function ProgressTracking() {
                     {/* Stats Cards */}
                     <div className="grid grid-cols-4 gap-6 mb-6">
                         {stats.map((stat, index) => {
-                            const IconComponent = stat.icon
                             return (
                                 <Card key={index}>
                                     <CardContent className="p-6">
@@ -327,7 +304,7 @@ export default function ProgressTracking() {
                                                 <p className={`text-2xl font-bold text-${stat.color}-600`}>{stat.value}</p>
                                             </div>
                                             <div className={`p-3 rounded-lg ${getIconBgColor(stat.color)}`}>
-                                                <IconComponent className="w-5 h-5" />
+                                                <i className={`${stat.icon} text-lg`}></i>
                                             </div>
                                         </div>
                                         {stat.progress && (
@@ -365,7 +342,7 @@ export default function ProgressTracking() {
                                     </div>
                                 </div>
                                 <div className="h-80 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center">
-                                    <BarChart3 className="w-9 h-9 text-gray-400 mb-4" />
+                                    <i className="fas fa-chart-bar text-4xl text-gray-400 mb-4"></i>
                                     <p className="text-gray-500 text-center mb-2">Biểu đồ tiến độ theo tuần</p>
                                     <p className="text-gray-400 text-sm text-center">Hiển thị xu hướng tiến độ học tập</p>
 
@@ -396,7 +373,7 @@ export default function ProgressTracking() {
                                     <span className="text-sm text-gray-500">Tuần hiện tại</span>
                                 </div>
                                 <div className="h-80 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center">
-                                    <BarChart3 className="w-9 h-9 text-gray-400 mb-4" />
+                                    <i className="fas fa-chart-bar text-4xl text-gray-400 mb-4"></i>
                                     <p className="text-gray-500 text-center mb-2">So sánh tiến độ các lớp</p>
                                     <p className="text-gray-400 text-sm text-center">Hiển thị tiến độ trung bình từng lớp</p>
 
@@ -427,7 +404,7 @@ export default function ProgressTracking() {
                                 <CardTitle className="text-lg">Chi tiết tiến độ sinh viên - Lớp IT101</CardTitle>
                                 <div className="flex items-center space-x-2">
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
                                         <Input
                                             placeholder="Tìm kiếm sinh viên..."
                                             value={searchTerm}
@@ -435,9 +412,9 @@ export default function ProgressTracking() {
                                             className="pl-10 w-64"
                                         />
                                     </div>
-                                    <Button variant="outline" size="sm">
-                                        <Filter className="w-4 h-4" />
-                                    </Button>
+                                    <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <i className="fas fa-filter text-gray-500"></i>
+                                    </button>
                                 </div>
                             </div>
                         </CardHeader>
@@ -460,7 +437,7 @@ export default function ProgressTracking() {
                                             <TableCell className="py-4">
                                                 <div className="flex items-center">
                                                     <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
-                                                        <User className="w-4 h-4 text-gray-600" />
+                                                        <i className="fas fa-user text-gray-600"></i>
                                                     </div>
                                                     <span className="font-medium text-gray-900">{student.name}</span>
                                                 </div>
@@ -493,12 +470,12 @@ export default function ProgressTracking() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex space-x-3">
-                                                    <Button variant="ghost" size="sm" className="p-0 h-auto">
-                                                        <Eye className="w-4 h-4 text-blue-600" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="p-0 h-auto">
-                                                        <MessageSquare className="w-4 h-4 text-green-600" />
-                                                    </Button>
+                                                    <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                                        <i className="fas fa-eye text-blue-600"></i>
+                                                    </button>
+                                                    <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                                        <i className="fas fa-comment text-green-600"></i>
+                                                    </button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -514,16 +491,16 @@ export default function ProgressTracking() {
                                     Hiển thị 1-5 trong tổng số 32 sinh viên
                                 </p>
                                 <div className="flex items-center space-x-2">
-                                    <Button variant="outline" size="sm" disabled className="opacity-50">
-                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                    <button disabled className="opacity-50 px-3 py-1 border border-gray-300 rounded-md text-sm flex items-center">
+                                        <i className="fas fa-chevron-left mr-1"></i>
                                         Trước
-                                    </Button>
-                                    <Button size="sm" className="bg-blue-600 text-white">1</Button>
-                                    <Button variant="outline" size="sm">2</Button>
-                                    <Button variant="outline" size="sm">
+                                    </button>
+                                    <button className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm">1</button>
+                                    <button className="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">2</button>
+                                    <button className="px-3 py-1 border border-gray-300 rounded-md text-sm flex items-center hover:bg-gray-50">
                                         Sau
-                                        <ChevronRight className="w-4 h-4 ml-1" />
-                                    </Button>
+                                        <i className="fas fa-chevron-right ml-1"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>

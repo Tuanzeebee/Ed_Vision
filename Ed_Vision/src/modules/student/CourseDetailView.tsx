@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/student/Student_card";
+import { Button } from "@/components/ui/student/Student_button";
 
 // Import the professor image asset
 import iconInstructions from "@/assets/student/iconInstructions.svg"
