@@ -1,6 +1,6 @@
 import Header from "../../components/layout/Header"
 import Footer from "../../components/layout/Footer"
-import { Card, CardContent } from "../../components/ui/card"
+import { Card, CardContent } from "../../components/ui/student/Student_card"
 
 type Props = {
   // Add props if needed

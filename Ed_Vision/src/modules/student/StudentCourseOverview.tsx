@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/student/Student_card"
 import Footer from "../../components/layout/Footer"
 import Header from "../../components/layout/Header"
 
@@ -130,7 +130,7 @@ export default function StudentCourseOverview({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                     </svg>
                     <span className="font-medium">Môn tiên quyết:</span>
-                    <a href="#" className="ml-2 text-purple-500 hover:underline font-semibold">IS 301 – Database</a>
+                    <a href="#" className="ml-2 text-purple-500 hover:underline font-semibold cursor-pointer">IS 301 – Database</a>
                   </div>
                   
                   <div className="flex items-center text-gray-600">
@@ -195,7 +195,7 @@ export default function StudentCourseOverview({
                 return (
                   <div key={module.id} className="border border-gray-200 rounded-xl overflow-hidden">
                     <button 
-                      className="w-full px-6 py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors flex justify-between items-center" 
+                      className="w-full px-6 py-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors flex justify-between items-center cursor-pointer" 
                       onClick={() => toggleModule(module.id)}
                     >
                       <div>
@@ -292,7 +292,7 @@ export default function StudentCourseOverview({
                   </div>
                   <p className="text-sm text-gray-600 mb-6">Dựa trên phân tích AI và lịch sử học tập</p>
                   
-                  <button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                  <button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105 cursor-pointer">
                     Bắt đầu học
                   </button>
                 </div>
