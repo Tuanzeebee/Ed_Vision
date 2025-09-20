@@ -13,6 +13,12 @@ import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
 import ProgressTracking from "@/modules/teacher/ProgressTracking";
 import TeacherReport from "@/modules/teacher/TeacherReport";
+import UploadTranscript from "./modules/student/UploadTranscript";
+import AdjustParameters from "./modules/student/AdjustParameters";
+import InstructionsPage from "./modules/student/InstructionsPage";
+import AcademicPlanningDashboard from "./modules/student/AcademicPlanningDashboard";
+import CourseDetailView from "./modules/student/CourseDetailView";
+import FinancialSurveyStep1 from "./modules/student/FinancialSurveyStep1";
 function App() {
   return (
     <Router>
@@ -26,10 +32,15 @@ function App() {
         <Route path="/student/register" element={<StudentRegister />} />
         <Route path="/student/otp-verification" element={<StudentOTPVerification />} />
         <Route path="/student/course-overview" element={<StudentCourseOverview />} />
+        <Route path="/student/upload-transcript" element={<UploadTranscript />} />
+        <Route path="/student/instructions" element={<InstructionsPage />} />
+        <Route path="/student/adjust-parameters" element={<AdjustParameters />} />
+        <Route path="/student/academic-planning" element={<AcademicPlanningDashboard />} />
+        <Route path="/student/course-detail" element={<CourseDetailView />} />
+        <Route path="/student/financial-survey/step/1" element={<FinancialSurveyStep1 />} />
         
-        {/* Parent routes */}
         {/* Redirect từ /book-appointment đến step 1 */}
-        <Route
+        <Route    
           path="/parent/book-appointment"
           element={<Navigate to="/parent/book-appointment/step/1" replace />}
         />
