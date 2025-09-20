@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
-import { Button } from "@/components/ui/teacher/teacher_button"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Progress } from "@/components/ui/teacher/teacher_progress"
 import { useNavigate } from "react-router-dom"
@@ -12,24 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/teacher/teacher_table"
-import {
-    Filter,
-    Download,
-    Eye,
-    Edit3,
-    Trash2,
-    Search,
-    ChevronDown,
-    BookOpen,
-    MoreHorizontal,
-    MessageSquare,
-    ClipboardList,
-    TrendingUp,
-    Settings,
-    AlertTriangle
-} from "lucide-react"
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
+
 // Asset imports
 import imgLogo from "@/assets/teacher/Avatar_View_Dashboard.png"
 import imgAvatar from "@/assets/teacher/Avatar_Teacher.png"
@@ -121,25 +103,45 @@ export default function ClassManagement() {
 
     // Xử lý lọc
     const handleFilter = () => {
+        type ClassItem = {
+            id: string;
+            name: string;
+            subject: string;
+            enrollment: string;
+            progress: number;
+            status: string;
+            statusColor: string;
+        };
+        
         if (selectedStatus === "Tất cả") {
             setClassData(initialData)
         } else {
-            setClassData(initialData.filter((c: any) => c.status === selectedStatus))
+            setClassData(initialData.filter((c: ClassItem) => c.status === selectedStatus))
         }
     }
 
     // Xuất Excel
     const handleExport = () => {
         try {
-            const worksheet = XLSX.utils.json_to_sheet(classData)
-            const workbook = XLSX.utils.book_new()
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách lớp")
-            const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-            const data = new Blob([excelBuffer], { type: "application/octet-stream" })
-            saveAs(data, "DanhSachLop.xlsx")
+            // Convert data to CSV format
+            const headers = "Mã lớp,Tên lớp,Môn học,Sĩ số,Tiến độ,Trạng thái\n";
+            const csvData = classData.map(item => 
+                `${item.id},${item.name},${item.subject},${item.enrollment},${item.progress}%,${item.status}`
+            ).join("\n");
+            
+            const csvContent = headers + csvData;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "DanhSachLop.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (error) {
-            console.error("Error exporting to Excel:", error)
-            alert("Có lỗi xảy ra khi xuất file Excel")
+            console.error("Error exporting to CSV:", error)
+            alert("Có lỗi xảy ra khi xuất file CSV")
         }
     }
 
@@ -155,18 +157,18 @@ export default function ClassManagement() {
 
                     <div className="flex items-center space-x-4">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"></i>
                             <input
                                 placeholder="Tìm kiếm sinh viên..."
                                 className="pl-10 pr-4 py-2 w-80 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
 
-                        <Button variant="ghost" className="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg">
+                        <button className="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200">
                             <img src={imgAvatar} alt="Avatar" className="w-8 h-8 rounded-full" />
                             <span className="text-sm text-gray-700">TS. Nguyễn Văn A</span>
-                            <ChevronDown className="w-3 h-3 text-gray-500" />
-                        </Button>
+                            <i className="fas fa-chevron-down w-3 h-3 text-gray-500"></i>
+                        </button>
                     </div>
                 </div>
             </header>
@@ -176,31 +178,31 @@ export default function ClassManagement() {
                 <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto">
                     <nav className="p-4 space-y-2">
                         <button onClick={() => handleNavigation('/teacher/dashboard')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <MoreHorizontal className="w-5 h-5" />
+                            <i className="fas fa-ellipsis-h w-5 h-5"></i>
                             <span>Dashboard</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/class-management')} className="flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg w-full text-left">
-                            <BookOpen className="w-5 h-5" />
+                            <i className="fas fa-book-open w-5 h-5"></i>
                             <span>Quản lý lớp học</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/grade-management')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <ClipboardList className="w-5 h-5" />
+                            <i className="fas fa-clipboard-list w-5 h-5"></i>
                             <span>Quản lý điểm</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/progress-tracking')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <TrendingUp className="w-5 h-5" />
+                            <i className="fas fa-chart-line w-5 h-5"></i>
                             <span>Theo dõi tiến độ</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/reports-alerts')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <AlertTriangle className="w-5 h-5" />
+                            <i className="fas fa-exclamation-triangle w-5 h-5"></i>
                             <span>Báo cáo & Cảnh báo</span>
                         </button>
                         <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <MessageSquare className="w-5 h-5" />
+                            <i className="fas fa-comment w-5 h-5"></i>
                             <span>Tin nhắn/Thông báo</span>
                         </a>
                         <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <Settings className="w-5 h-5" />
+                            <i className="fas fa-cog w-5 h-5"></i>
                             <span>Cài đặt tài khoản</span>
                         </a>
                     </nav>
@@ -247,14 +249,13 @@ export default function ClassManagement() {
                                     </div>
                                 </div>
 
-                                <Button
+                                <button
                                     onClick={handleFilter}
-                                    variant="outline"
-                                    className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                    className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-4 py-2 rounded-lg flex items-center"
                                 >
-                                    <Filter className="w-4 h-4 mr-2" />
+                                    <i className="fas fa-filter w-4 h-4 mr-2"></i>
                                     <span>Lọc</span>
-                                </Button>
+                                </button>
                             </div>
                         </CardContent>
                     </Card>
@@ -267,14 +268,13 @@ export default function ClassManagement() {
                                     Danh sách lớp học (8 lớp)
                                 </CardTitle>
 
-                                <Button
+                                <button
                                     onClick={handleExport}
-                                    variant="outline"
-                                    className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                                    className="bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 px-4 py-2 rounded-lg flex items-center"
                                 >
-                                    <Download className="w-4 h-4 mr-2" />
+                                    <i className="fas fa-download w-4 h-4 mr-2"></i>
                                     <span>Xuất Excel</span>
-                                </Button>
+                                </button>
                             </div>
                         </CardHeader>
 
@@ -338,15 +338,15 @@ export default function ClassManagement() {
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
                                                 <div className="flex items-center space-x-4">
-                                                    <Button variant="ghost" size="sm" className="p-0 w-6 h-6 text-blue-600 hover:text-blue-800">
-                                                        <Eye className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="p-0 w-6 h-6 text-green-600 hover:text-green-800">
-                                                        <Edit3 className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="p-0 w-6 h-6 text-red-600 hover:text-red-800">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                                    <button className="p-0 w-6 h-6 text-blue-600 hover:text-blue-800">
+                                                        <i className="fas fa-eye w-4 h-4"></i>
+                                                    </button>
+                                                    <button className="p-0 w-6 h-6 text-green-600 hover:text-green-800">
+                                                        <i className="fas fa-edit w-4 h-4"></i>
+                                                    </button>
+                                                    <button className="p-0 w-6 h-6 text-red-600 hover:text-red-800">
+                                                        <i className="fas fa-trash w-4 h-4"></i>
+                                                    </button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -361,15 +361,15 @@ export default function ClassManagement() {
                                         Hiển thị 1 đến 8 của 8 lớp học
                                     </p>
                                     <div className="flex items-center space-x-2">
-                                        <Button variant="outline" size="sm" disabled className="border-gray-300 text-gray-500">
+                                        <button disabled className="border border-gray-300 text-gray-500 px-3 py-1 rounded text-sm">
                                             Trước
-                                        </Button>
-                                        <Button size="sm" className="bg-blue-600 text-white px-3">
+                                        </button>
+                                        <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm">
                                             1
-                                        </Button>
-                                        <Button variant="outline" size="sm" disabled className="border-gray-300 text-gray-500">
+                                        </button>
+                                        <button disabled className="border border-gray-300 text-gray-500 px-3 py-1 rounded text-sm">
                                             Sau
-                                        </Button>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

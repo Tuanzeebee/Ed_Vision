@@ -5,32 +5,6 @@ import { Input } from "@/components/ui/teacher/teacher_input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/teacher/teacher_table"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { useNavigate } from "react-router-dom"
-import {
-    Filter,
-    RotateCcw,
-    FileText,
-    Download,
-    AlertTriangle,
-    TrendingDown,
-    Clock,
-    Search,
-    Plus,
-    Eye,
-    MessageSquare,
-    Edit,
-    Bell,
-    ChevronDown,
-    MoreHorizontal,
-    BookOpen,
-    ClipboardList,
-    TrendingUp,
-    Settings,
-    ChevronLeft,
-    ChevronRight,
-    RefreshCw,
-    FileBarChart
-} from "lucide-react"
-
 // Import assets
 import imgLogo from "@/assets/teacher/Avatar_View_Dashboard.png"
 import imgStudent from "@/assets/teacher/Avatar_Student2.png"
@@ -61,7 +35,7 @@ export default function TeacherReport() {
             value: "15",
             percentage: "6.0%",
             subtitle: "tổng số sinh viên",
-            icon: AlertTriangle,
+            icon: "fas fa-exclamation-triangle",
             iconBg: "bg-red-100",
             iconColor: "text-red-600",
             textColor: "text-red-600"
@@ -70,7 +44,7 @@ export default function TeacherReport() {
             title: "Rủi ro cao",
             value: "8",
             subtitle: "Điểm < 5.0",
-            icon: TrendingDown,
+            icon: "fas fa-chart-line-down",
             iconBg: "bg-red-100",
             iconColor: "text-red-600",
             textColor: "text-red-600"
@@ -79,7 +53,7 @@ export default function TeacherReport() {
             title: "Rủi ro trung bình",
             value: "7",
             subtitle: "Điểm 5.0-6.5",
-            icon: TrendingDown,
+            icon: "fas fa-chart-line-down",
             iconBg: "bg-orange-100",
             iconColor: "text-orange-600",
             textColor: "text-orange-600"
@@ -88,7 +62,7 @@ export default function TeacherReport() {
             title: "Cần theo dõi",
             value: "12",
             subtitle: "Vắng nhiều",
-            icon: Clock,
+            icon: "fas fa-clock",
             iconBg: "bg-yellow-100",
             iconColor: "text-yellow-600",
             textColor: "text-yellow-600"
@@ -222,7 +196,7 @@ export default function TeacherReport() {
             document.body.removeChild(element)
 
             alert('Xuất báo cáo PDF thành công!')
-        } catch (error) {
+        } catch {
             alert('Có lỗi xảy ra khi xuất báo cáo PDF')
         } finally {
             setIsExportingPDF(false)
@@ -244,7 +218,7 @@ export default function TeacherReport() {
             document.body.removeChild(element)
 
             alert('Xuất báo cáo Excel thành công!')
-        } catch (error) {
+        } catch {
             alert('Có lỗi xảy ra khi xuất báo cáo Excel')
         } finally {
             setIsExportingExcel(false)
@@ -266,7 +240,7 @@ export default function TeacherReport() {
             document.body.removeChild(element)
 
             alert('Xuất báo cáo chi tiết thành công!')
-        } catch (error) {
+        } catch {
             alert('Có lỗi xảy ra khi xuất báo cáo chi tiết')
         } finally {
             setIsExportingDetail(false)
@@ -302,7 +276,7 @@ export default function TeacherReport() {
 
                     <div className="flex-1 max-w-md mx-8">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"></i>
                             <Input
                                 placeholder="Tìm kiếm sinh viên..."
                                 className="pl-10"
@@ -311,19 +285,19 @@ export default function TeacherReport() {
                     </div>
 
                     <div className="flex items-center space-x-4">
-                        <Button variant="ghost" className="p-2 relative">
-                            <Bell className="w-5 h-5 text-gray-600" />
+                        <button className="p-2 relative">
+                            <i className="fas fa-bell w-5 h-5 text-gray-600"></i>
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
-                        </Button>
+                        </button>
 
-                        <Button variant="ghost" className="flex items-center space-x-2 px-2 py-1">
+                        <button className="flex items-center space-x-2 px-2 py-1">
                             <img src={imgStudent} alt="Avatar" className="w-8 h-8 rounded-full" />
                             <div className="text-left">
                                 <p className="text-sm font-medium text-gray-800">TS. Nguyễn Văn A</p>
                                 <p className="text-xs text-gray-500">Giảng viên</p>
                             </div>
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
-                        </Button>
+                            <i className="fas fa-chevron-down w-4 h-4 text-gray-400"></i>
+                        </button>
                     </div>
                 </div>
             </header>
@@ -333,31 +307,31 @@ export default function TeacherReport() {
                 <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-16 bottom-0 overflow-y-auto">
                     <nav className="p-4 space-y-2">
                         <button onClick={() => handleNavigation('/teacher/dashboard')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <MoreHorizontal className="w-5 h-5" />
+                            <i className="fas fa-ellipsis-h w-5 h-5"></i>
                             <span>Dashboard</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/class-management')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <BookOpen className="w-5 h-5" />
+                            <i className="fas fa-book-open w-5 h-5"></i>
                             <span>Quản lý lớp học</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/grade-management')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <ClipboardList className="w-5 h-5" />
+                            <i className="fas fa-clipboard-list w-5 h-5"></i>
                             <span>Quản lý điểm</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/progress-tracking')} className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg w-full text-left">
-                            <TrendingUp className="w-5 h-5" />
+                            <i className="fas fa-chart-line w-5 h-5"></i>
                             <span>Theo dõi tiến độ</span>
                         </button>
                         <button onClick={() => handleNavigation('/teacher/reports-alerts')} className="flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg w-full text-left">
-                            <FileBarChart className="w-5 h-5" />
+                            <i className="fas fa-chart-bar w-5 h-5"></i>
                             <span>Báo cáo & Cảnh báo</span>
                         </button>
                         <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <MessageSquare className="w-5 h-5" />
+                            <i className="fas fa-comment w-5 h-5"></i>
                             <span>Tin nhắn/Thông báo</span>
                         </a>
                         <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
-                            <Settings className="w-5 h-5" />
+                            <i className="fas fa-cog w-5 h-5"></i>
                             <span>Cài đặt tài khoản</span>
                         </a>
                     </nav>
@@ -402,14 +376,14 @@ export default function TeacherReport() {
                                     </div>
                                 </div>
                                 <div className="flex gap-3">
-                                    <Button className="bg-blue-600 hover:bg-blue-700">
-                                        <Filter className="w-4 h-4 mr-2" />
+                                    <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white">
+                                        <i className="fas fa-filter w-4 h-4 mr-2"></i>
                                         Lọc
-                                    </Button>
-                                    <Button variant="outline">
-                                        <RotateCcw className="w-4 h-4 mr-2" />
+                                    </button>
+                                    <button className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">
+                                        <i className="fas fa-undo w-4 h-4 mr-2"></i>
                                         Đặt lại
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
                         </CardContent>
@@ -418,7 +392,6 @@ export default function TeacherReport() {
                     {/* Risk Statistics */}
                     <div className="grid grid-cols-4 gap-6 mb-6">
                         {riskStats.map((stat, index) => {
-                            const IconComponent = stat.icon
                             return (
                                 <Card key={index}>
                                     <CardContent className="p-6">
@@ -428,7 +401,7 @@ export default function TeacherReport() {
                                                 <p className={`text-2xl font-bold ${stat.textColor}`}>{stat.value}</p>
                                             </div>
                                             <div className={`p-3 rounded-lg ${stat.iconBg}`}>
-                                                <IconComponent className={`w-5 h-5 ${stat.iconColor}`} />
+                                                <i className={`${stat.icon} w-5 h-5 ${stat.iconColor}`}></i>
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-2">
@@ -453,12 +426,12 @@ export default function TeacherReport() {
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Phân bố mức độ rủi ro</CardTitle>
                                     <div className="flex bg-gray-100 rounded-lg p-1">
-                                        <Button variant="ghost" size="sm" className="bg-blue-100 text-blue-600">
+                                        <button className="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm">
                                             Theo lớp
-                                        </Button>
-                                        <Button variant="ghost" size="sm" className="text-gray-600">
+                                        </button>
+                                        <button className="text-gray-600 px-3 py-1 rounded text-sm">
                                             Theo tháng
-                                        </Button>
+                                        </button>
                                     </div>
                                 </div>
                             </CardHeader>
@@ -481,9 +454,9 @@ export default function TeacherReport() {
                                     disabled={isExportingPDF}
                                 >
                                     {isExportingPDF ? (
-                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                        <i className="fas fa-sync w-4 h-4 mr-2 animate-spin"></i>
                                     ) : (
-                                        <FileText className="w-4 h-4 mr-2" />
+                                        <i className="fas fa-file-alt w-4 h-4 mr-2"></i>
                                     )}
                                     {isExportingPDF ? 'Đang xuất PDF...' : 'Xuất PDF'}
                                 </Button>
@@ -493,9 +466,9 @@ export default function TeacherReport() {
                                     disabled={isExportingExcel}
                                 >
                                     {isExportingExcel ? (
-                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                        <i className="fas fa-sync w-4 h-4 mr-2 animate-spin"></i>
                                     ) : (
-                                        <Download className="w-4 h-4 mr-2" />
+                                        <i className="fas fa-download w-4 h-4 mr-2"></i>
                                     )}
                                     {isExportingExcel ? 'Đang xuất Excel...' : 'Xuất Excel'}
                                 </Button>
@@ -505,9 +478,9 @@ export default function TeacherReport() {
                                     disabled={isExportingDetail}
                                 >
                                     {isExportingDetail ? (
-                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                        <i className="fas fa-sync w-4 h-4 mr-2 animate-spin"></i>
                                     ) : (
-                                        <FileText className="w-4 h-4 mr-2" />
+                                        <i className="fas fa-file-alt w-4 h-4 mr-2"></i>
                                     )}
                                     {isExportingDetail ? 'Đang xuất báo cáo...' : 'Báo cáo chi tiết'}
                                 </Button>
@@ -544,7 +517,7 @@ export default function TeacherReport() {
                                 <CardTitle>Danh sách sinh viên At-Risk</CardTitle>
                                 <div className="flex items-center space-x-2">
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"></i>
                                         <Input
                                             placeholder="Tìm kiếm sinh viên..."
                                             value={searchTerm}
@@ -553,7 +526,7 @@ export default function TeacherReport() {
                                         />
                                     </div>
                                     <Button className="bg-blue-600 hover:bg-blue-700">
-                                        <Plus className="w-4 h-4 mr-2" />
+                                        <i className="fas fa-plus w-4 h-4 mr-2"></i>
                                         Thêm ghi chú
                                     </Button>
                                 </div>
@@ -607,15 +580,15 @@ export default function TeacherReport() {
                                             <TableCell className="text-gray-500">{student.lastUpdate}</TableCell>
                                             <TableCell>
                                                 <div className="flex space-x-2">
-                                                    <Button variant="ghost" size="sm" className="p-1 h-auto">
-                                                        <Eye className="w-4 h-4 text-blue-600" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="p-1 h-auto">
-                                                        <MessageSquare className="w-4 h-4 text-green-600" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="p-1 h-auto">
-                                                        <Edit className="w-4 h-4 text-orange-600" />
-                                                    </Button>
+                                                    <button className="p-1 h-auto">
+                                                        <i className="fas fa-eye w-4 h-4 text-blue-600"></i>
+                                                    </button>
+                                                    <button className="p-1 h-auto">
+                                                        <i className="fas fa-comment w-4 h-4 text-green-600"></i>
+                                                    </button>
+                                                    <button className="p-1 h-auto">
+                                                        <i className="fas fa-edit w-4 h-4 text-orange-600"></i>
+                                                    </button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -631,16 +604,16 @@ export default function TeacherReport() {
                                     Hiển thị 1 đến 10 trong tổng số 15 sinh viên
                                 </p>
                                 <div className="flex items-center space-x-2">
-                                    <Button variant="outline" size="sm" disabled className="opacity-50">
-                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                    <button disabled className="border border-gray-300 px-3 py-1 rounded text-sm opacity-50">
+                                        <i className="fas fa-chevron-left w-4 h-4 mr-1"></i>
                                         Trước
-                                    </Button>
-                                    <Button size="sm" className="bg-blue-600 text-white">1</Button>
-                                    <Button variant="outline" size="sm">2</Button>
-                                    <Button variant="outline" size="sm">
+                                    </button>
+                                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm">1</button>
+                                    <button className="border border-gray-300 px-3 py-1 rounded text-sm">2</button>
+                                    <button className="border border-gray-300 px-3 py-1 rounded text-sm">
                                         Sau
-                                        <ChevronRight className="w-4 h-4 ml-1" />
-                                    </Button>
+                                        <i className="fas fa-chevron-right w-4 h-4 ml-1"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
