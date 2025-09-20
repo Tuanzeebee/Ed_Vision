@@ -38,7 +38,7 @@ function App() {
         <Route path="/student/academic-planning" element={<AcademicPlanningDashboard />} />
         <Route path="/student/course-detail" element={<CourseDetailView />} />
         <Route path="/student/financial-survey/step/1" element={<FinancialSurveyStep1 />} />
-        
+        {/* add new router */}
         {/* Redirect từ /book-appointment đến step 1 */}
         <Route    
           path="/parent/book-appointment"
