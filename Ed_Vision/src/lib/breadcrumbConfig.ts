@@ -74,6 +74,39 @@ export const breadcrumbConfig: Record<string, {
   '/admin/accounts': {
     label: 'Quản lý Tài khoản & Vai trò',
     parent: '/admin/dashboard'
+  },
+  // Reports and analytics
+  '/admin/reports/learning': {
+    label: 'Thống kê Tổng quát',
+    parent: '/admin/dashboard'
+  },
+  '/admin/analytics/performance': {
+    label: 'Báo cáo Lãnh đạo',
+    parent: '/admin/dashboard'
+  },
+  '/admin/leadership-reports': {
+    label: 'Báo cáo Lãnh đạo',
+    parent: '/admin/dashboard'
+  },
+  '/admin/ai-insights': {
+    label: 'Kết quả Học máy',
+    parent: '/admin/dashboard'
+  },
+  '/admin/permissions': {
+    label: 'Phân quyền',
+    parent: '/admin/dashboard'
+  },
+  '/admin/notifications': {
+    label: 'Quản lý Thông báo & Phản hồi',
+    parent: '/admin/dashboard'
+  },
+  '/admin/content-approval': {
+    label: 'Phê duyệt Nội dung',
+    parent: '/admin/dashboard'
+  },
+  '/admin/role-permissions': {
+    label: 'Phân quyền',
+    parent: '/admin/dashboard'
   }
 };
 

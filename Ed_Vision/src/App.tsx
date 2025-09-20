@@ -16,6 +16,13 @@ import TeacherSchedule from "./modules/admin/TeacherSchedule";
 import TeacherSupportHistory from "./modules/admin/TeacherSupportHistory";
 import QuestionManagement from "./modules/admin/QuestionManagement";
 import AddQuestion from "./modules/admin/AddQuestion";
+import GeneralStatistics from "./modules/admin/GeneralStatistics";
+import LeadershipReports from "./modules/admin/LeadershipReports";
+import AIPredictionResults from "./modules/admin/AIPredictionResults";
+import PermissionManagement from "./modules/admin/PermissionManagement";
+import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
+import ContentApproval from "./modules/admin/ContentApproval";
+import NotificationManagement from "./modules/admin/NotificationManagement";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
@@ -86,14 +93,16 @@ function App() {
         <Route path="/admin/questions/add" element={<AddQuestion />} />
         
         {/* Route cho báo cáo và phân tích */}
-        <Route path="/admin/reports/learning" element={<div className="p-6"><h1 className="text-2xl font-bold">Báo cáo Học tập</h1><p>Trang này đang phát triển...</p></div>} />
-        <Route path="/admin/analytics/performance" element={<div className="p-6"><h1 className="text-2xl font-bold">Phân tích Hiệu suất</h1><p>Trang này đang phát triển...</p></div>} />
-        <Route path="/admin/ai-insights" element={<div className="p-6"><h1 className="text-2xl font-bold">AI Insights</h1><p>Trang này đang phát triển...</p></div>} />
+        <Route path="/admin/reports/learning" element={<GeneralStatistics />} />
+        <Route path="/admin/analytics/performance" element={<LeadershipReports />} />
+        <Route path="/admin/leadership-reports" element={<LeadershipReports />} />
+        <Route path="/admin/ai-insights" element={<AIPredictionResults />} />
         
         {/* Route cho quản lý hệ thống */}
-        <Route path="/admin/notifications" element={<div className="p-6"><h1 className="text-2xl font-bold">Quản lý Thông báo</h1><p>Trang này đang phát triển...</p></div>} />
-        <Route path="/admin/content-approval" element={<div className="p-6"><h1 className="text-2xl font-bold">Phê duyệt Nội dung</h1><p>Trang này đang phát triển...</p></div>} />
-        <Route path="/admin/permissions" element={<div className="p-6"><h1 className="text-2xl font-bold">Phân quyền</h1><p>Trang này đang phát triển...</p></div>} />
+        <Route path="/admin/notifications" element={<NotificationManagement />} />
+        <Route path="/admin/content-approval" element={<ContentApproval />} />
+        <Route path="/admin/permissions" element={<PermissionManagement />} />
+        <Route path="/admin/role-permissions" element={<RolePermissionManagement />} />
         
         {/* Route cho all appointments */}
         <Route path="/parent/appointments" element={<AllAppointments />} />

@@ -118,19 +118,19 @@ export default function AdminSidebar({ activePage, onNavigate }: AdminSidebarPro
       children: [
         {
           icon: ChartBarIcon,
-          label: "Báo cáo Học tập",
+          label: "Thống kê Tổng quát",
           href: "/admin/reports/learning",
           onClick: () => handleNavigation("/admin/reports/learning")
         },
         {
           icon: ChartLineIcon,
-          label: "Phân tích Hiệu suất",
+          label: "Báo cáo Lãnh đạo",
           href: "/admin/analytics/performance",
           onClick: () => handleNavigation("/admin/analytics/performance")
         },
         {
           icon: RobotIcon,
-          label: "AI Insights",
+          label: "Kết quả Học máy",
           href: "/admin/ai-insights",
           onClick: () => handleNavigation("/admin/ai-insights")
         }
@@ -202,8 +202,15 @@ export default function AdminSidebar({ activePage, onNavigate }: AdminSidebarPro
       isActive = hasActiveChild && item.label !== "Trang chủ"
     } else {
       // Với leaf menu: exact match hoặc sub-path
-      isActive = Boolean(item.href === currentPage || 
-                (item.href && currentPage.startsWith(item.href + '/')))
+      // Special case cho Phân quyền: cả /admin/permissions và /admin/role-permissions đều thuộc về menu này
+      if (item.href === "/admin/permissions") {
+        isActive = Boolean(currentPage === "/admin/permissions" || 
+                  currentPage === "/admin/role-permissions" ||
+                  currentPage.startsWith("/admin/permissions/"))
+      } else {
+        isActive = Boolean(item.href === currentPage || 
+                  (item.href && currentPage.startsWith(item.href + '/')))
+      }
     }
     
     // Special case: Trang chủ chỉ active khi exact match với /admin/overview
