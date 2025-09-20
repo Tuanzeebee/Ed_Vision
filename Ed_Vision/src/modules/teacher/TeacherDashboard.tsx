@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/teacher/teacher_button"
 import { Input } from "@/components/ui/teacher/teacher_input"
 import {
     Table,
