@@ -5,7 +5,14 @@ import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
 import StudentDetails from "@/modules/parent/Parent_StudentDetails";
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
-
+import StudentLogin from "@/modules/student/StudentLogin";
+import StudentOTPVerification from "@/modules/student/StudentOTPVerification";
+import StudentRegister from "@/modules/student/StudentRegister";
+import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
+import ClassManagement from "@/modules/teacher/ClassManagement";
+import GradeManagement from "@/modules/teacher/GradeManagement";
+import ProgressTracking from "@/modules/teacher/ProgressTracking";
+import TeacherReport from "@/modules/teacher/TeacherReport";
 function App() {
   return (
     <Router>
