@@ -6,6 +6,7 @@ type Props = {
   className?: string
   showNavigation?: boolean
   isLandingPage?: boolean
+  isAdminMode?: boolean
   onLogin?: () => void
   onRegister?: () => void
 }
@@ -14,17 +15,22 @@ export default function Header({
   className = "", 
   showNavigation = true, 
   isLandingPage = false,
+  isAdminMode = false,
   onLogin,
   onRegister
 }: Props) {
   const navigate = useNavigate()
   
   // Temporary hardcoded values; replace with real data as needed
-  const studentName = "Student Name";
-  const studentRole = "Student Role";
+  const studentName = isAdminMode ? "Admin User" : "Student Name";
+  const studentRole = isAdminMode ? "Administrator" : "Student Role";
 
   const handleLogoClick = () => {
-    navigate("/student/landing")
+    if (isAdminMode) {
+      navigate("/admin/dashboard")
+    } else {
+      navigate("/student/landing")
+    }
   }
 
   return (
@@ -43,11 +49,15 @@ export default function Header({
               }
             }}
           >
-            <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain"/>
+            {isAdminMode ? (
+              <h1 className="text-2xl font-bold text-gray-900">PREDICA</h1>
+            ) : (
+              <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain"/>
+            )}
           </div>
 
-          {/* Navigation - ở giữa */}
-          {showNavigation && (
+          {/* Navigation - chỉ hiển thị khi không phải admin mode */}
+          {showNavigation && !isAdminMode && (
             <nav className="hidden md:flex items-center space-x-8">
               {/* Our Features Dropdown */}
               <div className="relative group">

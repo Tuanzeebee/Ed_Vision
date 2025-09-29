@@ -13,7 +13,7 @@ export const breadcrumbConfig: Record<string, {
     icon: 'fas fa-home text-blue-600'
   },
   '/admin/teachers': {
-    label: 'Quản lý Giảng viên',
+    label: 'Quản lý Giảng viên/Cố Vấn',
     parent: '/admin/dashboard'
   },
   '/admin/students': {
