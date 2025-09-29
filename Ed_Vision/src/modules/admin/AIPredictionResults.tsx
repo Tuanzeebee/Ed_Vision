@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
+import { useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -29,6 +30,10 @@ ChartJS.register(
 );
 
 export default function AIPredictionResults() {
+  // State for filters
+  const [scopeFilter, setScopeFilter] = useState('Toàn trường');
+  const [timeFilter, setTimeFilter] = useState('Học kỳ hiện tại (2024-1)');
+  
   // Chart data configurations
   const comparisonData = {
     labels: ['CNTT', 'Kinh tế', 'Ngoại ngữ', 'Xây dựng', 'Y Dược', 'Khác'],
@@ -178,10 +183,10 @@ export default function AIPredictionResults() {
               <p className="text-gray-600">Kết quả dự đoán từ AI - Phân tích và đánh giá hiệu suất mô hình học máy</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center cursor-pointer">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center cursor-pointer">
                 ➕ Tạo dự đoán mới
               </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center cursor-pointer">
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center cursor-pointer">
                 ⬇️ Xuất báo cáo
               </button>
             </div>
@@ -194,7 +199,11 @@ export default function AIPredictionResults() {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Phạm vi</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select 
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  value={scopeFilter}
+                  onChange={(e) => setScopeFilter(e.target.value)}
+                >
                   <option>Toàn trường</option>
                   <option>Khoa CNTT</option>
                   <option>Khoa Kinh tế</option>
@@ -205,13 +214,25 @@ export default function AIPredictionResults() {
               </div>
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Thời gian</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select 
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  value={timeFilter}
+                  onChange={(e) => setTimeFilter(e.target.value)}
+                >
                   <option>Học kỳ hiện tại (2024-1)</option>
                   <option>Học kỳ 2023-2</option>
                   <option>Học kỳ 2023-1</option>
                   <option>Học kỳ 2022-2</option>
                 </select>
               </div>
+            </div>
+            
+            {/* Current Filter Display */}
+            <div className="mt-4 flex items-center gap-2 text-sm">
+              <span className="text-gray-600">Đang hiển thị:</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                {scopeFilter} - {timeFilter}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -537,7 +558,7 @@ export default function AIPredictionResults() {
                   <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">Ưu tiên cao</span>
                 </div>
                 <p className="text-gray-600 mb-4">Xác định và hỗ trợ các sinh viên có nguy cơ học tập thấp thông qua các chương trình tư vấn và hỗ trợ học tập.</p>
-                <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer">
+                <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
                   Thực hiện ngay
                 </button>
               </CardContent>
@@ -550,7 +571,7 @@ export default function AIPredictionResults() {
                   <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">Ưu tiên trung bình</span>
                 </div>
                 <p className="text-gray-600 mb-4">Cải thiện phương pháp giảng dạy và đánh giá để nâng cao hiệu quả học tập của sinh viên.</p>
-                <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer">
+                <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
                   Lên kế hoạch
                 </button>
               </CardContent>
@@ -563,7 +584,7 @@ export default function AIPredictionResults() {
                   <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Ưu tiên thấp</span>
                 </div>
                 <p className="text-gray-600 mb-4">Tăng cường các buổi ôn tập và hỗ trợ sinh viên chuẩn bị tốt hơn cho các kỳ thi quan trọng.</p>
-                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer">
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
                   Xem xét sau
                 </button>
               </CardContent>

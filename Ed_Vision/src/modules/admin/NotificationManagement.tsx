@@ -186,10 +186,10 @@ export default function NotificationManagement() {
           <p className="text-gray-600">Tạo, gửi và theo dõi thông báo đến người dùng trong hệ thống</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          <button className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
             📥 Xuất báo cáo
           </button>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
             ➕ Tạo thông báo mới
           </button>
         </div>
@@ -272,7 +272,7 @@ export default function NotificationManagement() {
                   <input 
                     type="text" 
                     placeholder="Nhập tiêu đề thông báo..." 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                     value={newNotification.title}
                     onChange={(e) => setNewNotification(prev => ({ ...prev, title: e.target.value }))}
                   />
@@ -283,7 +283,7 @@ export default function NotificationManagement() {
                   <textarea 
                     rows={4} 
                     placeholder="Nhập nội dung thông báo..." 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                     value={newNotification.content}
                     onChange={(e) => setNewNotification(prev => ({ ...prev, content: e.target.value }))}
                   />
@@ -292,7 +292,7 @@ export default function NotificationManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Mức độ ưu tiên</label>
                   <select 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                     value={newNotification.priority}
                     onChange={(e) => setNewNotification(prev => ({ ...prev, priority: e.target.value }))}
                   >
@@ -308,7 +308,7 @@ export default function NotificationManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian hiển thị</label>
                   <input 
                     type="datetime-local" 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                     value={newNotification.displayTime}
                     onChange={(e) => setNewNotification(prev => ({ ...prev, displayTime: e.target.value }))}
                   />
@@ -317,7 +317,7 @@ export default function NotificationManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Đối tượng nhận</label>
                   <select 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                     value={newNotification.target}
                     onChange={(e) => setNewNotification(prev => ({ ...prev, target: e.target.value }))}
                   >
@@ -353,13 +353,13 @@ export default function NotificationManagement() {
             <div className="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
               <button 
                 onClick={handleSaveDraft}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer"
               >
                 💾 Lưu nháp
               </button>
               <button 
                 onClick={handleSendNotification}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer"
               >
                 📧 Gửi thông báo
               </button>
@@ -381,7 +381,7 @@ export default function NotificationManagement() {
                   <input 
                     type="text" 
                     placeholder="Tìm kiếm theo tiêu đề, nội dung..." 
-                    className="border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                    className="border border-gray-300 rounded-lg pl-10 pr-3 py-1.5 text-xs text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -389,7 +389,7 @@ export default function NotificationManagement() {
                 
                 {/* Target Filter */}
                 <select 
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                   value={targetFilter}
                   onChange={(e) => setTargetFilter(e.target.value)}
                 >
@@ -402,7 +402,7 @@ export default function NotificationManagement() {
                 
                 {/* Priority Filter */}
                 <select 
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                 >
@@ -493,15 +493,15 @@ export default function NotificationManagement() {
                 Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">3</span> trong tổng số <span className="font-medium">245</span> thông báo
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">Trước</button>
-                <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm cursor-pointer font-medium">1</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">2</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">3</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">4</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">5</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">Trước</button>
+                <button className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs cursor-pointer font-medium">1</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">2</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">3</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">4</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">5</button>
                 <span className="px-2 text-sm text-gray-500 font-medium">...</span>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">25</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">Sau</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">25</button>
+                <button className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors font-medium">Sau</button>
               </div>
             </div>
           </div>

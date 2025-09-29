@@ -659,7 +659,7 @@ export default function TeacherPerformance() {
                   <p className={`${rec.color.replace('text-', 'text-').replace('-600', '-700')} mb-4`}>
                     {rec.description}
                   </p>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border-2 border-blue-600">
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-2 border-blue-600">
                     📋 Xem chi tiết
                   </button>
                 </div>

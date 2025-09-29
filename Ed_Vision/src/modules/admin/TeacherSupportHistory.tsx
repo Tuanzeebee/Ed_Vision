@@ -301,13 +301,13 @@ const TeacherSupportHistory = () => {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-6 bg-blue-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Tổng yêu cầu</p>
-                  <p className="text-2xl font-bold text-gray-900">25</p>
+                  <p className="text-sm text-blue-800">Tổng yêu cầu</p>
+                  <p className="text-2xl font-bold text-blue-900">25</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 bg-blue-200 rounded-lg flex items-center justify-center">
                   <i className="fas fa-headset text-blue-600 text-xl"></i>
                 </div>
               </div>
@@ -315,13 +315,13 @@ const TeacherSupportHistory = () => {
           </Card>
           
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-6 bg-green-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Đã xử lý</p>
-                  <p className="text-2xl font-bold text-green-600">12</p>
+                  <p className="text-sm text-green-800">Đã xử lý</p>
+                  <p className="text-2xl font-bold text-green-900">12</p>
                 </div>
-                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 bg-green-200 rounded-lg flex items-center justify-center">
                   <i className="fas fa-check-circle text-green-600 text-xl"></i>
                 </div>
               </div>
@@ -329,13 +329,13 @@ const TeacherSupportHistory = () => {
           </Card>
           
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-6 bg-yellow-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Đang xử lý</p>
-                  <p className="text-2xl font-bold text-yellow-600">8</p>
+                  <p className="text-sm text-yellow-800">Đang xử lý</p>
+                  <p className="text-2xl font-bold text-yellow-900">8</p>
                 </div>
-                <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 bg-yellow-200 rounded-lg flex items-center justify-center">
                   <i className="fas fa-clock text-yellow-600 text-xl"></i>
                 </div>
               </div>
@@ -343,13 +343,13 @@ const TeacherSupportHistory = () => {
           </Card>
           
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-6 bg-red-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Chờ xử lý</p>
-                  <p className="text-2xl font-bold text-red-600">5</p>
+                  <p className="text-sm text-red-800">Chờ xử lý</p>
+                  <p className="text-2xl font-bold text-red-900">5</p>
                 </div>
-                <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 bg-red-200 rounded-lg flex items-center justify-center">
                   <i className="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                 </div>
               </div>
@@ -362,7 +362,7 @@ const TeacherSupportHistory = () => {
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Phân bố theo trạng thái</h3>
-              <div className="h-64">
+              <div className="h-48 w-full">
                 <Doughnut data={statusChartData} options={doughnutChartOptions} />
               </div>
             </CardContent>

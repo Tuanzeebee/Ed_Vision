@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/ui/admin/AdminLayout";
+import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
 
 type Question = {
@@ -28,70 +29,24 @@ const QuestionManagement = () => {
   });
 
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
 
-  // Mock data
-  const questions: Question[] = [
-    {
-      id: "1",
-      questionId: "Q001",
-      content: "Bạn đánh giá sức khỏe tâm lý tổng thể của mình như thế nào?",
-      category: "psychology",
-      type: "single-choice",
-      optionsCount: 4,
-      createdDate: "2024-01-15"
-    },
-    {
-      id: "2", 
-      questionId: "Q002",
-      content: "Những thách thức tài chính nào bạn hiện đang gặp phải?",
-      category: "finance",
-      type: "multiple-choice",
-      optionsCount: 6,
-      createdDate: "2024-01-14"
-    },
-    {
-      id: "3",
-      questionId: "Q003", 
-      content: "Bạn có hài lòng với chất lượng giảng dạy của giảng viên không?",
-      category: "academic",
-      type: "scale",
-      optionsCount: "5 điểm",
-      createdDate: "2024-01-13"
-    },
-    {
-      id: "4",
-      questionId: "Q004",
-      content: "Mô tả tình trạng sức khỏe thể chất hiện tại của bạn",
-      category: "health",
-      type: "text",
-      optionsCount: "Tự do",
-      createdDate: "2024-01-12"
-    },
-    {
-      id: "5",
-      questionId: "Q005",
-      content: "Bạn thường sử dụng những phương tiện giao thông nào để đến trường?",
-      category: "general",
-      type: "multiple-choice",
-      optionsCount: 5,
-      createdDate: "2024-01-11"
-    },
-    {
-      id: "6",
-      questionId: "Q006",
-      content: "Đánh giá mức độ hài lòng với cơ sở vật chất của trường",
-      category: "general",
-      type: "single-choice", 
-      optionsCount: 5,
-      createdDate: "2024-01-10"
-    }
-  ];
+  // Mock data is now inside useEffect
 
   const handleFilterChange = (filterKey: keyof QuestionFilter, value: string) => {
     setFilters(prev => ({
       ...prev,
       [filterKey]: value
     }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      search: '',
+      category: 'all',
+      type: 'all'
+    });
   };
 
   const handleSelectQuestion = (questionId: string) => {
@@ -104,11 +59,92 @@ const QuestionManagement = () => {
 
   const handleSelectAll = () => {
     setSelectedQuestions(
-      selectedQuestions.length === questions.length 
+      selectedQuestions.length === filteredQuestions.length 
         ? [] 
-        : questions.map(q => q.id)
+        : filteredQuestions.map(q => q.id)
     );
   };
+
+  // Filter logic with loading state
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const filterTimeout = setTimeout(() => {
+      // Move questions data inside useEffect to avoid dependency issues
+      const questionsData: Question[] = [
+        {
+          id: "1",
+          questionId: "Q001",
+          content: "Bạn đánh giá sức khỏe tâm lý tổng thể của mình như thế nào?",
+          category: "psychology",
+          type: "single-choice",
+          optionsCount: 4,
+          createdDate: "2024-01-15"
+        },
+        {
+          id: "2", 
+          questionId: "Q002",
+          content: "Những thách thức tài chính nào bạn hiện đang gặp phải?",
+          category: "finance",
+          type: "multiple-choice",
+          optionsCount: 6,
+          createdDate: "2024-01-14"
+        },
+        {
+          id: "3",
+          questionId: "Q003", 
+          content: "Bạn có hài lòng với chất lượng giảng dạy của giảng viên không?",
+          category: "academic",
+          type: "scale",
+          optionsCount: "5 điểm",
+          createdDate: "2024-01-13"
+        },
+        {
+          id: "4",
+          questionId: "Q004",
+          content: "Mô tả tình trạng sức khỏe thể chất hiện tại của bạn",
+          category: "health",
+          type: "text",
+          optionsCount: "Tự do",
+          createdDate: "2024-01-12"
+        },
+        {
+          id: "5",
+          questionId: "Q005",
+          content: "Bạn thường sử dụng những phương tiện giao thông nào để đến trường?",
+          category: "general",
+          type: "multiple-choice",
+          optionsCount: 5,
+          createdDate: "2024-01-11"
+        },
+        {
+          id: "6",
+          questionId: "Q006",
+          content: "Đánh giá mức độ hài lòng với cơ sở vật chất của trường",
+          category: "general",
+          type: "single-choice", 
+          optionsCount: 5,
+          createdDate: "2024-01-10"
+        }
+      ];
+      
+      const filtered = questionsData.filter(question => {
+        const matchesSearch = filters.search === '' || 
+          question.content.toLowerCase().includes(filters.search.toLowerCase()) ||
+          question.questionId.toLowerCase().includes(filters.search.toLowerCase());
+        
+        const matchesCategory = filters.category === 'all' || question.category === filters.category;
+        const matchesType = filters.type === 'all' || question.type === filters.type;
+        
+        return matchesSearch && matchesCategory && matchesType;
+      });
+      
+      setFilteredQuestions(filtered);
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(filterTimeout);
+  }, [filters.search, filters.category, filters.type]);
 
   const getCategoryBadge = (category: string) => {
     const badges = {
@@ -211,9 +247,11 @@ const QuestionManagement = () => {
                   </select>
                 </div>
 
-                <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded-md font-medium transition-colors flex items-center cursor-pointer text-xs">
-                  <i className="fas fa-filter mr-2"></i>
-                  Lọc
+                <button 
+                  onClick={handleResetFilters}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1.5 rounded-md font-medium transition-colors flex items-center cursor-pointer text-xs">
+                  <i className="fas fa-undo mr-2"></i>
+                  Reset
                 </button>
               </div>
               
@@ -241,15 +279,22 @@ const QuestionManagement = () => {
         {/* Questions Table */}
         <Card>
           <CardContent className="p-6">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+              {isLoading && (
+                <LoadingSpinner 
+                  text="Đang tải dữ liệu..." 
+                  size="md" 
+                  position="top" 
+                />
+              )}
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="border border-gray-200 px-4 py-3 text-left">
                       <input 
                         type="checkbox" 
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        checked={selectedQuestions.length === questions.length}
+                        className="rounded border-gray-300 text-white focus:ring-gray-500 accent-white"
+                        checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
                         onChange={handleSelectAll}
                       />
                     </th>
@@ -263,12 +308,22 @@ const QuestionManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {questions.map((question) => (
+                  {!isLoading && filteredQuestions.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center">
+                        <div className="text-gray-500">
+                          <span className="text-2xl mb-2 block">🔍</span>
+                          <p className="text-sm">Không tìm thấy câu hỏi phù hợp với bộ lọc</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : !isLoading ? (
+                    filteredQuestions.map((question) => (
                     <tr key={question.id} className="hover:bg-gray-50">
                       <td className="border border-gray-200 px-4 py-3">
                         <input 
                           type="checkbox" 
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-gray-300 text-white focus:ring-gray-500 accent-white"
                           checked={selectedQuestions.includes(question.id)}
                           onChange={() => handleSelectQuestion(question.id)}
                         />
@@ -309,7 +364,8 @@ const QuestionManagement = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  ) : null}
                 </tbody>
               </table>
             </div>
@@ -317,18 +373,18 @@ const QuestionManagement = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
               <div className="text-sm text-gray-600">
-                Hiện <span className="font-medium">1</span> đến <span className="font-medium">6</span> trong tổng số <span className="font-medium">24</span> kết quả
+                Hiện <span className="font-medium">1</span> đến <span className="font-medium">{filteredQuestions.length}</span> trong tổng số <span className="font-medium">{filteredQuestions.length}</span> kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer" disabled>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer" disabled>
                   <i className="fas fa-chevron-left mr-1"></i>
                   Trước
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">4</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">4</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                   Sau
                   <i className="fas fa-chevron-right ml-1"></i>
                 </button>

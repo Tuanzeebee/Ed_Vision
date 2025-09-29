@@ -84,10 +84,10 @@ export default function LeadershipReports() {
   };
 
   const dataDistributionData = {
-    labels: ['Điểm số', 'Chuyên cần', 'Học phí', 'Khảo sát', 'Hoạt động'],
+    labels: ['Điểm số', 'Hoạt động học tập', 'Thông tin sinh viên', 'Khảo sát đánh giá', 'Báo cáo hệ thống'],
     datasets: [{
       label: 'Số lượng bản ghi (nghìn)',
-      data: [450, 320, 280, 150, 120],
+      data: [450, 320, 280, 150, 180],
       backgroundColor: [
         '#3b82f6',
         '#10b981',
@@ -154,9 +154,13 @@ export default function LeadershipReports() {
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: { top: 0, right: 0, bottom: 0, left: 0 }
+    },
     plugins: {
       legend: {
-        position: 'bottom' as const
+        position: 'bottom' as const,
+        labels: { padding: 10 }
       }
     }
   };
@@ -280,7 +284,7 @@ export default function LeadershipReports() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Loại báo cáo</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                   <option>Báo cáo điểm số</option>
                   <option>Báo cáo hiệu suất</option>
                   <option>Báo cáo dự đoán</option>
@@ -289,7 +293,7 @@ export default function LeadershipReports() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Phạm vi dữ liệu</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                   <option>Toàn trường</option>
                   <option>Theo khoa</option>
                   <option>Theo lớp</option>
@@ -298,7 +302,7 @@ export default function LeadershipReports() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Khoảng thời gian</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                   <option>Học kỳ hiện tại</option>
                   <option>Năm học hiện tại</option>
                   <option>6 tháng gần đây</option>
@@ -310,12 +314,12 @@ export default function LeadershipReports() {
                 <input 
                   type="text" 
                   placeholder="Nhập từ khóa lọc..." 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Định dạng xuất</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                   <option>PDF</option>
                   <option>Excel</option>
                   <option>Word</option>
@@ -323,10 +327,10 @@ export default function LeadershipReports() {
                 </select>
               </div>
               <div className="flex items-end space-x-2">
-                <button className="bg-gray-200 text-gray-700 px-2 py-1 text-sm rounded-md hover:bg-gray-300 transition-colors cursor-pointer">
+                <button className="bg-gray-200 text-gray-700 px-2 py-1 text-xs rounded-md hover:bg-gray-300 transition-colors cursor-pointer">
                   💾 Lưu cấu hình
                 </button>
-                <button className="bg-blue-600 text-white px-2 py-1 text-sm rounded-md hover:bg-blue-700 transition-colors cursor-pointer">
+                <button className="bg-blue-600 text-white px-2 py-1 text-xs rounded-md hover:bg-blue-700 transition-colors cursor-pointer">
                   ➕ Tạo báo cáo
                 </button>
               </div>
@@ -448,8 +452,8 @@ export default function LeadershipReports() {
           {/* Faculty Distribution Chart */}
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Phân bố theo khoa</h3>
-              <div className="h-80 w-full">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Phân bố theo khoa</h3>
+              <div className="h-64 w-full mt-2">
                 <Doughnut data={facultyData} options={doughnutOptions} />
               </div>
             </CardContent>
@@ -537,7 +541,7 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">📊</div>
                   <h3 className="font-semibold mb-2">Dự đoán điểm cuối kỳ</h3>
                   <p className="text-sm opacity-90 mb-4">Phân tích và dự đoán kết quả học tập</p>
-                  <button className="bg-white text-blue-600 px-4 py-2 text-sm rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button className="bg-white text-blue-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -548,7 +552,7 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">👨‍🏫</div>
                   <h3 className="font-semibold mb-2">Phân tích hiệu suất giảng viên</h3>
                   <p className="text-sm opacity-90 mb-4">Đánh giá chất lượng giảng dạy</p>
-                  <button className="bg-white text-green-600 px-4 py-2 text-sm rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button className="bg-white text-green-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -559,7 +563,7 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">⚖️</div>
                   <h3 className="font-semibold mb-2">So sánh kết quả học tập</h3>
                   <p className="text-sm opacity-90 mb-4">Phân tích xu hướng và so sánh</p>
-                  <button className="bg-white text-purple-600 px-4 py-2 text-sm rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button className="bg-white text-purple-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -570,7 +574,7 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">⚠️</div>
                   <h3 className="font-semibold mb-2">Cảnh báo học vụ</h3>
                   <p className="text-sm opacity-90 mb-4">Phát hiện rủi ro và cảnh báo sớm</p>
-                  <button className="bg-white text-orange-600 px-4 py-2 text-sm rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button className="bg-white text-orange-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
                     ⚡ Tạo nhanh
                   </button>
                 </div>

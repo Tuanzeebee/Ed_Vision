@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "@/components/ui/admin/AdminLayout";
-import PermissionHeader from "@/components/ui/admin/PermissionHeader";
+import PermissionHeader, { type FilterState } from "@/components/ui/admin/PermissionHeader";
+import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
 
 interface Permission {
   id: string;
@@ -47,11 +48,27 @@ type PermissionState = {
 
 export default function RolePermissionManagement() {
   const [selectedRole, setSelectedRole] = useState('student');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('Tất cả');
-  const [statusFilter, setStatusFilter] = useState('Tất cả');
-  const [displayFilter, setDisplayFilter] = useState('Tất cả quyền');
+  const [filters, setFilters] = useState<FilterState>({
+    searchTerm: '',
+    accountTypeFilter: 'Tất cả',
+    schoolFilter: 'Tất cả',
+    majorFilter: 'Tất cả',
+    statusFilter: 'Tất cả',
+    permissionDisplayFilter: 'Tất cả'
+  });
+  const [isLoading, setIsLoading] = useState(false);
   
+  // Loading effect when filters change
+  useEffect(() => {
+    setIsLoading(true);
+    const loadTimeout = setTimeout(() => {
+      console.log('Filter applied:', { filters, selectedRole });
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(loadTimeout);
+  }, [filters, selectedRole]);
+
   // Permission state for each group
   const [permissions, setPermissions] = useState<PermissionState>({
     overview: {
@@ -173,6 +190,25 @@ export default function RolePermissionManagement() {
     return { granted, total };
   };
 
+  // Filter logic for roles
+  const filteredRoles = roles.filter(role => {
+    const matchesSearch = filters.searchTerm === '' || 
+      role.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
+    
+    const matchesDepartment = filters.accountTypeFilter === 'Tất cả' || 
+      (filters.accountTypeFilter === 'Sinh viên' && role.name === 'Sinh viên') ||
+      (filters.accountTypeFilter === 'Giảng viên' && role.name === 'Giảng viên') ||
+      (filters.accountTypeFilter === 'Lãnh đạo' && role.name === 'Lãnh đạo') ||
+      (filters.accountTypeFilter === 'Phụ huynh' && role.name === 'Phụ huynh');
+    
+    const matchesStatus = filters.statusFilter === 'Tất cả' || 
+      (filters.statusFilter === 'Hoạt động' && role.isActive) ||
+      (filters.statusFilter === 'Tạm khóa' && !role.isActive) ||
+      (filters.statusFilter === 'Đã khóa' && !role.isActive);
+    
+    return matchesSearch && matchesDepartment && matchesStatus;
+  });
+
   const getTotalStats = () => {
     let totalGranted = 0;
     let sensitiveLose = 0;
@@ -226,108 +262,17 @@ export default function RolePermissionManagement() {
   const stats = getTotalStats();
 
   return (
-    <AdminLayout activePage="/admin/permissions">
+    <AdminLayout>
       <div className="p-6 bg-gray-50 min-h-screen">
         <PermissionHeader 
           activeTab="role" 
           onUndo={handleUndo}
           onExportConfig={handleExportConfig}
           onSaveChanges={handleSaveChanges}
+          filters={filters}
+          onFiltersChange={setFilters}
+          showFilters={true}
         />
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Bộ lọc tài khoản</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tìm kiếm</label>
-                <input 
-                  type="text" 
-                  placeholder="Tên vai trò hoặc mô tả..." 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Loại vai trò</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={departmentFilter}
-                  onChange={(e) => setDepartmentFilter(e.target.value)}
-                >
-                  <option>Tất cả</option>
-                  <option>CNTT</option>
-                  <option>Kinh tế</option>
-                  <option>Y Dược</option>
-                  <option>Ngoại ngữ</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Trường</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option>Tất cả</option>
-                  <option>CNTT</option>
-                  <option>Kinh tế</option>
-                  <option>Y Dược</option>
-                  <option>Ngoại ngữ</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Chuyên ngành</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option>Tất cả</option>
-                  <option>Khoa học máy tính</option>
-                  <option>Hệ thống thông tin</option>
-                  <option>Mạng máy tính</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={displayFilter}
-                  onChange={(e) => setDisplayFilter(e.target.value)}
-                >
-                  <option>Tất cả</option>
-                  <option>Hoạt động</option>
-                  <option>Tạm khóa</option>
-                  <option>Đã khóa</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Hiển thị quyền</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option>Tất cả quyền</option>
-                  <option>Được cấp</option>
-                  <option>Bị cấm</option>
-                  <option>Override</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Đối tượng</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Tất cả</option>
-                  <option>Sinh viên</option>
-                  <option>Giảng viên</option>
-                  <option>Lãnh đạo</option>
-                  <option>Phụ huynh</option>
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -338,8 +283,15 @@ export default function RolePermissionManagement() {
                 <h3 className="text-lg font-semibold text-gray-800">Danh sách vai trò</h3>
                 <p className="text-sm text-gray-600 mt-1">Chọn vai trò để xem chi tiết quyền</p>
               </div>
-              <div className="p-4 space-y-2">
-                {roles.map((role) => (
+              <div className="p-4 space-y-2 relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+                {isLoading && (
+                  <LoadingSpinner 
+                    text="Đang tải danh sách vai trò..." 
+                    size="md" 
+                    position="center" 
+                  />
+                )}
+                {!isLoading && filteredRoles.map((role) => (
                   <div
                     key={role.id}
                     onClick={() => setSelectedRole(role.id)}
@@ -471,10 +423,62 @@ export default function RolePermissionManagement() {
           </div>
         </div>
 
+        {/* Permission Concepts Explanation */}
+        <Card className="mt-6">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">💡 Giải thích về Phân quyền</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
+                  <span className="mr-2">🏛️</span>
+                  Quyền Kế thừa (Role-based)
+                </h4>
+                <p className="text-blue-700 text-sm mb-2">
+                  Quyền mặc định được cấp cho TẤT CẢ tài khoản thuộc vai trò này.
+                </p>
+                <ul className="text-blue-600 text-xs list-disc list-inside space-y-1">
+                  <li>Ví dụ: Tất cả Sinh viên đều có quyền "Xem điểm"</li>
+                  <li>Áp dụng đồng loạt cho {stats.accounts.toLocaleString()} tài khoản</li>
+                  <li>Thay đổi ở đây sẽ ảnh hưởng toàn bộ vai trò</li>
+                </ul>
+              </div>
+              
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-800 mb-2 flex items-center">
+                  <span className="mr-2">⚡</span>
+                  Quyền Override (Cá nhân)
+                </h4>
+                <p className="text-orange-700 text-sm mb-2">
+                  Quyền đặc biệt được cấp riêng cho từng tài khoản cụ thể.
+                </p>
+                <ul className="text-orange-600 text-xs list-disc list-inside space-y-1">
+                  <li>Ví dụ: Sinh viên A được cấp thêm quyền "Tạo khảo sát"</li>
+                  <li>Ưu tiên cao hơn quyền kế thừa</li>
+                  <li>Không bị ảnh hưởng khi thay đổi quyền vai trò</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                <span className="mr-2">📊</span>
+                Thứ tự ưu tiên quyền
+              </h4>
+              <div className="flex items-center space-x-4 text-sm">
+                <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full font-medium">1. Override Từ chối</span>
+                <span className="text-gray-400">→</span>
+                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">2. Override Cho phép</span>
+                <span className="text-gray-400">→</span>
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">3. Quyền Vai trò</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
         {/* Impact Summary */}
         <Card className="mt-6">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Tác động thay đổi</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">📈 Tác động thay đổi</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600">{stats.accounts.toLocaleString()}</p>
