@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import johnSmithAvatar from '../../assets/parent/avatar.png';
 import iconEducation from '../../assets/parent/iconEducation.svg';
-import iconNotification from '../../assets/parent/iconNotification.svg';
 import iconMoreHoriz from '../../assets/parent/iconMoreHoriz.svg';
 import iconChevronRight from '../../assets/parent/iconChevronRight.svg';
 import iconCalendar from '../../assets/parent/iconCalendar.svg';
@@ -13,7 +12,8 @@ import iconWarning from '../../assets/parent/iconWarning.svg';
 import iconTrophy from '../../assets/parent/iconTrophy.svg';
 import iconTrendUp from '../../assets/parent/iconTrendUp.svg';
 import iconInfo from '../../assets/parent/iconInfo.svg';
-
+import Header from "../../components/layout/Header"
+import Footer from "../../components/layout/Footer"
 type Student = {
   id: string;
   name: string;
@@ -173,7 +173,8 @@ export default function ParentDashboard({
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <Header />
+
         <div className="px-24 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -185,15 +186,8 @@ export default function ParentDashboard({
                 <p className="text-sm text-gray-500">Welcome back, Sarah Thompson</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <img src={iconNotification} alt="Notifications" className="w-6 h-6" />
-              </button>
-              <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-            </div>
           </div>
         </div>
-      </header>
 
       <div className="flex-1 p-8">
         <div className="max-w-7xl mx-auto grid grid-cols-2 gap-8">
@@ -382,6 +376,7 @@ export default function ParentDashboard({
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

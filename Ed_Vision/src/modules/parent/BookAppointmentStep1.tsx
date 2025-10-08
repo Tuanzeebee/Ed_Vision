@@ -12,7 +12,7 @@ import iconLocation from "@/assets/parent/iconLocation.svg";
 import iconWifi from "@/assets/parent/iconWifi.svg";
 import iconCheck from "@/assets/parent/iconCheck.svg";
 import iconChevronLeft from "@/assets/parent/iconChevronLeft.svg";
-
+import Header from "../../components/layout/Header"
 type MeetingType = "in-person" | "video-call" | "phone-call";
 
 type Props = {
@@ -58,6 +58,7 @@ export default function BookAppointmentStep1({ onContinue, onBack, onClose }: Pr
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
+      <Header />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Steps */}

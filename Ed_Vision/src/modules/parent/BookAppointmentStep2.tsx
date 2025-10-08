@@ -12,7 +12,7 @@ import iconChevronRight from "@/assets/parent/iconChevronRight.svg"
 import iconArrowLeft from "@/assets/parent/iconArrowLeft.svg"
 import iconInfo from "@/assets/parent/iconInfo.svg"
 import iconEducation from "@/assets/parent/iconEducation.svg"
-
+import Header from "../../components/layout/Header"
 type Props = {
   onBack?: () => void
   onContinue?: () => void
@@ -56,11 +56,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
 
   const calendar = [ 
     [],// Previous month days
-    [1, 2, 3, 4, 5, 6, 7],
-    [8, 9, 10, 11, 12, 13, 14],
-    [15, 16, 17, 18, 19, 20, 21],
-    [22, 23, 24, 25, 26, 27, 28],
-    [29, 30, 31, 1, 2, 3, 4], // Next month days
+    [1, 2, 3, 4, 5, 6, 7], // Next month days
   ]
 
   const isNextMonth = (day: number | null, weekIndex: number) => {
@@ -81,6 +77,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col">
       {/* Header */}
+      <Header />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}

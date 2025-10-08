@@ -9,11 +9,9 @@ import ConfirmButton from "@/components/ui/parent/Parent_ConfirmButton"
 import iconCalendar from "@/assets/parent/iconCalendar1.svg"
 import iconPeople from "@/assets/parent/iconPeople1.svg"
 import iconUser from "@/assets/parent/iconUser.svg"
-import iconNotes from "@/assets/parent/iconNotes.svg"
-import iconCommunication from "@/assets/parent/iconCommunication.svg"
 import iconWarning from "@/assets/parent/iconWarning1.svg"
 import iconArrowLeft from "@/assets/parent/iconArrowLeft1.svg"
-
+import Header from "../../components/layout/Header"
 type AppointmentData = {
   meetingType: string
   lecturer: string
@@ -68,6 +66,7 @@ export default function BookAppointmentStep4({
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header Section */}
+      <Header />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}
@@ -175,30 +174,6 @@ export default function BookAppointmentStep4({
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Additional Notes */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <img src={iconNotes} alt="" className="w-6 h-6 mr-3" />
-                    <h3 className="text-lg font-semibold text-yellow-900">Additional Notes</h3>
-                  </div>
-                  <Button variant="ghost" className="text-yellow-600 text-sm">Edit</Button>
-                </div>
-                <p className="text-base text-yellow-800 leading-6">{appointmentData.additionalNotes}</p>
-              </div>
-
-              {/* Communication Preferences */}
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <img src={iconCommunication} alt="" className="w-6 h-6 mr-3" />
-                    <h3 className="text-lg font-semibold text-purple-900">Communication Preferences</h3>
-                  </div>
-                  <Button variant="ghost" className="text-purple-600 text-sm">Edit</Button>
-                </div>
-                <p className="text-base text-purple-800">Preferred reminder method: {appointmentData.communicationPreference}</p>
               </div>
             </div>
 

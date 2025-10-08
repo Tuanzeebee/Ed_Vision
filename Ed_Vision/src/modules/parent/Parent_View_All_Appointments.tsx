@@ -20,7 +20,7 @@ import iconCheck from "@/assets/parent/iconCheckBoiderGreen.svg";
 import iconCheck2 from "@/assets/parent/iconCheckBoiderGreen2.svg";
 import iconArrowDown from "@/assets/parent/iconArrowDown.svg";
 import avatarJohnSmith from "@/assets/parent/avatarJohnSmith.png";
-
+import Header from "../../components/layout/Header"
 type Props = {
   // Add any props here if needed
 }
@@ -31,6 +31,7 @@ export default function AllAppointments({}: Props) {
   return (
     <div className="bg-gray-50 min-h-screen w-full">
       {/* Header Section */}
+      <Header />
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-24">
           <div className="flex items-center justify-between py-4">
@@ -64,9 +65,6 @@ export default function AllAppointments({}: Props) {
                 <img src={iconBooking} alt="Book" className="w-4 h-4" />
                 Book New Appointment
               </Button>
-              
-              {/* User Avatar */}
-              <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
             </div>
           </div>
         </div>

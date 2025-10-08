@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/parent/Parent_card"
-
+import Header from "../../components/layout/Header"
 // Import assets
 import avatarJohnSmith from "@/assets/parent/avatarJohnSmithDetail.png"
 import iconArrowLeft from "@/assets/parent/iconArrowLeft.svg"
@@ -24,6 +24,7 @@ export default function StudentDetails({}: Props) {
   return (
     <div className="bg-gray-50 min-h-screen w-full">
       {/* Header */}
+      <Header />
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-24">
           <div className="flex items-center justify-between py-4">
@@ -41,12 +42,6 @@ export default function StudentDetails({}: Props) {
                 <h1 className="text-xl font-semibold text-gray-900">Student Information</h1>
                 <p className="text-sm text-gray-500">Academic profile and progress overview</p>
               </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <img src={iconNotification} alt="Notifications" className="w-6 h-6" />
-              </button>
-              <div className="w-8 h-8 bg-gray-300 rounded-full cursor-pointer hover:bg-gray-400 transition-colors"></div>
             </div>
           </div>
         </div>
