@@ -14,7 +14,7 @@ import iconPatient from "@/assets/parent/iconPatient.svg"
 import iconDashboard from "@/assets/parent/iconDashboard.svg"
 import iconPhone from "@/assets/parent/iconPhonestep5.svg"
 import iconEmail from "@/assets/parent/iconEmail.svg"
-
+import Header from "../../components/layout/Header"
 type AppointmentData = {
   date: string
   time: string
@@ -74,6 +74,7 @@ export default function BookAppointmentStep5({
   return (
     <div className="bg-green-50 min-h-screen flex flex-col">
       {/* Header */}
+      <Header />
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">

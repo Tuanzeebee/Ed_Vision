@@ -3,17 +3,14 @@ import { Card, CardContent } from "@/components/ui/parent/Parent_card"
 import { Button } from "@/components/ui/parent/Parent_button"
 import { Input } from "@/components/ui/parent/Parent_Input"
 import { Select } from "@/components/ui/parent/Parent_Select"
-import { Textarea } from "@/components/ui/parent/Parent_Textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/parent/Parent_RadioGroup"
 import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader"
 import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper"
 import ContinueButton from "@/components/ui/parent/Parent_ContinueButton"
 
 // Import SVG assets
 import iconEducation from "@/assets/parent/iconUserstep5.svg"
-import iconInfo from "@/assets/parent/iconInfo.svg"
 import iconArrowLeft from "@/assets/parent/iconArrowLeft.svg"
-
+import Header from "../../components/layout/Header"
 type FormData = {
   meetingPurpose: string
   parentName: string
@@ -62,6 +59,7 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
+      <Header />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}
@@ -82,13 +80,13 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
               <h3 className="text-base font-medium text-blue-900">Your Selection Summary</h3>
               <div className="flex gap-4">
                 <div className="flex-1 space-y-0.5">
-                  <div className="text-sm font-medium text-blue-700">Meeting Type:</div>
-                  <div className="text-sm text-blue-800">In-Person Meeting</div>
-                  <div className="text-xs text-blue-600">30-60 minutes • School premises • Mr. Tuan (adviser)</div>
+                  <div className="text font-medium text-blue-700">Meeting Type:</div>
+                  <div className="text text-blue-800">In-Person Meeting</div>
+                  <div className="text text-blue-600">30-60 minutes • School premises • Mr. Tuan (adviser)</div>
                 </div>
                 <div className="flex-1 space-y-0.5">
-                  <div className="text-sm font-medium text-blue-700">Date & Time:</div>
-                  <div className="text-sm text-blue-800">Sunday, Dec 15, 2024 at 10:00 AM</div>
+                  <div className="text font-medium text-blue-700">Date & Time:</div>
+                  <div className="text text-blue-800">Sunday, Dec 15, 2024 at 10:00 AM</div>
                 </div>
               </div>
             </div>
@@ -99,9 +97,6 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
                 <div className="flex items-center">
                   <img src={iconEducation} alt="" className="w-6 h-6 mr-3" />
                   <h3 className="text-base font-semibold text-green-900">Student Information</h3>
-                </div>
-                <div className="bg-green-100 px-2.5 py-0.5 rounded-full">
-                  <span className="text-xs font-medium text-green-800">Auto-populated from Database</span>
                 </div>
               </div>
               
@@ -125,35 +120,10 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
                   <div className="text-xs text-green-600">✓ Current enrollment verified</div>
                 </div>
               </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-start">
-                  <img src={iconInfo} alt="" className="w-3 h-5 mr-2 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm font-bold text-blue-800 leading-5">
-                    <p className="mb-1">Note: Student information is automatically retrieved from the school database. If any details appear</p>
-                    <p>incorrect, please contact the school administration to update student records.</p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Meeting Purpose */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Meeting Purpose *</label>
-                <Select 
-                  value={formData.meetingPurpose}
-                  onChange={(e) => handleInputChange('meetingPurpose', e.target.value)}
-                  required
-                >
-                  <option value="">Select meeting purpose</option>
-                  <option value="academic">Academic Performance</option>
-                  <option value="behavior">Behavioral Concerns</option>
-                  <option value="general">General Discussion</option>
-                  <option value="other">Other</option>
-                </Select>
-              </div>
 
               {/* Parent/Guardian Information */}
               <div className="space-y-4">
@@ -210,52 +180,6 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
                     />
                   </div>
                 </div>
-              </div>
-
-              {/* Additional Notes */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Additional Notes or Specific Topics</label>
-                <Textarea
-                  placeholder="Please describe any specific topics you'd like to discuss or additional information the lecturer should know..."
-                  value={formData.additionalNotes}
-                  onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
-                  rows={4}
-                />
-                <p className="text-sm text-gray-500">Optional - This helps the lecturer prepare for your meeting</p>
-              </div>
-
-              {/* Communication Preferences */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">Preferred Communication Method for Reminders</label>
-                <RadioGroup value={formData.communicationMethod} onValueChange={(value) => handleInputChange('communicationMethod', value)}>
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem 
-                      value="email" 
-                      id="email"
-                      checked={formData.communicationMethod === 'email'}
-                      onChange={(e) => handleInputChange('communicationMethod', e.target.value)}
-                    />
-                    <label htmlFor="email" className="text-gray-700">Email notifications</label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem 
-                      value="sms" 
-                      id="sms"
-                      checked={formData.communicationMethod === 'sms'}
-                      onChange={(e) => handleInputChange('communicationMethod', e.target.value)}
-                    />
-                    <label htmlFor="sms" className="text-gray-700">SMS text messages</label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem 
-                      value="both" 
-                      id="both"
-                      checked={formData.communicationMethod === 'both'}
-                      onChange={(e) => handleInputChange('communicationMethod', e.target.value)}
-                    />
-                    <label htmlFor="both" className="text-gray-700">Both email and SMS</label>
-                  </div>
-                </RadioGroup>
               </div>
             </form>
           </CardContent>

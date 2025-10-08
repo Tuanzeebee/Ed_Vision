@@ -40,6 +40,8 @@ import InstructionsPage from "./modules/student/InstructionsPage";
 import AcademicPlanningDashboard from "./modules/student/AcademicPlanningDashboard";
 import CourseDetailView from "./modules/student/CourseDetailView";
 import FinancialSurveyStep1 from "./modules/student/FinancialSurveyStep1";
+import ChooseMascot from "./modules/student/ChooseMascot";
+import LearningAdventure from "./modules/student/LearningAdventure";
 function App() {
   return (
     <Router>
@@ -59,6 +61,9 @@ function App() {
         <Route path="/student/academic-planning" element={<AcademicPlanningDashboard />} />
         <Route path="/student/course-detail" element={<CourseDetailView />} />
         <Route path="/student/financial-survey/step/1" element={<FinancialSurveyStep1 />} />
+        <Route path="/student/course-overview" element={<StudentCourseOverview />} />
+        <Route path="/student/choose-mascot" element={<ChooseMascot />} />
+        <Route path="/student/learning-adventure" element={<LearningAdventure />} />
         {/* add new router */}
         {/* Redirect từ /book-appointment đến step 1 */}
         <Route    
