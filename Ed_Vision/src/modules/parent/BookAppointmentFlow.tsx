@@ -219,7 +219,7 @@ export default function BookAppointmentFlow({
               dateTime: `${flowData.selectedDate} at ${flowData.selectedTime}`,
               purpose: flowData.formData.meetingPurpose || "General Discussion",
               studentName: "Emma Thompson",
-              gradeClass: "Grade 7B - Mathematics Class",
+              gradeClass: "Grade K28 CMU TPM 5",
               parentName: flowData.formData.parentName,
               relationship: flowData.formData.relationshipToStudent,
               phoneNumber: flowData.formData.phoneNumber,

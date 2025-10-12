@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
-import ParentDashboard from "@/modules/parent/ParentDashboard";
 import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
 import StudentDetails from "@/modules/parent/Parent_StudentDetails";
 import AccountManagement from "./modules/admin/AccountManagement";
@@ -43,6 +42,8 @@ import FinancialSurveyStep1 from "./modules/student/FinancialSurveyStep1";
 import ChooseMascot from "./modules/student/ChooseMascot";
 import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
+import ParentDashboardNew from "./modules/parent/ParentDashboardNew";
+import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 function App() {
   return (
     <Router>
@@ -65,21 +66,15 @@ function App() {
         <Route path="/student/course-overview" element={<StudentCourseOverview />} />
         <Route path="/student/choose-mascot" element={<ChooseMascot />} />
         <Route path="/student/learning-adventure" element={<LearningAdventure />} />
-        {/* add new router */}
-        {/* Redirect từ /book-appointment đến step 1 */}
-        <Route    
-          path="/parent/book-appointment"
-          element={<Navigate to="/parent/book-appointment/step/1" replace />}
-        />
 
-        {/* Route cho các step cụ thể với URL parameter */}
-        <Route
-          path="/parent/book-appointment/step/:stepNumber"
-          element={<BookAppointmentStepWrapper />}
-        />
-
+        {/* Route cho parent */}
+        <Route path="/parent/book-appointment/step/:stepNumber" element={<BookAppointmentStepWrapper />}/>
+        <Route path="/parent/dashboard" element={<ParentDashboardNew />} />
+        <Route path="/parent/book-appointment" element={<Navigate to="/parent/book-appointment/step/1" replace />}/>
+        <Route path="/parent/appointments" element={<AllAppointments />} />
+        <Route path="/parent/student-details" element={<StudentDetails />} />
+        <Route path="/parent/chat" element={<ChatWithTeachers />} />
         {/* Route cho dashboard */}
-        <Route path="/parent/dashboard" element={<ParentDashboard />} />
         <Route path="/admin/dashboard" element={<AdminOverviewDashboard />} />
         <Route path="/admin/overview" element={<AdminOverviewDashboard />} />
         <Route path="/admin/student-management" element={<StudentManagementDashboard />} />
@@ -110,15 +105,9 @@ function App() {
         <Route path="/admin/permissions" element={<PermissionManagement />} />
         <Route path="/admin/role-permissions" element={<RolePermissionManagement />} />
         
-        {/* Route cho all appointments */}
-        <Route path="/parent/appointments" element={<AllAppointments />} />
-        
         {/* Route cho account management */}
         <Route path="/admin/account-management" element={<AccountManagement />} />
         <Route path="/admin/users" element={<AccountManagement />} />
-        
-        {/* Route cho student details */}
-        <Route path="/parent/student-details" element={<StudentDetails />} />
         
         {/* Teacher routes */}
         <Route path="/teacher/dashboard" element={<TeacherDashboard />} />

@@ -115,7 +115,7 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
                     <span className="text-sm font-medium text-gray-700">Student Grade/Class</span>
                     <span className="text-gray-400 text-base">🔒</span>
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 mb-1">Grade 7B</div>
+                  <div className="text-lg font-semibold text-gray-900 mb-1">Grade K28 CMU TPM 5</div>
                   <div className="text-sm text-gray-600 mb-1">Mathematics Class</div>
                   <div className="text-xs text-green-600">✓ Current enrollment verified</div>
                 </div>
