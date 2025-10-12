@@ -42,6 +42,7 @@ import CourseDetailView from "./modules/student/CourseDetailView";
 import FinancialSurveyStep1 from "./modules/student/FinancialSurveyStep1";
 import ChooseMascot from "./modules/student/ChooseMascot";
 import LearningAdventure from "./modules/student/LearningAdventure";
+import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 function App() {
   return (
     <Router>
@@ -126,7 +127,7 @@ function App() {
         <Route path="/teacher/grade-management" element={<GradeManagement />} />
         <Route path="/teacher/progress-tracking" element={<ProgressTracking />} />
         <Route path="/teacher/reports-alerts" element={<TeacherReport />} />
-
+        <Route path="/teacher/appointments" element={<TeacherAppointmentDashboard />} />  
       </Routes>
     </Router>
   );
