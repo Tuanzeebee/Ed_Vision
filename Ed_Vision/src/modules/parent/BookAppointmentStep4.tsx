@@ -46,7 +46,7 @@ export default function BookAppointmentStep4({
     dateTime: "Sunday, December 15, 2024",
     purpose: "Academic Progress Discussion",
     studentName: "Emma Thompson",
-    gradeClass: "Grade 7B - Mathematics Class",
+    gradeClass: "Grade K28 CMU TPM 5",
     parentName: "Sarah Thompson",
     relationship: "Mother",
     phoneNumber: "+1 (555) 123-4567",

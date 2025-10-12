@@ -107,7 +107,10 @@ export default function StudentDetails({}: Props) {
                 <h3 className="text-lg font-semibold text-gray-900">Course Progress</h3>
                 <div className="flex gap-3">
                   <select className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-200 transition-colors">
-                    <option>Sort by Course Name</option>
+                    <option>Semester 1, 2024-2025</option>
+                    <option>Semester 2, 2024-2025</option>
+                    <option>Semester 1, 2023-2024</option>
+                    <option>Semester 2, 2023-2024</option>
                   </select>
                   <select className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-200 transition-colors">
                     <option>All Courses</option>
@@ -133,7 +136,7 @@ export default function StudentDetails({}: Props) {
                     <tr>
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Course Name</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-700">Credits</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700">Progress</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">Attendance</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-700">Grade</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-700">Points</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-700">Status</th>
@@ -149,11 +152,8 @@ export default function StudentDetails({}: Props) {
                         </div>
                       </td>
                       <td className="text-center py-6 px-4">3</td>
-                      <td className="py-6 px-4">
-                        <div className="w-20 mx-auto">
-                          <div className="bg-green-500 h-2 rounded-full mb-1"></div>
-                          <div className="text-sm text-green-600 text-center">100%</div>
-                        </div>
+                      <td className="text-center py-6 px-4">
+                        <span className="text-lg font-semibold text-green-600">95%</span>
                       </td>
                       <td className="text-center py-6 px-4">
                         <span className="text-lg font-semibold text-green-600">A-</span>
@@ -174,13 +174,8 @@ export default function StudentDetails({}: Props) {
                         </div>
                       </td>
                       <td className="text-center py-6 px-4">2</td>
-                      <td className="py-6 px-4">
-                        <div className="w-20 mx-auto">
-                          <div className="bg-gray-200 h-2 rounded-full mb-1 relative">
-                            <div className="bg-blue-500 h-2 rounded-full w-3/4"></div>
-                          </div>
-                          <div className="text-sm text-blue-600 text-center">75%</div>
-                        </div>
+                      <td className="text-center py-6 px-4">
+                        <span className="text-lg font-semibold text-blue-600">88%</span>
                       </td>
                       <td className="text-center py-6 px-4">
                         <span className="text-lg font-semibold text-blue-600">B+</span>
@@ -201,11 +196,8 @@ export default function StudentDetails({}: Props) {
                         </div>
                       </td>
                       <td className="text-center py-6 px-4">3</td>
-                      <td className="py-6 px-4">
-                        <div className="w-20 mx-auto">
-                          <div className="bg-red-500 h-2 rounded-full mb-1"></div>
-                          <div className="text-sm text-red-600 text-center">100%</div>
-                        </div>
+                      <td className="text-center py-6 px-4">
+                        <span className="text-lg font-semibold text-red-600">35%</span>
                       </td>
                       <td className="text-center py-6 px-4">
                         <span className="text-lg font-semibold text-red-600">F</span>
@@ -226,13 +218,8 @@ export default function StudentDetails({}: Props) {
                         </div>
                       </td>
                       <td className="text-center py-6 px-4">3</td>
-                      <td className="py-6 px-4">
-                        <div className="w-20 mx-auto">
-                          <div className="bg-gray-200 h-2 rounded-full mb-1 relative">
-                            <div className="bg-blue-500 h-2 rounded-full w-3/5"></div>
-                          </div>
-                          <div className="text-sm text-blue-600 text-center">60%</div>
-                        </div>
+                      <td className="text-center py-6 px-4">
+                        <span className="text-lg font-semibold text-blue-600">92%</span>
                       </td>
                       <td className="text-center py-6 px-4">
                         <span className="text-lg font-semibold text-blue-600">A</span>
@@ -253,11 +240,8 @@ export default function StudentDetails({}: Props) {
                         </div>
                       </td>
                       <td className="text-center py-6 px-4">4</td>
-                      <td className="py-6 px-4">
-                        <div className="w-20 mx-auto">
-                          <div className="bg-green-500 h-2 rounded-full mb-1"></div>
-                          <div className="text-sm text-green-600 text-center">100%</div>
-                        </div>
+                      <td className="text-center py-6 px-4">
+                        <span className="text-lg font-semibold text-green-600">98%</span>
                       </td>
                       <td className="text-center py-6 px-4">
                         <span className="text-lg font-semibold text-green-600">A+</span>
