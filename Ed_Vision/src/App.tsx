@@ -44,6 +44,9 @@ import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import ParentDashboardNew from "./modules/parent/ParentDashboardNew";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
+import LiveLearning from "./modules/student/LiveLearning";
+import VideoRoom from "./modules/student/VideoRoom";
+import StudyRooms from "./modules/student/StudyRooms";
 function App() {
   return (
     <Router>
@@ -66,6 +69,15 @@ function App() {
         <Route path="/student/course-overview" element={<StudentCourseOverview />} />
         <Route path="/student/choose-mascot" element={<ChooseMascot />} />
         <Route path="/student/learning-adventure" element={<LearningAdventure />} />
+        <Route path="/student/live-learning" element={<LiveLearning />} />
+        <Route path="/student/study-rooms" element={<StudyRooms />} />
+        <Route path="/student/video-room" element={<VideoRoom roomData={{
+          id: 'demo',
+          title: 'Demo Room', 
+          subtitle: 'Live Session · Demo',
+          description: 'Interactive learning session',
+          students: '12 participants'
+        }} />} /> 
 
         {/* Route cho parent */}
         <Route path="/parent/book-appointment/step/:stepNumber" element={<BookAppointmentStepWrapper />}/>
