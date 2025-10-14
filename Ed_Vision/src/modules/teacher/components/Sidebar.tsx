@@ -1,158 +1,105 @@
 import {
-  BarChart3,
-  GraduationCap,
+  Home,
+  Users,
   ClipboardList,
-  TrendingUp,
+  BarChart3,
   AlertTriangle,
-  MessageSquare,
-  Calendar,
-  CalendarPlus,
-  Clock,
-  CheckCircle,
+  Bell,
   Settings,
-  ChevronDown,
 } from 'lucide-react';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
 
 interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentPage: string;
-  onNavigate: (page: string) => void;
-  requestCount: number;
+  currentPage?: string;
+  onNavigate?: (path: string) => void;
 }
 
-export default function Sidebar({
-  isOpen,
-  onClose,
-  currentPage,
-  onNavigate,
-  requestCount,
-}: SidebarProps) {
-  const [appointmentDropdownOpen, setAppointmentDropdownOpen] = useState(true);
-
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'classes', label: 'Quản lý lớp học', icon: GraduationCap },
-    { id: 'grades', label: 'Quản lý điểm', icon: ClipboardList },
-    { id: 'progress', label: 'Theo dõi tiến độ', icon: TrendingUp },
-    { id: 'reports', label: 'Báo cáo & Cảnh báo', icon: AlertTriangle },
-    { id: 'messages', label: 'Tin nhắn/Thông báo', icon: MessageSquare },
-  ];
-
-  const appointmentSubItems = [
-    {
-      id: 'schedule',
-      label: 'Thiết lập lịch rảnh',
-      icon: CalendarPlus,
-      badge: null,
-    },
-    {
-      id: 'requests',
-      label: 'Yêu cầu lịch hẹn',
-      icon: Clock,
-      badge: requestCount,
-    },
-    {
-      id: 'confirmed',
-      label: 'Lịch hẹn đã xác nhận',
-      icon: CheckCircle,
-      badge: null,
-    },
-  ];
+export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const handleNavigation = (path: string) => {
+    if (onNavigate) {
+      onNavigate(path);
+    }
+  };
 
   return (
-    <>
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={onClose}
-        />
-      )}
+    <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto">
+      <nav className="p-4 space-y-2">
+        <button
+          onClick={() => handleNavigation('/teacher/dashboard')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'dashboard'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <Home className="w-5 h-5" />
+          <span>Dashboard</span>
+        </button>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed left-0 top-16 h-full bg-white shadow-lg border-r border-gray-200 w-64 transition-transform duration-300 ease-in-out z-40',
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        )}
-      >
-        <nav className="p-4 space-y-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                onNavigate(item.id);
-                onClose();
-              }}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <item.icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </button>
-          ))}
+        <button
+          onClick={() => handleNavigation('/teacher/class-management')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'class-management'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <Users className="w-5 h-5" />
+          <span>Quản lý lớp học</span>
+        </button>
 
-          {/* Appointment Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setAppointmentDropdownOpen(!appointmentDropdownOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 text-blue-600 bg-blue-50 rounded-lg font-medium hover:bg-blue-100 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <Calendar className="w-5 h-5" />
-                <span>Quản lý lịch hẹn</span>
-              </div>
-              <ChevronDown
-                className={cn(
-                  'w-4 h-4 transition-transform duration-200',
-                  appointmentDropdownOpen && 'rotate-180'
-                )}
-              />
-            </button>
+        <button
+          onClick={() => handleNavigation('/teacher/grade-management')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <ClipboardList className="w-5 h-5" />
+          <span>Quản lý điểm</span>
+        </button>
 
-            {appointmentDropdownOpen && (
-              <div className="mt-2 ml-4 space-y-1">
-                {appointmentSubItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      onNavigate(item.id);
-                      onClose();
-                    }}
-                    className={cn(
-                      'w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-colors relative',
-                      currentPage === item.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    )}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                    {item.badge !== null && item.badge > 0 && (
-                      <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-auto">
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        <button
+          onClick={() => handleNavigation('/teacher/progress-tracking')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'progress-tracking'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <BarChart3 className="w-5 h-5" />
+          <span>Theo dõi tiến độ</span>
+        </button>
 
-          <button
-            onClick={() => {
-              onNavigate('settings');
-              onClose();
-            }}
-            className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <Settings className="w-5 h-5" />
-            <span>Cài đặt tài khoản</span>
-          </button>
-        </nav>
-      </aside>
-    </>
+        <button
+          onClick={() => handleNavigation('/teacher/reports-alerts')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'reports-alerts'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <AlertTriangle className="w-5 h-5" />
+          <span>Báo cáo & Cảnh báo</span>
+        </button>
+
+        <button
+          onClick={() => handleNavigation('/teacher/messages')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'messages'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <Bell className="w-5 h-5" />
+          <span>Tin nhắn/Thông báo</span>
+        </button>
+
+        <button
+          onClick={() => handleNavigation('/teacher/settings')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'settings'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <Settings className="w-5 h-5" />
+          <span>Cài đặt tài khoản</span>
+        </button>
+      </nav>
+    </aside>
   );
 }
