@@ -12,6 +12,10 @@ import {
   Brain,
   MessageCircle,
   Megaphone,
+  Calendar,
+  CalendarPlus,
+  Clock,
+  CheckCircle,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,6 +30,9 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [isMessagesMenuOpen, setIsMessagesMenuOpen] = useState(
     currentPage === 'messages' || currentPage === 'chat'
   );
+  const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
+    currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+  );
 
   const handleNavigation = (path: string) => {
     if (onNavigate) {
@@ -39,6 +46,10 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
   const toggleMessagesMenu = () => {
     setIsMessagesMenuOpen(!isMessagesMenuOpen);
+  };
+
+  const toggleAppointmentMenu = () => {
+    setIsAppointmentMenuOpen(!isAppointmentMenuOpen);
   };
 
   return (
@@ -177,6 +188,69 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>Cuộc trò chuyện</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Appointment Management with Dropdown */}
+        <div className="space-y-1">
+          <button
+            onClick={toggleAppointmentMenu}
+            className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${
+              currentPage === 'appointments' || currentPage === 'requests' || currentPage === 'confirmed'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-5 h-5" />
+              <span>Quản lý lịch hẹn</span>
+            </div>
+            {isAppointmentMenuOpen ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Dropdown Menu */}
+          {isAppointmentMenuOpen && (
+            <div className="ml-4 space-y-1">
+              <button
+                onClick={() => handleNavigation('/teacher/appointments')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${
+                  currentPage === 'schedule'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <CalendarPlus className="w-4 h-4" />
+                <span>Thiết lập lịch rảnh</span>
+              </button>
+
+              <button
+                onClick={() => handleNavigation('/teacher/requests')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${
+                  currentPage === 'requests'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span>Yêu cầu lịch hẹn</span>
+              </button>
+
+              <button
+                onClick={() => handleNavigation('/teacher/confirmed')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${
+                  currentPage === 'confirmed'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>Lịch hẹn đã xác nhận</span>
               </button>
             </div>
           )}
