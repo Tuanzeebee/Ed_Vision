@@ -1,23 +1,22 @@
 ﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/student/Student_button"
-import { 
-  ArrowLeft, 
-  Users, 
-  Settings, 
-  Maximize, 
-  Mic, 
-  MicOff, 
-  Video, 
-  VideoOff, 
-  Monitor, 
-  Hand, 
-  Smile, 
+import {
+  ArrowLeft,
+  Users,
+  Settings,
+  Maximize,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Monitor,
+  Hand,
+  Smile,
   PhoneOff,
   Send,
   FileText,
   Code,
-  Image as ImageIcon,
   Upload,
   Download
 } from "lucide-react"
@@ -59,12 +58,12 @@ interface Participant {
   isSpeaking?: boolean
 }
 
-const TabButton = ({ 
-  isActive, 
-  onClick, 
-  children, 
-  icon 
-}: { 
+const TabButton = ({
+  isActive,
+  onClick,
+  children,
+  icon
+}: {
   isActive: boolean
   onClick: () => void
   children: React.ReactNode
@@ -74,22 +73,21 @@ const TabButton = ({
     role="tab"
     aria-selected={isActive}
     onClick={onClick}
-    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-      isActive
+    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${isActive
         ? 'text-white border-b-2 border-indigo-400 bg-white/5'
         : 'text-slate-300 hover:text-white hover:bg-white/5'
-    }`}
+      }`}
   >
     <span className="mr-2">{icon}</span>
     {children}
   </button>
 )
 
-const IconToggleButton = ({ 
-  isOn, 
-  onToggle, 
-  onIcon: OnIcon, 
-  offIcon: OffIcon, 
+const IconToggleButton = ({
+  isOn,
+  onToggle,
+  onIcon: OnIcon,
+  offIcon: OffIcon,
   ariaLabel,
   variant = 'default'
 }: {
@@ -101,12 +99,12 @@ const IconToggleButton = ({
   variant?: 'default' | 'danger'
 }) => {
   const baseClasses = "w-10 h-10 rounded-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-400/60"
-  const variantClasses = variant === 'danger' 
+  const variantClasses = variant === 'danger'
     ? "bg-red-500 hover:bg-red-600 text-white"
-    : isOn 
-      ? "bg-indigo-500 hover:bg-indigo-600 text-white" 
+    : isOn
+      ? "bg-indigo-500 hover:bg-indigo-600 text-white"
       : "bg-red-500 hover:bg-red-600 text-white"
-  
+
   return (
     <button
       aria-pressed={isOn}
@@ -128,7 +126,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
   const [showReactions, setShowReactions] = useState(false)
   const [chatInput, setChatInput] = useState('')
   const [notes, setNotes] = useState('')
-  
+
   const [chatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -168,24 +166,24 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
   ], [])
 
   const participants: Participant[] = useMemo(() => [
-    { 
-      name: 'You', 
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', 
-      isCurrentUser: true, 
-      isMuted: false 
+    {
+      name: 'You',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      isCurrentUser: true,
+      isMuted: false
     },
-    { 
-      name: 'Sarah M.', 
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face', 
-      isCurrentUser: false, 
-      isMuted: false, 
-      isSpeaking: true 
+    {
+      name: 'Sarah M.',
+      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
+      isCurrentUser: false,
+      isMuted: false,
+      isSpeaking: true
     },
-    { 
-      name: 'Mike R.', 
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', 
-      isCurrentUser: false, 
-      isMuted: true 
+    {
+      name: 'Mike R.',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      isCurrentUser: false,
+      isMuted: true
     }
   ], [])
 
@@ -275,22 +273,22 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
         <div className="flex-1 p-6">
           <div className="mb-4">
             <div className="bg-white/5 rounded-2xl overflow-hidden aspect-video relative border border-white/10">
-              <img 
-                src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=450&fit=crop" 
-                alt="Professor Lee presenting" 
+              <img
+                src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=450&fit=crop"
+                alt="Professor Lee presenting"
                 className="w-full h-full object-cover"
                 loading="lazy"
                 width={800}
                 height={450}
               />
-              
+
               <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   <span className="text-white text-sm font-medium">Prof. Lee</span>
                 </div>
               </div>
-              
+
               <div className="absolute top-3 right-3 bg-indigo-500/80 backdrop-blur-sm px-2 py-1 rounded text-xs border border-indigo-400/30">
                 <div className="flex items-center gap-1">
                   <Monitor className="w-3 h-3 text-white" />
@@ -302,25 +300,24 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 h-20">
             {participants.map((participant, index) => (
-              <div 
+              <div
                 key={index}
-                className={`bg-white/5 rounded overflow-hidden relative transition-all duration-200 hover:ring-1 hover:ring-white/20 border border-white/10 ${
-                  participant.isSpeaking ? 'ring-1 ring-emerald-400' : ''
-                }`}
+                className={`bg-white/5 rounded overflow-hidden relative transition-all duration-200 hover:ring-1 hover:ring-white/20 border border-white/10 ${participant.isSpeaking ? 'ring-1 ring-emerald-400' : ''
+                  }`}
               >
-                <img 
-                  src={participant.avatar} 
+                <img
+                  src={participant.avatar}
                   alt={participant.name}
                   className="w-full h-full object-cover"
                   loading="lazy"
                   width={120}
                   height={120}
                 />
-                
+
                 <div className="absolute bottom-0.5 left-0.5 bg-black/60 px-1 py-0.5 rounded text-xs text-white max-w-[calc(100%-4px)] truncate">
                   {participant.name}
                 </div>
-                
+
                 <div className="absolute top-0.5 right-0.5">
                   {participant.isCurrentUser ? (
                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
@@ -336,7 +333,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
                 </div>
               </div>
             ))}
-            
+
             <div className="bg-white/5 rounded flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors border border-white/10">
               <div className="text-center">
                 <span className="text-lg text-slate-300 block">+</span>
@@ -366,15 +363,15 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
 
           {currentTab === 'chat' && (
             <div className="flex-1 flex flex-col">
-              <div 
+              <div
                 ref={chatMessagesRef}
                 className="flex-1 overflow-y-auto p-4 space-y-3"
               >
                 {chatMessages.map((message) => (
                   <div key={message.id} className="hover:bg-white/5 p-2 rounded-lg transition-colors">
                     <div className="flex items-start gap-3">
-                      <img 
-                        src={message.avatar} 
+                      <img
+                        src={message.avatar}
                         alt={message.user}
                         className="w-8 h-8 rounded-full border border-white/20"
                         width={32}
@@ -446,11 +443,10 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
                   {files.map((file) => (
                     <div key={file.id} className="bg-white/10 hover:bg-white/20 transition-colors cursor-pointer border border-white/20 rounded-lg p-3">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          file.type === 'pdf' ? 'bg-red-500/20 text-red-400' :
-                          file.type === 'code' ? 'bg-green-500/20 text-green-400' :
-                          'bg-purple-500/20 text-purple-400'
-                        }`}>
+                        <div className={`p-2 rounded-lg ${file.type === 'pdf' ? 'bg-red-500/20 text-red-400' :
+                            file.type === 'code' ? 'bg-green-500/20 text-green-400' :
+                              'bg-purple-500/20 text-purple-400'
+                          }`}>
                           <file.icon className="w-5 h-5" />
                         </div>
                         <div className="flex-1">
@@ -490,7 +486,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
                 offIcon={MicOff}
                 ariaLabel={isMicOn ? "Mute microphone" : "Unmute microphone"}
               />
-              
+
               <IconToggleButton
                 isOn={isCameraOn}
                 onToggle={() => setIsCameraOn(!isCameraOn)}
@@ -498,7 +494,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
                 offIcon={VideoOff}
                 ariaLabel={isCameraOn ? "Turn off camera" : "Turn on camera"}
               />
-              
+
               <IconToggleButton
                 isOn={isScreenSharing}
                 onToggle={() => setIsScreenSharing(!isScreenSharing)}
@@ -506,7 +502,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
                 offIcon={Monitor}
                 ariaLabel={isScreenSharing ? "Stop screen sharing" : "Start screen sharing"}
               />
-              
+
               <IconToggleButton
                 isOn={isHandRaised}
                 onToggle={() => setIsHandRaised(!isHandRaised)}
