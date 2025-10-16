@@ -38,21 +38,21 @@ export default function TeacherAppointmentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>('schedule');
   const [appointmentDropdownOpen, setAppointmentDropdownOpen] = useState(true);
-  
+
   // Appointment schedule state
   const [availableDates, setAvailableDates] = useLocalStorage<AvailableDate[]>(
     'availableDates',
     []
   );
   const [selectedDate, setSelectedDate] = useState('');
-  
+
   // Time modal state
   const [timeModalOpen, setTimeModalOpen] = useState(false);
   const [currentDateForTime, setCurrentDateForTime] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('');
   const [duration, setDuration] = useState('60');
   const [endTime, setEndTime] = useState('');
-  
+
   // Request state
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [requests, setRequests] = useState<AppointmentRequest[]>([
@@ -90,20 +90,20 @@ export default function TeacherAppointmentDashboard() {
       studentName: 'Lê Văn Đức',
       studentClass: 'Lớp K30 CMU TPM 3',
       type: 'offline',
-      status: 'pending',    
+      status: 'pending',
       desiredDate: 'Thứ 5, 17/01/2024',
       desiredTime: '09:00-10:00',
       reason: 'Thảo luận về kết quả học tập học kỳ I và kế hoạch cải thiện',
       requestedAt: '14:20 - 14/01/2024',
     },
-     {
+    {
       id: 4,
       parentName: 'Bà Lê Thị Hoa',
       parentAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face',
       studentName: 'Lê Văn Đức',
       studentClass: 'Lớp K30 CMU TPM 3',
       type: 'offline',
-      status: 'pending',    
+      status: 'pending',
       desiredDate: 'Thứ 5, 17/01/2024',
       desiredTime: '09:00-10:00',
       reason: 'Thảo luận về kết quả học tập học kỳ I và kế hoạch cải thiện',
@@ -115,7 +115,7 @@ export default function TeacherAppointmentDashboard() {
       studentName: 'Lê Văn Đức',
       studentClass: 'Lớp K30 CMU TPM 3',
       type: 'offline',
-      status: 'pending',    
+      status: 'pending',
       desiredDate: 'Thứ 5, 17/01/2024',
       desiredTime: '09:00-10:00',
       reason: 'Thảo luận về kết quả học tập học kỳ I và kế hoạch cải thiện',
@@ -127,21 +127,21 @@ export default function TeacherAppointmentDashboard() {
       studentName: 'Lê Văn Đức',
       studentClass: 'Lớp K30 CMU TPM 3',
       type: 'offline',
-      status: 'pending',    
+      status: 'pending',
       desiredDate: 'Thứ 5, 17/01/2024',
       desiredTime: '09:00-10:00',
       reason: 'Thảo luận về kết quả học tập học kỳ I và kế hoạch cải thiện',
       requestedAt: '14:20 - 14/01/2024',
     },
   ]);
-  
+
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: string } | null>(null);
-  
+
   // Accept modal state
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [acceptingRequestId, setAcceptingRequestId] = useState<number | null>(null);
-  
+
   // Reject modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectingRequestId, setRejectingRequestId] = useState<number | null>(null);
@@ -149,7 +149,7 @@ export default function TeacherAppointmentDashboard() {
   const [customReason, setCustomReason] = useState('');
   const [suggestDate, setSuggestDate] = useState('');
   const [suggestTime, setSuggestTime] = useState('');
-  
+
   // Cancel confirmed appointment modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelingRequestId, setCancelingRequestId] = useState<number | null>(null);
@@ -243,14 +243,14 @@ export default function TeacherAppointmentDashboard() {
 
   const handleRemoveDate = (index: number, skipConfirm: boolean = false) => {
     const removedDate = availableDates[index];
-    
+
     // Nếu ngày có khung giờ và không skip confirm, hiển thị cảnh báo
     if (!skipConfirm && removedDate.timeSlots.length > 0) {
       if (!window.confirm('Bạn có chắc chắn muốn xóa ngày này và tất cả khung giờ?')) {
         return;
       }
     }
-    
+
     setAvailableDates(availableDates.filter((_, i) => i !== index));
     showToast(`Đã xóa ngày ${formatDate(removedDate.date)}!`, 'warning');
   };
@@ -306,7 +306,7 @@ export default function TeacherAppointmentDashboard() {
       setRejectModalOpen(true);
       return;
     }
-    
+
     if (action === 'accept') {
       // Mở modal chấp nhận
       setAcceptingRequestId(requestId);
@@ -314,7 +314,7 @@ export default function TeacherAppointmentDashboard() {
       return;
     }
   };
-  
+
   const handleConfirmAccept = () => {
     if (acceptingRequestId !== null) {
       setRequests(
@@ -325,14 +325,14 @@ export default function TeacherAppointmentDashboard() {
       showToast('Đã chấp nhận lịch hẹn!', 'success');
       setAcceptModalOpen(false);
       setAcceptingRequestId(null);
-      
+
       // Tự động chuyển sang trang "Lịch hẹn đã xác nhận" sau 1 giây
       setTimeout(() => {
         setCurrentPage('confirmed');
       }, 1000);
     }
   };
-  
+
   const handleCloseRejectModal = () => {
     setRejectModalOpen(false);
     setRejectingRequestId(null);
@@ -341,25 +341,25 @@ export default function TeacherAppointmentDashboard() {
     setSuggestDate('');
     setSuggestTime('');
   };
-  
+
   const handleConfirmReject = () => {
     if (!rejectReason) {
       showToast('Vui lòng chọn lý do từ chối!', 'error');
       return;
     }
-    
+
     if (rejectReason === 'custom' && !customReason.trim()) {
       showToast('Vui lòng nhập lý do cụ thể!', 'error');
       return;
     }
-    
+
     if (rejectingRequestId !== null) {
       setRequests(
         requests.map((req) =>
           req.id === rejectingRequestId ? { ...req, status: 'rejected' } : req
         )
       );
-      
+
       // Tạo thông báo dựa trên lý do
       const reasonMessages: Record<string, string> = {
         schedule_conflict: 'Có lịch đột xuất',
@@ -369,43 +369,43 @@ export default function TeacherAppointmentDashboard() {
         reschedule: 'Đề xuất lịch khác',
         custom: customReason,
       };
-      
+
       const reasonText = reasonMessages[rejectReason];
       showToast(`Đã từ chối lịch hẹn. Lý do: ${reasonText}`, 'warning');
-      
+
       handleCloseRejectModal();
     }
   };
-  
+
   const handleOpenCancelModal = (requestId: number) => {
     setCancelingRequestId(requestId);
     setCancelModalOpen(true);
     setCancelReason('');
     setCustomCancelReason('');
   };
-  
+
   const handleCloseCancelModal = () => {
     setCancelModalOpen(false);
     setCancelingRequestId(null);
     setCancelReason('');
     setCustomCancelReason('');
   };
-  
+
   const handleConfirmCancel = () => {
     if (!cancelReason) {
       showToast('Vui lòng chọn lý do hủy lịch hẹn!', 'error');
       return;
     }
-    
+
     if (cancelReason === 'custom' && !customCancelReason.trim()) {
       showToast('Vui lòng nhập lý do cụ thể!', 'error');
       return;
     }
-    
+
     if (cancelingRequestId !== null) {
       // Xóa lịch hẹn khỏi danh sách
       setRequests(requests.filter((req) => req.id !== cancelingRequestId));
-      
+
       // Tạo thông báo dựa trên lý do
       const reasonMessages: Record<string, string> = {
         schedule_conflict: 'Có lịch đột xuất',
@@ -415,10 +415,10 @@ export default function TeacherAppointmentDashboard() {
         time_error: 'Nhầm lẫn thời gian',
         custom: customCancelReason,
       };
-      
+
       const reasonText = reasonMessages[cancelReason];
       showToast(`Đã hủy lịch hẹn. Lý do: ${reasonText}. Phụ huynh đã được thông báo.`, 'warning');
-      
+
       handleCloseCancelModal();
     }
   };
@@ -451,7 +451,7 @@ export default function TeacherAppointmentDashboard() {
   const filteredRequests = requests.filter((req) => {
     // Loại bỏ các request đã được chấp nhận
     if (req.status === 'accepted') return false;
-    
+
     if (filterType === 'all') return true;
     if (filterType === 'pending') return req.status === 'pending';
     return req.type === filterType;
@@ -476,10 +476,10 @@ export default function TeacherAppointmentDashboard() {
       const match = timeStr.match(/(\d{2}:\d{2})/);
       return match ? match[1] : '00:00';
     };
-    
+
     const timeA = getTime(a.desiredTime);
     const timeB = getTime(b.desiredTime);
-    
+
     if (confirmedSortBy === 'nearest') {
       return timeA.localeCompare(timeB); // Sắp xếp tăng dần (giờ gần nhất)
     } else {
@@ -554,9 +554,8 @@ export default function TeacherAppointmentDashboard() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-16 h-full bg-white shadow-lg border-r border-gray-200 w-64 transition-transform duration-300 ease-in-out z-40 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed left-0 top-16 h-full bg-white shadow-lg border-r border-gray-200 w-64 transition-transform duration-300 ease-in-out z-40 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         <nav className="p-4 space-y-2">
           {[
@@ -587,9 +586,8 @@ export default function TeacherAppointmentDashboard() {
                 <span>Quản lý lịch hẹn</span>
               </div>
               <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  appointmentDropdownOpen ? 'rotate-180' : ''
-                }`}
+                className={`w-4 h-4 transition-transform duration-200 ${appointmentDropdownOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
 
@@ -606,11 +604,10 @@ export default function TeacherAppointmentDashboard() {
                       setCurrentPage(item.id as Page);
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-colors relative ${
-                      currentPage === item.id
+                    className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-colors relative ${currentPage === item.id
                         ? 'bg-blue-100 text-blue-700'
                         : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <item.icon className="w-4 h-4" />
                     <span>{item.label}</span>
@@ -649,25 +646,25 @@ export default function TeacherAppointmentDashboard() {
               <CardContent className="p-4">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4">Thống kê lịch hẹn</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <div className="text-2xl font-bold text-blue-600 mb-1">{totalDates}</div>
-                  <div className="text-sm text-gray-600">Tổng ngày rảnh</div>
-                </div>
-                <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <div className="text-2xl font-bold text-green-600 mb-1">{totalTimeSlots}</div>
-                  <div className="text-sm text-gray-600">Khung giờ</div>
-                </div>
-                <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <div className="text-2xl font-bold text-purple-600 mb-1">
-                    {totalHours.toFixed(1)}
+                  <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">{totalDates}</div>
+                    <div className="text-sm text-gray-600">Tổng ngày rảnh</div>
                   </div>
-                  <div className="text-sm text-gray-600">Tổng giờ rảnh</div>
+                  <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                    <div className="text-2xl font-bold text-green-600 mb-1">{totalTimeSlots}</div>
+                    <div className="text-sm text-gray-600">Khung giờ</div>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                    <div className="text-2xl font-bold text-purple-600 mb-1">
+                      {totalHours.toFixed(1)}
+                    </div>
+                    <div className="text-sm text-gray-600">Tổng giờ rảnh</div>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                    <div className="text-2xl font-bold text-orange-600 mb-1">{upcomingDates}</div>
+                    <div className="text-sm text-gray-600">Ngày sắp tới</div>
+                  </div>
                 </div>
-                <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                  <div className="text-2xl font-bold text-orange-600 mb-1">{upcomingDates}</div>
-                  <div className="text-sm text-gray-600">Ngày sắp tới</div>
-                </div>
-              </div>
               </CardContent>
             </Card>
 
@@ -676,79 +673,78 @@ export default function TeacherAppointmentDashboard() {
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Thêm ngày rảnh mới</h2>
 
-              {/* Quick Date Selection */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Chọn nhanh ngày trong tuần
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
-                  {quickDates.map((date, i) => {
-                    const dateString = date.toISOString().split('T')[0];
-                    const dayName = weekDays[date.getDay()];
-                    const dayNumber = date.getDate();
-                    const isToday = i === 0;
-                    const selectedDateIndex = availableDates.findIndex((d) => d.date === dateString);
-                    const isSelected = selectedDateIndex !== -1;
-
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            // Nếu đã chọn, hủy chọn (xóa ngày)
-                            // Chỉ skip confirm nếu ngày chưa có time slots
-                            const hasTimeSlots = availableDates[selectedDateIndex].timeSlots.length > 0;
-                            handleRemoveDate(selectedDateIndex, !hasTimeSlots);
-                          } else {
-                            // Nếu chưa chọn, thêm ngày
-                            handleAddDate(dateString);
-                          }
-                        }}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 text-center ${
-                          isSelected
-                            ? 'border-green-500 bg-green-50 text-green-700 hover:border-red-400 hover:bg-red-50 hover:text-red-700'
-                            : isToday
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
-                        }`}
-                        title={isSelected ? 'Click để hủy chọn ngày này' : 'Click để thêm ngày này'}
-                      >
-                        <div className="text-xs font-medium">{dayName}</div>
-                        <div className="text-lg font-bold">{dayNumber}</div>
-                        {isSelected && <Check className="inline w-3 h-3 text-green-600" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Manual Date Input */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <label htmlFor="dateInput" className="block text-sm font-medium text-gray-700 mb-2">
-                    Hoặc chọn ngày cụ thể
+                {/* Quick Date Selection */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Chọn nhanh ngày trong tuần
                   </label>
-                  <input
-                    type="date"
-                    id="dateInput"
-                    min={getTodayString()}
-                    max={getMaxDateString(6)}
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
+                    {quickDates.map((date, i) => {
+                      const dateString = date.toISOString().split('T')[0];
+                      const dayName = weekDays[date.getDay()];
+                      const dayNumber = date.getDate();
+                      const isToday = i === 0;
+                      const selectedDateIndex = availableDates.findIndex((d) => d.date === dateString);
+                      const isSelected = selectedDateIndex !== -1;
+
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              // Nếu đã chọn, hủy chọn (xóa ngày)
+                              // Chỉ skip confirm nếu ngày chưa có time slots
+                              const hasTimeSlots = availableDates[selectedDateIndex].timeSlots.length > 0;
+                              handleRemoveDate(selectedDateIndex, !hasTimeSlots);
+                            } else {
+                              // Nếu chưa chọn, thêm ngày
+                              handleAddDate(dateString);
+                            }
+                          }}
+                          className={`p-3 rounded-lg border-2 transition-all duration-200 text-center ${isSelected
+                              ? 'border-green-500 bg-green-50 text-green-700 hover:border-red-400 hover:bg-red-50 hover:text-red-700'
+                              : isToday
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
+                            }`}
+                          title={isSelected ? 'Click để hủy chọn ngày này' : 'Click để thêm ngày này'}
+                        >
+                          <div className="text-xs font-medium">{dayName}</div>
+                          <div className="text-lg font-bold">{dayNumber}</div>
+                          {isSelected && <Check className="inline w-3 h-3 text-green-600" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="flex items-end">
-                  <Button
-                    onClick={() => handleAddDate(selectedDate)}
-                    className="w-full sm:w-auto"
-                  >
-                    <Plus className="inline w-4 h-4 mr-2" />
-                    Thêm ngày rảnh
-                  </Button>
+
+                {/* Manual Date Input */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <label htmlFor="dateInput" className="block text-sm font-medium text-gray-700 mb-2">
+                      Hoặc chọn ngày cụ thể
+                    </label>
+                    <input
+                      type="date"
+                      id="dateInput"
+                      min={getTodayString()}
+                      max={getMaxDateString(6)}
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={() => handleAddDate(selectedDate)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Plus className="inline w-4 h-4 mr-2" />
+                      Thêm ngày rảnh
+                    </Button>
+                  </div>
                 </div>
-              </div>
               </CardContent>
             </Card>
 
@@ -771,21 +767,18 @@ export default function TeacherAppointmentDashboard() {
                   return (
                     <div
                       key={index}
-                      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${
-                        !isUpcoming ? 'opacity-75' : ''
-                      }`}
+                      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${!isUpcoming ? 'opacity-75' : ''
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
                         <div className="flex items-center gap-3 mb-4 sm:mb-0">
                           <div
-                            className={`p-3 rounded-lg ${
-                              isUpcoming ? 'bg-blue-100' : 'bg-gray-100'
-                            }`}
+                            className={`p-3 rounded-lg ${isUpcoming ? 'bg-blue-100' : 'bg-gray-100'
+                              }`}
                           >
                             <Clock
-                              className={`w-6 h-6 ${
-                                isUpcoming ? 'text-blue-600' : 'text-gray-500'
-                              }`}
+                              className={`w-6 h-6 ${isUpcoming ? 'text-blue-600' : 'text-gray-500'
+                                }`}
                             />
                           </div>
                           <div>
@@ -878,11 +871,10 @@ export default function TeacherAppointmentDashboard() {
                   <button
                     key={filter.id}
                     onClick={() => setFilterType(filter.id as FilterType)}
-                    className={`px-4 py-2 rounded-lg font-medium ${
-                      filterType === filter.id
+                    className={`px-4 py-2 rounded-lg font-medium ${filterType === filter.id
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     {filter.label}
                   </button>
@@ -895,102 +887,100 @@ export default function TeacherAppointmentDashboard() {
               {paginatedRequests.map((request) => {
                 // Ẩn các yêu cầu đã từ chối hoặc đã chấp nhận
                 if (request.status !== 'pending') return null;
-                
+
                 return (
                   <div
                     key={request.id}
                     className="bg-white rounded-lg shadow-sm border border-gray-200"
                   >
-                  <div className="p-4 border-b border-gray-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={request.parentAvatar}
-                          alt="Parent"
-                          className="w-12 h-12 rounded-full"
-                        />
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">{request.parentName}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                                request.type === 'online' ? 'bg-blue-500' : 'bg-orange-500'
-                              }`}
-                            >
-                              {request.type === 'online' ? 'Online' : 'Trực tiếp'}
-                            </span>
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                                request.status === 'pending'
-                                  ? 'bg-yellow-500'
+                    <div className="p-4 border-b border-gray-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={request.parentAvatar}
+                            alt="Parent"
+                            className="w-12 h-12 rounded-full"
+                          />
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900">{request.parentName}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium text-white ${request.type === 'online' ? 'bg-blue-500' : 'bg-orange-500'
+                                  }`}
+                              >
+                                {request.type === 'online' ? 'Online' : 'Trực tiếp'}
+                              </span>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium text-white ${request.status === 'pending'
+                                    ? 'bg-yellow-500'
+                                    : request.status === 'accepted'
+                                      ? 'bg-green-500'
+                                      : 'bg-red-500'
+                                  }`}
+                              >
+                                {request.status === 'pending'
+                                  ? 'Chờ xử lý'
                                   : request.status === 'accepted'
-                                  ? 'bg-green-500'
-                                  : 'bg-red-500'
-                              }`}
-                            >
-                              {request.status === 'pending'
-                                ? 'Chờ xử lý'
-                                : request.status === 'accepted'
-                                ? 'Đã chấp nhận'
-                                : 'Đã từ chối'}
-                            </span>
+                                    ? 'Đã chấp nhận'
+                                    : 'Đã từ chối'}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        {request.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleRequestAction(request.id, 'reject')}
+                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
+                            >
+                              <X className="inline w-4 h-4 mr-1" />
+                              Từ chối
+                            </button>
+                            <button
+                              onClick={() => handleRequestAction(request.id, 'accept')}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
+                            >
+                              <Check className="inline w-4 h-4 mr-1" />
+                              Chấp nhận
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {request.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleRequestAction(request.id, 'reject')}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
-                          >
-                            <X className="inline w-4 h-4 mr-1" />
-                            Từ chối
-                          </button>
-                          <button
-                            onClick={() => handleRequestAction(request.id, 'accept')}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
-                          >
-                            <Check className="inline w-4 h-4 mr-1" />
-                            Chấp nhận
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                      <h4 className="font-bold text-blue-900 text-lg">
-                        <GraduationCap className="inline w-5 h-5 mr-2" />
-                        Phụ huynh của: {request.studentName} ({request.studentClass})
-                      </h4>
                     </div>
 
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
-                      <h4 className="font-bold text-purple-900 mb-1">Thời gian mong muốn</h4>
-                      <p className="text-xl font-bold text-purple-800">
-                        {request.desiredDate} - {request.desiredTime}
-                      </p>
-                    </div>
+                    <div className="p-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <h4 className="font-bold text-blue-900 text-lg">
+                          <GraduationCap className="inline w-5 h-5 mr-2" />
+                          Phụ huynh của: {request.studentName} ({request.studentClass})
+                        </h4>
+                      </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <h5 className="font-medium text-gray-700 mb-1">Lý do gặp mặt</h5>
-                        <p className="text-gray-800 text-sm">{request.reason}</p>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
+                        <h4 className="font-bold text-purple-900 mb-1">Thời gian mong muốn</h4>
+                        <p className="text-xl font-bold text-purple-800">
+                          {request.desiredDate} - {request.desiredTime}
+                        </p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <h5 className="font-medium text-gray-700 mb-1">Thời gian yêu cầu</h5>
-                        <p className="text-gray-800 text-sm">{request.requestedAt}</p>
-                      </div>
-                      {request.platform && (
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <h5 className="font-medium text-gray-700 mb-1">Nền tảng</h5>
-                          <p className="text-gray-800 text-sm font-medium">{request.platform}</p>
+                          <h5 className="font-medium text-gray-700 mb-1">Lý do gặp mặt</h5>
+                          <p className="text-gray-800 text-sm">{request.reason}</p>
                         </div>
-                      )}
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <h5 className="font-medium text-gray-700 mb-1">Thời gian yêu cầu</h5>
+                          <p className="text-gray-800 text-sm">{request.requestedAt}</p>
+                        </div>
+                        {request.platform && (
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <h5 className="font-medium text-gray-700 mb-1">Nền tảng</h5>
+                            <p className="text-gray-800 text-sm font-medium">{request.platform}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -1082,22 +1072,20 @@ export default function TeacherAppointmentDashboard() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setConfirmedSortBy('nearest')}
-                        className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-                          confirmedSortBy === 'nearest'
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium ${confirmedSortBy === 'nearest'
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         <Clock className="inline w-4 h-4 mr-1" />
                         Giờ gần nhất
                       </button>
                       <button
                         onClick={() => setConfirmedSortBy('latest')}
-                        className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-                          confirmedSortBy === 'latest'
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium ${confirmedSortBy === 'latest'
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         <Clock className="inline w-4 h-4 mr-1" />
                         Giờ muộn nhất
@@ -1136,73 +1124,72 @@ export default function TeacherAppointmentDashboard() {
                       key={request.id}
                       className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
                     >
-                    <div className="flex items-start gap-4">
-                      <img
-                        src={request.parentAvatar}
-                        alt={request.parentName}
-                        className="w-14 h-14 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{request.parentName}</h3>
-                            <p className="text-sm text-gray-600">
-                              Phụ huynh của {request.studentName} - {request.studentClass}
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={request.parentAvatar}
+                          alt={request.parentName}
+                          className="w-14 h-14 rounded-full"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{request.parentName}</h3>
+                              <p className="text-sm text-gray-600">
+                                Phụ huynh của {request.studentName} - {request.studentClass}
+                              </p>
+                            </div>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Đã xác nhận
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Calendar className="w-4 h-4 mr-2 text-blue-500" />
+                              <span className="font-medium">Ngày hẹn:</span>
+                              <span className="ml-2">{request.desiredDate}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Clock className="w-4 h-4 mr-2 text-blue-500" />
+                              <span className="font-medium">Thời gian:</span>
+                              <span className="ml-2">{request.desiredTime}</span>
+                            </div>
+                          </div>
+
+                          <div className="mb-3">
+                            <span
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${request.type === 'online'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-purple-100 text-purple-800'
+                                }`}
+                            >
+                              {request.type === 'online' ? '🌐 Trực tuyến' : '🏫 Trực tiếp'}
+                              {request.platform && ` - ${request.platform}`}
+                            </span>
+                          </div>
+
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Lý do hẹn:</p>
+                            <p className="text-sm text-gray-600">{request.reason}</p>
+                          </div>
+
+                          <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+                            <p className="text-xs text-gray-500">
+                              Yêu cầu lúc: {request.requestedAt}
                             </p>
+                            <button
+                              onClick={() => handleOpenCancelModal(request.id)}
+                              className="px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-colors flex items-center gap-1.5"
+                            >
+                              <X className="w-4 h-4" />
+                              Hủy lịch hẹn
+                            </button>
                           </div>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Đã xác nhận
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Calendar className="w-4 h-4 mr-2 text-blue-500" />
-                            <span className="font-medium">Ngày hẹn:</span>
-                            <span className="ml-2">{request.desiredDate}</span>
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Clock className="w-4 h-4 mr-2 text-blue-500" />
-                            <span className="font-medium">Thời gian:</span>
-                            <span className="ml-2">{request.desiredTime}</span>
-                          </div>
-                        </div>
-
-                        <div className="mb-3">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                              request.type === 'online'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}
-                          >
-                            {request.type === 'online' ? '🌐 Trực tuyến' : '🏫 Trực tiếp'}
-                            {request.platform && ` - ${request.platform}`}
-                          </span>
-                        </div>
-
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Lý do hẹn:</p>
-                          <p className="text-sm text-gray-600">{request.reason}</p>
-                        </div>
-
-                        <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
-                          <p className="text-xs text-gray-500">
-                            Yêu cầu lúc: {request.requestedAt}
-                          </p>
-                          <button
-                            onClick={() => handleOpenCancelModal(request.id)}
-                            className="px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-colors flex items-center gap-1.5"
-                          >
-                            <X className="w-4 h-4" />
-                            Hủy lịch hẹn
-                          </button>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 </div>
 
                 {/* Pagination Controls */}
@@ -1380,13 +1367,13 @@ export default function TeacherAppointmentDashboard() {
                   <p className="text-sm text-gray-600">Bạn có chắc chắn muốn chấp nhận lịch hẹn này?</p>
                 </div>
               </div>
-              
+
               {/* Thông tin lịch hẹn */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 {(() => {
                   const request = requests.find((r) => r.id === acceptingRequestId);
                   if (!request) return null;
-                  
+
                   return (
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
@@ -1402,7 +1389,7 @@ export default function TeacherAppointmentDashboard() {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-3 pt-3 border-t border-blue-300">
                         <div>
                           <p className="text-xs text-gray-600 mb-1">Ngày hẹn:</p>
@@ -1413,21 +1400,20 @@ export default function TeacherAppointmentDashboard() {
                           <p className="text-sm font-medium text-gray-900">{request.desiredTime}</p>
                         </div>
                       </div>
-                      
+
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Hình thức:</p>
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                            request.type === 'online'
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${request.type === 'online'
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-purple-100 text-purple-800'
-                          }`}
+                            }`}
                         >
                           {request.type === 'online' ? '🌐 Trực tuyến' : '🏫 Trực tiếp'}
                           {request.platform && ` - ${request.platform}`}
                         </span>
                       </div>
-                      
+
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Lý do:</p>
                         <p className="text-sm text-gray-900">{request.reason}</p>
@@ -1436,7 +1422,7 @@ export default function TeacherAppointmentDashboard() {
                   );
                 })()}
               </div>
-              
+
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
                 <div className="flex gap-2">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -1450,9 +1436,9 @@ export default function TeacherAppointmentDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => {
                     setAcceptModalOpen(false);
                     setAcceptingRequestId(null);
@@ -1461,7 +1447,7 @@ export default function TeacherAppointmentDashboard() {
                 >
                   Hủy
                 </button>
-                <button 
+                <button
                   onClick={handleConfirmAccept}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2"
                 >
@@ -1488,16 +1474,16 @@ export default function TeacherAppointmentDashboard() {
                   <p className="text-xs text-gray-600">Chọn lý do từ chối</p>
                 </div>
               </div>
-              
+
               {/* Lý do có sẵn */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-gray-700 mb-2">Lý do từ chối:</label>
                 <div className="space-y-1.5">
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="rejectReason" 
-                      value="schedule_conflict" 
+                    <input
+                      type="radio"
+                      name="rejectReason"
+                      value="schedule_conflict"
                       checked={rejectReason === 'schedule_conflict'}
                       onChange={(e) => setRejectReason(e.target.value)}
                       className="mr-2 mt-0.5"
@@ -1507,11 +1493,11 @@ export default function TeacherAppointmentDashboard() {
                       <div className="text-xs text-gray-600">Tôi có công việc quan trọng phát sinh đột ngột</div>
                     </div>
                   </label>
-                  
+
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="rejectReason" 
+                    <input
+                      type="radio"
+                      name="rejectReason"
                       value="personal_leave"
                       checked={rejectReason === 'personal_leave'}
                       onChange={(e) => setRejectReason(e.target.value)}
@@ -1522,11 +1508,11 @@ export default function TeacherAppointmentDashboard() {
                       <div className="text-xs text-gray-600">Tôi đang trong thời gian nghỉ phép</div>
                     </div>
                   </label>
-                  
+
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="rejectReason" 
+                    <input
+                      type="radio"
+                      name="rejectReason"
                       value="meeting_conflict"
                       checked={rejectReason === 'meeting_conflict'}
                       onChange={(e) => setRejectReason(e.target.value)}
@@ -1537,11 +1523,11 @@ export default function TeacherAppointmentDashboard() {
                       <div className="text-xs text-gray-600">Tôi có cuộc họp không thể thay đổi</div>
                     </div>
                   </label>
-                  
+
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="rejectReason" 
+                    <input
+                      type="radio"
+                      name="rejectReason"
                       value="health_issue"
                       checked={rejectReason === 'health_issue'}
                       onChange={(e) => setRejectReason(e.target.value)}
@@ -1552,11 +1538,11 @@ export default function TeacherAppointmentDashboard() {
                       <div className="text-xs text-gray-600">Tôi đang gặp vấn đề về sức khỏe</div>
                     </div>
                   </label>
-                  
+
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="rejectReason" 
+                    <input
+                      type="radio"
+                      name="rejectReason"
                       value="reschedule"
                       checked={rejectReason === 'reschedule'}
                       onChange={(e) => setRejectReason(e.target.value)}
@@ -1567,11 +1553,11 @@ export default function TeacherAppointmentDashboard() {
                       <div className="text-xs text-gray-600">Tôi muốn đề xuất thời gian phù hợp hơn</div>
                     </div>
                   </label>
-                  
+
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="rejectReason" 
+                    <input
+                      type="radio"
+                      name="rejectReason"
                       value="custom"
                       checked={rejectReason === 'custom'}
                       onChange={(e) => setRejectReason(e.target.value)}
@@ -1584,21 +1570,21 @@ export default function TeacherAppointmentDashboard() {
                   </label>
                 </div>
               </div>
-              
+
               {/* Lý do tùy chỉnh */}
               {rejectReason === 'custom' && (
                 <div className="mb-3">
-                  <textarea 
+                  <textarea
                     id="customReason"
                     rows={2}
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
-                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" 
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     placeholder="Nhập lý do từ chối..."
                   />
                 </div>
               )}
-              
+
               {/* Gợi ý thời gian khác */}
               {rejectReason === 'reschedule' && (
                 <div className="mb-3">
@@ -1606,13 +1592,13 @@ export default function TeacherAppointmentDashboard() {
                     Đề xuất thời gian khác (tùy chọn):
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <input 
+                    <input
                       type="date"
                       value={suggestDate}
                       onChange={(e) => setSuggestDate(e.target.value)}
                       className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
-                    <input 
+                    <input
                       type="time"
                       value={suggestTime}
                       onChange={(e) => setSuggestTime(e.target.value)}
@@ -1621,15 +1607,15 @@ export default function TeacherAppointmentDashboard() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={handleCloseRejectModal}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium"
                 >
                   Hủy
                 </button>
-                <button 
+                <button
                   onClick={handleConfirmReject}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
                 >
@@ -1656,13 +1642,13 @@ export default function TeacherAppointmentDashboard() {
                   <p className="text-xs text-gray-600">Chọn lý do hủy</p>
                 </div>
               </div>
-              
+
               {/* Thông tin lịch hẹn */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 mb-3">
                 {(() => {
                   const request = requests.find((r) => r.id === cancelingRequestId);
                   if (!request) return null;
-                  
+
                   return (
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
@@ -1683,27 +1669,27 @@ export default function TeacherAppointmentDashboard() {
                   );
                 })()}
               </div>
-              
+
               {/* Lý do hủy - Compact version */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-gray-700 mb-2">Lý do hủy:</label>
                 <div className="space-y-1.5">
                   <label className="flex items-center px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
-                      value="schedule_conflict" 
+                    <input
+                      type="radio"
+                      name="cancelReason"
+                      value="schedule_conflict"
                       checked={cancelReason === 'schedule_conflict'}
                       onChange={(e) => setCancelReason(e.target.value)}
                       className="mr-2"
                     />
                     <span className="text-sm text-gray-900">Có lịch đột xuất</span>
                   </label>
-                  
+
                   <label className="flex items-center px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
+                    <input
+                      type="radio"
+                      name="cancelReason"
                       value="personal_leave"
                       checked={cancelReason === 'personal_leave'}
                       onChange={(e) => setCancelReason(e.target.value)}
@@ -1711,11 +1697,11 @@ export default function TeacherAppointmentDashboard() {
                     />
                     <span className="text-sm text-gray-900">Nghỉ phép</span>
                   </label>
-                  
+
                   <label className="flex items-center px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
+                    <input
+                      type="radio"
+                      name="cancelReason"
                       value="meeting_conflict"
                       checked={cancelReason === 'meeting_conflict'}
                       onChange={(e) => setCancelReason(e.target.value)}
@@ -1723,11 +1709,11 @@ export default function TeacherAppointmentDashboard() {
                     />
                     <span className="text-sm text-gray-900">Có cuộc họp quan trọng</span>
                   </label>
-                  
+
                   <label className="flex items-center px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
+                    <input
+                      type="radio"
+                      name="cancelReason"
                       value="health_issue"
                       checked={cancelReason === 'health_issue'}
                       onChange={(e) => setCancelReason(e.target.value)}
@@ -1735,11 +1721,11 @@ export default function TeacherAppointmentDashboard() {
                     />
                     <span className="text-sm text-gray-900">Vấn đề sức khỏe</span>
                   </label>
-                  
+
                   <label className="flex items-center px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
+                    <input
+                      type="radio"
+                      name="cancelReason"
                       value="time_error"
                       checked={cancelReason === 'time_error'}
                       onChange={(e) => setCancelReason(e.target.value)}
@@ -1747,11 +1733,11 @@ export default function TeacherAppointmentDashboard() {
                     />
                     <span className="text-sm text-gray-900">Nhầm lẫn thời gian</span>
                   </label>
-                  
+
                   <label className="flex items-center px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="cancelReason" 
+                    <input
+                      type="radio"
+                      name="cancelReason"
                       value="custom"
                       checked={cancelReason === 'custom'}
                       onChange={(e) => setCancelReason(e.target.value)}
@@ -1761,21 +1747,21 @@ export default function TeacherAppointmentDashboard() {
                   </label>
                 </div>
               </div>
-              
+
               {/* Lý do tùy chỉnh */}
               {cancelReason === 'custom' && (
                 <div className="mb-3">
-                  <textarea 
+                  <textarea
                     id="customCancelReason"
                     rows={2}
                     value={customCancelReason}
                     onChange={(e) => setCustomCancelReason(e.target.value)}
-                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     placeholder="Nhập lý do hủy..."
                   />
                 </div>
               )}
-              
+
               <div className="bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
                 <div className="flex gap-1.5">
                   <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
@@ -1788,15 +1774,15 @@ export default function TeacherAppointmentDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={handleCloseCancelModal}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium"
                 >
                   Quay lại
                 </button>
-                <button 
+                <button
                   onClick={handleConfirmCancel}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
                 >
@@ -1812,15 +1798,14 @@ export default function TeacherAppointmentDashboard() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white ${
-            toast.type === 'success'
+          className={`fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white ${toast.type === 'success'
               ? 'bg-green-500'
               : toast.type === 'error'
-              ? 'bg-red-500'
-              : toast.type === 'warning'
-              ? 'bg-yellow-500'
-              : 'bg-blue-500'
-          }`}
+                ? 'bg-red-500'
+                : toast.type === 'warning'
+                  ? 'bg-yellow-500'
+                  : 'bg-blue-500'
+            }`}
         >
           <div className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5" />

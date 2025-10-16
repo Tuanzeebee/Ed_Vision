@@ -89,14 +89,16 @@ function App() {
         <Route path="/parent/appointments" element={<AllAppointments />} />
         <Route path="/parent/student-details" element={<StudentDetails />} />
         <Route path="/parent/chat" element={<ChatWithTeachers />} />
-        {/* Route cho dashboard */}
+        {/* Admin routes - Dashboard */}
         <Route path="/admin/dashboard" element={<AdminOverviewDashboard />} />
         <Route path="/admin/overview" element={<AdminOverviewDashboard />} />
-        <Route path="/admin/student-management" element={<StudentManagementDashboard />} />
-        <Route path="/admin/students" element={<StudentManagementDashboard />} />
-        <Route path="/admin/students/:studentId" element={<StudentDetail />} />
 
-        {/* Route cho quản lý giáo viên và khảo sát */}
+        {/* Admin routes - Management */}
+        <Route path="/admin/users" element={<AccountManagement />} />
+        <Route path="/admin/account-management" element={<AccountManagement />} />
+        <Route path="/admin/students" element={<StudentManagementDashboard />} />
+        <Route path="/admin/student-management" element={<StudentManagementDashboard />} />
+        <Route path="/admin/students/:studentId" element={<StudentDetail />} />
         <Route path="/admin/teachers" element={<TeacherManagementDashboard />} />
         <Route path="/admin/teachers/:teacherId" element={<TeacherDetailProfile />} />
         <Route path="/admin/teachers/:teacherId/subjects" element={<TeacherSubjects />} />
@@ -108,21 +110,17 @@ function App() {
         <Route path="/admin/questions" element={<QuestionManagement />} />
         <Route path="/admin/questions/add" element={<AddQuestion />} />
 
-        {/* Route cho báo cáo và phân tích */}
+        {/* Admin routes - Reports & Analytics */}
         <Route path="/admin/reports/learning" element={<GeneralStatistics />} />
         <Route path="/admin/analytics/performance" element={<LeadershipReports />} />
         <Route path="/admin/leadership-reports" element={<LeadershipReports />} />
         <Route path="/admin/ai-insights" element={<AIPredictionResults />} />
 
-        {/* Route cho quản lý hệ thống */}
+        {/* Admin routes - System Management */}
         <Route path="/admin/notifications" element={<NotificationManagement />} />
         <Route path="/admin/content-approval" element={<ContentApproval />} />
         <Route path="/admin/permissions" element={<PermissionManagement />} />
         <Route path="/admin/role-permissions" element={<RolePermissionManagement />} />
-
-        {/* Route cho account management */}
-        <Route path="/admin/account-management" element={<AccountManagement />} />
-        <Route path="/admin/users" element={<AccountManagement />} />
 
         {/* Teacher routes */}
         <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
@@ -135,6 +133,9 @@ function App() {
         <Route path="/teacher/messages" element={<MessagesNotifications />} />
         <Route path="/teacher/chat" element={<TeacherChat />} />
         <Route path="/teacher/appointments" element={<TeacherAppointmentDashboard />} />
+        <Route path="/teacher/requests" element={<TeacherAppointmentDashboard />} />
+        <Route path="/teacher/confirmed" element={<TeacherAppointmentDashboard />} />
+        <Route path="/teacher/settings" element={<TeacherDashboard />} />
       </Routes>
     </Router>
   );
