@@ -1,15 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Button } from "@/components/ui/teacher/teacher_button"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/teacher/teacher_table"
-import { Progress } from "@/components/ui/teacher/teacher_progress"
 import TeacherLayout from "./components/TeacherLayout"
 
 // Asset imports
@@ -175,81 +166,6 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Class Management Table */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Lớp học đang giảng dạy</CardTitle>
-                        <Button>Xem tất cả lớp</Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Tên lớp</TableHead>
-                                <TableHead>Môn học</TableHead>
-                                <TableHead>Sĩ số</TableHead>
-                                <TableHead>Tiến độ TB</TableHead>
-                                <TableHead>At-Risk</TableHead>
-                                <TableHead>Trạng thái</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell className="font-medium">CNTT01</TableCell>
-                                <TableCell>Lập trình Web</TableCell>
-                                <TableCell>35</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center space-x-2">
-                                        <Progress value={78} className="w-16" />
-                                        <span className="text-sm text-gray-600">78%</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge className="text-xs bg-red-100 text-red-800">4 SV</Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge className="bg-green-100 text-green-800">Đang học</Badge>
-                                </TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell className="font-medium">CNTT02</TableCell>
-                                <TableCell>Cơ sở dữ liệu</TableCell>
-                                <TableCell>32</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center space-x-2">
-                                        <Progress value={65} className="w-16" />
-                                        <span className="text-sm text-gray-600">65%</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge className="bg-orange-100 text-orange-800 border-orange-200">7 SV</Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge className="bg-green-100 text-green-800">Đang học</Badge>
-                                </TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell className="font-medium">CNTT03</TableCell>
-                                <TableCell>Mạng máy tính</TableCell>
-                                <TableCell>28</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center space-x-2">
-                                        <Progress value={82} className="w-16" />
-                                        <span className="text-sm text-gray-600">82%</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge className="bg-green-100 text-green-800">2 SV</Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge className="bg-green-100 text-green-800">Đang học</Badge>
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
         </TeacherLayout>
     )
 }

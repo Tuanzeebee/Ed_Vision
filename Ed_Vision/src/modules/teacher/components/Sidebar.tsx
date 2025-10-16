@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Home,
   Users,
@@ -6,6 +7,11 @@ import {
   AlertTriangle,
   Bell,
   Settings,
+  ChevronDown,
+  ChevronRight,
+  Brain,
+  MessageCircle,
+  Megaphone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -14,10 +20,25 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const [isGradeMenuOpen, setIsGradeMenuOpen] = useState(
+    currentPage === 'grade-management' || currentPage === 'prediction-view'
+  );
+  const [isMessagesMenuOpen, setIsMessagesMenuOpen] = useState(
+    currentPage === 'messages' || currentPage === 'chat'
+  );
+
   const handleNavigation = (path: string) => {
     if (onNavigate) {
       onNavigate(path);
     }
+  };
+
+  const toggleGradeMenu = () => {
+    setIsGradeMenuOpen(!isGradeMenuOpen);
+  };
+
+  const toggleMessagesMenu = () => {
+    setIsMessagesMenuOpen(!isMessagesMenuOpen);
   };
 
   return (
@@ -26,8 +47,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <button
           onClick={() => handleNavigation('/teacher/dashboard')}
           className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'dashboard'
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
             }`}
         >
           <Home className="w-5 h-5" />
@@ -37,30 +58,65 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <button
           onClick={() => handleNavigation('/teacher/class-management')}
           className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'class-management'
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
             }`}
         >
           <Users className="w-5 h-5" />
           <span>Quản lý lớp học</span>
         </button>
 
-        <button
-          onClick={() => handleNavigation('/teacher/grade-management')}
-          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management'
+        {/* Grade Management with Dropdown */}
+        <div className="space-y-1">
+          <button
+            onClick={toggleGradeMenu}
+            className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management' || currentPage === 'prediction-view'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-50'
-            }`}
-        >
-          <ClipboardList className="w-5 h-5" />
-          <span>Quản lý điểm</span>
-        </button>
+              }`}
+          >
+            <div className="flex items-center space-x-3">
+              <ClipboardList className="w-5 h-5" />
+              <span>Quản lý điểm</span>
+            </div>
+            {isGradeMenuOpen ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
 
-        <button
+          {/* Dropdown Menu */}
+          {isGradeMenuOpen && (
+            <div className="ml-4 space-y-1">
+              <button
+                onClick={() => handleNavigation('/teacher/grade-management')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'grade-management'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Bảng điểm</span>
+              </button>
+
+              <button
+                onClick={() => handleNavigation('/teacher/prediction-view')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'prediction-view'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <Brain className="w-4 h-4" />
+                <span>Xem dự đoán</span>
+              </button>
+            </div>
+          )}
+        </div>        <button
           onClick={() => handleNavigation('/teacher/progress-tracking')}
           className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'progress-tracking'
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
             }`}
         >
           <BarChart3 className="w-5 h-5" />
@@ -70,30 +126,67 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <button
           onClick={() => handleNavigation('/teacher/reports-alerts')}
           className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'reports-alerts'
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
             }`}
         >
           <AlertTriangle className="w-5 h-5" />
           <span>Báo cáo & Cảnh báo</span>
         </button>
 
-        <button
-          onClick={() => handleNavigation('/teacher/messages')}
-          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'messages'
+        {/* Messages/Notifications with Dropdown */}
+        <div className="space-y-1">
+          <button
+            onClick={toggleMessagesMenu}
+            className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'messages' || currentPage === 'chat'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-50'
-            }`}
-        >
-          <Bell className="w-5 h-5" />
-          <span>Tin nhắn/Thông báo</span>
-        </button>
+              }`}
+          >
+            <div className="flex items-center space-x-3">
+              <Bell className="w-5 h-5" />
+              <span>Tin nhắn/Thông báo</span>
+            </div>
+            {isMessagesMenuOpen ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Dropdown Menu */}
+          {isMessagesMenuOpen && (
+            <div className="ml-4 space-y-1">
+              <button
+                onClick={() => handleNavigation('/teacher/messages')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'messages'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <Megaphone className="w-4 h-4" />
+                <span>Quản lý thông báo</span>
+              </button>
+
+              <button
+                onClick={() => handleNavigation('/teacher/chat')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'chat'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Cuộc trò chuyện</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         <button
           onClick={() => handleNavigation('/teacher/settings')}
           className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'settings'
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
             }`}
         >
           <Settings className="w-5 h-5" />

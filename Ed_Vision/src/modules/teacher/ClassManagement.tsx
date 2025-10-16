@@ -18,10 +18,7 @@ import {
     TrendingUp,
     TrendingDown,
     Search,
-    ChevronLeft,
-    Eye,
-    Edit,
-    MoreHorizontal
+    ChevronLeft
 } from "lucide-react"
 
 // Dữ liệu sinh viên mẫu
@@ -422,7 +419,6 @@ export default function ClassManagement() {
                                                     <TableHead className="w-36 text-center">Mức độ rủi ro</TableHead>
                                                     <TableHead className="w-32 text-center">Trạng thái</TableHead>
                                                     <TableHead className="w-32 text-center">Liên hệ</TableHead>
-                                                    <TableHead className="w-24 text-center">Thao tác</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -519,29 +515,6 @@ export default function ClassManagement() {
                                                                         title="Gửi email"
                                                                     >
                                                                         <Mail className="w-4 h-4" />
-                                                                    </button>
-                                                                </div>
-                                                            </TableCell>
-
-                                                            <TableCell className="text-center">
-                                                                <div className="flex items-center justify-center space-x-1">
-                                                                    <button
-                                                                        className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
-                                                                        title="Xem chi tiết"
-                                                                    >
-                                                                        <Eye className="w-4 h-4" />
-                                                                    </button>
-                                                                    <button
-                                                                        className="text-green-600 hover:text-green-800 p-1 rounded transition-colors"
-                                                                        title="Chỉnh sửa"
-                                                                    >
-                                                                        <Edit className="w-4 h-4" />
-                                                                    </button>
-                                                                    <button
-                                                                        className="text-gray-600 hover:text-gray-800 p-1 rounded transition-colors"
-                                                                        title="Thêm"
-                                                                    >
-                                                                        <MoreHorizontal className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
                                                             </TableCell>

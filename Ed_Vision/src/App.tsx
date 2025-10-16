@@ -31,6 +31,7 @@ import StudentRegister from "@/modules/student/StudentRegister";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
+import PredictionView from "@/modules/teacher/PredictionView";
 import ProgressTracking from "@/modules/teacher/ProgressTracking";
 import TeacherReport from "@/modules/teacher/TeacherReport";
 import UploadTranscript from "./modules/student/UploadTranscript";
@@ -42,6 +43,8 @@ import FinancialSurveyStep1 from "./modules/student/FinancialSurveyStep1";
 import ChooseMascot from "./modules/student/ChooseMascot";
 import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
+import MessagesNotifications from "./modules/teacher/MessagesNotifications";
+import TeacherChat from "./modules/teacher/TeacherChat";
 import ParentDashboardNew from "./modules/parent/ParentDashboardNew";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import LiveLearning from "./modules/student/LiveLearning";
@@ -73,16 +76,16 @@ function App() {
         <Route path="/student/study-rooms" element={<StudyRooms />} />
         <Route path="/student/video-room" element={<VideoRoom roomData={{
           id: 'demo',
-          title: 'Demo Room', 
+          title: 'Demo Room',
           subtitle: 'Live Session · Demo',
           description: 'Interactive learning session',
           students: '12 participants'
-        }} />} /> 
+        }} />} />
 
         {/* Route cho parent */}
-        <Route path="/parent/book-appointment/step/:stepNumber" element={<BookAppointmentStepWrapper />}/>
+        <Route path="/parent/book-appointment/step/:stepNumber" element={<BookAppointmentStepWrapper />} />
         <Route path="/parent/dashboard" element={<ParentDashboardNew />} />
-        <Route path="/parent/book-appointment" element={<Navigate to="/parent/book-appointment/step/1" replace />}/>
+        <Route path="/parent/book-appointment" element={<Navigate to="/parent/book-appointment/step/1" replace />} />
         <Route path="/parent/appointments" element={<AllAppointments />} />
         <Route path="/parent/student-details" element={<StudentDetails />} />
         <Route path="/parent/chat" element={<ChatWithTeachers />} />
@@ -92,7 +95,7 @@ function App() {
         <Route path="/admin/student-management" element={<StudentManagementDashboard />} />
         <Route path="/admin/students" element={<StudentManagementDashboard />} />
         <Route path="/admin/students/:studentId" element={<StudentDetail />} />
-        
+
         {/* Route cho quản lý giáo viên và khảo sát */}
         <Route path="/admin/teachers" element={<TeacherManagementDashboard />} />
         <Route path="/admin/teachers/:teacherId" element={<TeacherDetailProfile />} />
@@ -104,31 +107,34 @@ function App() {
         <Route path="/admin/classes" element={<QuestionManagement />} />
         <Route path="/admin/questions" element={<QuestionManagement />} />
         <Route path="/admin/questions/add" element={<AddQuestion />} />
-        
+
         {/* Route cho báo cáo và phân tích */}
         <Route path="/admin/reports/learning" element={<GeneralStatistics />} />
         <Route path="/admin/analytics/performance" element={<LeadershipReports />} />
         <Route path="/admin/leadership-reports" element={<LeadershipReports />} />
         <Route path="/admin/ai-insights" element={<AIPredictionResults />} />
-        
+
         {/* Route cho quản lý hệ thống */}
         <Route path="/admin/notifications" element={<NotificationManagement />} />
         <Route path="/admin/content-approval" element={<ContentApproval />} />
         <Route path="/admin/permissions" element={<PermissionManagement />} />
         <Route path="/admin/role-permissions" element={<RolePermissionManagement />} />
-        
+
         {/* Route cho account management */}
         <Route path="/admin/account-management" element={<AccountManagement />} />
         <Route path="/admin/users" element={<AccountManagement />} />
-        
+
         {/* Teacher routes */}
         <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
         <Route path="/teacher/teacher_dashboard" element={<TeacherDashboard />} />
         <Route path="/teacher/class-management" element={<ClassManagement />} />
         <Route path="/teacher/grade-management" element={<GradeManagement />} />
+        <Route path="/teacher/prediction-view" element={<PredictionView />} />
         <Route path="/teacher/progress-tracking" element={<ProgressTracking />} />
         <Route path="/teacher/reports-alerts" element={<TeacherReport />} />
-        <Route path="/teacher/appointments" element={<TeacherAppointmentDashboard />} />  
+        <Route path="/teacher/messages" element={<MessagesNotifications />} />
+        <Route path="/teacher/chat" element={<TeacherChat />} />
+        <Route path="/teacher/appointments" element={<TeacherAppointmentDashboard />} />
       </Routes>
     </Router>
   );
