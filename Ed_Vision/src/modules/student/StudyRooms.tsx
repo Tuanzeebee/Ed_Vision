@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/student/Student_button"
-import VideoRoom from './VideoRoom'
+import FriendsView from './FriendsView'
+import CreateRoomView from './CreateRoomView'
+import ChatView from './ChatView'
+import FavoritesView from './FavoritesView'
 import { 
   Menu, 
   X, 
@@ -13,8 +16,10 @@ import {
   MessageCircle, 
   Heart, 
   GraduationCap, 
-  Clock 
+  Clock
 } from "lucide-react"
+
+type ViewType = 'home' | 'friends' | 'create' | 'chat' | 'favorites'
 
 interface Room {
   id: string
@@ -28,16 +33,14 @@ interface Room {
 
 interface StudyRoomsProps {
   onJoinRoom?: (roomId: string) => void
-  onCreateRoom?: () => void
 }
 
-export default function StudyRooms({ onJoinRoom, onCreateRoom }: StudyRoomsProps) {
+export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
   const navigate = useNavigate()
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false)
-  const [currentView, setCurrentView] = useState<'rooms' | 'video'>('rooms')
-  const [joinedRoomData, setJoinedRoomData] = useState<Room | null>(null)
+  const [activeView, setActiveView] = useState<ViewType>('home')
 
   const rooms: Room[] = [
     {
@@ -118,20 +121,65 @@ export default function StudyRooms({ onJoinRoom, onCreateRoom }: StudyRoomsProps
     }
   }
 
-  const handleLeaveVideoRoom = () => {
-    setCurrentView('rooms')
-    setJoinedRoomData(null)
-  }
-
-  const handleCreateRoom = () => {
-    if (onCreateRoom) {
-      onCreateRoom()
-    }
-    setIsMobileSidebarOpen(false)
-  }
-
   const closeMobileSidebar = () => {
     setIsMobileSidebarOpen(false)
+  }
+
+  // Render view content based on activeView
+  const renderViewContent = () => {
+    switch (activeView) {
+      case 'friends':
+        return <FriendsView />
+      case 'create':
+        return <CreateRoomView />
+      case 'chat':
+        return <ChatView />
+      case 'favorites':
+        return <FavoritesView />
+      case 'home':
+      default:
+        return (
+          <div className="p-6 md:p-8">
+            {/* Section Header */}
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium">
+                <GraduationCap className="w-4 h-4" />
+                <span>School Channel</span>
+              </div>
+            </div>
+
+            {/* Rooms Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {rooms.map((room) => (
+                <div 
+                  key={room.id}
+                  onClick={() => handleJoinRoom(room)}
+                  className="cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <Card className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className={`aspect-video bg-gradient-to-br ${room.gradient} relative overflow-hidden`}>
+                      <img 
+                        src={room.image} 
+                        alt={room.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    </div>
+                    <CardContent className="p-5">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{room.title}</h3>
+                      <p className="text-gray-600 text-sm mb-3">{room.subtitle}</p>
+                      <div className="flex items-center text-gray-500 text-sm">
+                        <Users className="w-4 h-4 mr-1" />
+                        <span>{room.students}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+    }
   }
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
@@ -153,60 +201,66 @@ export default function StudyRooms({ onJoinRoom, onCreateRoom }: StudyRoomsProps
 
       {/* Navigation */}
       <nav className="space-y-2">
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl px-4 py-3 flex items-center gap-3 text-white font-medium">
+        <button
+          onClick={() => setActiveView('home')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            activeView === 'home'
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
           <Home className="w-5 h-5" />
           <span>Home</span>
-        </div>
-        <Button
-          variant="ghost"
-          className="w-full justify-start px-4 py-3 rounded-xl hover:bg-gray-100 flex items-center gap-3 text-gray-700 h-auto"
+        </button>
+        <button
+          onClick={() => setActiveView('friends')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            activeView === 'friends'
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
         >
           <Users className="w-5 h-5" />
           <span>Friends</span>
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={handleCreateRoom}
-          className="w-full justify-start px-4 py-3 rounded-xl hover:bg-gray-100 flex items-center gap-3 text-gray-700 h-auto"
+        </button>
+        <button
+          onClick={() => setActiveView('create')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            activeView === 'create'
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
         >
           <PlusCircle className="w-5 h-5" />
           <span>Create Room</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full justify-start px-4 py-3 rounded-xl hover:bg-gray-100 flex items-center gap-3 text-gray-700 h-auto"
+        </button>
+        <button
+          onClick={() => setActiveView('chat')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            activeView === 'chat'
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
         >
           <MessageCircle className="w-5 h-5" />
           <span>Chat</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full justify-start px-4 py-3 rounded-xl hover:bg-gray-100 flex items-center gap-3 text-gray-700 h-auto"
+        </button>
+        <button
+          onClick={() => setActiveView('favorites')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            activeView === 'favorites'
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
         >
           <Heart className="w-5 h-5" />
           <span>Favorite Room</span>
-        </Button>
+        </button>
       </nav>
     </div>
   )
 
-  // If in video view, show VideoRoom component
-  if (currentView === 'video' && joinedRoomData) {
-    return (
-      <VideoRoom 
-        roomData={{
-          id: joinedRoomData.id,
-          title: joinedRoomData.title,
-          subtitle: joinedRoomData.subtitle,
-          description: joinedRoomData.description,
-          students: joinedRoomData.students
-        }}
-        onLeaveRoom={handleLeaveVideoRoom}
-      />
-    )
-  }
-
-  // Otherwise show StudyRooms interface
+  // Render different views based on activeView state
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Mobile Hamburger Button */}
@@ -240,45 +294,7 @@ export default function StudyRooms({ onJoinRoom, onCreateRoom }: StudyRoomsProps
 
       {/* Main Content */}
       <main className="md:ml-60 min-h-screen">
-        <div className="p-6 md:p-8">
-          {/* Section Header */}
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium">
-              <GraduationCap className="w-4 h-4" />
-              <span>School Channel</span>
-            </div>
-          </div>
-
-          {/* Rooms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rooms.map((room) => (
-              <div 
-                key={room.id}
-                onClick={() => handleJoinRoom(room)}
-                className="cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-                <Card className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className={`aspect-video bg-gradient-to-br ${room.gradient} relative overflow-hidden`}>
-                    <img 
-                      src={room.image} 
-                      alt={room.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  </div>
-                  <CardContent className="p-5">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{room.title}</h3>
-                    <p className="text-gray-600 text-sm mb-3">{room.subtitle}</p>
-                    <div className="flex items-center text-gray-500 text-sm">
-                      <Users className="w-4 h-4 mr-1" />
-                      <span>{room.students}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
-          </div>
-        </div>
+        {renderViewContent()}
       </main>
 
       {/* Join Room Dialog */}
