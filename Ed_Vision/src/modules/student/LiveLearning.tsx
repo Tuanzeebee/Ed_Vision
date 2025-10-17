@@ -234,12 +234,6 @@ export default function LiveLearning() {
     setShowStudyRooms(false)
   }
 
-  const handleCreateRoom = () => {
-    console.log('Creating new room')
-    // Implement room creation logic here
-    setShowStudyRooms(false)
-  }
-
   const handlePlayTrack = (track: Track) => {
     setCurrentTrack(track)
     setIsPlaying(true)
@@ -922,7 +916,6 @@ export default function LiveLearning() {
         <div className="fixed inset-0 z-50 bg-white">
           <StudyRooms 
             onJoinRoom={handleJoinRoom}
-            onCreateRoom={handleCreateRoom}
           />
           {/* Close button for StudyRooms */}
           <Button
