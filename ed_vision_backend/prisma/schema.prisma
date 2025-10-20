@@ -278,6 +278,7 @@ model InstructorWeeklySlot {
   is_open          Boolean                     @default(true)
   note             String?
   auto_accept      Boolean                     @default(false)
+  meeting_type     String?                     @default("offline") @db.VarChar(32)
   appointments     Appointment[]
   week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
