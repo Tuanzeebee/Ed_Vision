@@ -1,14 +1,334 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model Account {
+  account_id         Int              @id @default(autoincrement())
+  email              String           @unique @db.VarChar(255)
+  password_hash      String
+  role               String           @db.VarChar(20)
+  status             String?          @default("active") @db.VarChar(20)
+  created_at         DateTime         @default(now()) @db.Timestamptz(6)
+  appointmentsBooked Appointment[]
+  instructor         Instructor?
+  parent             Parent?
+  profile            Profile?
+  student            Student?
+  surveyResponses    SurveyResponse[]
+
+  @@map("Account")
+}
+
+model Profile {
+  profile_id    Int       @id @default(autoincrement())
+  account_id    Int       @unique
+  full_name     String    @db.VarChar(150)
+  date_of_birth DateTime? @db.Date
+  gender        String?   @db.VarChar(16)
+  address       String?
+  avatar_url    String?
+  nationality   String?   @db.VarChar(80)
+  account       Account   @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@map("Profile")
+}
+
+model Parent {
+  parent_id          Int                 @id @default(autoincrement())
+  account_id         Int                 @unique
+  full_name          String              @db.VarChar(150)
+  email              String              @db.VarChar(255)
+  phone_number       String              @db.VarChar(30)
+  relationship_type  String?             @db.VarChar(32)
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime            @default(now()) @db.Timestamptz(6)
+  account            Account             @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  parentStudentLinks ParentStudentLink[]
+
+  @@map("Parent")
+}
+
+model Student {
+  student_id         Int                   @id @default(autoincrement())
+  account_id         Int                   @unique
+  student_code       String                @unique @db.VarChar(50)
+  major              String?               @db.VarChar(120)
+  cohort_year        Int?
+  class_id           Int?
+  status             String?               @default("active") @db.VarChar(20)
+  appointments       Appointment[]
+  parentStudentLinks ParentStudentLink[]
+  account            Account               @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  classGroup         ClassGroup?           @relation(fields: [class_id], references: [class_id])
+  courseRecords      StudentCourseRecord[]
+
+  @@map("Student")
+}
+
+model Instructor {
+  instructor_id               Int                          @id @default(autoincrement())
+  account_id                  Int                          @unique
+  employee_code               String                       @unique @db.VarChar(50)
+  academic_title              String?                      @db.VarChar(100)
+  position                    String?                      @db.VarChar(100)
+  department_id               Int?
+  hire_date                   DateTime?                    @db.Date
+  status                      String?                      @default("active") @db.VarChar(20)
+  adviserAssignments          AdviserAssignment[]
+  appointments                Appointment[]
+  account                     Account                      @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  department                  Department?                  @relation(fields: [department_id], references: [department_id])
+  instructorAvailabilityWeeks InstructorAvailabilityWeek[]
+
+  @@map("Instructor")
+}
+
+model Department {
+  department_id Int          @id @default(autoincrement())
+  code          String?      @unique @db.VarChar(20)
+  name          String       @db.VarChar(150)
+  status        String?      @default("active") @db.VarChar(20)
+  instructors   Instructor[]
+
+  @@map("Department")
+}
+
+model Program {
+  program_id        Int                @id @default(autoincrement())
+  program_code      String             @unique @db.VarChar(20)
+  program_name      String             @db.VarChar(255)
+  duration_years    Int?               @default(4) @db.SmallInt
+  classGroups       ClassGroup[]
+  curriculumCourses CurriculumCourse[]
+
+  @@map("Program")
+}
+
+model ClassGroup {
+  class_id           Int                 @id @default(autoincrement())
+  class_code         String              @unique @db.VarChar(30)
+  program_id         Int?
+  cohort_year        Int
+  status             String?             @default("active") @db.VarChar(20)
+  adviserAssignments AdviserAssignment[]
+  program            Program?            @relation(fields: [program_id], references: [program_id])
+  students           Student[]
+
+  @@map("ClassGroup")
+}
+
+model AdviserAssignment {
+  adviser_assign_id Int        @id @default(autoincrement())
+  class_id          Int
+  instructor_id     Int
+  assigned_date     DateTime?  @db.Date
+  ended_date        DateTime?  @db.Date
+  note              String?
+  classGroup        ClassGroup @relation(fields: [class_id], references: [class_id])
+  instructor        Instructor @relation(fields: [instructor_id], references: [instructor_id])
+
+  @@unique([class_id, instructor_id])
+  @@map("AdviserAssignment")
+}
+
+model ParentStudentLink {
+  link_id      Int     @id @default(autoincrement())
+  parent_id    Int
+  student_id   Int
+  relationship String? @db.VarChar(32)
+  link_code    String? @unique @db.VarChar(10)
+  parent       Parent  @relation(fields: [parent_id], references: [parent_id], onDelete: Cascade)
+  student      Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+
+  @@unique([parent_id, student_id])
+  @@map("ParentStudentLink")
+}
+
+model AcademicTerm {
+  term_id              Int                   @id @default(autoincrement())
+  academic_year        String                @db.VarChar(20)
+  semester_number      Int                   @db.SmallInt
+  is_summer            Boolean               @default(false)
+  status               String?               @default("active") @db.VarChar(20)
+  studentCourseRecords StudentCourseRecord[]
+
+  @@unique([academic_year, semester_number])
+  @@map("AcademicTerm")
+}
+
+model Course {
+  course_id            Int                   @id @default(autoincrement())
+  course_code          String                @unique @db.VarChar(20)
+  course_name          String                @db.VarChar(255)
+  credits_unit         Int?                  @db.SmallInt
+  study_format         String?               @default("offline") @db.VarChar(20)
+  language             String?               @db.VarChar(30)
+  difficulty           String?               @db.VarChar(20)
+  description          String?
+  curriculumCourses    CurriculumCourse[]
+  studentCourseRecords StudentCourseRecord[]
+
+  @@map("Course")
+}
+
+model CurriculumCourse {
+  id           Int     @id @default(autoincrement())
+  program_id   Int
+  course_id    Int
+  year_number  Int     @db.SmallInt
+  term_number  Int     @db.SmallInt
+  is_mandatory Boolean @default(true)
+  note         String?
+  course       Course  @relation(fields: [course_id], references: [course_id])
+  program      Program @relation(fields: [program_id], references: [program_id])
+
+  @@unique([program_id, course_id])
+  @@map("CurriculumCourse")
+}
+
+model StudentCourseRecord {
+  record_id               Int           @id @default(autoincrement())
+  student_id              Int?
+  course_id               Int?
+  term_id                 Int?
+  status                  String?       @default("planned") @db.VarChar(20)
+  raw_score               Decimal?      @db.Decimal(5, 2)
+  converted_score         String?       @db.VarChar(5)
+  converted_numeric_score Decimal?      @db.Decimal(5, 2)
+  course                  Course?       @relation(fields: [course_id], references: [course_id])
+  student                 Student?      @relation(fields: [student_id], references: [student_id])
+  academicTerm            AcademicTerm? @relation(fields: [term_id], references: [term_id])
+
+  @@unique([student_id, course_id])
+  @@map("StudentCourseRecord")
+}
+
+model SurveyQuestion {
+  question_id   Int            @id @default(autoincrement())
+  question_text String
+  question_type String?        @db.VarChar(20)
+  category      String?        @db.VarChar(50)
+  is_active     Boolean        @default(true)
+  surveyAnswers SurveyAnswer[]
+  surveyOptions SurveyOption[]
+
+  @@map("SurveyQuestion")
+}
+
+model SurveyOption {
+  option_id     Int             @id @default(autoincrement())
+  question_id   Int?
+  option_text   String?
+  option_value  Int?
+  surveyAnswers SurveyAnswer[]
+  question      SurveyQuestion? @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
+
+  @@map("SurveyOption")
+}
+
+model SurveyResponse {
+  response_id   Int            @id @default(autoincrement())
+  account_id    Int?
+  submitted_at  DateTime       @default(now()) @db.Timestamptz(6)
+  surveyAnswers SurveyAnswer[]
+  account       Account?       @relation(fields: [account_id], references: [account_id])
+
+  @@map("SurveyResponse")
+}
+
+model SurveyAnswer {
+  answer_id   Int             @id @default(autoincrement())
+  response_id Int?
+  question_id Int?
+  option_id   Int?
+  free_text   String?
+  option      SurveyOption?   @relation(fields: [option_id], references: [option_id])
+  question    SurveyQuestion? @relation(fields: [question_id], references: [question_id])
+  response    SurveyResponse? @relation(fields: [response_id], references: [response_id], onDelete: Cascade)
+
+  @@unique([response_id, question_id])
+  @@map("SurveyAnswer")
+}
+
+model InstructorAvailabilityWeek {
+  week_id               Int                    @id @default(autoincrement())
+  instructor_id         Int?
+  week_start_date       DateTime               @db.Date
+  created_at            DateTime               @default(now()) @db.Timestamptz(6)
+  instructor            Instructor?            @relation(fields: [instructor_id], references: [instructor_id])
+  instructorWeeklySlots InstructorWeeklySlot[]
+
+  @@unique([instructor_id, week_start_date])
+  @@map("InstructorAvailabilityWeek")
+}
+
+model InstructorWeeklySlot {
+  slot_id          Int                         @id @default(autoincrement())
+  week_id          Int?
+  day_of_week      Int?                        @db.SmallInt
+  start_time_local DateTime?                   @db.Time(6)
+  end_time_local   DateTime?                   @db.Time(6)
+  duration_minutes Int?                        @db.SmallInt
+  period_label     String?                     @db.VarChar(16)
+  capacity         Int                         @default(10) @db.SmallInt
+  is_open          Boolean                     @default(true)
+  note             String?
+  appointments     Appointment[]
+  week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
+
+  @@unique([week_id, day_of_week, start_time_local])
+  @@map("InstructorWeeklySlot")
+}
+
+model Appointment {
+  appointment_id     Int                  @id @default(autoincrement())
+  slot_id            Int
+  booker_account_id  Int
+  booker_role        String               @db.VarChar(20)
+  student_id         Int?
+  instructor_id      Int?
+  meeting_type       String               @db.VarChar(32)
+  meeting_purpose    String?              @db.VarChar(255)
+  meeting_location   String?
+  meeting_link       String?
+  status             String               @default("pending") @db.VarChar(32)
+  cancel_reason      String?
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?            @db.Timestamptz(6)
+  canceled_at        DateTime?            @db.Timestamptz(6)
+  booker             Account              @relation(fields: [booker_account_id], references: [account_id])
+  instructor         Instructor?          @relation(fields: [instructor_id], references: [instructor_id])
+  slot               InstructorWeeklySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
+  student            Student?             @relation(fields: [student_id], references: [student_id])
+  appointmentContact AppointmentContact?
+  reminderSchedules  ReminderSchedule[]
+
+  @@map("Appointment")
+}
+
+model AppointmentContact {
+  appointment_id          Int         @id
+  contact_name            String?     @db.VarChar(150)
+  contact_phone           String?     @db.VarChar(30)
+  contact_email           String?     @db.VarChar(255)
+  relationship_to_student String?     @db.VarChar(64)
+  appointment             Appointment @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
+
+  @@map("AppointmentContact")
+}
+
+model ReminderSchedule {
+  reminder_id    Int          @id @default(autoincrement())
+  appointment_id Int?
+  remind_at      DateTime?    @db.Timestamptz(6)
+  channel        String?      @db.VarChar(32)
+  sent_at        DateTime?    @db.Timestamptz(6)
+  appointment    Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
+
+  @@map("ReminderSchedule")
 }
