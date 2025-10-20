@@ -1,0 +1,245 @@
+-- =========================
+-- 🧩 ACCOUNT & PROFILE
+-- =========================
+CREATE TABLE Account (
+  account_id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role VARCHAR(20) NOT NULL,        -- student | parent | instructor | admin
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE Profile (
+  profile_id SERIAL PRIMARY KEY,
+  account_id INT UNIQUE REFERENCES Account(account_id) ON DELETE CASCADE,
+  full_name VARCHAR(150) NOT NULL,
+  date_of_birth DATE,
+  gender VARCHAR(16),
+  address TEXT,
+  avatar_url TEXT,
+  nationality VARCHAR(80)
+);
+
+-- =========================
+-- 👨‍👩‍👧‍👦 PARENT – STUDENT – INSTRUCTOR
+-- =========================
+CREATE TABLE Parent (
+  parent_id SERIAL PRIMARY KEY,
+  account_id INT UNIQUE NOT NULL REFERENCES Account(account_id) ON DELETE CASCADE,
+  full_name VARCHAR(150) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone_number VARCHAR(30) NOT NULL,
+  relationship_type VARCHAR(32),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE Student (
+  student_id SERIAL PRIMARY KEY,
+  account_id INT UNIQUE NOT NULL REFERENCES Account(account_id) ON DELETE CASCADE,
+  student_code VARCHAR(50) UNIQUE NOT NULL,
+  major VARCHAR(120),
+  cohort_year INT,
+  class_id INT,         -- liên kết lớp hành chính
+  status VARCHAR(20) DEFAULT 'active'
+);
+
+CREATE TABLE Instructor (
+  instructor_id SERIAL PRIMARY KEY,
+  account_id INT UNIQUE NOT NULL REFERENCES Account(account_id) ON DELETE CASCADE,
+  employee_code VARCHAR(50) UNIQUE NOT NULL,
+  academic_title VARCHAR(100),
+  position VARCHAR(100),
+  department_id INT,
+  hire_date DATE,
+  status VARCHAR(20) DEFAULT 'active'
+);
+
+-- =========================
+-- 🏫 DEPARTMENT, PROGRAM, CLASSGROUP, ADVISER ASSIGNMENT
+-- =========================
+CREATE TABLE Department (
+  department_id SERIAL PRIMARY KEY,
+  code VARCHAR(20) UNIQUE,
+  name VARCHAR(150) NOT NULL,
+  status VARCHAR(20) DEFAULT 'active'
+);
+
+CREATE TABLE Program (
+  program_id SERIAL PRIMARY KEY,
+  program_code VARCHAR(20) UNIQUE NOT NULL,
+  program_name VARCHAR(255) NOT NULL,
+  duration_years SMALLINT DEFAULT 4
+);
+
+CREATE TABLE ClassGroup (
+  class_id SERIAL PRIMARY KEY,
+  class_code VARCHAR(30) UNIQUE NOT NULL,
+  program_id INT REFERENCES Program(program_id),
+  cohort_year INT NOT NULL,
+  status VARCHAR(20) DEFAULT 'active'   -- active | inactive | graduated
+);
+
+CREATE TABLE AdviserAssignment (
+  adviser_assign_id SERIAL PRIMARY KEY,
+  class_id INT NOT NULL REFERENCES ClassGroup(class_id),
+  instructor_id INT NOT NULL REFERENCES Instructor(instructor_id),
+  assigned_date DATE,
+  ended_date DATE,
+  note TEXT,
+  UNIQUE (class_id, instructor_id)
+);
+
+-- =========================
+-- 👩‍👧 PARENT–STUDENT LINK
+-- =========================
+CREATE TABLE ParentStudentLink (
+  link_id SERIAL PRIMARY KEY,
+  parent_id INT NOT NULL REFERENCES Parent(parent_id) ON DELETE CASCADE,
+  student_id INT NOT NULL REFERENCES Student(student_id) ON DELETE CASCADE,
+  relationship VARCHAR(32),
+  link_code VARCHAR(10) UNIQUE,
+  UNIQUE (parent_id, student_id)
+);
+
+-- =========================
+-- 📚 COURSE & CURRICULUM
+-- =========================
+CREATE TABLE AcademicTerm (
+  term_id SERIAL PRIMARY KEY,
+  academic_year VARCHAR(20) NOT NULL,
+  semester_number SMALLINT NOT NULL,
+  is_summer BOOLEAN DEFAULT FALSE,
+  status VARCHAR(20) DEFAULT 'active',
+  UNIQUE (academic_year, semester_number)
+);
+
+CREATE TABLE Course (
+  course_id SERIAL PRIMARY KEY,
+  course_code VARCHAR(20) UNIQUE NOT NULL,
+  course_name VARCHAR(255) NOT NULL,
+  credits_unit SMALLINT,
+  study_format VARCHAR(20) DEFAULT 'offline',
+  language VARCHAR(30),
+  difficulty VARCHAR(20),
+  description TEXT
+);
+
+CREATE TABLE CurriculumCourse (
+  id SERIAL PRIMARY KEY,
+  program_id INT NOT NULL REFERENCES Program(program_id),
+  course_id INT NOT NULL REFERENCES Course(course_id),
+  year_number SMALLINT NOT NULL,
+  term_number SMALLINT NOT NULL,
+  is_mandatory BOOLEAN DEFAULT TRUE,
+  note TEXT,
+  UNIQUE (program_id, course_id)
+);
+
+CREATE TABLE StudentCourseRecord (
+  record_id SERIAL PRIMARY KEY,
+  student_id INT REFERENCES Student(student_id),
+  course_id INT REFERENCES Course(course_id),
+  term_id INT REFERENCES AcademicTerm(term_id),
+  status VARCHAR(20) DEFAULT 'planned',
+  raw_score NUMERIC(5,2),
+  converted_score VARCHAR(5),
+  converted_numeric_score NUMERIC(5,2),
+  UNIQUE (student_id, course_id)
+);
+
+-- =========================
+-- 🧮 SURVEY
+-- =========================
+CREATE TABLE SurveyQuestion (
+  question_id SERIAL PRIMARY KEY,
+  question_text TEXT NOT NULL,
+  question_type VARCHAR(20),
+  category VARCHAR(50),
+  is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE SurveyOption (
+  option_id SERIAL PRIMARY KEY,
+  question_id INT REFERENCES SurveyQuestion(question_id) ON DELETE CASCADE,
+  option_text TEXT,
+  option_value INT
+);
+
+CREATE TABLE SurveyResponse (
+  response_id SERIAL PRIMARY KEY,
+  account_id INT REFERENCES Account(account_id),
+  submitted_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE SurveyAnswer (
+  answer_id SERIAL PRIMARY KEY,
+  response_id INT REFERENCES SurveyResponse(response_id) ON DELETE CASCADE,
+  question_id INT REFERENCES SurveyQuestion(question_id),
+  option_id INT REFERENCES SurveyOption(option_id),
+  free_text TEXT,
+  UNIQUE (response_id, question_id)
+);
+
+-- =========================
+-- 📅 APPOINTMENT
+-- =========================
+CREATE TABLE InstructorAvailabilityWeek (
+  week_id SERIAL PRIMARY KEY,
+  instructor_id INT REFERENCES Instructor(instructor_id),
+  week_start_date DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (instructor_id, week_start_date)
+);
+
+CREATE TABLE InstructorWeeklySlot (
+  slot_id SERIAL PRIMARY KEY,
+  week_id INT REFERENCES InstructorAvailabilityWeek(week_id) ON DELETE CASCADE,
+  day_of_week SMALLINT,
+  start_time_local TIME,
+  end_time_local TIME,
+  period_label VARCHAR(16),
+  capacity SMALLINT NOT NULL DEFAULT 10,
+  is_open BOOLEAN DEFAULT TRUE,
+  note TEXT,
+  auto_accept BOOLEAN DEFAULT FALSE;
+  UNIQUE (week_id, day_of_week, start_time_local)
+);
+
+CREATE TABLE Appointment (
+  appointment_id SERIAL PRIMARY KEY,
+  slot_id INT NOT NULL REFERENCES InstructorWeeklySlot(slot_id) ON DELETE CASCADE,
+  booker_account_id INT NOT NULL REFERENCES Account(account_id),
+  booker_role VARCHAR(20) NOT NULL, -- parent | student | instructor | admin
+  student_id INT REFERENCES Student(student_id),
+  instructor_id INT REFERENCES Instructor(instructor_id),
+  meeting_type VARCHAR(32) NOT NULL, -- in_person | video_call | phone_call
+  meeting_purpose VARCHAR(255),
+  meeting_location TEXT,
+  meeting_link TEXT,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  cancel_reason TEXT,
+  attended BOOLEAN, 
+  attendance_status VARCHAR(20),   -- 'attended' | 'no_show' | 'late' | 'cancelled' | 'late_cancel'
+  attendance_checked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ,
+  canceled_at TIMESTAMPTZ
+);
+
+CREATE TABLE AppointmentContact (
+  appointment_id INT PRIMARY KEY REFERENCES Appointment(appointment_id) ON DELETE CASCADE,
+  contact_name VARCHAR(150),
+  contact_phone VARCHAR(30),
+  contact_email VARCHAR(255),
+  relationship_to_student VARCHAR(64)
+);
+
+CREATE TABLE ReminderSchedule (
+  reminder_id SERIAL PRIMARY KEY,
+  appointment_id INT REFERENCES Appointment(appointment_id) ON DELETE CASCADE,
+  remind_at TIMESTAMPTZ,
+  channel VARCHAR(32),
+  sent_at TIMESTAMPTZ
+);

@@ -273,11 +273,11 @@ model InstructorWeeklySlot {
   day_of_week      Int?                        @db.SmallInt
   start_time_local DateTime?                   @db.Time(6)
   end_time_local   DateTime?                   @db.Time(6)
-  duration_minutes Int?                        @db.SmallInt
   period_label     String?                     @db.VarChar(16)
   capacity         Int                         @default(10) @db.SmallInt
   is_open          Boolean                     @default(true)
   note             String?
+  auto_accept      Boolean                     @default(false)
   appointments     Appointment[]
   week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
@@ -286,27 +286,30 @@ model InstructorWeeklySlot {
 }
 
 model Appointment {
-  appointment_id     Int                  @id @default(autoincrement())
-  slot_id            Int
-  booker_account_id  Int
-  booker_role        String               @db.VarChar(20)
-  student_id         Int?
-  instructor_id      Int?
-  meeting_type       String               @db.VarChar(32)
-  meeting_purpose    String?              @db.VarChar(255)
-  meeting_location   String?
-  meeting_link       String?
-  status             String               @default("pending") @db.VarChar(32)
-  cancel_reason      String?
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?            @db.Timestamptz(6)
-  canceled_at        DateTime?            @db.Timestamptz(6)
-  booker             Account              @relation(fields: [booker_account_id], references: [account_id])
-  instructor         Instructor?          @relation(fields: [instructor_id], references: [instructor_id])
-  slot               InstructorWeeklySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
-  student            Student?             @relation(fields: [student_id], references: [student_id])
-  appointmentContact AppointmentContact?
-  reminderSchedules  ReminderSchedule[]
+  appointment_id        Int                  @id @default(autoincrement())
+  slot_id               Int
+  booker_account_id     Int
+  booker_role           String               @db.VarChar(20)
+  student_id            Int?
+  instructor_id         Int?
+  meeting_type          String               @db.VarChar(32)
+  meeting_purpose       String?              @db.VarChar(255)
+  meeting_location      String?
+  meeting_link          String?
+  status                String               @default("pending") @db.VarChar(32)
+  cancel_reason         String?
+  created_at            DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?            @db.Timestamptz(6)
+  canceled_at           DateTime?            @db.Timestamptz(6)
+  attendance_checked_at DateTime?            @db.Timestamptz(6)
+  attendance_status     String?              @db.VarChar(20)
+  attended              Boolean?
+  booker                Account              @relation(fields: [booker_account_id], references: [account_id])
+  instructor            Instructor?          @relation(fields: [instructor_id], references: [instructor_id])
+  slot                  InstructorWeeklySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
+  student               Student?             @relation(fields: [student_id], references: [student_id])
+  appointmentContact    AppointmentContact?
+  reminderSchedules     ReminderSchedule[]
 
   @@map("Appointment")
 }
