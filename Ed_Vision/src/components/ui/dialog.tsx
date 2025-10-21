@@ -4,9 +4,10 @@ interface DialogProps {
   open: boolean
   onOpenChange?: (open: boolean) => void
   children?: React.ReactNode
+  zIndex?: string
 }
 
-export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
+export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children, zIndex = 'z-50' }) => {
   if (!open) return null
   
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -16,7 +17,7 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
   }
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={handleBackdropClick}>
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center`} onClick={handleBackdropClick}>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50" />
       {/* Dialog content */}
@@ -28,8 +29,12 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
 }
 
 export const DialogContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className = '', ...props }) => {
+  // Check if className contains custom width/margin settings
+  const hasCustomWidth = className.includes('w-[') || className.includes('max-w-')
+  const defaultClasses = hasCustomWidth ? 'relative bg-white rounded-lg shadow-lg' : 'relative bg-white rounded-lg shadow-lg max-w-lg w-full mx-4'
+  
   return (
-    <div className={`relative bg-white rounded-lg shadow-lg max-w-lg w-full mx-4 ${className}`} {...props}>
+    <div className={`${defaultClasses} ${className}`} {...props}>
       {children}
     </div>
   )

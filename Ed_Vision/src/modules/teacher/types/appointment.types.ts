@@ -1,6 +1,8 @@
 export interface TimeSlot {
   start: string;
   end: string;
+  meetingType?: 'online' | 'offline' | 'both';
+  capacity?: number;
 }
 
 export interface AvailableDate {
