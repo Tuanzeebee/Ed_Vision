@@ -198,7 +198,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           <button
             onClick={toggleAppointmentMenu}
             className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${
-              currentPage === 'appointments' || currentPage === 'requests' || currentPage === 'confirmed'
+              currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
                 ? 'bg-blue-50 text-blue-600'
                 : 'text-gray-700 hover:bg-gray-50'
             }`}

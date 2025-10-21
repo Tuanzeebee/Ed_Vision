@@ -50,6 +50,7 @@ import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import LiveLearning from "./modules/student/LiveLearning";
 import VideoRoom from "./modules/student/VideoRoom";
 import StudyRooms from "./modules/student/StudyRooms";
+import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 function App() {
   return (
     <Router>
@@ -136,6 +137,7 @@ function App() {
         <Route path="/teacher/requests" element={<TeacherAppointmentDashboard />} />
         <Route path="/teacher/confirmed" element={<TeacherAppointmentDashboard />} />
         <Route path="/teacher/settings" element={<TeacherDashboard />} />
+        <Route path="/teacher/meeting-detail-demo" element={<MeetingDetailDemo />} />
       </Routes>
     </Router>
   );

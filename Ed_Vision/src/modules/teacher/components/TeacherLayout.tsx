@@ -6,13 +6,20 @@ import Sidebar from './Sidebar';
 interface TeacherLayoutProps {
     children: ReactNode;
     currentPage?: string;
+    onNavigate?: (path: string) => void;
 }
 
-export default function TeacherLayout({ children, currentPage }: TeacherLayoutProps) {
+export default function TeacherLayout({ children, currentPage, onNavigate }: TeacherLayoutProps) {
     const navigate = useNavigate();
 
     const handleNavigation = (path: string) => {
-        navigate(path);
+        // If custom navigation handler is provided, use it
+        if (onNavigate) {
+            onNavigate(path);
+        } else {
+            // Otherwise, use router navigation
+            navigate(path);
+        }
     };
 
     return (

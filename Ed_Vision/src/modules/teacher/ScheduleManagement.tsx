@@ -1,0 +1,570 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  CalendarPlus,
+  Plus,
+  X,
+  Info,
+  Monitor,
+  MapPin,
+  Globe,
+  Users,
+  Clock,
+  Check,
+} from 'lucide-react';
+import type { AvailableDate } from './types/appointment.types';
+import {
+  formatDate,
+  getTodayString,
+  getMaxDateString,
+  getDateString,
+  calculateEndTime,
+  isTimeSlotOverlapping,
+} from './utils/appointmentUtils';
+
+interface ScheduleManagementProps {
+  availableDates: AvailableDate[];
+  setAvailableDates: (dates: AvailableDate[]) => void;
+  showToast: (message: string, type: string) => void;
+}
+
+export default function ScheduleManagement({
+  availableDates,
+  setAvailableDates,
+  showToast,
+}: ScheduleManagementProps) {
+  const navigate = useNavigate();
+  const [selectedDate, setSelectedDate] = useState('');
+  
+  // Time modal state
+  const [timeModalOpen, setTimeModalOpen] = useState(false);
+  const [currentDateForTime, setCurrentDateForTime] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState('');
+  const [duration, setDuration] = useState('60');
+  const [endTime, setEndTime] = useState('');
+  const [meetingType, setMeetingType] = useState<'online' | 'offline' | 'both'>('both');
+  const [capacity, setCapacity] = useState('10');
+
+  // Update end time when start time or duration changes
+  useEffect(() => {
+    if (startTime && duration) {
+      setEndTime(calculateEndTime(startTime, parseInt(duration)));
+    }
+  }, [startTime, duration]);
+
+  // Initialize with sample data
+  useEffect(() => {
+    if (availableDates.length === 0) {
+      const sampleData: AvailableDate[] = [
+        {
+          date: getDateString(1),
+          timeSlots: [
+            { start: '09:00', end: '10:00', meetingType: 'online', capacity: 10 },
+            { start: '14:00', end: '15:00', meetingType: 'offline', capacity: 5 },
+            { start: '16:00', end: '17:00', meetingType: 'both', capacity: 15 },
+          ],
+        },
+        {
+          date: getDateString(3),
+          timeSlots: [
+            { start: '08:00', end: '09:00', meetingType: 'offline', capacity: 8 },
+            { start: '10:00', end: '10:30', meetingType: 'online', capacity: 12 },
+            { start: '13:00', end: '14:00', meetingType: 'both', capacity: 10 },
+          ],
+        },
+      ];
+      setAvailableDates(sampleData);
+    }
+  }, []);
+
+  const handleAddDate = (date: string) => {
+    if (!date) {
+      showToast('Vui lòng chọn ngày!', 'error');
+      return;
+    }
+    if (availableDates.find((d) => d.date === date)) {
+      showToast('Ngày này đã được thêm!', 'warning');
+      return;
+    }
+    setAvailableDates([...availableDates, { date, timeSlots: [] }]);
+    setSelectedDate('');
+    showToast('Đã thêm ngày rảnh thành công!', 'success');
+  };
+
+  const handleRemoveDate = (index: number, skipConfirm: boolean = false) => {
+    const removedDate = availableDates[index];
+
+    if (!skipConfirm && removedDate.timeSlots.length > 0) {
+      if (!window.confirm('Bạn có chắc chắn muốn xóa ngày này và tất cả khung giờ?')) {
+        return;
+      }
+    }
+
+    setAvailableDates(availableDates.filter((_, i) => i !== index));
+    showToast(`Đã xóa ngày ${formatDate(removedDate.date)}!`, 'warning');
+  };
+
+  const handleOpenTimeModal = (date: string) => {
+    setCurrentDateForTime(date);
+    setTimeModalOpen(true);
+    setStartTime('');
+    setEndTime('');
+    setDuration('60');
+    setMeetingType('both');
+    setCapacity('10');
+  };
+
+  const handleAddTimeSlot = () => {
+    if (!currentDateForTime || !startTime || !endTime) {
+      showToast('Vui lòng nhập đầy đủ thời gian!', 'error');
+      return;
+    }
+    if (startTime >= endTime) {
+      showToast('Giờ bắt đầu phải nhỏ hơn giờ kết thúc!', 'error');
+      return;
+    }
+
+    const dateIndex = availableDates.findIndex((d) => d.date === currentDateForTime);
+    if (dateIndex === -1) return;
+
+    if (isTimeSlotOverlapping(startTime, endTime, availableDates[dateIndex].timeSlots)) {
+      showToast('Khung giờ này bị trùng với khung giờ đã có!', 'warning');
+      return;
+    }
+
+    const newDates = [...availableDates];
+    newDates[dateIndex].timeSlots.push({
+      start: startTime,
+      end: endTime,
+      meetingType: meetingType,
+      capacity: parseInt(capacity) || 10,
+    });
+    newDates[dateIndex].timeSlots.sort((a, b) => a.start.localeCompare(b.start));
+    setAvailableDates(newDates);
+    setTimeModalOpen(false);
+    showToast(`Đã thêm khung giờ ${startTime} - ${endTime} thành công!`, 'success');
+  };
+
+  const handleRemoveTimeSlot = (dateIndex: number, slotIndex: number) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ này?')) {
+      const newDates = [...availableDates];
+      const removedSlot = newDates[dateIndex].timeSlots[slotIndex];
+      newDates[dateIndex].timeSlots.splice(slotIndex, 1);
+      setAvailableDates(newDates);
+      showToast(`Đã xóa khung giờ ${removedSlot.start} - ${removedSlot.end}!`, 'warning');
+    }
+  };
+
+  // Statistics
+  const totalDates = availableDates.length;
+  const totalTimeSlots = availableDates.reduce((sum, date) => sum + date.timeSlots.length, 0);
+  const totalHours = availableDates.reduce((sum, date) => {
+    return (
+      sum +
+      date.timeSlots.reduce((slotSum, slot) => {
+        const start = new Date(`2000-01-01T${slot.start}`);
+        const end = new Date(`2000-01-01T${slot.end}`);
+        return slotSum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      }, 0)
+    );
+  }, 0);
+  const upcomingDates = availableDates.filter((date) => new Date(date.date) >= new Date()).length;
+
+  // Quick dates
+  const quickDates = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    return date;
+  });
+  const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+  return (
+    <>
+      <div className="p-4 md:p-6 lg:p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Thiết lập lịch rảnh</h1>
+          <p className="text-gray-600">
+            Thiết lập ngày và giờ rảnh để sinh viên có thể đặt lịch hẹn
+          </p>
+        </div>
+
+        {/* Statistics */}
+        <div className="bg-blue-50 border-blue-200 border rounded-lg p-4 mb-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-4">Thống kê lịch hẹn</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+              <div className="text-2xl font-bold text-blue-600 mb-1">{totalDates}</div>
+              <div className="text-sm text-gray-600">Tổng ngày rảnh</div>
+            </div>
+            <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+              <div className="text-2xl font-bold text-green-600 mb-1">{totalTimeSlots}</div>
+              <div className="text-sm text-gray-600">Khung giờ</div>
+            </div>
+            <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+              <div className="text-2xl font-bold text-purple-600 mb-1">{totalHours.toFixed(1)}</div>
+              <div className="text-sm text-gray-600">Tổng giờ rảnh</div>
+            </div>
+            <div className="text-center bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+              <div className="text-2xl font-bold text-orange-600 mb-1">{upcomingDates}</div>
+              <div className="text-sm text-gray-600">Ngày sắp tới</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Add Date Form */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Thêm ngày rảnh mới</h2>
+
+          {/* Quick Date Selection */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Chọn nhanh ngày trong tuần
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
+              {quickDates.map((date, index) => {
+                const dateString = date.toISOString().split('T')[0];
+                const isToday = index === 0;
+                const isAdded = availableDates.some((d) => d.date === dateString);
+                const dateIndex = availableDates.findIndex((d) => d.date === dateString);
+                const hasTimeSlots = isAdded && availableDates[dateIndex]?.timeSlots.length > 0;
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      if (isAdded) {
+                        // Toggle: Remove date if already added
+                        // Don't skip confirm if there are time slots
+                        handleRemoveDate(dateIndex, !hasTimeSlots);
+                      } else {
+                        // Add date if not added
+                        handleAddDate(dateString);
+                      }
+                    }}
+                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 text-center ${
+                      isAdded
+                        ? 'bg-green-50 border-green-500 hover:bg-green-100'
+                        : isToday
+                        ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
+                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    <div className="text-xs font-medium text-gray-600 mb-1">
+                      {weekDays[date.getDay()]}
+                    </div>
+                    <div className="text-lg font-bold text-gray-900">
+                      {date.getDate().toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Th{date.getMonth() + 1}
+                    </div>
+                    {isAdded && (
+                      <div className="text-xs text-green-600 mt-1 font-medium flex items-center justify-center gap-1">
+                        <Check className="w-3 h-3" /> Đã thêm
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Manual Date Input */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label htmlFor="dateInput" className="block text-sm font-medium text-gray-700 mb-2">
+                Hoặc chọn ngày cụ thể
+              </label>
+              <input
+                type="date"
+                id="dateInput"
+                min={getTodayString()}
+                max={getMaxDateString(6)}
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => handleAddDate(selectedDate)}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Thêm ngày rảnh
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Available Dates List */}
+        {availableDates.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CalendarPlus className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có ngày rảnh nào</h3>
+            <p className="text-gray-600">
+              Hãy thêm ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {availableDates.map((dateObj, index) => {
+              const isUpcoming = new Date(dateObj.date) >= new Date();
+
+              return (
+                <div
+                  key={index}
+                  className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md transition-shadow ${
+                    !isUpcoming ? 'opacity-75' : ''
+                  }`}
+                  onClick={() => navigate('/teacher/meeting-detail-demo')}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
+                    <div className="flex items-center gap-3 mb-4 sm:mb-0">
+                      <div className="p-3 rounded-lg bg-blue-100">
+                        <Clock className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {formatDate(dateObj.date)}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          <Clock className="inline w-4 h-4 mr-1" />
+                          {dateObj.timeSlots.length} khung giờ
+                          {!isUpcoming && ' • Đã qua'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleOpenTimeModal(dateObj.date)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-1"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Thêm giờ
+                      </button>
+                      <button
+                        onClick={() => handleRemoveDate(index)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {dateObj.timeSlots.length > 0 ? (
+                    <div className="flex flex-wrap gap-3">
+                      {dateObj.timeSlots.map((slot, slotIndex) => (
+                        <div
+                          key={slotIndex}
+                          className="inline-flex items-center bg-blue-100 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium border border-blue-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span className="font-semibold">
+                                {slot.start} - {slot.end}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {slot.meetingType === 'online' && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  <Monitor className="w-3 h-3 mr-1" />
+                                  Online
+                                </span>
+                              )}
+                              {slot.meetingType === 'offline' && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  Offline
+                                </span>
+                              )}
+                              {slot.meetingType === 'both' && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                  <Globe className="w-3 h-3 mr-1" />
+                                  Both
+                                </span>
+                              )}
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                <Users className="w-3 h-3 mr-1" />
+                                {slot.capacity || 10} slots
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveTimeSlot(index, slotIndex)}
+                            className="ml-3 text-blue-600 hover:text-red-600 transition-colors"
+                            title="Xóa khung giờ"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 text-center py-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                      <p className="font-medium">Chưa có khung giờ nào</p>
+                      <p className="text-sm">Hãy thêm khung giờ rảnh cho ngày này!</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Time Modal */}
+      {timeModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setTimeModalOpen(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Thêm khung giờ rảnh</h3>
+                <button
+                  onClick={() => setTimeModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4">
+                {currentDateForTime && formatDate(currentDateForTime)}
+              </p>
+
+              {/* Quick Time Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Chọn nhanh khung giờ phổ biến
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {[
+                    { start: '08:00', duration: 60, label: '8:00 - 9:00 (1h)' },
+                    { start: '09:00', duration: 60, label: '9:00 - 10:00 (1h)' },
+                    { start: '14:00', duration: 60, label: '14:00 - 15:00 (1h)' },
+                    { start: '16:00', duration: 60, label: '16:00 - 17:00 (1h)' },
+                    { start: '19:00', duration: 60, label: '19:00 - 20:00 (1h)' },
+                    { start: '20:00', duration: 60, label: '20:00 - 21:00 (1h)' },
+                  ].map((slot, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setStartTime(slot.start);
+                        setDuration(slot.duration.toString());
+                      }}
+                      className="p-3 border border-gray-200 rounded-lg hover:bg-blue-50 text-sm transition-colors"
+                    >
+                      {slot.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Time */}
+              <div className="border-t border-gray-200 pt-4 mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Hoặc tùy chỉnh thời gian
+                </label>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="startTime" className="block text-xs font-medium text-gray-600 mb-2">
+                      Giờ bắt đầu
+                    </label>
+                    <input
+                      type="time"
+                      id="startTime"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="endTime" className="block text-xs font-medium text-gray-600 mb-2">
+                      Giờ kết thúc
+                    </label>
+                    <input
+                      type="time"
+                      id="endTime"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Meeting Type and Capacity */}
+              <div className="border-t border-gray-200 pt-4 mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Thông tin bổ sung
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="meetingType" className="block text-xs font-medium text-gray-600 mb-2">
+                      Loại cuộc họp
+                    </label>
+                    <select
+                      id="meetingType"
+                      value={meetingType}
+                      onChange={(e) => setMeetingType(e.target.value as 'online' | 'offline' | 'both')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="both">🌍 Both (Cả hai)</option>
+                      <option value="online">🌐 Online</option>
+                      <option value="offline">🏫 Offline (Trực tiếp)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="capacity" className="block text-xs font-medium text-gray-600 mb-2">
+                      Số lượng slot
+                    </label>
+                    <input
+                      type="number"
+                      id="capacity"
+                      value={capacity}
+                      onChange={(e) => setCapacity(e.target.value)}
+                      min="1"
+                      max="50"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Số lượng slot là số phụ huynh tối đa có thể đặt lịch trong khung giờ này
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setTimeModalOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleAddTimeSlot}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Thêm giờ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
