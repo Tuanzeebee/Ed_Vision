@@ -51,6 +51,7 @@ import LiveLearning from "./modules/student/LiveLearning";
 import VideoRoom from "./modules/student/VideoRoom";
 import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
+
 function App() {
   return (
     <Router>
