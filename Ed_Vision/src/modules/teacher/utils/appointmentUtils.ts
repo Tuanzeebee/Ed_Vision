@@ -9,7 +9,11 @@ export function showToast(message: string, type: ToastType = 'success') {
 }
 
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  // Parse date string as local time to avoid timezone issues
+  // dateString format: "YYYY-MM-DD"
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day); // month is 0-indexed
+  
   const options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     year: 'numeric',
