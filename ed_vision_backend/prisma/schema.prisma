@@ -256,15 +256,29 @@ model SurveyAnswer {
 }
 
 model InstructorAvailabilityWeek {
-  week_id               Int                    @id @default(autoincrement())
-  instructor_id         Int?
-  week_start_date       DateTime               @db.Date
-  created_at            DateTime               @default(now()) @db.Timestamptz(6)
-  instructor            Instructor?            @relation(fields: [instructor_id], references: [instructor_id])
-  instructorWeeklySlots InstructorWeeklySlot[]
+  week_id                  Int                         @id @default(autoincrement())
+  instructor_id            Int?
+  week_start_date          DateTime                    @db.Date
+  created_at               DateTime                    @default(now()) @db.Timestamptz(6)
+  instructor               Instructor?                 @relation(fields: [instructor_id], references: [instructor_id])
+  instructorWeeklySlots    InstructorWeeklySlot[]
+  instructorAvailabilityDates InstructorAvailabilityDate[]
 
   @@unique([instructor_id, week_start_date])
   @@map("InstructorAvailabilityWeek")
+}
+
+model InstructorAvailabilityDate {
+  date_id       Int                         @id @default(autoincrement())
+  week_id       Int
+  specific_date DateTime                    @db.Date
+  is_available  Boolean                     @default(true)
+  note          String?
+  created_at    DateTime                    @default(now()) @db.Timestamptz(6)
+  week          InstructorAvailabilityWeek  @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
+
+  @@unique([week_id, specific_date])
+  @@map("InstructorAvailabilityDate")
 }
 
 model InstructorWeeklySlot {
