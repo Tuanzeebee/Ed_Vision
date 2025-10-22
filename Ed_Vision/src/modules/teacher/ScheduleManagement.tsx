@@ -168,7 +168,17 @@ export default function ScheduleManagement({
       }, 0)
     );
   }, 0);
-  const upcomingDates = availableDates.filter((date) => new Date(date.date) >= new Date()).length;
+  
+  // Parse date string correctly to avoid timezone issues
+  const parseLocalDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to compare only dates
+  
+  const upcomingDates = availableDates.filter((date) => parseLocalDate(date.date) >= today).length;
 
   // Quick dates
   const quickDates = Array.from({ length: 7 }, (_, i) => {
@@ -176,7 +186,12 @@ export default function ScheduleManagement({
     date.setDate(date.getDate() + i);
     return date;
   });
-  const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  // Fix: getDay() returns 0=Sunday, 1=Monday, 2=Tuesday, etc.
+  // So we need to map correctly
+  const getDayName = (dayIndex: number) => {
+    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    return days[dayIndex];
+  };
 
   return (
     <>
@@ -222,7 +237,12 @@ export default function ScheduleManagement({
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
               {quickDates.map((date, index) => {
-                const dateString = date.toISOString().split('T')[0];
+                // Format date as YYYY-MM-DD in local timezone (not UTC)
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+                
                 const isToday = index === 0;
                 const isAdded = availableDates.some((d) => d.date === dateString);
                 const dateIndex = availableDates.findIndex((d) => d.date === dateString);
@@ -250,7 +270,7 @@ export default function ScheduleManagement({
                     }`}
                   >
                     <div className="text-xs font-medium text-gray-600 mb-1">
-                      {weekDays[date.getDay()]}
+                      {getDayName(date.getDay())}
                     </div>
                     <div className="text-lg font-bold text-gray-900">
                       {date.getDate().toString().padStart(2, '0')}
@@ -311,7 +331,7 @@ export default function ScheduleManagement({
         ) : (
           <div className="space-y-4">
             {availableDates.map((dateObj, index) => {
-              const isUpcoming = new Date(dateObj.date) >= new Date();
+              const isUpcoming = parseLocalDate(dateObj.date) >= today;
 
               return (
                 <div
