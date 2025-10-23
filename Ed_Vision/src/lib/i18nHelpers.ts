@@ -4,7 +4,7 @@
  * Các hàm tiện ích để làm việc với i18n
  */
 
-import { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 /**
  * Format số với ngôn ngữ hiện tại
@@ -88,7 +88,7 @@ export const getLanguageFlag = (langCode: string): string => {
  * Helper để tạo translation key có type-safety
  */
 export const createTranslationKeys = <T extends Record<string, any>>(
-  namespace: string,
+  _namespace: string,
   keys: T
 ): T => {
   return keys;
