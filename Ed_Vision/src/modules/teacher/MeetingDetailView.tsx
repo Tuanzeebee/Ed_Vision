@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { 
@@ -112,18 +112,71 @@ const colorSchemeConfig = {
 }
 
 export default function MeetingDetailView({ 
-  date = "17/01/2024",
-  weekday = "Thứ 4",
+  date: propDate,
+  weekday: propWeekday,
   timeSlots: initialTimeSlots = defaultTimeSlots,
   onBack
 }: Props) {
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Get data from navigation state or use props/defaults
+  const navigationState = location.state as { date?: string; timeSlots?: any[] } | null
+  
+  // Convert backend time slots to frontend format
+  const convertToFrontendTimeSlots = (backendSlots: any[]): TimeSlot[] => {
+    return backendSlots.map((slot, index) => ({
+      id: slot.slotId?.toString() || index.toString(),
+      startTime: slot.start || slot.startTime,
+      endTime: slot.end || slot.endTime,
+      duration: 60, // Default duration
+      meetingType: slot.meetingType || 'both',
+      totalSlots: slot.capacity || 10,
+      bookedSlots: slot.bookedCount || 0,
+      colorScheme: (['blue', 'orange', 'teal', 'purple'][index % 4]) as any
+    }))
+  }
+  
+  // Format date string from YYYY-MM-DD to DD/MM/YYYY
+  const formatDisplayDate = (dateStr: string): string => {
+    const [year, month, day] = dateStr.split('-')
+    return `${day}/${month}/${year}`
+  }
+  
+  // Get weekday name from date string (YYYY-MM-DD)
+  const getWeekdayName = (dateStr: string): string => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+    return days[date.getDay()]
+  }
+  
+  // Use navigation state if available, otherwise use props
+  const currentDate = navigationState?.date 
+    ? formatDisplayDate(navigationState.date) 
+    : (propDate || "17/01/2024")
+  
+  const currentWeekday = navigationState?.date 
+    ? getWeekdayName(navigationState.date) 
+    : (propWeekday || "Thứ 4")
+  
+  const initialSlotsData = navigationState?.timeSlots 
+    ? convertToFrontendTimeSlots(navigationState.timeSlots) 
+    : initialTimeSlots
+  
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [currentEditingSlot, setCurrentEditingSlot] = useState<TimeSlot | null>(null)
   const [selectedStudents, setSelectedStudents] = useState<Student[]>([])
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(initialTimeSlots)
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(initialSlotsData)
   const [toast, setToast] = useState<{ message: string; type: string } | null>(null)
+  
+  // Update timeSlots when navigation state changes
+  useEffect(() => {
+    if (navigationState?.timeSlots) {
+      setTimeSlots(convertToFrontendTimeSlots(navigationState.timeSlots))
+    }
+  }, [navigationState])
   
   // Add time modal state
   const [timeModalOpen, setTimeModalOpen] = useState(false)
@@ -211,7 +264,7 @@ export default function MeetingDetailView({
           <span>Thiết lập lịch rảnh</span>
         </button>
         <ChevronRight className="w-4 h-4" />
-        <span className="text-gray-900 font-medium">Chi tiết ngày {date}</span>
+        <span className="text-gray-900 font-medium">Chi tiết ngày {currentDate}</span>
       </div>
 
       {/* Page Header */}
@@ -219,7 +272,7 @@ export default function MeetingDetailView({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Chi tiết cuộc họp</h1>
-            <p className="text-gray-600">{weekday}, {date}</p>
+            <p className="text-gray-600">{currentWeekday}, {currentDate}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="bg-blue-100 px-4 py-2 rounded-lg">
@@ -313,7 +366,7 @@ export default function MeetingDetailView({
       <Card>
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            📊 Tổng quan ngày {date}
+            📊 Tổng quan ngày {currentDate}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center bg-blue-50 rounded-lg p-4">
@@ -351,8 +404,8 @@ export default function MeetingDetailView({
             isOpen={isEditorOpen}
             onClose={() => setIsEditorOpen(false)}
             timeSlot={currentEditingSlot}
-            date={date}
-            weekday={weekday}
+            date={currentDate}
+            weekday={currentWeekday}
             onSelectStudents={() => {
               setIsStudentModalOpen(true)
             }}
@@ -394,7 +447,7 @@ export default function MeetingDetailView({
               </div>
 
               <p className="text-sm text-gray-600 mb-4">
-                {weekday}, {date}
+                {currentWeekday}, {currentDate}
               </p>
 
               {/* Quick Time Selection */}

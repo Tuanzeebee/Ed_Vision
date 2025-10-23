@@ -96,8 +96,7 @@ export default function WordEditorModal({
   }
 
   const saveDocument = () => {
-    const content = editorRef.current?.innerHTML
-    console.log("Saving document...", content)
+    // const content = editorRef.current?.innerHTML
     alert("Đã lưu tài liệu thành công!")
   }
 

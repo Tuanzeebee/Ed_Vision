@@ -17,10 +17,12 @@ import {
   formatDate,
   getTodayString,
   getMaxDateString,
-  getDateString,
   calculateEndTime,
   isTimeSlotOverlapping,
 } from './utils/appointmentUtils';
+import { useInstructorAvailability } from './hooks/useInstructorAvailability';
+import { instructorAvailabilityApi } from '../../services/api';
+import { cacheService } from '../../services/cache';
 
 interface ScheduleManagementProps {
   availableDates: AvailableDate[];
@@ -36,6 +38,22 @@ export default function ScheduleManagement({
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState('');
   
+  // Get instructor ID - You should replace this with actual logic to get the logged-in instructor
+  // For example, from auth context or route params
+  const instructorId = 1; // TODO: Get from authentication context
+  
+  // Use the custom hook for API integration
+  const {
+    loading,
+    error: apiError,
+    fetchAvailability,
+    // fetchStatistics, // TODO: Use this for real-time statistics
+    addAvailabilityDate,
+    // bulkCreateAvailability, // TODO: Use this for bulk operations
+    deleteAvailabilityDate,
+    addTimeSlot,
+  } = useInstructorAvailability(instructorId);
+  
   // Time modal state
   const [timeModalOpen, setTimeModalOpen] = useState(false);
   const [currentDateForTime, setCurrentDateForTime] = useState<string | null>(null);
@@ -45,6 +63,12 @@ export default function ScheduleManagement({
   const [meetingType, setMeetingType] = useState<'online' | 'offline' | 'both'>('both');
   const [capacity, setCapacity] = useState('10');
 
+  // Helper function to parse date string correctly to avoid timezone issues
+  const parseLocalDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   // Update end time when start time or duration changes
   useEffect(() => {
     if (startTime && duration) {
@@ -52,46 +76,103 @@ export default function ScheduleManagement({
     }
   }, [startTime, duration]);
 
-  // Initialize with sample data
+  // Load availability data from backend with optimized caching
+  // Uses session-based tracking to prevent unnecessary reloads
   useEffect(() => {
-    if (availableDates.length === 0) {
-      const sampleData: AvailableDate[] = [
-        {
-          date: getDateString(1),
-          timeSlots: [
-            { start: '09:00', end: '10:00', meetingType: 'online', capacity: 10 },
-            { start: '14:00', end: '15:00', meetingType: 'offline', capacity: 5 },
-            { start: '16:00', end: '17:00', meetingType: 'both', capacity: 15 },
-          ],
-        },
-        {
-          date: getDateString(3),
-          timeSlots: [
-            { start: '08:00', end: '09:00', meetingType: 'offline', capacity: 8 },
-            { start: '10:00', end: '10:30', meetingType: 'online', capacity: 12 },
-            { start: '13:00', end: '14:00', meetingType: 'both', capacity: 10 },
-          ],
-        },
-      ];
-      setAvailableDates(sampleData);
-    }
-  }, []);
+    const loadAvailability = async () => {
+      // Check if this is truly the first load (session-based tracking)
+      const hasLoadedThisSession = sessionStorage.getItem('scheduleDataLoaded');
+      
+      // Check if we have cached data (memory or session storage)
+      const cacheKey = cacheService.getAvailabilityKey(instructorId);
+      const cachedData = cacheService.get<any>(cacheKey);
+      
+      // Priority 1: Use cached data if available
+      if (cachedData && cachedData.availabilities && availableDates.length === 0) {
+        console.log('✓ Restoring from cache');
+        setAvailableDates(cachedData.availabilities.map((avail: any) => ({
+          date: avail.date,
+          weekId: avail.weekId,
+          timeSlots: avail.timeSlots.map((slot: any) => ({
+            slotId: slot.slotId,
+            start: slot.startTime,
+            end: slot.endTime,
+            meetingType: slot.meetingType,
+            capacity: slot.capacity,
+          })),
+        })));
+        sessionStorage.setItem('scheduleDataLoaded', 'true');
+        return;
+      }
+      
+      // Priority 2: Load from backend if:
+      // - Never loaded this session AND
+      // - No local data exists (availableDates is empty)
+      if (!hasLoadedThisSession && availableDates.length === 0) {
+        try {
+          console.log('⚡ Initial load from backend');
+          const data = await fetchAvailability();
+          
+          // Update state with backend data
+          setAvailableDates(data);
+          
+          // Mark as loaded for this session
+          sessionStorage.setItem('scheduleDataLoaded', 'true');
+          
+          if (data.length > 0) {
+            showToast('Đã tải lịch rảnh từ server!', 'info');
+          }
+        } catch (err) {
+          // Still mark as loaded to prevent retry loops
+          sessionStorage.setItem('scheduleDataLoaded', 'true');
+        }
+      }
+    };
+    loadAvailability();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
-  const handleAddDate = (date: string) => {
+  // Show API errors via toast
+  useEffect(() => {
+    if (apiError) {
+      showToast(apiError, 'error');
+    }
+  }, [apiError, showToast]);
+
+  const handleAddDate = async (date: string) => {
     if (!date) {
       showToast('Vui lòng chọn ngày!', 'error');
       return;
     }
+    
+    // Prevent adding dates in the past
+    const selectedDateObj = parseLocalDate(date);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDateObj < todayDate) {
+      showToast('Không thể thêm ngày trong quá khứ!', 'error');
+      return;
+    }
+    
     if (availableDates.find((d) => d.date === date)) {
       showToast('Ngày này đã được thêm!', 'warning');
       return;
     }
-    setAvailableDates([...availableDates, { date, timeSlots: [] }]);
-    setSelectedDate('');
-    showToast('Đã thêm ngày rảnh thành công!', 'success');
+    
+    try {
+      // Add to backend first
+      await addAvailabilityDate(date, []);
+      // Update local state
+      setAvailableDates([...availableDates, { date, timeSlots: [] }]);
+      setSelectedDate('');
+      showToast('Đã thêm ngày rảnh thành công!', 'success');
+    } catch (err) {
+      showToast('Không thể thêm ngày rảnh. Vui lòng thử lại!', 'error');
+    }
   };
 
-  const handleRemoveDate = (index: number, skipConfirm: boolean = false) => {
+  const handleRemoveDate = async (index: number, skipConfirm: boolean = false) => {
     const removedDate = availableDates[index];
 
     if (!skipConfirm && removedDate.timeSlots.length > 0) {
@@ -100,8 +181,15 @@ export default function ScheduleManagement({
       }
     }
 
-    setAvailableDates(availableDates.filter((_, i) => i !== index));
-    showToast(`Đã xóa ngày ${formatDate(removedDate.date)}!`, 'warning');
+    try {
+      // Delete from backend first
+      await deleteAvailabilityDate(removedDate.date);
+      // Update local state
+      setAvailableDates(availableDates.filter((_, i) => i !== index));
+      showToast(`Đã xóa ngày ${formatDate(removedDate.date)}!`, 'warning');
+    } catch (err) {
+      showToast('Không thể xóa ngày. Vui lòng thử lại!', 'error');
+    }
   };
 
   const handleOpenTimeModal = (date: string) => {
@@ -114,7 +202,7 @@ export default function ScheduleManagement({
     setCapacity('10');
   };
 
-  const handleAddTimeSlot = () => {
+  const handleAddTimeSlot = async () => {
     if (!currentDateForTime || !startTime || !endTime) {
       showToast('Vui lòng nhập đầy đủ thời gian!', 'error');
       return;
@@ -132,26 +220,50 @@ export default function ScheduleManagement({
       return;
     }
 
-    const newDates = [...availableDates];
-    newDates[dateIndex].timeSlots.push({
-      start: startTime,
-      end: endTime,
-      meetingType: meetingType,
-      capacity: parseInt(capacity) || 10,
-    });
-    newDates[dateIndex].timeSlots.sort((a, b) => a.start.localeCompare(b.start));
-    setAvailableDates(newDates);
-    setTimeModalOpen(false);
-    showToast(`Đã thêm khung giờ ${startTime} - ${endTime} thành công!`, 'success');
+    try {
+      // Add to backend first
+      await addTimeSlot(currentDateForTime, {
+        startTime,
+        endTime,
+        meetingType,
+        capacity: parseInt(capacity) || 10,
+      });
+
+      // Update local state
+      const newDates = [...availableDates];
+      newDates[dateIndex].timeSlots.push({
+        start: startTime,
+        end: endTime,
+        meetingType: meetingType,
+        capacity: parseInt(capacity) || 10,
+      });
+      newDates[dateIndex].timeSlots.sort((a, b) => a.start.localeCompare(b.start));
+      setAvailableDates(newDates);
+      setTimeModalOpen(false);
+      showToast(`Đã thêm khung giờ ${startTime} - ${endTime} thành công!`, 'success');
+    } catch (err) {
+      showToast('Không thể thêm khung giờ. Vui lòng thử lại!', 'error');
+    }
   };
 
-  const handleRemoveTimeSlot = (dateIndex: number, slotIndex: number) => {
+  const handleRemoveTimeSlot = async (dateIndex: number, slotIndex: number) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ này?')) {
       const newDates = [...availableDates];
       const removedSlot = newDates[dateIndex].timeSlots[slotIndex];
-      newDates[dateIndex].timeSlots.splice(slotIndex, 1);
-      setAvailableDates(newDates);
-      showToast(`Đã xóa khung giờ ${removedSlot.start} - ${removedSlot.end}!`, 'warning');
+      
+      try {
+        // Delete from backend if slotId exists
+        if (removedSlot.slotId) {
+          await instructorAvailabilityApi.deleteTimeSlot(instructorId, removedSlot.slotId);
+        }
+        
+        // Update local state
+        newDates[dateIndex].timeSlots.splice(slotIndex, 1);
+        setAvailableDates(newDates);
+        showToast(`Đã xóa khung giờ ${removedSlot.start} - ${removedSlot.end}!`, 'warning');
+      } catch (err) {
+        showToast('Không thể xóa khung giờ. Vui lòng thử lại!', 'error');
+      }
     }
   };
 
@@ -168,12 +280,6 @@ export default function ScheduleManagement({
       }, 0)
     );
   }, 0);
-  
-  // Parse date string correctly to avoid timezone issues
-  const parseLocalDate = (dateString: string) => {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
   
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Reset time to compare only dates
@@ -196,11 +302,46 @@ export default function ScheduleManagement({
   return (
     <>
       <div className="p-4 md:p-6 lg:p-8">
+        {/* Loading overlay */}
+        {loading && (
+          <div className="fixed inset-0 bg-black bg-opacity-20 z-40 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 shadow-xl">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="text-gray-700 font-medium">Đang xử lý...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Thiết lập lịch rảnh</h1>
-          <p className="text-gray-600">
-            Thiết lập ngày và giờ rảnh để sinh viên có thể đặt lịch hẹn
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Thiết lập lịch rảnh</h1>
+              <p className="text-gray-600">
+                Thiết lập ngày và giờ rảnh để sinh viên có thể đặt lịch hẹn
+              </p>
+            </div>
+            {/* Debug: Reload button */}
+            <button
+              onClick={async () => {
+                try {
+                  const data = await fetchAvailability();
+                  setAvailableDates(data);
+                  showToast('Đã tải lại dữ liệu từ server!', 'success');
+                } catch (err) {
+                  showToast('Không thể tải lại dữ liệu!', 'error');
+                }
+              }}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium flex items-center gap-2"
+              title="Tải lại dữ liệu từ server"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Tải lại
+            </button>
+          </div>
         </div>
 
         {/* Statistics */}
@@ -336,13 +477,20 @@ export default function ScheduleManagement({
               return (
                 <div
                   key={index}
-                  className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md transition-shadow ${
+                  className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${
                     !isUpcoming ? 'opacity-75' : ''
                   }`}
-                  onClick={() => navigate('/teacher/meeting-detail-demo')}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-                    <div className="flex items-center gap-3 mb-4 sm:mb-0">
+                    <div 
+                      className="flex items-center gap-3 mb-4 sm:mb-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate('/teacher/meeting-detail-demo', { 
+                        state: { 
+                          date: dateObj.date,
+                          timeSlots: dateObj.timeSlots 
+                        } 
+                      })}
+                    >
                       <div className="p-3 rounded-lg bg-blue-100">
                         <Clock className="w-6 h-6 text-blue-600" />
                       </div>
@@ -357,7 +505,7 @@ export default function ScheduleManagement({
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-2">
                       <button
                         onClick={() => handleOpenTimeModal(dateObj.date)}
                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-1"
