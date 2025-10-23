@@ -25,3 +25,8 @@ dist-ssr
 # Bỏ qua GitHub và Cursor
 .github/
 .cursor/
+
+# Environment variables
+.env
+.env.local
+.env.*.local

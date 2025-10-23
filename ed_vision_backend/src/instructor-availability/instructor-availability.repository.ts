@@ -323,6 +323,8 @@ export class InstructorAvailabilityRepository {
 
   /**
    * Check if a time slot overlaps with existing slots
+   * NOTE: We check overlap within the SAME WEEK only
+   * This allows same time slots on same day_of_week in different weeks
    */
   async checkTimeSlotOverlap(
     weekId: number,
@@ -334,38 +336,37 @@ export class InstructorAvailabilityRepository {
     const startTimeDate = this.parseTimeToDate(startTime);
     const endTimeDate = this.parseTimeToDate(endTime);
 
-    const overlappingSlots = await this.prisma.instructorWeeklySlot.findMany({
+    // Get all slots for this week and day
+    const existingSlots = await this.prisma.instructorWeeklySlot.findMany({
       where: {
         week_id: weekId,
         day_of_week: dayOfWeek,
         slot_id: excludeSlotId ? { not: excludeSlotId } : undefined,
-        OR: [
-          {
-            // New slot starts during existing slot
-            AND: [
-              { start_time_local: { lte: startTimeDate } },
-              { end_time_local: { gt: startTimeDate } },
-            ],
-          },
-          {
-            // New slot ends during existing slot
-            AND: [
-              { start_time_local: { lt: endTimeDate } },
-              { end_time_local: { gte: endTimeDate } },
-            ],
-          },
-          {
-            // New slot completely contains existing slot
-            AND: [
-              { start_time_local: { gte: startTimeDate } },
-              { end_time_local: { lte: endTimeDate } },
-            ],
-          },
-        ],
       },
     });
 
-    return overlappingSlots.length > 0;
+    // Check for time overlap
+    for (const slot of existingSlots) {
+      if (!slot.start_time_local || !slot.end_time_local) continue;
+
+      const slotStart = slot.start_time_local;
+      const slotEnd = slot.end_time_local;
+
+      // Check if times overlap:
+      // 1. New slot starts during existing slot
+      // 2. New slot ends during existing slot  
+      // 3. New slot completely contains existing slot
+      const overlaps = 
+        (startTimeDate >= slotStart && startTimeDate < slotEnd) ||
+        (endTimeDate > slotStart && endTimeDate <= slotEnd) ||
+        (startTimeDate <= slotStart && endTimeDate >= slotEnd);
+
+      if (overlaps) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
