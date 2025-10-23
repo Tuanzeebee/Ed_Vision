@@ -1,0 +1,16 @@
+{
+  "dashboard": {
+    "title": "Teacher Dashboard",
+    "welcome": "Welcome back",
+    "myClasses": "My Classes"
+  },
+  "classes": {
+    "title": "Classes",
+    "viewClass": "View Class",
+    "students": "Students"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "viewSchedule": "View Schedule"
+  }
+}

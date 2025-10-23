@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from "@/components/ui/parent/Parent_card";
 import { Button } from "@/components/ui/parent/Parent_button";
 
@@ -26,6 +27,7 @@ type Props = {
 }
 
 export default function AllAppointments({}: Props) {
+  const { t } = useTranslation(['parent', 'common']);
   const navigate = useNavigate();
   
   return (
@@ -50,8 +52,8 @@ export default function AllAppointments({}: Props) {
                   <img src={iconDashboard} alt="Dashboard" className="w-6 h-6" />
                 </div>
                 <div className="ml-3">
-                  <h1 className="text-xl font-semibold text-gray-900">All Appointments</h1>
-                  <p className="text-sm text-gray-500">Manage your child's meetings and consultations</p>
+                  <h1 className="text-xl font-semibold text-gray-900">{t('parent:appointments.allAppointments')}</h1>
+                  <p className="text-sm text-gray-500">{t('parent:appointments.subtitle')}</p>
                 </div>
               </div>
             </div>
@@ -63,7 +65,7 @@ export default function AllAppointments({}: Props) {
                 onClick={() => navigate('/parent/book-appointment')}
               >
                 <img src={iconBooking} alt="Book" className="w-4 h-4" />
-                Book New Appointment
+                {t('parent:appointments.bookNew')}
               </Button>
             </div>
           </div>
@@ -81,7 +83,7 @@ export default function AllAppointments({}: Props) {
             <div className="ml-3">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-blue-900">John Smith</span>
-                <span className="text-sm text-blue-700">Year 3 • Mathematics & Science</span>
+                <span className="text-sm text-blue-700">{t('parent:appointments.childInfo', { year: '3', subjects: 'Mathematics & Science' })}</span>
               </div>
             </div>
           </div>
@@ -102,22 +104,22 @@ export default function AllAppointments({}: Props) {
                   </div>
                   <input
                     type="text"
-                    placeholder="Search appointments..."
+                    placeholder={t('parent:appointments.searchPlaceholder')}
                     className="block w-64 pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-400"
                   />
                 </div>
                 
                 {/* Filter buttons */}
                 <button className="px-5 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 cursor-pointer">
-                  All Status
+                  {t('parent:appointments.allStatus')}
                 </button>
                 <button className="px-5 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 cursor-pointer">
-                  All Time
+                  {t('parent:appointments.allTime')}
                 </button>
               </div>
               
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">12 appointments found</span>
+                <span className="text-sm text-gray-600">{t('parent:appointments.appointmentsFound', { count: 12 })}</span>
                 <button className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
                   <img src={iconSort} alt="Sort" className="w-5 h-5" />
                 </button>
@@ -133,7 +135,7 @@ export default function AllAppointments({}: Props) {
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <img src={iconClock} alt="Clock" className="w-5 h-5 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900">Upcoming Appointments (2)</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t('parent:appointments.upcomingCount', { count: 2 })}</h2>
           </div>
           
           {/* First Upcoming Appointment */}
@@ -147,8 +149,8 @@ export default function AllAppointments({}: Props) {
                       <img src={iconMeeting} alt="Meeting" className="w-6 h-6" />
                     </div>
                     <div className="ml-3">
-                      <h3 className="font-semibold text-gray-900">Meeting with Dr. Brown</h3>
-                      <p className="text-sm text-gray-600">Mathematics Department • Academic Progress Discussion</p>
+                      <h3 className="font-semibold text-gray-900">{t('parent:appointments.meetingWith', { teacher: 'Dr. Brown' })}</h3>
+                      <p className="text-sm text-gray-600">{t('parent:appointments.departments.mathematics')} • {t('parent:appointments.purposes.academicProgress')}</p>
                     </div>
                   </div>
                   
@@ -165,7 +167,7 @@ export default function AllAppointments({}: Props) {
                     <div className="flex items-center">
                       <img src={iconLocation} alt="Location" className="w-4 h-4 mr-2" />
                       <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded-full">
-                        Online Meeting
+                        {t('parent:appointments.meetingTypes.onlineMeeting')}
                       </span>
                     </div>
                   </div>
@@ -173,10 +175,10 @@ export default function AllAppointments({}: Props) {
                   {/* Meeting info */}
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                     <p className="font-bold text-sm text-orange-800 mb-1">
-                      Meeting Link: https://zoom.us/j/123456789
+                      {t('parent:appointments.meetingInfo.meetingLink')} https://zoom.us/j/123456789
                     </p>
                     <p className="text-xs text-orange-700">
-                      You will receive a reminder email 1 hour before the meeting
+                      {t('parent:appointments.meetingInfo.reminderEmail')}
                     </p>
                   </div>
                 </div>
@@ -184,13 +186,13 @@ export default function AllAppointments({}: Props) {
                 {/* Action buttons */}
                 <div className="flex flex-col gap-2">
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2">
-                    Join Meeting
+                    {t('parent:appointments.actions.joinMeeting')}
                   </Button>
                   <Button variant="secondary" className="text-sm px-4 py-2">
-                    Reschedule
+                    {t('parent:appointments.actions.reschedule')}
                   </Button>
                   <button className="text-sm text-red-600 hover:text-red-700 px-4 py-2 cursor-pointer">
-                    Cancel
+                    {t('parent:appointments.actions.cancel')}
                   </button>
                 </div>
               </div>
@@ -208,8 +210,8 @@ export default function AllAppointments({}: Props) {
                       <img src={iconPeople} alt="Conference" className="w-6 h-6" />
                     </div>
                     <div className="ml-3">
-                      <h3 className="font-semibold text-gray-900">Parent-Teacher Conference</h3>
-                      <p className="text-sm text-gray-600">General Discussion • Multiple Teachers</p>
+                      <h3 className="font-semibold text-gray-900">{t('parent:appointments.parentTeacherConference')}</h3>
+                      <p className="text-sm text-gray-600">{t('parent:appointments.departments.general')} • {t('parent:appointments.purposes.multipleTeachers')}</p>
                     </div>
                   </div>
                   
@@ -226,7 +228,7 @@ export default function AllAppointments({}: Props) {
                     <div className="flex items-center">
                       <img src={iconLocationPin} alt="Location" className="w-4 h-4 mr-2" />
                       <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                        In-Person
+                        {t('parent:appointments.meetingTypes.inPersonMeeting')}
                       </span>
                     </div>
                   </div>
@@ -234,10 +236,10 @@ export default function AllAppointments({}: Props) {
                   {/* Meeting info */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="font-bold text-sm text-blue-800 mb-1">
-                      Location: Main Building, Conference Room A
+                      {t('parent:appointments.meetingInfo.locationLabel')} {t('parent:appointments.meetingInfo.conferenceRoom')}
                     </p>
                     <p className="text-xs text-blue-700">
-                      Please arrive 10 minutes early for check-in
+                      {t('parent:appointments.meetingInfo.arriveEarly')}
                     </p>
                   </div>
                 </div>
@@ -245,13 +247,13 @@ export default function AllAppointments({}: Props) {
                 {/* Action buttons */}
                 <div className="flex flex-col gap-2">
                   <Button variant="secondary" className="text-sm px-4 py-2">
-                    View Details
+                    {t('parent:appointments.actions.viewDetails')}
                   </Button>
                   <Button variant="secondary" className="text-sm px-4 py-2">
-                    Reschedule
+                    {t('parent:appointments.actions.reschedule')}
                   </Button>
                   <button className="text-sm text-red-600 hover:text-red-700 px-4 py-2 cursor-pointer">
-                    Cancel
+                    {t('parent:appointments.actions.cancel')}
                   </button>
                 </div>
               </div>
@@ -263,7 +265,7 @@ export default function AllAppointments({}: Props) {
         <div>
           <div className="flex items-center mb-4">
             <img src={iconCheck} alt="Check" className="w-5 h-5 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900">Past Appointments (10)</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t('parent:appointments.pastCount', { count: 10 })}</h2>
           </div>
           
           {/* Past Appointment Example */}
@@ -277,12 +279,12 @@ export default function AllAppointments({}: Props) {
                       <img src={iconCheck2} alt="Completed" className="w-6 h-6" />
                     </div>
                     <div className="ml-3">
-                      <h3 className="font-semibold text-gray-900">Meeting with Prof. Johnson</h3>
-                      <p className="text-sm text-gray-600">Science Department • Homework Support</p>
+                      <h3 className="font-semibold text-gray-900">{t('parent:appointments.meetingWith', { teacher: 'Prof. Johnson' })}</h3>
+                      <p className="text-sm text-gray-600">{t('parent:appointments.departments.science')} • {t('parent:appointments.purposes.homeworkSupport')}</p>
                     </div>
                     <div className="ml-3">
                       <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                        Completed
+                        {t('parent:appointments.completed')}
                       </span>
                     </div>
                   </div>
@@ -300,7 +302,7 @@ export default function AllAppointments({}: Props) {
                     <div className="flex items-center">
                       <img src={iconLocationPin} alt="Location" className="w-4 h-4 mr-2" />
                       <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-1 rounded-full">
-                        In-Person
+                        {t('parent:appointments.meetingTypes.inPersonMeeting')}
                       </span>
                     </div>
                   </div>
@@ -308,7 +310,7 @@ export default function AllAppointments({}: Props) {
                   {/* Meeting summary */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="font-bold text-sm text-green-800">
-                      Meeting Summary: Discussed John's progress in Chemistry. Recommended additional practice problems for better understanding.
+                      {t('parent:appointments.meetingInfo.meetingSummary')} Discussed John's progress in Chemistry. Recommended additional practice problems for better understanding.
                     </p>
                   </div>
                 </div>
@@ -316,10 +318,10 @@ export default function AllAppointments({}: Props) {
                 {/* Action buttons */}
                 <div className="flex flex-col gap-2">
                   <Button variant="secondary" className="text-sm px-4 py-2">
-                    View Summary
+                    {t('parent:appointments.actions.viewSummary')}
                   </Button>
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2">
-                    Book Follow-up
+                    {t('parent:appointments.actions.bookFollowUp')}
                   </Button>
                 </div>
               </div>
@@ -329,7 +331,7 @@ export default function AllAppointments({}: Props) {
           {/* Show More Button */}
           <div className="flex justify-center">
             <button className="flex items-center gap-2 px-6 py-4 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 cursor-pointer">
-              <span>Show 9 More Past Appointments</span>
+              <span>{t('parent:appointments.showMore', { count: 9 })}</span>
               <img src={iconArrowDown} alt="Arrow down" className="w-4 h-4" />
             </button>
           </div>

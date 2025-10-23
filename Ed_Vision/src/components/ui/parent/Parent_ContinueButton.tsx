@@ -1,4 +1,5 @@
 import React from "react"
+import { useTranslation } from 'react-i18next';
 import iconArrowRight from "@/assets/parent/iconArrowRight.svg"
 
 type Props = {
@@ -12,8 +13,9 @@ export default function ContinueButton({
   onClick, 
   disabled = false, 
   className = "", 
-  children = "Continue" 
+  children 
 }: Props) {
+  const { t } = useTranslation(['parent']);
   return (
     <button
       onClick={onClick}
@@ -44,7 +46,7 @@ export default function ContinueButton({
       }}
     >
       <div className="flex items-center justify-center mr-2">
-        <span className="leading-6">{children}</span>
+        <span className="leading-6">{children || t('parent:ui.continueButton.continue')}</span>
       </div>
       <div className="flex items-center justify-center">
         <img src={iconArrowRight} alt="" className="w-3.5 h-4" />

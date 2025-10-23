@@ -21,7 +21,7 @@ import {
   isTimeSlotOverlapping,
 } from './utils/appointmentUtils';
 import { useInstructorAvailability } from './hooks/useInstructorAvailability';
-import { instructorAvailabilityApi } from '../../services/api';
+import { instructorAvailabilityApi } from '../../services/teacher/api';
 import { cacheService } from '../../services/cache';
 
 interface ScheduleManagementProps {

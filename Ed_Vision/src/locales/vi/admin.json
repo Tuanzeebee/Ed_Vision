@@ -1,0 +1,13 @@
+{
+  "dashboard": {
+    "title": "Trang Quản Trị",
+    "welcome": "Chào mừng trở lại",
+    "systemOverview": "Tổng quan hệ thống"
+  },
+  "management": {
+    "students": "Quản lý Học Sinh",
+    "teachers": "Quản lý Giáo Viên",
+    "accounts": "Quản lý Tài Khoản",
+    "permissions": "Quản lý Quyền"
+  }
+}

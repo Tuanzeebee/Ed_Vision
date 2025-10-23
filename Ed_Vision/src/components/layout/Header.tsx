@@ -1,6 +1,8 @@
 import { STUDENT_ASSETS } from "@/assets/student"
 import { Button } from "../ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import LanguageSwitcher from "../LanguageSwitcher"
 
 type Props = {
   className?: string
@@ -19,11 +21,12 @@ export default function Header({
   onLogin,
   onRegister
 }: Props) {
+  const { t } = useTranslation(['common'])
   const navigate = useNavigate()
 
   // Temporary hardcoded values; replace with real data as needed
   const studentName = isAdminMode ? "Admin User" : "Student Name";
-  const studentRole = isAdminMode ? "Administrator" : "Student Role";
+  const studentRole = isAdminMode ? t('common:header.user.administrator') : t('common:header.user.student');
 
   const handleLogoClick = () => {
     if (isAdminMode) {
@@ -62,7 +65,7 @@ export default function Header({
               {/* Our Features Dropdown */}
               <div className="relative group">
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                  <span>Our Features</span>
+                  <span>{t('common:header.navigation.ourFeatures')}</span>
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
@@ -76,8 +79,8 @@ export default function Header({
                         </svg>
                       </div>
                       <div>
-                        <div className="font-medium">Grade Forecasting</div>
-                        <div className="text-xs text-gray-500">AI-powered grade predictions</div>
+                        <div className="font-medium">{t('common:header.features.gradeForecasting.title')}</div>
+                        <div className="text-xs text-gray-500">{t('common:header.features.gradeForecasting.description')}</div>
                       </div>
                     </a>
                     <a href="#" className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
@@ -87,8 +90,8 @@ export default function Header({
                         </svg>
                       </div>
                       <div>
-                        <div className="font-medium">Performance Analytics</div>
-                        <div className="text-xs text-gray-500">Detailed learning insights</div>
+                        <div className="font-medium">{t('common:header.features.performanceAnalytics.title')}</div>
+                        <div className="text-xs text-gray-500">{t('common:header.features.performanceAnalytics.description')}</div>
                       </div>
                     </a>
                     <a href="#" className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
@@ -98,8 +101,8 @@ export default function Header({
                         </svg>
                       </div>
                       <div>
-                        <div className="font-medium">Study Optimization</div>
-                        <div className="text-xs text-gray-500">Personalized study plans</div>
+                        <div className="font-medium">{t('common:header.features.studyOptimization.title')}</div>
+                        <div className="text-xs text-gray-500">{t('common:header.features.studyOptimization.description')}</div>
                       </div>
                     </a>
                   </div>
@@ -108,36 +111,39 @@ export default function Header({
 
               {/* Research */}
               <a href="#" className="text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                Research
+                {t('common:header.navigation.research')}
               </a>
 
               {/* For Educators Dropdown */}
               <div className="relative group">
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                  <span>For Educators</span>
+                  <span>{t('common:header.navigation.forEducators')}</span>
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="py-2">
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">Teacher Dashboard</a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">Class Management</a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">Student Progress Tracking</a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">Parent Communication</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.teacherDashboard')}</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.classManagement')}</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.studentProgressTracking')}</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.parentCommunication')}</a>
                   </div>
                 </div>
               </div>
 
               {/* For Enterprise */}
               <a href="#" className="text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                For Enterprise
+                {t('common:header.navigation.forEnterprise')}
               </a>
             </nav>
           )}
 
           {/* User Profile or Auth Buttons */}
           <div className="flex items-center space-x-4">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+            
             {isLandingPage ? (
               // Auth buttons for landing page
               <div className="flex items-center space-x-3">
@@ -146,13 +152,13 @@ export default function Header({
                   onClick={onLogin}
                   className="border-2 border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:border-purple-500 hover:text-purple-500 transition-all duration-200"
                 >
-                  Login
+                  {t('common:header.auth.login')}
                 </Button>
                 <Button
                   onClick={onRegister}
                   className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
                 >
-                  Register
+                  {t('common:header.auth.register')}
                 </Button>
               </div>
             ) : (

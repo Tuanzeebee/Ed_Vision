@@ -1,9 +1,14 @@
+import { useTranslation } from 'react-i18next'
+
 type Props = {
   // Add props if needed for customization
   className?: string
 }
 
 export default function Footer({ className = "" }: Props) {
+  const { t } = useTranslation(['common'])
+  const currentYear = new Date().getFullYear()
+  
   return (
     <footer className={`py-12 text-white bg-slate-800 ${className}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,45 +18,45 @@ export default function Footer({ className = "" }: Props) {
             <div className="flex items-center space-x-2 mb-3">
               <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-12 w-auto object-contain rounded-xl" />
             </div>
-            <p className="text-gray-300 text-xs">Empowering students with AI-driven grade predictions</p>
+            <p className="text-gray-300 text-xs">{t('common:footer.slogan')}</p>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className="font-bold text-base mb-3">Product</h4>
+            <h4 className="font-bold text-base mb-3">{t('common:footer.sections.product.title')}</h4>
             <ul className="space-y-1 text-gray-300">
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Features</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Pricing</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">API</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Integrations</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.product.features')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.product.pricing')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.product.api')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.product.integrations')}</a></li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="font-bold text-base mb-3">Company</h4>
+            <h4 className="font-bold text-base mb-3">{t('common:footer.sections.company.title')}</h4>
             <ul className="space-y-1 text-gray-300">
-              <li><a href="#" className="hover:text-white transition-colors text-sm">About Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Careers</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Blog</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Press</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.company.aboutUs')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.company.careers')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.company.blog')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.company.press')}</a></li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h4 className="font-bold text-base mb-3">Support</h4>
+            <h4 className="font-bold text-base mb-3">{t('common:footer.sections.support.title')}</h4>
             <ul className="space-y-1 text-gray-300">
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Help Center</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Contact Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors text-sm">Terms of Service</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.support.helpCenter')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.support.contactUs')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.support.privacyPolicy')}</a></li>
+              <li><a href="#" className="hover:text-white transition-colors text-sm">{t('common:footer.sections.support.termsOfService')}</a></li>
             </ul>
           </div>
 
           {/* Social */}
           <div>
-            <h4 className="font-bold text-base mb-3">Follow Us</h4>
+            <h4 className="font-bold text-base mb-3">{t('common:footer.sections.social.title')}</h4>
             <div className="flex space-x-3">
               <a href="#" className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center hover:bg-purple-500 transition-colors">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -69,7 +74,7 @@ export default function Footer({ className = "" }: Props) {
 
         {/* Copyright */}
         <div className="pt-6 border-t border-white/20">
-          <p className="text-center text-gray-300 text-sm">&copy; 2024 GradeForecast. All rights reserved.</p>
+          <p className="text-center text-gray-300 text-sm">{t('common:footer.copyright', { year: currentYear })}</p>
         </div>
       </div>
     </footer>
