@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { KeyboardEvent, ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/parent/Parent_button';
 import { Input } from '@/components/ui/parent/Parent_Input';
 import { Card } from '@/components/ui/parent/Parent_card';
@@ -71,78 +72,79 @@ interface Message {
 type Props = {};
 
 export default function ChatWithTeachers({}: Props) {
+  const { t } = useTranslation(['parent', 'common']);
   const [teachers] = useState<Teacher[]>([
     {
       id: '1',
       name: 'Dr. Brown',
-      title: 'Mathematics Teacher',
+      title: t('parent:chat.teacherRoles.mathematics'),
       avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=48&h=48&fit=crop&crop=face',
       status: 'online',
-      lastMessage: 'Regarding John\'s progress...',
-      lastMessageTime: '2 min',
+      lastMessage: t('parent:chat.sampleMessages.progress'),
+      lastMessageTime: t('parent:chat.timeAgo.min', { count: 2 }),
       isActive: true,
     },
     {
       id: '2',
       name: 'Ms. Johnson',
-      title: 'Science Teacher',
+      title: t('parent:chat.teacherRoles.science'),
       avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=48&h=48&fit=crop&crop=face',
       status: 'online',
-      lastMessage: 'Great improvement in class!',
-      lastMessageTime: '1h',
+      lastMessage: t('parent:chat.sampleMessages.improvement'),
+      lastMessageTime: t('parent:chat.timeAgo.hour', { count: 1 }),
       unreadCount: 2,
     },
     {
       id: '3',
       name: 'Mr. Wilson',
-      title: 'Class Teacher',
+      title: t('parent:chat.teacherRoles.classTeacher'),
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=48&h=48&fit=crop&crop=face',
       status: 'away',
-      lastMessage: 'Meeting scheduled for next week',
-      lastMessageTime: '3h',
+      lastMessage: t('parent:chat.sampleMessages.meetingScheduled'),
+      lastMessageTime: t('parent:chat.timeAgo.hour', { count: 3 }),
     },
     {
       id: '4',
       name: 'Mrs. Davis',
-      title: 'English Teacher',
+      title: t('parent:chat.teacherRoles.english'),
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=48&h=48&fit=crop&crop=face',
       status: 'offline',
-      lastMessage: 'Reading assignment feedback',
-      lastMessageTime: '1d',
+      lastMessage: t('parent:chat.sampleMessages.feedback'),
+      lastMessageTime: t('parent:chat.timeAgo.day', { count: 1 }),
     },
     {
       id: '5',
       name: 'Mr. Garcia',
-      title: 'Physical Education',
+      title: t('parent:chat.teacherRoles.physicalEducation'),
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=48&h=48&fit=crop&crop=face',
       status: 'online',
-      lastMessage: 'Sports day preparation',
-      lastMessageTime: '2d',
+      lastMessage: t('parent:chat.sampleMessages.sportsDay'),
+      lastMessageTime: t('parent:chat.timeAgo.day', { count: 2 }),
     },
   ]);
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello Sarah! I wanted to discuss John\'s recent progress in mathematics. He\'s been doing exceptionally well with algebra concepts.',
+      text: t('parent:chat.sampleMessages.discussProgress'),
       isSent: false,
       timestamp: '10:30 AM',
     },
     {
       id: '2',
-      text: 'That\'s wonderful to hear! I\'ve noticed he\'s been more confident with his homework lately. Are there any specific areas where he could improve?',
+      text: t('parent:chat.sampleMessages.wonderfulToHear'),
       isSent: true,
       timestamp: '10:32 AM',
     },
     {
       id: '3',
-      text: 'I\'ve prepared a detailed progress report for you. Please take a look when you have time.',
+      text: t('parent:chat.sampleMessages.progressReport'),
       isSent: false,
       timestamp: '10:35 AM',
     },
     {
       id: '4',
-      text: 'Thank you so much! I\'ll review it tonight and get back to you if I have any questions.',
+      text: t('parent:chat.sampleMessages.thankYou'),
       isSent: true,
       timestamp: '10:37 AM',
     },
@@ -187,7 +189,7 @@ export default function ChatWithTeachers({}: Props) {
       setShowTyping(false);
       const responseMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Thank you for your message. I\'ll get back to you shortly with more details.',
+        text: t('parent:chat.sampleMessages.autoResponse'),
         isSent: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -261,8 +263,8 @@ export default function ChatWithTeachers({}: Props) {
                 </svg>
               </div>
               <div>
-                <h1 className="text-lg md:text-xl font-semibold text-gray-900">Chat with Teachers</h1>
-                <p className="text-sm text-gray-500">Stay connected with your child's educators</p>
+                <h1 className="text-lg md:text-xl font-semibold text-gray-900">{t('parent:chat.title')}</h1>
+                <p className="text-sm text-gray-500">{t('parent:chat.subtitle')}</p>
               </div>
             </div>
           </div>
@@ -293,7 +295,7 @@ export default function ChatWithTeachers({}: Props) {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search teachers..."
+                placeholder={t('parent:chat.searchTeachers')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -385,7 +387,7 @@ export default function ChatWithTeachers({}: Props) {
                 <h2 className="font-semibold text-gray-900 whitespace-nowrap">{selectedTeacher.name}</h2>
                 <p className="text-sm text-gray-500 whitespace-nowrap">
                   {selectedTeacher.title} •{' '}
-                  <span className="text-green-600 capitalize">{selectedTeacher.status}</span>
+                  <span className="text-green-600 capitalize">{t(`parent:chat.${selectedTeacher.status}`)}</span>
                 </p>
               </div>
             </div>
@@ -399,7 +401,7 @@ export default function ChatWithTeachers({}: Props) {
             {/* Date Separator */}
             <div className="flex items-center justify-center">
               <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs px-3 py-1">
-                Today
+                {t('parent:chat.today')}
               </Badge>
             </div>
 
@@ -477,7 +479,7 @@ export default function ChatWithTeachers({}: Props) {
                 <textarea
                   ref={textareaRef}
                   rows={1}
-                  placeholder="Type your message..."
+                  placeholder={t('parent:chat.typeMessage')}
                   value={messageInput}
                   onChange={handleTextareaChange}
                   onKeyDown={handleKeyDown}

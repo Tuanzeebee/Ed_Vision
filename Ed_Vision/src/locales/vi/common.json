@@ -1,0 +1,137 @@
+{
+  "app": {
+    "name": "EdVision",
+    "tagline": "Hệ thống Quản lý Giáo dục"
+  },
+  "navigation": {
+    "home": "Trang chủ",
+    "dashboard": "Bảng điều khiển",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa",
+    "close": "Đóng",
+    "view": "Xem",
+    "search": "Tìm kiếm",
+    "filter": "Lọc"
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "warning": "Cảnh báo",
+    "info": "Thông tin",
+    "confirm": "Xác nhận",
+    "yes": "Có",
+    "no": "Không",
+    "all": "Tất cả",
+    "none": "Không có",
+    "select": "Chọn",
+    "selected": "Đã chọn",
+    "date": "Ngày",
+    "time": "Thời gian",
+    "status": "Trạng thái",
+    "actions": "Hành động",
+    "details": "Chi tiết",
+    "description": "Mô tả",
+    "name": "Tên",
+    "email": "Email",
+    "phone": "Điện thoại",
+    "address": "Địa chỉ"
+  },
+  "time": {
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "tomorrow": "Ngày mai",
+    "thisWeek": "Tuần này",
+    "lastWeek": "Tuần trước",
+    "thisMonth": "Tháng này",
+    "lastMonth": "Tháng trước",
+    "minutes": "phút",
+    "hours": "giờ",
+    "days": "ngày",
+    "weeks": "tuần",
+    "months": "tháng",
+    "years": "năm"
+  },
+  "messages": {
+    "noData": "Không có dữ liệu",
+    "saveSuccess": "Lưu thành công",
+    "saveError": "Lưu thất bại",
+    "deleteSuccess": "Xóa thành công",
+    "deleteError": "Xóa thất bại",
+    "updateSuccess": "Cập nhật thành công",
+    "updateError": "Cập nhật thất bại"
+  },
+  "header": {
+    "navigation": {
+      "ourFeatures": "Tính năng của chúng tôi",
+      "research": "Nghiên cứu",
+      "forEducators": "Dành cho Giáo viên",
+      "forEnterprise": "Dành cho Doanh nghiệp"
+    },
+    "features": {
+      "gradeForecasting": {
+        "title": "Dự đoán Điểm số",
+        "description": "Dự đoán điểm số bằng AI"
+      },
+      "performanceAnalytics": {
+        "title": "Phân tích Hiệu suất",
+        "description": "Thông tin chi tiết về học tập"
+      },
+      "studyOptimization": {
+        "title": "Tối ưu hóa Học tập",
+        "description": "Kế hoạch học tập cá nhân hóa"
+      }
+    },
+    "educators": {
+      "teacherDashboard": "Bảng điều khiển Giáo viên",
+      "classManagement": "Quản lý Lớp học",
+      "studentProgressTracking": "Theo dõi Tiến độ Học sinh",
+      "parentCommunication": "Giao tiếp với Phụ huynh"
+    },
+    "auth": {
+      "login": "Đăng nhập",
+      "register": "Đăng ký"
+    },
+    "user": {
+      "administrator": "Quản trị viên",
+      "student": "Học sinh"
+    }
+  },
+  "footer": {
+    "slogan": "Trao quyền cho học sinh với dự đoán điểm số dựa trên AI",
+    "sections": {
+      "product": {
+        "title": "Sản phẩm",
+        "features": "Tính năng",
+        "pricing": "Bảng giá",
+        "api": "API",
+        "integrations": "Tích hợp"
+      },
+      "company": {
+        "title": "Công ty",
+        "aboutUs": "Về chúng tôi",
+        "careers": "Tuyển dụng",
+        "blog": "Blog",
+        "press": "Báo chí"
+      },
+      "support": {
+        "title": "Hỗ trợ",
+        "helpCenter": "Trung tâm Trợ giúp",
+        "contactUs": "Liên hệ",
+        "privacyPolicy": "Chính sách Bảo mật",
+        "termsOfService": "Điều khoản Dịch vụ"
+      },
+      "social": {
+        "title": "Theo dõi chúng tôi"
+      }
+    },
+    "copyright": "© {{year}} GradeForecast. Bản quyền thuộc về chúng tôi."
+  }
+}

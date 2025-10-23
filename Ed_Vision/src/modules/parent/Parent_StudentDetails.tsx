@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from "@/components/ui/parent/Parent_card"
 import Header from "../../components/layout/Header"
 // Import assets
@@ -20,6 +21,7 @@ type Props = {
 
 export default function StudentDetails({}: Props) {
   const navigate = useNavigate();
+  const { t } = useTranslation(['parent', 'common']);
 
   return (
     <div className="bg-gray-50 min-h-screen w-full">
@@ -33,14 +35,14 @@ export default function StudentDetails({}: Props) {
                 className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
                 onClick={() => navigate('/parent/dashboard')}
               >
-                <img src={iconArrowLeft} alt="Back" className="w-5 h-5" />
+                <img src={iconArrowLeft} alt={t('parent:studentDetails.back')} className="w-5 h-5" />
               </button>
               <div className="bg-blue-600 rounded-lg p-2 ml-3">
                 <img src={iconUser} alt="Student" className="w-6 h-6" />
               </div>
               <div className="ml-3">
-                <h1 className="text-xl font-semibold text-gray-900">Student Information</h1>
-                <p className="text-sm text-gray-500">Academic profile and progress overview</p>
+                <h1 className="text-xl font-semibold text-gray-900">{t('parent:studentDetails.title')}</h1>
+                <p className="text-sm text-gray-500">{t('parent:studentDetails.subtitle')}</p>
               </div>
             </div>
           </div>
@@ -66,12 +68,12 @@ export default function StudentDetails({}: Props) {
                   <div className="flex items-start justify-between mb-6">
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">John Smith</h2>
-                      <p className="text-lg text-gray-600">Student ID: STU2024001</p>
+                      <p className="text-lg text-gray-600">{t('parent:studentDetails.profile.studentId')}: STU2024001</p>
                       <div className="flex items-center mt-2">
                         <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                          Year 3
+                          {t('parent:studentDetails.profile.year')} 3
                         </span>
-                        <span className="ml-4 text-gray-600">Mathematics & Science Program</span>
+                        <span className="ml-4 text-gray-600">{t('parent:studentDetails.profile.program')}</span>
                       </div>
                     </div>
                   </div>
@@ -80,19 +82,19 @@ export default function StudentDetails({}: Props) {
                   <div className="grid grid-cols-4 gap-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-600">3.45</div>
-                      <div className="text-sm text-gray-600">Current GPA</div>
+                      <div className="text-sm text-gray-600">{t('parent:studentDetails.profile.currentGpa')}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">85%</div>
-                      <div className="text-sm text-gray-600">Attendance</div>
+                      <div className="text-sm text-gray-600">{t('parent:studentDetails.profile.attendance')}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-purple-600">48</div>
-                      <div className="text-sm text-gray-600">Courses</div>
+                      <div className="text-sm text-gray-600">{t('parent:studentDetails.profile.courses')}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-orange-600">144/144</div>
-                      <div className="text-sm text-gray-600">Credits</div>
+                      <div className="text-sm text-gray-600">{t('parent:studentDetails.profile.credits')}</div>
                     </div>
                   </div>
                 </div>
@@ -104,28 +106,28 @@ export default function StudentDetails({}: Props) {
           <Card className="border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Course Progress</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('parent:studentDetails.courseProgress.title')}</h3>
                 <div className="flex gap-3">
                   <select className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-200 transition-colors">
-                    <option>Semester 1, 2024-2025</option>
-                    <option>Semester 2, 2024-2025</option>
-                    <option>Semester 1, 2023-2024</option>
-                    <option>Semester 2, 2023-2024</option>
+                    <option>{t('parent:studentDetails.courseProgress.semester')} 1, 2024-2025</option>
+                    <option>{t('parent:studentDetails.courseProgress.semester')} 2, 2024-2025</option>
+                    <option>{t('parent:studentDetails.courseProgress.semester')} 1, 2023-2024</option>
+                    <option>{t('parent:studentDetails.courseProgress.semester')} 2, 2023-2024</option>
                   </select>
                   <select className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-sm cursor-pointer hover:bg-gray-200 transition-colors">
-                    <option>All Courses</option>
+                    <option>{t('parent:studentDetails.courseProgress.allCourses')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-600">Showing 1-10 of 48 courses</p>
+                <p className="text-sm text-gray-600">{t('parent:studentDetails.courseProgress.showing', { start: 1, end: 10, total: 48 })}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span>Show:</span>
+                  <span>{t('parent:studentDetails.courseProgress.show')}:</span>
                   <select className="bg-gray-100 border border-gray-300 rounded px-3 py-1 cursor-pointer hover:bg-gray-200 transition-colors">
                     <option>10</option>
                   </select>
-                  <span>per page</span>
+                  <span>{t('parent:studentDetails.courseProgress.perPage')}</span>
                 </div>
               </div>
 
@@ -134,12 +136,12 @@ export default function StudentDetails({}: Props) {
                 <table className="w-full">
                   <thead className="border-b border-gray-200">
                     <tr>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700">Course Name</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700">Credits</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700">Attendance</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700">Grade</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700">Points</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-700">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">{t('parent:studentDetails.courseProgress.courseName')}</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">{t('parent:studentDetails.courseProgress.credits')}</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">{t('parent:studentDetails.courseProgress.attendance')}</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">{t('parent:studentDetails.courseProgress.grade')}</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">{t('parent:studentDetails.courseProgress.points')}</th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">{t('parent:studentDetails.courseProgress.status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -161,7 +163,7 @@ export default function StudentDetails({}: Props) {
                       <td className="text-center py-6 px-4 text-purple-600 font-medium">11.1</td>
                       <td className="text-center py-6 px-4">
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                          Passed
+                          {t('parent:studentDetails.courseProgress.passed')}
                         </span>
                       </td>
                     </tr>
@@ -183,7 +185,7 @@ export default function StudentDetails({}: Props) {
                       <td className="text-center py-6 px-4 text-purple-600 font-medium">6.6</td>
                       <td className="text-center py-6 px-4">
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                          In Progress
+                          {t('parent:studentDetails.courseProgress.inProgress')}
                         </span>
                       </td>
                     </tr>
@@ -205,7 +207,7 @@ export default function StudentDetails({}: Props) {
                       <td className="text-center py-6 px-4 text-red-600 font-medium">0.0</td>
                       <td className="text-center py-6 px-4">
                         <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
-                          Failed
+                          {t('parent:studentDetails.courseProgress.failed')}
                         </span>
                       </td>
                     </tr>
@@ -227,7 +229,7 @@ export default function StudentDetails({}: Props) {
                       <td className="text-center py-6 px-4 text-purple-600 font-medium">12.0</td>
                       <td className="text-center py-6 px-4">
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                          In Progress
+                          {t('parent:studentDetails.courseProgress.inProgress')}
                         </span>
                       </td>
                     </tr>
@@ -249,7 +251,7 @@ export default function StudentDetails({}: Props) {
                       <td className="text-center py-6 px-4 text-purple-600 font-medium">16.0</td>
                       <td className="text-center py-6 px-4">
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                          Passed
+                          {t('parent:studentDetails.courseProgress.passed')}
                         </span>
                       </td>
                     </tr>
@@ -260,8 +262,8 @@ export default function StudentDetails({}: Props) {
               {/* Pagination */}
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
                 <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-500 opacity-50 cursor-not-allowed">
-                  <img src={iconChevronLeft} alt="Previous" className="w-4 h-4" />
-                  Previous
+                  <img src={iconChevronLeft} alt={t('parent:studentDetails.courseProgress.previous')} className="w-4 h-4" />
+                  {t('parent:studentDetails.courseProgress.previous')}
                 </button>
                 
                 <div className="flex items-center gap-1">
@@ -273,8 +275,8 @@ export default function StudentDetails({}: Props) {
                 </div>
 
                 <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors">
-                  Next
-                  <img src={iconChevronRight} alt="Next" className="w-4 h-4" />
+                  {t('parent:studentDetails.courseProgress.next')}
+                  <img src={iconChevronRight} alt={t('parent:studentDetails.courseProgress.next')} className="w-4 h-4" />
                 </button>
               </div>
             </CardContent>
@@ -283,16 +285,16 @@ export default function StudentDetails({}: Props) {
           {/* Academic History */}
           <Card className="border-gray-200 shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Academic History by Semester</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('parent:studentDetails.academicHistory.title')}</h3>
               
               <div className="border border-gray-200 rounded-lg">
                 <div className="bg-gray-50 border-b border-gray-200 p-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-900">Semester 1, 2024</h4>
+                    <h4 className="font-medium text-gray-900">{t('parent:studentDetails.academicHistory.semesterLabel', { number: 1, year: 2024 })}</h4>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>GPA: 3.52</span>
-                      <span>Credits: 18</span>
-                      <span>Points: 63.36</span>
+                      <span>{t('parent:studentDetails.academicHistory.gpa')}: 3.52</span>
+                      <span>{t('parent:studentDetails.academicHistory.credits')}: 18</span>
+                      <span>{t('parent:studentDetails.academicHistory.points')}: 63.36</span>
                     </div>
                   </div>
                 </div>
@@ -337,15 +339,15 @@ export default function StudentDetails({}: Props) {
           {/* GPA Status */}
           <Card className="border-gray-200 shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">GPA Status</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('parent:studentDetails.gpaStatus.title')}</h3>
               
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <div className="text-3xl font-bold text-blue-600">3.45</div>
-                  <div className="text-lg font-medium text-green-600">Very Good</div>
+                  <div className="text-lg font-medium text-green-600">{t('parent:studentDetails.gpaStatus.veryGood')}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-600">Current Semester</div>
+                  <div className="text-sm text-gray-600">{t('parent:studentDetails.gpaStatus.currentSemester')}</div>
                   <div className="text-lg font-semibold text-gray-900">3.52</div>
                 </div>
               </div>
@@ -354,28 +356,28 @@ export default function StudentDetails({}: Props) {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between cursor-pointer hover:bg-green-100 transition-colors">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
-                    <span className="font-medium text-green-900">Excellent</span>
+                    <span className="font-medium text-green-900">{t('parent:studentDetails.gpaStatus.excellent')}</span>
                   </div>
-                  <span className="font-medium text-green-700">3.60 – 4.00</span>
+                  <span className="font-medium text-green-700">{t('parent:studentDetails.gpaStatus.range', { min: '3.60', max: '4.00' })}</span>
                 </div>
 
                 <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition-colors">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
-                    <span className="font-medium text-blue-900">Very Good</span>
+                    <span className="font-medium text-blue-900">{t('parent:studentDetails.gpaStatus.veryGood')}</span>
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium ml-3">
-                      Current
+                      {t('parent:studentDetails.gpaStatus.current')}
                     </span>
                   </div>
-                  <span className="font-medium text-blue-700">3.20 – 3.59</span>
+                  <span className="font-medium text-blue-700">{t('parent:studentDetails.gpaStatus.range', { min: '3.20', max: '3.59' })}</span>
                 </div>
 
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
-                    <span className="font-medium text-gray-700">Good</span>
+                    <span className="font-medium text-gray-700">{t('parent:studentDetails.gpaStatus.good')}</span>
                   </div>
-                  <span className="text-gray-600">2.50 – 3.19</span>
+                  <span className="text-gray-600">{t('parent:studentDetails.gpaStatus.range', { min: '2.50', max: '3.19' })}</span>
                 </div>
               </div>
             </CardContent>
@@ -386,7 +388,7 @@ export default function StudentDetails({}: Props) {
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
                 <img src={iconNotification} alt="Notifications" className="w-5 h-5 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('parent:studentDetails.notifications.title')}</h3>
               </div>
 
               <div className="space-y-4">
@@ -394,12 +396,12 @@ export default function StudentDetails({}: Props) {
                   <div className="flex items-start">
                     <img src={iconWarning} alt="Warning" className="w-5 h-5 mt-0.5 mr-3" />
                     <div>
-                      <h4 className="font-medium text-red-900">Failed Subject Alert</h4>
+                      <h4 className="font-medium text-red-900">{t('parent:studentDetails.notifications.failedSubject.title')}</h4>
                       <p className="text-sm text-red-700 mt-1">
-                        Chemistry Fundamentals (CHEM101) - Grade: F
+                        {t('parent:studentDetails.notifications.failedSubject.description', { courseName: 'Chemistry Fundamentals', courseCode: 'CHEM101', grade: 'F' })}
                       </p>
                       <p className="text-xs text-red-600 mt-1">
-                        Retake required for graduation. Contact academic advisor.
+                        {t('parent:studentDetails.notifications.failedSubject.note')}
                       </p>
                     </div>
                   </div>
@@ -409,12 +411,12 @@ export default function StudentDetails({}: Props) {
                   <div className="flex items-start">
                     <img src={iconTrophy} alt="Achievement" className="w-5 h-5 mt-0.5 mr-3" />
                     <div>
-                      <h4 className="font-medium text-green-900">Achievement Unlocked</h4>
+                      <h4 className="font-medium text-green-900">{t('parent:studentDetails.notifications.achievement.title')}</h4>
                       <p className="text-sm text-green-700 mt-1">
-                        Dean's List - Excellent Academic Performance
+                        {t('parent:studentDetails.notifications.achievement.deansList')}
                       </p>
                       <p className="text-xs text-green-600 mt-1">
-                        Congratulations on maintaining high GPA!
+                        {t('parent:studentDetails.notifications.achievement.congratulations')}
                       </p>
                     </div>
                   </div>
@@ -424,12 +426,12 @@ export default function StudentDetails({}: Props) {
                   <div className="flex items-start">
                     <img src={iconCalendar} alt="Calendar" className="w-5 h-5 mt-0.5 mr-3" />
                     <div>
-                      <h4 className="font-medium text-blue-900">Upcoming Exam</h4>
+                      <h4 className="font-medium text-blue-900">{t('parent:studentDetails.notifications.upcomingExam.title')}</h4>
                       <p className="text-sm text-blue-700 mt-1">
-                        Physics Laboratory - Final Exam
+                        {t('parent:studentDetails.notifications.upcomingExam.description', { courseName: 'Physics Laboratory' })}
                       </p>
                       <p className="text-xs text-blue-600 mt-1">
-                        September 20, 2024 at 2:00 PM
+                        {t('parent:studentDetails.notifications.upcomingExam.dateTime', { date: 'September 20, 2024', time: '2:00 PM' })}
                       </p>
                     </div>
                   </div>
@@ -441,7 +443,7 @@ export default function StudentDetails({}: Props) {
           {/* Emergency Contacts */}
           <Card className="border-gray-200 shadow-sm">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contacts</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('parent:studentDetails.emergencyContacts.title')}</h3>
               
               <div className="space-y-4">
                 <div className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
@@ -449,7 +451,7 @@ export default function StudentDetails({}: Props) {
                     <img src={iconEmail} alt="Email" className="w-5 h-5" />
                   </div>
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">Academic Advisor</div>
+                    <div className="font-medium text-gray-900">{t('parent:studentDetails.emergencyContacts.academicAdvisor')}</div>
                     <div className="text-sm text-gray-600">Dr. Sarah Johnson</div>
                     <div className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">sarah.johnson@university.edu</div>
                   </div>
@@ -460,8 +462,8 @@ export default function StudentDetails({}: Props) {
                     <img src={iconPhone} alt="Phone" className="w-5 h-5" />
                   </div>
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">Student Support</div>
-                    <div className="text-sm text-gray-600">24/7 Helpline</div>
+                    <div className="font-medium text-gray-900">{t('parent:studentDetails.emergencyContacts.studentSupport')}</div>
+                    <div className="text-sm text-gray-600">{t('parent:studentDetails.emergencyContacts.helpline')}</div>
                     <div className="text-sm text-green-600 hover:text-green-800 cursor-pointer">+1 (555) 123-4567</div>
                   </div>
                 </div>

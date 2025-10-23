@@ -3,12 +3,14 @@ import { Button } from "../../components/ui/student/Student_button"
 import Footer from "../../components/layout/Footer"
 import Header from "../../components/layout/Header"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 
 type Props = {
   // Add props if needed
 }
 
 export default function GradeForecastLanding({}: Props) {
+  const { t } = useTranslation(['student'])
   const navigate = useNavigate()
 
   const handleLogin = () => {
@@ -49,13 +51,13 @@ export default function GradeForecastLanding({}: Props) {
                   onClick={handleStartPredicting}
                   className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-6 rounded-xl text-base font-semibold hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
                 >
-                  Start Predicting
+                  {t('student:landing.startPredicting')}
                 </Button>
                 <Button 
                   variant="outline" 
                   className="border-2 border-gray-300 text-gray-700 px-6 py-6 rounded-xl text-base font-semibold hover:border-purple-500 hover:text-purple-500 transition-all duration-200"
                 >
-                  Watch Demo
+                  {t('student:landing.watchDemo')}
                 </Button>
               </div>
             </div>

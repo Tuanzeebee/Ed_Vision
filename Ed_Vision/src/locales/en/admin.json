@@ -1,0 +1,13 @@
+{
+  "dashboard": {
+    "title": "Admin Dashboard",
+    "welcome": "Welcome back",
+    "systemOverview": "System Overview"
+  },
+  "management": {
+    "students": "Student Management",
+    "teachers": "Teacher Management",
+    "accounts": "Account Management",
+    "permissions": "Permission Management"
+  }
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import johnSmithAvatar from '../../assets/parent/avatar.png';
 import iconEducation from '../../assets/parent/iconEducation.svg';
 import iconCalendar from '../../assets/parent/iconCalendar.svg';
@@ -122,41 +123,7 @@ export default function ParentDashboard({
       teacherName: 'Ms. Johnson'
     }
   ],
-  alerts = [
-    {
-      id: '1',
-      type: 'warning',
-      title: 'Academic Warning',
-      description: 'Low attendance in Mathematics (78%)',
-      date: 'Action required by September 20, 2024',
-      icon: iconWarning,
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      textColor: 'text-red-900'
-    },
-    {
-      id: '2',
-      type: 'success',
-      title: 'Excellence Award',
-      description: 'Outstanding GPA this semester (3.7)',
-      date: 'Awarded on September 1, 2024',
-      icon: iconTrophy,
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      textColor: 'text-green-900'
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'Improvement Notice',
-      description: 'Science grades showing positive trend',
-      date: 'Keep up the good work!',
-      icon: iconTrendUp,
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      textColor: 'text-blue-900'
-    }
-  ],
+  alerts = [],
   messages = [
     {
       id: '1',
@@ -195,10 +162,48 @@ export default function ParentDashboard({
     }
   ]
 }: Props) {
+  const { t } = useTranslation(['parent', 'common']);
   const navigate = useNavigate();
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Create default alerts with translations
+  const defaultAlerts: Alert[] = alerts.length === 0 ? [
+    {
+      id: '1',
+      type: 'warning',
+      title: t('parent:parentDashboard.academicWarning'),
+      description: t('parent:parentDashboard.lowAttendance', { subject: 'Mathematics', percent: '78' }),
+      date: t('parent:parentDashboard.actionRequired', { date: 'September 20, 2024' }),
+      icon: iconWarning,
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-900'
+    },
+    {
+      id: '2',
+      type: 'success',
+      title: t('parent:parentDashboard.excellenceAward'),
+      description: t('parent:parentDashboard.outstandingGpa', { gpa: '3.7' }),
+      date: t('parent:parentDashboard.awarded', { date: 'September 1, 2024' }),
+      icon: iconTrophy,
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      textColor: 'text-green-900'
+    },
+    {
+      id: '3',
+      type: 'info',
+      title: t('parent:parentDashboard.improvementNotice'),
+      description: t('parent:parentDashboard.positiveGrades', { subject: 'Science' }),
+      date: t('parent:parentDashboard.keepGoodWork'),
+      icon: iconTrendUp,
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-900'
+    }
+  ] : alerts;
 
   // Close notification dropdown when clicking outside
   useEffect(() => {
@@ -221,43 +226,43 @@ export default function ParentDashboard({
     {
       id: '1',
       type: 'accepted',
-      title: 'Meeting Confirmed',
-      description: "Dr. Brown accepted your meeting request",
+      title: t('parent:parentDashboard.notificationTypes.meetingConfirmed'),
+      description: t('parent:parentDashboard.notificationTypes.accepted', { name: 'Dr. Brown' }),
       date: 'Sep 15, 2024',
       time: '10:00 AM',
-      status: 'Accepted',
-      timeAgo: '2 minutes ago'
+      status: t('parent:parentDashboard.notificationTypes.statusAccepted'),
+      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.minutesAgo', { count: 2 })
     },
     {
       id: '2',
       type: 'declined',
-      title: 'Meeting Declined',
-      description: "Ms. Johnson declined your meeting request",
+      title: t('parent:parentDashboard.notificationTypes.meetingDeclined'),
+      description: t('parent:parentDashboard.notificationTypes.declined', { name: 'Ms. Johnson' }),
       date: 'Sep 20, 2024',
       time: '3:00 PM',
-      status: 'Declined',
-      timeAgo: '1 hour ago',
-      actionText: 'Request new time'
+      status: t('parent:parentDashboard.notificationTypes.statusDeclined'),
+      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.hourAgo', { count: 1 }),
+      actionText: t('parent:parentDashboard.notificationTypes.requestNewTime')
     },
     {
       id: '3',
       type: 'rescheduled',
-      title: 'Meeting Rescheduled',
-      description: "Mr. Wilson moved meeting to new time",
+      title: t('parent:parentDashboard.notificationTypes.meetingRescheduled'),
+      description: t('parent:parentDashboard.notificationTypes.rescheduled', { name: 'Mr. Wilson' }),
       date: 'Sep 25, 2024',
       time: '2:30 PM',
-      status: 'Rescheduled',
-      timeAgo: '3 hours ago'
+      status: t('parent:parentDashboard.notificationTypes.statusRescheduled'),
+      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.hoursAgo', { count: 3 })
     },
     {
       id: '4',
       type: 'pending',
-      title: 'Meeting Pending',
-      description: "Waiting for Dr. Smith's response",
+      title: t('parent:parentDashboard.notificationTypes.meetingPending'),
+      description: t('parent:parentDashboard.notificationTypes.pending', { name: 'Dr. Smith' }),
       date: 'Sep 28, 2024',
       time: '11:00 AM',
-      status: 'Pending',
-      timeAgo: 'Yesterday'
+      status: t('parent:parentDashboard.notificationTypes.statusPending'),
+      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.yesterday')
     }
   ];
 
@@ -369,7 +374,15 @@ export default function ParentDashboard({
     { day: '5', isCurrentMonth: false }
   ];
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays = [
+    t('parent:parentDashboard.calendar.sun'),
+    t('parent:parentDashboard.calendar.mon'),
+    t('parent:parentDashboard.calendar.tue'),
+    t('parent:parentDashboard.calendar.wed'),
+    t('parent:parentDashboard.calendar.thu'),
+    t('parent:parentDashboard.calendar.fri'),
+    t('parent:parentDashboard.calendar.sat')
+  ];
 
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col">
@@ -383,8 +396,8 @@ export default function ParentDashboard({
                 <img src={iconEducation} alt="" className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-lg md:text-xl font-semibold text-gray-900">Parent Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back, Sarah Thompson</p>
+                <h1 className="text-lg md:text-xl font-semibold text-gray-900">{t('parent:dashboard.title')}</h1>
+                <p className="text-sm text-gray-500">{t('parent:parentDashboard.welcomeBack')}, Sarah Thompson</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -411,8 +424,8 @@ export default function ParentDashboard({
                 {notificationDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-in slide-in-from-top-5 duration-200">
                     <div className="p-4 border-b border-gray-200">
-                      <h3 className="font-semibold text-gray-900">Appointment Notifications</h3>
-                      <p className="text-sm text-gray-500">Recent updates on your appointments</p>
+                      <h3 className="font-semibold text-gray-900">{t('parent:notifications.appointmentNotifications')}</h3>
+                      <p className="text-sm text-gray-500">{t('parent:notifications.recentUpdates')}</p>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.map((notification) => (
@@ -446,7 +459,7 @@ export default function ParentDashboard({
                         className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
                         onClick={() => navigate('/parent/appointments')}
                       >
-                        View All Notifications
+                        {t('parent:notifications.viewAllNotifications')}
                       </button>
                     </div>
                   </div>
@@ -481,7 +494,7 @@ export default function ParentDashboard({
               {/* Student Information Card */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">Student Information</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('parent:parentDashboard.studentInformation')}</h2>
                   <button className="p-1 text-gray-400 hover:text-gray-600">
                     <img src={iconMoreHoriz} alt="" className="w-5 h-5" />
                   </button>
@@ -505,7 +518,7 @@ export default function ParentDashboard({
                         <div className="ml-3">
                           <h3 className="font-semibold text-blue-900">{studentData.name}</h3>
                           <p className="text-sm text-blue-700">{studentData.year} • {studentData.subjects}</p>
-                          <p className="text-xs text-blue-600 mt-1">Student ID: {studentData.id}</p>
+                          <p className="text-xs text-blue-600 mt-1">{t('parent:parentDashboard.studentId')}: {studentData.id}</p>
                         </div>
                       </div>
                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,11 +530,11 @@ export default function ParentDashboard({
                   {/* Statistics */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Current GPA</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('parent:parentDashboard.currentGpa')}</p>
                       <p className="text-lg font-semibold text-gray-900">{studentData.gpa}</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Attendance</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('parent:students.attendance')}</p>
                       <p className="text-lg font-semibold text-gray-900">{studentData.attendance}</p>
                     </div>
                   </div>
@@ -573,11 +586,11 @@ export default function ParentDashboard({
                   <div className="flex items-center justify-center space-x-4 pt-4 border-t border-gray-200">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-orange-100 rounded"></div>
-                      <span className="text-xs text-gray-600">Online Meeting</span>
+                      <span className="text-xs text-gray-600">{t('parent:parentDashboard.onlineMeeting')}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-blue-100 rounded"></div>
-                      <span className="text-xs text-gray-600">In-Person</span>
+                      <span className="text-xs text-gray-600">{t('parent:appointments.inPerson')}</span>
                     </div>
                   </div>
                 </div>
@@ -587,10 +600,10 @@ export default function ParentDashboard({
             {/* Upcoming Appointments */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('parent:parentDashboard.upcomingAppointments')}</h2>
                 <div className="flex items-center space-x-2">
                   <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
-                    2 New
+                    {t('parent:parentDashboard.newCount', { count: 2 })}
                   </span>
                   <img src={iconCalendar} alt="" className="w-5 h-5" />
                 </div>
@@ -607,13 +620,13 @@ export default function ParentDashboard({
                         </p>
                         <div className="mt-2 flex items-center space-x-2">
                           <span className={`${appointment.tagColor} text-xs font-medium px-2 py-1 rounded-full`}>
-                            {appointment.type === 'online' ? 'Online Meeting' : 'In-Person'}
+                            {appointment.type === 'online' ? t('parent:parentDashboard.onlineMeeting') : t('parent:appointments.inPerson')}
                           </span>
                           <button 
                             className={`${appointment.textColor.replace('900', '600')} hover:${appointment.textColor.replace('900', '700')} text-xs font-medium`}
                             onClick={() => openChatPage()}
                           >
-                            💬 Chat
+                            💬 {t('parent:parentDashboard.chat')}
                           </button>
                         </div>
                       </div>
@@ -626,7 +639,7 @@ export default function ParentDashboard({
                   className="w-full text-center py-3 text-blue-600 hover:text-blue-700 font-medium text-sm cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
                   onClick={() => navigate('/parent/appointments')}
                 >
-                  View All Appointments
+                  {t('parent:appointments.viewAll')}
                 </button>
               </div>
             </div>
@@ -637,10 +650,10 @@ export default function ParentDashboard({
             {/* Recent Messages */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Messages</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('parent:parentDashboard.recentMessages')}</h2>
                 <div className="flex items-center space-x-2">
                   <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                    {newMessagesCount} New
+                    {t('parent:parentDashboard.newCount', { count: newMessagesCount })}
                   </span>
                   <button className="text-blue-600 hover:text-blue-700" onClick={openChatPage}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -668,7 +681,7 @@ export default function ParentDashboard({
                         <div className="flex items-center mt-1">
                           <span className={`w-2 h-2 ${message.isNew ? 'bg-blue-500' : 'bg-green-500'} rounded-full mr-2`}></span>
                           <span className={`text-xs ${message.isNew ? 'text-blue-600' : 'text-green-600'} font-medium`}>
-                            {message.isNew ? 'New message' : ''}
+                            {message.isNew ? t('parent:parentDashboard.newMessage') : ''}
                           </span>
                         </div>
                       </div>
@@ -684,7 +697,7 @@ export default function ParentDashboard({
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                   </svg>
-                  <span>Start New Chat</span>
+                  <span>{t('parent:parentDashboard.startNewChat')}</span>
                 </button>
               </div>
             </div>
@@ -692,12 +705,12 @@ export default function ParentDashboard({
             {/* Alerts & Recognition */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Alerts & Recognition</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('parent:parentDashboard.alertsAndRecognition')}</h2>
                 <img src={iconInfo} alt="" className="w-5 h-5" />
               </div>
 
               <div className="space-y-4">
-                {alerts.map((alert) => (
+                {defaultAlerts.map((alert) => (
                   <div key={alert.id} className={`${alert.bgColor} border ${alert.borderColor} rounded-lg p-4`}>
                     <div className="flex items-start">
                       <img src={alert.icon} alt="" className="w-5 h-5 mt-0.5" />
@@ -716,7 +729,7 @@ export default function ParentDashboard({
                             className={`${alert.textColor.replace('900', '600')} hover:${alert.textColor.replace('900', '700')} text-xs font-medium mt-2`}
                             onClick={() => openChatPage()}
                           >
-                            💬 Discuss with teacher
+                            {t('parent:parentDashboard.discussWithTeacher')}
                           </button>
                         )}
                       </div>
@@ -752,7 +765,7 @@ export default function ParentDashboard({
         <div className="fixed bottom-24 right-6 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-40">
           <div className="bg-blue-600 text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Quick Chat</h3>
+              <h3 className="font-semibold">{t('parent:parentDashboard.quickChat')}</h3>
               <button onClick={toggleChatWidget} className="text-white hover:text-gray-200">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -762,7 +775,7 @@ export default function ParentDashboard({
           </div>
           <div className="p-4 h-64 overflow-y-auto">
             <div className="space-y-3">
-              <div className="text-sm text-gray-600">Choose a teacher to chat with:</div>
+              <div className="text-sm text-gray-600">{t('parent:parentDashboard.chooseTeacher')}</div>
               {teachers.map((teacher) => (
                 <button 
                   key={teacher.name}
@@ -785,7 +798,7 @@ export default function ParentDashboard({
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
               onClick={openChatPage}
             >
-              View All Chats
+              {t('parent:parentDashboard.viewAllChats')}
             </button>
           </div>
         </div>
