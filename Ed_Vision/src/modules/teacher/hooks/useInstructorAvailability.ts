@@ -1,11 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
-import { instructorAvailabilityApi } from '../../../services/api';
+import { instructorAvailabilityApi } from '../../../services/teacher/api';
 import type {
   AvailabilityResponse,
   AvailabilityStatistics,
   AddAvailabilityDateDto,
   BulkCreateAvailabilityDto,
-} from '../../../services/api';
+  TimeSlotResponse,
+  AvailabilityDateResponse,
+} from '../../../services/teacher/api';
 import type { AvailableDate } from '../types/appointment.types';
 
 /**
@@ -29,10 +31,10 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const convertToFrontendFormat = useCallback(
     (response: AvailabilityResponse): AvailableDate[] => {
-      return response.availabilities.map((avail) => ({
+      return response.availabilities.map((avail: AvailabilityDateResponse) => ({
         date: avail.date,
         weekId: avail.weekId,
-        timeSlots: avail.timeSlots.map((slot) => ({
+        timeSlots: avail.timeSlots.map((slot: TimeSlotResponse) => ({
           slotId: slot.slotId,
           start: slot.startTime,
           end: slot.endTime,

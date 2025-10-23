@@ -5,7 +5,7 @@ import type {
   AvailabilityResponse,
   AvailabilityStatistics,
 } from './types';
-import { cacheService } from '../cache';
+import { cacheService } from '../../cache';
 
 /**
  * Instructor Availability API Service
