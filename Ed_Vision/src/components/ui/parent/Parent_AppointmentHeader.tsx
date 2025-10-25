@@ -8,9 +8,9 @@ type Props = {
   onClose?: () => void
 }
 
-export default function AppointmentHeader({ 
-  title, 
-  onClose 
+export default function AppointmentHeader({
+  title,
+  onClose
 }: Props) {
   const { t } = useTranslation(['parent']);
   return (

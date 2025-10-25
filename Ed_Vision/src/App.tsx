@@ -34,6 +34,7 @@ import GradeManagement from "@/modules/teacher/GradeManagement";
 import PredictionView from "@/modules/teacher/PredictionView";
 import ProgressTracking from "@/modules/teacher/ProgressTracking";
 import TeacherReport from "@/modules/teacher/TeacherReport";
+import StudentSurveyManagement from "@/modules/teacher/StudentSurveyManagement";
 import UploadTranscript from "./modules/student/UploadTranscript";
 import AdjustParameters from "./modules/student/AdjustParameters";
 import InstructionsPage from "./modules/student/InstructionsPage";
@@ -45,7 +46,6 @@ import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import TeacherChat from "./modules/teacher/TeacherChat";
-import ParentDashboardNew from "./modules/parent/ParentDashboardNew";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import LiveLearning from "./modules/student/LiveLearning";
 import VideoRoom from "./modules/student/VideoRoom";
@@ -86,7 +86,6 @@ function App() {
 
         {/* Route cho parent */}
         <Route path="/parent/book-appointment/step/:stepNumber" element={<BookAppointmentStepWrapper />} />
-        <Route path="/parent/dashboard" element={<ParentDashboardNew />} />
         <Route path="/parent/book-appointment" element={<Navigate to="/parent/book-appointment/step/1" replace />} />
         <Route path="/parent/appointments" element={<AllAppointments />} />
         <Route path="/parent/student-details" element={<StudentDetails />} />
@@ -131,6 +130,7 @@ function App() {
         <Route path="/teacher/grade-management" element={<GradeManagement />} />
         <Route path="/teacher/prediction-view" element={<PredictionView />} />
         <Route path="/teacher/progress-tracking" element={<ProgressTracking />} />
+        <Route path="/teacher/survey-management" element={<StudentSurveyManagement />} />
         <Route path="/teacher/reports-alerts" element={<TeacherReport />} />
         <Route path="/teacher/messages" element={<MessagesNotifications />} />
         <Route path="/teacher/chat" element={<TeacherChat />} />
