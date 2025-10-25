@@ -1,0 +1,16 @@
+{
+  "dashboard": {
+    "title": "Trang Giáo Viên",
+    "welcome": "Chào mừng trở lại",
+    "myClasses": "Lớp của tôi"
+  },
+  "classes": {
+    "title": "Lớp học",
+    "viewClass": "Xem lớp",
+    "students": "Học sinh"
+  },
+  "schedule": {
+    "title": "Lịch dạy",
+    "viewSchedule": "Xem lịch"
+  }
+}

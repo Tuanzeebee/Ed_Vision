@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import BookAppointmentStep1 from "./BookAppointmentStep1"
 import BookAppointmentStep2 from "./BookAppointmentStep2" 
 import BookAppointmentStep3 from "./BookAppointmentStep3"
@@ -47,6 +48,7 @@ export default function BookAppointmentFlow({
   onCancel,
   initialStep = 1 
 }: Props) {
+  const { t } = useTranslation(['parent', 'common'])
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -127,7 +129,7 @@ export default function BookAppointmentFlow({
       ...flowData,
       formData
     }))
-    alert('Draft saved successfully!')
+    alert(t('parent:bookAppointment.draftSaved'))
   }
 
   // Step 4: Confirmation
@@ -146,7 +148,7 @@ export default function BookAppointmentFlow({
   // Step 4: Save Draft
   const handleStep4SaveDraft = () => {
     localStorage.setItem('appointmentDraft', JSON.stringify(flowData))
-    alert('Draft saved successfully!')
+    alert(t('parent:bookAppointment.draftSaved'))
   }
 
   // Navigation functions
@@ -171,7 +173,7 @@ export default function BookAppointmentFlow({
   }
 
   const handleEmailSupport = () => {
-    window.open('mailto:support@university.edu?subject=Appointment Support')
+    window.open(`mailto:support@university.edu?subject=${t('parent:bookAppointment.supportEmail.subject')}`)
   }
 
   // Render current step
@@ -213,21 +215,21 @@ export default function BookAppointmentFlow({
             onBack={goBack}
             onClose={handleClose}
             appointmentData={{
-              meetingType: flowData.meetingType === "in-person" ? "In-Person Meeting" : 
-                          flowData.meetingType === "video-call" ? "Video Call Meeting" : "Phone Call Meeting",
+              meetingType: flowData.meetingType === "in-person" ? t('parent:bookAppointment.meetingTypes.inPerson') : 
+                          flowData.meetingType === "video-call" ? t('parent:bookAppointment.meetingTypes.videoCall') : t('parent:bookAppointment.meetingTypes.phoneCall'),
               lecturer: "Mr. Tuan (Mathematics Adviser)",
               dateTime: `${flowData.selectedDate} at ${flowData.selectedTime}`,
               purpose: flowData.formData.meetingPurpose || "General Discussion",
               studentName: "Emma Thompson",
-              gradeClass: "Grade 7B - Mathematics Class",
+              gradeClass: "Grade K28 CMU TPM 5",
               parentName: flowData.formData.parentName,
               relationship: flowData.formData.relationshipToStudent,
               phoneNumber: flowData.formData.phoneNumber,
               emailAddress: flowData.formData.emailAddress,
               additionalNotes: flowData.formData.additionalNotes,
-              communicationPreference: flowData.formData.communicationMethod === "email" ? "Email notifications" :
-                                      flowData.formData.communicationMethod === "sms" ? "SMS text messages" :
-                                      "Both email and SMS"
+              communicationPreference: flowData.formData.communicationMethod === "email" ? t('parent:bookAppointment.communications.email') :
+                                      flowData.formData.communicationMethod === "sms" ? t('parent:bookAppointment.communications.sms') :
+                                      t('parent:bookAppointment.communications.both')
             }}
           />
         )
@@ -241,11 +243,11 @@ export default function BookAppointmentFlow({
             appointmentData={{
               date: flowData.selectedDate,
               time: `${flowData.selectedTime} - ${getEndTime(flowData.selectedTime)}`,
-              location: flowData.meetingType === "in-person" ? "School premises, Room 204" :
-                       flowData.meetingType === "video-call" ? "Video Call (Link will be sent)" :
-                       "Phone Call",
-              meetingType: flowData.meetingType === "in-person" ? "In-Person Meeting" : 
-                          flowData.meetingType === "video-call" ? "Video Call Meeting" : "Phone Call Meeting",
+              location: flowData.meetingType === "in-person" ? t('parent:bookAppointment.locations.schoolPremises') :
+                       flowData.meetingType === "video-call" ? t('parent:bookAppointment.locations.videoCallLink') :
+                       t('parent:bookAppointment.locations.phoneCall'),
+              meetingType: flowData.meetingType === "in-person" ? t('parent:bookAppointment.meetingTypes.inPerson') : 
+                          flowData.meetingType === "video-call" ? t('parent:bookAppointment.meetingTypes.videoCall') : t('parent:bookAppointment.meetingTypes.phoneCall'),
               doctor: "Mr. Tuan (Mathematics Adviser)",
               specialization: "Mathematics Department",
               purpose: flowData.formData.meetingPurpose || "General Discussion",
@@ -256,7 +258,7 @@ export default function BookAppointmentFlow({
         )
       
       default:
-        return <div>Invalid step</div>
+        return <div>{t('parent:bookAppointment.invalidStep')}</div>
     }
   }
 

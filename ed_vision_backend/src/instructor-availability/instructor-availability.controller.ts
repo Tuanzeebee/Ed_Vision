@@ -1,0 +1,142 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { InstructorAvailabilityService } from './instructor-availability.service';
+import { AddAvailabilityDateDto } from './dto/add-availability-date.dto';
+import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
+import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
+import { BulkCreateAvailabilityDto } from './dto/bulk-create-availability.dto';
+
+@Controller('instructor-availability')
+export class InstructorAvailabilityController {
+  constructor(
+    private readonly availabilityService: InstructorAvailabilityService,
+  ) {}
+
+  /**
+   * Smoke test endpoint
+   */
+  @Get('admin/test')
+  test() {
+    return {
+      message: 'Instructor Availability API is working',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get instructor's availability statistics
+   * GET /instructor-availability/:instructorId/statistics
+   * NOTE: This must come BEFORE the general :instructorId route
+   */
+  @Get(':instructorId/statistics')
+  async getStatistics(@Param('instructorId', ParseIntPipe) instructorId: number) {
+    return this.availabilityService.getStatistics(instructorId);
+  }
+
+  /**
+   * Get instructor's availability
+   * GET /instructor-availability/:instructorId
+   */
+  @Get(':instructorId')
+  async getAvailability(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.availabilityService.getAvailability(instructorId, startDate, endDate);
+  }
+
+  /**
+   * Add a new availability date (with optional time slots)
+   * POST /instructor-availability/:instructorId/dates
+   */
+  @Post(':instructorId/dates')
+  @HttpCode(HttpStatus.CREATED)
+  async addAvailabilityDate(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Body() dto: AddAvailabilityDateDto,
+  ) {
+    return this.availabilityService.addAvailabilityDate(instructorId, dto);
+  }
+
+  /**
+   * Bulk create availability dates
+   * POST /instructor-availability/:instructorId/dates/bulk
+   */
+  @Post(':instructorId/dates/bulk')
+  @HttpCode(HttpStatus.CREATED)
+  async bulkCreateAvailability(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Body() dto: BulkCreateAvailabilityDto,
+  ) {
+    return this.availabilityService.bulkCreateAvailability(
+      instructorId,
+      dto.availabilities,
+    );
+  }
+
+  /**
+   * Delete all time slots for a specific date
+   * DELETE /instructor-availability/:instructorId/dates/:date
+   */
+  @Delete(':instructorId/dates/:date')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAvailabilityDate(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Param('date') date: string,
+  ) {
+    await this.availabilityService.deleteAvailabilityDate(instructorId, date);
+  }
+
+  /**
+   * Add a time slot to a specific date
+   * POST /instructor-availability/:instructorId/dates/:date/slots
+   */
+  @Post(':instructorId/dates/:date/slots')
+  @HttpCode(HttpStatus.CREATED)
+  async addTimeSlot(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Param('date') date: string,
+    @Body() dto: CreateTimeSlotDto,
+  ) {
+    return this.availabilityService.addTimeSlot(instructorId, date, dto);
+  }
+
+  /**
+   * Update a time slot
+   * PUT /instructor-availability/:instructorId/slots/:slotId
+   */
+  @Put(':instructorId/slots/:slotId')
+  async updateTimeSlot(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Param('slotId', ParseIntPipe) slotId: number,
+    @Body() dto: UpdateTimeSlotDto,
+  ) {
+    return this.availabilityService.updateTimeSlot(instructorId, slotId, dto);
+  }
+
+  /**
+   * Delete a specific time slot
+   * DELETE /instructor-availability/:instructorId/slots/:slotId
+   */
+  @Delete(':instructorId/slots/:slotId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteTimeSlot(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Param('slotId', ParseIntPipe) slotId: number,
+  ) {
+    await this.availabilityService.deleteTimeSlot(instructorId, slotId);
+  }
+}
+

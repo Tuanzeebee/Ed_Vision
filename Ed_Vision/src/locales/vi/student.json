@@ -1,0 +1,26 @@
+{
+  "dashboard": {
+    "title": "Trang Học Sinh",
+    "welcome": "Chào mừng trở lại",
+    "myProgress": "Tiến trình của tôi"
+  },
+  "courses": {
+    "title": "Khóa học của tôi",
+    "allCourses": "Tất cả khóa học",
+    "viewCourse": "Xem khóa học",
+    "enrolled": "Đã đăng ký"
+  },
+  "grades": {
+    "title": "Điểm số của tôi",
+    "forecast": "Dự báo điểm",
+    "gpa": "Điểm trung bình"
+  },
+  "learning": {
+    "adventure": "Hành trình học tập",
+    "progress": "Tiến độ"
+  },
+  "landing": {
+    "startPredicting": "Bắt đầu Dự đoán",
+    "watchDemo": "Xem Demo"
+  }
+}

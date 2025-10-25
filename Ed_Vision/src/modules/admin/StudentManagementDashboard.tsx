@@ -1,6 +1,4 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
-import StudentList from "./StudentList";
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Chart as ChartJS,
@@ -37,45 +35,7 @@ const CardContent = ({ children, className = "" }: { children: React.ReactNode; 
 );
 
 export default function StudentManagementDashboard() {
-  const [showStudentList, setShowStudentList] = useState(false);
   const navigate = useNavigate();
-
-  // Reset về dashboard chỉ khi navigate từ breadcrumb
-  useEffect(() => {
-    // Listen for popstate events (back/forward browser buttons) 
-    const handlePopState = () => {
-      // Chỉ reset khi user dùng back button hoặc navigate từ bên ngoài
-      if (window.location.pathname === '/admin/students') {
-        setShowStudentList(false);
-      }
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
-
-  // Handle navigation để reset state khi navigate từ breadcrumb hoặc sidebar
-  const handleNavigation = (href: string) => {
-    if (href === '/admin/students') {
-      // Reset về dashboard view
-      setShowStudentList(false);
-    } else if (href === '/admin/students/list') {
-      // Navigate tới StudentList view
-      setShowStudentList(true);
-    } else {
-      // Với các navigation khác, reset về dashboard trước khi navigate
-      setShowStudentList(false);
-      navigate(href);
-    }
-  };
-
-  // Nếu đang hiển thị danh sách sinh viên, render StudentList component
-  if (showStudentList) {
-    return <StudentList onNavigate={handleNavigation} />;
-  }
 
   // Dữ liệu mẫu cho biểu đồ sinh viên theo khoa
   const facultyData = {
@@ -139,14 +99,11 @@ export default function StudentManagementDashboard() {
   };
 
   const handleViewStudentList = () => {
-    setShowStudentList(true);
+    navigate('/admin/students/list');
   };
 
   return (
-    <AdminLayout 
-      activePage="/admin/students"
-      onNavigate={handleNavigation}
-    >
+    <AdminLayout>
       <div className="space-y-8">
         {/* Page Title */}
         <div className="flex items-center justify-between">
@@ -156,7 +113,7 @@ export default function StudentManagementDashboard() {
           </div>
           <button 
             onClick={handleViewStudentList}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm cursor-pointer"
+            className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs cursor-pointer"
           >
             <i className="fas fa-list mr-2"></i>
             Xem danh sách sinh viên

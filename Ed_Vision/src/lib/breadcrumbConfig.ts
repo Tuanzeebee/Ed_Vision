@@ -13,7 +13,7 @@ export const breadcrumbConfig: Record<string, {
     icon: 'fas fa-home text-blue-600'
   },
   '/admin/teachers': {
-    label: 'Quản lý Giảng viên',
+    label: 'Quản lý Giảng viên/Cố Vấn',
     parent: '/admin/dashboard'
   },
   '/admin/students': {
@@ -64,7 +64,7 @@ export const breadcrumbConfig: Record<string, {
   },
   '/admin/students/:studentId': {
     label: 'Chi tiết sinh viên',
-    parent: '/admin/students'
+    parent: '/admin/students/list'
   },
   // Account management
   '/admin/users': {
@@ -74,6 +74,14 @@ export const breadcrumbConfig: Record<string, {
   '/admin/accounts': {
     label: 'Quản lý Tài khoản & Vai trò',
     parent: '/admin/dashboard'
+  },
+  '/admin/account-management': {
+    label: 'Quản lý Tài khoản & Vai trò',
+    parent: '/admin/dashboard'
+  },
+  '/admin/accounts/add': {
+    label: 'Thêm mới tài khoản',
+    parent: '/admin/users'
   },
   // Reports and analytics
   '/admin/reports/learning': {

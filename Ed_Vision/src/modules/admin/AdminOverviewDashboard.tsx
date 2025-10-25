@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import AdminLayout from "../../components/ui/admin/AdminLayout"
+import LoadingSpinner from "../../components/ui/admin/LoadingSpinner"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -40,6 +41,13 @@ const ArrowUpIcon = () => <i className="fas fa-arrow-up"></i>
 const ArrowDownIcon = () => <i className="fas fa-arrow-down"></i>
 const ExclamationTriangleIcon = () => <i className="fas fa-exclamation-triangle"></i>
 
+interface FilteredData {
+  students: number;
+  teachers: number;
+  atRisk: number;
+  performance: number;
+}
+
 export default function AdminOverviewDashboard() {
   const [selectedSemester, setSelectedSemester] = useState("Kỳ 1 2024-2025");
   const [selectedSchool, setSelectedSchool] = useState("Tất cả");
@@ -47,6 +55,36 @@ export default function AdminOverviewDashboard() {
   const [selectedSubject, setSelectedSubject] = useState("Tất cả");
   const [selectedYear, setSelectedYear] = useState("2024-2025");
   const [subjectCode, setSubjectCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [filteredData, setFilteredData] = useState<FilteredData | null>(null);
+
+  // Filter logic with loading state
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const filterTimeout = setTimeout(() => {
+      // Simulate filtering based on selected filters
+      console.log('Filtering data with:', {
+        selectedSemester,
+        selectedSchool,
+        selectedMajor,
+        selectedSubject,
+        selectedYear,
+        subjectCode
+      });
+      
+      setFilteredData({
+        students: selectedSchool === 'CNTT' ? 8500 : selectedSchool === 'Kinh tế' ? 4347 : 12847,
+        teachers: selectedSchool === 'CNTT' ? 180 : selectedSchool === 'Kinh tế' ? 162 : 342,
+        atRisk: selectedSchool === 'CNTT' ? 8 : selectedSchool === 'Kinh tế' ? 7 : 15,
+        performance: selectedSchool === 'CNTT' ? 89.2 : selectedSchool === 'Kinh tế' ? 85.1 : 87.3
+      });
+      
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(filterTimeout);
+  }, [selectedSemester, selectedSchool, selectedMajor, selectedSubject, selectedYear, subjectCode]);
 
   // Dữ liệu mẫu cho biểu đồ thời gian truy cập
   const accessTimeData = {
@@ -158,7 +196,7 @@ export default function AdminOverviewDashboard() {
   };
 
   return (
-    <AdminLayout activePage="dashboard">
+    <AdminLayout>
       {/* Dashboard Header */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
@@ -185,70 +223,81 @@ export default function AdminOverviewDashboard() {
       </div>
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <SimpleCard className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-blue-700 mb-1">Tổng số Sinh viên</p>
-                  <p className="text-2xl font-bold text-blue-900">12,847</p>
-                  <p className="text-xs text-green-600 font-medium mt-1">
-                    <ArrowUpIcon />
-                    <span className="ml-1">+12% so với tháng trước</span>
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
-                  <UserGraduateIcon />
-                </div>
-              </div>
-            </SimpleCard>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 relative" style={{ minHeight: isLoading ? '120px' : 'auto' }}>
+            {isLoading && (
+              <LoadingSpinner 
+                text="Đang tải dữ liệu..." 
+                size="md" 
+                position="center" 
+              />
+            )}
+            {!isLoading && (
+              <>
+                <SimpleCard className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-blue-700 mb-1">Tổng số Sinh viên</p>
+                      <p className="text-2xl font-bold text-blue-900">{filteredData?.students?.toLocaleString() || '12,847'}</p>
+                      <p className="text-xs text-green-600 font-medium mt-1">
+                        <ArrowUpIcon />
+                        <span className="ml-1">+12% so với tháng trước</span>
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
+                      <UserGraduateIcon />
+                    </div>
+                  </div>
+                </SimpleCard>
 
-            <SimpleCard className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-green-700 mb-1">Số lượng Giảng viên</p>
-                  <p className="text-2xl font-bold text-green-900">342</p>
-                  <p className="text-xs text-green-600 font-medium mt-1">
-                    <ArrowUpIcon />
-                    <span className="ml-1">+5% so với tháng trước</span>
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
-                  <ChalkboardTeacherIcon />
-                </div>
-              </div>
-            </SimpleCard>
+                <SimpleCard className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-green-700 mb-1">Số lượng Giảng viên</p>
+                      <p className="text-2xl font-bold text-green-900">{filteredData?.teachers || '342'}</p>
+                      <p className="text-xs text-green-600 font-medium mt-1">
+                        <ArrowUpIcon />
+                        <span className="ml-1">+5% so với tháng trước</span>
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
+                      <ChalkboardTeacherIcon />
+                    </div>
+                  </div>
+                </SimpleCard>
 
-            <SimpleCard className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-red-700 mb-1">Sinh viên có nguy cơ</p>
-                  <p className="text-2xl font-bold text-red-900">15</p>
-                  <p className="text-xs text-green-600 font-medium mt-1">
-                    <ArrowDownIcon />
-                    <span className="ml-1">-3% so với tuần trước</span>
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-red-200 rounded-lg flex items-center justify-center">
-                  <ExclamationTriangleIcon />
-                </div>
-              </div>
-            </SimpleCard>
+                <SimpleCard className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-red-700 mb-1">Sinh viên có nguy cơ</p>
+                      <p className="text-2xl font-bold text-red-900">{filteredData?.atRisk || '15'}</p>
+                      <p className="text-xs text-green-600 font-medium mt-1">
+                        <ArrowDownIcon />
+                        <span className="ml-1">-3% so với tuần trước</span>
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-red-200 rounded-lg flex items-center justify-center">
+                      <ExclamationTriangleIcon />
+                    </div>
+                  </div>
+                </SimpleCard>
 
-            <SimpleCard className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-purple-700 mb-1">Hiệu suất Trung bình</p>
-                  <p className="text-2xl font-bold text-purple-900">87.3%</p>
-                  <p className="text-xs text-green-600 font-medium mt-1">
-                    <ArrowUpIcon />
-                    <span className="ml-1">+2.1% so với tháng trước</span>
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-purple-200 rounded-lg flex items-center justify-center">
-                  <ChartLineIcon />
-                </div>
-              </div>
-            </SimpleCard>
+                <SimpleCard className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-purple-700 mb-1">Hiệu suất Trung bình</p>
+                      <p className="text-2xl font-bold text-purple-900">{filteredData?.performance || '87.3'}%</p>
+                      <p className="text-xs text-green-600 font-medium mt-1">
+                        <ArrowUpIcon />
+                        <span className="ml-1">+2.1% so với tháng trước</span>
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-purple-200 rounded-lg flex items-center justify-center">
+                      <ChartLineIcon />
+                    </div>
+                  </div>
+                </SimpleCard>
+              </>
+            )}
           </div>
 
           {/* Charts Section */}
@@ -256,8 +305,16 @@ export default function AdminOverviewDashboard() {
             {/* Access Time Statistics */}
             <SimpleCard className="p-4">
               <h3 className="text-base font-semibold text-gray-900 mb-3">Thống kê thời gian truy cập</h3>
-              <div className="h-56 relative">
-                <Doughnut data={accessTimeData} options={doughnutOptions} />
+              <div className="h-48 w-full relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+                {isLoading ? (
+                  <LoadingSpinner 
+                    text="Đang tải biểu đồ..." 
+                    size="md" 
+                    position="center" 
+                  />
+                ) : (
+                  <Doughnut data={accessTimeData} options={doughnutOptions} />
+                )}
               </div>
               <div className="flex justify-center space-x-6 mt-4 text-sm">
                 <div className="flex items-center">
@@ -278,8 +335,16 @@ export default function AdminOverviewDashboard() {
             {/* GPA Distribution */}
             <SimpleCard className="p-4">
               <h3 className="text-base font-semibold text-gray-900 mb-3">Thống kê phân trăm GPA</h3>
-              <div className="h-56 relative">
-                <Doughnut data={gpaData} options={doughnutOptions} />
+              <div className="h-48 w-full relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+                {isLoading ? (
+                  <LoadingSpinner 
+                    text="Đang tải biểu đồ..." 
+                    size="md" 
+                    position="center" 
+                  />
+                ) : (
+                  <Doughnut data={gpaData} options={doughnutOptions} />
+                )}
               </div>
               <div className="flex justify-center space-x-6 mt-4 text-sm">
                 <div className="flex items-center">
@@ -356,6 +421,10 @@ export default function AdminOverviewDashboard() {
                   <option>Tất cả</option>
                   <option>CNTT</option>
                   <option>Kinh tế</option>
+                  <option>Y - Dược</option>
+                  <option>Kỹ thuật</option>
+                  <option>Ngoại ngữ</option>
+                  <option>Luật</option>
                 </select>
               </div>
               <div>
@@ -368,6 +437,11 @@ export default function AdminOverviewDashboard() {
                   <option>Tất cả</option>
                   <option>Khoa học máy tính</option>
                   <option>Hệ thống thông tin</option>
+                  <option>Công nghệ phần mềm</option>
+                  <option>An toàn thông tin</option>
+                  <option>Trí tuệ nhân tạo</option>
+                  <option>Quản trị kinh doanh</option>
+                  <option>Tài chính ngân hàng</option>
                 </select>
               </div>
               <div>
@@ -379,7 +453,13 @@ export default function AdminOverviewDashboard() {
                 >
                   <option>Tất cả</option>
                   <option>Toán cao cấp</option>
-                  <option>Lập trình</option>
+                  <option>Lập trình C++</option>
+                  <option>Cơ sở dữ liệu</option>
+                  <option>Mạng máy tính</option>
+                  <option>Kỹ thuật phần mềm</option>
+                  <option>Trí tuệ nhân tạo</option>
+                  <option>Tiếng Anh</option>
+                  <option>Kinh tế vi mô</option>
                 </select>
               </div>
               <div>
@@ -392,6 +472,8 @@ export default function AdminOverviewDashboard() {
                   <option>2024-2025</option>
                   <option>2023-2024</option>
                   <option>2022-2023</option>
+                  <option>2021-2022</option>
+                  <option>2020-2021</option>
                 </select>
               </div>
               <div>
@@ -404,17 +486,38 @@ export default function AdminOverviewDashboard() {
                   className="w-full px-2 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                 />
               </div>
-              <div className="flex items-end">
-                <button className="w-full px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-xs">
+              <div className="flex items-end gap-2">
+                <button 
+                  onClick={() => {
+                    setSelectedSchool("Tất cả");
+                    setSelectedMajor("Tất cả");
+                    setSelectedSubject("Tất cả");
+                    setSelectedYear("2024-2025");
+                    setSubjectCode("");
+                  }}
+                  className="px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium text-xs"
+                >
+                  <i className="fas fa-undo mr-1"></i>
+                  Reset
+                </button>
+                <button className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-xs">
                   <FilterIcon />
-                  <span className="ml-1">Áp dụng Bộ lọc</span>
+                  <span className="ml-1">Áp dụng</span>
                 </button>
               </div>
             </div>
 
             {/* Score Distribution Chart - Chart.js Bar Chart */}
-            <div className="h-64 relative">
-              <Bar data={scoreDistributionData} options={barOptions} />
+            <div className="h-64 relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+              {isLoading ? (
+                <LoadingSpinner 
+                  text="Đang tải biểu đồ phân phối..." 
+                  size="md" 
+                  position="center" 
+                />
+              ) : (
+                <Bar data={scoreDistributionData} options={barOptions} />
+              )}
             </div>
           </SimpleCard>
     </AdminLayout>

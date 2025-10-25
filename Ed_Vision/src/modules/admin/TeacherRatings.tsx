@@ -202,7 +202,7 @@ export default function TeacherRatings() {
                 <select 
                   value={filters.stars}
                   onChange={(e) => handleFilterChange('stars', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs"
                 >
                   <option value="all">Tất cả</option>
                   <option value="5">5 sao</option>
@@ -217,7 +217,7 @@ export default function TeacherRatings() {
                 <select 
                   value={filters.subject}
                   onChange={(e) => handleFilterChange('subject', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs"
                 >
                   <option value="all">Tất cả môn học</option>
                   <option value="java">Lập trình Java</option>
@@ -231,7 +231,7 @@ export default function TeacherRatings() {
                 <select 
                   value={filters.semester}
                   onChange={(e) => handleFilterChange('semester', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs"
                 >
                   <option value="all">Tất cả học kỳ</option>
                   <option value="hk1-2024">HK1 2024</option>
@@ -269,7 +269,7 @@ export default function TeacherRatings() {
                   placeholder="Nhập từ khóa..." 
                   value={filters.keyword}
                   onChange={(e) => handleFilterChange('keyword', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                 />
               </div>
             </div>
@@ -352,18 +352,18 @@ export default function TeacherRatings() {
               </div>
               <div className="flex items-center space-x-2">
                 <button 
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer" 
+                  className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer" 
                   disabled
                 >
                   <i className="fas fa-chevron-left mr-1"></i>
                   Trước
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
-                <span className="px-3 py-2 text-sm font-medium text-gray-500">...</span>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">49</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
+                <span className="px-3 py-1.5 text-xs font-medium text-gray-500">...</span>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">49</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                   Sau
                   <i className="fas fa-chevron-right ml-1"></i>
                 </button>

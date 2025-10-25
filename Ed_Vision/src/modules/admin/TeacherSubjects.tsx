@@ -207,9 +207,7 @@ export default function TeacherSubjects() {
   };
 
   return (
-    <AdminLayout
-      activePage="/admin/teachers"
-    >
+    <AdminLayout>
       <div className="space-y-6">
         {/* Teacher Profile Header */}
         <TeacherProfileHeader 

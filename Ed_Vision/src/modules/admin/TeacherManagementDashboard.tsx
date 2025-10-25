@@ -1,5 +1,6 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
-import { useState } from "react";
+import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Chart as ChartJS,
@@ -104,11 +105,112 @@ export default function TeacherManagementDashboard() {
   const [positionFilter, setPositionFilter] = useState("Tất cả chức vụ");
   const [statusFilter, setStatusFilter] = useState("Tất cả trạng thái");
   const [qualityFilter, setQualityFilter] = useState("Tất cả chất lượng");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   // Handle navigation to teacher detail
   const handleViewTeacher = (teacherId: string) => {
     navigate(`/admin/teachers/${teacherId}`);
+  };
+
+  const handleExportExcel = () => {
+    try {
+      // Tạo header cho CSV
+      const headers = [
+        'ID Giảng viên',
+        'Họ và Tên', 
+        'Email',
+        'Chức vụ', 
+        'Trạng thái',
+        'Chất lượng',
+        'Số sao',
+        'Số sinh viên đang cố vấn'
+      ];
+
+      // Tạo dữ liệu CSV
+      const csvRows = [
+        headers.join(','), // Header row
+        ...filteredTeachers.map((teacher) => {
+          const row = [
+            teacher.id,
+            `"${teacher.name}"`,
+            teacher.email,
+            `"${teacher.position}"`,
+            `"${teacher.status}"`,
+            `"${teacher.quality}"`,
+            teacher.qualityStars.toString(),
+            teacher.students.toString()
+          ];
+          return row.join(',');
+        })
+      ];
+
+      const csvContent = csvRows.join('\n');
+      
+      // Tạo file name với timestamp
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+      const fileName = `Danh_sach_giang_vien_${dateStr}_${timeStr}.csv`;
+
+      // Tạo và download file CSV
+      const blob = new Blob(['\uFEFF' + csvContent], { 
+        type: 'text/csv;charset=utf-8;' 
+      });
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up URL object
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 100);
+
+      // Hiển thị thông báo thành công với thống kê
+      const statusCounts = filteredTeachers.reduce((acc, teacher) => {
+        acc[teacher.status] = (acc[teacher.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const qualityCounts = filteredTeachers.reduce((acc, teacher) => {
+        acc[teacher.quality] = (acc[teacher.quality] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const avgQuality = (filteredTeachers.reduce((sum, teacher) => sum + teacher.qualityStars, 0) / filteredTeachers.length).toFixed(1);
+      const totalStudents = filteredTeachers.reduce((sum, teacher) => sum + teacher.students, 0);
+
+      const statusText = Object.entries(statusCounts)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(', ');
+
+      const qualityText = Object.entries(qualityCounts)
+        .map(([quality, count]) => `${quality}: ${count}`)
+        .join(', ');
+
+      alert(
+        `✓ Xuất file Excel thành công!\n\n` +
+        `📄 File: ${fileName}\n` +
+        `👩‍🏫 Tổng số giảng viên: ${filteredTeachers.length}\n` +
+        `⭐ Chất lượng TB: ${avgQuality}/5.0\n` +
+        `👥 Tổng sinh viên đang cố vấn: ${totalStudents}\n\n` +
+        `📊 Thống kê trạng thái: ${statusText}\n` +
+        `🏆 Thống kê chất lượng: ${qualityText}\n\n` +
+        `Filters áp dụng:\n` +
+        `- Chức vụ: ${positionFilter}\n` +
+        `- Trạng thái: ${statusFilter}\n` +
+        `- Chất lượng: ${qualityFilter}`
+      );
+
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      alert('❌ Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!');
+    }
   };
 
   // Chart data for quality distribution
@@ -196,10 +298,35 @@ export default function TeacherManagementDashboard() {
     ));
   };
 
+  // Filter logic with loading state
+  const [filteredTeachers, setFilteredTeachers] = useState(teachersData);
+  
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const filterTimeout = setTimeout(() => {
+      const filtered = teachersData.filter(teacher => {
+        const matchesSearch = searchTerm === '' || 
+          teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          teacher.id.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesPosition = positionFilter === 'Tất cả chức vụ' || teacher.position === positionFilter;
+        const matchesStatus = statusFilter === 'Tất cả trạng thái' || teacher.status === statusFilter;
+        const matchesQuality = qualityFilter === 'Tất cả chất lượng' || teacher.quality === qualityFilter.split(' (')[0];
+        
+        return matchesSearch && matchesPosition && matchesStatus && matchesQuality;
+      });
+      
+      setFilteredTeachers(filtered);
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(filterTimeout);
+  }, [searchTerm, positionFilter, statusFilter, qualityFilter]);
+
   return (
-    <AdminLayout 
-      activePage="/admin/teachers"
-    >
+    <AdminLayout>
       <div className="space-y-6">
         {/* Page Header */}
         <div>
@@ -284,7 +411,7 @@ export default function TeacherManagementDashboard() {
                     placeholder="Nhập tên giảng viên..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                    className="w-full pl-10 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                   />
                 </div>
                 
@@ -293,7 +420,7 @@ export default function TeacherManagementDashboard() {
                   <select 
                     value={positionFilter}
                     onChange={(e) => setPositionFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
                   >
                     <option>Tất cả chức vụ</option>
                     <option>Tiến sĩ</option>
@@ -304,7 +431,7 @@ export default function TeacherManagementDashboard() {
                   <select 
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
                   >
                     <option>Tất cả trạng thái</option>
                     <option>Đang hoạt động</option>
@@ -314,7 +441,7 @@ export default function TeacherManagementDashboard() {
                   <select 
                     value={qualityFilter}
                     onChange={(e) => setQualityFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
                   >
                     <option>Tất cả chất lượng</option>
                     <option>Tốt (5⭐)</option>
@@ -325,18 +452,42 @@ export default function TeacherManagementDashboard() {
                 </div>
               </div>
               
-              {/* Add Button */}
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 text-sm rounded-lg font-medium transition-colors flex items-center cursor-pointer">
-                <i className="fas fa-plus mr-1.5"></i>
-                Thêm giảng viên
-              </button>
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setPositionFilter("Tất cả chức vụ");
+                    setStatusFilter("Tất cả trạng thái");
+                    setQualityFilter("Tất cả chất lượng");
+                  }}
+                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
+                >
+                  <i className="fas fa-undo mr-2"></i>
+                  Reset bộ lọc
+                </button>
+                <button 
+                  onClick={handleExportExcel}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium cursor-pointer"
+                >
+                  <i className="fas fa-download mr-2"></i>
+                  Xuất Excel
+                </button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Teachers Table */}
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+            {isLoading && (
+              <LoadingSpinner 
+                text="Đang tải dữ liệu..." 
+                size="md" 
+                position="top" 
+              />
+            )}
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -345,13 +496,26 @@ export default function TeacherManagementDashboard() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chức vụ</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chất lượng</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SV hướng dẫn</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên đang cố vấn</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {teachersData.map((teacher, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
+                {!isLoading && filteredTeachers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center">
+                      <div className="text-gray-500">
+                        <span className="text-2xl mb-2 block">🔍</span>
+                        <p className="text-sm">Không tìm thấy giảng viên phù hợp với bộ lọc</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : !isLoading ? (
+                  filteredTeachers.map((teacher, index) => (
+                    <tr 
+                      key={index} 
+                      className="hover:bg-gray-50 cursor-pointer" 
+                      onClick={() => handleViewTeacher(teacher.id)}
+                    >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{teacher.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -383,26 +547,10 @@ export default function TeacherManagementDashboard() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.students} SV</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button 
-                          className="text-blue-600 hover:text-blue-900 cursor-pointer" 
-                          title="Xem"
-                          onClick={() => handleViewTeacher(teacher.id)}
-                        >
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 cursor-pointer" title="Chỉnh sửa">
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 cursor-pointer" title="Xóa">
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.students} sinh viên</td>
                   </tr>
-                ))}
+                  ))
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -411,18 +559,18 @@ export default function TeacherManagementDashboard() {
           <div className="bg-white px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between">
               <div className="text-sm text-gray-700 mb-4 sm:mb-0">
-                Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">5</span> trong tổng số <span className="font-medium">1083</span> kết quả
+                Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">{filteredTeachers.length}</span> trong tổng số <span className="font-medium">{filteredTeachers.length}</span> kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-not-allowed" disabled>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-not-allowed" disabled>
                   <i className="fas fa-chevron-left"></i>
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
-                <span className="px-3 py-2 text-sm font-medium text-gray-700">...</span>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">217</button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
+                <span className="px-3 py-1.5 text-xs font-medium text-gray-700">...</span>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">217</button>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                   <i className="fas fa-chevron-right"></i>
                 </button>
               </div>

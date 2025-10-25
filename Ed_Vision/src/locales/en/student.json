@@ -1,0 +1,26 @@
+{
+  "dashboard": {
+    "title": "Student Dashboard",
+    "welcome": "Welcome back",
+    "myProgress": "My Progress"
+  },
+  "courses": {
+    "title": "My Courses",
+    "allCourses": "All Courses",
+    "viewCourse": "View Course",
+    "enrolled": "Enrolled"
+  },
+  "grades": {
+    "title": "My Grades",
+    "forecast": "Grade Forecast",
+    "gpa": "GPA"
+  },
+  "learning": {
+    "adventure": "Learning Adventure",
+    "progress": "Progress"
+  },
+  "landing": {
+    "startPredicting": "Start Predicting",
+    "watchDemo": "Watch Demo"
+  }
+}

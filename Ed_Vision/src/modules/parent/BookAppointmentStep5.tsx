@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from "react-i18next"
 import { Card, CardContent } from "@/components/ui/parent/Parent_card"
 import { Button } from "@/components/ui/parent/Parent_button"
 
@@ -14,7 +15,7 @@ import iconPatient from "@/assets/parent/iconPatient.svg"
 import iconDashboard from "@/assets/parent/iconDashboard.svg"
 import iconPhone from "@/assets/parent/iconPhonestep5.svg"
 import iconEmail from "@/assets/parent/iconEmail.svg"
-
+import Header from "../../components/layout/Header"
 type AppointmentData = {
   date: string
   time: string
@@ -50,6 +51,7 @@ export default function BookAppointmentStep5({
     confirmationNumber: "#MED-2024-0122-047"
   }
 }: Props) {
+  const { t } = useTranslation(['parent', 'common'])
   const [copied, setCopied] = useState(false)
   const navigate = useNavigate()
 
@@ -74,6 +76,7 @@ export default function BookAppointmentStep5({
   return (
     <div className="bg-green-50 min-h-screen flex flex-col">
       {/* Header */}
+      <Header />
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -81,7 +84,7 @@ export default function BookAppointmentStep5({
               <div className="bg-green-600 rounded-lg p-2 mr-3">
                 <img src={iconCheck} alt="" className="w-5 h-5" />
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">Appointment Confirmed</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('parent:bookAppointment.step5.title')}</h1>
             </div>
             <Button variant="ghost" size="sm">
               <img src={iconClose} alt="" className="w-6 h-6" />
@@ -106,11 +109,11 @@ export default function BookAppointmentStep5({
             {/* Success Text */}
             <div className="space-y-4">
               <h2 className="text-3xl font-bold text-gray-900">
-                Appointment Successfully Confirmed!
+                {t('parent:bookAppointment.step5.successTitle')}
               </h2>
               <div className="text-lg text-gray-600 max-w-2xl mx-auto leading-7">
-                <p>Your consultation with Dr. Sarah Johnson has been scheduled and confirmed.</p>
-                <p>You will receive confirmation details via email and SMS shortly.</p>
+                <p>{t('parent:bookAppointment.step5.successMessage1', { doctor: appointmentData.doctor })}</p>
+                <p>{t('parent:bookAppointment.step5.successMessage2')}</p>
               </div>
             </div>
           </div>
@@ -121,9 +124,9 @@ export default function BookAppointmentStep5({
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-900">Appointment Details</h3>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('parent:bookAppointment.step5.appointmentDetails')}</h3>
                   <div className="bg-green-100 px-3 py-1 rounded-full">
-                    <span className="text-sm font-medium text-green-800">Confirmed</span>
+                    <span className="text-sm font-medium text-green-800">{t('parent:bookAppointment.step5.confirmed')}</span>
                   </div>
                 </div>
 
@@ -166,7 +169,7 @@ export default function BookAppointmentStep5({
                       <img src={iconPatient} alt="" className="w-5 h-5 mt-1 mr-3" />
                       <div>
                         <p className="font-medium text-gray-900">{appointmentData.patientName}</p>
-                        <p className="text-gray-600">Patient</p>
+                        <p className="text-gray-600">{t('parent:bookAppointment.step5.student')}</p>
                       </div>
                     </div>
                   </div>
@@ -177,7 +180,7 @@ export default function BookAppointmentStep5({
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Confirmation Number</p>
+                        <p className="text-sm font-medium text-gray-700">{t('parent:bookAppointment.step5.confirmationNumber')}</p>
                         <p className="text-lg font-semibold text-gray-900">{appointmentData.confirmationNumber}</p>
                       </div>
                       <Button
@@ -186,7 +189,7 @@ export default function BookAppointmentStep5({
                         onClick={handleCopyConfirmation}
                         className="text-blue-600 hover:text-blue-700"
                       >
-                        {copied ? "Copied!" : "Copy"}
+                        {copied ? t('parent:bookAppointment.step5.copied') : t('parent:bookAppointment.step5.copy')}
                       </Button>
                     </div>
                   </div>
@@ -202,13 +205,13 @@ export default function BookAppointmentStep5({
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
             >
               <img src={iconDashboard} alt="" className="w-5 h-5 mr-2" />
-              Back to Dashboard
+              {t('parent:bookAppointment.step5.backToDashboard')}
             </Button>
           </div>
 
           {/* Support Section */}
           <div className="text-center space-y-4">
-            <p className="text-gray-600">Need help or have questions about your appointment?</p>
+            <p className="text-gray-600">{t('parent:bookAppointment.step5.needHelpQuestion')}</p>
             <div className="flex items-center justify-center space-x-6">
               <Button
                 variant="ghost"
@@ -216,7 +219,7 @@ export default function BookAppointmentStep5({
                 className="text-blue-600 hover:text-blue-700 flex items-center"
               >
                 <img src={iconPhone} alt="" className="w-4 h-4 mr-2" />
-                Call (555) 987-6543
+                {t('parent:bookAppointment.step5.callSupport')}
               </Button>
               <Button
                 variant="ghost"
@@ -224,7 +227,7 @@ export default function BookAppointmentStep5({
                 className="text-blue-600 hover:text-blue-700 flex items-center"
               >
                 <img src={iconEmail} alt="" className="w-4 h-4 mr-2" />
-                Email Support
+                {t('parent:bookAppointment.step5.emailSupport')}
               </Button>
             </div>
           </div>

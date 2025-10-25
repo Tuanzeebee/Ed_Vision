@@ -4,6 +4,7 @@ import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader"
 import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper"
 import ContinueButton from "@/components/ui/parent/Parent_ContinueButton"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 
 // Import SVG icons
 import iconCheck from "@/assets/parent/iconCheck.svg"
@@ -12,7 +13,7 @@ import iconChevronRight from "@/assets/parent/iconChevronRight.svg"
 import iconArrowLeft from "@/assets/parent/iconArrowLeft.svg"
 import iconInfo from "@/assets/parent/iconInfo.svg"
 import iconEducation from "@/assets/parent/iconEducation.svg"
-
+import Header from "../../components/layout/Header"
 type Props = {
   onBack?: () => void
   onContinue?: () => void
@@ -20,6 +21,7 @@ type Props = {
 }
 
 export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Props) {
+  const { t } = useTranslation(['parent', 'common'])
   const [selectedDate, setSelectedDate] = useState(15)
   const [selectedTime, setSelectedTime] = useState('10:00 AM')
 
@@ -56,11 +58,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
 
   const calendar = [ 
     [],// Previous month days
-    [1, 2, 3, 4, 5, 6, 7],
-    [8, 9, 10, 11, 12, 13, 14],
-    [15, 16, 17, 18, 19, 20, 21],
-    [22, 23, 24, 25, 26, 27, 28],
-    [29, 30, 31, 1, 2, 3, 4], // Next month days
+    [1, 2, 3, 4, 5, 6, 7], // Next month days
   ]
 
   const isNextMonth = (day: number | null, weekIndex: number) => {
@@ -81,6 +79,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col">
       {/* Header */}
+      <Header />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}
@@ -97,8 +96,8 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                   <img src={iconEducation} alt="Education" className="w-5 h-5" style={{filter: 'brightness(0) saturate(100%) invert(48%) sepia(47%) saturate(2500%) hue-rotate(86deg) brightness(118%) contrast(119%)'}} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-gray-900 font-medium mb-1">In-Person Meeting</h3>
-                  <p className="text-gray-600 text-sm">30-60 minutes • School premises • Mr. Tuan (adviser)</p>
+                  <h3 className="text-gray-900 font-medium mb-1">{t('parent:bookAppointment.step2.meetingConfirmation')}</h3>
+                  <p className="text-gray-600 text-sm">{t('parent:bookAppointment.step2.meetingDetails', { duration: '30-60 minutes', location: 'School premises', adviser: 'Mr. Tuan (adviser)' })}</p>
                 </div>
                 <img src={iconCheck} alt="Selected" className="w-5 h-5" style={{filter: 'brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'}} />
               </div>
@@ -106,31 +105,31 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
 
             {/* Select Date & Time Section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Date & Time</h2>
-              <p className="text-gray-600">Choose your preferred date and available time slot</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('parent:bookAppointment.step2.title')}</h2>
+              <p className="text-gray-600">{t('parent:bookAppointment.step2.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Calendar Section */}
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Choose Date</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">{t('parent:bookAppointment.step2.chooseDate')}</h3>
                 <Card className="p-4">
                   {/* Calendar Header */}
                   <div className="flex items-center justify-between mb-4">
                     <Button variant="ghost" size="icon" className="hover:bg-gray-100 rounded-md p-2">
-                      <img src={iconChevronLeft} alt="Previous month" className="w-4 h-4" style={{filter: 'brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(233deg) brightness(100%) contrast(92%)'}} />
+                      <img src={iconChevronLeft} alt={t('parent:bookAppointment.step2.previousMonth')} className="w-4 h-4" style={{filter: 'brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(233deg) brightness(100%) contrast(92%)'}} />
                     </Button>
                     <h4 className="text-lg font-bold text-gray-900">December 2024</h4>
                     <Button variant="ghost" size="icon" className="hover:bg-gray-100 rounded-md p-2">
-                      <img src={iconChevronRight} alt="Next month" className="w-4 h-4" style={{filter: 'brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(233deg) brightness(100%) contrast(92%)'}} />
+                      <img src={iconChevronRight} alt={t('parent:bookAppointment.step2.nextMonth')} className="w-4 h-4" style={{filter: 'brightness(0) saturate(100%) invert(50%) sepia(0%) saturate(0%) hue-rotate(233deg) brightness(100%) contrast(92%)'}} />
                     </Button>
                   </div>
 
                   {/* Calendar Days Header */}
                   <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(day => (
                       <div key={day} className="p-2 text-center text-sm text-gray-500">
-                        {day}
+                        {t(`parent:bookAppointment.step2.daysOfWeek.${day}`)}
                       </div>
                     ))}
                   </div>
@@ -183,11 +182,11 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex items-center">
                       <div className="w-4 h-4 bg-blue-600 border-2 border-blue-600 rounded-md mr-2"></div>
-                      <span className="text-gray-600">Selected</span>
+                      <span className="text-gray-600">{t('parent:bookAppointment.step2.selected')}</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded-md mr-2"></div>
-                      <span className="text-gray-600">Unavailable</span>
+                      <span className="text-gray-600">{t('parent:bookAppointment.step2.unavailable')}</span>
                     </div>
                   </div>
                 </Card>
@@ -201,12 +200,12 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                       </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-medium text-gray-900 mb-2">
-                          Booking Instructions
+                          {t('parent:bookAppointment.step2.bookingInstructions')}
                         </h4>
                         <div className="text-xs text-gray-600 space-y-1">
-                          <p>• Select your preferred date from the calendar</p>
-                          <p>• Choose an available time slot on the right</p>
-                          <p>• Blue = Selected, Gray = Unavailable</p>
+                          <p>{t('parent:bookAppointment.step2.instructionSelectDate')}</p>
+                          <p>{t('parent:bookAppointment.step2.instructionSelectTime')}</p>
+                          <p>{t('parent:bookAppointment.step2.instructionLegend')}</p>
                         </div>
                       </div>
                     </div>
@@ -216,13 +215,13 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
 
               {/* Available Times Section */}
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Available Times</h3>
-                <p className="text-gray-600 text-sm mb-4">Sunday, December 15, 2024</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">{t('parent:bookAppointment.step2.availableTimes')}</h3>
+                <p className="text-gray-600 text-sm mb-4">{t('parent:bookAppointment.step2.dateDisplay', { dayOfWeek: 'Sunday', month: 'December', day: 15, year: 2024 })}</p>
 
                 <div className="space-y-6">
                   {/* Morning */}
                   <div>
-                    <h4 className="text-gray-700 mb-3">Morning</h4>
+                    <h4 className="text-gray-700 mb-3">{t('parent:bookAppointment.step2.morning')}</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {timeSlots.morning.map((slot) => {
                         const status = getSlotStatus(slot.time)
@@ -244,7 +243,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                           >
                             <span className="font-medium">{slot.time}</span>
                             <span className={`text-xs ${status === 'selected' ? 'text-blue-600' : status === 'booked' ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {status === 'selected' ? 'Selected' : status === 'booked' ? 'Booked' : 'Available'}
+                              {status === 'selected' ? t('parent:bookAppointment.step2.selected') : status === 'booked' ? t('parent:bookAppointment.step2.booked') : t('parent:bookAppointment.step2.available')}
                             </span>
                           </Button>
                         )
@@ -254,7 +253,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
 
                   {/* Afternoon */}
                   <div>
-                    <h4 className="text-gray-700 mb-3">Afternoon</h4>
+                    <h4 className="text-gray-700 mb-3">{t('parent:bookAppointment.step2.afternoon')}</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {timeSlots.afternoon.map((slot) => {
                         const status = getSlotStatus(slot.time)
@@ -276,7 +275,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                           >
                             <span className="font-medium">{slot.time}</span>
                             <span className={`text-xs ${status === 'selected' ? 'text-blue-600' : status === 'booked' ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {status === 'selected' ? 'Selected' : status === 'booked' ? 'Booked' : 'Available'}
+                              {status === 'selected' ? t('parent:bookAppointment.step2.selected') : status === 'booked' ? t('parent:bookAppointment.step2.booked') : t('parent:bookAppointment.step2.available')}
                             </span>
                           </Button>
                         )
@@ -286,7 +285,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
 
                   {/* Evening */}
                   <div>
-                    <h4 className="text-gray-700 text-sm mb-3">Evening</h4>
+                    <h4 className="text-gray-700 text-sm mb-3">{t('parent:bookAppointment.step2.evening')}</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {timeSlots.evening.map((slot) => {
                         const status = getSlotStatus(slot.time)
@@ -305,7 +304,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                           >
                             <span className="text-sm font-medium">{slot.time}</span>
                             <span className={`text-xs ${status === 'selected' ? 'text-blue-600' : 'text-gray-500'}`}>
-                              {status === 'selected' ? 'Selected' : '30 min'}
+                              {status === 'selected' ? t('parent:bookAppointment.step2.selected') : '30 min'}
                             </span>
                           </Button>
                         )
@@ -319,8 +318,8 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
                   <div className="flex items-center">
                     <img src={iconInfo} alt="Info" className="w-4 h-4 mr-3" style={{filter: 'brightness(0) saturate(100%) invert(30%) sepia(98%) saturate(2085%) hue-rotate(213deg) brightness(96%) contrast(101%)'}} />
                     <div>
-                      <p className="text-gray-900 font-medium">Selected Time</p>
-                      <p className="text-gray-600 text-sm">Sunday, Dec 15, 2024 at {selectedTime}</p>
+                      <p className="text-gray-900 font-medium">{t('parent:bookAppointment.step2.selectedTime')}</p>
+                      <p className="text-gray-600 text-sm">{t('parent:bookAppointment.step2.selectedTimeDisplay', { dayOfWeek: 'Sunday', month: 'Dec', day: 15, year: 2024, time: selectedTime })}</p>
                     </div>
                   </div>
                 </div>
@@ -330,14 +329,14 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
             {/* Navigation */}
             <div className="border-t border-gray-200 pt-6 mt-8 flex items-center justify-between">
               <Button variant="outline" onClick={onBack} className="flex items-center hover:bg-gray-50">
-                <img src={iconArrowLeft} alt="Back" className="w-4 h-4 mr-2" style={{filter: 'brightness(0) saturate(100%) invert(45%) sepia(0%) saturate(0%) hue-rotate(233deg) brightness(100%) contrast(92%)'}} />
-                Back
+                <img src={iconArrowLeft} alt={t('parent:bookAppointment.back')} className="w-4 h-4 mr-2" style={{filter: 'brightness(0) saturate(100%) invert(45%) sepia(0%) saturate(0%) hue-rotate(233deg) brightness(100%) contrast(92%)'}} />
+                {t('parent:bookAppointment.back')}
               </Button>
               
-              <span className="text-sm text-gray-500">Step 2 of 4</span>
+              <span className="text-sm text-gray-500">{t('parent:bookAppointment.progress', { current: 2, total: 4 })}</span>
               
               <ContinueButton onClick={onContinue}>
-                Continue
+                {t('parent:bookAppointment.continue')}
               </ContinueButton>
             </div>
           </CardContent>
@@ -349,14 +348,14 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <span className="text-gray-500 text-sm">Need help?</span>
+              <span className="text-gray-500 text-sm">{t('parent:bookAppointment.needHelp')}</span>
               <Button variant="link" className="text-blue-600 text-sm ml-4 p-0">
-                Contact Support
+                {t('parent:bookAppointment.contactSupport')}
               </Button>
             </div>
             
             <div className="flex items-center">
-              <span className="text-gray-500 text-sm">Secure booking powered by University Portal</span>
+              <span className="text-gray-500 text-sm">{t('parent:bookAppointment.secureBooking')}</span>
               <img src={iconCheck} alt="Secure" className="w-4 h-4 ml-4" style={{filter: 'brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%)'}} />
             </div>
           </div>
