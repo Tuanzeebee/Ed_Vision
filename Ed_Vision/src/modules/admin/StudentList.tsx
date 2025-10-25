@@ -1,6 +1,18 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
-import { useState } from "react";
+import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+// CSS để ẩn scrollbar
+const hideScrollbarStyle = `
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
+`;
 
 // Simple Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -26,7 +38,7 @@ const studentsData = [
     gpa: 3.85,
     status: "Đang học",
     statusColor: "green",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2023",
     avatar: "/src/assets/admin/avatar1.png"
   },
   {
@@ -38,7 +50,7 @@ const studentsData = [
     gpa: 3.92,
     status: "Đang học",
     statusColor: "green",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2023",
     avatar: "/src/assets/admin/avatar2.png"
   },
   {
@@ -50,7 +62,7 @@ const studentsData = [
     gpa: 2.45,
     status: "Cảnh báo",
     statusColor: "orange",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2023",
     avatar: "/src/assets/admin/avatar3.png"
   },
   {
@@ -62,7 +74,7 @@ const studentsData = [
     gpa: 1.85,
     status: "At-Risk",
     statusColor: "red",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2024",
     avatar: "/src/assets/admin/avatar4.png"
   },
   {
@@ -74,7 +86,7 @@ const studentsData = [
     gpa: 3.67,
     status: "Đang học",
     statusColor: "green",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2024",
     avatar: "/src/assets/admin/avatar5.png"
   },
   {
@@ -86,7 +98,7 @@ const studentsData = [
     gpa: 3.45,
     status: "Đang học",
     statusColor: "green",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2024",
     avatar: "/src/assets/admin/avatar6.png"
   },
   {
@@ -98,7 +110,7 @@ const studentsData = [
     gpa: 2.15,
     status: "At-Risk",
     statusColor: "red",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2024",
     avatar: "/src/assets/admin/avatar7.png"
   },
   {
@@ -110,7 +122,7 @@ const studentsData = [
     gpa: 3.78,
     status: "Đang học",
     statusColor: "green",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2025",
     avatar: "/src/assets/admin/avatar8.png"
   },
   {
@@ -122,7 +134,7 @@ const studentsData = [
     gpa: 2.78,
     status: "Cảnh báo",
     statusColor: "orange",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2025",
     avatar: "/src/assets/admin/avatar9.png"
   },
   {
@@ -134,21 +146,143 @@ const studentsData = [
     gpa: 3.89,
     status: "Đang học",
     statusColor: "green",
-    enrollDate: "15/09/2022",
+    enrollDate: "15/09/2025",
     avatar: "/src/assets/admin/avatar10.png"
   }
 ];
 
-export default function StudentList({ onNavigate }: { onNavigate?: (href: string) => void }) {
+export default function StudentList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFaculty, setSelectedFaculty] = useState("Tất cả khoa");
   const [selectedStatus, setSelectedStatus] = useState("Tất cả trạng thái");
   const [selectedYear, setSelectedYear] = useState("Năm học 2024-2025");
+  const [isLoading, setIsLoading] = useState(false);
+  const [filteredStudents, setFilteredStudents] = useState(studentsData);
   const navigate = useNavigate();
+
+  // Filter logic with loading state
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const filterTimeout = setTimeout(() => {
+      const filtered = studentsData.filter(student => {
+        // Filter theo search term (tên hoặc mã sinh viên)
+        const matchesSearchTerm = searchTerm === "" || 
+          student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.studentCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Filter theo khoa
+        const matchesFaculty = selectedFaculty === "Tất cả khoa" || 
+          student.faculty === selectedFaculty;
+
+        // Filter theo trạng thái
+        const matchesStatus = selectedStatus === "Tất cả trạng thái" || 
+          student.status === selectedStatus;
+
+        // Filter theo năm học
+        const matchesYear = selectedYear === "Năm học 2024-2025" || 
+          (selectedYear === "Năm học 2023-2024" && student.enrollDate.includes("2023")) ||
+          (selectedYear === "Năm học 2024-2025" && student.enrollDate.includes("2024")) ||
+          (selectedYear === "Năm học 2025-2026" && student.enrollDate.includes("2025"));
+
+        return matchesSearchTerm && matchesFaculty && matchesStatus && matchesYear;
+      });
+      
+      setFilteredStudents(filtered);
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(filterTimeout);
+  }, [searchTerm, selectedFaculty, selectedStatus, selectedYear]);
 
   const handleStudentClick = (studentId: number) => {
     // Navigate to student detail page
     navigate(`/admin/students/${studentId}`);
+  };
+
+  const handleExportExcel = () => {
+    try {
+      // Tạo header cho CSV
+      const headers = [
+        'STT',
+        'Họ và Tên', 
+        'Mã Sinh Viên',
+        'Email', 
+        'Khoa/Ngành',
+        'GPA',
+        'Trạng Thái',
+        'Ngày Nhập Học'
+      ];
+
+      // Tạo dữ liệu CSV
+      const csvRows = [
+        headers.join(','), // Header row
+        ...filteredStudents.map((student, index) => {
+          const row = [
+            (index + 1).toString(),
+            `"${student.name}"`,
+            student.studentCode,
+            student.email,
+            `"${student.faculty}"`,
+            student.gpa.toString(),
+            `"${student.status}"`,
+            student.enrollDate
+          ];
+          return row.join(',');
+        })
+      ];
+
+      const csvContent = csvRows.join('\n');
+      
+      // Tạo file name với timestamp
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+      const fileName = `Danh_sach_sinh_vien_${dateStr}_${timeStr}.csv`;
+
+      // Tạo và download file CSV
+      const blob = new Blob(['\uFEFF' + csvContent], { 
+        type: 'text/csv;charset=utf-8;' 
+      });
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up URL object
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 100);
+
+      // Hiển thị thông báo thành công với thống kê
+      const statusCounts = filteredStudents.reduce((acc, student) => {
+        acc[student.status] = (acc[student.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const statsText = Object.entries(statusCounts)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(', ');
+
+      alert(
+        `✓ Xuất file Excel thành công!\n\n` +
+        `📄 File: ${fileName}\n` +
+        `👥 Tổng số sinh viên: ${filteredStudents.length}\n` +
+        `📊 Thống kê: ${statsText}\n\n` +
+        `Filters áp dụng:\n` +
+        `- Khoa: ${selectedFaculty}\n` +
+        `- Trạng thái: ${selectedStatus}\n` +
+        `- Năm học: ${selectedYear}`
+      );
+
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      alert('❌ Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!');
+    }
   };
 
   const getGPAColor = (gpa: number) => {
@@ -176,10 +310,8 @@ export default function StudentList({ onNavigate }: { onNavigate?: (href: string
   };
 
   return (
-    <AdminLayout 
-      activePage="/admin/students"
-      onNavigate={onNavigate}
-    >
+    <AdminLayout>
+      <style dangerouslySetInnerHTML={{ __html: hideScrollbarStyle }} />
       <div className="space-y-8">
         {/* Page Header */}
         <div>
@@ -200,7 +332,8 @@ export default function StudentList({ onNavigate }: { onNavigate?: (href: string
                     placeholder="Tìm kiếm theo tên, mã sinh viên..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm cursor-text"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700 bg-white"
+                    autoComplete="off"
                   />
                 </div>
               </div>
@@ -210,7 +343,7 @@ export default function StudentList({ onNavigate }: { onNavigate?: (href: string
                 <select 
                   value={selectedFaculty}
                   onChange={(e) => setSelectedFaculty(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-sm cursor-pointer"
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer"
                 >
                   <option>Tất cả khoa</option>
                   <option>Khoa học Máy tính</option>
@@ -222,7 +355,7 @@ export default function StudentList({ onNavigate }: { onNavigate?: (href: string
                 <select 
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-sm cursor-pointer"
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer"
                 >
                   <option>Tất cả trạng thái</option>
                   <option>Đang học</option>
@@ -233,21 +366,32 @@ export default function StudentList({ onNavigate }: { onNavigate?: (href: string
                 <select 
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-sm cursor-pointer"
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer"
                 >
                   <option>Năm học 2024-2025</option>
                   <option>Năm học 2023-2024</option>
-                  <option>Năm học 2022-2023</option>
+                  <option>Năm học 2025-2026</option>
                 </select>
               </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3">
-                <button className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium cursor-pointer">
-                  <i className="fas fa-plus mr-2"></i>
-                  Thêm sinh viên
+                <button 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedFaculty("Tất cả khoa");
+                    setSelectedStatus("Tất cả trạng thái");
+                    setSelectedYear("Năm học 2024-2025");
+                  }}
+                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
+                >
+                  <i className="fas fa-undo mr-2"></i>
+                  Reset bộ lọc
                 </button>
-                <button className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium cursor-pointer">
+                <button 
+                  onClick={handleExportExcel}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium cursor-pointer"
+                >
                   <i className="fas fa-download mr-2"></i>
                   Xuất Excel
                 </button>
@@ -263,109 +407,130 @@ export default function StudentList({ onNavigate }: { onNavigate?: (href: string
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Danh sách Sinh viên</h3>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <span>Kết quả hiển thị: {studentsData.length}</span>
+                <span>Kết quả hiển thị: {filteredStudents.length} / {studentsData.length}</span>
               </div>
             </div>
           </div>
 
           {/* Table Content */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã SV</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khoa</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GPA</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày nhập học</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {studentsData.map((student, index) => (
-                  <tr 
-                    key={student.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleStudentClick(student.id)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+          <div className="max-w-full hide-scrollbar">
+            <div className="overflow-y-auto hide-scrollbar relative" style={{maxHeight: `${Math.min(filteredStudents.length, 10) * 80 + 60}px`, minHeight: isLoading ? '200px' : 'auto'}}>
+              {isLoading && (
+                <LoadingSpinner 
+                  text="Đang tải dữ liệu..." 
+                  size="md" 
+                  position="top" 
+                />
+              )}
+              <table className="w-full min-w-[1200px] table-fixed">
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '60px'}}>STT</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '280px'}}>Sinh viên</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '120px'}}>Mã SV</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '150px'}}>Khoa</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '80px'}}>GPA</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>Trạng thái</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '120px'}}>Ngày nhập học</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '200px'}}>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                {!isLoading && filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center">
+                        <i className="fas fa-search text-gray-400 text-4xl mb-4"></i>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy sinh viên</h3>
+                        <p className="text-gray-500">Thử thay đổi tiêu chí tìm kiếm hoặc bộ lọc</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : !isLoading ? (
+                  filteredStudents.map((student, index) => (
+                    <tr 
+                      key={student.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleStudentClick(student.id)}
+                    >
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium" style={{width: '60px'}}>
                       {index + 1}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{width: '280px'}}>
                       <div className="flex items-center">
                         <img 
                           src={student.avatar} 
                           alt="Student" 
-                          className="w-10 h-10 rounded-full mr-3 object-cover"
+                          className="w-10 h-10 rounded-full mr-3 object-cover flex-shrink-0"
                           onError={(e) => {
                             e.currentTarget.src = "/src/assets/parent/avatarJohnSmith.png";
                           }}
                         />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                          <div className="text-sm text-gray-500">{student.email}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 truncate">{student.name}</div>
+                          <div className="text-sm text-gray-500 truncate">{student.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.studentCode}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.faculty}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{width: '120px'}}>{student.studentCode}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate" style={{width: '150px'}}>{student.faculty}</td>
+                    <td className="px-4 py-4 whitespace-nowrap" style={{width: '80px'}}>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGPAColor(student.gpa)}`}>
                         {student.gpa}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap" style={{width: '100px'}}>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(student.statusColor)}`}>
                         <i className={`fas fa-circle ${getStatusIcon(student.statusColor)} mr-1 text-xs`}></i>
                         {student.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.enrollDate}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button className="px-3 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors text-xs font-medium cursor-pointer">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{width: '120px'}}>{student.enrollDate}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium" style={{width: '200px'}}>
+                      <div className="flex space-x-1">
+                        <button className="px-2 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors text-xs font-medium cursor-pointer">
                           <i className="fas fa-exclamation-triangle mr-1"></i>
-                          Gửi cảnh báo
+                          Cảnh báo
                         </button>
-                        <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs font-medium cursor-pointer">
+                        <button className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs font-medium cursor-pointer">
                           <i className="fas fa-user-tie mr-1"></i>
-                          Liên hệ cố vấn
+                          Cố vấn
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </tr>
+                  ))
+                ) : null}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">10</span> trong tổng số <span className="font-medium">10</span> kết quả
+                Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">{filteredStudents.length}</span> trong tổng số <span className="font-medium">{filteredStudents.length}</span> kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 cursor-pointer" disabled>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 cursor-pointer" disabled>
                   <i className="fas fa-chevron-left mr-1"></i>
                   Trước
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 cursor-pointer">
                   1
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
                   2
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
                   3
                 </button>
-                <span className="px-3 py-2 text-sm font-medium text-gray-500">...</span>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
+                <span className="px-3 py-1.5 text-xs font-medium text-gray-500">...</span>
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
                   1825
                 </button>
-                <button className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
                   Sau
                   <i className="fas fa-chevron-right ml-1"></i>
                 </button>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+// import { useState } from "react"; // Unused for now
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/student/Student_card";
 import { Button } from "@/components/ui/student/Student_button";
@@ -13,7 +13,7 @@ import {
   CalendarIcon
 } from "@/assets/student/icons";
 
-type Props = {};
+// type Props = {}; // Unused for now
 
 interface CourseCard {
   code: string;
@@ -34,8 +34,8 @@ interface SemesterData {
   courses: CourseCard[];
 }
 
-export default function AcademicPlanningDashboard({}: Props) {
-  const [activeTab, setActiveTab] = useState("semester-plan");
+export default function AcademicPlanningDashboard() {
+  // const [activeTab, setActiveTab] = useState("semester-plan"); // Unused for now
   const navigate = useNavigate();
 
   // Sample data based on the Figma design

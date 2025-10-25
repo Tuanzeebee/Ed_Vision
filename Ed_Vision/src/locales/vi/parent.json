@@ -1,0 +1,467 @@
+{
+  "dashboard": {
+    "title": "Trang Phụ huynh",
+    "welcome": "Chào mừng trở lại",
+    "overview": "Tổng quan"
+  },
+  "students": {
+    "title": "Con em của tôi",
+    "details": "Thông tin học sinh",
+    "year": "Năm học",
+    "subjects": "Môn học",
+    "gpa": "Điểm TB",
+    "attendance": "Điểm danh",
+    "viewDetails": "Xem chi tiết",
+    "academicPerformance": "Kết quả học tập",
+    "behaviorAndAttendance": "Hành vi & Điểm danh"
+  },
+  "appointments": {
+    "title": "Lịch hẹn",
+    "allAppointments": "Tất Cả Lịch Hẹn",
+    "subtitle": "Quản lý các cuộc họp và tư vấn của con bạn",
+    "upcoming": "Lịch hẹn sắp tới",
+    "past": "Lịch hẹn đã qua",
+    "viewAll": "Xem tất cả lịch hẹn",
+    "book": "Đặt lịch hẹn",
+    "bookNew": "Đặt lịch hẹn mới",
+    "date": "Ngày",
+    "time": "Giờ",
+    "type": "Loại",
+    "online": "Trực tuyến",
+    "inPerson": "Trực tiếp",
+    "phoneCall": "Điện thoại",
+    "videoCall": "Gọi video",
+    "teacher": "Giáo viên",
+    "subject": "Môn học",
+    "status": "Trạng thái",
+    "confirmed": "Đã xác nhận",
+    "pending": "Chờ xử lý",
+    "cancelled": "Đã hủy",
+    "completed": "Hoàn thành",
+    "childInfo": "Năm {{year}} • {{subjects}}",
+    "searchPlaceholder": "Tìm kiếm lịch hẹn...",
+    "allStatus": "Tất Cả Trạng Thái",
+    "allTime": "Tất Cả Thời Gian",
+    "appointmentsFound": "Tìm thấy {{count}} lịch hẹn",
+    "upcomingCount": "Lịch Hẹn Sắp Tới ({{count}})",
+    "pastCount": "Lịch Hẹn Đã Qua ({{count}})",
+    "meetingWith": "Cuộc họp với {{teacher}}",
+    "parentTeacherConference": "Hội Nghị Phụ Huynh - Giáo Viên",
+    "meetingTypes": {
+      "onlineMeeting": "Họp Trực Tuyến",
+      "inPersonMeeting": "Gặp Trực Tiếp"
+    },
+    "departments": {
+      "mathematics": "Khoa Toán",
+      "science": "Khoa Khoa Học",
+      "general": "Thảo Luận Chung"
+    },
+    "purposes": {
+      "academicProgress": "Thảo Luận Tiến Độ Học Tập",
+      "homeworkSupport": "Hỗ Trợ Bài Tập",
+      "multipleTeachers": "Nhiều Giáo Viên"
+    },
+    "meetingInfo": {
+      "meetingLink": "Link Cuộc Họp:",
+      "reminderEmail": "Bạn sẽ nhận email nhắc nhở 1 giờ trước cuộc họp",
+      "locationLabel": "Địa điểm:",
+      "arriveEarly": "Vui lòng đến sớm 10 phút để làm thủ tục",
+      "meetingSummary": "Tóm Tắt Cuộc Họp:",
+      "conferenceRoom": "Tòa Nhà Chính, Phòng Hội Nghị A"
+    },
+    "actions": {
+      "joinMeeting": "Tham Gia Họp",
+      "reschedule": "Đổi Lịch",
+      "cancel": "Hủy",
+      "viewDetails": "Xem Chi Tiết",
+      "viewSummary": "Xem Tóm Tắt",
+      "bookFollowUp": "Đặt Lịch Tiếp Theo"
+    },
+    "showMore": "Hiển Thị Thêm {{count}} Lịch Hẹn Đã Qua"
+  },
+  "bookAppointment": {
+    "step1": {
+      "title": "Chọn Loại Cuộc Họp",
+      "subtitle": "Chọn cách bạn muốn gặp giảng viên",
+      "inPersonTitle": "Gặp Trực Tiếp",
+      "inPersonDescription": "Gặp mặt trực tiếp tại văn phòng giảng viên hoặc phòng họp được chỉ định",
+      "inPersonDuration": "30-60 phút",
+      "inPersonLocation": "Trong khuôn viên trường",
+      "videoCallTitle": "Gọi Video",
+      "videoCallDescription": "Kết nối qua Zoom, Teams hoặc Google Meet từ bất kỳ đâu",
+      "videoCallDuration": "30-45 phút",
+      "videoCallLocation": "Cần kết nối internet ổn định",
+      "phoneCallTitle": "Điện Thoại",
+      "phoneCallDescription": "Cuộc gọi điện thoại truyền thống để thảo luận nhanh",
+      "phoneCallDuration": "15-30 phút",
+      "phoneCallLocation": "Không cần phần mềm đặc biệt"
+    },
+    "step2": {
+      "title": "Chọn Ngày & Giờ",
+      "subtitle": "Chọn ngày và khung giờ bạn muốn",
+      "meetingConfirmation": "Gặp Trực Tiếp",
+      "meetingDetails": "{{duration}} • {{location}} • {{adviser}}",
+      "chooseDate": "Chọn Ngày",
+      "availableTimes": "Giờ Có Sẵn",
+      "dateDisplay": "{{dayOfWeek}}, {{day}} {{month}}, {{year}}",
+      "morning": "Buổi Sáng",
+      "afternoon": "Buổi Chiều",
+      "evening": "Buổi Tối",
+      "selected": "Đã chọn",
+      "booked": "Đã đặt",
+      "available": "Có sẵn",
+      "unavailable": "Không có sẵn",
+      "selectedTime": "Giờ Đã Chọn",
+      "selectedTimeDisplay": "{{dayOfWeek}}, {{day}} {{month}}, {{year}} lúc {{time}}",
+      "bookingInstructions": "Hướng Dẫn Đặt Lịch",
+      "instructionSelectDate": "• Chọn ngày bạn muốn từ lịch",
+      "instructionSelectTime": "• Chọn khung giờ có sẵn bên phải",
+      "instructionLegend": "• Xanh = Đã chọn, Xám = Không có sẵn",
+      "previousMonth": "Tháng trước",
+      "nextMonth": "Tháng sau",
+      "daysOfWeek": {
+        "sun": "CN",
+        "mon": "T2",
+        "tue": "T3",
+        "wed": "T4",
+        "thu": "T5",
+        "fri": "T6",
+        "sat": "T7"
+      }
+    },
+    "step3": {
+      "title": "Chi Tiết Cuộc Họp",
+      "subtitle": "Vui lòng cung cấp thêm thông tin về cuộc họp của bạn",
+      "selectionSummary": "Tóm Tắt Lựa Chọn Của Bạn",
+      "meetingType": "Loại Cuộc Họp:",
+      "dateTime": "Ngày & Giờ:",
+      "studentInformation": "Thông Tin Học Sinh",
+      "studentName": "Tên Học Sinh",
+      "studentGrade": "Lớp/Khối Học Sinh",
+      "verifiedFromRecords": "✓ Đã xác minh từ hồ sơ học sinh",
+      "enrollmentVerified": "✓ Đã xác minh đăng ký hiện tại",
+      "parentGuardianInfo": "Thông Tin Phụ Huynh/Người Giám Hộ",
+      "yourName": "Tên Của Bạn",
+      "yourNamePlaceholder": "Nhập họ tên đầy đủ",
+      "relationshipToStudent": "Quan Hệ Với Học Sinh",
+      "selectRelationship": "Chọn quan hệ",
+      "mother": "Mẹ",
+      "father": "Bố",
+      "guardian": "Người giám hộ",
+      "other": "Khác",
+      "contactInformation": "Thông Tin Liên Hệ",
+      "phoneNumber": "Số Điện Thoại",
+      "phoneNumberPlaceholder": "Nhập số điện thoại",
+      "emailAddress": "Địa Chỉ Email",
+      "emailAddressPlaceholder": "Nhập địa chỉ email",
+      "backToDateTime": "Quay Lại Chọn Ngày & Giờ",
+      "saveAsDraft": "Lưu Nháp",
+      "continueToReview": "Tiếp Tục Đến Xem Lại",
+      "required": "*"
+    },
+    "step4": {
+      "title": "Xác Nhận Cuộc Hẹn",
+      "subtitle": "Vui lòng xem xét tất cả thông tin trước khi xác nhận cuộc họp",
+      "edit": "Chỉnh sửa",
+      "meetingInformation": "Thông Tin Cuộc Họp",
+      "meetingType": "Loại Cuộc Họp",
+      "duration": "30-60 phút",
+      "location": "Trong khuôn viên trường",
+      "dateTime": "Ngày & Giờ",
+      "timeSlot": "10:00 AM - 11:00 AM",
+      "lecturer": "Giảng Viên",
+      "room": "Phòng 204, Khoa Toán",
+      "meetingPurpose": "Mục Đích Cuộc Họp",
+      "studentInformation": "Thông Tin Học Sinh",
+      "verified": "Đã xác minh",
+      "studentName": "Tên Học Sinh",
+      "gradeClass": "Lớp",
+      "parentGuardianInformation": "Thông Tin Phụ Huynh/Người Giám Hộ",
+      "name": "Họ và Tên",
+      "relationship": "Quan Hệ",
+      "phoneNumber": "Số Điện Thoại",
+      "emailAddress": "Địa Chỉ Email",
+      "importantReminders": "Lưu Ý Quan Trọng:",
+      "reminder1": "Vui lòng đến sớm 5 phút để có thời gian làm thủ tục",
+      "reminder2": "Mang theo các tài liệu hoặc bài tập liên quan",
+      "reminder3": "Việc hủy cuộc hẹn phải được thực hiện ít nhất 24 giờ trước",
+      "reminder4": "Bạn sẽ nhận được thông báo xác nhận và nhắc nhở",
+      "termsAgreement": "Tôi xác nhận rằng tất cả thông tin trên là chính xác và tôi đồng ý với",
+      "meetingPolicies": "chính sách cuộc họp",
+      "and": "và",
+      "termsOfService": "điều khoản dịch vụ",
+      "termsDescription": ". Tôi hiểu chính sách hủy và sẽ đến đúng giờ cho cuộc hẹn đã lên lịch.",
+      "backToDetails": "Quay Lại Chi Tiết",
+      "saveAsDraft": "Lưu Nháp",
+      "confirmAppointment": "Xác Nhận Cuộc Hẹn"
+    },
+    "step5": {
+      "title": "Cuộc Hẹn Đã Được Xác Nhận",
+      "subtitle": "Xem xét và xác nhận cuộc hẹn của bạn",
+      "successTitle": "Cuộc Hẹn Đã Được Xác Nhận Thành Công!",
+      "successMessage1": "Cuộc tư vấn của bạn với {{doctor}} đã được lên lịch và xác nhận.",
+      "successMessage2": "Bạn sẽ nhận được chi tiết xác nhận qua email và SMS trong thời gian sớm nhất.",
+      "appointmentDetails": "Chi Tiết Cuộc Hẹn",
+      "confirmed": "Đã xác nhận",
+      "dateTime": "Ngày & Giờ",
+      "location": "Địa Điểm",
+      "meetingType": "Loại Cuộc Họp",
+      "doctor": "Bác Sĩ",
+      "lecturer": "Giảng Viên",
+      "purpose": "Mục Đích",
+      "patient": "Bệnh Nhân",
+      "student": "Học Sinh",
+      "confirmationNumber": "Số Xác Nhận",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép!",
+      "backToDashboard": "Quay Về Trang Chủ",
+      "needHelpQuestion": "Cần trợ giúp hoặc có câu hỏi về cuộc hẹn của bạn?",
+      "callSupport": "Gọi (555) 987-6543",
+      "emailSupport": "Hỗ Trợ Qua Email"
+    },
+    "continue": "Tiếp tục",
+    "back": "Quay lại",
+    "confirm": "Xác nhận lịch hẹn",
+    "progress": "Bước {{current}} trong {{total}}",
+    "needHelp": "Cần trợ giúp?",
+    "contactSupport": "Liên hệ hỗ trợ",
+    "secureBooking": "Đặt lịch an toàn bởi Cổng thông tin Đại học",
+    "draftSaved": "Đã lưu bản nháp thành công!",
+    "invalidStep": "Bước không hợp lệ",
+    "meetingTypes": {
+      "inPerson": "Gặp Mặt Trực Tiếp",
+      "videoCall": "Họp Qua Video",
+      "phoneCall": "Gọi Điện Thoại"
+    },
+    "locations": {
+      "schoolPremises": "Khuôn viên trường, Phòng 204",
+      "videoCallLink": "Cuộc gọi Video (Link sẽ được gửi)",
+      "phoneCall": "Cuộc gọi điện thoại"
+    },
+    "communications": {
+      "email": "Thông báo qua Email",
+      "sms": "Tin nhắn SMS",
+      "both": "Cả Email và SMS"
+    },
+    "supportEmail": {
+      "subject": "Hỗ Trợ Cuộc Hẹn"
+    },
+    "consoleMessages": {
+      "appointmentCompleted": "Cuộc hẹn đã hoàn thành:",
+      "appointmentCancelled": "Cuộc hẹn đã bị hủy"
+    }
+  },
+  "alerts": {
+    "title": "Thông báo Quan trọng",
+    "new": "Mới",
+    "viewAll": "Xem tất cả"
+  },
+  "chat": {
+    "title": "Trò chuyện với Giáo viên",
+    "subtitle": "Giữ liên lạc với giáo viên của con bạn",
+    "sendMessage": "Gửi tin nhắn",
+    "typeMessage": "Nhập tin nhắn của bạn...",
+    "searchTeachers": "Tìm kiếm giáo viên...",
+    "online": "Trực tuyến",
+    "offline": "Ngoại tuyến",
+    "away": "Vắng mặt",
+    "today": "Hôm nay",
+    "typing": "Đang nhập...",
+    "teacherRoles": {
+      "mathematics": "Giáo viên Toán",
+      "science": "Giáo viên Khoa học",
+      "classTeacher": "Giáo viên Chủ nhiệm",
+      "english": "Giáo viên Tiếng Anh",
+      "physicalEducation": "Giáo viên Thể dục"
+    },
+    "sampleMessages": {
+      "progress": "Về tiến độ học tập của John...",
+      "improvement": "Tiến bộ rất tốt trên lớp!",
+      "meetingScheduled": "Cuộc họp đã được lên lịch cho tuần tới",
+      "feedback": "Phản hồi bài tập đọc",
+      "sportsDay": "Chuẩn bị ngày hội thể thao",
+      "discussProgress": "Xin chào Sarah! Tôi muốn thảo luận về tiến độ gần đây của John trong môn toán. Em ấy đang làm rất tốt với các khái niệm đại số.",
+      "wonderfulToHear": "Thật tuyệt vời khi nghe tin này! Tôi nhận thấy em ấy tự tin hơn với bài tập về nhà gần đây. Có lĩnh vực nào em ấy có thể cải thiện không?",
+      "progressReport": "Tôi đã chuẩn bị báo cáo tiến độ chi tiết cho bạn. Vui lòng xem khi bạn có thời gian.",
+      "thankYou": "Cảm ơn rất nhiều! Tôi sẽ xem xét tối nay và phản hồi lại nếu có câu hỏi.",
+      "autoResponse": "Cảm ơn tin nhắn của bạn. Tôi sẽ phản hồi lại sớm với thông tin chi tiết hơn."
+    },
+    "timeAgo": {
+      "min": "{{count}} phút",
+      "hour": "{{count}}h",
+      "day": "{{count}}d"
+    }
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "markAsRead": "Đánh dấu đã đọc",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "noNotifications": "Không có thông báo",
+    "appointmentNotifications": "Thông báo Lịch hẹn",
+    "recentUpdates": "Cập nhật gần đây về lịch hẹn của bạn",
+    "viewAllNotifications": "Xem tất cả Thông báo"
+  },
+  "parentDashboard": {
+    "welcomeBack": "Chào mừng trở lại",
+    "studentInformation": "Thông tin Học sinh",
+    "studentId": "Mã học sinh",
+    "currentGpa": "Điểm TB Hiện tại",
+    "upcomingAppointments": "Lịch hẹn Sắp tới",
+    "newCount": "{{count}} Mới",
+    "onlineMeeting": "Họp Trực tuyến",
+    "meetingWith": "Gặp {{name}}",
+    "parentTeacherConference": "Họp Phụ huynh-Giáo viên",
+    "chat": "Trò chuyện",
+    "recentMessages": "Tin nhắn Gần đây",
+    "newMessage": "Tin nhắn mới",
+    "startNewChat": "Bắt đầu Trò chuyện Mới",
+    "alertsAndRecognition": "Cảnh báo & Khen thưởng",
+    "academicWarning": "Cảnh báo Học tập",
+    "lowAttendance": "Điểm danh thấp trong môn {{subject}} ({{percent}}%)",
+    "actionRequired": "Yêu cầu hành động trước {{date}}",
+    "excellenceAward": "Giải thưởng Xuất sắc",
+    "outstandingGpa": "Điểm TB xuất sắc học kỳ này ({{gpa}})",
+    "awarded": "Được trao vào {{date}}",
+    "improvementNotice": "Thông báo Cải thiện",
+    "positiveGrades": "Điểm môn {{subject}} có xu hướng tích cực",
+    "keepGoodWork": "Hãy tiếp tục phát huy!",
+    "discussWithTeacher": "💬 Trao đổi với giáo viên",
+    "quickChat": "Trò chuyện Nhanh",
+    "chooseTeacher": "Chọn giáo viên để trò chuyện:",
+    "viewAllChats": "Xem tất cả Cuộc trò chuyện",
+    "calendar": {
+      "september": "Tháng 9",
+      "october": "Tháng 10",
+      "november": "Tháng 11",
+      "december": "Tháng 12",
+      "january": "Tháng 1",
+      "february": "Tháng 2",
+      "march": "Tháng 3",
+      "april": "Tháng 4",
+      "may": "Tháng 5",
+      "june": "Tháng 6",
+      "july": "Tháng 7",
+      "august": "Tháng 8",
+      "sun": "CN",
+      "mon": "T2",
+      "tue": "T3",
+      "wed": "T4",
+      "thu": "T5",
+      "fri": "T6",
+      "sat": "T7"
+    },
+    "notificationTypes": {
+      "meetingConfirmed": "Đã xác nhận Cuộc họp",
+      "meetingDeclined": "Đã từ chối Cuộc họp",
+      "meetingRescheduled": "Đã đổi lịch Cuộc họp",
+      "meetingPending": "Cuộc họp Chờ xử lý",
+      "accepted": "{{name}} đã chấp nhận yêu cầu gặp của bạn",
+      "declined": "{{name}} đã từ chối yêu cầu gặp của bạn",
+      "rescheduled": "{{name}} đã chuyển cuộc họp sang thời gian mới",
+      "pending": "Đang chờ phản hồi từ {{name}}",
+      "requestNewTime": "Yêu cầu thời gian mới",
+      "statusAccepted": "Đã chấp nhận",
+      "statusDeclined": "Đã từ chối",
+      "statusRescheduled": "Đã đổi lịch",
+      "statusPending": "Chờ xử lý",
+      "timeAgo": {
+        "minutesAgo": "{{count}} phút trước",
+        "hourAgo": "{{count}} giờ trước",
+        "hoursAgo": "{{count}} giờ trước",
+        "yesterday": "Hôm qua"
+      }
+    }
+  },
+  "studentDetails": {
+    "title": "Thông Tin Học Sinh",
+    "subtitle": "Hồ sơ học tập và tổng quan tiến độ",
+    "back": "Quay lại",
+    "profile": {
+      "studentId": "Mã Học Sinh",
+      "year": "Năm",
+      "program": "Chương trình Toán & Khoa học",
+      "currentGpa": "Điểm TB Hiện tại",
+      "attendance": "Điểm danh",
+      "courses": "Môn học",
+      "credits": "Tín chỉ"
+    },
+    "courseProgress": {
+      "title": "Tiến Độ Môn Học",
+      "semester": "Học kỳ",
+      "allCourses": "Tất cả môn học",
+      "showing": "Hiển thị {{start}}-{{end}} trong {{total}} môn học",
+      "show": "Hiển thị",
+      "perPage": "mỗi trang",
+      "courseName": "Tên Môn Học",
+      "credits": "Tín chỉ",
+      "attendance": "Điểm danh",
+      "grade": "Điểm",
+      "points": "Điểm số",
+      "status": "Trạng thái",
+      "passed": "Đã qua",
+      "inProgress": "Đang học",
+      "failed": "Trượt",
+      "previous": "Trước",
+      "next": "Tiếp"
+    },
+    "academicHistory": {
+      "title": "Lịch Sử Học Tập Theo Học Kỳ",
+      "gpa": "Điểm TB",
+      "credits": "Tín chỉ",
+      "points": "Điểm số",
+      "semesterLabel": "Học kỳ {{number}}, {{year}}"
+    },
+    "gpaStatus": {
+      "title": "Trạng Thái Điểm TB",
+      "currentSemester": "Học Kỳ Hiện Tại",
+      "excellent": "Xuất sắc",
+      "veryGood": "Rất tốt",
+      "good": "Tốt",
+      "current": "Hiện tại",
+      "range": "{{min}} – {{max}}"
+    },
+    "notifications": {
+      "title": "Thông Báo",
+      "failedSubject": {
+        "title": "Cảnh Báo Môn Trượt",
+        "description": "{{courseName}} ({{courseCode}}) - Điểm: {{grade}}",
+        "note": "Cần học lại để tốt nghiệp. Liên hệ cố vấn học tập."
+      },
+      "achievement": {
+        "title": "Thành Tích Mở Khóa",
+        "deansList": "Danh Sách Hiệu Trưởng - Thành Tích Học Tập Xuất Sắc",
+        "congratulations": "Chúc mừng bạn đã duy trì điểm TB cao!"
+      },
+      "upcomingExam": {
+        "title": "Kỳ Thi Sắp Tới",
+        "description": "{{courseName}} - Thi Cuối Kỳ",
+        "dateTime": "{{date}} lúc {{time}}"
+      }
+    },
+    "emergencyContacts": {
+      "title": "Liên Hệ Khẩn Cấp",
+      "academicAdvisor": "Cố Vấn Học Tập",
+      "studentSupport": "Hỗ Trợ Học Sinh",
+      "helpline": "Đường Dây Nóng 24/7"
+    }
+  },
+  "ui": {
+    "appointmentHeader": {
+      "defaultTitle": "Đặt Lịch Hẹn"
+    },
+    "continueButton": {
+      "continue": "Tiếp Tục"
+    },
+    "confirmButton": {
+      "confirmAppointment": "Xác Nhận Lịch Hẹn"
+    },
+    "progressStepper": {
+      "steps": {
+        "meetingType": "Loại Cuộc Họp",
+        "dateTime": "Ngày & Giờ",
+        "details": "Chi Tiết",
+        "confirmation": "Xác Nhận"
+      }
+    }
+  }
+}

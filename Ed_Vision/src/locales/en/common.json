@@ -1,0 +1,137 @@
+{
+  "app": {
+    "name": "EdVision",
+    "tagline": "Education Management System"
+  },
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "view": "View",
+    "search": "Search",
+    "filter": "Filter"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "select": "Select",
+    "selected": "Selected",
+    "date": "Date",
+    "time": "Time",
+    "status": "Status",
+    "actions": "Actions",
+    "details": "Details",
+    "description": "Description",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This week",
+    "lastWeek": "Last week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "weeks": "weeks",
+    "months": "months",
+    "years": "years"
+  },
+  "messages": {
+    "noData": "No data available",
+    "saveSuccess": "Saved successfully",
+    "saveError": "Failed to save",
+    "deleteSuccess": "Deleted successfully",
+    "deleteError": "Failed to delete",
+    "updateSuccess": "Updated successfully",
+    "updateError": "Failed to update"
+  },
+  "header": {
+    "navigation": {
+      "ourFeatures": "Our Features",
+      "research": "Research",
+      "forEducators": "For Educators",
+      "forEnterprise": "For Enterprise"
+    },
+    "features": {
+      "gradeForecasting": {
+        "title": "Grade Forecasting",
+        "description": "AI-powered grade predictions"
+      },
+      "performanceAnalytics": {
+        "title": "Performance Analytics",
+        "description": "Detailed learning insights"
+      },
+      "studyOptimization": {
+        "title": "Study Optimization",
+        "description": "Personalized study plans"
+      }
+    },
+    "educators": {
+      "teacherDashboard": "Teacher Dashboard",
+      "classManagement": "Class Management",
+      "studentProgressTracking": "Student Progress Tracking",
+      "parentCommunication": "Parent Communication"
+    },
+    "auth": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "user": {
+      "administrator": "Administrator",
+      "student": "Student"
+    }
+  },
+  "footer": {
+    "slogan": "Empowering students with AI-driven grade predictions",
+    "sections": {
+      "product": {
+        "title": "Product",
+        "features": "Features",
+        "pricing": "Pricing",
+        "api": "API",
+        "integrations": "Integrations"
+      },
+      "company": {
+        "title": "Company",
+        "aboutUs": "About Us",
+        "careers": "Careers",
+        "blog": "Blog",
+        "press": "Press"
+      },
+      "support": {
+        "title": "Support",
+        "helpCenter": "Help Center",
+        "contactUs": "Contact Us",
+        "privacyPolicy": "Privacy Policy",
+        "termsOfService": "Terms of Service"
+      },
+      "social": {
+        "title": "Follow Us"
+      }
+    },
+    "copyright": "© {{year}} GradeForecast. All rights reserved."
+  }
+}

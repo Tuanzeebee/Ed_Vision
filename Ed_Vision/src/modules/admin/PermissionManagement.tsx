@@ -1,10 +1,31 @@
 import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
-import PermissionHeader from "../../components/ui/admin/PermissionHeader";
-import { useState } from "react";
+import PermissionHeader, { type FilterState } from "../../components/ui/admin/PermissionHeader";
+import { useState, useEffect } from "react";
+import LoadingSpinner from "../../components/ui/admin/LoadingSpinner";
 
 export default function PermissionManagement() {
   const [selectedUser, setSelectedUser] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    searchTerm: '',
+    accountTypeFilter: 'Tất cả',
+    schoolFilter: 'Tất cả',
+    majorFilter: 'Tất cả',
+    statusFilter: 'Tất cả',
+    permissionDisplayFilter: 'Tất cả'
+  });
+
+  // Loading effect when filters change
+  useEffect(() => {
+    setIsLoading(true);
+    const loadTimeout = setTimeout(() => {
+      console.log('Filter applied:', { filters, selectedUser });
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(loadTimeout);
+  }, [filters, selectedUser]);
 
   const users = [
     {
@@ -132,73 +153,14 @@ export default function PermissionManagement() {
   };
 
   return (
-    <AdminLayout activePage="/admin/permissions">
+    <AdminLayout>
       <div className="p-6 bg-gray-50 overflow-y-auto">
-        <PermissionHeader activeTab="account" />
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Bộ lọc tài khoản</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tìm kiếm</label>
-                <input 
-                  type="text" 
-                  placeholder="Tên tài khoản hoặc Email..." 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Loại tài khoản</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Tất cả</option>
-                  <option>Sinh viên</option>
-                  <option>Giảng viên</option>
-                  <option>Lãnh đạo</option>
-                  <option>Phụ huynh</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Trường</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Tất cả</option>
-                  <option>CNTT</option>
-                  <option>Kinh tế</option>
-                  <option>Ngoại ngữ</option>
-                  <option>Y Dược</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Chuyên ngành</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Tất cả</option>
-                  <option>Khoa học máy tính</option>
-                  <option>Hệ thống thông tin</option>
-                  <option>Mạng máy tính</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Tất cả</option>
-                  <option>Hoạt động</option>
-                  <option>Vắng mặt</option>
-                  <option>Đã khóa</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Hiển thị quyền</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Tất cả</option>
-                  <option>Được cấp</option>
-                  <option>Override</option>
-                  <option>Kế thừa</option>
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <PermissionHeader 
+          activeTab="account" 
+          filters={filters}
+          onFiltersChange={setFilters}
+          showFilters={true}
+        />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -208,8 +170,15 @@ export default function PermissionManagement() {
               <h3 className="text-lg font-semibold text-gray-800">Danh sách tài khoản</h3>
               <p className="text-sm text-gray-600 mt-1">Chọn tài khoản để xem chi tiết phân quyền</p>
             </div>
-            <div className="max-h-80 overflow-y-auto">
-              {users.map((user) => (
+            <div className="max-h-80 overflow-y-auto relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+              {isLoading && (
+                <LoadingSpinner 
+                  text="Đang tải danh sách tài khoản..." 
+                  size="md" 
+                  position="center" 
+                />
+              )}
+              {!isLoading && users.map((user) => (
                 <div
                   key={user.id}
                   onClick={() => setSelectedUser(user.id)}

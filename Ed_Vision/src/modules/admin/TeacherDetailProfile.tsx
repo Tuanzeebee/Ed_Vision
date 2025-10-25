@@ -76,9 +76,7 @@ export default function TeacherDetailProfile() {
 
 
   return (
-    <AdminLayout 
-      activePage="/admin/teachers"
-    >
+    <AdminLayout>
       <div className="space-y-6">
         {/* Teacher Profile Header */}
         <TeacherProfileHeader 
@@ -146,7 +144,7 @@ export default function TeacherDetailProfile() {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-600 mb-1">Địa chỉ</label>
-                    <p className="text-gray-800">{teacherData?.address || '36 Hoa Thanh Quế'}</p>
+                    <p className="text-gray-800">{teacherData?.address || '108 Đống Đa, TP Đà Nẵng'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Học hàm/học vị</label>

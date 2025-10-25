@@ -10,7 +10,7 @@ type Props = {
 }
 
 export default function StudentRegister({ 
-  onGoogleRegister, 
+  // onGoogleRegister, // Unused for now 
   onEmailRegister
 }: Props) {
   const navigate = useNavigate()

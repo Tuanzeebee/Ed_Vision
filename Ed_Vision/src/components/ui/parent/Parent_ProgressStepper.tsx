@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import iconCheck from "@/assets/parent/iconCheckBig.svg"
 
 type StepStatus = 'completed' | 'current' | 'upcoming'
@@ -13,17 +14,20 @@ type Props = {
   steps?: Step[]
 }
 
-const defaultSteps: Step[] = [
-  { id: 1, label: "Meeting Type", status: 'completed' },
-  { id: 2, label: "Date & Time", status: 'completed' },
-  { id: 3, label: "Details", status: 'completed' },
-  { id: 4, label: "Confirmation", status: 'current' }
-]
-
 export default function ProgressStepper({ 
   currentStep, 
-  steps = defaultSteps 
+  steps 
 }: Props) {
+  const { t } = useTranslation(['parent']);
+  
+  const defaultSteps: Step[] = [
+    { id: 1, label: t('parent:ui.progressStepper.steps.meetingType'), status: 'completed' },
+    { id: 2, label: t('parent:ui.progressStepper.steps.dateTime'), status: 'completed' },
+    { id: 3, label: t('parent:ui.progressStepper.steps.details'), status: 'completed' },
+    { id: 4, label: t('parent:ui.progressStepper.steps.confirmation'), status: 'current' }
+  ];
+  
+  const stepsToUse = steps || defaultSteps;
   const getStepStatus = (stepId: number): StepStatus => {
     if (stepId < currentStep) return 'completed'
     if (stepId === currentStep) return 'current'
@@ -57,10 +61,10 @@ export default function ProgressStepper({
     <div className="bg-white border-b border-gray-200">
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-center">
-          {steps.map((step, index) => {
+          {stepsToUse.map((step, index) => {
             const status = getStepStatus(step.id)
             const styles = getStepStyles(status)
-            const isLast = index === steps.length - 1
+            const isLast = index === stepsToUse.length - 1
             
             return (
               <div key={step.id} className="flex items-center">

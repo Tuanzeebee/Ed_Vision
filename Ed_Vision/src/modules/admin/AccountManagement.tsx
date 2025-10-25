@@ -1,4 +1,7 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
+import LoadingSpinner from "../../components/ui/admin/LoadingSpinner";
 
 // Import image assets
 import imgAdmin from "../../assets/parent/c47870bf01f989650eaadfebe75f1949340dd812.png"
@@ -77,7 +80,7 @@ const Button = ({ children, variant = "primary", size = "md", className = "", ..
   
   const sizes = {
     sm: "px-3 py-2 text-xs",
-    md: "px-4 py-2 text-sm", 
+    md: "px-4 py-1.5 text-xs", 
     lg: "px-6 py-3 text-base"
   };
   
@@ -92,109 +95,166 @@ const Button = ({ children, variant = "primary", size = "md", className = "", ..
 };
 
 export default function AccountManagement() {
-  const userData = [
-    {
-      id: "#001",
-      avatar: imgUser1,
-      name: "Nguyễn Văn An",
-      birth: "15/03/1995",
-      gender: "Nam",
-      email: "nguyen.van.an@predica.edu.vn",
-      school: "Khoa học Máy tính",
-      role: "Quản trị viên",
-      joinDate: "01/09/2020",
-      status: "active" as const
-    },
-    {
-      id: "#002", 
-      avatar: null,
-      name: "Trần Thị Bình",
-      birth: "22/07/1992",
-      gender: "Nữ",
-      email: "tran.thi.binh@predica.edu.vn", 
-      school: "Y - Dược",
-      role: "Giảng viên",
-      joinDate: "15/02/2019",
-      status: "inactive" as const
-    },
-    {
-      id: "#003",
-      avatar: imgUser2,
-      name: "Lê Văn Cường", 
-      birth: "10/11/1988",
-      gender: "Nam",
-      email: "le.van.cuong@predica.edu.vn",
-      school: "Kinh Tế",
-      role: "Sinh viên",
-      joinDate: "10/08/2021",
-      status: "blocked" as const
-    },
-    {
-      id: "#004",
-      avatar: imgUser3,
-      name: "Phạm Thị Dung",
-      birth: "05/12/1990", 
-      gender: "Nữ",
-      email: "pham.thi.dung@predica.edu.vn",
-      school: "Công Nghệ",
-      role: "Giảng viên",
-      joinDate: "20/03/2018",
-      status: "active" as const
-    },
-    {
-      id: "#005",
-      avatar: imgAdmin,
-      name: "Hoàng Văn Em",
-      birth: "18/09/1993",
-      gender: "Nam", 
-      email: "hoang.van.em@predica.edu.vn",
-      school: "Du lịch",
-      role: "Sinh viên",
-      joinDate: "12/09/2022",
-      status: "inactive" as const
-    },
-    {
-      id: "#006",
-      avatar: imgUser4,
-      name: "Vũ Thị Giang",
-      birth: "28/04/1991",
-      gender: "Nữ",
-      email: "vu.thi.giang@predica.edu.vn", 
-      school: "Đào tạo quốc tế",
-      role: "Quản trị viên",
-      joinDate: "05/01/2017",
-      status: "active" as const
-    },
-    {
-      id: "#007",
-      avatar: imgUser1,
-      name: "Đặng Văn Hùng",
-      birth: "14/06/1989",
-      gender: "Nam",
-      email: "dang.van.hung@predica.edu.vn",
-      school: "Xã hội", 
-      role: "Giảng viên",
-      joinDate: "25/11/2016",
-      status: "blocked" as const
-    },
-    {
-      id: "#008",
-      avatar: imgUser5,
-      name: "Ngô Thị Lan",
-      birth: "03/02/1994",
-      gender: "Nữ",
-      email: "ngo.thi.lan@predica.edu.vn",
-      school: "Y - Dược",
-      role: "Sinh viên",
-      joinDate: "08/07/2023", 
-      status: "active" as const
-    }
-  ];
+  const navigate = useNavigate();
+  // State management for filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Filter logic with loading state
+  const [filteredData, setFilteredData] = useState<{
+    id: string;
+    avatar: string | null;
+    name: string;
+    birth: string;
+    gender: string;
+    email: string;
+    school: string;
+    role: string;
+    joinDate: string;
+    status: 'active' | 'inactive' | 'blocked';
+  }[]>([]);
+  
+  useEffect(() => {
+    setIsLoading(true);
+    
+    const filterTimeout = setTimeout(() => {
+      const userData = [
+        {
+          id: "#001",
+          avatar: imgUser1,
+          name: "Nguyễn Văn An",
+          birth: "15/03/1995",
+          gender: "Nam",
+          email: "nguyen.van.an@predica.edu.vn",
+          school: "Khoa học Máy tính",
+          role: "Quản trị viên",
+          joinDate: "01/09/2020",
+          status: "active" as const
+        },
+        {
+          id: "#002", 
+          avatar: null,
+          name: "Trần Thị Bình",
+          birth: "22/07/1992",
+          gender: "Nữ",
+          email: "tran.thi.binh@predica.edu.vn", 
+          school: "Y - Dược",
+          role: "Giảng viên",
+          joinDate: "15/02/2019",
+          status: "inactive" as const
+        },
+        {
+          id: "#003",
+          avatar: imgUser2,
+          name: "Lê Văn Cường", 
+          birth: "10/11/1988",
+          gender: "Nam",
+          email: "le.van.cuong@predica.edu.vn",
+          school: "Kinh Tế",
+          role: "Sinh viên",
+          joinDate: "10/08/2021",
+          status: "blocked" as const
+        },
+        {
+          id: "#004",
+          avatar: imgUser3,
+          name: "Phạm Thị Dung",
+          birth: "05/12/1990", 
+          gender: "Nữ",
+          email: "pham.thi.dung@predica.edu.vn",
+          school: "Công Nghệ",
+          role: "Giảng viên",
+          joinDate: "20/03/2018",
+          status: "active" as const
+        },
+        {
+          id: "#005",
+          avatar: imgAdmin,
+          name: "Hoàng Văn Em",
+          birth: "18/09/1993",
+          gender: "Nam", 
+          email: "hoang.van.em@predica.edu.vn",
+          school: "Du lịch",
+          role: "Sinh viên",
+          joinDate: "12/09/2022",
+          status: "inactive" as const
+        },
+        {
+          id: "#006",
+          avatar: imgUser4,
+          name: "Vũ Thị Giang",
+          birth: "28/04/1991",
+          gender: "Nữ",
+          email: "vu.thi.giang@predica.edu.vn", 
+          school: "Đào tạo quốc tế",
+          role: "Quản trị viên",
+          joinDate: "05/01/2017",
+          status: "active" as const
+        },
+        {
+          id: "#007",
+          avatar: imgUser1,
+          name: "Đặng Văn Hùng",
+          birth: "14/06/1989",
+          gender: "Nam",
+          email: "dang.van.hung@predica.edu.vn",
+          school: "Xã hội", 
+          role: "Giảng viên",
+          joinDate: "25/11/2016",
+          status: "blocked" as const
+        },
+        {
+          id: "#008",
+          avatar: imgUser5,
+          name: "Ngô Thị Lan",
+          birth: "03/02/1994",
+          gender: "Nữ",
+          email: "ngo.thi.lan@predica.edu.vn",
+          school: "Y - Dược",
+          role: "Sinh viên",
+          joinDate: "08/07/2023", 
+          status: "active" as const
+        }
+      ];
+
+      const
+      filtered = userData.filter(user => {
+        const matchesSearch = searchTerm === '' || 
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.id.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesRole = selectedRole === '' || 
+          (selectedRole === 'admin' && user.role === 'Quản trị viên') ||
+          (selectedRole === 'teacher' && user.role === 'Giảng viên') ||
+          (selectedRole === 'student' && user.role === 'Sinh viên');
+        
+        const matchesStatus = selectedStatus === '' || user.status === selectedStatus;
+        
+        const matchesSchool = selectedSchool === '' ||
+          (selectedSchool === 'cs' && user.school === 'Khoa học Máy tính') ||
+          (selectedSchool === 'medical' && user.school === 'Y - Dược') ||
+          (selectedSchool === 'economics' && user.school === 'Kinh Tế') ||
+          (selectedSchool === 'technology' && user.school === 'Công Nghệ') ||
+          (selectedSchool === 'tourism' && user.school === 'Du lịch') ||
+          (selectedSchool === 'international' && user.school === 'Đào tạo quốc tế') ||
+          (selectedSchool === 'social' && user.school === 'Xã hội');
+        
+        return matchesSearch && matchesRole && matchesStatus && matchesSchool;
+      });
+      
+      setFilteredData(filtered);
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(filterTimeout);
+  }, [searchTerm, selectedRole, selectedStatus, selectedSchool]);
 
   return (
-    <AdminLayout 
-      activePage="/admin/users"
-    >
+    <AdminLayout>
       <div className="space-y-6">
         {/* Page Title */}
         <div>
@@ -214,10 +274,15 @@ export default function AccountManagement() {
                 <input 
                   type="text"
                   placeholder="Tìm kiếm tài khoản..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg w-64 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <Button className="cursor-pointer px-3 py-2">
+              <Button 
+                className="cursor-pointer px-3 py-2"
+                onClick={() => navigate('/admin/accounts/add')}
+              >
                 <PlusIcon />
                 <span className="ml-2">Thêm mới</span>
               </Button>
@@ -225,24 +290,39 @@ export default function AccountManagement() {
             
             {/* Filters */}
             <div className="flex items-center space-x-2">
-              <select className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select 
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="" className="text-gray-700">Tất cả vai trò</option>
                 <option value="admin" className="text-gray-700">Quản trị viên</option>
                 <option value="teacher" className="text-gray-700">Giảng viên</option>
                 <option value="student" className="text-gray-700">Sinh viên</option>
               </select>
-              <select className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select 
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="" className="text-gray-700">Tất cả trạng thái</option>
                 <option value="active" className="text-gray-700">Hoạt động</option>
                 <option value="inactive" className="text-gray-700">Vắng mặt</option>
                 <option value="blocked" className="text-gray-700">Đã khóa</option>
               </select>
-              <select className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm w-36 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select 
+                value={selectedSchool}
+                onChange={(e) => setSelectedSchool(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-36 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="" className="text-gray-700">Tất cả trường</option>
                 <option value="cs" className="text-gray-700">Khoa học Máy tính</option>
                 <option value="medical" className="text-gray-700">Y - Dược</option>
                 <option value="economics" className="text-gray-700">Kinh Tế</option>
                 <option value="technology" className="text-gray-700">Công Nghệ</option>
+                <option value="tourism" className="text-gray-700">Du lịch</option>
+                <option value="international" className="text-gray-700">Đào tạo quốc tế</option>
+                <option value="social" className="text-gray-700">Xã hội</option>
               </select>
             </div>
           </div>
@@ -250,9 +330,17 @@ export default function AccountManagement() {
 
         {/* Users Table */}
         <Card className="overflow-hidden">
-          {/* Table Header */}
-          <div className="bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 text-sm font-semibold text-gray-700">
+          <div className="relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+            {isLoading && (
+              <LoadingSpinner 
+                text="Đang tải dữ liệu..." 
+                size="md" 
+                position="top" 
+              />
+            )}
+            {/* Table Header */}
+            <div className="bg-gray-50 border-b border-gray-200">
+            <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700">
               <div className="col-span-1">Mã số</div>
               <div className="col-span-2">Họ và tên</div>
               <div className="col-span-3">Email</div>
@@ -266,8 +354,16 @@ export default function AccountManagement() {
 
           {/* Table Body */}
           <div className="divide-y divide-gray-100">
-            {userData.map((user) => (
-              <div key={user.id} className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+            {!isLoading && filteredData.length === 0 ? (
+              <div className="px-6 py-8 text-center">
+                <div className="text-gray-500">
+                  <span className="text-2xl mb-2 block">🔍</span>
+                  <p className="text-sm">Không tìm thấy người dùng phù hợp với bộ lọc</p>
+                </div>
+              </div>
+            ) : !isLoading ? (
+              filteredData.map((user) => (
+              <div key={user.id} className="grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 transition-colors">
                 <div className="col-span-1 flex items-center">
                   <span className="text-sm text-gray-800">{user.id}</span>
                 </div>
@@ -305,7 +401,7 @@ export default function AccountManagement() {
                 </div>
                 
                 <div className="col-span-1 flex items-center">
-                  <span className="text-sm text-gray-600">{user.joinDate}</span>
+                  <span className="text-sm text-gray-600 whitespace-nowrap">{user.joinDate}</span>
                 </div>
                 
                 <div className="col-span-1 flex items-center">
@@ -316,34 +412,50 @@ export default function AccountManagement() {
                 </div>
                 
                 <div className="col-span-2 flex items-center justify-center space-x-1">
-                  <Button variant="ghost" size="sm" title="Xem chi tiết" className="hover:bg-blue-50">
+                  <button 
+                    title="Xem chi tiết" 
+                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
+                  >
                     <EyeIcon />
-                  </Button>
-                  <Button variant="ghost" size="sm" title="Chỉnh sửa" className="hover:bg-green-50">
+                  </button>
+                  <button 
+                    title="Chỉnh sửa" 
+                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-green-50 transition-colors cursor-pointer"
+                  >
                     <EditIcon />
-                  </Button>
+                  </button>
                   {user.status === 'blocked' ? (
-                    <Button variant="ghost" size="sm" title="Mở khóa" className="hover:bg-green-50">
+                    <button 
+                      title="Mở khóa" 
+                      className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-green-50 transition-colors cursor-pointer"
+                    >
                       <UnlockIcon />
-                    </Button>
+                    </button>
                   ) : (
-                    <Button variant="ghost" size="sm" title="Khóa tài khoản" className="hover:bg-red-50">
+                    <button 
+                      title="Khóa tài khoản" 
+                      className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                    >
                       <LockIcon />
-                    </Button>
+                    </button>
                   )}
-                  <Button variant="ghost" size="sm" title="Xóa" className="hover:bg-red-50">
+                  <button 
+                    title="Xóa" 
+                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                  >
                     <DeleteIcon />
-                  </Button>
+                  </button>
                 </div>
               </div>
-            ))}
+              ))
+            ) : null}
           </div>
 
           {/* Pagination */}
           <div className="bg-white border-t border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Hiển thị 1 đến 8 của 247 kết quả
+                Hiển thị 1 đến {filteredData.length} của {filteredData.length} kết quả
               </div>
               <div className="flex items-center space-x-2">
                 <Button variant="secondary" size="sm" disabled className="opacity-50">
@@ -361,6 +473,7 @@ export default function AccountManagement() {
                 </Button>
               </div>
             </div>
+          </div>
           </div>
         </Card>
       </div>

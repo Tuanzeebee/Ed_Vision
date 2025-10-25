@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next';
 
 // Import the SVG asset
 import confirmIcon from "@/assets/parent/confirmIcon.svg"
@@ -14,8 +15,9 @@ export default function ConfirmButton({
   onClick, 
   disabled = false, 
   className = "",
-  children = "Confirm Appointment"
+  children
 }: ConfirmButtonProps) {
+  const { t } = useTranslation(['parent']);
   const handleClick = () => {
     if (!disabled && onClick) {
       onClick()
@@ -68,7 +70,7 @@ export default function ConfirmButton({
         </div>
       </div>
       <div className="flex flex-col font-medium h-6 justify-center leading-none not-italic relative shrink-0 text-base text-center text-white">
-        <span className="leading-6">{children}</span>
+        <span className="leading-6">{children || t('parent:ui.confirmButton.confirmAppointment')}</span>
       </div>
     </button>
   )
