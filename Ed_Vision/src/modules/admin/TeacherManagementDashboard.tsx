@@ -113,6 +113,106 @@ export default function TeacherManagementDashboard() {
     navigate(`/admin/teachers/${teacherId}`);
   };
 
+  const handleExportExcel = () => {
+    try {
+      // Tạo header cho CSV
+      const headers = [
+        'ID Giảng viên',
+        'Họ và Tên', 
+        'Email',
+        'Chức vụ', 
+        'Trạng thái',
+        'Chất lượng',
+        'Số sao',
+        'Số sinh viên đang cố vấn'
+      ];
+
+      // Tạo dữ liệu CSV
+      const csvRows = [
+        headers.join(','), // Header row
+        ...filteredTeachers.map((teacher) => {
+          const row = [
+            teacher.id,
+            `"${teacher.name}"`,
+            teacher.email,
+            `"${teacher.position}"`,
+            `"${teacher.status}"`,
+            `"${teacher.quality}"`,
+            teacher.qualityStars.toString(),
+            teacher.students.toString()
+          ];
+          return row.join(',');
+        })
+      ];
+
+      const csvContent = csvRows.join('\n');
+      
+      // Tạo file name với timestamp
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+      const fileName = `Danh_sach_giang_vien_${dateStr}_${timeStr}.csv`;
+
+      // Tạo và download file CSV
+      const blob = new Blob(['\uFEFF' + csvContent], { 
+        type: 'text/csv;charset=utf-8;' 
+      });
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up URL object
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 100);
+
+      // Hiển thị thông báo thành công với thống kê
+      const statusCounts = filteredTeachers.reduce((acc, teacher) => {
+        acc[teacher.status] = (acc[teacher.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const qualityCounts = filteredTeachers.reduce((acc, teacher) => {
+        acc[teacher.quality] = (acc[teacher.quality] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const avgQuality = (filteredTeachers.reduce((sum, teacher) => sum + teacher.qualityStars, 0) / filteredTeachers.length).toFixed(1);
+      const totalStudents = filteredTeachers.reduce((sum, teacher) => sum + teacher.students, 0);
+
+      const statusText = Object.entries(statusCounts)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(', ');
+
+      const qualityText = Object.entries(qualityCounts)
+        .map(([quality, count]) => `${quality}: ${count}`)
+        .join(', ');
+
+      alert(
+        `✓ Xuất file Excel thành công!\n\n` +
+        `📄 File: ${fileName}\n` +
+        `👩‍🏫 Tổng số giảng viên: ${filteredTeachers.length}\n` +
+        `⭐ Chất lượng TB: ${avgQuality}/5.0\n` +
+        `👥 Tổng sinh viên đang cố vấn: ${totalStudents}\n\n` +
+        `📊 Thống kê trạng thái: ${statusText}\n` +
+        `🏆 Thống kê chất lượng: ${qualityText}\n\n` +
+        `Filters áp dụng:\n` +
+        `- Chức vụ: ${positionFilter}\n` +
+        `- Trạng thái: ${statusFilter}\n` +
+        `- Chất lượng: ${qualityFilter}`
+      );
+
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      alert('❌ Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!');
+    }
+  };
+
   // Chart data for quality distribution
   const qualityData = {
     labels: ['Tốt', 'Khá', 'TB', 'Tệ'],
@@ -213,7 +313,7 @@ export default function TeacherManagementDashboard() {
         
         const matchesPosition = positionFilter === 'Tất cả chức vụ' || teacher.position === positionFilter;
         const matchesStatus = statusFilter === 'Tất cả trạng thái' || teacher.status === statusFilter;
-        const matchesQuality = qualityFilter === 'Tất cả chất lượng' || teacher.quality === qualityFilter;
+        const matchesQuality = qualityFilter === 'Tất cả chất lượng' || teacher.quality === qualityFilter.split(' (')[0];
         
         return matchesSearch && matchesPosition && matchesStatus && matchesQuality;
       });
@@ -352,11 +452,28 @@ export default function TeacherManagementDashboard() {
                 </div>
               </div>
               
-              {/* Add Button */}
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-xs rounded-lg font-medium transition-colors flex items-center cursor-pointer">
-                <i className="fas fa-plus mr-2"></i>
-                Thêm giảng viên
-              </button>
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setPositionFilter("Tất cả chức vụ");
+                    setStatusFilter("Tất cả trạng thái");
+                    setQualityFilter("Tất cả chất lượng");
+                  }}
+                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
+                >
+                  <i className="fas fa-undo mr-2"></i>
+                  Reset bộ lọc
+                </button>
+                <button 
+                  onClick={handleExportExcel}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium cursor-pointer"
+                >
+                  <i className="fas fa-download mr-2"></i>
+                  Xuất Excel
+                </button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -379,8 +496,7 @@ export default function TeacherManagementDashboard() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chức vụ</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chất lượng</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SV hướng dẫn</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên đang cố vấn</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -395,7 +511,11 @@ export default function TeacherManagementDashboard() {
                   </tr>
                 ) : !isLoading ? (
                   filteredTeachers.map((teacher, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                    <tr 
+                      key={index} 
+                      className="hover:bg-gray-50 cursor-pointer" 
+                      onClick={() => handleViewTeacher(teacher.id)}
+                    >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{teacher.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -427,24 +547,7 @@ export default function TeacherManagementDashboard() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.students} SV</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button 
-                          className="text-blue-600 hover:text-blue-900 cursor-pointer" 
-                          title="Xem"
-                          onClick={() => handleViewTeacher(teacher.id)}
-                        >
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 cursor-pointer" title="Chỉnh sửa">
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 cursor-pointer" title="Xóa">
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.students} sinh viên</td>
                   </tr>
                   ))
                 ) : null}

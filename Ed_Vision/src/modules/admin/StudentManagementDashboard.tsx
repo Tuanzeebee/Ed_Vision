@@ -1,6 +1,5 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
-import StudentList from "./StudentList";
-import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -36,29 +35,7 @@ const CardContent = ({ children, className = "" }: { children: React.ReactNode; 
 );
 
 export default function StudentManagementDashboard() {
-  const [showStudentList, setShowStudentList] = useState(false);
-
-  // Reset về dashboard chỉ khi navigate từ breadcrumb
-  useEffect(() => {
-    // Listen for popstate events (back/forward browser buttons) 
-    const handlePopState = () => {
-      // Chỉ reset khi user dùng back button hoặc navigate từ bên ngoài
-      if (window.location.pathname === '/admin/students') {
-        setShowStudentList(false);
-      }
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
-
-  // Nếu đang hiển thị danh sách sinh viên, render StudentList component
-  if (showStudentList) {
-    return <StudentList />;
-  }
+  const navigate = useNavigate();
 
   // Dữ liệu mẫu cho biểu đồ sinh viên theo khoa
   const facultyData = {
@@ -122,7 +99,7 @@ export default function StudentManagementDashboard() {
   };
 
   const handleViewStudentList = () => {
-    setShowStudentList(true);
+    navigate('/admin/students/list');
   };
 
   return (

@@ -3,9 +3,11 @@ import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrap
 import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
 import StudentDetails from "@/modules/parent/Parent_StudentDetails";
 import AccountManagement from "./modules/admin/AccountManagement";
+import AddAccount from "./modules/admin/AddAccount";
 import StudentManagementDashboard from "./modules/admin/StudentManagementDashboard";
 import AdminOverviewDashboard from "./modules/admin/AdminOverviewDashboard";
 import StudentDetail from "./modules/admin/StudentDetail";
+import StudentList from "./modules/admin/StudentList";
 import TeacherManagementDashboard from "./modules/admin/TeacherManagementDashboard";
 import TeacherDetailProfile from "./modules/admin/TeacherDetailProfile";
 import TeacherSubjects from "./modules/admin/TeacherSubjects";
@@ -98,8 +100,10 @@ function App() {
         {/* Admin routes - Management */}
         <Route path="/admin/users" element={<AccountManagement />} />
         <Route path="/admin/account-management" element={<AccountManagement />} />
+        <Route path="/admin/accounts/add" element={<AddAccount />} />
         <Route path="/admin/students" element={<StudentManagementDashboard />} />
         <Route path="/admin/student-management" element={<StudentManagementDashboard />} />
+        <Route path="/admin/students/list" element={<StudentList />} />
         <Route path="/admin/students/:studentId" element={<StudentDetail />} />
         <Route path="/admin/teachers" element={<TeacherManagementDashboard />} />
         <Route path="/admin/teachers/:teacherId" element={<TeacherDetailProfile />} />
