@@ -30,6 +30,10 @@ import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
 import StudentLogin from "@/modules/student/StudentLogin";
 import StudentOTPVerification from "@/modules/student/StudentOTPVerification";
 import StudentRegister from "@/modules/student/StudentRegister";
+// New auth components (some components navigate to /auth/* so provide routes)
+import AuthStudentLogin from "@/modules/auth/StudentLogin";
+import AuthStudentRegister from "@/modules/auth/StudentRegister";
+import AuthStudentOTPVerification from "@/modules/auth/StudentOTPVerification";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
@@ -53,6 +57,7 @@ import LiveLearning from "./modules/student/LiveLearning";
 import VideoRoom from "./modules/student/VideoRoom";
 import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
+import ProtectedRoute from '@/components/ProtectedRoute'
 
 function App() {
   return (
@@ -63,9 +68,14 @@ function App() {
 
         {/* Student routes */}
         <Route path="/student/landing" element={<GradeForecastLanding />} />
-        <Route path="/student/login" element={<StudentLogin />} />
-        <Route path="/student/register" element={<StudentRegister />} />
-        <Route path="/student/otp-verification" element={<StudentOTPVerification />} />
+  <Route path="/student/login" element={<StudentLogin />} />
+  <Route path="/student/register" element={<StudentRegister />} />
+  <Route path="/student/otp-verification" element={<StudentOTPVerification />} />
+
+  {/* Auth routes (used by updated components) */}
+  <Route path="/auth/login" element={<AuthStudentLogin />} />
+  <Route path="/auth/register" element={<AuthStudentRegister />} />
+  <Route path="/auth/otp-verification" element={<AuthStudentOTPVerification />} />
         <Route path="/student/course-overview" element={<StudentCourseOverview />} />
         <Route path="/student/upload-transcript" element={<UploadTranscript />} />
         <Route path="/student/instructions" element={<InstructionsPage />} />
@@ -93,40 +103,40 @@ function App() {
         <Route path="/parent/appointments" element={<AllAppointments />} />
         <Route path="/parent/student-details" element={<StudentDetails />} />
         <Route path="/parent/chat" element={<ChatWithTeachers />} />
-        {/* Admin routes - Dashboard */}
-        <Route path="/admin/dashboard" element={<AdminOverviewDashboard />} />
-        <Route path="/admin/overview" element={<AdminOverviewDashboard />} />
+  {/* Admin routes - Dashboard (protected) */}
+  <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
+  <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
 
-        {/* Admin routes - Management */}
-        <Route path="/admin/users" element={<AccountManagement />} />
-        <Route path="/admin/account-management" element={<AccountManagement />} />
-        <Route path="/admin/accounts/add" element={<AddAccount />} />
-        <Route path="/admin/students" element={<StudentManagementDashboard />} />
-        <Route path="/admin/student-management" element={<StudentManagementDashboard />} />
-        <Route path="/admin/students/list" element={<StudentList />} />
-        <Route path="/admin/students/:studentId" element={<StudentDetail />} />
-        <Route path="/admin/teachers" element={<TeacherManagementDashboard />} />
-        <Route path="/admin/teachers/:teacherId" element={<TeacherDetailProfile />} />
-        <Route path="/admin/teachers/:teacherId/subjects" element={<TeacherSubjects />} />
-        <Route path="/admin/teachers/:teacherId/ratings" element={<TeacherRatings />} />
-        <Route path="/admin/teachers/:teacherId/performance" element={<TeacherPerformance />} />
-        <Route path="/admin/teachers/:teacherId/schedule" element={<TeacherSchedule />} />
-        <Route path="/admin/teachers/:teacherId/support-history" element={<TeacherSupportHistory />} />
-        <Route path="/admin/classes" element={<QuestionManagement />} />
-        <Route path="/admin/questions" element={<QuestionManagement />} />
-        <Route path="/admin/questions/add" element={<AddQuestion />} />
+  {/* Admin routes - Management (protected) */}
+  <Route path="/admin/users" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+  <Route path="/admin/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+  <Route path="/admin/accounts/add" element={<ProtectedRoute><AddAccount /></ProtectedRoute>} />
+  <Route path="/admin/students" element={<ProtectedRoute><StudentManagementDashboard /></ProtectedRoute>} />
+  <Route path="/admin/student-management" element={<ProtectedRoute><StudentManagementDashboard /></ProtectedRoute>} />
+  <Route path="/admin/students/list" element={<ProtectedRoute><StudentList /></ProtectedRoute>} />
+  <Route path="/admin/students/:studentId" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
+  <Route path="/admin/teachers" element={<ProtectedRoute><TeacherManagementDashboard /></ProtectedRoute>} />
+  <Route path="/admin/teachers/:teacherId" element={<ProtectedRoute><TeacherDetailProfile /></ProtectedRoute>} />
+  <Route path="/admin/teachers/:teacherId/subjects" element={<ProtectedRoute><TeacherSubjects /></ProtectedRoute>} />
+  <Route path="/admin/teachers/:teacherId/ratings" element={<ProtectedRoute><TeacherRatings /></ProtectedRoute>} />
+  <Route path="/admin/teachers/:teacherId/performance" element={<ProtectedRoute><TeacherPerformance /></ProtectedRoute>} />
+  <Route path="/admin/teachers/:teacherId/schedule" element={<ProtectedRoute><TeacherSchedule /></ProtectedRoute>} />
+  <Route path="/admin/teachers/:teacherId/support-history" element={<ProtectedRoute><TeacherSupportHistory /></ProtectedRoute>} />
+  <Route path="/admin/classes" element={<ProtectedRoute><QuestionManagement /></ProtectedRoute>} />
+  <Route path="/admin/questions" element={<ProtectedRoute><QuestionManagement /></ProtectedRoute>} />
+  <Route path="/admin/questions/add" element={<ProtectedRoute><AddQuestion /></ProtectedRoute>} />
 
-        {/* Admin routes - Reports & Analytics */}
-        <Route path="/admin/reports/learning" element={<GeneralStatistics />} />
-        <Route path="/admin/analytics/performance" element={<LeadershipReports />} />
-        <Route path="/admin/leadership-reports" element={<LeadershipReports />} />
-        <Route path="/admin/ai-insights" element={<AIPredictionResults />} />
+  {/* Admin routes - Reports & Analytics (protected) */}
+  <Route path="/admin/reports/learning" element={<ProtectedRoute><GeneralStatistics /></ProtectedRoute>} />
+  <Route path="/admin/analytics/performance" element={<ProtectedRoute><LeadershipReports /></ProtectedRoute>} />
+  <Route path="/admin/leadership-reports" element={<ProtectedRoute><LeadershipReports /></ProtectedRoute>} />
+  <Route path="/admin/ai-insights" element={<ProtectedRoute><AIPredictionResults /></ProtectedRoute>} />
 
-        {/* Admin routes - System Management */}
-        <Route path="/admin/notifications" element={<NotificationManagement />} />
-        <Route path="/admin/content-approval" element={<ContentApproval />} />
-        <Route path="/admin/permissions" element={<PermissionManagement />} />
-        <Route path="/admin/role-permissions" element={<RolePermissionManagement />} />
+  {/* Admin routes - System Management (protected) */}
+  <Route path="/admin/notifications" element={<ProtectedRoute><NotificationManagement /></ProtectedRoute>} />
+  <Route path="/admin/content-approval" element={<ProtectedRoute><ContentApproval /></ProtectedRoute>} />
+  <Route path="/admin/permissions" element={<ProtectedRoute><PermissionManagement /></ProtectedRoute>} />
+  <Route path="/admin/role-permissions" element={<ProtectedRoute><RolePermissionManagement /></ProtectedRoute>} />
 
         {/* Teacher routes */}
         <Route path="/teacher/dashboard" element={<TeacherDashboard />} />

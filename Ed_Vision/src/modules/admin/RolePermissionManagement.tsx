@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { buildUrl } from '@/services/api/config';
+import { apiFetch } from '@/services/api/fetch'
 import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "@/components/ui/admin/AdminLayout";
 import PermissionHeader, { type FilterState } from "@/components/ui/admin/PermissionHeader";
 import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
+import { useMemo } from 'react'
 
 interface Permission {
   id: string;
@@ -29,21 +32,22 @@ interface Role {
 }
 
 type PermissionState = {
-  overview: {
-    dashboard: boolean;
-    statistics: boolean;
-  };
-  student: {
-    viewGrades: boolean;
-    viewNotifications: boolean;
-    viewAIResults: boolean;
-    editProfile: boolean;
-    registerCourses: boolean;
-    contactAdvisor: boolean;
-  };
-  survey: {
-    createSurvey: boolean;
-  };
+  // Flattened permission keys that map to app routes / features
+  // admin_* keys control access to admin pages
+  admin_overview: boolean
+  admin_users: boolean
+  admin_role_permissions: boolean
+  admin_reports: boolean
+
+  // teacher features
+  teacher_dashboard: boolean
+
+  // student features
+  student_course_overview: boolean
+  student_profile_access: boolean
+
+  // survey
+  create_survey: boolean
 };
 
 export default function RolePermissionManagement() {
@@ -69,24 +73,22 @@ export default function RolePermissionManagement() {
     return () => clearTimeout(loadTimeout);
   }, [filters, selectedRole]);
 
-  // Permission state for each group
-  const [permissions, setPermissions] = useState<PermissionState>({
-    overview: {
-      dashboard: true,
-      statistics: false
-    },
-    student: {
-      viewGrades: true,
-      viewNotifications: true,
-      viewAIResults: true,
-      editProfile: false,
-      registerCourses: true,
-      contactAdvisor: false
-    },
-    survey: {
-      createSurvey: false
-    }
-  });
+  // Default permission template
+  const defaultPermissions: PermissionState = {
+    admin_overview: true,
+    admin_users: true,
+    admin_role_permissions: true,
+    admin_reports: true,
+    teacher_dashboard: true,
+    student_course_overview: true,
+    student_profile_access: true,
+    create_survey: false
+  }
+
+  // Permission state for each group (current working copy)
+  const [permissions, setPermissions] = useState<PermissionState>(defaultPermissions);
+  // Permissions as last-saved on server (used to detect changes)
+  const [savedPermissions, setSavedPermissions] = useState<Record<string, boolean> | null>(null);
 
   const roles: Role[] = [
     {
@@ -123,66 +125,94 @@ export default function RolePermissionManagement() {
     }
   ];
 
-  const permissionGroups: PermissionGroup[] = [
-    {
-      id: 'overview',
-      name: 'Nhóm Tổng quan',
-      icon: 'fas fa-tachometer-alt',
-      color: 'blue',
-      permissions: [
-        { id: 'dashboard', name: 'Xem Dashboard', granted: permissions.overview.dashboard },
-        { id: 'statistics', name: 'Xem thống kê cơ bản', granted: permissions.overview.statistics }
-      ]
-    },
-    {
-      id: 'student',
-      name: 'Nhóm Sinh viên',
-      icon: 'fas fa-user-graduate',
-      color: 'green',
-      permissions: [
-        { id: 'viewGrades', name: 'Xem môn học & điểm', granted: permissions.student.viewGrades },
-        { id: 'viewNotifications', name: 'Xem thông báo', granted: permissions.student.viewNotifications },
-        { id: 'viewAIResults', name: 'Xem kết quả AI cá nhân', granted: permissions.student.viewAIResults },
-        { id: 'editProfile', name: 'Chỉnh sửa thông tin cá nhân', granted: permissions.student.editProfile },
-        { id: 'registerCourses', name: 'Đăng ký môn học', granted: permissions.student.registerCourses },
-        { id: 'contactAdvisor', name: 'Liên hệ cố vấn', granted: permissions.student.contactAdvisor }
-      ]
-    },
-    {
-      id: 'survey',
-      name: 'Nhóm Khảo sát',
-      icon: 'fas fa-poll',
-      color: 'purple',
-      permissions: [
-        { id: 'createSurvey', name: 'Tạo khảo sát', granted: permissions.survey.createSurvey, sensitive: true }
+  // permissionGroup generation will be derived from server-provided permission definitions
+  const [allPermissionDefs, setAllPermissionDefs] = useState<Array<{ key: string; name: string; category?: string; sensitive?: boolean }>>([])
+
+  // Fetch permission definitions
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+  const json = await apiFetch('/admin/permissions').catch(() => null)
+        if (!cancelled) {
+          if (json && json.success) setAllPermissionDefs(json.data || [])
+          else setAllPermissionDefs([])
+        }
+      } catch (e) {
+        // ignore
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const permissionGroups: PermissionGroup[] = useMemo(() => {
+    const groups: Record<string, PermissionGroup> = {}
+    // group permissions by category
+    for (const def of allPermissionDefs) {
+      const cat = def.category || 'other'
+      if (!groups[cat]) {
+        groups[cat] = { id: cat, name: cat === 'other' ? 'Khác' : cat, icon: '', color: 'gray', permissions: [] }
+      }
+      groups[cat].permissions.push({ id: def.key, name: def.name || def.key, granted: !!(permissions as any)[def.key], sensitive: !!def.sensitive })
+    }
+    // fallback to existing hardcoded if none returned
+    if (Object.keys(groups).length === 0) {
+      return [
+        {
+          id: 'admin',
+          name: 'Admin - Hệ thống',
+          icon: 'fas fa-tachometer-alt',
+          color: 'blue',
+          permissions: [
+            { id: 'admin_overview', name: 'Truy cập Admin Overview', granted: permissions.admin_overview },
+            { id: 'admin_users', name: 'Quản lý người dùng (Users)', granted: permissions.admin_users },
+            { id: 'admin_role_permissions', name: 'Phân quyền (Role & Permissions)', granted: permissions.admin_role_permissions },
+            { id: 'admin_reports', name: 'Xem báo cáo và phân tích', granted: permissions.admin_reports }
+          ]
+        },
+        {
+          id: 'student',
+          name: 'Nhóm Sinh viên',
+          icon: 'fas fa-user-graduate',
+          color: 'green',
+          permissions: [
+            { id: 'student_course_overview', name: 'Truy cập Course Overview', granted: permissions.student_course_overview },
+            { id: 'student_profile_access', name: 'Truy cập trang Profile', granted: permissions.student_profile_access }
+          ]
+        },
+        {
+          id: 'survey',
+          name: 'Nhóm Khảo sát',
+          icon: 'fas fa-poll',
+          color: 'purple',
+          permissions: [
+            { id: 'create_survey', name: 'Tạo khảo sát', granted: permissions.create_survey, sensitive: true }
+          ]
+        }
       ]
     }
-  ];
 
-  const handlePermissionToggle = (groupId: string, permissionId: string) => {
-    setPermissions(prev => {
-      const newPermissions = { ...prev };
-      
-      if (groupId === 'overview' && permissionId in newPermissions.overview) {
-        newPermissions.overview = {
-          ...newPermissions.overview,
-          [permissionId]: !newPermissions.overview[permissionId as keyof typeof newPermissions.overview]
-        };
-      } else if (groupId === 'student' && permissionId in newPermissions.student) {
-        newPermissions.student = {
-          ...newPermissions.student,
-          [permissionId]: !newPermissions.student[permissionId as keyof typeof newPermissions.student]
-        };
-      } else if (groupId === 'survey' && permissionId in newPermissions.survey) {
-        newPermissions.survey = {
-          ...newPermissions.survey,
-          [permissionId]: !newPermissions.survey[permissionId as keyof typeof newPermissions.survey]
-        };
-      }
-      
-      return newPermissions;
-    });
+    return Object.values(groups)
+  }, [allPermissionDefs, permissions])
+
+  const handlePermissionToggle = (permissionId: string) => {
+    // permissions are stored at top-level keys; toggle by permissionId
+    setPermissions(prev => ({
+      ...prev,
+      [permissionId]: !prev[permissionId as keyof PermissionState]
+    }));
   };
+
+  const hasChanges = () => {
+    if (!savedPermissions) return true
+    const keys = new Set([...Object.keys(defaultPermissions), ...Object.keys(savedPermissions)])
+    for (const k of keys) {
+      const a = (permissions as any)[k]
+      const b = (savedPermissions as any)[k]
+      if (!!a !== !!b) return true
+    }
+    return false
+  }
 
   const getGroupStats = (group: PermissionGroup) => {
     const granted = group.permissions.filter(p => p.granted).length;
@@ -229,11 +259,88 @@ export default function RolePermissionManagement() {
   };
 
   const handleSaveChanges = () => {
-    if (window.confirm('Bạn có chắc chắn muốn lưu các thay đổi phân quyền?')) {
-      console.log('Saving permission changes...');
-      alert('Thay đổi phân quyền đã được lưu thành công!');
+    if (!hasChanges()) {
+      alert('Không có thay đổi để lưu')
+      return
     }
+
+    if (!window.confirm('Bạn có chắc chắn muốn lưu các thay đổi phân quyền?')) return
+
+    // Persist the permissions for the selected role via API
+    ;(async () => {
+      try {
+        // persist via apiFetch (adds Authorization header automatically)
+        try {
+          const json = await apiFetch(`/admin/role-permissions/${selectedRole}`, {
+            method: 'PUT',
+            body: JSON.stringify({ permissions: { ...permissions } })
+          })
+          if (json && json.success) {
+            const merged = { ...defaultPermissions, ...(json.data || permissions) }
+            setSavedPermissions({ ...merged })
+            setPermissions({ ...merged })
+            alert('Thay đổi phân quyền đã được lưu thành công!')
+          } else {
+            console.error('Save failed', { parsed: json })
+            alert('Lưu phân quyền thất bại')
+          }
+        } catch (e) {
+          console.error('Failed to save via API', e)
+          alert('Lưu phân quyền thất bại')
+        }
+      } catch (e) {
+        console.error('Failed to save via API', e)
+        alert('Lưu phân quyền thất bại')
+      }
+    })()
   };
+
+  // Load saved permissions for the selected role
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        // indicate loading so UI can show stable state
+        setIsLoading(true)
+
+        // while loading, reset to defaults so we don't show previous role's values
+        setPermissions({ ...defaultPermissions })
+
+        try {
+          const json = await apiFetch(`/admin/role-permissions/${selectedRole}`).catch(() => null)
+          if (cancelled) return
+          if (json && json.success) {
+            const saved = json.data || {}
+            if (saved && Object.keys(saved).length > 0) {
+              const merged = { ...defaultPermissions, ...saved }
+              setPermissions(merged)
+              setSavedPermissions({ ...merged })
+            } else {
+              setSavedPermissions({ ...defaultPermissions })
+              setPermissions({ ...defaultPermissions })
+            }
+          } else {
+            setSavedPermissions({ ...defaultPermissions })
+            setPermissions({ ...defaultPermissions })
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setSavedPermissions({ ...defaultPermissions })
+            setPermissions({ ...defaultPermissions })
+          }
+        }
+      } catch (e) {
+        // ignore, fallback to defaults
+        if (!cancelled) {
+          setSavedPermissions({ ...defaultPermissions })
+          setPermissions({ ...defaultPermissions })
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [selectedRole])
 
   const handleExportConfig = () => {
     console.log('Exporting configuration...');
@@ -245,16 +352,14 @@ export default function RolePermissionManagement() {
       console.log('Undoing changes...');
       // Reset to default state
       setPermissions({
-        overview: { dashboard: true, statistics: false },
-        student: {
-          viewGrades: true,
-          viewNotifications: true,
-          viewAIResults: true,
-          editProfile: false,
-          registerCourses: true,
-          contactAdvisor: false
-        },
-        survey: { createSurvey: false }
+        admin_overview: true,
+        admin_users: true,
+        admin_role_permissions: true,
+        admin_reports: true,
+        teacher_dashboard: true,
+        student_course_overview: true,
+        student_profile_access: true,
+        create_survey: false
       });
     }
   };
@@ -384,6 +489,7 @@ export default function RolePermissionManagement() {
                         {group.permissions.map((permission) => (
                           <div
                             key={permission.id}
+                            onClick={() => handlePermissionToggle(permission.id)}
                             className={`flex items-center justify-between p-3 rounded-lg ${
                               permission.granted ? 'bg-green-50' : 'bg-red-50'
                             }`}
@@ -392,7 +498,7 @@ export default function RolePermissionManagement() {
                               <span className={`mr-3 ${
                                 permission.granted ? 'text-green-500' : 'text-red-500'
                               }`}>
-                                {permission.granted ? '✅' : '❌'}
+                                                {permission.granted ? '✅' : '❌'}
                               </span>
                               <div className="flex items-center">
                                 <span className="text-gray-800">{permission.name}</span>
@@ -403,15 +509,16 @@ export default function RolePermissionManagement() {
                                 )}
                               </div>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={permission.granted}
-                                onChange={() => handlePermissionToggle(group.id, permission.id)}
-                                className="sr-only peer"
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
+                                            <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => { e.stopPropagation() }}>
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={permission.granted}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onChange={() => handlePermissionToggle(permission.id)}
+                                                    className="sr-only peer"
+                                                  />
+                                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
                           </div>
                         ))}
                       </div>
