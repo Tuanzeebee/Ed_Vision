@@ -11,11 +11,15 @@ model Account {
   account_id         Int              @id @default(autoincrement())
   email              String           @unique @db.VarChar(255)
   password_hash      String
-  role               String           @db.VarChar(20)
   status             String?          @default("active") @db.VarChar(20)
   created_at         DateTime         @default(now()) @db.Timestamptz(6)
+  last_login_at      DateTime?        @db.Timestamptz(6)
+  last_logout_at     DateTime?        @db.Timestamptz(6)
+  role_id            Int?
+  roleRel            Role?            @relation(fields: [role_id], references: [id])
   appointmentsBooked Appointment[]
   instructor         Instructor?
+  otps               Otp[]
   parent             Parent?
   profile            Profile?
   student            Student?
@@ -256,26 +260,26 @@ model SurveyAnswer {
 }
 
 model InstructorAvailabilityWeek {
-  week_id                  Int                         @id @default(autoincrement())
-  instructor_id            Int?
-  week_start_date          DateTime                    @db.Date
-  created_at               DateTime                    @default(now()) @db.Timestamptz(6)
-  instructor               Instructor?                 @relation(fields: [instructor_id], references: [instructor_id])
-  instructorWeeklySlots    InstructorWeeklySlot[]
+  week_id                     Int                          @id @default(autoincrement())
+  instructor_id               Int?
+  week_start_date             DateTime                     @db.Date
+  created_at                  DateTime                     @default(now()) @db.Timestamptz(6)
   instructorAvailabilityDates InstructorAvailabilityDate[]
+  instructor                  Instructor?                  @relation(fields: [instructor_id], references: [instructor_id])
+  instructorWeeklySlots       InstructorWeeklySlot[]
 
   @@unique([instructor_id, week_start_date])
   @@map("InstructorAvailabilityWeek")
 }
 
 model InstructorAvailabilityDate {
-  date_id       Int                         @id @default(autoincrement())
+  date_id       Int                        @id @default(autoincrement())
   week_id       Int
-  specific_date DateTime                    @db.Date
-  is_available  Boolean                     @default(true)
+  specific_date DateTime                   @db.Date
+  is_available  Boolean                    @default(true)
   note          String?
-  created_at    DateTime                    @default(now()) @db.Timestamptz(6)
-  week          InstructorAvailabilityWeek  @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
+  created_at    DateTime                   @default(now()) @db.Timestamptz(6)
+  week          InstructorAvailabilityWeek @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
   @@unique([week_id, specific_date])
   @@map("InstructorAvailabilityDate")
@@ -349,4 +353,60 @@ model ReminderSchedule {
   appointment    Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
 
   @@map("ReminderSchedule")
+}
+
+/// OTPs for account verification / password reset
+model Otp {
+  otp_id     Int      @id @default(autoincrement())
+  account_id Int
+  code       String   @db.VarChar(10)
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  account    Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@index([account_id])
+  @@map("Otp")
+}
+
+/// Role-based permissions persisted for roles (admin-managed)
+model Role {
+  id              Int              @id @default(autoincrement())
+  code            String           @unique @db.VarChar(80)
+  name            String           @db.VarChar(150)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(6)
+  accounts        Account[]
+  rolePermissions RolePermission[]
+
+  @@map("Role")
+}
+
+model Permission {
+  id              Int              @id @default(autoincrement())
+  key             String           @unique @db.VarChar(200)
+  name            String           @db.VarChar(200)
+  category        String?          @db.VarChar(120)
+  description     String?
+  sensitive       Boolean          @default(false)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(6)
+  rolePermissions RolePermission[]
+
+  @@map("Permission")
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  enabled      Boolean    @default(false)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(6)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@map("RolePermission")
 }

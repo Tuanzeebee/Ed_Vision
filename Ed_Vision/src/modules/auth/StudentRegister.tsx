@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/student/Student_button"
 import { Input } from "@/components/ui/student/Input"
 import { BackButton } from "@/components/ui/student/Student_BackButton"
 import { useNavigate } from "react-router-dom"
+import { buildUrl } from '@/services/api/config'
 
 type Props = {
   onGoogleRegister?: () => void
@@ -14,6 +15,8 @@ export default function StudentRegister({
   onEmailRegister
 }: Props) {
   const navigate = useNavigate()
+  // keep the prop referenced to avoid unused variable lint
+  void onEmailRegister
 
   const handleBack = () => {
     navigate("/student/landing")
@@ -25,6 +28,7 @@ export default function StudentRegister({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    console.debug('StudentRegister.handleSubmit - called')
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
@@ -45,7 +49,8 @@ export default function StudentRegister({
 
     // Call backend register endpoint
     const payload = { email, password, confirmPassword }
-    fetch('http://localhost:3000/auth/register', {
+    console.debug('StudentRegister - calling backend', buildUrl('/auth/register'))
+    fetch(buildUrl('/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -103,7 +108,7 @@ export default function StudentRegister({
                     name="email"
                     required
                     placeholder="Enter your DTU email"
-                    className="text-sm text-gray-900 placeholder-gray-400"
+                    className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"
                   />
                 </div>
 
@@ -140,6 +145,8 @@ export default function StudentRegister({
                 {/* Register Button */}
                 <Button
                   type="submit"
+                  data-debug="student-register-submit"
+                  onClick={() => console.debug('StudentRegister.button - clicked')}
                   className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-[1.02] shadow-md text-sm"
                 >
                   Register

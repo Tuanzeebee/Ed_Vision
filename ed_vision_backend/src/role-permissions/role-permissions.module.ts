@@ -7,5 +7,6 @@ import { RolePermissionsController } from './role-permissions.controller'
   imports: [PrismaModule],
   providers: [RolePermissionsService],
   controllers: [RolePermissionsController],
+  exports: [RolePermissionsService],
 })
 export class RolePermissionsModule {}

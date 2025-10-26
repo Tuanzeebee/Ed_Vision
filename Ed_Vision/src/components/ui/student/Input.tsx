@@ -5,7 +5,9 @@ export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, style, ...props }, ref) => {
+    // ensure caret is visible (dark) even if browser/autofill changes styles
+    const mergedStyle = { ...(style as React.CSSProperties), caretColor: '#111827' }
     return (
       <input
         type={type}
@@ -14,6 +16,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className
         )}
         ref={ref}
+        style={mergedStyle}
         {...props}
       />
     )

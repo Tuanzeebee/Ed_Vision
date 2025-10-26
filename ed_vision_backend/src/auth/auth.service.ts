@@ -1,12 +1,13 @@
 import { Injectable, BadRequestException, ConflictException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { RolePermissionsService } from '../role-permissions/role-permissions.service'
 import { RegisterDto } from './dto/register.dto'
 import * as bcrypt from 'bcryptjs'
 import { OtpService } from './otp.service'
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService, private readonly otpService: OtpService) {}
+  constructor(private readonly prisma: PrismaService, private readonly otpService: OtpService, private readonly rolePermissionsSvc: RolePermissionsService) {}
 
   /**
    * Register a new student account
@@ -106,7 +107,15 @@ export class AuthService {
     }
 
   const roleCode = account.roleRel?.code || 'student'
-  return { accessToken: `dev-token-${account.account_id}`, account: { account_id: account.account_id, email: account.email, role: roleCode, last_login_at: new Date() } }
+  // attach permissions for the role so frontend can make immediate UI decisions
+  let perms = {}
+  try {
+    perms = await this.rolePermissionsSvc.getPermissionsForRole(roleCode)
+  } catch (e) {
+    perms = {}
+  }
+
+  return { accessToken: `dev-token-${account.account_id}`, account: { account_id: account.account_id, email: account.email, role: roleCode, last_login_at: new Date(), permissions: perms } }
   }
 
   async logout(email: string) {

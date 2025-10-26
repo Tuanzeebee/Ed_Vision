@@ -1,8 +1,8 @@
 // Export all student modules
 export { default as StudentDashboard } from './StudentDashboard'
-export { default as StudentLogin } from './StudentLogin'
-export { default as StudentRegister } from './StudentRegister'
-export { default as StudentOTPVerification } from './StudentOTPVerification'
+export { default as StudentLogin } from '../auth/StudentLogin'
+export { default as StudentRegister } from '../auth/StudentRegister'
+export { default as StudentOTPVerification } from '../auth/StudentOTPVerification'
 export { default as AcademicPlanningDashboard } from './AcademicPlanningDashboard'
 export { default as StudentCourseOverview } from './StudentCourseOverview'
 export { default as CourseDetailView } from './CourseDetailView'

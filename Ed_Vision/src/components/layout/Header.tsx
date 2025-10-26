@@ -3,6 +3,8 @@ import { Button } from "../ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import LanguageSwitcher from "../LanguageSwitcher"
+import { useEffect, useRef, useState } from 'react'
+import { buildUrl } from '@/services/api/config'
 
 type Props = {
   className?: string
@@ -24,17 +26,101 @@ export default function Header({
   const { t } = useTranslation(['common'])
   const navigate = useNavigate()
 
+  // Local UI state for the profile menu and current user info
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const [user, setUser] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem('user')
+      return raw ? JSON.parse(raw) : null
+    } catch (e) {
+      return null
+    }
+  })
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+
+    document.addEventListener('click', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('click', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [])
+
+  // Listen for auth events and storage changes so header updates immediately
+  useEffect(() => {
+    function onLogin(e: Event) {
+      try {
+        const detail = (e as any).detail
+        if (detail) setUser(detail)
+        else {
+          const raw = localStorage.getItem('user')
+          setUser(raw ? JSON.parse(raw) : null)
+        }
+      } catch {
+        setUser(null)
+      }
+    }
+
+    function onLogout() {
+      setUser(null)
+    }
+
+    function onStorage(e: StorageEvent) {
+      if (e.key === 'user' || e.key === 'token') {
+        try { setUser(e.newValue ? JSON.parse(e.newValue) : null) } catch { setUser(null) }
+      }
+    }
+
+    window.addEventListener('auth:login', onLogin as EventListener)
+    window.addEventListener('auth:logout', onLogout)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener('auth:login', onLogin as EventListener)
+      window.removeEventListener('auth:logout', onLogout)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [])
+
   // Temporary hardcoded values; replace with real data as needed
-  const studentName = isAdminMode ? "Admin User" : "Student Name";
-  const studentRole = isAdminMode ? t('common:header.user.administrator') : t('common:header.user.student');
+  const isAuthenticated = !!user
+
+  const studentName = user?.fullName || user?.name || user?.email || (isAdminMode ? "Admin User" : "Guest")
+  const roleCode = (user?.roleRel?.code || user?.role || '') as string
+  const studentRole = roleCode ? roleCode : (isAdminMode ? t('common:header.user.administrator') : t('common:header.user.student'))
 
   const handleLogoClick = () => {
+    // Navigate according to the logged-in user's role when available
+    if (isAuthenticated) {
+      const rc = (user?.roleRel?.code || user?.role || '').toLowerCase()
+      if (rc === 'admin' || rc === 'administrator') return navigate('/admin/overview')
+      if (rc === 'teacher') return navigate('/teacher/dashboard')
+      if (rc === 'parent') return navigate('/parent/dashboard')
+      // default: student
+      return navigate('/student/landing')
+    }
+
+    // Fallback when not authenticated
     if (isAdminMode) {
-      navigate("/admin/overview")
+      navigate('/admin/overview')
     } else {
-      navigate("/student/landing")
+      navigate('/student/landing')
     }
   }
+
+  // mark unused prop as referenced to satisfy strict linting
+  void isLandingPage
 
   return (
     <header className={`bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 ${className}`}>
@@ -143,37 +229,126 @@ export default function Header({
           <div className="flex items-center space-x-4">
             {/* Language Switcher */}
             <LanguageSwitcher />
-            
-            {isLandingPage ? (
-              // Auth buttons for landing page
+
+            {/* If not authenticated show login/register buttons, otherwise show profile dropdown */}
+            {!isAuthenticated ? (
+              // Auth buttons for landing / unauthenticated pages
               <div className="flex items-center space-x-3">
                 <Button
                   variant="outline"
-                  onClick={onLogin}
+                  onClick={() => {
+                    if (onLogin) return onLogin()
+                    navigate('/auth/login')
+                  }}
                   className="border-2 border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:border-purple-500 hover:text-purple-500 transition-all duration-200"
                 >
                   {t('common:header.auth.login')}
                 </Button>
                 <Button
-                  onClick={onRegister}
+                  onClick={() => {
+                    if (onRegister) return onRegister()
+                    navigate('/auth/register')
+                  }}
                   className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
                 >
                   {t('common:header.auth.register')}
                 </Button>
               </div>
             ) : (
-              // User profile for authenticated pages
-              <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors">
-                <img src={STUDENT_ASSETS.defaultAvatar}
-                  alt="User Avatar"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-purple-500" />
-                <div className="hidden sm:block">
-                  <p className="text-sm font-semibold text-gray-900">{studentName}</p>
-                  <p className="text-xs text-gray-500">{studentRole}</p>
-                </div>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
+              // User profile dropdown for authenticated pages
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen((s) => !s)}
+                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  aria-expanded={menuOpen}
+                >
+                  <img src={user?.avatar || STUDENT_ASSETS.defaultAvatar}
+                    alt="User Avatar"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500" />
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-semibold text-gray-900">{studentName}</p>
+                    <p className="text-xs text-gray-500">{studentRole}</p>
+                  </div>
+                  <svg className={`w-4 h-4 text-gray-400 transform transition-transform ${menuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+
+                {/* Dropdown menu */}
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 min-w-max bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
+                    <div className="flex flex-col py-1 px-2">
+                      {/* Profile button */}
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false)
+                          navigate('/student/profile')
+                        }}
+                        className="px-2 py-1 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 rounded-md"
+                      >
+                        <svg
+                          className="w-4 h-4 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M5.121 17.804A13.937 13.937 0 0112 15c2.761 0 5.286.7 7.379 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        Profile
+                      </button>
+
+                      {/* Divider */}
+                      <div className="my-1 border-t border-gray-100"></div>
+
+                      {/* Logout button */}
+                      <button
+                        onClick={async () => {
+                          setMenuOpen(false)
+                          try {
+                            const email = user?.email
+                            if (email) {
+                              await fetch(buildUrl('/auth/logout'), {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email }),
+                              })
+                            }
+                          } catch (e) {
+                            console.error('Logout notify failed', e)
+                          } finally {
+                            localStorage.removeItem('token')
+                            localStorage.removeItem('user')
+                            setUser(null)
+                            window.dispatchEvent(new CustomEvent('auth:logout'))
+                            navigate('/student/landing')
+                          }
+                        }}
+                        className="px-2 py-1 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 rounded-md"
+                      >
+                        <svg
+                          className="w-4 h-4 text-red-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7"
+                          />
+                        </svg>
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+
+                )}
               </div>
             )}
           </div>

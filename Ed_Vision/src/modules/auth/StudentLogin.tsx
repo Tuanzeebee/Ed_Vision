@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/student/Input"
 import { BackButton } from "@/components/ui/student/Student_BackButton"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
+import { buildUrl } from '@/services/api/config'
 
 type Props = {
   onGoogleLogin?: () => void
@@ -34,6 +35,7 @@ export default function StudentLogin({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
+    console.debug('StudentLogin.handleSubmit - called')
     const formData = new FormData(e.currentTarget)
     const email = (formData.get('email') as string) || ''
     const password = (formData.get('password') as string) || ''
@@ -47,7 +49,8 @@ export default function StudentLogin({
     // Default behaviour: call backend /auth/login
     try {
       setLoading(true)
-      const res = await fetch('http://localhost:3000/auth/login', {
+      console.debug('StudentLogin - calling backend', buildUrl('/auth/login'))
+      const res = await fetch(buildUrl('/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -75,6 +78,13 @@ export default function StudentLogin({
         if (account) {
           try {
             localStorage.setItem('user', JSON.stringify(account))
+            // notify other components (Header) that login occurred
+            try {
+              window.dispatchEvent(new CustomEvent('auth:login', { detail: account }))
+            } catch (e) {
+              // older browsers may not support CustomEvent constructor
+              try { window.dispatchEvent(new Event('auth:login')) } catch (_) {}
+            }
           } catch (_) {}
         }
 
@@ -166,7 +176,7 @@ export default function StudentLogin({
                     name="email"
                     required
                     placeholder="Enter your email"
-                    className="text-sm text-gray-900 placeholder-gray-400"
+                    className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"
                   />
                 </div>
 
@@ -188,6 +198,8 @@ export default function StudentLogin({
                 {/* Login Button */}
                 <Button
                   type="submit"
+                  data-debug="student-login-submit"
+                  onClick={() => console.debug('StudentLogin.button - clicked')}
                   disabled={loading}
                   className={"w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-[1.02] shadow-md text-sm " + (loading ? 'opacity-60 cursor-not-allowed' : '')}
                 >
