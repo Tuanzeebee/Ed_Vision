@@ -16,6 +16,7 @@ export interface Report {
   scope: string;
   status: string;
   statusColor: string;
+  format?: string; // Format to export: PDF, Excel, Word
 }
 
 /**
