@@ -8,8 +8,6 @@ import {
     Brain,
     CheckCircle,
     AlertCircle,
-    TrendingUp,
-    TrendingDown,
     Users,
     Target,
     Sparkles,
@@ -31,11 +29,15 @@ interface UploadedFile {
 interface PredictionResult {
     studentId: string
     studentName: string
-    currentGrade: number
-    predictedGrade: number
+    currentGPA: number
+    predictedGPA: number
+    attendanceRate: number
+    spiritualSupport: 'low' | 'medium' | 'high'
+    materialSupport: 'low' | 'medium' | 'high'
     riskLevel: 'low' | 'medium' | 'high'
     confidence: number
     factors: string[]
+    trendData?: number[] // For line chart
 }
 
 export default function PredictionView() {
@@ -44,35 +46,75 @@ export default function PredictionView() {
     const [isUploading, setIsUploading] = useState(false)
     const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null)
     const [dragActive, setDragActive] = useState(false)
+    const [showChartModal, setShowChartModal] = useState(false)
+    const [selectedStudentChart, setSelectedStudentChart] = useState<PredictionResult | null>(null)
 
-    // Sample prediction data
+    // Sample prediction data với cấu trúc mới
     const samplePredictions: PredictionResult[] = [
         {
-            studentId: "SV001",
+            studentId: "CMU2024001",
             studentName: "Nguyễn Văn An",
-            currentGrade: 7.5,
-            predictedGrade: 8.2,
+            currentGPA: 3.2,
+            predictedGPA: 3.5,
+            attendanceRate: 85,
+            spiritualSupport: 'high',
+            materialSupport: 'medium',
             riskLevel: 'low',
             confidence: 85,
-            factors: ["Điểm tăng đều", "Tham gia tích cực", "Bài tập đầy đủ"]
+            factors: ["GPA tăng đều", "Tham gia tích cực", "Bài tập đầy đủ"],
+            trendData: [2.8, 3.0, 3.1, 3.2, 3.3, 3.5]
         },
         {
-            studentId: "SV002",
+            studentId: "CMU2024002",
             studentName: "Trần Thị Bình",
-            currentGrade: 5.2,
-            predictedGrade: 4.8,
+            currentGPA: 2.1,
+            predictedGPA: 1.9,
+            attendanceRate: 62,
+            spiritualSupport: 'low',
+            materialSupport: 'low',
             riskLevel: 'high',
             confidence: 78,
-            factors: ["Điểm giảm dần", "Vắng mặt nhiều", "Nộp bài muộn"]
+            factors: ["GPA giảm dần", "Vắng mặt nhiều", "Nộp bài muộn"],
+            trendData: [2.5, 2.3, 2.2, 2.1, 2.0, 1.9]
         },
         {
-            studentId: "SV003",
+            studentId: "CMU2024003",
             studentName: "Lê Văn Cường",
-            currentGrade: 6.8,
-            predictedGrade: 7.1,
+            currentGPA: 2.7,
+            predictedGPA: 2.9,
+            attendanceRate: 78,
+            spiritualSupport: 'medium',
+            materialSupport: 'high',
             riskLevel: 'medium',
             confidence: 72,
-            factors: ["Điểm không ổn định", "Cần cải thiện", "Tiềm năng tốt"]
+            factors: ["GPA không ổn định", "Cần cải thiện", "Tiềm năng tốt"],
+            trendData: [2.6, 2.8, 2.5, 2.7, 2.8, 2.9]
+        },
+        {
+            studentId: "CMU2024004",
+            studentName: "Phạm Thị Dung",
+            currentGPA: 3.8,
+            predictedGPA: 3.9,
+            attendanceRate: 96,
+            spiritualSupport: 'high',
+            materialSupport: 'high',
+            riskLevel: 'low',
+            confidence: 92,
+            factors: ["Học tập xuất sắc", "Điểm danh đều đặn", "Tích cực tham gia"],
+            trendData: [3.6, 3.7, 3.8, 3.8, 3.9, 3.9]
+        },
+        {
+            studentId: "CMU2024005",
+            studentName: "Hoàng Minh Tuấn",
+            currentGPA: 2.4,
+            predictedGPA: 2.6,
+            attendanceRate: 71,
+            spiritualSupport: 'medium',
+            materialSupport: 'medium',
+            riskLevel: 'medium',
+            confidence: 68,
+            factors: ["Tiến bộ từ từ", "Cần động viên", "Khả năng cải thiện"],
+            trendData: [2.2, 2.3, 2.4, 2.4, 2.5, 2.6]
         }
     ]
 
@@ -148,31 +190,71 @@ export default function PredictionView() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
     }
 
-    const getRiskLevelColor = (level: 'low' | 'medium' | 'high') => {
+    const getSupportLevelColor = (level: 'low' | 'medium' | 'high') => {
         switch (level) {
             case 'low':
-                return 'text-green-600 bg-green-50 border-green-200'
+                return 'text-red-600 bg-red-50 border-red-200'
             case 'medium':
                 return 'text-yellow-600 bg-yellow-50 border-yellow-200'
             case 'high':
-                return 'text-red-600 bg-red-50 border-red-200'
+                return 'text-green-600 bg-green-50 border-green-200'
             default:
                 return 'text-gray-600 bg-gray-50 border-gray-200'
         }
     }
 
-    const getRiskLevelText = (level: 'low' | 'medium' | 'high') => {
+    const getSupportLevelText = (level: 'low' | 'medium' | 'high') => {
         switch (level) {
             case 'low':
-                return 'Rủi ro thấp'
+                return 'Thấp'
             case 'medium':
-                return 'Rủi ro trung bình'
+                return 'Trung bình'
             case 'high':
-                return 'Rủi ro cao'
+                return 'Cao'
             default:
                 return 'Không xác định'
         }
     }
+
+    const getSupportLevelIcon = (level: 'low' | 'medium' | 'high') => {
+        switch (level) {
+            case 'low':
+                return '🔴'
+            case 'medium':
+                return '🟡'
+            case 'high':
+                return '🟢'
+            default:
+                return '⚪'
+        }
+    }
+
+    // Unused functions - có thể sử dụng sau
+    // const getRiskLevelColor = (level: 'low' | 'medium' | 'high') => {
+    //     switch (level) {
+    //         case 'low':
+    //             return 'text-green-600 bg-green-50 border-green-200'
+    //         case 'medium':
+    //             return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+    //         case 'high':
+    //             return 'text-red-600 bg-red-50 border-red-200'
+    //         default:
+    //             return 'text-gray-600 bg-gray-50 border-gray-200'
+    //     }
+    // }
+
+    // const getRiskLevelText = (level: 'low' | 'medium' | 'high') => {
+    //     switch (level) {
+    //         case 'low':
+    //             return 'Rủi ro thấp'
+    //         case 'medium':
+    //             return 'Rủi ro trung bình'
+    //         case 'high':
+    //             return 'Rủi ro cao'
+    //         default:
+    //             return 'Không xác định'
+    //     }
+    // }
 
     return (
         <TeacherLayout currentPage="prediction-view">
@@ -380,71 +462,98 @@ export default function PredictionView() {
                                         <table className="w-full">
                                             <thead>
                                                 <tr className="border-b border-gray-200">
-                                                    <th className="text-left py-3 px-4 font-medium text-gray-900">Sinh viên</th>
-                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Điểm hiện tại</th>
-                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Dự đoán</th>
-                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Xu hướng</th>
-                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Mức rủi ro</th>
-                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Độ tin cậy</th>
-                                                    <th className="text-left py-3 px-4 font-medium text-gray-900">Yếu tố chính</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900 w-16">STT</th>
+                                                    <th className="text-left py-3 px-4 font-medium text-gray-900">Họ và tên sinh viên</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Mã sinh viên</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">GPA dự đoán</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Tỉ lệ điểm danh</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Ủng hộ tinh thần</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Ủng hộ vật chất</th>
+                                                    <th className="text-center py-3 px-4 font-medium text-gray-900">Biểu đồ</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200">
                                                 {selectedFile.predictions.map((prediction, index) => (
                                                     <tr key={index} className="hover:bg-gray-50">
+                                                        {/* STT */}
+                                                        <td className="py-3 px-4 text-center text-sm font-medium text-gray-600">
+                                                            {index + 1}
+                                                        </td>
+
+                                                        {/* Họ và tên sinh viên */}
                                                         <td className="py-3 px-4">
                                                             <div>
                                                                 <p className="font-medium text-gray-900">{prediction.studentName}</p>
-                                                                <p className="text-sm text-gray-500">{prediction.studentId}</p>
+                                                                <p className="text-sm text-gray-500">Độ tin cậy: {prediction.confidence}%</p>
                                                             </div>
                                                         </td>
+
+                                                        {/* Mã sinh viên */}
                                                         <td className="py-3 px-4 text-center">
-                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                                {prediction.currentGrade.toFixed(1)}
+                                                            <span className="font-mono text-sm font-medium text-blue-600">
+                                                                {prediction.studentId}
                                                             </span>
                                                         </td>
+
+                                                        {/* GPA dự đoán */}
                                                         <td className="py-3 px-4 text-center">
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${prediction.predictedGrade >= 8 ? 'bg-green-100 text-green-800' :
-                                                                    prediction.predictedGrade >= 6.5 ? 'bg-yellow-100 text-yellow-800' :
-                                                                        'bg-red-100 text-red-800'
-                                                                }`}>
-                                                                {prediction.predictedGrade.toFixed(1)}
-                                                            </span>
+                                                            <div className="flex flex-col items-center space-y-1">
+                                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${prediction.predictedGPA >= 3.0 ? 'bg-green-100 text-green-800' : prediction.predictedGPA >= 2.5 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                                                    {prediction.predictedGPA.toFixed(2)}
+                                                                </span>
+                                                                <span className="text-xs text-gray-500">
+                                                                    Hiện tại: {prediction.currentGPA.toFixed(2)}
+                                                                </span>
+                                                            </div>
                                                         </td>
+
+                                                        {/* Tỉ lệ điểm danh */}
                                                         <td className="py-3 px-4 text-center">
-                                                            {prediction.predictedGrade > prediction.currentGrade ? (
-                                                                <TrendingUp className="w-5 h-5 text-green-600 mx-auto" />
-                                                            ) : (
-                                                                <TrendingDown className="w-5 h-5 text-red-600 mx-auto" />
-                                                            )}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-center">
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRiskLevelColor(prediction.riskLevel)}`}>
-                                                                {getRiskLevelText(prediction.riskLevel)}
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-3 px-4 text-center">
-                                                            <div className="flex items-center justify-center space-x-2">
-                                                                <div className="w-12 bg-gray-200 rounded-full h-2">
+                                                            <div className="flex flex-col items-center space-y-1">
+                                                                <span className={`font-semibold text-lg ${prediction.attendanceRate >= 90 ? 'text-green-600' : prediction.attendanceRate >= 75 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                                                    {prediction.attendanceRate}%
+                                                                </span>
+                                                                <div className="w-16 bg-gray-200 rounded-full h-2">
                                                                     <div
-                                                                        className="bg-blue-600 h-2 rounded-full"
-                                                                        style={{ width: `${prediction.confidence}%` }}
+                                                                        className={`h-2 rounded-full ${prediction.attendanceRate >= 90 ? 'bg-green-500' : prediction.attendanceRate >= 75 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                                        style={{ width: `${prediction.attendanceRate}%` }}
                                                                     ></div>
                                                                 </div>
-                                                                <span className="text-xs text-gray-600">{prediction.confidence}%</span>
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 px-4">
-                                                            <div className="space-y-1">
-                                                                {prediction.factors.slice(0, 2).map((factor, idx) => (
-                                                                    <span key={idx} className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded mr-1">
-                                                                        {factor}
-                                                                    </span>
-                                                                ))}
-                                                                {prediction.factors.length > 2 && (
-                                                                    <span className="text-xs text-gray-500">+{prediction.factors.length - 2} khác</span>
-                                                                )}
+
+                                                        {/* Ủng hộ tinh thần */}
+                                                        <td className="py-3 px-4 text-center">
+                                                            <div className="flex flex-col items-center space-y-1">
+                                                                <span className="text-lg">{getSupportLevelIcon(prediction.spiritualSupport)}</span>
+                                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSupportLevelColor(prediction.spiritualSupport)}`}>
+                                                                    {getSupportLevelText(prediction.spiritualSupport)}
+                                                                </span>
                                                             </div>
+                                                        </td>
+
+                                                        {/* Ủng hộ vật chất */}
+                                                        <td className="py-3 px-4 text-center">
+                                                            <div className="flex flex-col items-center space-y-1">
+                                                                <span className="text-lg">{getSupportLevelIcon(prediction.materialSupport)}</span>
+                                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSupportLevelColor(prediction.materialSupport)}`}>
+                                                                    {getSupportLevelText(prediction.materialSupport)}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Biểu đồ */}
+                                                        <td className="py-3 px-4 text-center">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedStudentChart(prediction)
+                                                                    setShowChartModal(true)
+                                                                }}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg flex items-center space-x-1 mx-auto transition-colors"
+                                                            >
+                                                                <BarChart3 className="w-4 h-4" />
+                                                                <span className="text-xs">Xem</span>
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -460,10 +569,7 @@ export default function PredictionView() {
                                     <Download className="w-4 h-4" />
                                     <span>Xuất báo cáo</span>
                                 </button>
-                                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
-                                    <BarChart3 className="w-4 h-4" />
-                                    <span>Xem biểu đồ</span>
-                                </button>
+
                             </div>
                         </div>
                     ) : (
@@ -485,6 +591,164 @@ export default function PredictionView() {
                     )}
                 </div>
             </div>
+
+            {/* Chart Modal */}
+            {showChartModal && selectedStudentChart && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                                <BarChart3 className="w-6 h-6 mr-2 text-blue-600" />
+                                Biểu đồ tiến độ - {selectedStudentChart.studentName}
+                            </h3>
+                            <button
+                                onClick={() => setShowChartModal(false)}
+                                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Student Info */}
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-600">Mã sinh viên:</span>
+                                        <p className="font-mono font-medium text-blue-600">{selectedStudentChart.studentId}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">GPA hiện tại:</span>
+                                        <p className="font-bold text-lg">{selectedStudentChart.currentGPA.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">GPA dự đoán:</span>
+                                        <p className="font-bold text-lg text-green-600">{selectedStudentChart.predictedGPA.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Độ tin cậy:</span>
+                                        <p className="font-bold text-lg text-blue-600">{selectedStudentChart.confidence}%</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Line Chart */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                <h4 className="text-lg font-semibold text-gray-900 mb-4">Xu hướng GPA theo thời gian</h4>
+                                <div className="relative">
+                                    {/* Chart Container */}
+                                    <div className="h-64 flex items-end space-x-3 border-b border-l border-gray-300 pl-4 pb-4">
+                                        {selectedStudentChart.trendData?.map((gpa, index) => (
+                                            <div key={index} className="flex-1 flex flex-col items-center space-y-2">
+                                                {/* Bar */}
+                                                <div
+                                                    className={`w-full rounded-t transition-all duration-500 ${gpa >= 3.0 ? 'bg-green-500' : gpa >= 2.5 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                    style={{
+                                                        height: `${(gpa / 4.0) * 200}px`,
+                                                        minHeight: '20px'
+                                                    }}
+                                                ></div>
+                                                {/* Value */}
+                                                <span className="text-xs font-medium text-gray-700">{gpa.toFixed(1)}</span>
+                                                {/* Time Label */}
+                                                <span className="text-xs text-gray-500">Tháng {index + 1}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Y-axis labels */}
+                                    <div className="absolute left-0 top-0 h-64 flex flex-col justify-between text-xs text-gray-500 pr-2">
+                                        <span>4.0</span>
+                                        <span>3.0</span>
+                                        <span>2.0</span>
+                                        <span>1.0</span>
+                                        <span>0.0</span>
+                                    </div>
+                                </div>
+
+                                {/* Chart Legend */}
+                                <div className="flex justify-center space-x-6 mt-4 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-4 h-4 bg-green-500 rounded"></div>
+                                        <span>Giỏi (≥3.0)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                                        <span>Khá (2.5-3.0)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-4 h-4 bg-red-500 rounded"></div>
+                                        <span>Yếu (&lt;2.5)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Support Analysis */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-blue-50 p-4 rounded-lg">
+                                    <h5 className="font-semibold text-blue-900 mb-3">📚 Ủng hộ tinh thần</h5>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-blue-700">Mức độ:</span>
+                                            <span className={`px-2 py-1 rounded text-sm font-medium ${getSupportLevelColor(selectedStudentChart.spiritualSupport)}`}>
+                                                {getSupportLevelText(selectedStudentChart.spiritualSupport)}
+                                            </span>
+                                        </div>
+                                        <div className="text-sm text-blue-600">
+                                            {selectedStudentChart.spiritualSupport === 'high' && 'Sinh viên có động lực học tập cao, tích cực tham gia hoạt động'}
+                                            {selectedStudentChart.spiritualSupport === 'medium' && 'Sinh viên cần được động viên thêm, quan tâm nhiều hơn'}
+                                            {selectedStudentChart.spiritualSupport === 'low' && 'Sinh viên cần can thiệp tâm lý, tư vấn học tập'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-green-50 p-4 rounded-lg">
+                                    <h5 className="font-semibold text-green-900 mb-3">💰 Ủng hộ vật chất</h5>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-green-700">Mức độ:</span>
+                                            <span className={`px-2 py-1 rounded text-sm font-medium ${getSupportLevelColor(selectedStudentChart.materialSupport)}`}>
+                                                {getSupportLevelText(selectedStudentChart.materialSupport)}
+                                            </span>
+                                        </div>
+                                        <div className="text-sm text-green-600">
+                                            {selectedStudentChart.materialSupport === 'high' && 'Điều kiện kinh tế ổn định, đầy đủ tài liệu học tập'}
+                                            {selectedStudentChart.materialSupport === 'medium' && 'Điều kiện trung bình, cần hỗ trợ một phần tài liệu'}
+                                            {selectedStudentChart.materialSupport === 'low' && 'Cần hỗ trợ học bổng, tài liệu học tập'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Recommendations */}
+                            <div className="bg-yellow-50 p-4 rounded-lg">
+                                <h5 className="font-semibold text-yellow-900 mb-3">💡 Khuyến nghị</h5>
+                                <div className="space-y-2">
+                                    {selectedStudentChart.factors.map((factor, index) => (
+                                        <div key={index} className="flex items-start space-x-2">
+                                            <span className="text-yellow-600 mt-1">•</span>
+                                            <span className="text-yellow-800 text-sm">{factor}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                            <button
+                                onClick={() => setShowChartModal(false)}
+                                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                            >
+                                Đóng
+                            </button>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                                <Download className="w-4 h-4" />
+                                <span>Xuất báo cáo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </TeacherLayout>
     )
 }

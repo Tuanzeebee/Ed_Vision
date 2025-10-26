@@ -12,7 +12,6 @@ import {
     Calendar,
     ChevronRight,
     X,
-    Phone,
     Mail,
     User,
     TrendingUp,
@@ -30,19 +29,21 @@ const studentsData = {
             avatar: "/src/assets/teacher/Avatar_Student1.png",
             email: "nguyenvanan@student.edu",
             gpa: 3.8,
+            predictedGpa: 3.9,
             attendance: 95,
             status: "Excellent",
-            riskLevel: "Low"
+            riskLevel: "None" // GPA >= 2.68
         },
         {
             masv: "SV002",
             name: "Trần Thị Bình",
             avatar: "/src/assets/teacher/Avatar_Student2.png",
             email: "tranthibinh@student.edu",
-            gpa: 2.5,
+            gpa: 1.8,
+            predictedGpa: 1.9,
             attendance: 70,
             status: "At Risk",
-            riskLevel: "High"
+            riskLevel: "High" // GPA < 2.0
         },
         {
             masv: "SV003",
@@ -50,9 +51,32 @@ const studentsData = {
             avatar: "/src/assets/teacher/Avatar_Student3.png",
             email: "levancuong@student.edu",
             gpa: 3.2,
+            predictedGpa: 3.4,
             attendance: 85,
             status: "Good",
-            riskLevel: "Medium"
+            riskLevel: "None" // GPA >= 3.2
+        },
+        {
+            masv: "SV005",
+            name: "Hoàng Thị Mai",
+            avatar: "/src/assets/teacher/Avatar_Student2.png",
+            email: "hoangthimai@student.edu",
+            gpa: 2.55,
+            predictedGpa: 2.65,
+            attendance: 82,
+            status: "Monitor",
+            riskLevel: "Monitor" // 2.4 <= GPA < 2.68
+        },
+        {
+            masv: "SV006",
+            name: "Phạm Văn Nam",
+            avatar: "/src/assets/teacher/Avatar_Student1.png",
+            email: "phamvannam@student.edu",
+            gpa: 2.2,
+            predictedGpa: 2.35,
+            attendance: 75,
+            status: "Warning",
+            riskLevel: "Medium" // 2.0 <= GPA < 2.4
         }
     ],
     "KT2022A": [
@@ -62,9 +86,10 @@ const studentsData = {
             avatar: "/src/assets/teacher/Avatar_Student1.png",
             email: "phamthidung@student.edu",
             gpa: 3.9,
+            predictedGpa: 4.0,
             attendance: 98,
             status: "Excellent",
-            riskLevel: "Low"
+            riskLevel: "None" // GPA >= 3.2
         }
     ]
 }
@@ -373,7 +398,8 @@ export default function ClassManagement() {
                                                     className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
                                                     <option value="all">Tất cả mức độ</option>
-                                                    <option value="Low">Ít nguy cơ</option>
+                                                    <option value="None">Không có rủi ro</option>
+                                                    <option value="Monitor">Cần theo dõi</option>
                                                     <option value="Medium">Nguy cơ trung bình</option>
                                                     <option value="High">Nguy cơ cao</option>
                                                 </select>
@@ -388,15 +414,21 @@ export default function ClassManagement() {
                                                 <p className="font-bold text-gray-900">{studentsData[selectedClass as keyof typeof studentsData].length}</p>
                                             </div>
                                             <div className="text-center">
+                                                <p className="text-gray-500">Không rủi ro</p>
+                                                <p className="font-bold text-green-600">
+                                                    {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.riskLevel === 'None').length}
+                                                </p>
+                                            </div>
+                                            <div className="text-center">
                                                 <p className="text-gray-500">Nguy cơ cao</p>
                                                 <p className="font-bold text-red-600">
                                                     {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.riskLevel === 'High').length}
                                                 </p>
                                             </div>
                                             <div className="text-center">
-                                                <p className="text-gray-500">Xuất sắc</p>
+                                                <p className="text-gray-500">Giỏi (≥3.2)</p>
                                                 <p className="font-bold text-green-600">
-                                                    {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.status === 'Excellent').length}
+                                                    {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.gpa >= 3.2).length}
                                                 </p>
                                             </div>
                                         </div>
@@ -415,10 +447,10 @@ export default function ClassManagement() {
                                                     <TableHead className="w-20 text-center">Avatar</TableHead>
                                                     <TableHead className="min-w-[200px]">Thông tin sinh viên</TableHead>
                                                     <TableHead className="w-32 text-center">GPA</TableHead>
+                                                    <TableHead className="w-32 text-center">GPA Dự đoán</TableHead>
                                                     <TableHead className="w-32 text-center">Điểm danh</TableHead>
                                                     <TableHead className="w-36 text-center">Mức độ rủi ro</TableHead>
-                                                    <TableHead className="w-32 text-center">Trạng thái</TableHead>
-                                                    <TableHead className="w-32 text-center">Liên hệ</TableHead>
+                                                    <TableHead className="w-32 text-center">Hành động</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -454,16 +486,31 @@ export default function ClassManagement() {
 
                                                             <TableCell className="text-center">
                                                                 <div className="flex flex-col items-center space-y-1">
-                                                                    <span className={`text-lg font-bold ${student.gpa >= 3.5 ? 'text-green-600' :
-                                                                        student.gpa >= 2.5 ? 'text-yellow-600' : 'text-red-600'
+                                                                    <span className={`text-lg font-bold ${student.gpa >= 3.2 ? 'text-green-600' :
+                                                                        student.gpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'
                                                                         }`}>
                                                                         {student.gpa}
                                                                     </span>
+                                                                    <span className="text-xs text-gray-500">
+                                                                        {student.gpa >= 3.2 ? 'Giỏi' : student.gpa >= 2.68 ? 'Khá' : 'Yếu'}
+                                                                    </span>
+                                                                </div>
+                                                            </TableCell>
+
+                                                            <TableCell className="text-center">
+                                                                <div className="flex flex-col items-center space-y-1">
+                                                                    <span className={`text-lg font-bold ${student.predictedGpa >= 3.2 ? 'text-green-600' :
+                                                                        student.predictedGpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'
+                                                                        }`}>
+                                                                        {student.predictedGpa}
+                                                                    </span>
                                                                     <div className="flex items-center space-x-1">
-                                                                        {student.gpa >= 3.5 ? (
+                                                                        {student.predictedGpa > student.gpa ? (
                                                                             <TrendingUp className="w-3 h-3 text-green-500" />
-                                                                        ) : (
+                                                                        ) : student.predictedGpa < student.gpa ? (
                                                                             <TrendingDown className="w-3 h-3 text-red-500" />
+                                                                        ) : (
+                                                                            <span className="text-xs text-gray-500">—</span>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -482,39 +529,38 @@ export default function ClassManagement() {
 
                                                             <TableCell className="text-center">
                                                                 <Badge
-                                                                    variant={student.riskLevel === 'High' ? 'destructive' :
-                                                                        student.riskLevel === 'Medium' ? 'secondary' : 'default'}
-                                                                    className="text-xs font-medium"
+                                                                    className={`text-xs font-medium ${student.riskLevel === 'High' ? 'bg-red-100 text-red-700 border-red-300' :
+                                                                            student.riskLevel === 'Medium' ? 'bg-orange-100 text-orange-700 border-orange-300' :
+                                                                                student.riskLevel === 'Monitor' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                                                                                    'bg-green-100 text-green-700 border-green-300'
+                                                                        }`}
                                                                 >
-                                                                    {student.riskLevel === 'High' ? 'Nguy cơ cao' :
-                                                                        student.riskLevel === 'Medium' ? 'Nguy cơ TB' : 'Ít nguy cơ'}
+                                                                    {student.riskLevel === 'High' ? '🔴 Nguy cơ cao' :
+                                                                        student.riskLevel === 'Medium' ? '� Nguy cơ TB' :
+                                                                            student.riskLevel === 'Monitor' ? '� Cần theo dõi' :
+                                                                                '🟢 Không rủi ro'}
                                                                 </Badge>
                                                             </TableCell>
 
                                                             <TableCell className="text-center">
-                                                                <Badge
-                                                                    variant={student.status === 'Excellent' ? 'default' :
-                                                                        student.status === 'Good' ? 'secondary' : 'destructive'}
-                                                                    className="text-xs font-medium"
-                                                                >
-                                                                    {student.status === 'Excellent' ? 'Xuất sắc' :
-                                                                        student.status === 'Good' ? 'Tốt' : 'Cần cải thiện'}
-                                                                </Badge>
-                                                            </TableCell>
-
-                                                            <TableCell className="text-center">
-                                                                <div className="flex items-center justify-center space-x-2">
+                                                                <div className="flex items-center justify-center space-x-1">
                                                                     <button
-                                                                        className="text-blue-500 hover:text-blue-700 p-1 rounded transition-colors"
-                                                                        title="Gọi điện"
+                                                                        className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded transition-all"
+                                                                        title="Xem chi tiết"
                                                                     >
-                                                                        <Phone className="w-4 h-4" />
+                                                                        <User className="w-4 h-4" />
                                                                     </button>
                                                                     <button
-                                                                        className="text-green-500 hover:text-green-700 p-1 rounded transition-colors"
-                                                                        title="Gửi email"
+                                                                        className="text-green-600 hover:text-green-800 p-1.5 hover:bg-green-50 rounded transition-all"
+                                                                        title="Nhắn tin"
                                                                     >
                                                                         <Mail className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        className="text-orange-600 hover:text-orange-800 p-1.5 hover:bg-orange-50 rounded transition-all"
+                                                                        title="Đặt lịch tư vấn"
+                                                                    >
+                                                                        <Calendar className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
                                                             </TableCell>

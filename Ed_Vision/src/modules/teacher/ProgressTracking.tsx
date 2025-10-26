@@ -227,34 +227,28 @@ export default function ProgressTracking() {
                 </div>
             </div>
 
-            {/* Advanced Overview Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Compact Overview Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {/* Total Students Card */}
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200">
+                    <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                            <div className="space-y-2">
-                                <p className="text-blue-100 text-sm font-medium">Tổng sinh viên</p>
-                                <p className="text-4xl font-bold">{totalStudents}</p>
-                                <div className="flex items-center space-x-2">
-                                    <div className="flex items-center space-x-1">
-                                        <TrendingUp className="w-3 h-3" />
-                                        <span className="text-xs font-medium">Đang theo dõi</span>
-                                    </div>
+                            <div>
+                                <p className="text-blue-100 text-xs font-medium">Tổng sinh viên</p>
+                                <p className="text-2xl font-bold">{totalStudents}</p>
+                                <div className="flex items-center space-x-1 mt-1">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">Đang theo dõi</span>
                                 </div>
                             </div>
-                            <div className="bg-white/20 p-3 rounded-xl">
-                                <Users className="w-8 h-8 text-white" />
-                            </div>
+                            <Users className="w-8 h-8 text-blue-200" />
                         </div>
-
-                        {/* Mini Progress Indicators */}
-                        <div className="mt-4 flex justify-between text-xs">
-                            <div className="text-center">
+                        <div className="flex justify-between text-xs mt-3 pt-2 border-t border-blue-400/20">
+                            <div>
                                 <div className="text-blue-100">Hoạt động</div>
                                 <div className="font-bold">{totalStudents - highRiskStudents}</div>
                             </div>
-                            <div className="text-center">
+                            <div>
                                 <div className="text-blue-100">Cần hỗ trợ</div>
                                 <div className="font-bold">{highRiskStudents}</div>
                             </div>
@@ -263,33 +257,27 @@ export default function ProgressTracking() {
                 </Card>
 
                 {/* Average GPA Card */}
-                <Card className="bg-gradient-to-br from-emerald-500 to-green-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-emerald-500 to-green-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200">
+                    <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                            <div className="space-y-2">
-                                <p className="text-green-100 text-sm font-medium">GPA học kỳ TB</p>
-                                <p className="text-4xl font-bold">{classStats.averageSemesterGPA}</p>
-                                <div className="flex items-center space-x-2">
-                                    <div className="flex items-center space-x-1">
-                                        <TrendingUp className="w-3 h-3" />
-                                        <span className="text-xs font-medium">Học kỳ hiện tại</span>
-                                    </div>
+                            <div>
+                                <p className="text-green-100 text-xs font-medium">GPA học kỳ TB</p>
+                                <p className="text-2xl font-bold">{classStats.averageSemesterGPA}</p>
+                                <div className="flex items-center space-x-1 mt-1">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">Học kỳ hiện tại</span>
                                 </div>
                             </div>
-                            <div className="bg-white/20 p-3 rounded-xl">
-                                <Award className="w-8 h-8 text-white" />
-                            </div>
+                            <Award className="w-8 h-8 text-green-200" />
                         </div>
-
-                        {/* GPA Distribution Mini Chart */}
-                        <div className="mt-4">
+                        <div className="mt-3 pt-2 border-t border-green-400/20">
                             <div className="flex justify-between text-xs text-green-100 mb-1">
-                                <span>Phân bố GPA</span>
-                                <span>3.0+: {studentsProgress.filter(s => s.currentGPA >= 3.0).length}</span>
+                                <span>GPA ≥ 3.0</span>
+                                <span>{studentsProgress.filter(s => s.currentGPA >= 3.0).length} sinh viên</span>
                             </div>
-                            <div className="w-full bg-white/20 rounded-full h-2">
+                            <div className="w-full bg-white/20 rounded-full h-1.5">
                                 <div
-                                    className="bg-white h-2 rounded-full transition-all duration-500"
+                                    className="bg-white h-1.5 rounded-full transition-all duration-500"
                                     style={{ width: `${(studentsProgress.filter(s => s.currentGPA >= 3.0).length / totalStudents) * 100}%` }}
                                 ></div>
                             </div>
@@ -298,63 +286,51 @@ export default function ProgressTracking() {
                 </Card>
 
                 {/* High Risk Students Card */}
-                <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200">
+                    <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                            <div className="space-y-2">
-                                <p className="text-red-100 text-sm font-medium">Nguy cơ cao</p>
-                                <p className="text-4xl font-bold">{highRiskStudents}</p>
-                                <div className="flex items-center space-x-2">
-                                    <div className="flex items-center space-x-1">
-                                        <AlertTriangle className="w-3 h-3" />
-                                        <span className="text-xs font-medium">Cần can thiệp</span>
-                                    </div>
+                            <div>
+                                <p className="text-red-100 text-xs font-medium">Nguy cơ cao</p>
+                                <p className="text-2xl font-bold">{highRiskStudents}</p>
+                                <div className="flex items-center space-x-1 mt-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    <span className="text-xs">Cần can thiệp</span>
                                 </div>
                             </div>
-                            <div className="bg-white/20 p-3 rounded-xl">
-                                <AlertTriangle className="w-8 h-8 text-white" />
-                            </div>
+                            <AlertTriangle className="w-8 h-8 text-red-200" />
                         </div>
-
-                        {/* Risk Level Breakdown */}
-                        <div className="mt-4 space-y-1">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-red-100">Cao</span>
-                                <span className="font-bold">{studentsProgress.filter(s => s.riskLevel === "high").length}</span>
+                        <div className="flex justify-between text-xs mt-3 pt-2 border-t border-red-400/20">
+                            <div>
+                                <div className="text-red-100">Cao</div>
+                                <div className="font-bold">{studentsProgress.filter(s => s.riskLevel === "high").length}</div>
                             </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-red-100">Trung bình</span>
-                                <span className="font-bold">{studentsProgress.filter(s => s.riskLevel === "medium").length}</span>
+                            <div>
+                                <div className="text-red-100">Trung bình</div>
+                                <div className="font-bold">{studentsProgress.filter(s => s.riskLevel === "medium").length}</div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Improvement Trend Card */}
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200">
+                    <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                            <div className="space-y-2">
-                                <p className="text-purple-100 text-sm font-medium">Tiến bộ tích cực</p>
-                                <p className="text-4xl font-bold">{improvingStudents}</p>
-                                <div className="flex items-center space-x-2">
-                                    <div className="flex items-center space-x-1">
-                                        <TrendingUp className="w-3 h-3" />
-                                        <span className="text-xs font-medium">Xu hướng tăng</span>
-                                    </div>
+                            <div>
+                                <p className="text-purple-100 text-xs font-medium">Tiến bộ tích cực</p>
+                                <p className="text-2xl font-bold">{improvingStudents}</p>
+                                <div className="flex items-center space-x-1 mt-1">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">Xu hướng tăng</span>
                                 </div>
                             </div>
-                            <div className="bg-white/20 p-3 rounded-xl">
-                                <TrendingUp className="w-8 h-8 text-white" />
-                            </div>
+                            <TrendingUp className="w-8 h-8 text-purple-200" />
                         </div>
-
-                        {/* Performance Distribution */}
-                        <div className="mt-4">
-                            <div className="text-xs text-purple-100 mb-2">Tỷ lệ cải thiện: {Math.round((improvingStudents / totalStudents) * 100)}%</div>
-                            <div className="w-full bg-white/20 rounded-full h-2">
+                        <div className="mt-3 pt-2 border-t border-purple-400/20">
+                            <div className="text-xs text-purple-100 mb-1">Tỷ lệ cải thiện: {Math.round((improvingStudents / totalStudents) * 100)}%</div>
+                            <div className="w-full bg-white/20 rounded-full h-1.5">
                                 <div
-                                    className="bg-white h-2 rounded-full transition-all duration-500"
+                                    className="bg-white h-1.5 rounded-full transition-all duration-500"
                                     style={{ width: `${(improvingStudents / totalStudents) * 100}%` }}
                                 ></div>
                             </div>
@@ -363,224 +339,220 @@ export default function ProgressTracking() {
                 </Card>
             </div>
 
-            {/* Weekly Timeline - Moved to Top */}
-            <Card className="mb-6">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center space-x-2">
-                            <BarChart3 className="w-5 h-5 text-blue-600" />
-                            <span>Analytics Dashboard - Hiệu suất Học tập</span>
-                        </CardTitle>
-                        <div className="flex items-center space-x-2">
-                            <Badge className="bg-green-100 text-green-800">Live</Badge>
-                            <Button variant="outline" size="sm">
-                                <RefreshCw className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {/* Compact Key Metrics */}
-                    <div className="grid grid-cols-4 gap-4 mb-4">
-                        <div className="bg-blue-50 p-3 rounded-lg text-center">
-                            <div className="text-xl font-bold text-blue-600">
-                                {Math.round((studentsProgress.reduce((sum, s) => sum + s.attendanceRate, 0) / totalStudents))}%
-                            </div>
-                            <div className="text-xs text-blue-700 font-medium">Điểm danh</div>
-                        </div>
-                        <div className="bg-green-50 p-3 rounded-lg text-center">
-                            <div className="text-xl font-bold text-green-600">
-                                {Math.round((studentsProgress.reduce((sum, s) => sum + s.submissionRate, 0) / totalStudents))}%
-                            </div>
-                            <div className="text-xs text-green-700 font-medium">Nộp bài</div>
-                        </div>
-                        <div className="bg-purple-50 p-3 rounded-lg text-center">
-                            <div className="text-xl font-bold text-purple-600">
-                                {Math.round((studentsProgress.reduce((sum, s) => sum + (s.completedCredits / s.totalCredits) * 100, 0) / totalStudents))}%
-                            </div>
-                            <div className="text-xs text-purple-700 font-medium">Tiến độ</div>
-                        </div>
-                        <div className="bg-orange-50 p-3 rounded-lg text-center">
-                            <div className="text-xl font-bold text-orange-600">
-                                {studentsProgress.filter(s => s.currentGPA >= s.targetGPA - 0.1).length}
-                            </div>
-                            <div className="text-xs text-orange-700 font-medium">Đạt mục tiêu</div>
-                        </div>
-                    </div>
-
-                    {/* Simple Progress Summary */}
-                    <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-4 rounded-lg">
-                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">Phân Bố Hiệu Suất</h4>
-                        <div className="grid grid-cols-3 gap-3 text-center">
-                            <div className="bg-green-100 p-3 rounded-lg">
-                                <div className="text-lg font-bold text-green-700">
-                                    {studentsProgress.filter(s => s.currentGPA >= 3.5 && s.attendanceRate >= 90).length}
+            {/* Compact Analytics Dashboard */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                {/* Analytics Dashboard */}
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center space-x-2 text-lg">
+                                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                                    <span>Analytics Dashboard - Hiệu suất Học tập</span>
+                                </CardTitle>
+                                <div className="flex items-center space-x-2">
+                                    <Badge className="bg-green-100 text-green-800 text-xs">Live</Badge>
+                                    <Button variant="outline" size="sm">
+                                        <RefreshCw className="w-3 h-3" />
+                                    </Button>
                                 </div>
-                                <div className="text-xs text-green-600">Xuất sắc</div>
                             </div>
-                            <div className="bg-yellow-100 p-3 rounded-lg">
-                                <div className="text-lg font-bold text-yellow-700">
-                                    {studentsProgress.filter(s => s.currentGPA >= 2.5 && s.currentGPA < 3.5).length}
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            {/* Compact Key Metrics */}
+                            <div className="grid grid-cols-4 gap-3 mb-3">
+                                <div className="bg-blue-50 p-3 rounded-lg text-center">
+                                    <div className="text-lg font-bold text-blue-600">
+                                        {Math.round((studentsProgress.reduce((sum, s) => sum + s.attendanceRate, 0) / totalStudents))}%
+                                    </div>
+                                    <div className="text-xs text-blue-700 font-medium">Điểm danh</div>
                                 </div>
-                                <div className="text-xs text-yellow-600">Khá</div>
-                            </div>
-                            <div className="bg-red-100 p-3 rounded-lg">
-                                <div className="text-lg font-bold text-red-700">
-                                    {studentsProgress.filter(s => s.currentGPA < 2.5 || s.attendanceRate < 75).length}
+                                <div className="bg-green-50 p-3 rounded-lg text-center">
+                                    <div className="text-lg font-bold text-green-600">
+                                        {Math.round((studentsProgress.reduce((sum, s) => sum + s.submissionRate, 0) / totalStudents))}%
+                                    </div>
+                                    <div className="text-xs text-green-700 font-medium">Nộp bài</div>
                                 </div>
-                                <div className="text-xs text-red-600">Cần hỗ trợ</div>
+                                <div className="bg-purple-50 p-3 rounded-lg text-center">
+                                    <div className="text-lg font-bold text-purple-600">
+                                        {Math.round((studentsProgress.reduce((sum, s) => sum + (s.completedCredits / s.totalCredits) * 100, 0) / totalStudents))}%
+                                    </div>
+                                    <div className="text-xs text-purple-700 font-medium">Tiến độ</div>
+                                </div>
+                                <div className="bg-orange-50 p-3 rounded-lg text-center">
+                                    <div className="text-lg font-bold text-orange-600">
+                                        {studentsProgress.filter(s => s.currentGPA >= s.targetGPA - 0.1).length}
+                                    </div>
+                                    <div className="text-xs text-orange-700 font-medium">Đạt mục tiêu</div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
 
-            {/* Real-time Notifications & Actions */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                        <Clock className="w-5 h-5 text-orange-600" />
-                        <span>Cảnh báo & Hành động</span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Urgent Alerts */}
-                    <div className="space-y-3">
-                        <h4 className="font-semibold text-red-600 text-sm">🚨 Cảnh báo khẩn cấp</h4>
-
-                        {studentsProgress.filter(s => s.riskLevel === "high").slice(0, 2).map((student) => (
-                            <div key={student.id} className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                                <div className="flex items-start space-x-2">
-                                    <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-red-900">{student.name}</p>
-                                        <p className="text-xs text-red-700">GPA: {student.currentGPA} - Vắng: {100 - student.attendanceRate}%</p>
-                                        <Button
-                                            size="sm"
-                                            className="mt-2 bg-red-600 hover:bg-red-700 text-xs"
-                                            onClick={() => {
-                                                setContactForm({
-                                                    ...contactForm,
-                                                    recipient: student.id,
-                                                    subject: `KHẨN CẤP: Can thiệp cho sinh viên ${student.name}`,
-                                                    message: `Sinh viên ${student.name} (${student.id}) đang có nguy cơ học tập cao:\n- GPA hiện tại: ${student.currentGPA}\n- Tỷ lệ vắng học: ${100 - student.attendanceRate}%\n\nCần hỗ trợ và can thiệp kịp thời.`,
-                                                    priority: "urgent"
-                                                })
-                                                setShowContactModal(true)
-                                            }}
-                                        >
-                                            <MessageCircle className="w-3 h-3 mr-1" />
-                                            Can thiệp ngay
-                                        </Button>
+                            {/* Simple Progress Summary */}
+                            <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-3 rounded-lg mb-0">
+                                <h4 className="font-semibold text-gray-900 mb-2 text-sm">Phân Bố Hiệu Suất</h4>
+                                <div className="grid grid-cols-3 gap-3 text-center">
+                                    <div className="bg-green-100 p-2 rounded-lg">
+                                        <div className="text-lg font-bold text-green-700">
+                                            {studentsProgress.filter(s => s.currentGPA >= 3.5 && s.attendanceRate >= 90).length}
+                                        </div>
+                                        <div className="text-xs text-green-600">Xuất sắc</div>
+                                    </div>
+                                    <div className="bg-yellow-100 p-2 rounded-lg">
+                                        <div className="text-lg font-bold text-yellow-700">
+                                            {studentsProgress.filter(s => s.currentGPA >= 2.5 && s.currentGPA < 3.5).length}
+                                        </div>
+                                        <div className="text-xs text-yellow-600">Khá</div>
+                                    </div>
+                                    <div className="bg-red-100 p-2 rounded-lg">
+                                        <div className="text-lg font-bold text-red-700">
+                                            {studentsProgress.filter(s => s.currentGPA < 2.5 || s.attendanceRate < 75).length}
+                                        </div>
+                                        <div className="text-xs text-red-600">Cần hỗ trợ</div>
                                     </div>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                    {/* Positive Updates */}
-                    <div className="space-y-3">
-                        <h4 className="font-semibold text-green-600 text-sm">✅ Cập nhật tích cực</h4>
+                {/* Quick Actions & Alerts */}
+                <div>
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center space-x-2 text-lg">
+                                <Clock className="w-5 h-5 text-orange-600" />
+                                <span>Cảnh báo & Hành động</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {/* Urgent Alerts */}
+                            <div>
+                                <h4 className="font-semibold text-red-600 text-sm mb-2">🚨 Cảnh báo khẩn cấp</h4>
+                                {studentsProgress.filter(s => s.riskLevel === "high").slice(0, 1).map((student) => (
+                                    <div key={student.id} className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                                        <div className="flex items-start space-x-2">
+                                            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-red-900">{student.name}</p>
+                                                <p className="text-xs text-red-700">GPA: {student.currentGPA} - Vắng: {100 - student.attendanceRate}%</p>
+                                                <Button
+                                                    size="sm"
+                                                    className="mt-2 bg-red-600 hover:bg-red-700 text-xs"
+                                                    onClick={() => {
+                                                        setContactForm({
+                                                            ...contactForm,
+                                                            recipient: student.id,
+                                                            subject: `KHẨN CẤP: Can thiệp cho sinh viên ${student.name}`,
+                                                            message: `Sinh viên ${student.name} (${student.id}) đang có nguy cơ học tập cao:\n- GPA hiện tại: ${student.currentGPA}\n- Tỷ lệ vắng học: ${100 - student.attendanceRate}%\n\nCần hỗ trợ và can thiệp kịp thời.`,
+                                                            priority: "urgent"
+                                                        })
+                                                        setShowContactModal(true)
+                                                    }}
+                                                >
+                                                    <MessageCircle className="w-3 h-3 mr-1" />
+                                                    Can thiệp ngay
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
 
-                        <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                            <div className="flex items-start space-x-2">
-                                <TrendingUp className="w-4 h-4 text-green-500 mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium text-green-900">3 sinh viên cải thiện GPA</p>
-                                    <p className="text-xs text-green-700">Tuần này có xu hướng tích cực</p>
+                            {/* Positive Updates */}
+                            <div>
+                                <h4 className="font-semibold text-green-600 text-sm mb-2">✅ Cập nhật tích cực</h4>
+                                <div className="bg-green-50 border border-green-200 p-2 rounded-lg">
+                                    <div className="flex items-start space-x-2">
+                                        <TrendingUp className="w-4 h-4 text-green-500 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-medium text-green-900">3 sinh viên cải thiện GPA</p>
+                                            <p className="text-xs text-green-700">Tuần này có xu hướng tích cực</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                            <div className="flex items-start space-x-2">
-                                <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium text-blue-900">Tỷ lệ nộp bài tăng 5%</p>
-                                    <p className="text-xs text-blue-700">So với tuần trước</p>
+                            {/* Quick Actions */}
+                            <div>
+                                <h4 className="font-semibold text-gray-900 text-sm mb-2">Hành động nhanh</h4>
+                                <div className="space-y-2">
+                                    <Button
+                                        size="sm"
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-xs"
+                                        onClick={() => setShowNotificationModal(true)}
+                                    >
+                                        <Users className="w-3 h-3 mr-2" />
+                                        Gửi thông báo tới lớp
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full text-xs"
+                                        onClick={() => setShowReportModal(true)}
+                                    >
+                                        <Download className="w-3 h-3 mr-2" />
+                                        Xuất báo cáo tuần
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full text-xs border-orange-300 text-orange-600"
+                                        onClick={() => setShowContactModal(true)}
+                                    >
+                                        <MessageCircle className="w-3 h-3 mr-2" />
+                                        Liên hệ phụ huynh
+                                    </Button>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Quick Actions */}
-                    <div className="space-y-2">
-                        <h4 className="font-semibold text-gray-900 text-sm">Hành động nhanh</h4>
-
-                        <Button
-                            size="sm"
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-xs"
-                            onClick={() => setShowNotificationModal(true)}
-                        >
-                            <Users className="w-3 h-3 mr-2" />
-                            Gửi thông báo tới lớp
-                        </Button>
-
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs"
-                            onClick={() => setShowReportModal(true)}
-                        >
-                            <Download className="w-3 h-3 mr-2" />
-                            Xuất báo cáo tuần
-                        </Button>
-
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs border-orange-300 text-orange-600"
-                            onClick={() => setShowContactModal(true)}
-                        >
-                            <MessageCircle className="w-3 h-3 mr-2" />
-                            Liên hệ phụ huynh
-                        </Button>
-                    </div>
-
-                    {/* Performance Summary */}
-                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg">
-                        <h4 className="font-semibold text-gray-900 text-sm mb-3">Tóm tắt hiệu suất</h4>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Lớp hoạt động tốt</span>
-                                <span className="font-bold text-green-600">85%</span>
+                            {/* Performance Summary */}
+                            <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 rounded-lg">
+                                <h4 className="font-semibold text-gray-900 text-sm mb-2">Tóm tắt hiệu suất</h4>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-gray-600">Lớp hoạt động tốt</span>
+                                        <span className="font-bold text-green-600">85%</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-gray-600">Cần theo dõi</span>
+                                        <span className="font-bold text-yellow-600">12%</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-gray-600">Can thiệp khẩn</span>
+                                        <span className="font-bold text-red-600">3%</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Cần theo dõi</span>
-                                <span className="font-bold text-yellow-600">12%</span>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-gray-600">Can thiệp khẩn</span>
-                                <span className="font-bold text-red-600">3%</span>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
 
-            {/* Weekly Timeline - Moved to Top */}
+            {/* Compact Weekly Timeline */}
             <Card className="mb-6">
-                <CardHeader>
+                <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center space-x-2">
+                        <CardTitle className="flex items-center space-x-2 text-lg">
                             <BarChart3 className="w-5 h-5 text-blue-600" />
                             <span>Timeline Tiến độ 6 Tuần - Học kỳ I 2024-2025</span>
                         </CardTitle>
                         <div className="flex items-center space-x-2">
-                            <select className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <select className="bg-gray-100 border border-gray-300 rounded-lg px-2 py-1 text-sm">
                                 <option>Học kỳ I 2024-2025</option>
                                 <option>Học kỳ II 2023-2024</option>
                             </select>
                             <Button variant="outline" size="sm">
-                                <RefreshCw className="w-4 h-4" />
+                                <RefreshCw className="w-3 h-3" />
                             </Button>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                     {/* Simplified Timeline Bars */}
-                    <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-4">
-                        <div className="grid grid-cols-6 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-xl p-4 mb-4">
+                        <div className="grid grid-cols-6 gap-3">
                             {weeklyProgressData.map((week, index) => {
                                 const performance = (week.averageGrade / 10) * 100
                                 const attendanceHeight = week.attendanceRate
@@ -588,16 +560,16 @@ export default function ProgressTracking() {
                                 return (
                                     <div key={index} className="text-center">
                                         {/* Week Bar Chart */}
-                                        <div className="h-24 flex items-end justify-center space-x-1 mb-2">
+                                        <div className="h-20 flex items-end justify-center space-x-1 mb-2">
                                             {/* Grade Bar */}
                                             <div
-                                                className="w-4 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t transition-all duration-300 hover:scale-110"
+                                                className="w-3 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t transition-all duration-300 hover:scale-110"
                                                 style={{ height: `${performance}%` }}
                                                 title={`Điểm TB: ${week.averageGrade}`}
                                             ></div>
                                             {/* Attendance Bar */}
                                             <div
-                                                className="w-4 bg-gradient-to-t from-green-500 to-green-300 rounded-t transition-all duration-300 hover:scale-110"
+                                                className="w-3 bg-gradient-to-t from-green-500 to-green-300 rounded-t transition-all duration-300 hover:scale-110"
                                                 style={{ height: `${attendanceHeight}%` }}
                                                 title={`Điểm danh: ${week.attendanceRate}%`}
                                             ></div>
@@ -615,7 +587,7 @@ export default function ProgressTracking() {
                         </div>
 
                         {/* Legend */}
-                        <div className="flex justify-center space-x-6 mt-4 text-xs">
+                        <div className="flex justify-center space-x-6 mt-3 text-xs">
                             <div className="flex items-center space-x-1">
                                 <div className="w-3 h-3 bg-blue-500 rounded"></div>
                                 <span className="text-gray-600">Điểm TB</span>
@@ -628,7 +600,7 @@ export default function ProgressTracking() {
                     </div>
 
                     {/* Quick Weekly Summary */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                         <div className="bg-blue-50 p-3 rounded-lg text-center">
                             <div className="text-sm font-medium text-blue-800">Điểm TB tuần này</div>
                             <div className="text-xl font-bold text-blue-600">8.2</div>
@@ -642,7 +614,7 @@ export default function ProgressTracking() {
                         <div className="bg-purple-50 p-3 rounded-lg text-center">
                             <div className="text-sm font-medium text-purple-800">Xu hướng</div>
                             <div className="text-xl font-bold text-purple-600 flex items-center justify-center">
-                                <TrendingUp className="w-5 h-5 mr-1" />
+                                <TrendingUp className="w-4 h-4 mr-1" />
                                 Tích cực
                             </div>
                             <div className="text-xs text-purple-600">3 tuần liên tiếp tăng</div>
@@ -653,54 +625,54 @@ export default function ProgressTracking() {
 
             {selectedView === "overview" ? (
                 <>
-                    {/* Simplified Class Performance Overview */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    {/* Compact Class Performance Overview */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                         {/* Class Performance Metrics */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center space-x-2">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center space-x-2 text-lg">
                                     <BarChart3 className="w-5 h-5 text-blue-600" />
                                     <span>Thống kê Hiệu suất Lớp</span>
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-6">
+                            <CardContent className="space-y-4">
                                 {/* Simple Performance Cards */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-blue-50 p-4 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-blue-600">{classStats.averageSemesterGPA}</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-blue-50 p-3 rounded-lg text-center">
+                                        <div className="text-xl font-bold text-blue-600">{classStats.averageSemesterGPA}</div>
                                         <div className="text-sm text-blue-700">GPA Trung Bình</div>
                                         <div className="text-xs text-gray-600 mt-1">Học kỳ hiện tại</div>
                                     </div>
 
-                                    <div className="bg-green-50 p-4 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-green-600">{classStats.averageAttendance}%</div>
+                                    <div className="bg-green-50 p-3 rounded-lg text-center">
+                                        <div className="text-xl font-bold text-green-600">{classStats.averageAttendance}%</div>
                                         <div className="text-sm text-green-700">Điểm Danh TB</div>
                                         <div className="text-xs text-gray-600 mt-1">6 tuần qua</div>
                                     </div>
 
-                                    <div className="bg-purple-50 p-4 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-purple-600">{classStats.averageSubmission}%</div>
+                                    <div className="bg-purple-50 p-3 rounded-lg text-center">
+                                        <div className="text-xl font-bold text-purple-600">{classStats.averageSubmission}%</div>
                                         <div className="text-sm text-purple-700">Nộp Bài TB</div>
                                         <div className="text-xs text-gray-600 mt-1">Đúng thời hạn</div>
                                     </div>
 
-                                    <div className="bg-orange-50 p-4 rounded-lg text-center">
-                                        <div className="text-2xl font-bold text-orange-600">{classStats.studentsOnTrack}</div>
+                                    <div className="bg-orange-50 p-3 rounded-lg text-center">
+                                        <div className="text-xl font-bold text-orange-600">{classStats.studentsOnTrack}</div>
                                         <div className="text-sm text-orange-700">Đạt Mục Tiêu</div>
                                         <div className="text-xs text-gray-600 mt-1">Sinh viên</div>
                                     </div>
                                 </div>
 
                                 {/* Simple Performance Distribution */}
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-gray-900 mb-3">Phân Loại Hiệu Suất</h4>
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <h4 className="font-semibold text-gray-900 mb-2 text-sm">Phân Loại Hiệu Suất</h4>
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between p-2 bg-green-100 rounded">
                                             <div className="flex items-center space-x-2">
                                                 <Star className="w-4 h-4 text-green-600" />
                                                 <span className="text-sm font-medium text-green-800">Xuất sắc (GPA ≥ 3.5)</span>
                                             </div>
-                                            <Badge className="bg-green-200 text-green-800">
+                                            <Badge className="bg-green-200 text-green-800 text-xs">
                                                 {studentsProgress.filter(s => s.currentGPA >= 3.5).length} sinh viên
                                             </Badge>
                                         </div>
@@ -710,7 +682,7 @@ export default function ProgressTracking() {
                                                 <CheckCircle className="w-4 h-4 text-yellow-600" />
                                                 <span className="text-sm font-medium text-yellow-800">Khá (GPA 2.5-3.5)</span>
                                             </div>
-                                            <Badge className="bg-yellow-200 text-yellow-800">
+                                            <Badge className="bg-yellow-200 text-yellow-800 text-xs">
                                                 {studentsProgress.filter(s => s.currentGPA >= 2.5 && s.currentGPA < 3.5).length} sinh viên
                                             </Badge>
                                         </div>
@@ -720,7 +692,7 @@ export default function ProgressTracking() {
                                                 <AlertTriangle className="w-4 h-4 text-red-600" />
                                                 <span className="text-sm font-medium text-red-800">Cần hỗ trợ (GPA &lt; 2.5)</span>
                                             </div>
-                                            <Badge className="bg-red-200 text-red-800">
+                                            <Badge className="bg-red-200 text-red-800 text-xs">
                                                 {studentsProgress.filter(s => s.currentGPA < 2.5).length} sinh viên
                                             </Badge>
                                         </div>
@@ -731,17 +703,17 @@ export default function ProgressTracking() {
 
                         {/* Weekly Summary & Alerts */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center space-x-2">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center space-x-2 text-lg">
                                     <Activity className="w-5 h-5 text-orange-600" />
                                     <span>Phân tích Tuần này</span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {/* Current Week Summary */}
-                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
-                                    <h4 className="font-semibold text-gray-900 mb-3">Tuần 6 - Hiện tại</h4>
-                                    <div className="space-y-3">
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
+                                    <h4 className="font-semibold text-gray-900 mb-2 text-sm">Tuần 6 - Hiện tại</h4>
+                                    <div className="space-y-2">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm text-gray-600">Điểm trung bình</span>
                                             <div className="flex items-center space-x-2">
@@ -761,10 +733,10 @@ export default function ProgressTracking() {
                                 </div>
 
                                 {/* Weekly Insights */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-gray-900">Thông tin chi tiết</h4>
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-900 text-sm">Thông tin chi tiết</h4>
 
-                                    <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                                    <div className="bg-green-50 border border-green-200 p-2 rounded-lg">
                                         <div className="flex items-start space-x-2">
                                             <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
                                             <div>
@@ -774,7 +746,7 @@ export default function ProgressTracking() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                                    <div className="bg-blue-50 border border-blue-200 p-2 rounded-lg">
                                         <div className="flex items-start space-x-2">
                                             <Users className="w-4 h-4 text-blue-500 mt-0.5" />
                                             <div>
@@ -784,7 +756,7 @@ export default function ProgressTracking() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg">
+                                    <div className="bg-orange-50 border border-orange-200 p-2 rounded-lg">
                                         <div className="flex items-start space-x-2">
                                             <Clock className="w-4 h-4 text-orange-500 mt-0.5" />
                                             <div>
@@ -797,7 +769,7 @@ export default function ProgressTracking() {
 
                                 {/* Quick Actions */}
                                 <div className="space-y-2">
-                                    <h4 className="font-semibold text-gray-900">Hành động nhanh</h4>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Hành động nhanh</h4>
                                     <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700">
                                         <Eye className="w-3 h-3 mr-2" />
                                         Xem báo cáo chi tiết
@@ -811,13 +783,13 @@ export default function ProgressTracking() {
                         </Card>
                     </div>
 
-                    {/* Quick Progress Overview */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Compact Progress Overview */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* High Risk Students */}
                         <Card>
-                            <CardHeader>
+                            <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-red-600">Sinh viên cần can thiệp khẩn cấp</CardTitle>
+                                    <CardTitle className="text-red-600 text-lg">Sinh viên cần can thiệp khẩn cấp</CardTitle>
                                     <Badge className="bg-red-100 text-red-800">{highRiskStudents}</Badge>
                                 </div>
                             </CardHeader>
@@ -828,9 +800,9 @@ export default function ProgressTracking() {
                                     .map((student) => (
                                         <div key={student.id} className="bg-red-50 border border-red-200 rounded-lg p-3">
                                             <div className="flex items-center space-x-3">
-                                                <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full" />
+                                                <img src={student.avatar} alt={student.name} className="w-8 h-8 rounded-full" />
                                                 <div className="flex-1">
-                                                    <p className="font-medium text-gray-900">{student.name}</p>
+                                                    <p className="font-medium text-gray-900 text-sm">{student.name}</p>
                                                     <p className="text-sm text-gray-600">{student.id} - {student.class}</p>
                                                     <div className="flex items-center space-x-4 mt-1">
                                                         <span className="text-xs text-red-600">GPA: {student.currentGPA}</span>
@@ -873,9 +845,9 @@ export default function ProgressTracking() {
 
                         {/* Top Performers */}
                         <Card>
-                            <CardHeader>
+                            <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-green-600">Sinh viên xuất sắc</CardTitle>
+                                    <CardTitle className="text-green-600 text-lg">Sinh viên xuất sắc</CardTitle>
                                     <Badge className="bg-green-100 text-green-800">{studentsProgress.filter(s => s.currentGPA >= 3.5).length}</Badge>
                                 </div>
                             </CardHeader>
@@ -888,11 +860,11 @@ export default function ProgressTracking() {
                                         <div key={student.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
                                             <div className="flex items-center space-x-3">
                                                 <div className="relative">
-                                                    <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full" />
+                                                    <img src={student.avatar} alt={student.name} className="w-8 h-8 rounded-full" />
                                                     {index === 0 && <Star className="absolute -top-1 -right-1 w-4 h-4 text-yellow-500 fill-current" />}
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="font-medium text-gray-900">{student.name}</p>
+                                                    <p className="font-medium text-gray-900 text-sm">{student.name}</p>
                                                     <p className="text-sm text-gray-600">{student.id} - {student.class}</p>
                                                     <div className="flex items-center space-x-4 mt-1">
                                                         <span className="text-xs text-green-600 font-medium">GPA: {student.currentGPA}</span>

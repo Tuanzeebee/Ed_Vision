@@ -10,12 +10,11 @@ import {
   ChevronDown,
   ChevronRight,
   Brain,
-  MessageCircle,
-  Megaphone,
   Calendar,
   CalendarPlus,
   Clock,
   CheckCircle,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,9 +26,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [isGradeMenuOpen, setIsGradeMenuOpen] = useState(
     currentPage === 'grade-management' || currentPage === 'prediction-view'
   );
-  const [isMessagesMenuOpen, setIsMessagesMenuOpen] = useState(
-    currentPage === 'messages' || currentPage === 'chat'
-  );
+
   const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
     currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
   );
@@ -44,9 +41,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     setIsGradeMenuOpen(!isGradeMenuOpen);
   };
 
-  const toggleMessagesMenu = () => {
-    setIsMessagesMenuOpen(!isMessagesMenuOpen);
-  };
+
 
   const toggleAppointmentMenu = () => {
     setIsAppointmentMenuOpen(!isAppointmentMenuOpen);
@@ -134,6 +129,18 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           <span>Theo dõi tiến độ</span>
         </button>
 
+        {/* Survey Management */}
+        <button
+          onClick={() => handleNavigation('/teacher/survey-management')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'survey-management'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <ClipboardCheck className="w-5 h-5" />
+          <span>Khảo sát sinh viên</span>
+        </button>
+
         <button
           onClick={() => handleNavigation('/teacher/reports-alerts')}
           className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'reports-alerts'
@@ -145,63 +152,25 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           <span>Báo cáo & Cảnh báo</span>
         </button>
 
-        {/* Messages/Notifications with Dropdown */}
-        <div className="space-y-1">
-          <button
-            onClick={toggleMessagesMenu}
-            className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'messages' || currentPage === 'chat'
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-gray-700 hover:bg-gray-50'
-              }`}
-          >
-            <div className="flex items-center space-x-3">
-              <Bell className="w-5 h-5" />
-              <span>Tin nhắn/Thông báo</span>
-            </div>
-            {isMessagesMenuOpen ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-
-          {/* Dropdown Menu */}
-          {isMessagesMenuOpen && (
-            <div className="ml-4 space-y-1">
-              <button
-                onClick={() => handleNavigation('/teacher/messages')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'messages'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <Megaphone className="w-4 h-4" />
-                <span>Quản lý thông báo</span>
-              </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/chat')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'chat'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Cuộc trò chuyện</span>
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => handleNavigation('/teacher/messages')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'messages'
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
+            }`}
+        >
+          <Bell className="w-5 h-5" />
+          <span>Tin nhắn/Thông báo</span>
+        </button>
 
         {/* Appointment Management with Dropdown */}
         <div className="space-y-1">
           <button
             onClick={toggleAppointmentMenu}
-            className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${
-              currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
+            className={`flex items-center justify-between px-4 py-3 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-gray-700 hover:bg-gray-50'
+              }`}
           >
             <div className="flex items-center space-x-3">
               <Calendar className="w-5 h-5" />
@@ -219,11 +188,10 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <div className="ml-4 space-y-1">
               <button
                 onClick={() => handleNavigation('/teacher/appointments')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${
-                  currentPage === 'schedule'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'schedule'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
               >
                 <CalendarPlus className="w-4 h-4" />
                 <span>Thiết lập lịch rảnh</span>
@@ -231,11 +199,10 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
               <button
                 onClick={() => handleNavigation('/teacher/requests')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${
-                  currentPage === 'requests'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'requests'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
               >
                 <Clock className="w-4 h-4" />
                 <span>Yêu cầu lịch hẹn</span>
@@ -243,11 +210,10 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
               <button
                 onClick={() => handleNavigation('/teacher/confirmed')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${
-                  currentPage === 'confirmed'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'confirmed'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>Lịch hẹn đã xác nhận</span>
