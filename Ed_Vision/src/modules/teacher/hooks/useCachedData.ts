@@ -35,7 +35,6 @@ export function useCachedData<T>(
         if (enableCache && !forceRefresh) {
           const cached = cacheService.get<T>(cacheKey, { ttl });
           if (cached) {
-            console.log(`✓ Cache hit: ${cacheKey}`);
             setData(cached);
             setLoading(false);
             return cached;
@@ -43,7 +42,6 @@ export function useCachedData<T>(
         }
 
         // Fetch fresh data
-        console.log(`⚡ Fetching fresh data: ${cacheKey}`);
         const freshData = await fetcher();
         setData(freshData);
 
@@ -70,7 +68,6 @@ export function useCachedData<T>(
   const invalidate = useCallback(
     async (reload: boolean = false) => {
       cacheService.remove(cacheKey);
-      console.log(`✓ Cache invalidated: ${cacheKey}`);
       if (reload) {
         await loadData(true);
       }
@@ -86,7 +83,6 @@ export function useCachedData<T>(
       setData(newData);
       if (enableCache) {
         cacheService.set(cacheKey, newData, { ttl });
-        console.log(`✓ Cache updated: ${cacheKey}`);
       }
     },
     [cacheKey, enableCache, ttl]

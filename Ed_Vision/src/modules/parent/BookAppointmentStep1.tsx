@@ -7,7 +7,6 @@ import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader";
 import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper";
 import iconMeeting from "@/assets/parent/iconMeeting.svg";
 import iconVideoCall from "@/assets/parent/iconVideoCall.svg";
-import iconPhone from "@/assets/parent/iconPhone.svg";
 import iconClock from "@/assets/parent/iconClock.svg";
 import iconLocation from "@/assets/parent/iconLocation.svg";
 import iconWifi from "@/assets/parent/iconWifi.svg";
@@ -42,14 +41,6 @@ export default function BookAppointmentStep1({ onContinue, onBack, onClose }: Pr
       duration: t('parent:bookAppointment.step1.videoCallDuration'),
       location: t('parent:bookAppointment.step1.videoCallLocation'),
       icon: iconVideoCall,
-    },
-    {
-      id: "phone-call" as MeetingType,
-      title: t('parent:bookAppointment.step1.phoneCallTitle'),
-      description: t('parent:bookAppointment.step1.phoneCallDescription'),
-      duration: t('parent:bookAppointment.step1.phoneCallDuration'),
-      location: t('parent:bookAppointment.step1.phoneCallLocation'),
-      icon: iconPhone,
     },
   ];
 

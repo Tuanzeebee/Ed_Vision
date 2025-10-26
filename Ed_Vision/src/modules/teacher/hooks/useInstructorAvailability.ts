@@ -71,9 +71,14 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const fetchAvailability = useCallback(
     async (startDate?: string, endDate?: string, forceRefresh: boolean = false): Promise<AvailableDate[]> => {
+      // Validate instructorId
+      if (!instructorId || instructorId <= 0) {
+        console.warn('⚠ Invalid instructorId, skipping fetch');
+        return [];
+      }
+
       // Prevent duplicate concurrent requests
       if (fetchInProgressRef.current && !forceRefresh) {
-        console.log('⚠ Fetch already in progress, skipping duplicate request');
         return [];
       }
 
@@ -81,7 +86,6 @@ export function useInstructorAvailability(instructorId: number) {
       const now = Date.now();
       const timeSinceLastFetch = now - lastFetchTimeRef.current;
       if (timeSinceLastFetch < DEBOUNCE_THRESHOLD && !forceRefresh) {
-        console.log('⚠ Debounced: Too soon since last fetch');
         return [];
       }
 
@@ -117,6 +121,11 @@ export function useInstructorAvailability(instructorId: number) {
    * Utilizes caching for improved performance
    */
   const fetchStatistics = useCallback(async (forceRefresh: boolean = false): Promise<AvailabilityStatistics> => {
+    // Validate instructorId
+    if (!instructorId || instructorId <= 0) {
+      throw new Error('Invalid instructorId');
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -136,6 +145,11 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const addAvailabilityDate = useCallback(
     async (date: string, timeSlots?: AvailableDate['timeSlots']): Promise<void> => {
+      // Validate instructorId
+      if (!instructorId || instructorId <= 0) {
+        throw new Error('Invalid instructorId');
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -165,6 +179,11 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const bulkCreateAvailability = useCallback(
     async (dates: AvailableDate[]): Promise<void> => {
+      // Validate instructorId
+      if (!instructorId || instructorId <= 0) {
+        throw new Error('Invalid instructorId');
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -188,11 +207,18 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const deleteAvailabilityDate = useCallback(
     async (date: string): Promise<void> => {
+      // Validate instructorId
+      if (!instructorId || instructorId <= 0) {
+        console.error('❌ Invalid instructorId:', instructorId);
+        throw new Error('Invalid instructorId');
+      }
+
       setLoading(true);
       setError(null);
       try {
         await instructorAvailabilityApi.deleteAvailabilityDate(instructorId, date);
       } catch (err) {
+        console.error('❌ API deleteAvailabilityDate failed:', err);
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to delete availability date';
         setError(errorMessage);
@@ -217,6 +243,11 @@ export function useInstructorAvailability(instructorId: number) {
         capacity: number;
       }
     ): Promise<void> => {
+      // Validate instructorId
+      if (!instructorId || instructorId <= 0) {
+        throw new Error('Invalid instructorId');
+      }
+
       setLoading(true);
       setError(null);
       try {
