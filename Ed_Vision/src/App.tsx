@@ -57,6 +57,7 @@ import VideoRoom from "./modules/student/VideoRoom";
 import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
+import ParentDashboard from "./modules/parent/ParentDashboardNew";
 
 function App() {
         return (
@@ -96,6 +97,7 @@ function App() {
                                 }} /></ProtectedRoute>} />
 
                                 {/* Route cho parent */}
+                                 <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["parent"]}><ParentDashboard /></ProtectedRoute>} />                             
                                 <Route path="/parent/book-appointment/step/:stepNumber" element={<ProtectedRoute allowedRoles={["parent"]}><BookAppointmentStepWrapper /></ProtectedRoute>} />
                                 <Route path="/parent/book-appointment" element={<ProtectedRoute allowedRoles={["parent"]}><Navigate to="/parent/book-appointment/step/1" replace /></ProtectedRoute>} />
                                 <Route path="/parent/appointments" element={<ProtectedRoute allowedRoles={["parent"]}><AllAppointments /></ProtectedRoute>} />

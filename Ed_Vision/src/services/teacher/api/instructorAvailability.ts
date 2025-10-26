@@ -62,7 +62,6 @@ class InstructorAvailabilityApi {
           ttl: this.CACHE_TTL.AVAILABILITY,
         });
         if (cachedData) {
-          console.log('✓ Cache hit: Using cached availability data');
           return cachedData;
         }
       }
@@ -87,7 +86,6 @@ class InstructorAvailabilityApi {
       cacheService.set(cacheKey, result, {
         ttl: this.CACHE_TTL.AVAILABILITY,
       });
-      console.log('✓ Cache updated: Fresh availability data stored');
       
       return result;
     } catch (error) {
@@ -111,7 +109,6 @@ class InstructorAvailabilityApi {
           ttl: this.CACHE_TTL.STATISTICS,
         });
         if (cachedData) {
-          console.log('✓ Cache hit: Using cached statistics');
           return cachedData;
         }
       }
@@ -131,7 +128,6 @@ class InstructorAvailabilityApi {
       cacheService.set(cacheKey, result, {
         ttl: this.CACHE_TTL.STATISTICS,
       });
-      console.log('✓ Cache updated: Fresh statistics stored');
 
       return result;
     } catch (error) {
@@ -164,7 +160,6 @@ class InstructorAvailabilityApi {
 
     // Invalidate cache after modification
     cacheService.invalidateInstructorCache(instructorId);
-    console.log('✓ Cache invalidated: After adding availability date');
 
     return response.json();
   }
@@ -194,7 +189,6 @@ class InstructorAvailabilityApi {
 
     // Invalidate cache after bulk modification
     cacheService.invalidateInstructorCache(instructorId);
-    console.log('✓ Cache invalidated: After bulk create');
 
     return response.json();
   }
@@ -206,6 +200,7 @@ class InstructorAvailabilityApi {
    */
   async deleteAvailabilityDate(instructorId: number, date: string): Promise<void> {
     const url = buildUrl(`${this.baseUrl}/${instructorId}/dates/${date}`);
+    
     const response = await fetch(url, {
       method: 'DELETE',
     });
@@ -217,7 +212,6 @@ class InstructorAvailabilityApi {
 
     // Invalidate cache after deletion
     cacheService.invalidateInstructorCache(instructorId);
-    console.log('✓ Cache invalidated: After deleting availability date');
   }
 
   /**
@@ -265,7 +259,6 @@ class InstructorAvailabilityApi {
 
     // Invalidate cache after deletion
     cacheService.invalidateInstructorCache(instructorId);
-    console.log('✓ Cache invalidated: After deleting time slot');
   }
 }
 

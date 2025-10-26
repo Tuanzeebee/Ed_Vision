@@ -21,6 +21,7 @@ import {
   isTimeSlotOverlapping,
 } from './utils/appointmentUtils';
 import { useInstructorAvailability } from './hooks/useInstructorAvailability';
+import { useInstructorProfile } from './hooks/useInstructorProfile';
 import { instructorAvailabilityApi } from '../../services/teacher/api';
 import { cacheService } from '../../services/cache';
 
@@ -38,11 +39,10 @@ export default function ScheduleManagement({
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState('');
   
-  // Get instructor ID - You should replace this with actual logic to get the logged-in instructor
-  // For example, from auth context or route params
-  const instructorId = 1; // TODO: Get from authentication context
+  // Get instructor profile from logged-in account
+  const { instructorId, loading: profileLoading, error: profileError } = useInstructorProfile();
   
-  // Use the custom hook for API integration
+  // Use the custom hook for API integration (only if instructorId is available)
   const {
     loading,
     error: apiError,
@@ -52,7 +52,7 @@ export default function ScheduleManagement({
     // bulkCreateAvailability, // TODO: Use this for bulk operations
     deleteAvailabilityDate,
     addTimeSlot,
-  } = useInstructorAvailability(instructorId);
+  } = useInstructorAvailability(instructorId || 0);
   
   // Time modal state
   const [timeModalOpen, setTimeModalOpen] = useState(false);
@@ -62,12 +62,23 @@ export default function ScheduleManagement({
   const [endTime, setEndTime] = useState('');
   const [meetingType, setMeetingType] = useState<'online' | 'offline' | 'both'>('both');
   const [capacity, setCapacity] = useState('10');
+  
+  // Delete confirmation modal state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [dateToDelete, setDateToDelete] = useState<{ index: number; date: AvailableDate } | null>(null);
 
   // Helper function to parse date string correctly to avoid timezone issues
   const parseLocalDate = (dateString: string) => {
     const [year, month, day] = dateString.split('-').map(Number);
     return new Date(year, month - 1, day);
   };
+
+  // Show profile error if any
+  useEffect(() => {
+    if (profileError) {
+      showToast(`Lỗi: ${profileError}`, 'error');
+    }
+  }, [profileError, showToast]);
 
   // Update end time when start time or duration changes
   useEffect(() => {
@@ -79,6 +90,11 @@ export default function ScheduleManagement({
   // Load availability data from backend with optimized caching
   // Uses session-based tracking to prevent unnecessary reloads
   useEffect(() => {
+    // Don't load if instructor profile is still loading or not available
+    if (profileLoading || !instructorId) {
+      return;
+    }
+
     const loadAvailability = async () => {
       // Check if this is truly the first load (session-based tracking)
       const hasLoadedThisSession = sessionStorage.getItem('scheduleDataLoaded');
@@ -89,7 +105,6 @@ export default function ScheduleManagement({
       
       // Priority 1: Use cached data if available
       if (cachedData && cachedData.availabilities && availableDates.length === 0) {
-        console.log('✓ Restoring from cache');
         setAvailableDates(cachedData.availabilities.map((avail: any) => ({
           date: avail.date,
           weekId: avail.weekId,
@@ -110,7 +125,6 @@ export default function ScheduleManagement({
       // - No local data exists (availableDates is empty)
       if (!hasLoadedThisSession && availableDates.length === 0) {
         try {
-          console.log('⚡ Initial load from backend');
           const data = await fetchAvailability();
           
           // Update state with backend data
@@ -130,7 +144,7 @@ export default function ScheduleManagement({
     };
     loadAvailability();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array - only run once on mount
+  }, [instructorId, profileLoading]); // Reload when instructorId becomes available
 
   // Show API errors via toast
   useEffect(() => {
@@ -174,11 +188,13 @@ export default function ScheduleManagement({
 
   const handleRemoveDate = async (index: number, skipConfirm: boolean = false) => {
     const removedDate = availableDates[index];
+    const hasTimeSlots = removedDate?.timeSlots?.length > 0;
 
-    if (!skipConfirm && removedDate.timeSlots.length > 0) {
-      if (!window.confirm('Bạn có chắc chắn muốn xóa ngày này và tất cả khung giờ?')) {
-        return;
-      }
+    if (!skipConfirm) {
+      // Open custom confirmation modal instead of browser confirm
+      setDateToDelete({ index, date: removedDate });
+      setDeleteConfirmOpen(true);
+      return;
     }
 
     try {
@@ -186,10 +202,40 @@ export default function ScheduleManagement({
       await deleteAvailabilityDate(removedDate.date);
       // Update local state
       setAvailableDates(availableDates.filter((_, i) => i !== index));
-      showToast(`Đã xóa ngày ${formatDate(removedDate.date)}!`, 'warning');
+      
+      // Only show toast if the date had time slots (important deletion)
+      // For empty dates (no slots), delete silently for better UX
+      if (hasTimeSlots) {
+        showToast(`Đã xóa ngày ${formatDate(removedDate.date)} và ${removedDate.timeSlots.length} khung giờ!`, 'success');
+      }
     } catch (err) {
       showToast('Không thể xóa ngày. Vui lòng thử lại!', 'error');
     }
+  };
+
+  const confirmDeleteDate = async () => {
+    if (!dateToDelete) return;
+    
+    showToast('Đang xóa ngày rảnh...', 'info');
+    setDeleteConfirmOpen(false);
+
+    try {
+      // Delete from backend first
+      await deleteAvailabilityDate(dateToDelete.date.date);
+      // Update local state
+      setAvailableDates(availableDates.filter((_, i) => i !== dateToDelete.index));
+      showToast(`Đã xóa ngày ${formatDate(dateToDelete.date.date)}!`, 'success');
+    } catch (err) {
+      showToast('Không thể xóa ngày. Vui lòng thử lại!', 'error');
+    } finally {
+      setDateToDelete(null);
+    }
+  };
+
+  const cancelDeleteDate = () => {
+    setDeleteConfirmOpen(false);
+    setDateToDelete(null);
+    showToast('Đã hủy xóa ngày rảnh', 'info');
   };
 
   const handleOpenTimeModal = (date: string) => {
@@ -247,6 +293,11 @@ export default function ScheduleManagement({
   };
 
   const handleRemoveTimeSlot = async (dateIndex: number, slotIndex: number) => {
+    if (!instructorId) {
+      showToast('Không tìm thấy thông tin giảng viên!', 'error');
+      return;
+    }
+
     if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ này?')) {
       const newDates = [...availableDates];
       const removedSlot = newDates[dateIndex].timeSlots[slotIndex];
@@ -302,13 +353,36 @@ export default function ScheduleManagement({
   return (
     <>
       <div className="p-4 md:p-6 lg:p-8">
-        {/* Loading overlay */}
-        {loading && (
+        {/* Loading overlay for profile or API operations */}
+        {(profileLoading || loading) && (
           <div className="fixed inset-0 bg-black bg-opacity-20 z-40 flex items-center justify-center">
             <div className="bg-white rounded-lg p-6 shadow-xl">
               <div className="flex items-center space-x-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="text-gray-700 font-medium">Đang xử lý...</span>
+                <span className="text-gray-700 font-medium">
+                  {profileLoading ? 'Đang tải thông tin...' : 'Đang xử lý...'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show error if instructor profile couldn't be loaded */}
+        {!profileLoading && !instructorId && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Không thể tải thông tin giảng viên
+                </h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{profileError || 'Vui lòng đăng nhập lại hoặc liên hệ quản trị viên.'}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -394,6 +468,11 @@ export default function ScheduleManagement({
                     key={index}
                     onClick={() => {
                       if (isAdded) {
+                        // Validate dateIndex before removing
+                        if (dateIndex === -1) {
+                          showToast('Lỗi: Không tìm thấy ngày để xóa!', 'error');
+                          return;
+                        }
                         // Toggle: Remove date if already added
                         // Don't skip confirm if there are time slots
                         handleRemoveDate(dateIndex, !hasTimeSlots);
@@ -402,8 +481,11 @@ export default function ScheduleManagement({
                         handleAddDate(dateString);
                       }
                     }}
+                    disabled={!instructorId}
                     className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 text-center ${
-                      isAdded
+                      !instructorId
+                        ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                        : isAdded
                         ? 'bg-green-50 border-green-500 hover:bg-green-100'
                         : isToday
                         ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
@@ -443,13 +525,15 @@ export default function ScheduleManagement({
                 max={getMaxDateString(6)}
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={!instructorId}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
             <div className="flex items-end">
               <button
                 onClick={() => handleAddDate(selectedDate)}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                disabled={!instructorId}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 <Plus className="h-4 w-4" />
                 Thêm ngày rảnh
@@ -514,7 +598,11 @@ export default function ScheduleManagement({
                         Thêm giờ
                       </button>
                       <button
-                        onClick={() => handleRemoveDate(index)}
+                        onClick={() => {
+                          // Auto-detect: skip confirm if no time slots
+                          const hasTimeSlots = dateObj.timeSlots.length > 0;
+                          handleRemoveDate(index, !hasTimeSlots);
+                        }}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
                       >
                         <X className="w-4 h-4" />
@@ -727,6 +815,62 @@ export default function ScheduleManagement({
                 >
                   <Plus className="w-4 h-4" />
                   Thêm giờ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Toast */}
+      {deleteConfirmOpen && dateToDelete && (
+        <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none flex justify-center p-4">
+          <div className="pointer-events-auto w-full max-w-sm bg-white rounded-lg shadow-2xl border border-gray-200 animate-in slide-in-from-top duration-300">
+            <div className="p-4">
+              {/* Header */}
+              <div className="flex items-start gap-3 mb-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Xác nhận xóa ngày rảnh
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {formatDate(dateToDelete.date.date)}
+                  </p>
+                  {dateToDelete.date.timeSlots.length > 0 && (
+                    <p className="text-xs text-red-600 mt-1 font-medium">
+                      Sẽ xóa {dateToDelete.date.timeSlots.length} khung giờ
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={cancelDeleteDate}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={cancelDeleteDate}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDeleteDate}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Xóa
                 </button>
               </div>
             </div>
