@@ -58,6 +58,7 @@ import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
+import { StudentSurveyManagement } from "./modules/teacher";
 
 function App() {
         return (
@@ -153,6 +154,7 @@ function App() {
                                 <Route path="/teacher/confirmed" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                 <Route path="/teacher/settings" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherDashboard /></ProtectedRoute>} />
                                 <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute allowedRoles={["teacher"]}><MeetingDetailDemo /></ProtectedRoute>} />
+                                <Route path="/teacher/survey-management" element={<ProtectedRoute allowedRoles={["teacher"]}><StudentSurveyManagement /></ProtectedRoute>} />
                         </Routes>
                 </Router>
         );
