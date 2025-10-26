@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
 import LoadingSpinner from "../../components/ui/admin/LoadingSpinner";
 
@@ -94,6 +95,7 @@ const Button = ({ children, variant = "primary", size = "md", className = "", ..
 };
 
 export default function AccountManagement() {
+  const navigate = useNavigate();
   // State management for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
@@ -277,7 +279,10 @@ export default function AccountManagement() {
                   className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg w-64 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <Button className="cursor-pointer px-3 py-2">
+              <Button 
+                className="cursor-pointer px-3 py-2"
+                onClick={() => navigate('/admin/accounts/add')}
+              >
                 <PlusIcon />
                 <span className="ml-2">Thêm mới</span>
               </Button>
@@ -406,25 +411,40 @@ export default function AccountManagement() {
                   </StatusBadge>
                 </div>
                 
-                <div className="col-span-2 flex items-center justify-center -space-x-1">
-                  <Button variant="ghost" size="sm" title="Xem chi tiết" className="hover:bg-blue-50 px-2">
+                <div className="col-span-2 flex items-center justify-center space-x-1">
+                  <button 
+                    title="Xem chi tiết" 
+                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
+                  >
                     <EyeIcon />
-                  </Button>
-                  <Button variant="ghost" size="sm" title="Chỉnh sửa" className="hover:bg-green-50 px-2">
+                  </button>
+                  <button 
+                    title="Chỉnh sửa" 
+                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-green-50 transition-colors cursor-pointer"
+                  >
                     <EditIcon />
-                  </Button>
+                  </button>
                   {user.status === 'blocked' ? (
-                    <Button variant="ghost" size="sm" title="Mở khóa" className="hover:bg-green-50 px-2">
+                    <button 
+                      title="Mở khóa" 
+                      className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-green-50 transition-colors cursor-pointer"
+                    >
                       <UnlockIcon />
-                    </Button>
+                    </button>
                   ) : (
-                    <Button variant="ghost" size="sm" title="Khóa tài khoản" className="hover:bg-red-50 px-2">
+                    <button 
+                      title="Khóa tài khoản" 
+                      className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                    >
                       <LockIcon />
-                    </Button>
+                    </button>
                   )}
-                  <Button variant="ghost" size="sm" title="Xóa" className="hover:bg-red-50 px-2">
+                  <button 
+                    title="Xóa" 
+                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                  >
                     <DeleteIcon />
-                  </Button>
+                  </button>
                 </div>
               </div>
               ))

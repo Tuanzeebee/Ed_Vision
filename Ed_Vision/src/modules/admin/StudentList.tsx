@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
 import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 // CSS để ẩn scrollbar
@@ -200,6 +200,91 @@ export default function StudentList() {
     navigate(`/admin/students/${studentId}`);
   };
 
+  const handleExportExcel = () => {
+    try {
+      // Tạo header cho CSV
+      const headers = [
+        'STT',
+        'Họ và Tên', 
+        'Mã Sinh Viên',
+        'Email', 
+        'Khoa/Ngành',
+        'GPA',
+        'Trạng Thái',
+        'Ngày Nhập Học'
+      ];
+
+      // Tạo dữ liệu CSV
+      const csvRows = [
+        headers.join(','), // Header row
+        ...filteredStudents.map((student, index) => {
+          const row = [
+            (index + 1).toString(),
+            `"${student.name}"`,
+            student.studentCode,
+            student.email,
+            `"${student.faculty}"`,
+            student.gpa.toString(),
+            `"${student.status}"`,
+            student.enrollDate
+          ];
+          return row.join(',');
+        })
+      ];
+
+      const csvContent = csvRows.join('\n');
+      
+      // Tạo file name với timestamp
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+      const fileName = `Danh_sach_sinh_vien_${dateStr}_${timeStr}.csv`;
+
+      // Tạo và download file CSV
+      const blob = new Blob(['\uFEFF' + csvContent], { 
+        type: 'text/csv;charset=utf-8;' 
+      });
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up URL object
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 100);
+
+      // Hiển thị thông báo thành công với thống kê
+      const statusCounts = filteredStudents.reduce((acc, student) => {
+        acc[student.status] = (acc[student.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const statsText = Object.entries(statusCounts)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(', ');
+
+      alert(
+        `✓ Xuất file Excel thành công!\n\n` +
+        `📄 File: ${fileName}\n` +
+        `👥 Tổng số sinh viên: ${filteredStudents.length}\n` +
+        `📊 Thống kê: ${statsText}\n\n` +
+        `Filters áp dụng:\n` +
+        `- Khoa: ${selectedFaculty}\n` +
+        `- Trạng thái: ${selectedStatus}\n` +
+        `- Năm học: ${selectedYear}`
+      );
+
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      alert('❌ Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!');
+    }
+  };
+
   const getGPAColor = (gpa: number) => {
     if (gpa >= 3.5) return "bg-green-100 text-green-800";
     if (gpa >= 2.5) return "bg-yellow-100 text-yellow-800";
@@ -303,11 +388,10 @@ export default function StudentList() {
                   <i className="fas fa-undo mr-2"></i>
                   Reset bộ lọc
                 </button>
-                <button className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium cursor-pointer">
-                  <i className="fas fa-plus mr-2"></i>
-                  Thêm sinh viên
-                </button>
-                <button className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium cursor-pointer">
+                <button 
+                  onClick={handleExportExcel}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium cursor-pointer"
+                >
                   <i className="fas fa-download mr-2"></i>
                   Xuất Excel
                 </button>

@@ -14,15 +14,15 @@ export default function GradeForecastLanding({}: Props) {
   const navigate = useNavigate()
 
   const handleLogin = () => {
-    navigate("/student/login")
+    navigate("/auth/login")
   }
 
   const handleRegister = () => {
-    navigate("/student/register")
+    navigate("/auth/register")
   }
 
   const handleStartPredicting = () => {
-    navigate("/student/register")
+    navigate("/auth/register")
   }
 
   return (

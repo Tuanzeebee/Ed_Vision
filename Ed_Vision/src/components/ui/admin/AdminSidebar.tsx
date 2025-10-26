@@ -21,6 +21,14 @@ function ParentItem({ item }: { item: MenuItemConfig }) {
       return location.pathname === '/admin/permissions' || location.pathname === '/admin/role-permissions'
     }
     
+    // Xử lý đặc biệt cho account management - coi cả /admin/users, /admin/account-management và /admin/accounts/add là active
+    if (child.to === '/admin/users') {
+      return location.pathname === '/admin/users' || 
+             location.pathname === '/admin/account-management' || 
+             location.pathname === '/admin/accounts' ||
+             location.pathname === '/admin/accounts/add'
+    }
+    
     // Xử lý đặc biệt cho khảo sát - coi cả /admin/classes, /admin/questions và /admin/add-question là active
     if (child.to === '/admin/classes') {
       return location.pathname === '/admin/classes' || 
@@ -79,6 +87,12 @@ function LeafItem({ item }: { item: MenuItemConfig }) {
   const isActive = (() => {
     if (item.to === '/admin/permissions') {
       return location.pathname === '/admin/permissions' || location.pathname === '/admin/role-permissions'
+    }
+    if (item.to === '/admin/users') {
+      return location.pathname === '/admin/users' || 
+             location.pathname === '/admin/account-management' || 
+             location.pathname === '/admin/accounts' ||
+             location.pathname === '/admin/accounts/add'
     }
     if (item.to === '/admin/classes') {
       return location.pathname === '/admin/classes' || 

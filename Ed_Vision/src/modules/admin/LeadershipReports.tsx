@@ -13,7 +13,22 @@ import {
   BarElement,
   Filler
 } from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { getScopeStats, saveReportsToStorage, loadReportsFromStorage, type Report } from '@/lib/reportUtils';
+import Modal from '@/components/ui/admin/Modal';
+import { 
+  majorsBySchool, 
+  classesBySchoolAndMajor
+} from '@/lib/leadershipReportsConstants';
+import pdfMake from 'pdfmake/build/pdfmake';
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+import { generateReportContentByType, generateCSVContentByType } from '@/lib/reportTemplates';
+import { generatePDFReportByType } from '@/lib/pdfReportTemplates';
+
+// Configure pdfMake fonts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(pdfMake as any).vfs = pdfFonts;
 
 ChartJS.register(
   CategoryScale,
@@ -29,60 +44,307 @@ ChartJS.register(
 );
 
 export default function LeadershipReports() {
-  // Chart data configurations
-  const trendData = {
-    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
-    datasets: [
+  // State for time filter (from GeneralStatistics)
+  const [timeFilter, setTimeFilter] = useState('tháng-này');
+  
+  // State for report form
+  const [reportType, setReportType] = useState("Báo cáo điểm số");
+  const [dataScope, setDataScope] = useState("Trường Khoa học máy tính");
+  const [major, setMajor] = useState("Tất cả ngành");
+  const [className, setClassName] = useState("Tất cả lớp");
+  const [timeRange, setTimeRange] = useState("Học kỳ hiện tại");
+  const [customWeekStart, setCustomWeekStart] = useState("");
+  const [customWeekEnd, setCustomWeekEnd] = useState("");
+  const [exportFormat, setExportFormat] = useState("PDF");
+  
+  // Get available majors based on selected school
+  const availableMajors = majorsBySchool[dataScope] || [];
+  
+  // Get available classes based on selected school and major
+  const availableClasses = useMemo(() => {
+    if (major === "Tất cả ngành") {
+      // If "All majors" selected, show all classes from all majors in the school
+      const schoolClasses = classesBySchoolAndMajor[dataScope] || {};
+      return Object.values(schoolClasses).flat();
+    }
+    return classesBySchoolAndMajor[dataScope]?.[major] || [];
+  }, [dataScope, major]);
+  
+  // Reset major when school changes
+  useEffect(() => {
+    setMajor("Tất cả ngành");
+    setClassName("Tất cả lớp");
+  }, [dataScope]);
+  
+  // Loading and Modal states
+  const [isLoading, setIsLoading] = useState(false);
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+  
+  // State for reports list - Load from localStorage on mount
+  const [reports, setReports] = useState<Report[]>(() => {
+    const stored = loadReportsFromStorage();
+    return stored || [
       {
-        label: 'Số lượng dự đoán',
-        data: [120, 135, 148, 162, 175, 188, 195, 210, 225, 240, 255, 270],
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#3b82f6',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        yAxisID: 'y'
+        id: 1,
+        name: "Báo cáo điểm cuối kỳ HK1-2024",
+        type: "Điểm số",
+        creator: "Admin",
+        date: "15/12/2024",
+        scope: "Toàn trường",
+        status: "Đã tải xuống",
+        statusColor: "green"
       },
       {
-        label: 'Tỷ lệ chính xác (%)',
-        data: [65, 68, 70, 73, 75, 78, 80, 82, 85, 87, 89, 91],
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderWidth: 3,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#10b981',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderDash: [5, 5],
-        yAxisID: 'y1'
+        id: 2,
+        name: "Phân tích hiệu suất giảng viên",
+        type: "Hiệu suất",
+        creator: "Admin",
+        date: "14/12/2024",
+        scope: "Khoa CNTT",
+        status: "Chưa tải xuống",
+        statusColor: "yellow"
+      },
+      {
+        id: 3,
+        name: "Dự đoán kết quả học tập",
+        type: "Dự đoán",
+        creator: "Admin",
+        date: "13/12/2024",
+        scope: "Lớp 12A",
+        status: "Đã tải xuống",
+        statusColor: "green"
       }
-    ]
+    ];
+  });
+
+  // Save reports to localStorage whenever it changes
+  useEffect(() => {
+    saveReportsToStorage(reports);
+  }, [reports]);
+
+  // Get current time filter label
+  const getTimeFilterLabel = () => {
+    const labels: { [key: string]: string } = {
+      'hôm-nay': 'hôm nay',
+      'tuần-này': 'tuần này',
+      'tháng-này': 'tháng này', 
+      'tất-cả': 'tất cả thời gian'
+    };
+    return labels[timeFilter] || 'tháng này';
   };
 
-  const facultyData = {
-    labels: ['CNTT', 'Kinh tế', 'Ngoại ngữ', 'Y-Dược', 'Kỹ thuật'],
-    datasets: [{
-      data: [35, 25, 20, 12, 8],
-      backgroundColor: [
-        '#3b82f6',
-        '#10b981',
-        '#f59e0b',
-        '#8b5cf6',
-        '#ef4444'
-      ],
-      borderWidth: 2,
-      borderColor: '#ffffff'
-    }]
+  // Get comparison period label
+  const getComparisonLabel = () => {
+    const labels: { [key: string]: string } = {
+      'hôm-nay': 'so với hôm qua',
+      'tuần-này': 'so với tuần trước',
+      'tháng-này': 'so với tháng trước', 
+      'tất-cả': 'so với năm trước'
+    };
+    return labels[timeFilter] || 'so với kỳ trước';
   };
 
+  // Get formatted time range for display
+  const getFormattedTimeRange = useCallback(() => {
+    if (timeRange === "Tùy chỉnh" && customWeekStart && customWeekEnd) {
+      return `Tuần ${customWeekStart} - Tuần ${customWeekEnd}`;
+    }
+    return timeRange;
+  }, [timeRange, customWeekStart, customWeekEnd]);
+
+  // Calculate dynamic data based on time filter using useMemo
+  const dashboardData = useMemo(() => {
+    const baseData: { [key: string]: { reports: number; reportsGrowth: number } } = {
+      'hôm-nay': { reports: 12, reportsGrowth: 25.0 },
+      'tuần-này': { reports: 68, reportsGrowth: 18.5 },
+      'tháng-này': { reports: 487, reportsGrowth: 8.3 },
+      'tất-cả': { reports: 11847, reportsGrowth: 3.2 }
+    };
+    
+    return baseData[timeFilter] || baseData['tháng-này'];
+  }, [timeFilter]);
+
+  // Modal handlers
+  const showModal = useCallback((title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setModal({ isOpen: true, title, message, type });
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModal(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // Helper function to normalize report type for templates
+  const normalizeReportType = (type: string): string => {
+    // Remove "Báo cáo " prefix if exists
+    const cleanType = type.replace('Báo cáo ', '');
+    
+    // Map lowercase to proper case for template matching
+    const typeMap: { [key: string]: string } = {
+      'điểm số': 'Điểm số',
+      'hiệu suất': 'Hiệu suất',
+      'dự đoán': 'Dự đoán',
+      'tổng hợp': 'Tổng hợp'
+    };
+    
+    return typeMap[cleanType.toLowerCase()] || cleanType;
+  };
+
+  // Helper function to export file
+  const exportReportFile = useCallback(async (reportName: string, type: string, scope: string, format: string) => {
+    setIsLoading(true);
+    
+    // Normalize type to match template expectations
+    const normalizedType = normalizeReportType(type);
+    
+    try {
+      const fileName = `${reportName.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}`;
+      
+      let blob: Blob;
+      let fileExtension: string;
+      
+      if (format === 'PDF') {
+        // Export as PDF using pdfMake with type-specific content
+        const stats = getScopeStats(scope);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const docDefinition = generatePDFReportByType(reportName, normalizedType, scope, timeRange, stats) as any;
+        
+        pdfMake.createPdf(docDefinition).download(`${fileName}.pdf`);
+        showModal('Thành công', `Đã xuất báo cáo ${fileName}.pdf thành công!`, 'success');
+        setIsLoading(false);
+        return; // Exit early for PDF
+      } else if (format === 'Excel') {
+        // Enhanced Excel export with type-specific content
+        const stats = getScopeStats(scope);
+        const csvContent = generateCSVContentByType(reportName, normalizedType, scope, timeRange, stats);
+        
+        blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        fileExtension = 'csv';
+    } else if (format === 'Word') {
+      // Word export as text
+      const stats = getScopeStats(scope);
+      const content = generateReportContentByType(reportName, normalizedType, scope, timeRange, stats);
+      blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      fileExtension = 'txt';
+    } else {
+      // PowerPoint export as text
+      const stats = getScopeStats(scope);
+      const content = generateReportContentByType(reportName, normalizedType, scope, timeRange, stats);
+      blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      fileExtension = 'txt';
+    }
+    
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.${fileExtension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showModal('Thành công', `Đã xuất báo cáo ${fileName}.${fileExtension} thành công!`, 'success');
+    } catch (error) {
+      console.error('Lỗi khi xuất báo cáo:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Lỗi không xác định';
+      showModal('Lỗi', `Không thể xuất báo cáo: ${errorMsg}`, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [timeRange, showModal]);
+
+  // Handler to create new report
+  const handleCreateReport = useCallback(() => {
+    const formattedTimeRange = getFormattedTimeRange();
+    
+    const newReport: Report = {
+      id: reports.length + 1,
+      name: `${reportType} - ${new Date().toLocaleDateString('vi-VN')}`,
+      type: reportType.replace('Báo cáo ', ''),
+      creator: "Admin",
+      date: new Date().toLocaleDateString('vi-VN'),
+      scope: dataScope,
+      status: "Chưa tải xuống",
+      statusColor: "yellow",
+      format: exportFormat // Save the selected format
+    };
+    
+    setReports(prev => [newReport, ...prev]);
+    
+    // Show success message - NO auto download
+    showModal(
+      'Thành công',
+      `Đã tạo báo cáo ${exportFormat} thành công!\n\nTên: ${newReport.name}\nPhạm vi: ${dataScope}\nNgành: ${major}\nLớp: ${className}\nThời gian: ${formattedTimeRange}\n\nNhấn nút "Tải xuống" ở danh sách để tải file.`,
+      'success'
+    );
+    
+    // Reset form
+    setReportType("Báo cáo điểm số");
+    setDataScope("Trường Khoa học máy tính");
+    setMajor("Tất cả ngành");
+    setClassName("Tất cả lớp");
+    setTimeRange("Học kỳ hiện tại");
+    setCustomWeekStart("");
+    setCustomWeekEnd("");
+    setExportFormat("PDF");
+  }, [reports, reportType, dataScope, major, className, exportFormat, showModal, getFormattedTimeRange]);
+
+  // Handler for quick create buttons
+  const handleQuickCreate = (reportName: string, reportType: string) => {
+    const newReport: Report = {
+      id: reports.length + 1,
+      name: reportName,
+      type: reportType,
+      creator: "Admin",
+      date: new Date().toLocaleDateString('vi-VN'),
+      scope: "Toàn trường",
+      status: "Chưa tải xuống",
+      statusColor: "yellow",
+      format: "PDF" // Quick create defaults to PDF
+    };
+    
+    setReports([newReport, ...reports]);
+    
+    showModal('Thành công', `⚡ Đã tạo nhanh báo cáo thành công!\n\n${reportName}\n\nNhấn nút "Tải xuống" ở danh sách để tải file PDF.`, 'success');
+  };
+
+  // Handler to download existing report
+  const handleDownloadReport = (report: typeof reports[0]) => {
+    // Use the format saved in the report, or default to PDF
+    const format = report.format || 'PDF';
+    exportReportFile(report.name, report.type, report.scope, format);
+    
+    // Update status to "Đã tải xuống"
+    setReports(prevReports => 
+      prevReports.map(r => 
+        r.id === report.id 
+          ? { ...r, status: 'Đã tải xuống', statusColor: 'green' as const }
+          : r
+      )
+    );
+    
+    showModal('Thành công', `📥 Đã tải xuống báo cáo định dạng ${format}: ${report.name}`, 'success');
+  };
+
+  // Handler to delete report
+  const handleDeleteReport = (reportId: number) => {
+    if (confirm('⚠️ Bạn có chắc chắn muốn xóa báo cáo này?')) {
+      setReports(reports.filter(r => r.id !== reportId));
+      showModal('Thành công', '🗑️ Đã xóa báo cáo!', 'success');
+    }
+  };
+
+  // Chart data configurations
   const dataDistributionData = {
     labels: ['Điểm số', 'Hoạt động học tập', 'Thông tin sinh viên', 'Khảo sát đánh giá', 'Báo cáo hệ thống'],
     datasets: [{
@@ -97,72 +359,6 @@ export default function LeadershipReports() {
       ],
       borderRadius: 6
     }]
-  };
-
-
-
-  const trendOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      intersect: false,
-      mode: 'index' as const
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 20
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)'
-        }
-      },
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        title: {
-          display: true,
-          text: 'Số lượng dự đoán'
-        },
-        min: 100,
-        max: 300
-      },
-      y1: {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        title: {
-          display: true,
-          text: 'Tỷ lệ chính xác (%)'
-        },
-        grid: {
-          drawOnChartArea: false
-        },
-        min: 60,
-        max: 95
-      }
-    }
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: { top: 0, right: 0, bottom: 0, left: 0 }
-    },
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
-        labels: { padding: 10 }
-      }
-    }
   };
 
   const barOptions = {
@@ -190,87 +386,92 @@ export default function LeadershipReports() {
       <div className="p-6 bg-gray-50 overflow-y-auto">
         {/* Page Header */}
         <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <span className="text-blue-600 text-2xl mr-3">📊</span>
-            <h1 className="text-3xl font-bold text-gray-900">Báo cáo Lãnh đạo</h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <span className="text-blue-600 text-2xl mr-3">📊</span>
+              <h1 className="text-3xl font-bold text-gray-900">Báo cáo Lãnh đạo</h1>
+            </div>
+            
+            {/* Time Filter */}
+            <div className="flex items-center space-x-2">
+              {/* Navigation Arrows */}
+              <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
+                <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-l-md transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Today Button */}
+              <button 
+                onClick={() => setTimeFilter('hôm-nay')}
+                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                  timeFilter === 'hôm-nay'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:text-green-600 hover:bg-green-50'
+                }`}
+              >
+                Hôm nay
+              </button>
+              
+              {/* Time Period Buttons */}
+              <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
+                {[
+                  { value: 'tuần-này', label: 'Tuần' },
+                  { value: 'tháng-này', label: 'Tháng' },
+                  { value: 'tất-cả', label: 'Tất cả' }
+                ].map((period, index) => (
+                  <button
+                    key={period.value}
+                    onClick={() => setTimeFilter(period.value)}
+                    className={`px-2 py-1 text-xs font-medium transition-colors ${
+                      index === 0 ? 'rounded-l-md' : ''
+                    } ${
+                      index === 2 ? 'rounded-r-md' : ''
+                    } ${
+                      timeFilter === period.value
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                    }`}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          <p className="text-gray-600">Hiển thị báo cáo dữ liệu, hiệu suất và phân tích nâng cao</p>
+          <p className="text-gray-600">Hiển thị báo cáo dữ liệu và phân tích ({getTimeFilterLabel()})</p>
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Data */}
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Tổng số dữ liệu</p>
-                  <p className="text-3xl font-bold text-blue-900 mt-2">1,254,897</p>
-                  <div className="flex items-center mt-2">
-                    <span className="text-green-500 text-sm mr-1">↗</span>
-                    <span className="text-green-600 text-sm font-medium">+12.5%</span>
-                    <span className="text-blue-600 text-sm ml-1">so với kỳ trước</span>
-                  </div>
-                </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">💾</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Reports Created */}
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <div className="mb-8">
+          {/* Reports Created - Single Card */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 max-w-md">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-700">Báo cáo đã tạo</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">487</p>
+                  <p className="text-3xl font-bold text-green-900 mt-2">
+                    {dashboardData.reports.toLocaleString('vi-VN')}
+                  </p>
                   <div className="flex items-center mt-2">
-                    <span className="text-green-500 text-sm mr-1">↗</span>
-                    <span className="text-green-600 text-sm font-medium">+8.3%</span>
+                    <span className={`text-sm mr-1 ${dashboardData.reportsGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {dashboardData.reportsGrowth >= 0 ? '↗' : '↘'}
+                    </span>
+                    <span className={`text-sm font-medium ${dashboardData.reportsGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {dashboardData.reportsGrowth >= 0 ? '+' : ''}{dashboardData.reportsGrowth}%
+                    </span>
+                    <span className="text-green-600 text-sm ml-1">{getComparisonLabel()}</span>
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
                   <span className="text-white text-2xl">📄</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Prediction Accuracy */}
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">Tỷ lệ dự đoán chính xác</p>
-                  <p className="text-3xl font-bold text-purple-900 mt-2">92.7%</p>
-                  <div className="flex items-center mt-2">
-                    <span className="text-green-500 text-sm mr-1">↗</span>
-                    <span className="text-green-600 text-sm font-medium">+2.1%</span>
-                  </div>
-                </div>
-                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">🎯</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Response Time */}
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-700">Thời gian phản hồi TB</p>
-                  <p className="text-3xl font-bold text-orange-900 mt-2">1.8s</p>
-                  <div className="flex items-center mt-2">
-                    <span className="text-orange-500 text-sm mr-1">↗</span>
-                    <span className="text-orange-600 text-sm font-medium">+0.3s</span>
-                  </div>
-                </div>
-                <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">⏰</span>
                 </div>
               </div>
             </CardContent>
@@ -284,53 +485,131 @@ export default function LeadershipReports() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Loại báo cáo</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select 
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
                   <option>Báo cáo điểm số</option>
                   <option>Báo cáo hiệu suất</option>
                   <option>Báo cáo dự đoán</option>
                   <option>Báo cáo tổng hợp</option>
                 </select>
               </div>
+              
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Phạm vi dữ liệu</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                  <option>Toàn trường</option>
-                  <option>Theo khoa</option>
-                  <option>Theo lớp</option>
-                  <option>Theo môn học</option>
+                <select 
+                  value={dataScope}
+                  onChange={(e) => setDataScope(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option>Trường Khoa học máy tính</option>
+                  <option>Trường Công nghệ</option>
+                  <option>Trường Kinh tế và Kinh doanh</option>
+                  <option>Trường Ngôn ngữ và Xã hội nhân văn</option>
+                  <option>Trường Du lịch</option>
+                  <option>Trường Y-Dược</option>
+                  <option>Trường Đào tạo quốc tế</option>
+                  <option>Viện Quản lý Nam Khuê</option>
+                  <option>Viện Việt-Nhật</option>
                 </select>
               </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Ngành</label>
+                <select 
+                  value={major}
+                  onChange={(e) => setMajor(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option>Tất cả ngành</option>
+                  {availableMajors.map((majorName) => (
+                    <option key={majorName} value={majorName}>
+                      {majorName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Lớp</label>
+                <select 
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option>Tất cả lớp</option>
+                  {availableClasses.map((classCode) => (
+                    <option key={classCode} value={classCode}>
+                      {classCode}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Khoảng thời gian</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <select 
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
                   <option>Học kỳ hiện tại</option>
                   <option>Năm học hiện tại</option>
                   <option>6 tháng gần đây</option>
                   <option>Tùy chỉnh</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Bộ lọc bổ sung</label>
-                <input 
-                  type="text" 
-                  placeholder="Nhập từ khóa lọc..." 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+              
+              {/* Show custom week range inputs when "Tùy chỉnh" is selected */}
+              {timeRange === "Tùy chỉnh" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tuần bắt đầu</label>
+                    <input 
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={customWeekStart}
+                      onChange={(e) => setCustomWeekStart(e.target.value)}
+                      placeholder="VD: 2" 
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tuần kết thúc</label>
+                    <input 
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={customWeekEnd}
+                      onChange={(e) => setCustomWeekEnd(e.target.value)}
+                      placeholder="VD: 5" 
+                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </>
+              )}
+              
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Định dạng xuất</label>
-                <select className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                  <option>PDF</option>
-                  <option>Excel</option>
-                  <option>Word</option>
-                  <option>Thuyết trình</option>
+                <select 
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="PDF">📄 PDF</option>
+                  <option value="Excel">📊 Excel (CSV)</option>
+                  <option value="Word">📝 Word (TXT)</option>
                 </select>
               </div>
-              <div className="flex items-end space-x-2">
-                <button className="bg-gray-200 text-gray-700 px-2 py-1 text-xs rounded-md hover:bg-gray-300 transition-colors cursor-pointer">
-                  💾 Lưu cấu hình
-                </button>
-                <button className="bg-blue-600 text-white px-2 py-1 text-xs rounded-md hover:bg-blue-700 transition-colors cursor-pointer">
+              
+              <div className="flex items-end">
+                <button 
+                  onClick={handleCreateReport}
+                  className="bg-blue-600 text-white px-4 py-2 text-sm rounded-md hover:bg-blue-700 transition-colors cursor-pointer font-medium"
+                >
                   ➕ Tạo báo cáo
                 </button>
               </div>
@@ -341,7 +620,9 @@ export default function LeadershipReports() {
         {/* Reports List */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Danh sách báo cáo đã tạo</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Danh sách báo cáo đã tạo</h2>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -356,109 +637,57 @@ export default function LeadershipReports() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Báo cáo điểm cuối kỳ HK1-2024</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Điểm số</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Admin</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">15/12/2024</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Toàn trường</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✅ Hoàn thành
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900 cursor-pointer" title="Xem">
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 cursor-pointer" title="Tải xuống">
-                          <i className="fas fa-download"></i>
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 cursor-pointer" title="Xóa">
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Phân tích hiệu suất giảng viên</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Hiệu suất</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Admin</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">14/12/2024</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Khoa CNTT</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        ⏱️ Đang xử lý
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900 cursor-pointer" title="Xem">
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button className="text-orange-600 hover:text-orange-900 cursor-pointer" title="Tạm dừng">
-                          <i className="fas fa-pause"></i>
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 cursor-pointer" title="Xóa">
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Dự đoán kết quả học tập</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dự đoán</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Admin</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">13/12/2024</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Lớp 12A</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        ❌ Thất bại
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900 cursor-pointer" title="Xem">
-                          <i className="fas fa-eye"></i>
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 cursor-pointer" title="Thử lại">
-                          <i className="fas fa-redo"></i>
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 cursor-pointer" title="Xóa">
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  {reports.map((report) => (
+                    <tr key={report.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.type}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.creator}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.date}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.scope}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          report.statusColor === 'green' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {report.statusColor === 'green' ? '✅' : '📝'} {report.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex space-x-3">
+                          {/* Xem chi tiết */}
+                          <button 
+                            onClick={() => showModal('Xem báo cáo', `📄 Xem chi tiết báo cáo: ${report.name}\n\nLoại: ${report.type}\nPhạm vi: ${report.scope}\nNgày tạo: ${report.date}\n\nNội dung báo cáo sẽ được hiển thị ở đây...`, 'info')}
+                            className="text-blue-600 hover:text-blue-900 cursor-pointer transition-colors" 
+                            title="Xem chi tiết"
+                          >
+                            <i className="fas fa-eye"></i>
+                          </button>
+                          
+                          {/* Tải xuống */}
+                          <button 
+                            onClick={() => handleDownloadReport(report)}
+                            className="text-green-600 hover:text-green-900 cursor-pointer transition-colors" 
+                            title="Tải xuống"
+                          >
+                            <i className="fas fa-download"></i>
+                          </button>
+                          
+                          {/* Xóa */}
+                          <button 
+                            onClick={() => handleDeleteReport(report.id)}
+                            className="text-red-600 hover:text-red-900 cursor-pointer transition-colors" 
+                            title="Xóa"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Trend Chart */}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Xu hướng dữ liệu theo thời gian</h3>
-              <div className="h-80 w-full">
-                <Line data={trendData} options={trendOptions} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Faculty Distribution Chart */}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Phân bố theo khoa</h3>
-              <div className="h-64 w-full mt-2">
-                <Doughnut data={facultyData} options={doughnutOptions} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Data Distribution Chart */}
         <Card className="mb-8">
@@ -470,66 +699,7 @@ export default function LeadershipReports() {
           </CardContent>
         </Card>
 
-        {/* Additional Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Prediction Accuracy */}
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-green-800">Độ chính xác dự đoán</h3>
-                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-md">
-                  <span className="text-white">📈</span>
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-green-700 mb-2">+5.2%</p>
-                <p className="text-sm text-green-600">so với tháng trước</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* System Usage */}
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-blue-800">Mức độ sử dụng hệ thống</h3>
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-md">
-                  <span className="text-white">👥</span>
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-blue-700 mb-2">+12.8%</p>
-                <p className="text-sm text-blue-600">tăng trưởng</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Factors */}
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-purple-800">Yếu tố ảnh hưởng Top 3</h3>
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-md">
-                  <span className="text-white">⭐</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-700">Chuyên cần</span>
-                  <span className="text-sm font-semibold text-purple-900">85%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-700">Bài tập</span>
-                  <span className="text-sm font-semibold text-purple-900">72%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-700">Thi giữa kỳ</span>
-                  <span className="text-sm font-semibold text-purple-900">68%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Additional Metrics - removed as requested */}
 
         {/* Recommended Reports */}
         <Card>
@@ -541,7 +711,10 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">📊</div>
                   <h3 className="font-semibold mb-2">Dự đoán điểm cuối kỳ</h3>
                   <p className="text-sm opacity-90 mb-4">Phân tích và dự đoán kết quả học tập</p>
-                  <button className="bg-white text-blue-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button 
+                    onClick={() => handleQuickCreate('Dự đoán điểm cuối kỳ', 'Dự đoán')}
+                    className="bg-white text-blue-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
+                  >
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -552,7 +725,10 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">👨‍🏫</div>
                   <h3 className="font-semibold mb-2">Phân tích hiệu suất giảng viên</h3>
                   <p className="text-sm opacity-90 mb-4">Đánh giá chất lượng giảng dạy</p>
-                  <button className="bg-white text-green-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button 
+                    onClick={() => handleQuickCreate('Phân tích hiệu suất giảng viên', 'Hiệu suất')}
+                    className="bg-white text-green-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
+                  >
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -563,7 +739,10 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">⚖️</div>
                   <h3 className="font-semibold mb-2">So sánh kết quả học tập</h3>
                   <p className="text-sm opacity-90 mb-4">Phân tích xu hướng và so sánh</p>
-                  <button className="bg-white text-purple-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button 
+                    onClick={() => handleQuickCreate('So sánh kết quả học tập', 'So sánh')}
+                    className="bg-white text-purple-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
+                  >
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -574,7 +753,10 @@ export default function LeadershipReports() {
                   <div className="text-3xl mb-3">⚠️</div>
                   <h3 className="font-semibold mb-2">Cảnh báo học vụ</h3>
                   <p className="text-sm opacity-90 mb-4">Phát hiện rủi ro và cảnh báo sớm</p>
-                  <button className="bg-white text-orange-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100">
+                  <button 
+                    onClick={() => handleQuickCreate('Cảnh báo học vụ', 'Cảnh báo')}
+                    className="bg-white text-orange-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
+                  >
                     ⚡ Tạo nhanh
                   </button>
                 </div>
@@ -583,6 +765,25 @@ export default function LeadershipReports() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+            <p className="mt-4 text-gray-700 font-medium">Đang xử lý...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+      />
     </AdminLayout>
   );
 }
