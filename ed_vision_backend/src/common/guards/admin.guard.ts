@@ -16,40 +16,40 @@ export class AdminGuard implements CanActivate {
     let token = ''
     if (typeof auth === 'string' && auth.startsWith('Bearer ')) token = auth.slice(7)
     if (!token && req.headers['x-access-token']) token = req.headers['x-access-token']
-    if (!token) throw new UnauthorizedException('Missing token')
+    if (!token) throw new UnauthorizedException('Thiếu mã xác thực')
 
     // expect token like dev-token-<id>
     const parts = token.split('-')
     const idStr = parts[parts.length - 1]
     const id = parseInt(idStr, 10)
-    if (isNaN(id)) throw new UnauthorizedException('Invalid token')
+    if (isNaN(id)) throw new UnauthorizedException('Token không hợp lệ')
 
     // lazy import PrismaClient to avoid circular deps
     const { PrismaClient } = require('@prisma/client')
     const prisma = new PrismaClient()
     try {
       const account = await prisma.account.findUnique({ where: { account_id: id }, include: { roleRel: true } })
-      if (!account) throw new UnauthorizedException('Account not found')
+      if (!account) throw new UnauthorizedException('Không tìm thấy tài khoản')
       const roleCode = account.roleRel?.code
-      if (!roleCode) throw new UnauthorizedException('Account role not assigned')
+      if (!roleCode) throw new UnauthorizedException('Chưa phân quyền cho tài khoản')
 
       // Check for optional required-permission metadata on the handler/class
       const requiredPermission = this.reflector.get<string>('requiredPermission', context.getHandler()) || this.reflector.get<string>('requiredPermission', context.getClass())
       if (requiredPermission) {
         // find role and permission and ensure enabled
         const role = await prisma.role.findUnique({ where: { code: roleCode } })
-        if (!role) throw new ForbiddenException('Role not found')
+        if (!role) throw new ForbiddenException('Không tìm thấy vai trò')
         const perm = await prisma.permission.findUnique({ where: { key: requiredPermission } })
-        if (!perm) throw new ForbiddenException('Permission not found')
+        if (!perm) throw new ForbiddenException('Không tìm thấy quyền')
         const rp = await prisma.rolePermission.findUnique({ where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } } })
-        if (!rp || !rp.enabled) throw new ForbiddenException('Permission required')
+        if (!rp || !rp.enabled) throw new ForbiddenException('Không có quyền truy cập')
         // attach account to request for downstream
         req.user = { account_id: account.account_id, email: account.email, role: roleCode }
         return true
       }
 
       // default: only admin role allowed
-      if (roleCode !== 'admin') throw new ForbiddenException('Admin access required')
+      if (roleCode !== 'admin') throw new ForbiddenException('Yêu cầu quyền quản trị viên')
       req.user = { account_id: account.account_id, email: account.email, role: roleCode }
       return true
     } finally {

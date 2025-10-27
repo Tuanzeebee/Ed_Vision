@@ -2,8 +2,11 @@ import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { Input } from "@/components/ui/student/Input"
 import { BackButton } from "@/components/ui/student/Student_BackButton"
+import { ToastContainer } from "@/components/ui/Toast"
 import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 import { buildUrl } from '@/services/api/config'
+import { useToast } from '@/lib/useToast'
 
 type Props = {
   onGoogleRegister?: () => void
@@ -17,6 +20,9 @@ export default function StudentRegister({
   const navigate = useNavigate()
   // keep the prop referenced to avoid unused variable lint
   void onEmailRegister
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const { toasts, error: showError, success: showSuccess, hideToast } = useToast()
 
   const handleBack = () => {
     navigate("/student/landing")
@@ -36,14 +42,14 @@ export default function StudentRegister({
     
     // Validate password confirmation
     if (password !== confirmPassword) {
-      alert('Passwords do not match')
+      showError('Mật khẩu xác nhận không khớp')
       return
     }
     
     // Client-side: allow only DTU email domain
     const domain = '@dtu.edu.vn'
     if (!email?.toLowerCase()?.endsWith(domain)) {
-      alert(`Registration only allowed with ${domain} email`)
+      showError(`Chỉ cho phép đăng ký với email ${domain}`)
       return
     }
 
@@ -58,17 +64,21 @@ export default function StudentRegister({
       .then(async (res) => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
-          throw new Error(err.message || 'Registration failed')
+          throw new Error(err.message || 'Đăng ký thất bại')
         }
         return res.json()
       })
       .then(() => {
         // success -> navigate to OTP page and pass email
-        navigate('/auth/otp-verification', { state: { email } })
+        showSuccess('Đăng ký thành công! Kiểm tra email để xác thực.', 2000)
+        setTimeout(() => {
+          navigate('/auth/otp-verification', { state: { email } })
+        }, 1500)
       })
       .catch((err) => {
         console.error('Register error', err)
-        alert(err.message || 'Registration error')
+        const cleanMessage = (err.message || 'Lỗi đăng ký').replace(/^["'\[\]]+|["'\[\]]+$/g, '').trim()
+        showError(cleanMessage)
       })
   }
 
@@ -117,14 +127,32 @@ export default function StudentRegister({
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                     Password
                   </label>
-                  <Input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    placeholder="Enter your password"
-                    className="text-sm text-gray-900 placeholder-gray-400"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      name="password"
+                      required
+                      placeholder="Enter your password"
+                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? (
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Confirm Password Input */}
@@ -132,14 +160,32 @@ export default function StudentRegister({
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                     Confirm Password
                   </label>
-                  <Input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    required
-                    placeholder="Confirm your password"
-                    className="text-sm text-gray-900 placeholder-gray-400"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      required
+                      placeholder="Confirm your password"
+                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? (
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Register Button */}
@@ -169,6 +215,9 @@ export default function StudentRegister({
           </Card>
         </div>
       </main>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
     </div>
   )
 }
