@@ -101,6 +101,18 @@ export default function ClassManagement() {
     const [filterRisk, setFilterRisk] = useState("all")
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(10)
+    const [showDetailModal, setShowDetailModal] = useState(false)
+    const [selectedStudentDetail, setSelectedStudentDetail] = useState<any>(null)
+    const [quickMessage, setQuickMessage] = useState('')
+    const [selectedTemplate, setSelectedTemplate] = useState('')
+
+    // Mẫu tin nhắn nhanh
+    const messageTemplates = [
+        { id: 'concern', label: '😟 Quan tâm', message: 'Thầy nhận thấy em đang gặp khó khăn. Em có thể chia sẻ với thầy không?' },
+        { id: 'encourage', label: '💪 Động viên', message: 'Thầy tin em có thể vượt qua! Cố gắng lên nhé!' },
+        { id: 'appointment', label: '📅 Mời gặp', message: 'Thầy muốn gặp em để trao đổi về học tập. Em sắp xếp được không?' },
+        { id: 'support', label: '🤝 Hỗ trợ', message: 'Nếu cần hỗ trợ, đừng ngại liên hệ thầy nhé!' }
+    ]
 
     // Utility function để filter students
     const getFilteredStudents = () => {
@@ -215,20 +227,20 @@ export default function ClassManagement() {
     return (
         <TeacherLayout currentPage="class-management">
             {/* Page Header */}
-            <div className="mb-6">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-xl shadow-lg mb-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        <h2 className="text-3xl font-bold mb-2">
                             {showStudentDetail && selectedClass ? `Chi tiết sinh viên - Lớp ${selectedClass}` : 'Quản lý Lớp học'}
                         </h2>
-                        <p className="text-gray-600">
+                        <p className="text-green-100">
                             {showStudentDetail && selectedClass ? 'Xem thông tin chi tiết từng sinh viên trong lớp' : 'Quản lý và theo dõi các lớp học được phân công'}
                         </p>
                     </div>
                     {showStudentDetail && (
                         <button
                             onClick={() => setShowStudentDetail(false)}
-                            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all"
+                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30"
                         >
                             <X className="w-4 h-4" />
                             <span>Quay lại</span>
@@ -530,9 +542,9 @@ export default function ClassManagement() {
                                                             <TableCell className="text-center">
                                                                 <Badge
                                                                     className={`text-xs font-medium ${student.riskLevel === 'High' ? 'bg-red-100 text-red-700 border-red-300' :
-                                                                            student.riskLevel === 'Medium' ? 'bg-orange-100 text-orange-700 border-orange-300' :
-                                                                                student.riskLevel === 'Monitor' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-                                                                                    'bg-green-100 text-green-700 border-green-300'
+                                                                        student.riskLevel === 'Medium' ? 'bg-orange-100 text-orange-700 border-orange-300' :
+                                                                            student.riskLevel === 'Monitor' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                                                                                'bg-green-100 text-green-700 border-green-300'
                                                                         }`}
                                                                 >
                                                                     {student.riskLevel === 'High' ? '🔴 Nguy cơ cao' :
@@ -544,13 +556,12 @@ export default function ClassManagement() {
 
                                                             <TableCell className="text-center">
                                                                 <div className="flex items-center justify-center space-x-1">
+
                                                                     <button
-                                                                        className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded transition-all"
-                                                                        title="Xem chi tiết"
-                                                                    >
-                                                                        <User className="w-4 h-4" />
-                                                                    </button>
-                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedStudentDetail(student)
+                                                                            setShowDetailModal(true)
+                                                                        }}
                                                                         className="text-green-600 hover:text-green-800 p-1.5 hover:bg-green-50 rounded transition-all"
                                                                         title="Nhắn tin"
                                                                     >
@@ -647,6 +658,213 @@ export default function ClassManagement() {
                             <p className="text-gray-500">Không có dữ liệu sinh viên cho lớp này</p>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Modal Chi tiết Sinh viên */}
+            {showDetailModal && selectedStudentDetail && (
+                <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-t-xl">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <img
+                                        src={selectedStudentDetail.avatar}
+                                        alt={selectedStudentDetail.name}
+                                        className="w-16 h-16 rounded-full border-4 border-white object-cover"
+                                    />
+                                    <div>
+                                        <h3 className="text-2xl font-bold">{selectedStudentDetail.name}</h3>
+                                        <p className="text-blue-100">MASV: {selectedStudentDetail.masv}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setShowDetailModal(false)
+                                        setSelectedStudentDetail(null)
+                                        setQuickMessage('')
+                                        setSelectedTemplate('')
+                                    }}
+                                    className="text-white hover:text-gray-200 transition-colors"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-6">
+                            {/* Thông tin cơ bản */}
+                            <div>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                    <User className="w-5 h-5 text-indigo-600 mr-2" />
+                                    Thông tin cơ bản
+                                </h4>
+                                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                    <div className="flex items-start">
+                                        <Mail className="w-5 h-5 text-gray-500 mr-3 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs text-gray-500">Email</p>
+                                            <p className="text-sm font-medium text-gray-900">{selectedStudentDetail.email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start">
+                                        <svg className="w-5 h-5 text-gray-500 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Số điện thoại</p>
+                                            <p className="text-sm font-medium text-gray-900">0{Math.floor(Math.random() * 900000000) + 100000000}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start">
+                                        <svg className="w-5 h-5 text-gray-500 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Địa chỉ</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {Math.floor(Math.random() * 500) + 1} {['Nguyễn Trãi', 'Láng Hạ', 'Giải Phóng', 'Đại Cồ Việt', 'Lê Văn Lương'][Math.floor(Math.random() * 5)]}, Hà Nội
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Thông tin học tập */}
+                            <div>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                    <GraduationCap className="w-5 h-5 text-blue-600 mr-2" />
+                                    Thông tin học tập
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="bg-blue-50 rounded-lg p-4 text-center">
+                                        <p className="text-sm text-gray-600 mb-1">GPA Hiện tại</p>
+                                        <p className={`text-2xl font-bold ${selectedStudentDetail.gpa >= 3.2 ? 'text-green-600' : selectedStudentDetail.gpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                            {selectedStudentDetail.gpa}
+                                        </p>
+                                    </div>
+                                    <div className="bg-green-50 rounded-lg p-4 text-center">
+                                        <p className="text-sm text-gray-600 mb-1">GPA Dự đoán</p>
+                                        <p className={`text-2xl font-bold ${selectedStudentDetail.predictedGpa >= 3.2 ? 'text-green-600' : selectedStudentDetail.predictedGpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                            {selectedStudentDetail.predictedGpa}
+                                        </p>
+                                    </div>
+                                    <div className="bg-purple-50 rounded-lg p-4 text-center">
+                                        <p className="text-sm text-gray-600 mb-1">Điểm danh</p>
+                                        <p className={`text-2xl font-bold ${selectedStudentDetail.attendance >= 90 ? 'text-green-600' : selectedStudentDetail.attendance >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                            {selectedStudentDetail.attendance}%
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tin nhắn nhanh */}
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Mail className="w-5 h-5 text-green-600" />
+                                    <h5 className="text-lg font-semibold text-green-900">Gửi tin nhắn nhanh</h5>
+                                </div>
+
+                                {/* Mẫu tin nhắn */}
+                                <div className="mb-4">
+                                    <label className="text-sm font-medium text-gray-700 mb-2 block">Chọn mẫu tin nhắn:</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {messageTemplates.map((template) => (
+                                            <button
+                                                key={template.id}
+                                                onClick={() => {
+                                                    setSelectedTemplate(template.id)
+                                                    setQuickMessage(template.message)
+                                                }}
+                                                className={`text-left px-4 py-3 rounded-lg text-sm font-medium transition-all ${selectedTemplate === template.id
+                                                    ? 'bg-green-600 text-white shadow-lg transform scale-105'
+                                                    : 'bg-white text-gray-700 hover:bg-green-100 hover:shadow-md border-2 border-gray-200'
+                                                    }`}
+                                            >
+                                                {template.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Hộp nhập tin nhắn */}
+                                <div className="mb-4">
+                                    <label className="text-sm font-medium text-gray-700 mb-2 block">Nội dung tin nhắn:</label>
+                                    <textarea
+                                        value={quickMessage}
+                                        onChange={(e) => setQuickMessage(e.target.value)}
+                                        placeholder="Nhập tin nhắn hoặc chọn mẫu ở trên..."
+                                        rows={5}
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                                    />
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className="text-xs text-gray-500">
+                                            {quickMessage.length} ký tự
+                                        </span>
+                                        {quickMessage.length > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    setQuickMessage('')
+                                                    setSelectedTemplate('')
+                                                }}
+                                                className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+                                            >
+                                                <X className="w-3 h-3" />
+                                                Xóa nội dung
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Nút gửi */}
+                                <button
+                                    onClick={() => {
+                                        if (quickMessage.trim()) {
+                                            alert(`✅ Đã gửi tin nhắn đến ${selectedStudentDetail.name}:\n\n"${quickMessage}"`)
+                                            setQuickMessage('')
+                                            setSelectedTemplate('')
+                                        }
+                                    }}
+                                    disabled={!quickMessage.trim()}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                >
+                                    <Mail className="w-5 h-5" />
+                                    Gửi tin nhắn ngay
+                                </button>
+                            </div>
+
+                            {/* Các hành động */}
+                            <div className="pt-4 border-t border-gray-200">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => {
+                                            setShowDetailModal(false)
+                                            // Navigate to messages page
+                                            window.location.href = `/teacher/messages?studentId=${selectedStudentDetail.masv}`
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                                    >
+                                        <Mail className="w-5 h-5" />
+                                        Nhắn tin
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowDetailModal(false)
+                                            // Navigate to appointments page
+                                            window.location.href = `/teacher/appointments?action=book&studentId=${selectedStudentDetail.masv}`
+                                        }}
+                                        className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                                    >
+                                        <Calendar className="w-5 h-5" />
+                                        Đặt lịch tư vấn
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </TeacherLayout>

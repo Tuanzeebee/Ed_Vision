@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Button } from "@/components/ui/teacher/teacher_button"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
@@ -61,11 +62,16 @@ interface ConversationHistory {
 }
 
 export default function MessagesNotifications() {
+    // Get studentId from URL params
+    const [searchParams] = useSearchParams()
+    const studentIdFromUrl = searchParams.get('studentId')
+
     // States
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
     const [messageInput, setMessageInput] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [showSuggestions, setShowSuggestions] = useState(false)
+    const [showHistory, setShowHistory] = useState(false)
 
     // Modal states cho 3 actions quan trọng
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
@@ -161,6 +167,16 @@ export default function MessagesNotifications() {
             lastConversationDate: '2024-10-23'
         }
     ]
+
+    // Auto-select student if studentId is provided in URL
+    useEffect(() => {
+        if (studentIdFromUrl && students.length > 0) {
+            const student = students.find(s => s.id === studentIdFromUrl)
+            if (student) {
+                setSelectedStudent(student)
+            }
+        }
+    }, [studentIdFromUrl])
 
     // Mock data - Lịch sử cuộc trò chuyện
     const conversationHistories: ConversationHistory[] = [
@@ -407,17 +423,17 @@ export default function MessagesNotifications() {
         <TeacherLayout currentPage="messages">
             <div className="h-[calc(100vh-120px)] flex flex-col">
                 {/* Header với thống kê tổng quan */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-xl mb-4">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-xl shadow-lg mb-4">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
-                            <h2 className="text-2xl font-bold mb-1">Trao đổi & Tư vấn Sinh viên</h2>
-                            <p className="text-blue-100 text-sm">Chat trực tiếp và theo dõi lịch sử tư vấn</p>
+                            <h2 className="text-3xl font-bold mb-2">Trao đổi & Tư vấn Sinh viên</h2>
+                            <p className="text-blue-100">Chat trực tiếp và theo dõi lịch sử tư vấn</p>
                         </div>
                         <div className="flex flex-wrap gap-3">
                             {/* Quick Actions */}
                             <Button
                                 onClick={() => setIsBulkModalOpen(true)}
-                                className="bg-green-500 hover:bg-green-600 text-white shadow-lg"
+                                className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
                                 size="sm"
                             >
                                 <Megaphone className="w-4 h-4 mr-2" />
@@ -425,7 +441,7 @@ export default function MessagesNotifications() {
                             </Button>
                             <Button
                                 onClick={() => setIsQuickModalOpen(true)}
-                                className="bg-white hover:bg-gray-100 text-blue-600 shadow-lg"
+                                className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
                                 size="sm"
                             >
                                 <Zap className="w-4 h-4 mr-2" />
@@ -433,7 +449,7 @@ export default function MessagesNotifications() {
                             </Button>
                             <Button
                                 onClick={() => setIsUrgentModalOpen(true)}
-                                className="bg-red-500 hover:bg-red-600 text-white shadow-lg"
+                                className="bg-red-500 hover:bg-red-600 text-white shadow-lg border border-red-600"
                                 size="sm"
                             >
                                 <AlertTriangle className="w-4 h-4 mr-2" />
@@ -481,7 +497,7 @@ export default function MessagesNotifications() {
                     </div>
                 </div>
 
-                {/* Main Chat Interface - 4 Columns Layout */}
+                {/* Main Chat Interface - 3 Columns Layout */}
                 <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
                     {/* Column 1 - Danh sách sinh viên */}
                     <div className="col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
@@ -555,7 +571,7 @@ export default function MessagesNotifications() {
                     </div>
 
                     {/* Column 2 - Main Chat Area */}
-                    <div className="col-span-12 lg:col-span-4 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div className={`col-span-12 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden ${showHistory ? 'lg:col-span-5' : 'lg:col-span-6'}`}>
                         {selectedStudent ? (
                             <>
                                 {/* Chat Header */}
@@ -588,6 +604,15 @@ export default function MessagesNotifications() {
                                                     {selectedStudent.riskLevel === 'high' ? '⚠️ Cần chú ý' : '👀 Theo dõi'}
                                                 </Badge>
                                             )}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setShowHistory(!showHistory)}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <Clock className="w-4 h-4" />
+                                                Lịch sử ({selectedStudent.totalConversations || 0})
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -675,131 +700,132 @@ export default function MessagesNotifications() {
                         )}
                     </div>
 
-                    {/* Column 3 - Lịch sử cuộc trò chuyện */}
-                    <div className="col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
-                        <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-blue-50">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-indigo-600" />
-                                Lịch sử tư vấn
-                            </CardTitle>
-                            {selectedStudent && (
-                                <div className="mt-2 flex items-center gap-2 text-sm">
-                                    <Badge className="bg-indigo-100 text-indigo-700">
-                                        {selectedStudent.totalConversations} cuộc trò chuyện
-                                    </Badge>
-                                    <span className="text-gray-500">
-                                        Gần nhất: {new Date(selectedStudent.lastConversationDate || '').toLocaleDateString('vi-VN')}
-                                    </span>
-                                </div>
-                            )}
-                        </CardHeader>
-                        <CardContent className="p-0 flex-1 overflow-hidden">
-                            {selectedStudent ? (
-                                <div className="h-full overflow-y-auto">
-                                    {filteredConversationHistory.length > 0 ? (
-                                        <div className="divide-y">
-                                            {filteredConversationHistory.map((conv) => (
-                                                <div key={conv.id} className="p-4 hover:bg-gray-50 transition-colors">
-                                                    <div className="flex items-start justify-between mb-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <Calendar className="w-4 h-4 text-gray-400" />
-                                                            <span className="text-sm text-gray-600">
-                                                                {new Date(conv.date).toLocaleDateString('vi-VN', {
-                                                                    day: '2-digit',
-                                                                    month: '2-digit',
-                                                                    year: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
+                    {/* Column 3 - Lịch sử cuộc trò chuyện (Conditional) */}
+                    {showHistory && selectedStudent && (
+                        <div className="col-span-12 lg:col-span-4 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
+                            <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-blue-50">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-indigo-600" />
+                                    Lịch sử tư vấn
+                                </CardTitle>
+                                {selectedStudent && (
+                                    <div className="mt-2 flex items-center gap-2 text-sm">
+                                        <Badge className="bg-indigo-100 text-indigo-700">
+                                            {selectedStudent.totalConversations} cuộc trò chuyện
+                                        </Badge>
+                                        <span className="text-gray-500">
+                                            Gần nhất: {new Date(selectedStudent.lastConversationDate || '').toLocaleDateString('vi-VN')}
+                                        </span>
+                                    </div>
+                                )}
+                            </CardHeader>
+                            <CardContent className="p-0 flex-1 overflow-hidden">
+                                {selectedStudent ? (
+                                    <div className="h-full overflow-y-auto">
+                                        {filteredConversationHistory.length > 0 ? (
+                                            <div className="divide-y">
+                                                {filteredConversationHistory.map((conv) => (
+                                                    <div key={conv.id} className="p-4 hover:bg-gray-50 transition-colors">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Calendar className="w-4 h-4 text-gray-400" />
+                                                                <span className="text-sm text-gray-600">
+                                                                    {new Date(conv.date).toLocaleDateString('vi-VN', {
+                                                                        day: '2-digit',
+                                                                        month: '2-digit',
+                                                                        year: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </span>
+                                                            </div>
+                                                            <Badge className={`text-xs ${getSentimentBadge(conv.sentiment)}`}>
+                                                                {getSentimentIcon(conv.sentiment)}
+                                                            </Badge>
+                                                        </div>
+
+                                                        <h4 className="font-medium text-gray-900 mb-2 flex items-start gap-2">
+                                                            <FileText className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                                            <span className="text-sm">{conv.topic}</span>
+                                                        </h4>
+
+                                                        <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                                                            {conv.summary}
+                                                        </p>
+
+                                                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" />
+                                                                {conv.duration}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <MessageCircle className="w-3 h-3" />
+                                                                {conv.messageCount} tin nhắn
                                                             </span>
                                                         </div>
-                                                        <Badge className={`text-xs ${getSentimentBadge(conv.sentiment)}`}>
-                                                            {getSentimentIcon(conv.sentiment)}
-                                                        </Badge>
+
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {conv.tags.map((tag, idx) => (
+                                                                <Badge key={idx} className="text-xs bg-gray-100 text-gray-600">
+                                                                    {tag}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
                                                     </div>
-
-                                                    <h4 className="font-medium text-gray-900 mb-2 flex items-start gap-2">
-                                                        <FileText className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
-                                                        <span className="text-sm">{conv.topic}</span>
-                                                    </h4>
-
-                                                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                                                        {conv.summary}
-                                                    </p>
-
-                                                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                                                        <span className="flex items-center gap-1">
-                                                            <Clock className="w-3 h-3" />
-                                                            {conv.duration}
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <MessageCircle className="w-3 h-3" />
-                                                            {conv.messageCount} tin nhắn
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {conv.tags.map((tag, idx) => (
-                                                            <Badge key={idx} className="text-xs bg-gray-100 text-gray-600">
-                                                                {tag}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full p-8 text-center">
+                                                <div>
+                                                    <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                                    <p className="text-sm text-gray-500">Chưa có lịch sử tư vấn</p>
                                                 </div>
-                                            ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full p-8 text-center">
+                                        <div>
+                                            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                            <p className="text-sm text-gray-500">Chọn sinh viên để xem lịch sử</p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Lịch sử giúp theo dõi quá trình tư vấn
+                                            </p>
                                         </div>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full p-8 text-center">
-                                            <div>
-                                                <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                                <p className="text-sm text-gray-500">Chưa có lịch sử tư vấn</p>
+                                    </div>
+                                )}
+                            </CardContent>
+
+                            {/* Thống kê nhanh */}
+                            {selectedStudent && filteredConversationHistory.length > 0 && (
+                                <div className="border-t p-4 bg-gray-50">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="text-center p-2 bg-white rounded-lg border">
+                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                <TrendingUp className="w-4 h-4 text-green-600" />
+                                                <span className="text-xs text-gray-600">Tích cực</span>
+                                            </div>
+                                            <div className="text-lg font-bold text-green-600">
+                                                {filteredConversationHistory.filter(c => c.sentiment === 'positive').length}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center h-full p-8 text-center">
-                                    <div>
-                                        <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-sm text-gray-500">Chọn sinh viên để xem lịch sử</p>
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            Lịch sử giúp theo dõi quá trình tư vấn
-                                        </p>
+                                        <div className="text-center p-2 bg-white rounded-lg border">
+                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                <MessageCircle className="w-4 h-4 text-blue-600" />
+                                                <span className="text-xs text-gray-600">Tổng số</span>
+                                            </div>
+                                            <div className="text-lg font-bold text-blue-600">
+                                                {filteredConversationHistory.reduce((sum, c) => sum + c.messageCount, 0)}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
-                        </CardContent>
+                        </div>
+                    )}
 
-                        {/* Thống kê nhanh */}
-                        {selectedStudent && filteredConversationHistory.length > 0 && (
-                            <div className="border-t p-4 bg-gray-50">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="text-center p-2 bg-white rounded-lg border">
-                                        <div className="flex items-center justify-center gap-1 mb-1">
-                                            <TrendingUp className="w-4 h-4 text-green-600" />
-                                            <span className="text-xs text-gray-600">Tích cực</span>
-                                        </div>
-                                        <div className="text-lg font-bold text-green-600">
-                                            {filteredConversationHistory.filter(c => c.sentiment === 'positive').length}
-                                        </div>
-                                    </div>
-                                    <div className="text-center p-2 bg-white rounded-lg border">
-                                        <div className="flex items-center justify-center gap-1 mb-1">
-                                            <MessageCircle className="w-4 h-4 text-blue-600" />
-                                            <span className="text-xs text-gray-600">Tổng số</span>
-                                        </div>
-                                        <div className="text-lg font-bold text-blue-600">
-                                            {filteredConversationHistory.reduce((sum, c) => sum + c.messageCount, 0)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Column 4 - Câu hỏi gợi ý */}
-                    <div className={`col-span-12 lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden ${showSuggestions || !selectedStudent ? 'block' : 'hidden lg:block'
-                        }`}>
+                    {/* Column 3/4 - Câu hỏi gợi ý */}
+                    <div className={`col-span-12 bg-white rounded-xl shadow-sm overflow-hidden ${showHistory ? 'hidden' : 'lg:col-span-3 lg:block'}`}>
                         <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <MessageCircle className="w-4 h-4 text-purple-600" />
@@ -843,7 +869,7 @@ export default function MessagesNotifications() {
 
             {/* Modal Thông báo hàng loạt */}
             {isBulkModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-xl">
                             <div className="flex items-center justify-between">
@@ -942,7 +968,7 @@ export default function MessagesNotifications() {
 
             {/* Modal Tin nhắn nhanh */}
             {isQuickModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
                         <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-t-xl">
                             <div className="flex items-center justify-between">
@@ -1003,7 +1029,7 @@ export default function MessagesNotifications() {
 
             {/* Modal Cảnh báo khẩn cấp */}
             {isUrgentModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
                         <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-xl">
                             <div className="flex items-center justify-between">

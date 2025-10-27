@@ -347,9 +347,9 @@ export default function TeacherDashboard() {
     return (
         <TeacherLayout currentPage="dashboard">
             {/* Page Header */}
-            <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Tổng quan Dashboard</h2>
-                <p className="text-gray-600">Theo dõi tình hình học tập và quản lý sinh viên</p>
+            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6 rounded-xl shadow-lg mb-6">
+                <h2 className="text-3xl font-bold mb-2">Tổng quan Dashboard</h2>
+                <p className="text-blue-100">Theo dõi tình hình học tập và quản lý sinh viên</p>
             </div>
 
             {/* Stats Cards */}

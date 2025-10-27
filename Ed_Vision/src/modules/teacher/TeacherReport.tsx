@@ -364,7 +364,7 @@ export default function TeacherReport() {
                 </Button>
                 <Button
                     size="sm"
-                    onClick={() => navigate(`/teacher/chat?studentId=${student.id}`)}
+                    onClick={() => navigate(`/teacher/messages?studentId=${student.id}`)}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
                 >
                     <i className="fas fa-comment mr-1"></i>
@@ -385,23 +385,23 @@ export default function TeacherReport() {
     return (
         <TeacherLayout currentPage="reports-alerts">
             {/* Page Header */}
-            <div className="mb-6">
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 rounded-xl shadow-lg mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Báo cáo & Cảnh báo</h2>
-                        <p className="text-gray-600">Theo dõi và quản lý sinh viên có nguy cơ học tập</p>
+                        <h2 className="text-3xl font-bold mb-2">Báo cáo & Cảnh báo</h2>
+                        <p className="text-red-100">Theo dõi và quản lý sinh viên có nguy cơ học tập</p>
                     </div>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-0">
                         <Button
                             onClick={handleExportPDF}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                            className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 flex items-center justify-center border border-white/30"
                         >
                             <i className="fas fa-file-export mr-2"></i>
                             Xuất báo cáo PDF
                         </Button>
                         <Button
                             onClick={handleExportExcel}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center"
+                            className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 flex items-center justify-center border border-white/30"
                         >
                             <i className="fas fa-file-excel mr-2"></i>
                             Xuất Excel
@@ -772,7 +772,7 @@ export default function TeacherReport() {
 
             {/* Modal xem tất cả sinh viên */}
             {showAllModal && selectedRiskGroup && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
                         <div className={`p-6 border-b ${selectedRiskGroup === 'Nguy cơ cao' ? 'bg-red-50 border-red-200' :
                             selectedRiskGroup === 'Nguy cơ trung bình' ? 'bg-orange-50 border-orange-200' :
@@ -819,7 +819,7 @@ export default function TeacherReport() {
 
             {/* Modal chi tiết sinh viên */}
             {showDetailModal && selectedStudent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
                         <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-blue-100">
                             <div className="flex items-center justify-between">
@@ -992,7 +992,7 @@ export default function TeacherReport() {
                                     <Button
                                         onClick={() => {
                                             closeStudentDetail()
-                                            navigate(`/teacher/chat?studentId=${selectedStudent.id}`)
+                                            navigate(`/teacher/messages?studentId=${selectedStudent.id}`)
                                         }}
                                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                                     >
