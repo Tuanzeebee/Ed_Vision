@@ -2,9 +2,12 @@ import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { Input } from "@/components/ui/student/Input"
 import { BackButton } from "@/components/ui/student/Student_BackButton"
+import { ToastContainer } from "@/components/ui/Toast"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { buildUrl } from '@/services/api/config'
+import { useToast } from '@/lib/useToast'
+import { TokenManager } from '@/lib/tokenManager'
 
 type Props = {
   onGoogleLogin?: () => void
@@ -30,11 +33,20 @@ export default function StudentLogin({
     console.log("Navigate to reset password")
   }
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const { toasts, error: showError, hideToast } = useToast()
+
+  // Helper function to clean error messages
+  const cleanErrorMessage = (message: string): string => {
+    return message
+      .replace(/^["'\[\]]+|["'\[\]]+$/g, '') // Remove quotes and brackets from start/end
+      .replace(/^Error:\s*/i, '') // Remove "Error:" prefix
+      .replace(/^\w+Error:\s*/i, '') // Remove specific error type prefixes
+      .trim()
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError(null)
     console.debug('StudentLogin.handleSubmit - called')
     const formData = new FormData(e.currentTarget)
     const email = (formData.get('email') as string) || ''
@@ -62,8 +74,10 @@ export default function StudentLogin({
 
       if (!res.ok) {
         // Prefer server message, fallback to status text
-        const msg = (data && (data.message || data.error || data?.data?.message)) || res.statusText || 'Login failed'
-        setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+        const msg = (data && (data.message || data.error || data?.data?.message)) || res.statusText || 'Đăng nhập thất bại'
+        const rawMessage = typeof msg === 'string' ? msg : JSON.stringify(msg)
+        const errorMessage = cleanErrorMessage(rawMessage)
+        showError(errorMessage)
         return
       }
 
@@ -74,7 +88,8 @@ export default function StudentLogin({
       const token = payload?.accessToken || payload?.token || payload?.access_token
       const account = payload?.account || payload?.user
       if (token) {
-        localStorage.setItem('token', token)
+        // Use TokenManager to set token with sliding expiry
+        TokenManager.setToken(token)
         if (account) {
           try {
             localStorage.setItem('user', JSON.stringify(account))
@@ -93,8 +108,9 @@ export default function StudentLogin({
         // Normalize to lowercase for comparison
         const role = (typeof roleCode === 'string') ? roleCode.toLowerCase() : ''
 
+        // Navigate immediately without toast
         if (role === 'student' || role === 'student_role' || role === '') {
-          navigate('/student/landing')
+          navigate('/student/instructions')
         } else if (role === 'teacher') {
           navigate('/teacher/dashboard')
         } else if (role === 'admin' || role === 'administrator') {
@@ -112,7 +128,9 @@ export default function StudentLogin({
       // If no token returned, but response ok, navigate to landing
       navigate('/student/landing')
     } catch (err: any) {
-      setError(err?.message || 'Unable to contact server')
+      const rawMessage = err?.message || 'Không thể kết nối đến máy chủ'
+      const errorMessage = cleanErrorMessage(rawMessage)
+      showError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -185,14 +203,32 @@ export default function StudentLogin({
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                     Password
                   </label>
-                  <Input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    placeholder="Enter your password"
-                    className="text-sm text-gray-900 placeholder-gray-400"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      name="password"
+                      required
+                      placeholder="Enter your password"
+                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? (
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Login Button */}
@@ -205,9 +241,6 @@ export default function StudentLogin({
                 >
                   {loading ? 'Signing in...' : 'Login'}
                 </Button>
-                {error ? (
-                  <p className="text-sm text-red-600 mt-2" role="alert">{error}</p>
-                ) : null}
               </form>
 
               {/* Footer Links */}
@@ -235,6 +268,9 @@ export default function StudentLogin({
           </Card>
         </div>
       </main>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
     </div>
   )
 }

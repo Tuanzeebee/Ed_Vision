@@ -77,7 +77,7 @@ class InstructorAvailabilityApi {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(error.message || 'Failed to fetch availability');
+        throw new Error(error.message || 'Không thể tải thời gian biểu');
       }
 
       const result = await response.json();
@@ -119,7 +119,7 @@ class InstructorAvailabilityApi {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(error.message || 'Failed to fetch statistics');
+        throw new Error(error.message || 'Không thể tải thống kê');
       }
 
       const result = await response.json();
@@ -155,7 +155,7 @@ class InstructorAvailabilityApi {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(error.message || 'Failed to add availability date');
+      throw new Error(error.message || 'Không thể thêm ngày có thể dạy');
     }
 
     // Invalidate cache after modification
@@ -184,7 +184,7 @@ class InstructorAvailabilityApi {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(error.message || 'Failed to bulk create availability');
+      throw new Error(error.message || 'Không thể tạo hàng loạt thời gian biểu');
     }
 
     // Invalidate cache after bulk modification
@@ -207,7 +207,7 @@ class InstructorAvailabilityApi {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(error.message || 'Failed to delete availability date');
+      throw new Error(error.message || 'Không thể xóa ngày có thể dạy');
     }
 
     // Invalidate cache after deletion
@@ -254,7 +254,7 @@ class InstructorAvailabilityApi {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(error.message || 'Failed to delete time slot');
+      throw new Error(error.message || 'Không thể xóa khung giờ');
     }
 
     // Invalidate cache after deletion

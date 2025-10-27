@@ -1,7 +1,9 @@
 import { Card, CardContent } from "../../components/ui/student/Student_card"
 import { Button } from "../../components/ui/student/Student_button"
+import { ToastContainer } from "../../components/ui/Toast"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
+import { useToast } from '../../lib/useToast'
 
 type Props = {
   onVerifyOTP?: (otp: string) => void
@@ -19,6 +21,7 @@ export default function StudentOTPVerification({
   const [countdown, setCountdown] = useState(60)
   const [isResendDisabled, setIsResendDisabled] = useState(true)
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
+  const { toasts, error: showError, success: showSuccess, hideToast } = useToast()
 
   // Auto-focus first input on mount
   useEffect(() => {
@@ -58,6 +61,20 @@ export default function StudentOTPVerification({
     }
   }
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    const pastedData = e.clipboardData.getData('text')
+    
+    // Check if pasted data is exactly 4 digits
+    if (/^\d{4}$/.test(pastedData)) {
+      const digits = pastedData.split('')
+      setOtp(digits)
+      
+      // Focus the last input after pasting
+      inputRefs[3].current?.focus()
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const otpCode = otp.join('')
@@ -83,12 +100,15 @@ export default function StudentOTPVerification({
         })
         .then(() => {
           // Show a confirmation and return user to landing so they can login
-          alert('Registration successful. Please log in to continue.')
-          navigate('/student/landing')
+          showSuccess('Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.', 3000)
+          setTimeout(() => {
+            navigate('/student/landing')
+          }, 2500)
         })
         .catch((err) => {
           console.error('OTP verify error', err)
-          alert(err.message || 'Verification failed')
+          const cleanMessage = (err.message || 'Xác thực thất bại').replace(/^["'\[\]]+|["'\[\]]+$/g, '').trim()
+          showError(cleanMessage)
         })
     }
   }
@@ -115,11 +135,12 @@ export default function StudentOTPVerification({
           return res.json()
         })
         .then(() => {
-          alert('Verification code resent')
+          showSuccess('Mã xác thực đã được gửi lại')
         })
         .catch((err) => {
           console.error('Resend error', err)
-          alert(err.message || 'Resend failed')
+          const cleanMessage = (err.message || 'Gửi lại thất bại').replace(/^["'\[\]]+|["'\[\]]+$/g, '').trim()
+          showError(cleanMessage)
         })
     }
   }
@@ -175,6 +196,7 @@ export default function StudentOTPVerification({
                       value={digit}
                       onChange={(e) => handleInputChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={handlePaste}
                       className="w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-bold text-gray-900 placeholder-gray-400 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition-all duration-200"
                     />
                   ))}
@@ -231,6 +253,9 @@ export default function StudentOTPVerification({
           </CardContent>
         </Card>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={hideToast} />
     </div>
   )
 }

@@ -105,7 +105,7 @@ export function useInstructorAvailability(instructorId: number) {
         const frontendData = convertToFrontendFormat(response);
         return frontendData;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch availability';
+        const errorMessage = err instanceof Error ? err.message : 'Không thể tải thời gian biểu';
         setError(errorMessage);
         throw err;
       } finally {
@@ -132,7 +132,7 @@ export function useInstructorAvailability(instructorId: number) {
       const stats = await instructorAvailabilityApi.getStatistics(instructorId, forceRefresh);
       return stats;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch statistics';
+      const errorMessage = err instanceof Error ? err.message : 'Không thể tải thống kê';
       setError(errorMessage);
       throw err;
     } finally {
@@ -164,7 +164,7 @@ export function useInstructorAvailability(instructorId: number) {
         };
         await instructorAvailabilityApi.addAvailabilityDate(instructorId, dto);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to add availability date';
+        const errorMessage = err instanceof Error ? err.message : 'Không thể thêm ngày có thể dạy';
         setError(errorMessage);
         throw err;
       } finally {
@@ -192,7 +192,7 @@ export function useInstructorAvailability(instructorId: number) {
         await instructorAvailabilityApi.bulkCreateAvailability(instructorId, dto);
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to bulk create availability';
+          err instanceof Error ? err.message : 'Không thể tạo hàng loạt thời gian biểu';
         setError(errorMessage);
         throw err;
       } finally {
@@ -220,7 +220,7 @@ export function useInstructorAvailability(instructorId: number) {
       } catch (err) {
         console.error('❌ API deleteAvailabilityDate failed:', err);
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to delete availability date';
+          err instanceof Error ? err.message : 'Không thể xóa ngày có thể dạy';
         setError(errorMessage);
         throw err;
       } finally {
