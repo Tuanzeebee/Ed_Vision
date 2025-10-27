@@ -21,12 +21,12 @@ export class AuthService {
 
     // simple validation
     if (password !== confirmPassword) {
-      throw new BadRequestException('Passwords do not match')
+      throw new BadRequestException('Mật khẩu xác nhận không khớp')
     }
 
     const domain = '@dtu.edu.vn'
     if (!email.toLowerCase().endsWith(domain)) {
-      throw new BadRequestException(`Registration allowed only for ${domain} emails`)
+      throw new BadRequestException(`Chỉ cho phép đăng ký với email ${domain}`)
     }
 
     // check existing account
@@ -40,9 +40,9 @@ export class AuthService {
         }).catch((e) => {
           console.error('Failed to resend OTP for existing pending account (async)', e)
         })
-        return { message: 'Verification OTP resend triggered', email }
+        return { message: 'Mã OTP xác thực đã được gửi lại', email }
       }
-      throw new ConflictException('Email already registered')
+      throw new ConflictException('Email đã được đăng ký')
     }
 
     const passwordHash = await bcrypt.hash(password, 10)
@@ -88,15 +88,15 @@ export class AuthService {
    */
   async login(email: string, password: string) {
   const account = await (this.prisma as any).account.findUnique({ where: { email }, include: { roleRel: true } })
-    if (!account) throw new UnauthorizedException('Invalid credentials')
+    if (!account) throw new UnauthorizedException('Email hoặc mật khẩu không đúng')
 
     if (account.status !== 'active') {
       // Not yet verified
-      throw new BadRequestException('Account not active. Please verify your email')
+      throw new BadRequestException('Tài khoản chưa được kích hoạt. Vui lòng xác thực email')
     }
 
     const match = await bcrypt.compare(password, account.password_hash)
-    if (!match) throw new UnauthorizedException('Invalid credentials')
+    if (!match) throw new UnauthorizedException('Email hoặc mật khẩu không đúng')
 
     // For now return a simple token placeholder. Replace with real JWT in production.
     // update last_login_at
@@ -120,13 +120,13 @@ export class AuthService {
 
   async logout(email: string) {
     const account = await this.prisma.account.findUnique({ where: { email } })
-    if (!account) throw new BadRequestException('Account not found')
+    if (!account) throw new BadRequestException('Không tìm thấy tài khoản')
     try {
       await (this.prisma as any).account.update({ where: { account_id: account.account_id }, data: { last_logout_at: new Date() } })
       return { ok: true }
     } catch (e) {
       console.error('Failed to update last_logout_at', e)
-      throw new InternalServerErrorException('Failed to record logout')
+      throw new InternalServerErrorException('Không thể ghi nhận đăng xuất')
     }
   }
 }

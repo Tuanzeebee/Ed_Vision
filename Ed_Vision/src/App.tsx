@@ -27,9 +27,6 @@ import NotificationManagement from "./modules/admin/NotificationManagement";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
-import StudentLogin from "@/modules/student/StudentLogin";
-import StudentOTPVerification from "@/modules/student/StudentOTPVerification";
-import StudentRegister from "@/modules/student/StudentRegister";
 // New auth components (some components navigate to /auth/* so provide routes)
 import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
@@ -57,24 +54,26 @@ import VideoRoom from "./modules/student/VideoRoom";
 import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
+import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
+import { SessionTimeoutWarning } from '@/components/SessionTimeoutWarning'
 
 function App() {
         return (
                 <Router>
+                        {/* Session timeout warning - shows globally when needed */}
+                        <SessionTimeoutWarning />
                         <Routes>
                                 {/* Default route redirect to student landing */}
-                                <Route path="/" element={<Navigate to="/student/landing" replace />} />
+                                <Route path="/" element={<AuthRedirectWrapper><Navigate to="/student/landing" replace /></AuthRedirectWrapper>} />
 
                                 {/* Student routes */}
                                 <Route path="/student/landing" element={<GradeForecastLanding />} />
-                                <Route path="/student/login" element={<StudentLogin />} />
-                                <Route path="/student/register" element={<StudentRegister />} />
-                                <Route path="/student/otp-verification" element={<StudentOTPVerification />} />
+                                
 
                                 {/* Auth routes (used by updated components) */}
-                                <Route path="/auth/login" element={<AuthStudentLogin />} />
-                                <Route path="/auth/register" element={<AuthStudentRegister />} />
-                                <Route path="/auth/otp-verification" element={<AuthStudentOTPVerification />} />
+                                <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
+                                <Route path="/auth/register" element={<AuthRedirectWrapper><AuthStudentRegister /></AuthRedirectWrapper>} />
+                                <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
                                 <Route path="/student/course-overview" element={<ProtectedRoute allowedRoles={["student"]}><StudentCourseOverview /></ProtectedRoute>} />
                                 <Route path="/student/upload-transcript" element={<ProtectedRoute allowedRoles={["student"]}><UploadTranscript /></ProtectedRoute>} />
                                 <Route path="/student/instructions" element={<ProtectedRoute allowedRoles={["student"]}><InstructionsPage /></ProtectedRoute>} />
@@ -82,7 +81,6 @@ function App() {
                                 <Route path="/student/academic-planning" element={<ProtectedRoute allowedRoles={["student"]}><AcademicPlanningDashboard /></ProtectedRoute>} />
                                 <Route path="/student/course-detail" element={<ProtectedRoute allowedRoles={["student"]}><CourseDetailView /></ProtectedRoute>} />
                                 <Route path="/student/financial-survey/step/1" element={<ProtectedRoute allowedRoles={["student"]}><FinancialSurveyStep1 /></ProtectedRoute>} />
-                                <Route path="/student/course-overview" element={<ProtectedRoute allowedRoles={["student"]}><StudentCourseOverview /></ProtectedRoute>} />
                                 <Route path="/student/choose-mascot" element={<ProtectedRoute allowedRoles={["student"]}><ChooseMascot /></ProtectedRoute>} />
                                 <Route path="/student/learning-adventure" element={<ProtectedRoute allowedRoles={["student"]}><LearningAdventure /></ProtectedRoute>} />
                                 <Route path="/student/live-learning" element={<ProtectedRoute allowedRoles={["student"]}><LiveLearning /></ProtectedRoute>} />
@@ -96,6 +94,7 @@ function App() {
                                 }} /></ProtectedRoute>} />
 
                                 {/* Route cho parent */}
+                                <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["parent"]}><AllAppointments /></ProtectedRoute>} />
                                 <Route path="/parent/book-appointment/step/:stepNumber" element={<ProtectedRoute allowedRoles={["parent"]}><BookAppointmentStepWrapper /></ProtectedRoute>} />
                                 <Route path="/parent/book-appointment" element={<ProtectedRoute allowedRoles={["parent"]}><Navigate to="/parent/book-appointment/step/1" replace /></ProtectedRoute>} />
                                 <Route path="/parent/appointments" element={<ProtectedRoute allowedRoles={["parent"]}><AllAppointments /></ProtectedRoute>} />

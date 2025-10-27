@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import LanguageSwitcher from "../LanguageSwitcher"
 import { useEffect, useRef, useState } from 'react'
 import { buildUrl } from '@/services/api/config'
+import { useAuth } from '@/hooks/useAuth'
 
 type Props = {
   className?: string
@@ -26,17 +27,12 @@ export default function Header({
   const { t } = useTranslation(['common'])
   const navigate = useNavigate()
 
-  // Local UI state for the profile menu and current user info
+  // Use auth hook for authentication state
+  const { isAuthenticated, user, getDashboardPath, logout } = useAuth()
+  
+  // Local UI state for the profile menu 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
-  const [user, setUser] = useState<any>(() => {
-    try {
-      const raw = localStorage.getItem('user')
-      return raw ? JSON.parse(raw) : null
-    } catch (e) {
-      return null
-    }
-  })
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -58,44 +54,9 @@ export default function Header({
     }
   }, [])
 
-  // Listen for auth events and storage changes so header updates immediately
-  useEffect(() => {
-    function onLogin(e: Event) {
-      try {
-        const detail = (e as any).detail
-        if (detail) setUser(detail)
-        else {
-          const raw = localStorage.getItem('user')
-          setUser(raw ? JSON.parse(raw) : null)
-        }
-      } catch {
-        setUser(null)
-      }
-    }
+  // Auth state is managed by useAuth hook - no need for manual event listeners
 
-    function onLogout() {
-      setUser(null)
-    }
-
-    function onStorage(e: StorageEvent) {
-      if (e.key === 'user' || e.key === 'token') {
-        try { setUser(e.newValue ? JSON.parse(e.newValue) : null) } catch { setUser(null) }
-      }
-    }
-
-    window.addEventListener('auth:login', onLogin as EventListener)
-    window.addEventListener('auth:logout', onLogout)
-    window.addEventListener('storage', onStorage)
-    return () => {
-      window.removeEventListener('auth:login', onLogin as EventListener)
-      window.removeEventListener('auth:logout', onLogout)
-      window.removeEventListener('storage', onStorage)
-    }
-  }, [])
-
-  // Temporary hardcoded values; replace with real data as needed
-  const isAuthenticated = !!user
-
+  // Get user display info
   const studentName = user?.fullName || user?.name || user?.email || (isAdminMode ? "Admin User" : "Guest")
   const roleCode = (user?.roleRel?.code || user?.role || '') as string
   const studentRole = roleCode ? roleCode : (isAdminMode ? t('common:header.user.administrator') : t('common:header.user.student'))
@@ -103,19 +64,15 @@ export default function Header({
   const handleLogoClick = () => {
     // Navigate according to the logged-in user's role when available
     if (isAuthenticated) {
-      const rc = (user?.roleRel?.code || user?.role || '').toLowerCase()
-      if (rc === 'admin' || rc === 'administrator') return navigate('/admin/overview')
-      if (rc === 'teacher') return navigate('/teacher/dashboard')
-      if (rc === 'parent') return navigate('/parent/dashboard')
-      // default: student
-      return navigate('/student/landing')
-    }
-
-    // Fallback when not authenticated
-    if (isAdminMode) {
-      navigate('/admin/overview')
+      const dashboardPath = getDashboardPath()
+      navigate(dashboardPath)
     } else {
-      navigate('/student/landing')
+      // Fallback when not authenticated
+      if (isAdminMode) {
+        navigate('/admin/overview')
+      } else {
+        navigate('/student/landing')
+      }
     }
   }
 
@@ -321,11 +278,8 @@ export default function Header({
                           } catch (e) {
                             console.error('Logout notify failed', e)
                           } finally {
-                            localStorage.removeItem('token')
-                            localStorage.removeItem('user')
-                            setUser(null)
-                            window.dispatchEvent(new CustomEvent('auth:logout'))
-                            navigate('/student/landing')
+                            // Use the logout function from useAuth hook
+                            logout()
                           }
                         }}
                         className="px-2 py-1 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 rounded-md"

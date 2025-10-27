@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/student/Student_button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import MusicBrowser from './MusicBrowser'
 import StudyRooms from './StudyRooms'
+import { LearningSessionIndicator } from '@/components/LearningSessionIndicator'
 import { Clock, Play, Pause,RotateCcw, ArrowLeft, Image as ImageIcon,GraduationCap,Music,PlayCircle,CloudRain,Settings,X,Plus,Minus,
   SkipBack,
   SkipForward,
@@ -1038,6 +1039,13 @@ export default function LiveLearning() {
         accept="image/*"
         onChange={handleBackgroundChange}
         className="hidden"
+      />
+
+      {/* Learning Session Indicator - hiển thị ở góc phải trên */}
+      <LearningSessionIndicator 
+        position="top-right" 
+        showAlways={false}
+        autoExtend={false}
       />
     </div>
   )
