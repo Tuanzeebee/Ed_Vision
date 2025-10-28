@@ -48,15 +48,13 @@ import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
-import LiveLearning from "./modules/student/LiveLearning";
-import VideoRoom from "./modules/student/VideoRoom";
-import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
 import { SessionTimeoutWarning } from '@/components/SessionTimeoutWarning'
+import ChatView from "./modules/student/ChatView";
 
 function App() {
         return (
@@ -84,15 +82,7 @@ function App() {
                                 <Route path="/student/financial-survey/step/1" element={<ProtectedRoute allowedRoles={["student"]}><FinancialSurveyStep1 /></ProtectedRoute>} />
                                 <Route path="/student/choose-mascot" element={<ProtectedRoute allowedRoles={["student"]}><ChooseMascot /></ProtectedRoute>} />
                                 <Route path="/student/learning-adventure" element={<ProtectedRoute allowedRoles={["student"]}><LearningAdventure /></ProtectedRoute>} />
-                                <Route path="/student/live-learning" element={<ProtectedRoute allowedRoles={["student"]}><LiveLearning /></ProtectedRoute>} />
-                                <Route path="/student/study-rooms" element={<ProtectedRoute allowedRoles={["student"]}><StudyRooms /></ProtectedRoute>} />
-                                <Route path="/student/video-room" element={<ProtectedRoute allowedRoles={["student"]}><VideoRoom roomData={{
-                                        id: 'demo',
-                                        title: 'Demo Room',
-                                        subtitle: 'Live Session · Demo',
-                                        description: 'Interactive learning session',
-                                        students: '12 participants'
-                                }} /></ProtectedRoute>} />
+                                <Route path="/student/chat-view" element={<ProtectedRoute allowedRoles={["student"]}><ChatView /></ProtectedRoute>} />
 
                                 {/* Route cho parent */}
                                 <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["parent"]}><ParentDashboard /></ProtectedRoute>} />
