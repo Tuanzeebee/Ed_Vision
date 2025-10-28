@@ -265,7 +265,7 @@ model InstructorAvailabilityWeek {
   week_start_date             DateTime                     @db.Date
   created_at                  DateTime                     @default(now()) @db.Timestamptz(6)
   instructorAvailabilityDates InstructorAvailabilityDate[]
-  instructor                  Instructor?                  @relation(fields: [instructor_id], references: [instructor_id])
+  instructor                  Instructor?                  @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
   instructorWeeklySlots       InstructorWeeklySlot[]
 
   @@unique([instructor_id, week_start_date])
