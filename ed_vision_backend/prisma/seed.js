@@ -162,10 +162,12 @@ async function main() {
 
   console.log('Seeding finished')
 
-  // Ensure an admin account exists (dev/test only)
+  // Ensure demo accounts exist for all roles (dev/test only)
   const bcrypt = require('bcryptjs')
+  
+  // 1. Admin account
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@dtu.edu.vn'
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin'
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123'
   const adminRoleRec = await prisma.role.findUnique({ where: { code: 'admin' } })
   if (adminRoleRec) {
     const existing = await prisma.account.findUnique({ where: { email: adminEmail } })
@@ -179,13 +181,189 @@ async function main() {
           roleRel: { connect: { id: adminRoleRec.id } }
         }
       })
-      console.log('Created admin user:', adminEmail, 'id=', acc.account_id)
-      console.log('Dev token for admin (use as Bearer): dev-token-' + acc.account_id)
+      console.log('✓ Created admin user:', adminEmail, 'id=', acc.account_id)
+      console.log('  Password: admin123')
     } else {
-      console.log('Admin user already exists:', adminEmail)
-      console.log('Dev token (existing): dev-token-' + existing.account_id)
+      console.log('✓ Admin user already exists:', adminEmail)
     }
   }
+
+  // 2. Teacher account
+  const teacherEmail = 'teacher@dtu.edu.vn'
+  const teacherPassword = 'teacher123'
+  const teacherRoleRec = await prisma.role.findUnique({ where: { code: 'teacher' } })
+  if (teacherRoleRec) {
+    let teacherAcc = await prisma.account.findUnique({ where: { email: teacherEmail } })
+    if (!teacherAcc) {
+      const hash = await bcrypt.hash(teacherPassword, 10)
+      teacherAcc = await prisma.account.create({
+        data: {
+          email: teacherEmail,
+          password_hash: hash,
+          status: 'active',
+          roleRel: { connect: { id: teacherRoleRec.id } }
+        }
+      })
+      console.log('✓ Created teacher user:', teacherEmail, 'id=', teacherAcc.account_id)
+      console.log('  Password: teacher123')
+    } else {
+      console.log('✓ Teacher user already exists:', teacherEmail)
+    }
+
+    // Create Instructor record if not exists
+    const existingInstructor = await prisma.instructor.findUnique({ 
+      where: { account_id: teacherAcc.account_id } 
+    })
+    if (!existingInstructor) {
+      const instructor = await prisma.instructor.create({
+        data: {
+          account_id: teacherAcc.account_id,
+          employee_code: 'GV001',
+          academic_title: 'Thạc sĩ',
+          position: 'Giảng viên',
+          status: 'active'
+        }
+      })
+      console.log('  ✓ Created instructor record, instructor_id=', instructor.instructor_id)
+    }
+
+    // Create Profile if not exists
+    const existingProfile = await prisma.profile.findUnique({
+      where: { account_id: teacherAcc.account_id }
+    })
+    if (!existingProfile) {
+      await prisma.profile.create({
+        data: {
+          account_id: teacherAcc.account_id,
+          full_name: 'Nguyễn Văn Giáo Viên',
+          gender: 'male',
+          nationality: 'Vietnam'
+        }
+      })
+      console.log('  ✓ Created teacher profile')
+    }
+  }
+
+  // 3. Student account
+  const studentEmail = 'student@dtu.edu.vn'
+  const studentPassword = 'student123'
+  const studentRoleRec = await prisma.role.findUnique({ where: { code: 'student' } })
+  if (studentRoleRec) {
+    let studentAcc = await prisma.account.findUnique({ where: { email: studentEmail } })
+    if (!studentAcc) {
+      const hash = await bcrypt.hash(studentPassword, 10)
+      studentAcc = await prisma.account.create({
+        data: {
+          email: studentEmail,
+          password_hash: hash,
+          status: 'active',
+          roleRel: { connect: { id: studentRoleRec.id } }
+        }
+      })
+      console.log('✓ Created student user:', studentEmail, 'id=', studentAcc.account_id)
+      console.log('  Password: student123')
+    } else {
+      console.log('✓ Student user already exists:', studentEmail)
+    }
+
+    // Create Student record if not exists
+    const existingStudent = await prisma.student.findUnique({ 
+      where: { account_id: studentAcc.account_id } 
+    })
+    if (!existingStudent) {
+      const student = await prisma.student.create({
+        data: {
+          account_id: studentAcc.account_id,
+          student_code: 'SV001',
+          major: 'Công nghệ phần mềm',
+          cohort_year: 2023,
+          status: 'active'
+        }
+      })
+      console.log('  ✓ Created student record, student_id=', student.student_id)
+    }
+
+    // Create Profile if not exists
+    const existingProfile = await prisma.profile.findUnique({
+      where: { account_id: studentAcc.account_id }
+    })
+    if (!existingProfile) {
+      await prisma.profile.create({
+        data: {
+          account_id: studentAcc.account_id,
+          full_name: 'Nguyễn Văn Sinh Viên',
+          gender: 'male',
+          nationality: 'Vietnam'
+        }
+      })
+      console.log('  ✓ Created student profile')
+    }
+  }
+
+  // 4. Parent account
+  const parentEmail = 'parent@dtu.edu.vn'
+  const parentPassword = 'parent123'
+  const parentRoleRec = await prisma.role.findUnique({ where: { code: 'parent' } })
+  if (parentRoleRec) {
+    let parentAcc = await prisma.account.findUnique({ where: { email: parentEmail } })
+    if (!parentAcc) {
+      const hash = await bcrypt.hash(parentPassword, 10)
+      parentAcc = await prisma.account.create({
+        data: {
+          email: parentEmail,
+          password_hash: hash,
+          status: 'active',
+          roleRel: { connect: { id: parentRoleRec.id } }
+        }
+      })
+      console.log('✓ Created parent user:', parentEmail, 'id=', parentAcc.account_id)
+      console.log('  Password: parent123')
+    } else {
+      console.log('✓ Parent user already exists:', parentEmail)
+    }
+
+    // Create Parent record if not exists
+    const existingParent = await prisma.parent.findUnique({ 
+      where: { account_id: parentAcc.account_id } 
+    })
+    if (!existingParent) {
+      const parent = await prisma.parent.create({
+        data: {
+          account_id: parentAcc.account_id,
+          full_name: 'Nguyễn Văn Phụ Huynh',
+          email: parentEmail,
+          phone_number: '0123456789',
+          relationship_type: 'parent'
+        }
+      })
+      console.log('  ✓ Created parent record, parent_id=', parent.parent_id)
+    }
+
+    // Create Profile if not exists
+    const existingProfile = await prisma.profile.findUnique({
+      where: { account_id: parentAcc.account_id }
+    })
+    if (!existingProfile) {
+      await prisma.profile.create({
+        data: {
+          account_id: parentAcc.account_id,
+          full_name: 'Nguyễn Văn Phụ Huynh',
+          gender: 'male',
+          nationality: 'Vietnam'
+        }
+      })
+      console.log('  ✓ Created parent profile')
+    }
+  }
+
+  console.log('\n✅ All demo accounts created successfully!')
+  console.log('\n📋 Login Credentials:')
+  console.log('┌─────────────────────────────────────────────────┐')
+  console.log('│ Admin:   admin@dtu.edu.vn   / admin123         │')
+  console.log('│ Teacher: teacher@dtu.edu.vn / teacher123       │')
+  console.log('│ Student: student@dtu.edu.vn / student123       │')
+  console.log('│ Parent:  parent@dtu.edu.vn  / parent123        │')
+  console.log('└─────────────────────────────────────────────────┘')
 }
 
 main()

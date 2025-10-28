@@ -35,6 +35,30 @@ export class InstructorAvailabilityController {
   }
 
   /**
+   * Get instructor profile by account_id
+   * GET /instructor-availability/profile/:accountId
+   * NOTE: This must come BEFORE the :instructorId routes
+   */
+  @Get('profile/:accountId')
+  async getInstructorProfile(@Param('accountId', ParseIntPipe) accountId: number) {
+    return this.availabilityService.getInstructorProfile(accountId);
+  }
+
+  /**
+   * Delete all time slots for a specific date
+   * DELETE /instructor-availability/:instructorId/dates/:date
+   * IMPORTANT: Must come BEFORE general :instructorId routes to avoid conflicts
+   */
+  @Delete(':instructorId/dates/:date')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAvailabilityDate(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+    @Param('date') date: string,
+  ) {
+    await this.availabilityService.deleteAvailabilityDate(instructorId, date);
+  }
+
+  /**
    * Get instructor's availability statistics
    * GET /instructor-availability/:instructorId/statistics
    * NOTE: This must come BEFORE the general :instructorId route
@@ -84,19 +108,6 @@ export class InstructorAvailabilityController {
       instructorId,
       dto.availabilities,
     );
-  }
-
-  /**
-   * Delete all time slots for a specific date
-   * DELETE /instructor-availability/:instructorId/dates/:date
-   */
-  @Delete(':instructorId/dates/:date')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAvailabilityDate(
-    @Param('instructorId', ParseIntPipe) instructorId: number,
-    @Param('date') date: string,
-  ) {
-    await this.availabilityService.deleteAvailabilityDate(instructorId, date);
   }
 
   /**
