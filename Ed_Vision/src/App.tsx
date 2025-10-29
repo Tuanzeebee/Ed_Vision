@@ -53,6 +53,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
+import ChatView from "./modules/student/ChatView";
 
 function App() {
         return (
