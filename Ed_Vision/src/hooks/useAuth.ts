@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { TokenManager } from '@/lib/tokenManager'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
 
@@ -17,18 +16,41 @@ export const useAuth = () => {
     isLoading: true,
     timeRemaining: 0
   })
-  const navigate = useNavigate()
+  // navigation handled via full page redirects on logout; keep router hook available if needed elsewhere
   
-  // Track user activity to extend token
-  useActivityTracker(authState.isAuthenticated)
+  // Track user activity to extend token - but stop tracking if token is expired
+  useActivityTracker(authState.isAuthenticated, authState.timeRemaining)
 
   // Check authentication status
   const checkAuth = useCallback(() => {
-    const token = TokenManager.getToken()
+    // First check if token is expired (e.g. tab closed > timeout)
     const isExpired = TokenManager.isTokenExpired()
-    
-    if (!token || isExpired) {
-      // Token expired or doesn't exist
+    if (isExpired) {
+      // Notify UI that session expired so components can show the modal
+      try {
+        window.dispatchEvent(new CustomEvent('auth:expired'))
+      } catch (e) {
+        try {
+          window.dispatchEvent(new Event('auth:expired'))
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      // Clear token and mark unauthenticated
+      TokenManager.clearToken()
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        isLoading: false,
+        timeRemaining: 0
+      })
+      return false
+    }
+
+    const token = TokenManager.getToken()
+    if (!token) {
+      // Token doesn't exist
       TokenManager.clearToken()
       setAuthState({
         isAuthenticated: false,
@@ -62,26 +84,94 @@ export const useAuth = () => {
 
   // Logout function
   const logout = useCallback(() => {
-    TokenManager.clearToken()
+    // Create a small overlay to hide UI changes during logout for a smoother transition
+    try {
+      if (typeof document !== 'undefined') {
+        const existing = document.getElementById('app-logout-overlay')
+        if (!existing) {
+          const overlay = document.createElement('div')
+          overlay.id = 'app-logout-overlay'
+          overlay.style.position = 'fixed'
+          overlay.style.inset = '0'
+          overlay.style.background = 'rgba(0,0,0,0)'
+          overlay.style.display = 'flex'
+          overlay.style.alignItems = 'center'
+          overlay.style.justifyContent = 'center'
+          overlay.style.zIndex = '999999'
+          overlay.style.transition = 'background 180ms ease'
+
+          const box = document.createElement('div')
+          box.style.padding = '18px 24px'
+          box.style.borderRadius = '8px'
+          box.style.background = 'rgba(255,255,255,0.95)'
+          box.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'
+          box.style.display = 'flex'
+          box.style.alignItems = 'center'
+          box.style.gap = '12px'
+
+          const spinner = document.createElement('div')
+          spinner.style.width = '28px'
+          spinner.style.height = '28px'
+          spinner.style.border = '3px solid #e5e7eb'
+          spinner.style.borderTop = '3px solid #6366f1'
+          spinner.style.borderRadius = '50%'
+          spinner.style.animation = 'spin 1s linear infinite'
+
+          const text = document.createElement('div')
+          text.style.color = '#111827'
+          text.style.fontSize = '14px'
+          text.innerText = 'Đang đăng xuất...'
+
+          box.appendChild(spinner)
+          box.appendChild(text)
+          overlay.appendChild(box)
+          document.body.appendChild(overlay)
+
+          // add spin keyframes if not present
+          const styleId = 'app-logout-overlay-style'
+          if (!document.getElementById(styleId)) {
+            const style = document.createElement('style')
+            style.id = styleId
+            style.innerHTML = `@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`
+            document.head.appendChild(style)
+          }
+
+          // trigger fade-in
+          requestAnimationFrame(() => {
+            overlay.style.background = 'rgba(0,0,0,0.45)'
+          })
+        }
+      }
+    } catch (e) {
+      // ignore overlay errors
+    }
+
+    // perform cleanup then navigate — overlay hides the intermediate UI changes
+    try {
+      TokenManager.clearToken()
+    } catch (_) {}
+
     setAuthState({
       isAuthenticated: false,
       user: null,
       isLoading: false,
       timeRemaining: 0
     })
-    
+
     // Dispatch logout event
     try {
       window.dispatchEvent(new CustomEvent('auth:logout'))
     } catch (e) {
-      try { 
-        window.dispatchEvent(new Event('auth:logout')) 
+      try {
+        window.dispatchEvent(new Event('auth:logout'))
       } catch (_) {}
     }
-    
-    // Navigate to login
-    navigate('/auth/login')
-  }, [navigate])
+
+    // Navigate to landing after a tiny delay to let the overlay fade in
+    setTimeout(() => {
+      window.location.href = '/student/landing'
+    }, 160)
+  }, [])
 
   // Monitor token status but don't auto logout - let user decide
   useEffect(() => {
@@ -175,6 +265,8 @@ export const useAuth = () => {
     switch (normalizedRole) {
       case 'admin':
       case 'administrator':
+        return '/admin/dashboard'
+      case 'leader':
         return '/admin/dashboard'
       case 'teacher':
         return '/teacher/dashboard'
