@@ -38,10 +38,10 @@ export default function ScheduleManagement({
 }: ScheduleManagementProps) {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState('');
-  
+
   // Get instructor profile from logged-in account
   const { instructorId, loading: profileLoading, error: profileError } = useInstructorProfile();
-  
+
   // Use the custom hook for API integration (only if instructorId is available)
   const {
     loading,
@@ -53,7 +53,7 @@ export default function ScheduleManagement({
     deleteAvailabilityDate,
     addTimeSlot,
   } = useInstructorAvailability(instructorId || 0);
-  
+
   // Time modal state
   const [timeModalOpen, setTimeModalOpen] = useState(false);
   const [currentDateForTime, setCurrentDateForTime] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function ScheduleManagement({
   const [endTime, setEndTime] = useState('');
   const [meetingType, setMeetingType] = useState<'online' | 'offline' | 'both'>('both');
   const [capacity, setCapacity] = useState('10');
-  
+
   // Delete confirmation modal state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [dateToDelete, setDateToDelete] = useState<{ index: number; date: AvailableDate } | null>(null);
@@ -98,11 +98,11 @@ export default function ScheduleManagement({
     const loadAvailability = async () => {
       // Check if this is truly the first load (session-based tracking)
       const hasLoadedThisSession = sessionStorage.getItem('scheduleDataLoaded');
-      
+
       // Check if we have cached data (memory or session storage)
       const cacheKey = cacheService.getAvailabilityKey(instructorId);
       const cachedData = cacheService.get<any>(cacheKey);
-      
+
       // Priority 1: Use cached data if available
       if (cachedData && cachedData.availabilities && availableDates.length === 0) {
         setAvailableDates(cachedData.availabilities.map((avail: any) => ({
@@ -119,20 +119,20 @@ export default function ScheduleManagement({
         sessionStorage.setItem('scheduleDataLoaded', 'true');
         return;
       }
-      
+
       // Priority 2: Load from backend if:
       // - Never loaded this session AND
       // - No local data exists (availableDates is empty)
       if (!hasLoadedThisSession && availableDates.length === 0) {
         try {
           const data = await fetchAvailability();
-          
+
           // Update state with backend data
           setAvailableDates(data);
-          
+
           // Mark as loaded for this session
           sessionStorage.setItem('scheduleDataLoaded', 'true');
-          
+
           if (data.length > 0) {
             showToast('Đã tải lịch rảnh từ server!', 'info');
           }
@@ -158,22 +158,22 @@ export default function ScheduleManagement({
       showToast('Vui lòng chọn ngày!', 'error');
       return;
     }
-    
+
     // Prevent adding dates in the past
     const selectedDateObj = parseLocalDate(date);
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
-    
+
     if (selectedDateObj < todayDate) {
       showToast('Không thể thêm ngày trong quá khứ!', 'error');
       return;
     }
-    
+
     if (availableDates.find((d) => d.date === date)) {
       showToast('Ngày này đã được thêm!', 'warning');
       return;
     }
-    
+
     try {
       // Add to backend first
       await addAvailabilityDate(date, []);
@@ -202,7 +202,7 @@ export default function ScheduleManagement({
       await deleteAvailabilityDate(removedDate.date);
       // Update local state
       setAvailableDates(availableDates.filter((_, i) => i !== index));
-      
+
       // Only show toast if the date had time slots (important deletion)
       // For empty dates (no slots), delete silently for better UX
       if (hasTimeSlots) {
@@ -215,7 +215,7 @@ export default function ScheduleManagement({
 
   const confirmDeleteDate = async () => {
     if (!dateToDelete) return;
-    
+
     showToast('Đang xóa ngày rảnh...', 'info');
     setDeleteConfirmOpen(false);
 
@@ -301,13 +301,13 @@ export default function ScheduleManagement({
     if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ này?')) {
       const newDates = [...availableDates];
       const removedSlot = newDates[dateIndex].timeSlots[slotIndex];
-      
+
       try {
         // Delete from backend if slotId exists
         if (removedSlot.slotId) {
           await instructorAvailabilityApi.deleteTimeSlot(instructorId, removedSlot.slotId);
         }
-        
+
         // Update local state
         newDates[dateIndex].timeSlots.splice(slotIndex, 1);
         setAvailableDates(newDates);
@@ -331,10 +331,10 @@ export default function ScheduleManagement({
       }, 0)
     );
   }, 0);
-  
+
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Reset time to compare only dates
-  
+
   const upcomingDates = availableDates.filter((date) => parseLocalDate(date.date) >= today).length;
 
   // Quick dates
@@ -387,12 +387,12 @@ export default function ScheduleManagement({
             </div>
           </div>
         )}
-        
-        <div className="mb-6">
+
+        <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-6 rounded-xl shadow-lg mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Thiết lập lịch rảnh</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold mb-2">Thiết lập lịch rảnh</h1>
+              <p className="text-teal-100">
                 Thiết lập ngày và giờ rảnh để sinh viên có thể đặt lịch hẹn
               </p>
             </div>
@@ -407,7 +407,7 @@ export default function ScheduleManagement({
                   showToast('Không thể tải lại dữ liệu!', 'error');
                 }
               }}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium flex items-center gap-2"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium flex items-center gap-2 border border-white/30"
               title="Tải lại dữ liệu từ server"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -457,7 +457,7 @@ export default function ScheduleManagement({
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 const dateString = `${year}-${month}-${day}`;
-                
+
                 const isToday = index === 0;
                 const isAdded = availableDates.some((d) => d.date === dateString);
                 const dateIndex = availableDates.findIndex((d) => d.date === dateString);
@@ -482,15 +482,14 @@ export default function ScheduleManagement({
                       }
                     }}
                     disabled={!instructorId}
-                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 text-center ${
-                      !instructorId
+                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 text-center ${!instructorId
                         ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
                         : isAdded
-                        ? 'bg-green-50 border-green-500 hover:bg-green-100'
-                        : isToday
-                        ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
-                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                    }`}
+                          ? 'bg-green-50 border-green-500 hover:bg-green-100'
+                          : isToday
+                            ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
+                            : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
                   >
                     <div className="text-xs font-medium text-gray-600 mb-1">
                       {getDayName(date.getDay())}
@@ -561,18 +560,17 @@ export default function ScheduleManagement({
               return (
                 <div
                   key={index}
-                  className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${
-                    !isUpcoming ? 'opacity-75' : ''
-                  }`}
+                  className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${!isUpcoming ? 'opacity-75' : ''
+                    }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-                    <div 
+                    <div
                       className="flex items-center gap-3 mb-4 sm:mb-0 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate('/teacher/meeting-detail-demo', { 
-                        state: { 
+                      onClick={() => navigate('/teacher/meeting-detail-demo', {
+                        state: {
                           date: dateObj.date,
-                          timeSlots: dateObj.timeSlots 
-                        } 
+                          timeSlots: dateObj.timeSlots
+                        }
                       })}
                     >
                       <div className="p-3 rounded-lg bg-blue-100">
@@ -674,7 +672,7 @@ export default function ScheduleManagement({
 
       {/* Time Modal */}
       {timeModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {

@@ -1204,9 +1204,9 @@ const StudentSurveyManagement = () => {
     return (
         <TeacherLayout>
             <div className="p-6">
-                <div className="mb-6">
+                <div className="bg-gradient-to-r from-pink-600 to-rose-600 text-white p-6 rounded-xl shadow-lg mb-6">
                     <h1 className="text-3xl font-bold mb-2">Khảo sát sinh viên</h1>
-                    <p className="text-gray-600">
+                    <p className="text-pink-100">
                         Quản lý khảo sát định kỳ để theo dõi tình hình sinh viên và hỗ trợ dự đoán điểm
                     </p>
                 </div>

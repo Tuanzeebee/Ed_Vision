@@ -47,11 +47,7 @@ import ChooseMascot from "./modules/student/ChooseMascot";
 import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
-import TeacherChat from "./modules/teacher/TeacherChat";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
-import LiveLearning from "./modules/student/LiveLearning";
-import VideoRoom from "./modules/student/VideoRoom";
-import StudyRooms from "./modules/student/StudyRooms";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
@@ -68,7 +64,7 @@ function App() {
 
                                 {/* Student routes */}
                                 <Route path="/student/landing" element={<GradeForecastLanding />} />
-                                
+
 
                                 {/* Auth routes (used by updated components) */}
                                 <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
@@ -83,18 +79,10 @@ function App() {
                                 <Route path="/student/financial-survey/step/1" element={<ProtectedRoute allowedRoles={["student"]}><FinancialSurveyStep1 /></ProtectedRoute>} />
                                 <Route path="/student/choose-mascot" element={<ProtectedRoute allowedRoles={["student"]}><ChooseMascot /></ProtectedRoute>} />
                                 <Route path="/student/learning-adventure" element={<ProtectedRoute allowedRoles={["student"]}><LearningAdventure /></ProtectedRoute>} />
-                                <Route path="/student/live-learning" element={<ProtectedRoute allowedRoles={["student"]}><LiveLearning /></ProtectedRoute>} />
-                                <Route path="/student/study-rooms" element={<ProtectedRoute allowedRoles={["student"]}><StudyRooms /></ProtectedRoute>} />
-                                <Route path="/student/video-room" element={<ProtectedRoute allowedRoles={["student"]}><VideoRoom roomData={{
-                                        id: 'demo',
-                                        title: 'Demo Room',
-                                        subtitle: 'Live Session · Demo',
-                                        description: 'Interactive learning session',
-                                        students: '12 participants'
-                                }} /></ProtectedRoute>} />
+                                <Route path="/student/chat-view" element={<ProtectedRoute allowedRoles={["student"]}><ChatView /></ProtectedRoute>} />
 
                                 {/* Route cho parent */}
-                                <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["parent"]}><ParentDashboard /></ProtectedRoute>} />  
+                                <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={["parent"]}><ParentDashboard /></ProtectedRoute>} />
                                 <Route path="/parent/book-appointment/step/:stepNumber" element={<ProtectedRoute allowedRoles={["parent"]}><BookAppointmentStepWrapper /></ProtectedRoute>} />
                                 <Route path="/parent/book-appointment" element={<ProtectedRoute allowedRoles={["parent"]}><Navigate to="/parent/book-appointment/step/1" replace /></ProtectedRoute>} />
                                 <Route path="/parent/appointments" element={<ProtectedRoute allowedRoles={["parent"]}><AllAppointments /></ProtectedRoute>} />
@@ -144,13 +132,13 @@ function App() {
                                 <Route path="/teacher/progress-tracking" element={<ProtectedRoute allowedRoles={["teacher"]}><ProgressTracking /></ProtectedRoute>} />
                                 <Route path="/teacher/reports-alerts" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherReport /></ProtectedRoute>} />
                                 <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["teacher"]}><MessagesNotifications /></ProtectedRoute>} />
-                                <Route path="/teacher/chat" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherChat /></ProtectedRoute>} />
                                 <Route path="/teacher/appointments" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                 <Route path="/teacher/requests" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                 <Route path="/teacher/confirmed" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                 <Route path="/teacher/settings" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherDashboard /></ProtectedRoute>} />
                                 <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute allowedRoles={["teacher"]}><MeetingDetailDemo /></ProtectedRoute>} />
                                 <Route path="/teacher/survey-management" element={<ProtectedRoute allowedRoles={["teacher"]}><StudentSurveyManagement /></ProtectedRoute>} />
+
                         </Routes>
                 </Router>
         );
