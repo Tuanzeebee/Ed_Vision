@@ -5,7 +5,7 @@ import { TokenManager } from '@/lib/tokenManager'
  * Hook để theo dõi hoạt động của người dùng và cập nhật token expiry
  * Sẽ track các events: mouse movement, clicks, keyboard, scroll, etc.
  */
-export const useActivityTracker = (isAuthenticated: boolean) => {
+export const useActivityTracker = (isAuthenticated: boolean, timeRemaining?: number) => {
   const updateActivity = useCallback(() => {
     if (isAuthenticated) {
       TokenManager.updateActivity()
@@ -13,7 +13,12 @@ export const useActivityTracker = (isAuthenticated: boolean) => {
   }, [isAuthenticated])
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    // Since there's no idle timeout anymore, we only need minimal activity tracking
+    // Just to update sessionStorage and show user is still active
+    if (!isAuthenticated) {
+      console.log('ActivityTracker: Stopped - not authenticated')
+      return
+    }
 
     // Các events để track hoạt động người dùng
     const events = [
@@ -31,9 +36,12 @@ export const useActivityTracker = (isAuthenticated: boolean) => {
       if (throttleTimer) return
       
       throttleTimer = setTimeout(() => {
-        updateActivity()
+        // Update activity to maintain sessionStorage and lastActivity timestamp
+        if (isAuthenticated && !TokenManager.isTokenExpired()) {
+          updateActivity()
+        }
         throttleTimer = null
-      }, 10000) // Cập nhật tối đa 1 lần mỗi 10 giây
+      }, 30000) // Cập nhật tối đa 1 lần mỗi 30 giây (less frequent since no idle timeout)
     }
 
     // Thêm event listeners
@@ -50,7 +58,7 @@ export const useActivityTracker = (isAuthenticated: boolean) => {
         document.removeEventListener(event, throttledUpdateActivity, true)
       })
     }
-  }, [isAuthenticated, updateActivity])
+  }, [isAuthenticated, updateActivity, timeRemaining])
 
   // Cũng track navigation changes
   useEffect(() => {

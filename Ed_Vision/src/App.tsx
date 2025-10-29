@@ -53,14 +53,12 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
-import { SessionTimeoutWarning } from '@/components/SessionTimeoutWarning'
 import ChatView from "./modules/student/ChatView";
 
 function App() {
         return (
                 <Router>
-                        {/* Session timeout warning - shows globally when needed */}
-                        <SessionTimeoutWarning />
+                        {/* Session timeout warning removed - feature deleted */}
                         <Routes>
                                 {/* Default route redirect to student landing */}
                                 <Route path="/" element={<AuthRedirectWrapper><Navigate to="/student/landing" replace /></AuthRedirectWrapper>} />
@@ -92,8 +90,8 @@ function App() {
                                 <Route path="/parent/student-details" element={<ProtectedRoute allowedRoles={["parent"]}><StudentDetails /></ProtectedRoute>} />
                                 <Route path="/parent/chat" element={<ProtectedRoute allowedRoles={["parent"]}><ChatWithTeachers /></ProtectedRoute>} />
                                 {/* Admin routes - Dashboard (protected) */}
-                                <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
-                                <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
+                                <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><AdminOverviewDashboard /></ProtectedRoute>} />
+                                <Route path="/admin/overview" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><AdminOverviewDashboard /></ProtectedRoute>} />
 
                                 {/* Admin routes - Management (protected) */}
                                 <Route path="/admin/users" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
@@ -115,10 +113,10 @@ function App() {
                                 <Route path="/admin/questions/add" element={<ProtectedRoute><AddQuestion /></ProtectedRoute>} />
 
                                 {/* Admin routes - Reports & Analytics (protected) */}
-                                <Route path="/admin/reports/learning" element={<ProtectedRoute><GeneralStatistics /></ProtectedRoute>} />
-                                <Route path="/admin/analytics/performance" element={<ProtectedRoute><LeadershipReports /></ProtectedRoute>} />
-                                <Route path="/admin/leadership-reports" element={<ProtectedRoute><LeadershipReports /></ProtectedRoute>} />
-                                <Route path="/admin/ai-insights" element={<ProtectedRoute><AIPredictionResults /></ProtectedRoute>} />
+                                <Route path="/admin/reports/learning" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><GeneralStatistics /></ProtectedRoute>} />
+                                <Route path="/admin/analytics/performance" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><LeadershipReports /></ProtectedRoute>} />
+                                <Route path="/admin/leadership-reports" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><LeadershipReports /></ProtectedRoute>} />
+                                <Route path="/admin/ai-insights" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><AIPredictionResults /></ProtectedRoute>} />
 
                                 {/* Admin routes - System Management (protected) */}
                                 <Route path="/admin/notifications" element={<ProtectedRoute><NotificationManagement /></ProtectedRoute>} />
