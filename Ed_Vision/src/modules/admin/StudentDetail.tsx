@@ -305,9 +305,9 @@ export default function StudentDetail() {
         cornerRadius: 8,
         displayColors: true,
         callbacks: {
-          label: function(tooltipItem: { dataset: { label?: string }, parsed: { y: number } }) {
+          label: function(tooltipItem: { dataset: { label?: string }, parsed: { y: number | null } }) {
             const label = tooltipItem.dataset.label || '';
-            return label + ': ' + tooltipItem.parsed.y + ' điểm';
+            return label + ': ' + (tooltipItem.parsed.y ?? 0) + ' điểm';
           }
         }
       }
