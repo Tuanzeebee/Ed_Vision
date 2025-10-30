@@ -13,18 +13,21 @@ import {
   BarElement,
   Filler
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { getScopeStats, saveReportsToStorage, loadReportsFromStorage, type Report } from '@/lib/reportUtils';
 import Modal from '@/components/ui/admin/Modal';
+import ConfirmDialog from '@/components/ui/admin/ConfirmDialog';
+import { useConfirm } from '@/hooks/useConfirm';
 import { 
   majorsBySchool, 
   classesBySchoolAndMajor
 } from '@/lib/leadershipReportsConstants';
 import pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
-import { generateReportContentByType, generateCSVContentByType } from '@/lib/reportTemplates';
+import { generateReportContentByType } from '@/lib/reportTemplates';
 import { generatePDFReportByType } from '@/lib/pdfReportTemplates';
+import { exportToExcel, exportToWord, exportToPowerPoint } from '@/lib/exportHelpers';
+import { generateChartsForReportType } from '@/lib/chartGenerator';
 
 // Configure pdfMake fonts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +49,9 @@ ChartJS.register(
 export default function LeadershipReports() {
   // State for time filter (from GeneralStatistics)
   const [timeFilter, setTimeFilter] = useState('tháng-này');
+  
+  // Confirm dialog hook
+  const { confirm, confirmState } = useConfirm();
   
   // State for report form
   const [reportType, setReportType] = useState("Báo cáo điểm số");
@@ -93,7 +99,35 @@ export default function LeadershipReports() {
   // State for reports list - Load from localStorage on mount
   const [reports, setReports] = useState<Report[]>(() => {
     const stored = loadReportsFromStorage();
-    return stored || [
+    
+    // Normalize all report types to have consistent capitalization
+    const normalizeReportType = (type: string): string => {
+      // Map of expected types
+      const typeMap: { [key: string]: string } = {
+        'điểm số': 'Điểm số',
+        'Điểm số': 'Điểm số',
+        'hiệu suất': 'Hiệu suất',
+        'Hiệu suất': 'Hiệu suất',
+        'dự đoán': 'Dự đoán',
+        'Dự đoán': 'Dự đoán',
+        'tổng hợp': 'Tổng hợp',
+        'Tổng hợp': 'Tổng hợp',
+        'so sánh': 'So sánh',
+        'So sánh': 'So sánh',
+        'cảnh báo': 'Cảnh báo',
+        'Cảnh báo': 'Cảnh báo'
+      };
+      
+      return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
+    };
+    
+    // Normalize stored data
+    const normalizedStored = stored?.map(report => ({
+      ...report,
+      type: normalizeReportType(report.type)
+    }));
+    
+    return normalizedStored || [
       {
         id: 1,
         name: "Báo cáo điểm cuối kỳ HK1-2024",
@@ -127,10 +161,126 @@ export default function LeadershipReports() {
     ];
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const reportsPerPage = 10;
+
+  // Filter states
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterCreator, setFilterCreator] = useState<string>('all');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+  const [filterScope, setFilterScope] = useState<string>('all');
+
+  // Selection states
+  const [selectedReports, setSelectedReports] = useState<number[]>([]);
+
   // Save reports to localStorage whenever it changes
   useEffect(() => {
     saveReportsToStorage(reports);
   }, [reports]);
+
+  // Apply filters to reports
+  const filteredReports = useMemo(() => {
+    return reports.filter(report => {
+      // Filter by type
+      if (filterType !== 'all' && report.type !== filterType) return false;
+      
+      // Filter by creator
+      if (filterCreator !== 'all' && report.creator !== filterCreator) return false;
+      
+      // Filter by scope
+      if (filterScope !== 'all' && report.scope !== filterScope) return false;
+      
+      // Filter by date range
+      if (filterDateFrom || filterDateTo) {
+        const reportDate = new Date(report.date.split('/').reverse().join('-'));
+        
+        if (filterDateFrom) {
+          const fromDate = new Date(filterDateFrom);
+          if (reportDate < fromDate) return false;
+        }
+        
+        if (filterDateTo) {
+          const toDate = new Date(filterDateTo);
+          if (reportDate > toDate) return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [reports, filterType, filterCreator, filterDateFrom, filterDateTo, filterScope]);
+
+  // Calculate pagination based on filtered reports
+  const totalPages = Math.ceil(filteredReports.length / reportsPerPage);
+  const indexOfLastReport = currentPage * reportsPerPage;
+  const indexOfFirstReport = indexOfLastReport - reportsPerPage;
+  const currentReports = filteredReports.slice(indexOfFirstReport, indexOfLastReport);
+
+  // Get unique values for filters
+  const uniqueTypes = useMemo(() => {
+    return Array.from(new Set(reports.map(r => r.type)));
+  }, [reports]);
+
+  const uniqueCreators = useMemo(() => {
+    return Array.from(new Set(reports.map(r => r.creator)));
+  }, [reports]);
+
+  const uniqueScopes = useMemo(() => {
+    return Array.from(new Set(reports.map(r => r.scope)));
+  }, [reports]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, filterCreator, filterDateFrom, filterDateTo, filterScope]);
+
+  // Reset to page 1 when reports change
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [filteredReports.length, currentPage, totalPages]);
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedReports(currentReports.map(r => r.id));
+    } else {
+      setSelectedReports([]);
+    }
+  };
+
+  // Handle individual selection
+  const handleSelectReport = (reportId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedReports(prev => [...prev, reportId]);
+    } else {
+      setSelectedReports(prev => prev.filter(id => id !== reportId));
+    }
+  };
+
+  // Handle delete selected
+  const handleDeleteSelected = async () => {
+    if (selectedReports.length === 0) return;
+
+    const confirmed = await confirm({
+      title: 'Xác nhận xóa báo cáo',
+      message: `Bạn có chắc chắn muốn xóa ${selectedReports.length} báo cáo đã chọn không?\n\nHành động này không thể hoàn tác.`,
+      confirmText: 'Xóa báo cáo',
+      cancelText: 'Hủy bỏ',
+      type: 'danger'
+    });
+
+    if (confirmed) {
+      setReports(prev => prev.filter(report => !selectedReports.includes(report.id)));
+      setSelectedReports([]);
+      showModal('Thành công', `🗑️ Đã xóa ${selectedReports.length} báo cáo thành công!`, 'success');
+    }
+  };
+
+  // Check if all current page reports are selected
+  const isAllSelected = currentReports.length > 0 && currentReports.every(r => selectedReports.includes(r.id));
 
   // Get current time filter label
   const getTimeFilterLabel = () => {
@@ -143,17 +293,6 @@ export default function LeadershipReports() {
     return labels[timeFilter] || 'tháng này';
   };
 
-  // Get comparison period label
-  const getComparisonLabel = () => {
-    const labels: { [key: string]: string } = {
-      'hôm-nay': 'so với hôm qua',
-      'tuần-này': 'so với tuần trước',
-      'tháng-này': 'so với tháng trước', 
-      'tất-cả': 'so với năm trước'
-    };
-    return labels[timeFilter] || 'so với kỳ trước';
-  };
-
   // Get formatted time range for display
   const getFormattedTimeRange = useCallback(() => {
     if (timeRange === "Tùy chỉnh" && customWeekStart && customWeekEnd) {
@@ -164,15 +303,67 @@ export default function LeadershipReports() {
 
   // Calculate dynamic data based on time filter using useMemo
   const dashboardData = useMemo(() => {
-    const baseData: { [key: string]: { reports: number; reportsGrowth: number } } = {
-      'hôm-nay': { reports: 12, reportsGrowth: 25.0 },
-      'tuần-này': { reports: 68, reportsGrowth: 18.5 },
-      'tháng-này': { reports: 487, reportsGrowth: 8.3 },
-      'tất-cả': { reports: 11847, reportsGrowth: 3.2 }
+    // Get actual counts from reports
+    const totalReports = reports.length;
+    const scoreReports = reports.filter(r => r.type === 'Điểm số').length;
+    const performanceReports = reports.filter(r => r.type === 'Hiệu suất').length;
+    const predictionReports = reports.filter(r => r.type === 'Dự đoán').length;
+    const summaryReports = reports.filter(r => r.type === 'Tổng hợp').length;
+    
+    // Sample growth data based on time filter (these would come from API in real app)
+    const growthData: { [key: string]: { 
+      reportsGrowth: number;
+      scoreGrowth: number;
+      performanceGrowth: number;
+      predictionGrowth: number;
+      summaryGrowth: number;
+      comparisonText: string;
+    } } = {
+      'hôm-nay': { 
+        reportsGrowth: 3,
+        scoreGrowth: 2,
+        performanceGrowth: 1,
+        predictionGrowth: 1,
+        summaryGrowth: 1,
+        comparisonText: 'so với hôm qua'
+      },
+      'tuần-này': { 
+        reportsGrowth: 15,
+        scoreGrowth: 8,
+        performanceGrowth: 4,
+        predictionGrowth: 2,
+        summaryGrowth: 1,
+        comparisonText: 'so với tuần trước'
+      },
+      'tháng-này': { 
+        reportsGrowth: 45,
+        scoreGrowth: 22,
+        performanceGrowth: 15,
+        predictionGrowth: 5,
+        summaryGrowth: 3,
+        comparisonText: 'so với tháng trước'
+      },
+      'tất-cả': { 
+        reportsGrowth: 1205,
+        scoreGrowth: 520,
+        performanceGrowth: 380,
+        predictionGrowth: 210,
+        summaryGrowth: 95,
+        comparisonText: 'so với năm trước'
+      }
     };
     
-    return baseData[timeFilter] || baseData['tháng-này'];
-  }, [timeFilter]);
+    const growth = growthData[timeFilter] || growthData['tháng-này'];
+    
+    return {
+      reports: totalReports,
+      scoreReports,
+      performanceReports,
+      predictionReports,
+      summaryReports,
+      ...growth
+    };
+  }, [timeFilter, reports]);
 
   // Modal handlers
   const showModal = useCallback((title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -208,40 +399,43 @@ export default function LeadershipReports() {
     
     try {
       const fileName = `${reportName.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}`;
+      const stats = getScopeStats(scope);
+      
+      // Generate charts programmatically based on report type and data
+      console.log('� Generating charts for report type:', normalizedType);
+      const charts = generateChartsForReportType(normalizedType, stats);
+      console.log('✅ Generated charts:', Object.keys(charts));
       
       let blob: Blob;
       let fileExtension: string;
       
       if (format === 'PDF') {
-        // Export as PDF using pdfMake with type-specific content
-        const stats = getScopeStats(scope);
+        // Export as PDF using pdfMake with type-specific content and charts
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const docDefinition = generatePDFReportByType(reportName, normalizedType, scope, timeRange, stats) as any;
-        
+        const docDefinition = generatePDFReportByType(reportName, normalizedType, scope, timeRange, stats, charts) as any;
         pdfMake.createPdf(docDefinition).download(`${fileName}.pdf`);
         showModal('Thành công', `Đã xuất báo cáo ${fileName}.pdf thành công!`, 'success');
         setIsLoading(false);
         return; // Exit early for PDF
       } else if (format === 'Excel') {
-        // Enhanced Excel export with type-specific content
-        const stats = getScopeStats(scope);
-        const csvContent = generateCSVContentByType(reportName, normalizedType, scope, timeRange, stats);
-        
-        blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        fileExtension = 'csv';
-    } else if (format === 'Word') {
-      // Word export as text
-      const stats = getScopeStats(scope);
-      const content = generateReportContentByType(reportName, normalizedType, scope, timeRange, stats);
-      blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      fileExtension = 'txt';
-    } else {
-      // PowerPoint export as text
-      const stats = getScopeStats(scope);
-      const content = generateReportContentByType(reportName, normalizedType, scope, timeRange, stats);
-      blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      fileExtension = 'txt';
-    }
+        // Export Excel (.xlsx) with all generated charts
+        blob = await exportToExcel(reportName, normalizedType, scope, timeRange, stats, charts);
+        fileExtension = 'xlsx';
+      } else if (format === 'Word') {
+        // Export Word (.docx) with all generated charts
+        blob = await exportToWord(reportName, normalizedType, scope, timeRange, stats, charts);
+        fileExtension = 'docx';
+      } else if (format === 'PowerPoint') {
+        // Export PowerPoint (.pptx) with chart image using pptxgenjs
+        const chartBase64 = charts.systemScale || null;
+        blob = await exportToPowerPoint(reportName, normalizedType, scope, timeRange, stats, chartBase64);
+        fileExtension = 'pptx';
+      } else {
+        // Fallback: plain text
+        const content = generateReportContentByType(reportName, normalizedType, scope, timeRange, stats);
+        blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        fileExtension = 'txt';
+      }
     
       // Create download link
       const url = window.URL.createObjectURL(blob);
@@ -264,13 +458,31 @@ export default function LeadershipReports() {
   }, [timeRange, showModal]);
 
   // Handler to create new report
-  const handleCreateReport = useCallback(() => {
+  const handleCreateReport = useCallback(async () => {
     const formattedTimeRange = getFormattedTimeRange();
     
+    // Extract type and capitalize first letter
+    const extractedType = reportType.replace('Báo cáo ', '');
+    const normalizedType = extractedType.charAt(0).toUpperCase() + extractedType.slice(1);
+    
+    // Show confirmation dialog
+    const confirmed = await confirm({
+      title: 'Xác nhận tạo báo cáo',
+      message: `Bạn có chắc chắn muốn tạo báo cáo sau không?\n\nLoại: ${reportType}\nPhạm vi: ${dataScope}\nNgành: ${major}\nLớp: ${className}\nĐịnh dạng: ${exportFormat}\nThời gian: ${formattedTimeRange}`,
+      confirmText: 'Tạo báo cáo',
+      cancelText: 'Hủy bỏ',
+      type: 'info'
+    });
+
+    if (!confirmed) return;
+    
+    // Generate unique ID using timestamp + random number
+    const uniqueId = Date.now() + Math.floor(Math.random() * 1000);
+    
     const newReport: Report = {
-      id: reports.length + 1,
+      id: uniqueId,
       name: `${reportType} - ${new Date().toLocaleDateString('vi-VN')}`,
-      type: reportType.replace('Báo cáo ', ''),
+      type: normalizedType,
       creator: "Admin",
       date: new Date().toLocaleDateString('vi-VN'),
       scope: dataScope,
@@ -279,7 +491,13 @@ export default function LeadershipReports() {
       format: exportFormat // Save the selected format
     };
     
-    setReports(prev => [newReport, ...prev]);
+    // Create completely new array to ensure React detects change
+    setReports(prev => {
+      const newReports = [newReport, ...prev];
+      console.log('🆕 Created new report:', newReport);
+      console.log('📋 New reports list:', newReports);
+      return newReports;
+    });
     
     // Show success message - NO auto download
     showModal(
@@ -297,31 +515,24 @@ export default function LeadershipReports() {
     setCustomWeekStart("");
     setCustomWeekEnd("");
     setExportFormat("PDF");
-  }, [reports, reportType, dataScope, major, className, exportFormat, showModal, getFormattedTimeRange]);
-
-  // Handler for quick create buttons
-  const handleQuickCreate = (reportName: string, reportType: string) => {
-    const newReport: Report = {
-      id: reports.length + 1,
-      name: reportName,
-      type: reportType,
-      creator: "Admin",
-      date: new Date().toLocaleDateString('vi-VN'),
-      scope: "Toàn trường",
-      status: "Chưa tải xuống",
-      statusColor: "yellow",
-      format: "PDF" // Quick create defaults to PDF
-    };
-    
-    setReports([newReport, ...reports]);
-    
-    showModal('Thành công', `⚡ Đã tạo nhanh báo cáo thành công!\n\n${reportName}\n\nNhấn nút "Tải xuống" ở danh sách để tải file PDF.`, 'success');
-  };
+  }, [reportType, dataScope, major, className, exportFormat, showModal, getFormattedTimeRange, confirm]);
 
   // Handler to download existing report
-  const handleDownloadReport = (report: typeof reports[0]) => {
+  const handleDownloadReport = async (report: typeof reports[0]) => {
     // Use the format saved in the report, or default to PDF
     const format = report.format || 'PDF';
+    
+    // Show confirmation dialog
+    const confirmed = await confirm({
+      title: 'Xác nhận tải xuống',
+      message: `Bạn có muốn tải xuống báo cáo sau không?\n\nTên: ${report.name}\nLoại: ${report.type}\nĐịnh dạng: ${format}\nPhạm vi: ${report.scope}\nNgày tạo: ${report.date}`,
+      confirmText: 'Tải xuống',
+      cancelText: 'Hủy bỏ',
+      type: 'info'
+    });
+
+    if (!confirmed) return;
+    
     exportReportFile(report.name, report.type, report.scope, format);
     
     // Update status to "Đã tải xuống"
@@ -337,49 +548,27 @@ export default function LeadershipReports() {
   };
 
   // Handler to delete report
-  const handleDeleteReport = (reportId: number) => {
-    if (confirm('⚠️ Bạn có chắc chắn muốn xóa báo cáo này?')) {
-      setReports(reports.filter(r => r.id !== reportId));
-      showModal('Thành công', '🗑️ Đã xóa báo cáo!', 'success');
+  const handleDeleteReport = async (reportId: number, reportName: string) => {
+    const confirmed = await confirm({
+      title: 'Xác nhận xóa báo cáo',
+      message: `Bạn có chắc chắn muốn xóa báo cáo:\n\n"${reportName}"\n\nHành động này không thể hoàn tác.`,
+      confirmText: 'Xóa báo cáo',
+      cancelText: 'Hủy bỏ',
+      type: 'danger'
+    });
+
+    if (confirmed) {
+      setReports(prev => {
+        const newReports = prev.filter(r => r.id !== reportId);
+        console.log('🗑️ Deleted report ID:', reportId);
+        console.log('📋 Remaining reports:', newReports);
+        return newReports;
+      });
+      showModal('Thành công', '🗑️ Đã xóa báo cáo thành công!', 'success');
     }
   };
 
-  // Chart data configurations
-  const dataDistributionData = {
-    labels: ['Điểm số', 'Hoạt động học tập', 'Thông tin sinh viên', 'Khảo sát đánh giá', 'Báo cáo hệ thống'],
-    datasets: [{
-      label: 'Số lượng bản ghi (nghìn)',
-      data: [450, 320, 280, 150, 180],
-      backgroundColor: [
-        '#3b82f6',
-        '#10b981',
-        '#f59e0b',
-        '#8b5cf6',
-        '#ef4444'
-      ],
-      borderRadius: 6
-    }]
-  };
 
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y' as const,
-    plugins: {
-      legend: {
-        display: false
-      }
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Số lượng (nghìn bản ghi)'
-        }
-      }
-    }
-  };
 
   return (
     <AdminLayout>
@@ -451,31 +640,117 @@ export default function LeadershipReports() {
 
         {/* Overview Cards */}
         <div className="mb-8">
-          {/* Reports Created - Single Card */}
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 max-w-md">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Báo cáo đã tạo</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">
-                    {dashboardData.reports.toLocaleString('vi-VN')}
-                  </p>
-                  <div className="flex items-center mt-2">
-                    <span className={`text-sm mr-1 ${dashboardData.reportsGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {dashboardData.reportsGrowth >= 0 ? '↗' : '↘'}
-                    </span>
-                    <span className={`text-sm font-medium ${dashboardData.reportsGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {dashboardData.reportsGrowth >= 0 ? '+' : ''}{dashboardData.reportsGrowth}%
-                    </span>
-                    <span className="text-green-600 text-sm ml-1">{getComparisonLabel()}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {/* Tổng báo cáo đã tạo */}
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-700">Báo cáo đã tạo</p>
+                    <p className="text-3xl font-bold text-green-900 mt-2">
+                      {dashboardData.reports}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <span className={`text-xs ${dashboardData.reportsGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {dashboardData.reportsGrowth >= 0 ? '+' : ''}{dashboardData.reportsGrowth} báo cáo đã tạo {dashboardData.comparisonText}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">📄</span>
                   </div>
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">📄</span>
+              </CardContent>
+            </Card>
+
+            {/* Báo cáo điểm số */}
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-700">Báo cáo điểm số</p>
+                    <p className="text-3xl font-bold text-blue-900 mt-2">
+                      {dashboardData.scoreReports}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <span className={`text-xs ${dashboardData.scoreGrowth >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        {dashboardData.scoreGrowth >= 0 ? '+' : ''}{dashboardData.scoreGrowth} báo cáo đã tạo {dashboardData.comparisonText}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">📊</span>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Báo cáo hiệu suất */}
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-purple-700">Báo cáo hiệu suất</p>
+                    <p className="text-3xl font-bold text-purple-900 mt-2">
+                      {dashboardData.performanceReports}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <span className={`text-xs ${dashboardData.performanceGrowth >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                        {dashboardData.performanceGrowth >= 0 ? '+' : ''}{dashboardData.performanceGrowth} báo cáo đã tạo {dashboardData.comparisonText}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">📈</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Báo cáo dự đoán */}
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-orange-700">Báo cáo dự đoán</p>
+                    <p className="text-3xl font-bold text-orange-900 mt-2">
+                      {dashboardData.predictionReports}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <span className={`text-xs ${dashboardData.predictionGrowth >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {dashboardData.predictionGrowth >= 0 ? '+' : ''}{dashboardData.predictionGrowth} báo cáo đã tạo {dashboardData.comparisonText}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">🔮</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Báo cáo tổng hợp */}
+            <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-indigo-700">Báo cáo tổng hợp</p>
+                    <p className="text-3xl font-bold text-indigo-900 mt-2">
+                      {dashboardData.summaryReports}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <span className={`text-xs ${dashboardData.summaryGrowth >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+                        {dashboardData.summaryGrowth >= 0 ? '+' : ''}{dashboardData.summaryGrowth} báo cáo đã tạo {dashboardData.comparisonText}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-2xl">�</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Create New Report Section */}
@@ -600,8 +875,8 @@ export default function LeadershipReports() {
                   className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="PDF">📄 PDF</option>
-                  <option value="Excel">📊 Excel (CSV)</option>
-                  <option value="Word">📝 Word (TXT)</option>
+                  <option value="Excel">📊 Excel (.xlsx)</option>
+                  <option value="Word">📝 Word (.docx)</option>
                 </select>
               </div>
               
@@ -622,11 +897,111 @@ export default function LeadershipReports() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Danh sách báo cáo đã tạo</h2>
+              
+              {/* Delete selected button */}
+              {selectedReports.length > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+                >
+                  <i className="fas fa-trash"></i>
+                  Xóa đã chọn ({selectedReports.length})
+                </button>
+              )}
             </div>
+
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {/* Type filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Loại báo cáo</label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">Tất cả loại</option>
+                  {uniqueTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Creator filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Người tạo</label>
+                <select
+                  value={filterCreator}
+                  onChange={(e) => setFilterCreator(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">Tất cả người tạo</option>
+                  {uniqueCreators.map(creator => (
+                    <option key={creator} value={creator}>{creator}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date from filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Từ ngày</label>
+                <input
+                  type="date"
+                  value={filterDateFrom}
+                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Date to filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Đến ngày</label>
+                <input
+                  type="date"
+                  value={filterDateTo}
+                  onChange={(e) => setFilterDateTo(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Scope filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phạm vi</label>
+                <select
+                  value={filterScope}
+                  onChange={(e) => setFilterScope(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">Tất cả phạm vi</option>
+                  {uniqueScopes.map(scope => (
+                    <option key={scope} value={scope}>{scope}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Results info */}
+            {(filterType !== 'all' || filterCreator !== 'all' || filterScope !== 'all' || filterDateFrom || filterDateTo) && (
+              <div className="mb-4 text-sm text-gray-600">
+                Tìm thấy <span className="font-semibold text-gray-900">{filteredReports.length}</span> báo cáo
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="w-4 h-4 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-gray-500 checked:bg-white checked:border-gray-800 cursor-pointer appearance-none checked:after:content-['✓'] checked:after:text-gray-900 checked:after:text-xs checked:after:flex checked:after:items-center checked:after:justify-center"
+                        style={{
+                          backgroundImage: 'none'
+                        }}
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên báo cáo</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người tạo</th>
@@ -637,14 +1012,33 @@ export default function LeadershipReports() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {reports.map((report) => (
-                    <tr key={report.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.creator}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.scope}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                  {currentReports.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                        <i className="fas fa-inbox text-4xl mb-2 block text-gray-300"></i>
+                        Không tìm thấy báo cáo nào
+                      </td>
+                    </tr>
+                  ) : (
+                    currentReports.map((report, index) => (
+                      <tr key={`${report.id}-${index}`} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedReports.includes(report.id)}
+                            onChange={(e) => handleSelectReport(report.id, e.target.checked)}
+                            className="w-4 h-4 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-gray-500 checked:bg-white checked:border-gray-800 cursor-pointer appearance-none checked:after:content-['✓'] checked:after:text-gray-900 checked:after:text-xs checked:after:flex checked:after:items-center checked:after:justify-center"
+                            style={{
+                              backgroundImage: 'none'
+                            }}
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.type}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.creator}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.scope}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           report.statusColor === 'green' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
@@ -653,15 +1047,6 @@ export default function LeadershipReports() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex space-x-3">
-                          {/* Xem chi tiết */}
-                          <button 
-                            onClick={() => showModal('Xem báo cáo', `📄 Xem chi tiết báo cáo: ${report.name}\n\nLoại: ${report.type}\nPhạm vi: ${report.scope}\nNgày tạo: ${report.date}\n\nNội dung báo cáo sẽ được hiển thị ở đây...`, 'info')}
-                            className="text-blue-600 hover:text-blue-900 cursor-pointer transition-colors" 
-                            title="Xem chi tiết"
-                          >
-                            <i className="fas fa-eye"></i>
-                          </button>
-                          
                           {/* Tải xuống */}
                           <button 
                             onClick={() => handleDownloadReport(report)}
@@ -673,7 +1058,7 @@ export default function LeadershipReports() {
                           
                           {/* Xóa */}
                           <button 
-                            onClick={() => handleDeleteReport(report.id)}
+                            onClick={() => handleDeleteReport(report.id, report.name)}
                             className="text-red-600 hover:text-red-900 cursor-pointer transition-colors" 
                             title="Xóa"
                           >
@@ -682,86 +1067,93 @@ export default function LeadershipReports() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Data Distribution Chart */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Phân bố dữ liệu theo loại</h3>
-            <div className="h-80 w-full">
-              <Bar data={dataDistributionData} options={barOptions} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Additional Metrics - removed as requested */}
-
-        {/* Recommended Reports */}
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Báo cáo được đề xuất</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 cursor-pointer">
-                <div className="text-center">
-                  <div className="text-3xl mb-3">📊</div>
-                  <h3 className="font-semibold mb-2">Dự đoán điểm cuối kỳ</h3>
-                  <p className="text-sm opacity-90 mb-4">Phân tích và dự đoán kết quả học tập</p>
-                  <button 
-                    onClick={() => handleQuickCreate('Dự đoán điểm cuối kỳ', 'Dự đoán')}
-                    className="bg-white text-blue-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+                <div className="flex items-center text-sm text-gray-700">
+                  <span>
+                    Hiển thị <span className="font-medium">{indexOfFirstReport + 1}</span> đến{' '}
+                    <span className="font-medium">{Math.min(indexOfLastReport, filteredReports.length)}</span> trong tổng số{' '}
+                    <span className="font-medium">{filteredReports.length}</span> báo cáo
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Previous button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
                   >
-                    ⚡ Tạo nhanh
+                    <i className="fas fa-chevron-left mr-1"></i>
+                    Trước
+                  </button>
+                  
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                      // Show first page, last page, current page, and pages around current
+                      const showPage = 
+                        page === 1 || 
+                        page === totalPages || 
+                        (page >= currentPage - 1 && page <= currentPage + 1);
+                      
+                      // Show ellipsis
+                      const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                      const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+                      
+                      if (showEllipsisBefore || showEllipsisAfter) {
+                        return (
+                          <span key={page} className="px-2 text-gray-400">
+                            ...
+                          </span>
+                        );
+                      }
+                      
+                      if (!showPage) return null;
+                      
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Next button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Sau
+                    <i className="fas fa-chevron-right ml-1"></i>
                   </button>
                 </div>
               </div>
-              
-              <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 cursor-pointer">
-                <div className="text-center">
-                  <div className="text-3xl mb-3">👨‍🏫</div>
-                  <h3 className="font-semibold mb-2">Phân tích hiệu suất giảng viên</h3>
-                  <p className="text-sm opacity-90 mb-4">Đánh giá chất lượng giảng dạy</p>
-                  <button 
-                    onClick={() => handleQuickCreate('Phân tích hiệu suất giảng viên', 'Hiệu suất')}
-                    className="bg-white text-green-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
-                  >
-                    ⚡ Tạo nhanh
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 cursor-pointer">
-                <div className="text-center">
-                  <div className="text-3xl mb-3">⚖️</div>
-                  <h3 className="font-semibold mb-2">So sánh kết quả học tập</h3>
-                  <p className="text-sm opacity-90 mb-4">Phân tích xu hướng và so sánh</p>
-                  <button 
-                    onClick={() => handleQuickCreate('So sánh kết quả học tập', 'So sánh')}
-                    className="bg-white text-purple-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
-                  >
-                    ⚡ Tạo nhanh
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 cursor-pointer">
-                <div className="text-center">
-                  <div className="text-3xl mb-3">⚠️</div>
-                  <h3 className="font-semibold mb-2">Cảnh báo học vụ</h3>
-                  <p className="text-sm opacity-90 mb-4">Phát hiện rủi ro và cảnh báo sớm</p>
-                  <button 
-                    onClick={() => handleQuickCreate('Cảnh báo học vụ', 'Cảnh báo')}
-                    className="bg-white text-orange-600 px-4 py-1.5 text-xs rounded-md transition-colors cursor-pointer font-semibold hover:bg-gray-100"
-                  >
-                    ⚡ Tạo nhanh
-                  </button>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -783,6 +1175,18 @@ export default function LeadershipReports() {
         title={modal.title}
         message={modal.message}
         type={modal.type}
+      />
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        type={confirmState.type}
+        onConfirm={confirmState.onConfirm}
+        onCancel={confirmState.onCancel}
       />
     </AdminLayout>
   );

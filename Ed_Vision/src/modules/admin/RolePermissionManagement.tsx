@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { buildUrl } from '@/services/api/config';
 import { apiFetch } from '@/services/api/fetch'
 import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "@/components/ui/admin/AdminLayout";
@@ -73,8 +72,8 @@ export default function RolePermissionManagement() {
     return () => clearTimeout(loadTimeout);
   }, [filters, selectedRole]);
 
-  // Default permission template
-  const defaultPermissions: PermissionState = {
+  // Default permission template - useMemo to stabilize reference
+  const defaultPermissions: PermissionState = useMemo(() => ({
     admin_overview: true,
     admin_users: true,
     admin_role_permissions: true,
@@ -83,7 +82,7 @@ export default function RolePermissionManagement() {
     student_course_overview: true,
     student_profile_access: true,
     create_survey: false
-  }
+  }), []);
 
   // Permission state for each group (current working copy)
   const [permissions, setPermissions] = useState<PermissionState>(defaultPermissions);
@@ -138,7 +137,7 @@ export default function RolePermissionManagement() {
           if (json && json.success) setAllPermissionDefs(json.data || [])
           else setAllPermissionDefs([])
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     })()
@@ -153,7 +152,7 @@ export default function RolePermissionManagement() {
       if (!groups[cat]) {
         groups[cat] = { id: cat, name: cat === 'other' ? 'Khác' : cat, icon: '', color: 'gray', permissions: [] }
       }
-      groups[cat].permissions.push({ id: def.key, name: def.name || def.key, granted: !!(permissions as any)[def.key], sensitive: !!def.sensitive })
+      groups[cat].permissions.push({ id: def.key, name: def.name || def.key, granted: !!(permissions as Record<string, boolean>)[def.key], sensitive: !!def.sensitive })
     }
     // fallback to existing hardcoded if none returned
     if (Object.keys(groups).length === 0) {
@@ -207,8 +206,8 @@ export default function RolePermissionManagement() {
     if (!savedPermissions) return true
     const keys = new Set([...Object.keys(defaultPermissions), ...Object.keys(savedPermissions)])
     for (const k of keys) {
-      const a = (permissions as any)[k]
-      const b = (savedPermissions as any)[k]
+      const a = (permissions as Record<string, boolean>)[k]
+      const b = (savedPermissions as Record<string, boolean>)[k]
       if (!!a !== !!b) return true
     }
     return false
@@ -323,13 +322,13 @@ export default function RolePermissionManagement() {
             setSavedPermissions({ ...defaultPermissions })
             setPermissions({ ...defaultPermissions })
           }
-        } catch (err) {
+        } catch {
           if (!cancelled) {
             setSavedPermissions({ ...defaultPermissions })
             setPermissions({ ...defaultPermissions })
           }
         }
-      } catch (e) {
+      } catch {
         // ignore, fallback to defaults
         if (!cancelled) {
           setSavedPermissions({ ...defaultPermissions })
