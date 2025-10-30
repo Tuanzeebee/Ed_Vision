@@ -17,6 +17,28 @@ export class InstructorAvailabilityService {
   ) {}
 
   /**
+   * Get instructor profile by account_id
+   * Returns instructor_id and other instructor details
+   */
+  async getInstructorProfile(accountId: number) {
+    const instructor = await this.repository.getInstructorByAccountId(accountId);
+    
+    if (!instructor) {
+      throw new NotFoundException(`No instructor found for account_id: ${accountId}`);
+    }
+
+    return {
+      instructor_id: instructor.instructor_id,
+      account_id: instructor.account_id,
+      employee_code: instructor.employee_code,
+      academic_title: instructor.academic_title,
+      position: instructor.position,
+      department_id: instructor.department_id,
+      status: instructor.status,
+    };
+  }
+
+  /**
    * Get instructor's availability for a date range
    */
   async getAvailability(
@@ -52,7 +74,7 @@ export class InstructorAvailabilityService {
 
           const dateStr = dateRecord.specific_date.toISOString().split('T')[0];
           const date = new Date(dateRecord.specific_date);
-          const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+          const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Use UTC day
 
           if (!dateMap.has(dateStr)) {
             dateMap.set(dateStr, {
@@ -136,7 +158,7 @@ export class InstructorAvailabilityService {
     dto: AddAvailabilityDateDto,
   ): Promise<AvailabilityDateResponse> {
     const date = this.parseDateString(dto.date);
-    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay(); // Convert Sunday from 0 to 7
+    const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Convert Sunday from 0 to 7, use UTC
 
     // Find or create the week
     const week = await this.repository.findOrCreateWeek(instructorId, date);
@@ -185,7 +207,7 @@ export class InstructorAvailabilityService {
     }
 
     const date = this.parseDateString(dateStr);
-    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+    const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Use UTC day
 
     // Find or create the week
     const week = await this.repository.findOrCreateWeek(instructorId, date);
@@ -325,7 +347,7 @@ export class InstructorAvailabilityService {
     dateStr: string,
   ): Promise<void> {
     const date = this.parseDateString(dateStr);
-    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+    const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Use UTC day
 
     // Find the week (don't create if not exists)
     const week = await this.repository.findWeek(instructorId, date);
@@ -353,6 +375,15 @@ export class InstructorAvailabilityService {
 
     // Delete the availability date record
     await this.repository.deleteAvailabilityDate(week.week_id, date);
+
+    // Check if the week still has any availability dates or slots left
+    const remainingDates = await this.repository.getAvailabilityDatesForWeek(week.week_id);
+    const remainingSlots = await this.repository.getSlotsForWeek(week.week_id);
+    
+    if (remainingDates.length === 0 && remainingSlots.length === 0) {
+      // No dates or slots left in this week, delete the week itself to keep database clean
+      await this.repository.deleteWeek(week.week_id);
+    }
   }
 
   /**
@@ -382,10 +413,12 @@ export class InstructorAvailabilityService {
 
   /**
    * Helper: Parse date string in YYYY-MM-DD format safely without timezone issues
+   * Returns UTC midnight for the given date to ensure consistency with database
    */
   private parseDateString(dateString: string): Date {
     const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
+    // Create date in UTC to avoid timezone conversion issues
+    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
   }
 
   /**
@@ -399,11 +432,12 @@ export class InstructorAvailabilityService {
 
   /**
    * Helper: Get date from week start and day of week
+   * Uses UTC to avoid timezone issues
    */
   private getDateFromWeekAndDay(weekStart: Date, dayOfWeek: number): Date {
     const date = new Date(weekStart);
     const diff = dayOfWeek === 7 ? 6 : dayOfWeek - 1; // Monday is 1, Sunday is 7
-    date.setDate(date.getDate() + diff);
+    date.setUTCDate(date.getUTCDate() + diff);
     return date;
   }
 }

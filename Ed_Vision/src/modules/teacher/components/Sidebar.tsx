@@ -69,7 +69,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <Users className="w-5 h-5" />
-          <span>Quản lý lớp học</span>
+          <span>Quản lý lớp cố vấn</span>
         </button>
 
         {/* Grade Management with Dropdown */}

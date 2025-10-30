@@ -6,6 +6,24 @@ export class InstructorAvailabilityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Get instructor by account_id
+   */
+  async getInstructorByAccountId(accountId: number) {
+    return this.prisma.instructor.findUnique({
+      where: { account_id: accountId },
+      select: {
+        instructor_id: true,
+        account_id: true,
+        employee_code: true,
+        academic_title: true,
+        position: true,
+        department_id: true,
+        status: true,
+      },
+    });
+  }
+
+  /**
    * Find or create a week for the given instructor and date
    */
   async findOrCreateWeek(instructorId: number, date: Date) {
@@ -104,7 +122,7 @@ export class InstructorAvailabilityRepository {
    * Delete availability date record
    */
   async deleteAvailabilityDate(weekId: number, specificDate: Date) {
-    return this.prisma.instructorAvailabilityDate.delete({
+    const result = await this.prisma.instructorAvailabilityDate.delete({
       where: {
         week_id_specific_date: {
           week_id: weekId,
@@ -112,6 +130,7 @@ export class InstructorAvailabilityRepository {
         },
       },
     });
+    return result;
   }
 
   /**
@@ -121,6 +140,26 @@ export class InstructorAvailabilityRepository {
     return this.prisma.instructorAvailabilityDate.findMany({
       where: { week_id: weekId },
       orderBy: { specific_date: 'asc' },
+    });
+  }
+
+  /**
+   * Delete a week (should only be called when week has no more dates)
+   */
+  async deleteWeek(weekId: number) {
+    const result = await this.prisma.instructorAvailabilityWeek.delete({
+      where: { week_id: weekId },
+    });
+    return result;
+  }
+
+  /**
+   * Get all slots for a week
+   */
+  async getSlotsForWeek(weekId: number) {
+    return this.prisma.instructorWeeklySlot.findMany({
+      where: { week_id: weekId },
+      orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
     });
   }
 
@@ -256,12 +295,13 @@ export class InstructorAvailabilityRepository {
    * Delete all slots for a specific date (day of week in a week)
    */
   async deleteSlotsForDate(weekId: number, dayOfWeek: number) {
-    return this.prisma.instructorWeeklySlot.deleteMany({
+    const result = await this.prisma.instructorWeeklySlot.deleteMany({
       where: {
         week_id: weekId,
         day_of_week: dayOfWeek,
       },
     });
+    return result;
   }
 
   /**
@@ -371,13 +411,14 @@ export class InstructorAvailabilityRepository {
 
   /**
    * Get week start date (Monday) for a given date
+   * Uses UTC to avoid timezone issues
    */
   private getWeekStartDate(date: Date): Date {
     const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0); // Reset time to start of day
+    const day = d.getUTCDay(); // Use UTC day
+    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    d.setUTCDate(diff);
+    d.setUTCHours(0, 0, 0, 0); // Reset time to start of day in UTC
     return d;
   }
 

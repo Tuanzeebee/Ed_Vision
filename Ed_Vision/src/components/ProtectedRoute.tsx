@@ -31,7 +31,8 @@ export default function ProtectedRoute({ children, allowedRoles = ['admin'], per
       student: '/student/landing',
       teacher: '/teacher/dashboard',
       parent: '/parent/dashboard',
-      admin: '/admin/dashboard'
+      admin: '/admin/dashboard',
+      leader: '/admin/dashboard'
     }
 
     const redirectTo = roleRedirectMap[code] || '/auth/login'

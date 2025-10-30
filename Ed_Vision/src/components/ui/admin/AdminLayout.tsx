@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 import { buildUrl } from '@/services/api/config'
 import AdminSidebar from './AdminSidebar'
@@ -92,6 +93,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogoClick = () => navigate('/admin/overview')
 
+  const { logout } = useAuth()
+
   const handleLogout = async () => {
     setMenuOpen(false)
     try {
@@ -106,10 +109,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     } catch (e) {
       console.error('Logout notify failed', e)
     } finally {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.dispatchEvent(new CustomEvent('auth:logout'))
-      navigate('/auth/login')
+      // Delegate to centralized logout which performs full cleanup and redirect
+      try {
+        logout()
+      } catch (e) {
+        // Fallback: clear and redirect to student landing
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('rolePermissions')
+        window.location.href = '/student/landing'
+      }
     }
   }
 
