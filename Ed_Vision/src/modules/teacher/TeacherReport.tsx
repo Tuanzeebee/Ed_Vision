@@ -170,8 +170,8 @@ export default function TeacherReport() {
             {
                 label: 'Nguy cơ trung bình',
                 data: [18, 20, 22, 19, 23, 21, 20, 21],
-                borderColor: 'rgb(245, 158, 11)',
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderColor: 'rgb(234, 179, 8)',
+                backgroundColor: 'rgba(234, 179, 8, 0.1)',
                 borderWidth: 2,
                 fill: true,
                 tension: 0.4
@@ -179,8 +179,8 @@ export default function TeacherReport() {
             {
                 label: 'Cần theo dõi',
                 data: [6, 8, 7, 9, 8, 7, 8, 8],
-                borderColor: 'rgb(251, 191, 36)',
-                backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                borderColor: 'rgb(34, 197, 94)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
                 borderWidth: 2,
                 fill: true,
                 tension: 0.4
@@ -209,9 +209,9 @@ export default function TeacherReport() {
         datasets: [{
             data: [15, 12, 8, 7, 5],
             backgroundColor: [
-                'rgb(220, 38, 38)',
-                'rgb(245, 158, 11)',
-                'rgb(251, 191, 36)',
+                'rgb(220, 38, 38)',    // Đỏ
+                'rgb(234, 179, 8)',    // Vàng  
+                'rgb(34, 197, 94)',    // Xanh
                 'rgb(156, 163, 175)',
                 'rgb(209, 213, 219)'
             ],
@@ -235,9 +235,9 @@ export default function TeacherReport() {
             case 'Nguy cơ cao':
                 return 'bg-red-100 text-red-800 border-red-200'
             case 'Nguy cơ trung bình':
-                return 'bg-orange-100 text-orange-800 border-orange-200'
-            case 'Cần theo dõi':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+            case 'Cần theo dõi':
+                return 'bg-green-100 text-green-800 border-green-200'
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200'
         }
@@ -257,9 +257,9 @@ export default function TeacherReport() {
     }
 
     const getScoreColor = (gpa: number) => {
-        if (gpa >= 2.0) return 'text-blue-600'      // Cần theo dõi (2.0 - 2.5)
-        if (gpa >= 1.5) return 'text-orange-600'    // Nguy cơ trung bình (1.5 - 2.0)
-        return 'text-red-700'                        // Nguy cơ cao (< 1.5)
+        if (gpa >= 2.0) return 'text-green-600'       // Cần theo dõi (2.0 - 2.5) - xanh
+        if (gpa >= 1.5) return 'text-yellow-600'      // Nguy cơ trung bình (1.5 - 2.0) - vàng  
+        return 'text-red-700'                          // Nguy cơ cao (< 1.5) - đỏ
     }
 
     const handleExportPDF = () => {
@@ -324,7 +324,7 @@ export default function TeacherReport() {
                 </div>
                 <div className="text-center p-2 bg-gray-50 rounded">
                     <p className="text-xs text-gray-500">Vắng</p>
-                    <p className={`text-lg font-bold ${student.absences > 10 ? 'text-red-600' : student.absences > 5 ? 'text-orange-600' : 'text-yellow-600'}`}>{student.absences} buổi</p>
+                    <p className={`text-lg font-bold ${student.absences > 10 ? 'text-red-600' : student.absences > 5 ? 'text-yellow-600' : 'text-green-600'}`}>{student.absences} buổi</p>
                 </div>
             </div>
 
@@ -543,14 +543,14 @@ export default function TeacherReport() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Nguy cơ trung bình</p>
-                                <p className="text-3xl font-bold text-orange-600">{mediumRisk}</p>
+                                <p className="text-3xl font-bold text-yellow-600">{mediumRisk}</p>
                             </div>
-                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <i className="fas fa-exclamation-circle text-orange-600 text-xl"></i>
+                            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-exclamation-circle text-yellow-600 text-xl"></i>
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-sm">
-                            <span className="text-orange-600 font-medium">{((mediumRisk / totalAtRisk) * 100).toFixed(1)}%</span>
+                            <span className="text-yellow-600 font-medium">{((mediumRisk / totalAtRisk) * 100).toFixed(1)}%</span>
                             <span className="text-gray-500 ml-2">của tổng At-Risk</span>
                         </div>
                     </CardContent>
@@ -561,14 +561,14 @@ export default function TeacherReport() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Cần theo dõi</p>
-                                <p className="text-3xl font-bold text-yellow-600">{lowRisk}</p>
+                                <p className="text-3xl font-bold text-green-600">{lowRisk}</p>
                             </div>
-                            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                <i className="fas fa-eye text-yellow-600 text-xl"></i>
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-eye text-green-600 text-xl"></i>
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-sm">
-                            <span className="text-yellow-600 font-medium">{((lowRisk / totalAtRisk) * 100).toFixed(1)}%</span>
+                            <span className="text-green-600 font-medium">{((lowRisk / totalAtRisk) * 100).toFixed(1)}%</span>
                             <span className="text-gray-500 ml-2">của tổng At-Risk</span>
                         </div>
                     </CardContent>
@@ -682,22 +682,22 @@ export default function TeacherReport() {
                         </CardContent>
                     </Card>
 
-                    {/* Card: Nguy cơ trung bình - CAM NHẠT */}
-                    <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg hover:shadow-xl transition-shadow">
-                        <CardHeader className="bg-gradient-to-r from-orange-100 via-amber-50 to-orange-50 border-b-2 border-orange-200">
+                    {/* Card: Nguy cơ trung bình - MÀU VÀNG */}
+                    <Card className="border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 shadow-lg hover:shadow-xl transition-shadow">
+                        <CardHeader className="bg-gradient-to-r from-yellow-100 via-amber-50 to-yellow-50 border-b-2 border-yellow-200">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center shadow-md">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center shadow-md">
                                         <i className="fas fa-exclamation-circle text-white text-lg"></i>
                                     </div>
                                     <div>
-                                        <CardTitle className="text-orange-900 font-bold text-lg">Nguy cơ trung bình</CardTitle>
-                                        <p className="text-sm text-orange-700 mt-0.5">GPA 1.5-2.0 • Cần hỗ trợ kịp thời</p>
+                                        <CardTitle className="text-yellow-900 font-bold text-lg">Nguy cơ trung bình</CardTitle>
+                                        <p className="text-sm text-yellow-700 mt-0.5">GPA 1.5-2.0 • Cần hỗ trợ kịp thời</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-3xl font-bold text-orange-700">{mediumRiskStudents.length}</div>
-                                    <div className="text-xs text-orange-600 font-medium">sinh viên</div>
+                                    <div className="text-3xl font-bold text-yellow-700">{mediumRiskStudents.length}</div>
+                                    <div className="text-xs text-yellow-600 font-medium">sinh viên</div>
                                 </div>
                             </div>
                         </CardHeader>
@@ -716,7 +716,7 @@ export default function TeacherReport() {
                             {mediumRiskStudents.length > 3 && (
                                 <Button
                                     onClick={() => openViewAllModal('Nguy cơ trung bình')}
-                                    className="w-full mt-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md"
+                                    className="w-full mt-4 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 text-white shadow-md"
                                 >
                                     <i className="fas fa-list mr-2"></i>
                                     Xem tất cả {mediumRiskStudents.length} sinh viên
@@ -725,22 +725,22 @@ export default function TeacherReport() {
                         </CardContent>
                     </Card>
 
-                    {/* Card: Cần theo dõi - XANH MÁT */}
-                    <Card className="border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-shadow">
-                        <CardHeader className="bg-gradient-to-r from-blue-100 via-cyan-50 to-blue-50 border-b-2 border-blue-200">
+                    {/* Card: Cần theo dõi - MÀU XANH */}
+                    <Card className="border-2 border-green-300 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-shadow">
+                        <CardHeader className="bg-gradient-to-r from-green-100 via-emerald-50 to-green-50 border-b-2 border-green-200">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-md">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-md">
                                         <i className="fas fa-eye text-white text-lg"></i>
                                     </div>
                                     <div>
-                                        <CardTitle className="text-blue-900 font-bold text-lg">Cần theo dõi</CardTitle>
-                                        <p className="text-sm text-blue-700 mt-0.5">GPA 2.0-2.5 • Giám sát thường xuyên</p>
+                                        <CardTitle className="text-green-900 font-bold text-lg">Cần theo dõi</CardTitle>
+                                        <p className="text-sm text-green-700 mt-0.5">GPA 2.0-2.5 • Giám sát thường xuyên</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-3xl font-bold text-blue-700">{monitorStudents.length}</div>
-                                    <div className="text-xs text-blue-600 font-medium">sinh viên</div>
+                                    <div className="text-3xl font-bold text-green-700">{monitorStudents.length}</div>
+                                    <div className="text-xs text-green-600 font-medium">sinh viên</div>
                                 </div>
                             </div>
                         </CardHeader>
@@ -759,7 +759,7 @@ export default function TeacherReport() {
                             {monitorStudents.length > 3 && (
                                 <Button
                                     onClick={() => openViewAllModal('Cần theo dõi')}
-                                    className="w-full mt-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md"
+                                    className="w-full mt-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
                                 >
                                     <i className="fas fa-list mr-2"></i>
                                     Xem tất cả {monitorStudents.length} sinh viên
@@ -775,21 +775,21 @@ export default function TeacherReport() {
                 <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
                         <div className={`p-6 border-b ${selectedRiskGroup === 'Nguy cơ cao' ? 'bg-red-50 border-red-200' :
-                            selectedRiskGroup === 'Nguy cơ trung bình' ? 'bg-orange-50 border-orange-200' :
-                                'bg-yellow-50 border-yellow-200'
+                            selectedRiskGroup === 'Nguy cơ trung bình' ? 'bg-yellow-50 border-yellow-200' :
+                                'bg-green-50 border-green-200'
                             }`}>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
                                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${selectedRiskGroup === 'Nguy cơ cao' ? 'bg-red-600' :
-                                        selectedRiskGroup === 'Nguy cơ trung bình' ? 'bg-orange-600' :
-                                            'bg-yellow-600'
+                                        selectedRiskGroup === 'Nguy cơ trung bình' ? 'bg-yellow-600' :
+                                            'bg-green-600'
                                         }`}>
                                         <i className={`fas ${getRiskIcon(selectedRiskGroup)} text-white text-xl`}></i>
                                     </div>
                                     <div>
                                         <h3 className={`text-2xl font-bold ${selectedRiskGroup === 'Nguy cơ cao' ? 'text-red-900' :
-                                            selectedRiskGroup === 'Nguy cơ trung bình' ? 'text-orange-900' :
-                                                'text-yellow-900'
+                                            selectedRiskGroup === 'Nguy cơ trung bình' ? 'text-yellow-900' :
+                                                'text-green-900'
                                             }`}>
                                             {selectedRiskGroup}
                                         </h3>
@@ -886,7 +886,7 @@ export default function TeacherReport() {
                                     </div>
                                     <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg border-2 border-red-200">
                                         <p className="text-sm text-red-700 mb-2 font-medium">Số buổi vắng</p>
-                                        <p className={`text-4xl font-bold ${selectedStudent.absences > 10 ? 'text-red-600' : selectedStudent.absences > 5 ? 'text-orange-600' : 'text-yellow-600'}`}>
+                                        <p className={`text-4xl font-bold ${selectedStudent.absences > 10 ? 'text-red-600' : selectedStudent.absences > 5 ? 'text-yellow-600' : 'text-green-600'}`}>
                                             {selectedStudent.absences}
                                         </p>
                                         <p className="text-xs text-red-600 mt-1">Buổi học</p>

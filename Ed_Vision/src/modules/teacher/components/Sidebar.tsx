@@ -48,7 +48,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto">
+    <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto z-10">
       <nav className="p-4 space-y-2">
         <button
           onClick={() => handleNavigation('/teacher/dashboard')}
