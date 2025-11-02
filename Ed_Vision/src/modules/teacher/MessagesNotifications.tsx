@@ -16,7 +16,10 @@ import {
     Clock,
     Calendar,
     FileText,
-    TrendingUp
+    TrendingUp,
+    ChevronDown,
+    Users,
+    SlidersHorizontal
 } from "lucide-react"
 
 // Interfaces
@@ -61,17 +64,32 @@ interface ConversationHistory {
     sentiment: 'positive' | 'neutral' | 'negative'
 }
 
+type StudentGroup = 'atrisk' | 'normal'
+
 export default function MessagesNotifications() {
     // Get studentId from URL params
     const [searchParams] = useSearchParams()
     const studentIdFromUrl = searchParams.get('studentId')
 
+<<<<<<< Updated upstream
+    // Tab state cho 2 nhóm sinh viên
+    const [activeGroup, setActiveGroup] = useState<StudentGroup>('atrisk')
+
+=======
+>>>>>>> Stashed changes
     // States
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
     const [messageInput, setMessageInput] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
+<<<<<<< Updated upstream
+
+    // Filter states
+    const [selectedClass, setSelectedClass] = useState<string>('all')
+    const [showFilters, setShowFilters] = useState(false)
+=======
+>>>>>>> Stashed changes
 
     // Modal states cho 3 actions quan trọng
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
@@ -174,6 +192,15 @@ export default function MessagesNotifications() {
             const student = students.find(s => s.id === studentIdFromUrl)
             if (student) {
                 setSelectedStudent(student)
+<<<<<<< Updated upstream
+                // Tự động chọn nhóm phù hợp
+                if (student.riskLevel === 'high' || student.riskLevel === 'medium') {
+                    setActiveGroup('atrisk')
+                } else {
+                    setActiveGroup('normal')
+                }
+=======
+>>>>>>> Stashed changes
             }
         }
     }, [studentIdFromUrl])
@@ -387,10 +414,23 @@ export default function MessagesNotifications() {
         }
     }
 
-    const filteredStudents = students.filter(student =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.className.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    // Chia sinh viên thành 2 nhóm
+    const atRiskStudents = students.filter(s => s.riskLevel === 'high' || s.riskLevel === 'medium')
+    const normalStudents = students.filter(s => s.riskLevel === 'low' || !s.riskLevel)
+
+    // Lọc sinh viên theo nhóm hiện tại và các tiêu chí
+    const currentGroupStudents = activeGroup === 'atrisk' ? atRiskStudents : normalStudents
+
+    const filteredStudents = currentGroupStudents.filter(student => {
+        const matchSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.className.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchClass = selectedClass === 'all' || student.className === selectedClass
+
+        return matchSearch && matchClass
+    })
+
+    // Lấy danh sách các lớp unique
+    const classList = ['all', ...Array.from(new Set(students.map(s => s.className)))]
 
     // Lọc lịch sử cuộc trò chuyện theo sinh viên được chọn
     const filteredConversationHistory = selectedStudent
@@ -422,50 +462,84 @@ export default function MessagesNotifications() {
     return (
         <TeacherLayout currentPage="messages">
             <div className="h-[calc(100vh-120px)] flex flex-col">
-                {/* Header với thống kê tổng quan */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-xl shadow-lg mb-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div>
-                            <h2 className="text-3xl font-bold mb-2">Trao đổi & Tư vấn Sinh viên</h2>
-                            <p className="text-blue-100">Chat trực tiếp và theo dõi lịch sử tư vấn</p>
+                {/* Header với tabs */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg mb-4">
+                    <div className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+                            <div>
+                                <h2 className="text-3xl font-bold mb-2">Truyền thông & Tư vấn</h2>
+                                <p className="text-blue-100">Quản lý tin nhắn và thông báo đến sinh viên</p>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                {/* Quick Actions */}
+                                <Button
+                                    onClick={() => setIsBulkModalOpen(true)}
+                                    className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
+                                    size="sm"
+                                >
+                                    <Megaphone className="w-4 h-4 mr-2" />
+                                    Thông báo hàng loạt
+                                </Button>
+                                <Button
+                                    onClick={() => setIsQuickModalOpen(true)}
+                                    className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
+                                    size="sm"
+                                >
+                                    <Zap className="w-4 h-4 mr-2" />
+                                    Tin nhắn nhanh
+                                </Button>
+                                <Button
+                                    onClick={() => setIsUrgentModalOpen(true)}
+                                    className="bg-red-500 hover:bg-red-600 text-white shadow-lg border border-red-600"
+                                    size="sm"
+                                >
+                                    <AlertTriangle className="w-4 h-4 mr-2" />
+                                    Cảnh báo khẩn cấp
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-3">
-                            {/* Quick Actions */}
-                            <Button
-                                onClick={() => setIsBulkModalOpen(true)}
-                                className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
-                                size="sm"
+
+                        {/* Tabs cho 2 nhóm sinh viên */}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setActiveGroup('atrisk')}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${activeGroup === 'atrisk'
+                                    ? 'bg-white text-blue-600 shadow-lg'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                    }`}
                             >
-                                <Megaphone className="w-4 h-4 mr-2" />
-                                Thông báo hàng loạt
-                            </Button>
-                            <Button
-                                onClick={() => setIsQuickModalOpen(true)}
-                                className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
-                                size="sm"
+                                <AlertTriangle className="w-5 h-5" />
+                                <span>Sinh viên cảnh báo</span>
+                                <Badge className="bg-red-500 text-white ml-2">
+                                    {atRiskStudents.length}
+                                </Badge>
+                            </button>
+                            <button
+                                onClick={() => setActiveGroup('normal')}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${activeGroup === 'normal'
+                                    ? 'bg-white text-blue-600 shadow-lg'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                    }`}
                             >
-                                <Zap className="w-4 h-4 mr-2" />
-                                Tin nhắn nhanh
-                            </Button>
-                            <Button
-                                onClick={() => setIsUrgentModalOpen(true)}
-                                className="bg-red-500 hover:bg-red-600 text-white shadow-lg border border-red-600"
-                                size="sm"
-                            >
-                                <AlertTriangle className="w-4 h-4 mr-2" />
-                                Cảnh báo khẩn cấp
-                            </Button>
+                                <Users className="w-5 h-5" />
+                                <span>Sinh viên bình thường</span>
+                                <Badge className="bg-green-500 text-white ml-2">
+                                    {normalStudents.length}
+                                </Badge>
+                            </button>
                         </div>
                     </div>
 
-                    {/* Thống kê nhanh */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                    {/* Thống kê theo nhóm */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 pb-6">
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-1">
-                                <MessageCircle className="w-4 h-4" />
-                                <span className="text-xs text-blue-100">Tổng sinh viên</span>
+                                <Users className="w-4 h-4" />
+                                <span className="text-xs text-blue-100">
+                                    {activeGroup === 'atrisk' ? 'SV cảnh báo' : 'SV bình thường'}
+                                </span>
                             </div>
-                            <div className="text-2xl font-bold">{students.length}</div>
+                            <div className="text-2xl font-bold">{currentGroupStudents.length}</div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-1">
@@ -473,7 +547,7 @@ export default function MessagesNotifications() {
                                 <span className="text-xs text-blue-100">Chưa đọc</span>
                             </div>
                             <div className="text-2xl font-bold text-yellow-300">
-                                {students.filter(s => s.unreadCount > 0).length}
+                                {currentGroupStudents.filter(s => s.unreadCount > 0).length}
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
@@ -482,39 +556,91 @@ export default function MessagesNotifications() {
                                 <span className="text-xs text-blue-100">Cuộc trò chuyện</span>
                             </div>
                             <div className="text-2xl font-bold">
-                                {students.reduce((sum, s) => sum + (s.totalConversations || 0), 0)}
+                                {currentGroupStudents.reduce((sum, s) => sum + (s.totalConversations || 0), 0)}
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-1">
-                                <TrendingUp className="w-4 h-4" />
-                                <span className="text-xs text-blue-100">Cần chú ý</span>
+                                <MessageCircle className="w-4 h-4" />
+                                <span className="text-xs text-blue-100">Trung bình/SV</span>
                             </div>
-                            <div className="text-2xl font-bold text-red-300">
-                                {students.filter(s => s.riskLevel === 'high').length}
+                            <div className="text-2xl font-bold text-green-300">
+                                {currentGroupStudents.length > 0
+                                    ? Math.round(currentGroupStudents.reduce((sum, s) => sum + (s.totalConversations || 0), 0) / currentGroupStudents.length)
+                                    : 0}
                             </div>
                         </div>
                     </div>
                 </div>
 
+<<<<<<< Updated upstream
+                {/* Main Content - 3 Columns Layout */}
+=======
                 {/* Main Chat Interface - 3 Columns Layout */}
+>>>>>>> Stashed changes
                 <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
                     {/* Column 1 - Danh sách sinh viên */}
                     <div className="col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-4 border-b">
+                        <div className="p-4 border-b space-y-3">
+                            {/* Search bar */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Tìm kiếm sinh viên..."
+                                    placeholder="Tìm kiếm theo tên, lớp..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                 />
                             </div>
-                            <div className="mt-3 flex items-center justify-between text-sm">
+
+                            {/* Filter button */}
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+                            >
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <SlidersHorizontal className="w-4 h-4" />
+                                    <span>Bộ lọc</span>
+                                    {selectedClass !== 'all' && (
+                                        <Badge className="bg-blue-100 text-blue-700 text-xs">1</Badge>
+                                    )}
+                                </div>
+                                <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Filters dropdown */}
+                            {showFilters && (
+                                <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
+                                    {/* Filter by class */}
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-700 mb-1 block">Lọc theo lớp</label>
+                                        <select
+                                            value={selectedClass}
+                                            onChange={(e) => setSelectedClass(e.target.value)}
+                                            className="w-full text-sm border rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="all">Tất cả lớp</option>
+                                            {classList.filter(c => c !== 'all').map(className => (
+                                                <option key={className} value={className}>{className}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Reset filters */}
+                                    {selectedClass !== 'all' && (
+                                        <button
+                                            onClick={() => setSelectedClass('all')}
+                                            className="w-full text-xs text-blue-600 hover:text-blue-700 font-medium py-1"
+                                        >
+                                            Xóa bộ lọc
+                                        </button>
+                                    )}
+                                </div>
+                            )}                                {/* Count */}
+                            <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-600">{filteredStudents.length} sinh viên</span>
-                                <Badge className="bg-red-100 text-red-700">
+                                <Badge className="bg-red-100 text-red-700 text-xs">
                                     {students.filter(s => s.unreadCount > 0).length} chưa đọc
                                 </Badge>
                             </div>
@@ -702,6 +828,7 @@ export default function MessagesNotifications() {
 
                     {/* Column 3 - Lịch sử cuộc trò chuyện (Conditional) */}
                     {showHistory && selectedStudent && (
+<<<<<<< Updated upstream
                         <>
                             {/* Backdrop */}
                             <div
@@ -786,8 +913,87 @@ export default function MessagesNotifications() {
                                                     <div>
                                                         <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                                         <p className="text-sm text-gray-500">Chưa có lịch sử tư vấn</p>
+=======
+                        <div className="col-span-12 lg:col-span-4 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
+                            <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-blue-50">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-indigo-600" />
+                                    Lịch sử tư vấn
+                                </CardTitle>
+                                {selectedStudent && (
+                                    <div className="mt-2 flex items-center gap-2 text-sm">
+                                        <Badge className="bg-indigo-100 text-indigo-700">
+                                            {selectedStudent.totalConversations} cuộc trò chuyện
+                                        </Badge>
+                                        <span className="text-gray-500">
+                                            Gần nhất: {new Date(selectedStudent.lastConversationDate || '').toLocaleDateString('vi-VN')}
+                                        </span>
+                                    </div>
+                                )}
+                            </CardHeader>
+                            <CardContent className="p-0 flex-1 overflow-hidden">
+                                {selectedStudent ? (
+                                    <div className="h-full overflow-y-auto">
+                                        {filteredConversationHistory.length > 0 ? (
+                                            <div className="divide-y">
+                                                {filteredConversationHistory.map((conv) => (
+                                                    <div key={conv.id} className="p-4 hover:bg-gray-50 transition-colors">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Calendar className="w-4 h-4 text-gray-400" />
+                                                                <span className="text-sm text-gray-600">
+                                                                    {new Date(conv.date).toLocaleDateString('vi-VN', {
+                                                                        day: '2-digit',
+                                                                        month: '2-digit',
+                                                                        year: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </span>
+                                                            </div>
+                                                            <Badge className={`text-xs ${getSentimentBadge(conv.sentiment)}`}>
+                                                                {getSentimentIcon(conv.sentiment)}
+                                                            </Badge>
+                                                        </div>
+
+                                                        <h4 className="font-medium text-gray-900 mb-2 flex items-start gap-2">
+                                                            <FileText className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                                            <span className="text-sm">{conv.topic}</span>
+                                                        </h4>
+
+                                                        <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                                                            {conv.summary}
+                                                        </p>
+
+                                                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" />
+                                                                {conv.duration}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <MessageCircle className="w-3 h-3" />
+                                                                {conv.messageCount} tin nhắn
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {conv.tags.map((tag, idx) => (
+                                                                <Badge key={idx} className="text-xs bg-gray-100 text-gray-600">
+                                                                    {tag}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+>>>>>>> Stashed changes
                                                     </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full p-8 text-center">
+                                                <div>
+                                                    <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                                    <p className="text-sm text-gray-500">Chưa có lịch sử tư vấn</p>
                                                 </div>
+<<<<<<< Updated upstream
                                             )}
                                         </div>
                                     ) : (
@@ -832,6 +1038,52 @@ export default function MessagesNotifications() {
                         </>
                     )}
 
+=======
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full p-8 text-center">
+                                        <div>
+                                            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                            <p className="text-sm text-gray-500">Chọn sinh viên để xem lịch sử</p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Lịch sử giúp theo dõi quá trình tư vấn
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+
+                            {/* Thống kê nhanh */}
+                            {selectedStudent && filteredConversationHistory.length > 0 && (
+                                <div className="border-t p-4 bg-gray-50">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="text-center p-2 bg-white rounded-lg border">
+                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                <TrendingUp className="w-4 h-4 text-green-600" />
+                                                <span className="text-xs text-gray-600">Tích cực</span>
+                                            </div>
+                                            <div className="text-lg font-bold text-green-600">
+                                                {filteredConversationHistory.filter(c => c.sentiment === 'positive').length}
+                                            </div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded-lg border">
+                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                <MessageCircle className="w-4 h-4 text-blue-600" />
+                                                <span className="text-xs text-gray-600">Tổng số</span>
+                                            </div>
+                                            <div className="text-lg font-bold text-blue-600">
+                                                {filteredConversationHistory.reduce((sum, c) => sum + c.messageCount, 0)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+>>>>>>> Stashed changes
                     {/* Column 3/4 - Câu hỏi gợi ý */}
                     <div className={`col-span-12 bg-white rounded-xl shadow-sm overflow-hidden ${showHistory ? 'hidden' : 'lg:col-span-3 lg:block'}`}>
                         <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">

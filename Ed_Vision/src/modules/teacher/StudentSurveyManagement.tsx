@@ -42,6 +42,13 @@ interface Survey {
     avgCompletion: number
     faculty: string
     className: string
+    description?: string
+    reminders: number
+    lastReminderDate?: string
+    averageScore?: number
+    riskStudents: number
+    completedStudents: StudentResponse[]
+    incompleteStudents: IncompleteStudent[]
 }
 
 interface SurveyQuestion {
@@ -51,6 +58,54 @@ interface SurveyQuestion {
     type: "scale" | "text" | "choice"
     options?: string[]
     weight: number
+    isRequired: boolean
+    helpText?: string
+}
+
+interface SurveyTemplate {
+    id: string
+    name: string
+    description: string
+    type: "beginning" | "midterm" | "final"
+    estimatedTime: number
+    questions: SurveyQuestion[]
+    createdBy: string
+    createdDate: string
+    usage: number
+}
+
+interface StudentResponse {
+    studentId: string
+    studentName: string
+    studentCode: string
+    completedDate: string
+    responses: QuestionResponse[]
+    overallScore: number
+    categoryScores: {
+        financial: number
+        mental: number
+        academic: number
+        social: number
+    }
+    riskLevel: "low" | "medium" | "high"
+    flags: string[]
+    notes?: string
+}
+
+interface QuestionResponse {
+    questionId: string
+    answer: string | number
+    category: string
+}
+
+interface IncompleteStudent {
+    studentId: string
+    studentName: string
+    studentCode: string
+    lastAccess?: string
+    remindersSent: number
+    email: string
+    phoneNumber?: string
 }
 
 interface SurveyHistory {
@@ -68,9 +123,14 @@ interface SurveyHistory {
             social: number
         }
         notes: string
+        improvements: string[]
+        concerns: string[]
     }[]
     trend: "improving" | "stable" | "declining"
     riskLevel: "low" | "medium" | "high"
+    lastUpdate: string
+    totalSurveys: number
+    averageScore: number
 }
 
 const StudentSurveyManagement = () => {
@@ -95,14 +155,168 @@ const StudentSurveyManagement = () => {
     const [showPreview, setShowPreview] = useState(false)
     const [surveyDescription, setSurveyDescription] = useState("")
 
-    // Expanded states
+    // Additional states for enhanced features
     const [expandedStudents, setExpandedStudents] = useState<string[]>([])
-
-    // Edit and reminder states
     const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null)
     const [showReminderDialog, setShowReminderDialog] = useState(false)
     const [reminderSurveyId, setReminderSurveyId] = useState<string | null>(null)
     const [reminderMessage, setReminderMessage] = useState("")
+    const [showDetailView, setShowDetailView] = useState(false)
+    const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
+    const [showAnalytics, setShowAnalytics] = useState(false)
+    const [showIncompleteModal, setShowIncompleteModal] = useState(false)
+    const [selectedIncompleteStudents, setSelectedIncompleteStudents] = useState<IncompleteStudent[]>([])
+    const [bulkReminderMessage, setBulkReminderMessage] = useState("")
+    const [showTemplates, setShowTemplates] = useState(false)
+    const [selectedTemplate, setSelectedTemplate] = useState<string>("")
+
+    // Survey templates
+    const surveyTemplates: SurveyTemplate[] = [
+        {
+            id: "template_beginning",
+            name: "Mẫu khảo sát đầu kỳ",
+            description: "Khảo sát toàn diện về tình hình sinh viên bước vào học kỳ mới",
+            type: "beginning",
+            estimatedTime: 15,
+            questions: [
+                {
+                    id: "q1",
+                    category: "financial",
+                    question: "Tình hình tài chính của bạn có đủ để chi trả học phí và sinh hoạt phí trong học kỳ này không?",
+                    type: "scale",
+                    weight: 2,
+                    isRequired: true,
+                    helpText: "1 = Rất khó khăn, 10 = Rất thoải mái"
+                },
+                {
+                    id: "q2",
+                    category: "mental",
+                    question: "Bạn cảm thấy như thế nào về tâm lý của mình khi bước vào học kỳ mới?",
+                    type: "scale",
+                    weight: 2,
+                    isRequired: true,
+                    helpText: "1 = Rất lo lắng/căng thẳng, 10 = Rất tự tin/thoải mái"
+                },
+                {
+                    id: "q3",
+                    category: "academic",
+                    question: "Bạn có chuẩn bị tốt về mặt học tập cho học kỳ này không?",
+                    type: "scale",
+                    weight: 2,
+                    isRequired: true,
+                    helpText: "1 = Không chuẩn bị gì, 10 = Chuẩn bị rất kỹ"
+                },
+                {
+                    id: "q4",
+                    category: "social",
+                    question: "Mức độ hài lòng với mối quan hệ bạn bè/đồng học của bạn hiện tại?",
+                    type: "scale",
+                    weight: 1,
+                    isRequired: true,
+                    helpText: "1 = Rất không hài lòng, 10 = Rất hài lòng"
+                },
+                {
+                    id: "q5",
+                    category: "academic",
+                    question: "Những khó khăn lớn nhất bạn gặp phải trong học tập?",
+                    type: "choice",
+                    options: ["Thiếu kiến thức nền tảng", "Khó hiểu bài giảng", "Thiếu tài liệu học tập", "Không có thời gian học", "Khó tập trung", "Khác"],
+                    weight: 1,
+                    isRequired: false
+                }
+            ],
+            createdBy: "Hệ thống",
+            createdDate: "2024-01-01",
+            usage: 45
+        },
+        {
+            id: "template_midterm",
+            name: "Mẫu khảo sát giữa kỳ",
+            description: "Đánh giá tình hình thích ứng và học tập giữa học kỳ",
+            type: "midterm",
+            estimatedTime: 10,
+            questions: [
+                {
+                    id: "q1",
+                    category: "academic",
+                    question: "Bạn đánh giá thế nào về kết quả học tập của mình đến thời điểm hiện tại?",
+                    type: "scale",
+                    weight: 3,
+                    isRequired: true,
+                    helpText: "1 = Rất kém, 10 = Rất tốt"
+                },
+                {
+                    id: "q2",
+                    category: "mental",
+                    question: "Mức độ căng thẳng học tập của bạn hiện tại?",
+                    type: "scale",
+                    weight: 2,
+                    isRequired: true,
+                    helpText: "1 = Không căng thẳng, 10 = Rất căng thẳng"
+                },
+                {
+                    id: "q3",
+                    category: "financial",
+                    question: "Tình hình tài chính có ảnh hưởng đến việc học của bạn không?",
+                    type: "scale",
+                    weight: 2,
+                    isRequired: true,
+                    helpText: "1 = Ảnh hưởng rất nhiều, 10 = Không ảnh hưởng"
+                }
+            ],
+            createdBy: "Hệ thống",
+            createdDate: "2024-01-01",
+            usage: 38
+        },
+        {
+            id: "template_final",
+            name: "Mẫu khảo sát cuối kỳ",
+            description: "Tổng kết và đánh giá toàn diện cuối học kỳ",
+            type: "final",
+            estimatedTime: 20,
+            questions: [
+                {
+                    id: "q1",
+                    category: "academic",
+                    question: "Bạn có hài lòng với kết quả học tập trong học kỳ vừa qua không?",
+                    type: "scale",
+                    weight: 3,
+                    isRequired: true,
+                    helpText: "1 = Rất không hài lòng, 10 = Rất hài lòng"
+                },
+                {
+                    id: "q2",
+                    category: "mental",
+                    question: "Sức khỏe tinh thần của bạn sau một học kỳ học tập?",
+                    type: "scale",
+                    weight: 2,
+                    isRequired: true,
+                    helpText: "1 = Rất tệ, 10 = Rất tốt"
+                },
+                {
+                    id: "q3",
+                    category: "social",
+                    question: "Bạn có tham gia đủ các hoạt động xã hội/ngoại khóa không?",
+                    type: "scale",
+                    weight: 1,
+                    isRequired: true,
+                    helpText: "1 = Không tham gia, 10 = Tham gia rất tích cực"
+                },
+                {
+                    id: "q4",
+                    category: "academic",
+                    question: "Đánh giá chung về chất lượng giảng dạy trong học kỳ?",
+                    type: "text",
+                    weight: 1,
+                    isRequired: false,
+                    helpText: "Chia sẻ ý kiến của bạn về giảng viên và phương pháp giảng dạy"
+                }
+            ],
+            createdBy: "Hệ thống",
+            createdDate: "2024-01-01",
+            usage: 32
+        }
+    ]
 
     // Mock data
     const faculties = ["Khoa Công nghệ thông tin", "Khoa Kinh tế", "Khoa Ngoại ngữ"]
@@ -122,7 +336,14 @@ const StudentSurveyManagement = () => {
             completedResponses: 98,
             avgCompletion: 65,
             faculty: "Khoa Công nghệ thông tin",
-            className: "CNTT-K19A"
+            className: "CNTT-K19A",
+            description: "Khảo sát nhằm thu thập thông tin về tình hình tài chính, tâm lý, học tập và xã hội của sinh viên đầu học kỳ",
+            reminders: 2,
+            lastReminderDate: "2024-09-12",
+            averageScore: 7.2,
+            riskStudents: 12,
+            completedStudents: [],
+            incompleteStudents: []
         },
         {
             id: "2",
@@ -137,7 +358,14 @@ const StudentSurveyManagement = () => {
             completedResponses: 45,
             avgCompletion: 30,
             faculty: "Khoa Công nghệ thông tin",
-            className: "CNTT-K19A"
+            className: "CNTT-K19A",
+            description: "Đánh giá tình hình học tập và thích ứng của sinh viên tại thời điểm giữa học kỳ",
+            reminders: 1,
+            lastReminderDate: "2024-10-25",
+            averageScore: 6.8,
+            riskStudents: 18,
+            completedStudents: [],
+            incompleteStudents: []
         }
     ]
 
@@ -155,7 +383,14 @@ const StudentSurveyManagement = () => {
             completedResponses: 145,
             avgCompletion: 100,
             faculty: "Khoa Công nghệ thông tin",
-            className: "CNTT-K19A"
+            className: "CNTT-K19A",
+            description: "Tổng kết đánh giá cuối học kỳ về kết quả học tập và sự phát triển của sinh viên",
+            reminders: 3,
+            lastReminderDate: "2024-05-18",
+            averageScore: 7.8,
+            riskStudents: 8,
+            completedStudents: [],
+            incompleteStudents: []
         }
     ]
 
@@ -175,7 +410,9 @@ const StudentSurveyManagement = () => {
                         academic: 8,
                         social: 7
                     },
-                    notes: "Sinh viên có tình hình tốt, cần theo dõi thêm về tâm lý"
+                    notes: "Sinh viên có tình hình tốt, cần theo dõi thêm về tâm lý",
+                    improvements: ["Kết quả học tập ổn định", "Quan hệ bạn bè tích cực"],
+                    concerns: ["Áp lực tài chính nhẹ", "Cần hỗ trợ tâm lý"]
                 },
                 {
                     surveyId: "2",
@@ -187,11 +424,16 @@ const StudentSurveyManagement = () => {
                         academic: 7,
                         social: 6
                     },
-                    notes: "Có dấu hiệu stress kỳ thi"
+                    notes: "Có dấu hiệu stress kỳ thi",
+                    improvements: ["Điểm số cải thiện"],
+                    concerns: ["Stress kỳ thi", "Thiếu thời gian ôn tập"]
                 }
             ],
             trend: "improving",
-            riskLevel: "low"
+            riskLevel: "low",
+            lastUpdate: "2024-09-10",
+            totalSurveys: 2,
+            averageScore: 6.5
         },
         {
             studentId: "SV002",
@@ -208,15 +450,20 @@ const StudentSurveyManagement = () => {
                         academic: 5,
                         social: 5
                     },
-                    notes: "Cần hỗ trợ tài chính và tư vấn tâm lý"
+                    notes: "Cần hỗ trợ tài chính và tư vấn tâm lý",
+                    improvements: [],
+                    concerns: ["Khó khăn tài chính nghiêm trọng", "Tâm lý không ổn định", "Kết quả học tập yếu", "Ít tương tác xã hội"]
                 }
             ],
             trend: "declining",
-            riskLevel: "high"
+            riskLevel: "high",
+            lastUpdate: "2024-09-08",
+            totalSurveys: 1,
+            averageScore: 4.5
         }
     ]
 
-    // Helper functions
+    // Enhanced helper functions
     const getStatusColor = (status: string) => {
         switch (status) {
             case "active": return "bg-green-500"
@@ -224,6 +471,72 @@ const StudentSurveyManagement = () => {
             case "draft": return "bg-gray-500"
             case "expired": return "bg-red-500"
             default: return "bg-gray-500"
+        }
+    }
+
+    const loadTemplate = (templateId: string) => {
+        const template = surveyTemplates.find(t => t.id === templateId)
+        if (template) {
+            setSurveyTitle(`${template.name} - ${selectedYear}`)
+            setSurveyType(template.type)
+            setSurveyDescription(template.description)
+            setQuestions(template.questions)
+            setShowTemplates(false)
+            setSelectedTemplate(templateId)
+            alert(`Đã tải mẫu "${template.name}" thành công!`)
+        }
+    }
+
+    const viewSurveyDetails = (survey: Survey) => {
+        setSelectedSurvey(survey)
+        setShowDetailView(true)
+    }
+
+    const viewSurveyAnalytics = (survey: Survey) => {
+        setSelectedSurvey(survey)
+        setShowAnalytics(true)
+    }
+
+    const viewIncompleteStudents = (survey: Survey) => {
+        // Mock incomplete students data
+        const mockIncomplete: IncompleteStudent[] = [
+            {
+                studentId: "SV003",
+                studentName: "Lê Văn C",
+                studentCode: "19IT003",
+                lastAccess: "2024-09-10",
+                remindersSent: 2,
+                email: "levanc@student.edu.vn",
+                phoneNumber: "0123456789"
+            },
+            {
+                studentId: "SV004",
+                studentName: "Phạm Thị D",
+                studentCode: "19IT004",
+                lastAccess: "2024-09-08",
+                remindersSent: 1,
+                email: "phamthid@student.edu.vn",
+                phoneNumber: "0987654321"
+            }
+        ]
+        setSelectedIncompleteStudents(mockIncomplete)
+        setShowIncompleteModal(true)
+        setBulkReminderMessage(
+            `Thông báo quan trọng: Khảo sát "${survey.title}" sẽ hết hạn vào ${survey.dueDate}. ` +
+            `Vui lòng hoàn thành khảo sát để giúp giảng viên nắm bắt tình hình học tập và hỗ trợ bạn tốt hơn. ` +
+            `Truy cập hệ thống học tập để thực hiện khảo sát.`
+        )
+    }
+
+    const sendBulkReminder = () => {
+        if (selectedIncompleteStudents.length > 0 && bulkReminderMessage.trim()) {
+            // TODO: Implement bulk reminder API call
+            console.log("Sending bulk reminder to:", selectedIncompleteStudents.map(s => s.studentName))
+            console.log("Message:", bulkReminderMessage)
+            alert(`Đã gửi nhắc nhở đến ${selectedIncompleteStudents.length} sinh viên chưa hoàn thành khảo sát!`)
+            setShowIncompleteModal(false)
+            setSelectedIncompleteStudents([])
+            setBulkReminderMessage("")
         }
     }
 
@@ -267,7 +580,8 @@ const StudentSurveyManagement = () => {
             category: "financial",
             question: "",
             type: "scale",
-            weight: 1
+            weight: 1,
+            isRequired: true
         }
         setQuestions([...questions, newQuestion])
     }
@@ -358,7 +672,12 @@ const StudentSurveyManagement = () => {
             completedResponses: 0,
             avgCompletion: 0,
             faculty: targetFaculty === "all" ? "Tất cả khoa" : targetFaculty,
-            className: targetClass === "all" ? "Tất cả lớp" : targetClass
+            className: targetClass === "all" ? "Tất cả lớp" : targetClass,
+            description: surveyDescription,
+            reminders: 0,
+            riskStudents: 0,
+            completedStudents: [],
+            incompleteStudents: []
         }
 
         // TODO: Save survey to backend
@@ -496,8 +815,29 @@ const StudentSurveyManagement = () => {
                     </div>
                     {showActions && (
                         <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => viewSurveyDetails(survey)}
+                                title="Xem chi tiết"
+                            >
                                 <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => viewSurveyAnalytics(survey)}
+                                title="Xem phân tích"
+                            >
+                                <BarChart3 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => viewIncompleteStudents(survey)}
+                                title="Sinh viên chưa làm"
+                            >
+                                <Users className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm">
                                 <Download className="w-4 h-4" />
@@ -1007,12 +1347,29 @@ const StudentSurveyManagement = () => {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Câu hỏi khảo sát</CardTitle>
-                            <CardDescription>Thêm câu hỏi để thu thập thông tin từ sinh viên</CardDescription>
+                            <CardDescription>
+                                Thêm câu hỏi để thu thập thông tin từ sinh viên
+                                {selectedTemplate && (
+                                    <Badge className="ml-2" variant="outline">
+                                        Đang sử dụng mẫu: {surveyTemplates.find(t => t.id === selectedTemplate)?.name}
+                                    </Badge>
+                                )}
+                            </CardDescription>
                         </div>
-                        <Button onClick={addQuestion}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Thêm câu hỏi
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowTemplates(true)}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Sử dụng mẫu
+                            </Button>
+                            <Button onClick={addQuestion}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Thêm câu hỏi
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -1283,13 +1640,320 @@ const StudentSurveyManagement = () => {
                                 >
                                     Hủy
                                 </Button>
-                                <Button
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                                    onClick={confirmSendReminder}
-                                >
-                                    <Send className="w-4 h-4 mr-2" />
+                                <Button className="flex-1" onClick={confirmSendReminder}>
                                     Gửi nhắc nhở
                                 </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Survey Templates Modal */}
+                {showTemplates && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                    <h3 className="text-xl font-bold">Chọn mẫu khảo sát</h3>
+                                </div>
+                                <Button variant="ghost" onClick={() => setShowTemplates(false)}>
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {surveyTemplates.map((template) => (
+                                    <Card key={template.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-lg">{template.name}</CardTitle>
+                                            <Badge variant="outline">{getTypeText(template.type)}</Badge>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="text-sm text-gray-600 mb-4">{template.description}</p>
+                                            <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                                <span>{template.questions.length} câu hỏi</span>
+                                                <span>{template.estimatedTime} phút</span>
+                                            </div>
+                                            <Button
+                                                className="w-full"
+                                                onClick={() => loadTemplate(template.id)}
+                                            >
+                                                Sử dụng mẫu này
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Incomplete Students Modal */}
+                {showIncompleteModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <Users className="w-6 h-6 text-orange-600" />
+                                    <h3 className="text-xl font-bold">Sinh viên chưa hoàn thành</h3>
+                                </div>
+                                <Button variant="ghost" onClick={() => setShowIncompleteModal(false)}>
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {selectedIncompleteStudents.map((student) => (
+                                    <Card key={student.studentId}>
+                                        <CardContent className="pt-4">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="font-medium">{student.studentName}</h4>
+                                                    <p className="text-sm text-gray-600">Mã SV: {student.studentCode}</p>
+                                                    <p className="text-sm text-gray-500">Truy cập cuối: {student.lastAccess}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <Badge variant="outline" className="text-orange-600 border-orange-200">
+                                                        {student.remindersSent} nhắc nhở đã gửi
+                                                    </Badge>
+                                                    <div className="text-sm text-gray-500 mt-1">
+                                                        <p>{student.email}</p>
+                                                        <p>{student.phoneNumber}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">Nội dung nhắc nhở hàng loạt</label>
+                                    <textarea
+                                        className="w-full px-3 py-2 border rounded-lg"
+                                        rows={4}
+                                        value={bulkReminderMessage}
+                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBulkReminderMessage(e.target.value)}
+                                        placeholder="Nhập nội dung nhắc nhở..."
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <Button variant="outline" className="flex-1" onClick={() => setShowIncompleteModal(false)}>
+                                        Đóng
+                                    </Button>
+                                    <Button className="flex-1" onClick={sendBulkReminder}>
+                                        Gửi nhắc nhở ({selectedIncompleteStudents.length} sinh viên)
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Survey Detail View Modal */}
+                {showDetailView && selectedSurvey && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <Eye className="w-6 h-6 text-blue-600" />
+                                    <h3 className="text-xl font-bold">Chi tiết khảo sát</h3>
+                                </div>
+                                <Button variant="ghost" onClick={() => setShowDetailView(false)}>
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 className="font-medium mb-2">Thông tin cơ bản</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <p><strong>Tiêu đề:</strong> {selectedSurvey.title}</p>
+                                            <p><strong>Loại:</strong> {getTypeText(selectedSurvey.type)}</p>
+                                            <p><strong>Khoa:</strong> {selectedSurvey.faculty}</p>
+                                            <p><strong>Lớp:</strong> {selectedSurvey.className}</p>
+                                            <p><strong>Trạng thái:</strong>
+                                                <Badge className={`ml-2 ${getStatusColor(selectedSurvey.status)}`}>
+                                                    {selectedSurvey.status === "active" ? "Đang diễn ra" :
+                                                        selectedSurvey.status === "completed" ? "Đã hoàn thành" :
+                                                            selectedSurvey.status === "draft" ? "Nháp" : "Hết hạn"}
+                                                </Badge>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-medium mb-2">Thống kê</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <p><strong>Tổng sinh viên:</strong> {selectedSurvey.totalStudents}</p>
+                                            <p><strong>Đã hoàn thành:</strong> {selectedSurvey.completedResponses}</p>
+                                            <p><strong>Tỷ lệ hoàn thành:</strong> {selectedSurvey.avgCompletion}%</p>
+                                            <p><strong>Ngày tạo:</strong> {selectedSurvey.createdDate}</p>
+                                            <p><strong>Hạn chót:</strong> {selectedSurvey.dueDate}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-medium mb-3">Danh sách câu hỏi</h4>
+                                    <div className="space-y-3">
+                                        {questions.map((question, idx) => (
+                                            <Card key={question.id}>
+                                                <CardContent className="pt-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm font-medium">
+                                                            {idx + 1}
+                                                        </span>
+                                                        <div className="flex-1">
+                                                            <p className="font-medium">{question.question}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {question.category === "financial" ? "💰 Tài chính" :
+                                                                        question.category === "mental" ? "🧠 Tâm lý" :
+                                                                            question.category === "academic" ? "📚 Học tập" : "👥 Xã hội"}
+                                                                </Badge>
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {question.type === "scale" ? "Đánh giá" : question.type === "choice" ? "Trắc nghiệm" : "Văn bản"}
+                                                                </Badge>
+                                                                {question.isRequired && (
+                                                                    <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                                                                        Bắt buộc
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Survey Analytics Modal */}
+                {showAnalytics && selectedSurvey && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <BarChart3 className="w-6 h-6 text-green-600" />
+                                    <h3 className="text-xl font-bold">Phân tích khảo sát</h3>
+                                </div>
+                                <Button variant="ghost" onClick={() => setShowAnalytics(false)}>
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Response Rate Chart */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Tỷ lệ phản hồi</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="h-64 flex items-center justify-center text-gray-500">
+                                            [Biểu đồ tỷ lệ phản hồi]
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Category Analysis */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Phân tích theo danh mục</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm">💰 Tài chính</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-20 h-2 bg-gray-200 rounded">
+                                                        <div className="w-3/4 h-2 bg-yellow-500 rounded"></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium">3.2/5</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm">🧠 Tâm lý</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-20 h-2 bg-gray-200 rounded">
+                                                        <div className="w-4/5 h-2 bg-green-500 rounded"></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium">4.1/5</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm">📚 Học tập</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-20 h-2 bg-gray-200 rounded">
+                                                        <div className="w-3/5 h-2 bg-blue-500 rounded"></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium">2.8/5</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm">👥 Xã hội</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-20 h-2 bg-gray-200 rounded">
+                                                        <div className="w-4/5 h-2 bg-purple-500 rounded"></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium">3.9/5</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Risk Assessment */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Đánh giá nguy cơ</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between p-3 rounded-lg bg-red-50">
+                                                <span className="text-sm font-medium text-red-700">Nguy cơ cao</span>
+                                                <span className="text-lg font-bold text-red-700">12 sinh viên</span>
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50">
+                                                <span className="text-sm font-medium text-yellow-700">Cần theo dõi</span>
+                                                <span className="text-lg font-bold text-yellow-700">8 sinh viên</span>
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 rounded-lg bg-green-50">
+                                                <span className="text-sm font-medium text-green-700">Ổn định</span>
+                                                <span className="text-lg font-bold text-green-700">25 sinh viên</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Improvement Suggestions */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Đề xuất cải thiện</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3 text-sm">
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                <p>Tăng cường hỗ trợ tài chính cho sinh viên có điểm tài chính thấp</p>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                <p>Tổ chức các buổi tư vấn tâm lý định kỳ</p>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                <p>Cải thiện phương pháp giảng dạy để nâng cao hiệu quả học tập</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </div>
                     </div>
