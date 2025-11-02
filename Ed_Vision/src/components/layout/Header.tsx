@@ -12,6 +12,7 @@ type Props = {
   showNavigation?: boolean
   isLandingPage?: boolean
   isAdminMode?: boolean
+  isTeacherMode?: boolean
   onLogin?: () => void
   onRegister?: () => void
 }
@@ -21,6 +22,7 @@ export default function Header({
   showNavigation = true,
   isLandingPage = false,
   isAdminMode = false,
+  isTeacherMode = false,
   onLogin,
   onRegister
 }: Props) {
@@ -29,7 +31,7 @@ export default function Header({
 
   // Use auth hook for authentication state
   const { isAuthenticated, user, getDashboardPath, logout } = useAuth()
-  
+
   // Local UI state for the profile menu 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -57,9 +59,9 @@ export default function Header({
   // Auth state is managed by useAuth hook - no need for manual event listeners
 
   // Get user display info
-  const studentName = user?.fullName || user?.name || user?.email || (isAdminMode ? "Admin User" : "Guest")
+  const studentName = user?.fullName || user?.name || user?.email || (isAdminMode ? "Admin User" : isTeacherMode ? "Teacher" : "Guest")
   const roleCode = (user?.roleRel?.code || user?.role || '') as string
-  const studentRole = roleCode ? roleCode : (isAdminMode ? t('common:header.user.administrator') : t('common:header.user.student'))
+  const studentRole = roleCode ? roleCode : (isAdminMode ? t('common:header.user.administrator') : isTeacherMode ? "Giảng viên" : t('common:header.user.student'))
 
   const handleLogoClick = () => {
     // Navigate according to the logged-in user's role when available
@@ -70,6 +72,8 @@ export default function Header({
       // Fallback when not authenticated
       if (isAdminMode) {
         navigate('/admin/overview')
+      } else if (isTeacherMode) {
+        navigate('/teacher/dashboard')
       } else {
         navigate('/student/landing')
       }
@@ -97,13 +101,13 @@ export default function Header({
           >
             {isAdminMode ? (
               <h1 className="text-2xl font-bold text-gray-900">PREDICA</h1>
+            ) : isTeacherMode ? (
+              <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
             ) : (
               <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
             )}
-          </div>
-
-          {/* Navigation - chỉ hiển thị khi không phải admin mode */}
-          {showNavigation && !isAdminMode && (
+          </div>          {/* Navigation - chỉ hiển thị khi không phải admin mode và teacher mode */}
+          {showNavigation && !isAdminMode && !isTeacherMode && (
             <nav className="hidden md:flex items-center space-x-8">
               {/* Our Features Dropdown */}
               <div className="relative group">
@@ -239,7 +243,11 @@ export default function Header({
                       <button
                         onClick={() => {
                           setMenuOpen(false)
-                          navigate('/student/profile')
+                          if (isTeacherMode) {
+                            navigate('/teacher/profile')
+                          } else {
+                            navigate('/student/profile')
+                          }
                         }}
                         className="px-2 py-1 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 rounded-md"
                       >
