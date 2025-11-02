@@ -238,8 +238,8 @@ export default function TeacherManagementDashboard() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: { parsed: { y: number } }) {
-            return context.parsed.y + ' giảng viên';
+          label: function(context: { parsed: { y: number | null } }) {
+            return (context.parsed.y ?? 0) + ' giảng viên';
           }
         }
       }

@@ -25,52 +25,81 @@ export default function Modal({ isOpen, onClose, title, message, type = 'info' }
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return '✅';
+        return (
+          <div className="flex-shrink-0 w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        );
       case 'error':
-        return '❌';
+        return (
+          <div className="flex-shrink-0 w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-red-100">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+        );
       default:
-        return 'ℹ️';
+        return (
+          <div className="flex-shrink-0 w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-blue-100">
+            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        );
     }
   };
 
-  const getColorClass = () => {
+  const getButtonClass = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-600 hover:bg-green-700 focus:ring-green-500';
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-600 hover:bg-red-700 focus:ring-red-500';
       default:
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop with blur */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="fixed inset-0 backdrop-blur-sm transition-all"
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in duration-200">
-        <div className={`rounded-lg p-4 border ${getColorClass()}`}>
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">{getIcon()}</span>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-2">{title}</h3>
-              <p className="text-gray-700 whitespace-pre-line">{message}</p>
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative transform overflow-hidden rounded-lg bg-white shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-gray-200">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="text-center">
+              {getIcon()}
+              
+              <div className="mt-3">
+                <h3 className="text-xl font-bold leading-6 text-gray-900 mb-3">
+                  {title}
+                </h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                    {message}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Đóng
-          </button>
+          
+          {/* Action button */}
+          <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`inline-flex w-full justify-center rounded-md px-6 py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClass()}`}
+            >
+              Đóng
+            </button>
+          </div>
         </div>
       </div>
     </div>

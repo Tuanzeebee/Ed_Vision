@@ -171,8 +171,8 @@ export default function AdminOverviewDashboard() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: {parsed: {y: number}}) {
-            return 'Số lượng: ' + context.parsed.y + ' sinh viên';
+          label: function(context: {parsed: {y: number | null}}) {
+            return 'Số lượng: ' + (context.parsed.y ?? 0) + ' sinh viên';
           }
         }
       }
