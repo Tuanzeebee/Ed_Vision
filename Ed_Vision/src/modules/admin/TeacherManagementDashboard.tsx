@@ -2,26 +2,6 @@ import AdminLayout from "@/components/ui/admin/AdminLayout";
 import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-
-// Đăng ký các components của Chart.js
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 // Simple Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -106,158 +86,13 @@ export default function TeacherManagementDashboard() {
   const [statusFilter, setStatusFilter] = useState("Tất cả trạng thái");
   const [qualityFilter, setQualityFilter] = useState("Tất cả chất lượng");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [teachersPerPage] = useState(10);
   const navigate = useNavigate();
 
   // Handle navigation to teacher detail
   const handleViewTeacher = (teacherId: string) => {
     navigate(`/admin/teachers/${teacherId}`);
-  };
-
-  const handleExportExcel = () => {
-    try {
-      // Tạo header cho CSV
-      const headers = [
-        'ID Giảng viên',
-        'Họ và Tên', 
-        'Email',
-        'Chức vụ', 
-        'Trạng thái',
-        'Chất lượng',
-        'Số sao',
-        'Số sinh viên đang cố vấn'
-      ];
-
-      // Tạo dữ liệu CSV
-      const csvRows = [
-        headers.join(','), // Header row
-        ...filteredTeachers.map((teacher) => {
-          const row = [
-            teacher.id,
-            `"${teacher.name}"`,
-            teacher.email,
-            `"${teacher.position}"`,
-            `"${teacher.status}"`,
-            `"${teacher.quality}"`,
-            teacher.qualityStars.toString(),
-            teacher.students.toString()
-          ];
-          return row.join(',');
-        })
-      ];
-
-      const csvContent = csvRows.join('\n');
-      
-      // Tạo file name với timestamp
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-      const fileName = `Danh_sach_giang_vien_${dateStr}_${timeStr}.csv`;
-
-      // Tạo và download file CSV
-      const blob = new Blob(['\uFEFF' + csvContent], { 
-        type: 'text/csv;charset=utf-8;' 
-      });
-
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up URL object
-      setTimeout(() => {
-        URL.revokeObjectURL(link.href);
-      }, 100);
-
-      // Hiển thị thông báo thành công với thống kê
-      const statusCounts = filteredTeachers.reduce((acc, teacher) => {
-        acc[teacher.status] = (acc[teacher.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const qualityCounts = filteredTeachers.reduce((acc, teacher) => {
-        acc[teacher.quality] = (acc[teacher.quality] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const avgQuality = (filteredTeachers.reduce((sum, teacher) => sum + teacher.qualityStars, 0) / filteredTeachers.length).toFixed(1);
-      const totalStudents = filteredTeachers.reduce((sum, teacher) => sum + teacher.students, 0);
-
-      const statusText = Object.entries(statusCounts)
-        .map(([status, count]) => `${status}: ${count}`)
-        .join(', ');
-
-      const qualityText = Object.entries(qualityCounts)
-        .map(([quality, count]) => `${quality}: ${count}`)
-        .join(', ');
-
-      alert(
-        `✓ Xuất file Excel thành công!\n\n` +
-        `📄 File: ${fileName}\n` +
-        `👩‍🏫 Tổng số giảng viên: ${filteredTeachers.length}\n` +
-        `⭐ Chất lượng TB: ${avgQuality}/5.0\n` +
-        `👥 Tổng sinh viên đang cố vấn: ${totalStudents}\n\n` +
-        `📊 Thống kê trạng thái: ${statusText}\n` +
-        `🏆 Thống kê chất lượng: ${qualityText}\n\n` +
-        `Filters áp dụng:\n` +
-        `- Chức vụ: ${positionFilter}\n` +
-        `- Trạng thái: ${statusFilter}\n` +
-        `- Chất lượng: ${qualityFilter}`
-      );
-
-    } catch (error) {
-      console.error('Lỗi khi xuất Excel:', error);
-      alert('❌ Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!');
-    }
-  };
-
-  // Chart data for quality distribution
-  const qualityData = {
-    labels: ['Tốt', 'Khá', 'TB', 'Tệ'],
-    datasets: [{
-      data: [450, 380, 200, 53],
-      backgroundColor: [
-        '#10b981',
-        '#3b82f6', 
-        '#f59e0b',
-        '#ef4444'
-      ],
-      borderWidth: 0,
-      borderRadius: 4
-    }]
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context: { parsed: { y: number | null } }) {
-            return (context.parsed.y ?? 0) + ' giảng viên';
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        display: false,
-        beginAtZero: true
-      },
-      x: {
-        display: false
-      }
-    },
-    elements: {
-      bar: {
-        borderSkipped: false
-      }
-    }
   };
 
   const getPositionBadgeColor = (position: string) => {
@@ -325,6 +160,17 @@ export default function TeacherManagementDashboard() {
     return () => clearTimeout(filterTimeout);
   }, [searchTerm, positionFilter, statusFilter, qualityFilter]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, positionFilter, statusFilter, qualityFilter]);
+
+  // Pagination calculations
+  const indexOfLastTeacher = currentPage * teachersPerPage;
+  const indexOfFirstTeacher = indexOfLastTeacher - teachersPerPage;
+  const currentTeachers = filteredTeachers.slice(indexOfFirstTeacher, indexOfLastTeacher);
+  const totalPages = Math.ceil(filteredTeachers.length / teachersPerPage);
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -335,63 +181,37 @@ export default function TeacherManagementDashboard() {
         </div>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Online Teachers */}
-          <Card className="p-6 bg-green-200">
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent>
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Giảng viên trực tuyến</p>
-                  <p className="text-2xl font-bold text-gray-900">75/1083</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-800 mb-2">Giảng viên đang trực tuyến</p>
+                  <p className="text-4xl font-bold text-green-700 mb-1">75</p>
+                  <p className="text-xs text-green-600">trên tổng 1,083</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-user-check text-green-600 text-xl"></i>
+                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
+                  <i className="fas fa-user-check text-green-600 text-2xl"></i>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Average Quality */}
-          <Card className="p-6 bg-blue-200">
+          {/* Teachers Need Support */}
+          <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent>
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Chất lượng trung bình</p>
-                  <p className="text-2xl font-bold text-gray-900">4.2/5.0</p>
-                  <p className="text-sm text-green-600 font-medium">+0.3 điểm so với kỳ trước</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-orange-800 mb-2">Giảng viên cần hỗ trợ</p>
+                  <p className="text-4xl font-bold text-orange-700 mb-1">12</p>
+                  <p className="text-xs text-red-600 flex items-center">
+                    <i className="fas fa-arrow-up text-xs mr-1"></i>
+                    +3 giảng viên so với tháng trước
+                  </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-star text-blue-600 text-xl"></i>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quality Distribution */}
-          <Card className="p-6">
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="w-full">
-                  <p className="text-sm font-medium text-gray-600 mb-3">Phân bố chất lượng</p>
-                  <div className="h-16 w-full">
-                    <Bar data={qualityData} options={chartOptions} />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Need Support */}
-          <Card className="p-6 bg-orange-200">
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Cần hỗ trợ</p>
-                  <p className="text-2xl font-bold text-gray-900">1</p>
-                  <p className="text-sm text-green-600 font-medium">-1% so với tháng trước</p>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
+                  <i className="fas fa-exclamation-triangle text-orange-600 text-2xl"></i>
                 </div>
               </div>
             </CardContent>
@@ -466,13 +286,6 @@ export default function TeacherManagementDashboard() {
                   <i className="fas fa-undo mr-2"></i>
                   Reset bộ lọc
                 </button>
-                <button 
-                  onClick={handleExportExcel}
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium cursor-pointer"
-                >
-                  <i className="fas fa-download mr-2"></i>
-                  Xuất Excel
-                </button>
               </div>
             </div>
           </CardContent>
@@ -497,6 +310,7 @@ export default function TeacherManagementDashboard() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chất lượng</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên đang cố vấn</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -510,11 +324,10 @@ export default function TeacherManagementDashboard() {
                     </td>
                   </tr>
                 ) : !isLoading ? (
-                  filteredTeachers.map((teacher, index) => (
+                  currentTeachers.map((teacher, index) => (
                     <tr 
                       key={index} 
-                      className="hover:bg-gray-50 cursor-pointer" 
-                      onClick={() => handleViewTeacher(teacher.id)}
+                      className="hover:bg-gray-50"
                     >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{teacher.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -548,6 +361,15 @@ export default function TeacherManagementDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.students} sinh viên</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button 
+                        onClick={() => handleViewTeacher(teacher.id)}
+                        title="Xem chi tiết"
+                        className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                      >
+                        <span className="text-blue-600 hover:text-blue-900 text-lg">👁️</span>
+                      </button>
+                    </td>
                   </tr>
                   ))
                 ) : null}
@@ -559,18 +381,63 @@ export default function TeacherManagementDashboard() {
           <div className="bg-white px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between">
               <div className="text-sm text-gray-700 mb-4 sm:mb-0">
-                Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">{filteredTeachers.length}</span> trong tổng số <span className="font-medium">{filteredTeachers.length}</span> kết quả
+                Hiển thị <span className="font-medium">{indexOfFirstTeacher + 1}</span> đến <span className="font-medium">{Math.min(indexOfLastTeacher, filteredTeachers.length)}</span> trong tổng số <span className="font-medium">{filteredTeachers.length}</span> kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-not-allowed" disabled>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+                >
                   <i className="fas fa-chevron-left"></i>
                 </button>
-                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
-                <span className="px-3 py-1.5 text-xs font-medium text-gray-700">...</span>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">217</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer ${
+                        currentPage === pageNum
+                          ? 'text-white bg-blue-600 border border-blue-600'
+                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <>
+                    <span className="px-2 text-gray-500">...</span>
+                    <button 
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+                
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+                >
                   <i className="fas fa-chevron-right"></i>
                 </button>
               </div>
