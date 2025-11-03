@@ -1,5 +1,6 @@
 ﻿import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
+import TimeFilter from "../../components/ui/admin/TimeFilter";
 import { useState } from 'react';
 import {
   Chart as ChartJS,
@@ -30,6 +31,7 @@ ChartJS.register(
 export default function GeneralStatistics() {
   // State for time filter
   const [timeFilter, setTimeFilter] = useState('tháng-này');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // Function to get data based on time filter
   const getFilteredData = (baseData: number[]) => {
@@ -82,58 +84,12 @@ export default function GeneralStatistics() {
             </div>
             
             {/* Enhanced Time Filter */}
-            <div className="flex items-center space-x-2">
-              {/* Navigation Arrows */}
-              <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
-                <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-l-md transition-colors">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md transition-colors">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Today Button */}
-              <button 
-                onClick={() => setTimeFilter('hôm-nay')}
-                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                  timeFilter === 'hôm-nay'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:text-green-600 hover:bg-green-50'
-                }`}
-              >
-                Hôm nay
-              </button>
-              
-              {/* Time Period Buttons */}
-              <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
-                {[
-                  { value: 'tuần-này', label: 'Tuần' },
-                  { value: 'tháng-này', label: 'Tháng' },
-                  { value: 'tất-cả', label: 'Tất cả' }
-                ].map((period, index) => (
-                  <button
-                    key={period.value}
-                    onClick={() => setTimeFilter(period.value)}
-                    className={`px-2 py-1 text-xs font-medium transition-colors ${
-                      index === 0 ? 'rounded-l-md' : ''
-                    } ${
-                      index === 2 ? 'rounded-r-md' : ''
-                    } ${
-                      timeFilter === period.value
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                    }`}
-                  >
-                    {period.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <TimeFilter 
+              value={timeFilter}
+              onChange={setTimeFilter}
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+            />
           </div>
           <p className="text-gray-600">Tổng quan hoạt động học tập và hiệu suất hệ thống AI giáo dục đại học ({getTimeFilterLabel()})</p>
         </div>
@@ -141,19 +97,17 @@ export default function GeneralStatistics() {
         {/* Key Performance Indicators */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Warning Risk Card */}
-          <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border-0">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-yellow-100">Sinh viên có cảnh báo</p>
-                  <p className="text-3xl font-bold text-white mt-2">{getFilteredData([324])[0].toLocaleString()}</p>
-                  <div className="flex items-center mt-2">
-                    <i className="fas fa-arrow-down text-yellow-200 text-sm mr-1"></i>
-                    <span className="text-yellow-200 text-sm font-medium">-2.1%</span>
-                    <span className="text-yellow-200 text-sm ml-1">so với kỳ trước</span>
-                  </div>
+                  <p className="text-sm font-medium text-blue-700">Sinh viên có cảnh báo</p>
+                  <p className="text-3xl font-bold text-blue-900">{getFilteredData([324])[0].toLocaleString()}</p>
+                  <p className="text-sm text-green-600 flex items-center mt-1">
+                    ↗ +7 sinh viên so với kỳ trước
+                  </p>
                 </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
                   <span className="text-white text-2xl">⚠️</span>
                 </div>
               </div>
@@ -161,19 +115,17 @@ export default function GeneralStatistics() {
           </Card>
 
           {/* AI Prediction Accuracy */}
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-100">Độ chính xác AI dự đoán</p>
-                  <p className="text-3xl font-bold text-white mt-2">94.2%</p>
-                  <div className="flex items-center mt-2">
-                    <i className="fas fa-arrow-up text-green-200 text-sm mr-1"></i>
-                    <span className="text-green-200 text-sm font-medium">+2.1%</span>
-                    <span className="text-green-200 text-sm ml-1">cải thiện</span>
-                  </div>
+                  <p className="text-sm font-medium text-green-700">Độ chính xác AI dự đoán</p>
+                  <p className="text-3xl font-bold text-green-900">94.2%</p>
+                  <p className="text-sm text-green-600 flex items-center mt-1">
+                    ↗ +2.0% so với kỳ trước
+                  </p>
                 </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
                   <span className="text-white text-2xl">🤖</span>
                 </div>
               </div>
@@ -181,19 +133,17 @@ export default function GeneralStatistics() {
           </Card>
 
           {/* Average Study Progress */}
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-100">Tiến độ học tập trung bình</p>
-                  <p className="text-3xl font-bold text-white mt-2">78.3%</p>
-                  <div className="flex items-center mt-2">
-                    <i className="fas fa-arrow-up text-purple-200 text-sm mr-1"></i>
-                    <span className="text-purple-200 text-sm font-medium">+5.7%</span>
-                    <span className="text-purple-200 text-sm ml-1">tiến bộ</span>
-                  </div>
+                  <p className="text-sm font-medium text-purple-700">Tiến độ học tập trung bình</p>
+                  <p className="text-3xl font-bold text-purple-900">78.3%</p>
+                  <p className="text-sm text-green-600 flex items-center mt-1">
+                    ↗ +4.5% so với kỳ trước
+                  </p>
                 </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-lg">
                   <span className="text-white text-2xl">🏆</span>
                 </div>
               </div>
@@ -201,19 +151,17 @@ export default function GeneralStatistics() {
           </Card>
 
           {/* Completion Rate */}
-          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-orange-100">Tỉ lệ hoàn thành bài tập</p>
-                  <p className="text-3xl font-bold text-white mt-2">89.1%</p>
-                  <div className="flex items-center mt-2">
-                    <i className="fas fa-arrow-up text-orange-200 text-sm mr-1"></i>
-                    <span className="text-orange-200 text-sm font-medium">+3.4%</span>
-                    <span className="text-orange-200 text-sm ml-1">tăng trưởng</span>
-                  </div>
+                  <p className="text-sm font-medium text-red-700">Tỉ lệ hoàn thành bài tập</p>
+                  <p className="text-3xl font-bold text-red-900">89.1%</p>
+                  <p className="text-sm text-green-600 flex items-center mt-1">
+                    ↗ +3.0% so với kỳ trước
+                  </p>
                 </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center shadow-lg">
                   <span className="text-white text-2xl">✅</span>
                 </div>
               </div>

@@ -1,30 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
 import LoadingSpinner from "../../components/ui/admin/LoadingSpinner";
-
-// Import image assets
-import imgAdmin from "../../assets/parent/c47870bf01f989650eaadfebe75f1949340dd812.png"
-import imgUser1 from "../../assets/parent/1162b70d9bce3d9bc46857cc86bb8bdc5c5e3d08.png"
-import imgUser2 from "../../assets/parent/7c6922ae3190c8299bc180b4dcf8ebdbb7375921.png"
-import imgUser3 from "../../assets/parent/80590115117c5f72e317a9fc5e7105049fb7d1da.png"
-import imgUser4 from "../../assets/parent/68ac1bee97c99b0898da5250c533dbe2f4b998dd.png"
-import imgUser5 from "../../assets/parent/e978b833672fc70116d1ad26305f7e7a10a729fd.png"
+import { accountService, type AccountData } from "../../services/api/accountService";
+import { useToast } from "../../lib/useToast";
 
 // Icon components
 const SearchIcon = () => <i className="fas fa-search text-gray-400"></i>;
 const PlusIcon = () => <i className="fas fa-plus text-white"></i>;
-const EyeIcon = () => <i className="fas fa-eye text-blue-600"></i>;
-const EditIcon = () => <i className="fas fa-edit text-green-600"></i>;
-const LockIcon = () => <i className="fas fa-lock text-red-600"></i>;
-const UnlockIcon = () => <i className="fas fa-unlock text-green-600"></i>;
-const DeleteIcon = () => <i className="fas fa-trash text-red-600"></i>;
 const ChevronLeftIcon = () => <i className="fas fa-chevron-left text-gray-500"></i>;
 const ChevronRightIcon = () => <i className="fas fa-chevron-right text-gray-400"></i>;
 
 // Status badge component
 const StatusBadge = ({ status, children }: { status: 'active' | 'inactive' | 'blocked'; children: React.ReactNode }) => {
-  const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium";
+  const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap";
   const statusClasses = {
     active: "bg-green-100 text-green-800",
     inactive: "bg-yellow-100 text-yellow-800", 
@@ -42,19 +31,64 @@ const StatusBadge = ({ status, children }: { status: 'active' | 'inactive' | 'bl
   );
 };
 
-// Role badge component  
+// Role badge component
 const RoleBadge = ({ role }: { role: string }) => {
-  const roleColors = {
-    'Quản trị viên': 'bg-blue-100 text-blue-800',
-    'Giảng viên': 'bg-purple-100 text-purple-800',
-    'Sinh viên': 'bg-orange-100 text-orange-800'
+  const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-full text-xs whitespace-nowrap";
+  
+  // Determine if role should be bold
+  const isBold = role === 'Lãnh đạo';
+  const fontWeight = isBold ? 'font-bold' : 'font-medium';
+  
+  // Color mapping for each role
+  const roleClasses: { [key: string]: string } = {
+    'Lãnh đạo': 'bg-red-100 text-red-800',
+    'Giảng viên': 'bg-green-100 text-green-800',
+    'Sinh viên': 'bg-orange-100 text-orange-800',
+    'Phụ huynh': 'bg-pink-100 text-pink-800'
   };
   
+  const colorClass = roleClasses[role] || 'bg-gray-100 text-gray-800';
+  
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800'}`}>
+    <span className={`${baseClasses} ${colorClass} ${fontWeight}`}>
       {role}
     </span>
   );
+};
+
+// Helper functions
+const getRoleDisplayName = (roleCode?: string, roleName?: string): string => {
+  if (roleName) return roleName;
+  const roleMap: { [key: string]: string } = {
+    'admin': 'Quản trị viên',
+    'leader': 'Lãnh đạo',
+    'teacher': 'Giảng viên',
+    'student': 'Sinh viên',
+    'parent': 'Phụ huynh'
+  };
+  return roleCode ? roleMap[roleCode] || roleCode : 'N/A';
+};
+
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('vi-VN');
+};
+
+const getSchoolOrDepartment = (account: AccountData): string => {
+  if (account.instructor?.departmentName) {
+    return account.instructor.departmentName;
+  }
+  if (account.student?.major) {
+    return account.student.major;
+  }
+  return 'N/A';
+};
+
+const getUserCode = (account: AccountData): string => {
+  if (account.student?.studentCode) return account.student.studentCode;
+  if (account.instructor?.employeeCode) return account.instructor.employeeCode;
+  return account.accountId.toString();
 };
 
 // Simple Card components
@@ -96,162 +130,89 @@ const Button = ({ children, variant = "primary", size = "md", className = "", ..
 
 export default function AccountManagement() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  
   // State management for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedSchool, setSelectedSchool] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState('Tất cả các trường');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Filter logic with loading state
-  const [filteredData, setFilteredData] = useState<{
-    id: string;
-    avatar: string | null;
-    name: string;
-    birth: string;
-    gender: string;
-    email: string;
-    school: string;
-    role: string;
-    joinDate: string;
-    status: 'active' | 'inactive' | 'blocked';
-  }[]>([]);
-  
-  useEffect(() => {
-    setIsLoading(true);
-    
-    const filterTimeout = setTimeout(() => {
-      const userData = [
-        {
-          id: "#001",
-          avatar: imgUser1,
-          name: "Nguyễn Văn An",
-          birth: "15/03/1995",
-          gender: "Nam",
-          email: "nguyen.van.an@predica.edu.vn",
-          school: "Khoa học Máy tính",
-          role: "Quản trị viên",
-          joinDate: "01/09/2020",
-          status: "active" as const
-        },
-        {
-          id: "#002", 
-          avatar: null,
-          name: "Trần Thị Bình",
-          birth: "22/07/1992",
-          gender: "Nữ",
-          email: "tran.thi.binh@predica.edu.vn", 
-          school: "Y - Dược",
-          role: "Giảng viên",
-          joinDate: "15/02/2019",
-          status: "inactive" as const
-        },
-        {
-          id: "#003",
-          avatar: imgUser2,
-          name: "Lê Văn Cường", 
-          birth: "10/11/1988",
-          gender: "Nam",
-          email: "le.van.cuong@predica.edu.vn",
-          school: "Kinh Tế",
-          role: "Sinh viên",
-          joinDate: "10/08/2021",
-          status: "blocked" as const
-        },
-        {
-          id: "#004",
-          avatar: imgUser3,
-          name: "Phạm Thị Dung",
-          birth: "05/12/1990", 
-          gender: "Nữ",
-          email: "pham.thi.dung@predica.edu.vn",
-          school: "Công Nghệ",
-          role: "Giảng viên",
-          joinDate: "20/03/2018",
-          status: "active" as const
-        },
-        {
-          id: "#005",
-          avatar: imgAdmin,
-          name: "Hoàng Văn Em",
-          birth: "18/09/1993",
-          gender: "Nam", 
-          email: "hoang.van.em@predica.edu.vn",
-          school: "Du lịch",
-          role: "Sinh viên",
-          joinDate: "12/09/2022",
-          status: "inactive" as const
-        },
-        {
-          id: "#006",
-          avatar: imgUser4,
-          name: "Vũ Thị Giang",
-          birth: "28/04/1991",
-          gender: "Nữ",
-          email: "vu.thi.giang@predica.edu.vn", 
-          school: "Đào tạo quốc tế",
-          role: "Quản trị viên",
-          joinDate: "05/01/2017",
-          status: "active" as const
-        },
-        {
-          id: "#007",
-          avatar: imgUser1,
-          name: "Đặng Văn Hùng",
-          birth: "14/06/1989",
-          gender: "Nam",
-          email: "dang.van.hung@predica.edu.vn",
-          school: "Xã hội", 
-          role: "Giảng viên",
-          joinDate: "25/11/2016",
-          status: "blocked" as const
-        },
-        {
-          id: "#008",
-          avatar: imgUser5,
-          name: "Ngô Thị Lan",
-          birth: "03/02/1994",
-          gender: "Nữ",
-          email: "ngo.thi.lan@predica.edu.vn",
-          school: "Y - Dược",
-          role: "Sinh viên",
-          joinDate: "08/07/2023", 
-          status: "active" as const
-        }
-      ];
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
-      const
-      filtered = userData.filter(user => {
-        const matchesSearch = searchTerm === '' || 
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.id.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesRole = selectedRole === '' || 
-          (selectedRole === 'admin' && user.role === 'Quản trị viên') ||
-          (selectedRole === 'teacher' && user.role === 'Giảng viên') ||
-          (selectedRole === 'student' && user.role === 'Sinh viên');
-        
-        const matchesStatus = selectedStatus === '' || user.status === selectedStatus;
-        
-        const matchesSchool = selectedSchool === '' ||
-          (selectedSchool === 'cs' && user.school === 'Khoa học Máy tính') ||
-          (selectedSchool === 'medical' && user.school === 'Y - Dược') ||
-          (selectedSchool === 'economics' && user.school === 'Kinh Tế') ||
-          (selectedSchool === 'technology' && user.school === 'Công Nghệ') ||
-          (selectedSchool === 'tourism' && user.school === 'Du lịch') ||
-          (selectedSchool === 'international' && user.school === 'Đào tạo quốc tế') ||
-          (selectedSchool === 'social' && user.school === 'Xã hội');
-        
-        return matchesSearch && matchesRole && matchesStatus && matchesSchool;
+  // API data state
+  const [accountsData, setAccountsData] = useState<AccountData[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Fetch data from API
+  const fetchAccounts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await accountService.getAccounts({
+        search: searchTerm || undefined,
+        role: selectedRole || undefined,
+        status: selectedStatus || undefined,
+        school: selectedSchool !== 'Tất cả các trường' ? selectedSchool : undefined,
+        page: currentPage,
+        limit: usersPerPage,
       });
-      
-      setFilteredData(filtered);
+
+      setAccountsData(response.data);
+      setTotalRecords(response.meta.total);
+      setTotalPages(response.meta.totalPages);
+    } catch (error) {
+      console.error('Failed to fetch accounts:', error);
+      showToast('Không thể tải danh sách tài khoản', 'error');
+      setAccountsData([]);
+      setTotalRecords(0);
+      setTotalPages(0);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(filterTimeout);
+    }
+  }, [searchTerm, selectedRole, selectedStatus, selectedSchool, currentPage, showToast]);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchTerm, selectedRole, selectedStatus, selectedSchool]);
+
+  // Handle lock/unlock account
+  const handleLockAccount = async (accountId: number) => {
+    try {
+      await accountService.lockAccount(accountId);
+      showToast('Đã khóa tài khoản thành công', 'success');
+      // Refresh data
+      fetchAccounts();
+    } catch (error) {
+      console.error('Failed to lock account:', error);
+      showToast('Không thể khóa tài khoản', 'error');
+    }
+  };
+
+  const handleUnlockAccount = async (accountId: number) => {
+    try {
+      await accountService.unlockAccount(accountId);
+      showToast('Đã mở khóa tài khoản thành công', 'success');
+      // Refresh data
+      fetchAccounts();
+    } catch (error) {
+      console.error('Failed to unlock account:', error);
+      showToast('Không thể mở khóa tài khoản', 'error');
+    }
+  };
+
+  // Calculate display indices
+  const indexOfFirstUser = (currentPage - 1) * usersPerPage + 1;
+  const indexOfLastUser = Math.min(currentPage * usersPerPage, totalRecords);
+
 
   return (
     <AdminLayout>
@@ -291,14 +252,31 @@ export default function AccountManagement() {
             {/* Filters */}
             <div className="flex items-center space-x-2">
               <select 
+                value={selectedSchool}
+                onChange={(e) => setSelectedSchool(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-48 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option>Tất cả các trường</option>
+                <option>Trường Khoa học máy tính</option>
+                <option>Trường Công nghệ</option>
+                <option>Trường Kinh tế và Kinh doanh</option>
+                <option>Trường Ngôn ngữ và Xã hội nhân văn</option>
+                <option>Trường Du lịch</option>
+                <option>Trường Y-Dược</option>
+                <option>Trường Đào tạo quốc tế</option>
+                <option>Viện Quản lý Nam Khuê</option>
+                <option>Viện Việt-Nhật</option>
+              </select>
+              <select 
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
                 className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="" className="text-gray-700">Tất cả vai trò</option>
-                <option value="admin" className="text-gray-700">Quản trị viên</option>
+                <option value="leader" className="text-gray-700">Lãnh đạo</option>
                 <option value="teacher" className="text-gray-700">Giảng viên</option>
                 <option value="student" className="text-gray-700">Sinh viên</option>
+                <option value="parent" className="text-gray-700">Phụ huynh</option>
               </select>
               <select 
                 value={selectedStatus}
@@ -310,51 +288,37 @@ export default function AccountManagement() {
                 <option value="inactive" className="text-gray-700">Vắng mặt</option>
                 <option value="blocked" className="text-gray-700">Đã khóa</option>
               </select>
-              <select 
-                value={selectedSchool}
-                onChange={(e) => setSelectedSchool(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-36 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="" className="text-gray-700">Tất cả trường</option>
-                <option value="cs" className="text-gray-700">Khoa học Máy tính</option>
-                <option value="medical" className="text-gray-700">Y - Dược</option>
-                <option value="economics" className="text-gray-700">Kinh Tế</option>
-                <option value="technology" className="text-gray-700">Công Nghệ</option>
-                <option value="tourism" className="text-gray-700">Du lịch</option>
-                <option value="international" className="text-gray-700">Đào tạo quốc tế</option>
-                <option value="social" className="text-gray-700">Xã hội</option>
-              </select>
             </div>
           </div>
         </Card>
 
         {/* Users Table */}
         <Card className="overflow-hidden">
-          <div className="relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
-            {isLoading && (
-              <LoadingSpinner 
-                text="Đang tải dữ liệu..." 
-                size="md" 
-                position="top" 
-              />
-            )}
-            {/* Table Header */}
-            <div className="bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700">
+          <div className="overflow-x-auto">
+            <div className="relative" style={{ minHeight: isLoading ? '200px' : 'auto', minWidth: '1200px' }}>
+              {isLoading && (
+                <LoadingSpinner 
+                  text="Đang tải dữ liệu..." 
+                  size="md" 
+                  position="top" 
+                />
+              )}
+              {/* Table Header */}
+              <div className="bg-gray-50 border-b border-gray-200">
+              <div className="grid grid-cols-12 gap-3 px-6 py-3 text-sm font-semibold text-gray-700">
               <div className="col-span-1">Mã số</div>
               <div className="col-span-2">Họ và tên</div>
-              <div className="col-span-3">Email</div>
-              <div className="col-span-1">Trường</div>
-              <div className="col-span-1">Vai trò</div>
-              <div className="col-span-1">Ngày đăng ký</div>
+              <div className="col-span-2">Vai trò</div>
+              <div className="col-span-2">Trường</div>
+              <div className="col-span-2">Ngày đăng ký</div>
               <div className="col-span-1">Trạng thái</div>
-              <div className="col-span-2 text-center">Thao tác</div>
+              <div className="col-span-2 pl-10">Thao tác</div>
+              </div>
             </div>
-          </div>
 
           {/* Table Body */}
           <div className="divide-y divide-gray-100">
-            {!isLoading && filteredData.length === 0 ? (
+            {!isLoading && accountsData.length === 0 ? (
               <div className="px-6 py-8 text-center">
                 <div className="text-gray-500">
                   <span className="text-2xl mb-2 block">🔍</span>
@@ -362,18 +326,18 @@ export default function AccountManagement() {
                 </div>
               </div>
             ) : !isLoading ? (
-              filteredData.map((user) => (
-              <div key={user.id} className="grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 transition-colors">
+              accountsData.map((account) => (
+              <div key={account.accountId} className="grid grid-cols-12 gap-3 px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="col-span-1 flex items-center">
-                  <span className="text-sm text-gray-800">{user.id}</span>
+                  <span className="text-sm text-gray-800">{getUserCode(account)}</span>
                 </div>
                 
                 <div className="col-span-2 flex items-center">
                   <div className="flex items-center">
-                    {user.avatar ? (
+                    {account.profile?.avatarUrl ? (
                       <img 
-                        src={user.avatar} 
-                        alt={user.name}
+                        src={account.profile.avatarUrl} 
+                        alt={account.profile.fullName}
                         className="w-10 h-10 rounded-full border border-gray-200"
                       />
                     ) : (
@@ -382,92 +346,140 @@ export default function AccountManagement() {
                       </div>
                     )}
                     <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-800">{user.name}</div>
-                      <div className="text-xs text-gray-500">{user.birth} • {user.gender}</div>
+                      <div className="text-sm font-medium text-gray-800">{account.profile?.fullName || 'N/A'}</div>
+                      <div className="text-xs text-gray-500">
+                        {formatDate(account.profile?.dateOfBirth)} • {account.profile?.gender || 'N/A'}
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="col-span-3 flex items-center">
-                  <span className="text-sm text-gray-600">{user.email}</span>
+                <div className="col-span-2 flex items-center">
+                  <RoleBadge role={getRoleDisplayName(account.role?.code, account.role?.name)} />
+                </div>
+                
+                <div className="col-span-2 flex items-center">
+                  <span className="text-sm text-gray-600 truncate">{getSchoolOrDepartment(account)}</span>
+                </div>
+                
+                <div className="col-span-2 flex items-center">
+                  <span className="text-sm text-gray-600">{formatDate(account.createdAt)}</span>
                 </div>
                 
                 <div className="col-span-1 flex items-center">
-                  <span className="text-sm text-gray-600">{user.school}</span>
-                </div>
-                
-                <div className="col-span-1 flex items-center">
-                  <RoleBadge role={user.role} />
-                </div>
-                
-                <div className="col-span-1 flex items-center">
-                  <span className="text-sm text-gray-600 whitespace-nowrap">{user.joinDate}</span>
-                </div>
-                
-                <div className="col-span-1 flex items-center">
-                  <StatusBadge status={user.status}>
-                    {user.status === 'active' ? 'Hoạt động' : 
-                     user.status === 'inactive' ? 'Vắng mặt' : 'Đã khóa'}
+                  <StatusBadge status={account.status as 'active' | 'inactive' | 'blocked'}>
+                    {account.status === 'active' ? 'Hoạt động' : 
+                     account.status === 'inactive' ? 'Vắng mặt' : 'Đã khóa'}
                   </StatusBadge>
                 </div>
                 
-                <div className="col-span-2 flex items-center justify-center space-x-1">
+                <div className="col-span-2 flex items-center space-x-1 pl-10">
                   <button 
-                    title="Xem chi tiết" 
-                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/admin/accounts/${account.accountId}`)}
+                    title="Xem chi tiết"
+                    className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                   >
-                    <EyeIcon />
+                    <span className="text-blue-600 hover:text-blue-900">👁️</span>
                   </button>
                   <button 
-                    title="Chỉnh sửa" 
-                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-green-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/admin/accounts/edit/${account.accountId}`)}
+                    title="Chỉnh sửa"
+                    className="p-1.5 hover:bg-yellow-50 rounded-md transition-colors cursor-pointer"
                   >
-                    <EditIcon />
+                    <span className="text-yellow-600 hover:text-yellow-900">✏️</span>
                   </button>
-                  {user.status === 'blocked' ? (
+                  {account.status === 'blocked' ? (
                     <button 
-                      title="Mở khóa" 
-                      className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-green-50 transition-colors cursor-pointer"
+                      onClick={() => handleUnlockAccount(account.accountId)}
+                      title="Mở khóa"
+                      className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
                     >
-                      <UnlockIcon />
+                      <span style={{ filter: 'sepia(1) hue-rotate(50deg) saturate(3) brightness(1.2)' }}>🔓</span>
                     </button>
                   ) : (
                     <button 
-                      title="Khóa tài khoản" 
-                      className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                      onClick={() => handleLockAccount(account.accountId)}
+                      title="Khóa tài khoản"
+                      className="p-1.5 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                     >
-                      <LockIcon />
+                      <span style={{ filter: 'hue-rotate(-30deg) saturate(2) brightness(0.9)' }}>🔒</span>
                     </button>
                   )}
-                  <button 
-                    title="Xóa" 
-                    className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors cursor-pointer"
-                  >
-                    <DeleteIcon />
-                  </button>
                 </div>
               </div>
               ))
             ) : null}
+          </div>
           </div>
 
           {/* Pagination */}
           <div className="bg-white border-t border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Hiển thị 1 đến {filteredData.length} của {filteredData.length} kết quả
+                Hiển thị {indexOfFirstUser} đến {indexOfLastUser} của {totalRecords} kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="secondary" size="sm" disabled className="opacity-50">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  disabled={currentPage === 1}
+                  className={currentPage === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                >
                   <ChevronLeftIcon />
                   <span className="ml-1">Trước</span>
                 </Button>
-                <Button size="sm" className="bg-blue-600 text-white">1</Button>
-                <Button variant="secondary" size="sm">2</Button>
-                <Button variant="secondary" size="sm">3</Button>
-                <span className="px-2 text-gray-500">...</span>
-                <Button variant="secondary" size="sm">31</Button>
-                <Button variant="secondary" size="sm">
+                
+                {/* Page numbers */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        size="sm"
+                        variant={currentPage === pageNum ? "primary" : "secondary"}
+                        className={currentPage === pageNum ? "bg-blue-600 text-white" : "cursor-pointer"}
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      <span className="px-2 text-gray-500">...</span>
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        className="cursor-pointer"
+                        onClick={() => setCurrentPage(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  className={currentPage === totalPages ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                >
                   <span className="mr-1">Sau</span>
                   <ChevronRightIcon />
                 </Button>

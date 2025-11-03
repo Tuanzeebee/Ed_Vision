@@ -143,9 +143,9 @@ export default function StudentManagementDashboard() {
                 <div>
                   <p className="text-sm font-medium text-orange-700 mb-1">Sinh viên bị cảnh báo</p>
                   <p className="text-3xl font-bold text-orange-600">81</p>
-                  <p className="text-sm text-orange-600 font-medium mt-1">
+                  <p className="text-sm text-red-600 font-medium mt-1">
                     <i className="fas fa-arrow-up mr-1"></i>
-                    +68% so với tháng trước
+                    +55 sinh viên so với tháng trước
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -163,7 +163,7 @@ export default function StudentManagementDashboard() {
                   <p className="text-3xl font-bold text-blue-600">36</p>
                   <p className="text-sm text-green-600 font-medium mt-1">
                     <i className="fas fa-arrow-down mr-1"></i>
-                    -12% so với tháng trước
+                    -5 sinh viên so với tháng trước
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
