@@ -92,24 +92,26 @@ model Instructor {
   @@map("Instructor")
 }
 
-model Department {
+model Department { // Bảng Trường: vs ĐTQT
   department_id Int          @id @default(autoincrement())
   code          String?      @unique @db.VarChar(20)
   name          String       @db.VarChar(150)
   status        String?      @default("active") @db.VarChar(20)
   instructors   Instructor[]
+  programs      Program[]
 
   @@map("Department")
 }
 
-model Program {
+model Program { // Bảng Chương trình: vd: CNPM CMU
   program_id        Int                @id @default(autoincrement())
   program_code      String             @unique @db.VarChar(20)
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
-
+  department_id     Int                
+  department        Department         @relation(fields: [department_id], references: [department_id])
   @@map("Program")
 }
 
@@ -133,8 +135,8 @@ model AdviserAssignment {
   assigned_date     DateTime?  @db.Date
   ended_date        DateTime?  @db.Date
   note              String?
-  classGroup        ClassGroup @relation(fields: [class_id], references: [class_id])
-  instructor        Instructor @relation(fields: [instructor_id], references: [instructor_id])
+  classGroup    ClassGroup @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
+  instructor    Instructor @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
 
   @@unique([class_id, instructor_id])
   @@map("AdviserAssignment")
@@ -188,9 +190,9 @@ model CurriculumCourse {
   term_number  Int     @db.SmallInt
   is_mandatory Boolean @default(true)
   note         String?
-  course       Course  @relation(fields: [course_id], references: [course_id])
-  program      Program @relation(fields: [program_id], references: [program_id])
-
+  course     Course  @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  program    Program @relation(fields: [program_id], references: [program_id], onDelete: Cascade)
+  
   @@unique([program_id, course_id])
   @@map("CurriculumCourse")
 }
@@ -205,7 +207,7 @@ model StudentCourseRecord {
   converted_score         String?       @db.VarChar(5)
   converted_numeric_score Decimal?      @db.Decimal(5, 2)
   course                  Course?       @relation(fields: [course_id], references: [course_id])
-  student                 Student?      @relation(fields: [student_id], references: [student_id])
+  student                 Student?      @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   academicTerm            AcademicTerm? @relation(fields: [term_id], references: [term_id])
 
   @@unique([student_id, course_id])
@@ -252,7 +254,7 @@ model SurveyAnswer {
   option_id   Int?
   free_text   String?
   option      SurveyOption?   @relation(fields: [option_id], references: [option_id])
-  question    SurveyQuestion? @relation(fields: [question_id], references: [question_id])
+  question    SurveyQuestion? @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
   response    SurveyResponse? @relation(fields: [response_id], references: [response_id], onDelete: Cascade)
 
   @@unique([response_id, question_id])

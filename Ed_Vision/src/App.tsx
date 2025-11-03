@@ -51,14 +51,10 @@ import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
-<<<<<<< Updated upstream
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
 import ChatView from "./modules/student/ChatView";
-=======
-import { StudentSurveyManagement } from "./modules/teacher";
->>>>>>> Stashed changes
 
 function App() {
         return (
@@ -124,7 +120,6 @@ function App() {
                                         <Route path="/admin/leadership-reports" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><LeadershipReports /></ProtectedRoute>} />
                                         <Route path="/admin/ai-insights" element={<ProtectedRoute allowedRoles={["admin", "leader"]}><AIPredictionResults /></ProtectedRoute>} />
 
-<<<<<<< Updated upstream
                                         {/* Admin routes - System Management (protected) */}
                                         <Route path="/admin/notifications" element={<ProtectedRoute><NotificationManagement /></ProtectedRoute>} />
                                         <Route path="/admin/content-approval" element={<ProtectedRoute><ContentApproval /></ProtectedRoute>} />
@@ -150,26 +145,6 @@ function App() {
                                 </Routes>
                         </Router>
                 </Suspense>
-=======
-                                {/* Teacher routes */}
-                                <Route path="/teacher/dashboard" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherDashboard /></ProtectedRoute>} />
-                                <Route path="/teacher/teacher_dashboard" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherDashboard /></ProtectedRoute>} />
-                                <Route path="/teacher/class-management" element={<ProtectedRoute allowedRoles={["teacher"]}><ClassManagement /></ProtectedRoute>} />
-                                <Route path="/teacher/grade-management" element={<ProtectedRoute allowedRoles={["teacher"]}><GradeManagement /></ProtectedRoute>} />
-                                <Route path="/teacher/prediction-view" element={<ProtectedRoute allowedRoles={["teacher"]}><PredictionView /></ProtectedRoute>} />
-                                <Route path="/teacher/progress-tracking" element={<ProtectedRoute allowedRoles={["teacher"]}><ProgressTracking /></ProtectedRoute>} />
-                                <Route path="/teacher/reports-alerts" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherReport /></ProtectedRoute>} />
-                                <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={["teacher"]}><MessagesNotifications /></ProtectedRoute>} />
-                                <Route path="/teacher/appointments" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
-                                <Route path="/teacher/requests" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
-                                <Route path="/teacher/confirmed" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherAppointmentDashboard /></ProtectedRoute>} />
-                                <Route path="/teacher/settings" element={<ProtectedRoute allowedRoles={["teacher"]}><TeacherDashboard /></ProtectedRoute>} />
-                                <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute allowedRoles={["teacher"]}><MeetingDetailDemo /></ProtectedRoute>} />
-                                <Route path="/teacher/survey-management" element={<ProtectedRoute allowedRoles={["teacher"]}><StudentSurveyManagement /></ProtectedRoute>} />
-
-                        </Routes>
-                </Router>
->>>>>>> Stashed changes
         );
 }
 
