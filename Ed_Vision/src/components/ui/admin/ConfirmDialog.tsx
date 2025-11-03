@@ -9,7 +9,8 @@ interface ConfirmDialogProps {
   confirmButtonClass?: string;
   onConfirm: () => void;
   onCancel: () => void;
-  type?: 'danger' | 'warning' | 'info';
+  type?: 'danger' | 'warning' | 'info' | 'success';
+  hideCancel?: boolean;
 }
 
 export default function ConfirmDialog({
@@ -21,7 +22,8 @@ export default function ConfirmDialog({
   confirmButtonClass,
   onConfirm,
   onCancel,
-  type = 'warning'
+  type = 'warning',
+  hideCancel = false
 }: ConfirmDialogProps) {
   // Handle ESC key to close
   useEffect(() => {
@@ -60,6 +62,14 @@ export default function ConfirmDialog({
             </svg>
           </div>
         );
+      case 'success':
+        return (
+          <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        );
       case 'info':
         return (
           <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
@@ -86,6 +96,8 @@ export default function ConfirmDialog({
     switch (type) {
       case 'danger':
         return 'bg-red-600 hover:bg-red-700 focus:ring-red-500';
+      case 'success':
+        return 'bg-green-600 hover:bg-green-700 focus:ring-green-500';
       case 'info':
         return 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
       default:
@@ -130,13 +142,15 @@ export default function ConfirmDialog({
             >
               {confirmText}
             </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-colors"
-            >
-              {cancelText}
-            </button>
+            {!hideCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-colors"
+              >
+                {cancelText}
+              </button>
+            )}
           </div>
         </div>
       </div>

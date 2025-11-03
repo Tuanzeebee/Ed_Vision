@@ -1,5 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
+import TimeFilter from "../../components/ui/admin/TimeFilter";
+import CourseYearSelector from "../../lib/courseYearSelector";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -49,6 +51,7 @@ ChartJS.register(
 export default function LeadershipReports() {
   // State for time filter (from GeneralStatistics)
   const [timeFilter, setTimeFilter] = useState('tháng-này');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
   // Confirm dialog hook
   const { confirm, confirmState } = useConfirm();
@@ -56,6 +59,7 @@ export default function LeadershipReports() {
   // State for report form
   const [reportType, setReportType] = useState("Báo cáo điểm số");
   const [dataScope, setDataScope] = useState("Trường Khoa học máy tính");
+  const [courseYear, setCourseYear] = useState("Tất cả khóa");
   const [major, setMajor] = useState("Tất cả ngành");
   const [className, setClassName] = useState("Tất cả lớp");
   const [timeRange, setTimeRange] = useState("Học kỳ hiện tại");
@@ -78,6 +82,7 @@ export default function LeadershipReports() {
   
   // Reset major when school changes
   useEffect(() => {
+    setCourseYear("Tất cả khóa");
     setMajor("Tất cả ngành");
     setClassName("Tất cả lớp");
   }, [dataScope]);
@@ -468,7 +473,7 @@ export default function LeadershipReports() {
     // Show confirmation dialog
     const confirmed = await confirm({
       title: 'Xác nhận tạo báo cáo',
-      message: `Bạn có chắc chắn muốn tạo báo cáo sau không?\n\nLoại: ${reportType}\nPhạm vi: ${dataScope}\nNgành: ${major}\nLớp: ${className}\nĐịnh dạng: ${exportFormat}\nThời gian: ${formattedTimeRange}`,
+      message: `Bạn có chắc chắn muốn tạo báo cáo sau không?\n\nLoại: ${reportType}\nPhạm vi: ${dataScope}\nKhóa: ${courseYear}\nNgành: ${major}\nLớp: ${className}\nĐịnh dạng: ${exportFormat}\nThời gian: ${formattedTimeRange}`,
       confirmText: 'Tạo báo cáo',
       cancelText: 'Hủy bỏ',
       type: 'info'
@@ -502,20 +507,21 @@ export default function LeadershipReports() {
     // Show success message - NO auto download
     showModal(
       'Thành công',
-      `Đã tạo báo cáo ${exportFormat} thành công!\n\nTên: ${newReport.name}\nPhạm vi: ${dataScope}\nNgành: ${major}\nLớp: ${className}\nThời gian: ${formattedTimeRange}\n\nNhấn nút "Tải xuống" ở danh sách để tải file.`,
+      `Đã tạo báo cáo ${exportFormat} thành công!\n\nTên: ${newReport.name}\nPhạm vi: ${dataScope}\nKhóa: ${courseYear}\nNgành: ${major}\nLớp: ${className}\nThời gian: ${formattedTimeRange}\n\nNhấn nút "Tải xuống" ở danh sách để tải file.`,
       'success'
     );
     
     // Reset form
     setReportType("Báo cáo điểm số");
     setDataScope("Trường Khoa học máy tính");
+    setCourseYear("Tất cả khóa");
     setMajor("Tất cả ngành");
     setClassName("Tất cả lớp");
     setTimeRange("Học kỳ hiện tại");
     setCustomWeekStart("");
     setCustomWeekEnd("");
     setExportFormat("PDF");
-  }, [reportType, dataScope, major, className, exportFormat, showModal, getFormattedTimeRange, confirm]);
+  }, [reportType, dataScope, courseYear, major, className, exportFormat, showModal, getFormattedTimeRange, confirm]);
 
   // Handler to download existing report
   const handleDownloadReport = async (report: typeof reports[0]) => {
@@ -582,58 +588,12 @@ export default function LeadershipReports() {
             </div>
             
             {/* Time Filter */}
-            <div className="flex items-center space-x-2">
-              {/* Navigation Arrows */}
-              <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
-                <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-l-md transition-colors">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md transition-colors">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Today Button */}
-              <button 
-                onClick={() => setTimeFilter('hôm-nay')}
-                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                  timeFilter === 'hôm-nay'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:text-green-600 hover:bg-green-50'
-                }`}
-              >
-                Hôm nay
-              </button>
-              
-              {/* Time Period Buttons */}
-              <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
-                {[
-                  { value: 'tuần-này', label: 'Tuần' },
-                  { value: 'tháng-này', label: 'Tháng' },
-                  { value: 'tất-cả', label: 'Tất cả' }
-                ].map((period, index) => (
-                  <button
-                    key={period.value}
-                    onClick={() => setTimeFilter(period.value)}
-                    className={`px-2 py-1 text-xs font-medium transition-colors ${
-                      index === 0 ? 'rounded-l-md' : ''
-                    } ${
-                      index === 2 ? 'rounded-r-md' : ''
-                    } ${
-                      timeFilter === period.value
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                    }`}
-                  >
-                    {period.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <TimeFilter 
+              value={timeFilter}
+              onChange={setTimeFilter}
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+            />
           </div>
           <p className="text-gray-600">Hiển thị báo cáo dữ liệu và phân tích ({getTimeFilterLabel()})</p>
         </div>
@@ -745,7 +705,7 @@ export default function LeadershipReports() {
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">�</span>
+                    <span className="text-white text-2xl">📋</span>
                   </div>
                 </div>
               </CardContent>
@@ -789,6 +749,14 @@ export default function LeadershipReports() {
                   <option>Viện Quản lý Nam Khuê</option>
                   <option>Viện Việt-Nhật</option>
                 </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Khóa</label>
+                <CourseYearSelector
+                  value={courseYear}
+                  onChange={setCourseYear}
+                />
               </div>
               
               <div>
@@ -883,7 +851,7 @@ export default function LeadershipReports() {
               <div className="flex items-end">
                 <button 
                   onClick={handleCreateReport}
-                  className="bg-blue-600 text-white px-4 py-2 text-sm rounded-md hover:bg-blue-700 transition-colors cursor-pointer font-medium"
+                  className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-md hover:bg-blue-700 transition-colors cursor-pointer font-medium"
                 >
                   ➕ Tạo báo cáo
                 </button>
@@ -895,19 +863,8 @@ export default function LeadershipReports() {
         {/* Reports List */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-900">Danh sách báo cáo đã tạo</h2>
-              
-              {/* Delete selected button */}
-              {selectedReports.length > 0 && (
-                <button
-                  onClick={handleDeleteSelected}
-                  className="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
-                >
-                  <i className="fas fa-trash"></i>
-                  Xóa đã chọn ({selectedReports.length})
-                </button>
-              )}
             </div>
 
             {/* Filters */}
@@ -1073,87 +1030,107 @@ export default function LeadershipReports() {
               </table>
             </div>
             
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-                <div className="flex items-center text-sm text-gray-700">
+            {/* Pagination and Delete Button Section */}
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+              <div className="flex items-center text-sm text-gray-700">
+                {totalPages > 1 ? (
                   <span>
                     Hiển thị <span className="font-medium">{indexOfFirstReport + 1}</span> đến{' '}
                     <span className="font-medium">{Math.min(indexOfLastReport, filteredReports.length)}</span> trong tổng số{' '}
                     <span className="font-medium">{filteredReports.length}</span> báo cáo
                   </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {/* Previous button */}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                      currentPage === 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                    }`}
-                  >
-                    <i className="fas fa-chevron-left mr-1"></i>
-                    Trước
-                  </button>
-                  
-                  {/* Page numbers */}
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
-                      // Show first page, last page, current page, and pages around current
-                      const showPage = 
-                        page === 1 || 
-                        page === totalPages || 
-                        (page >= currentPage - 1 && page <= currentPage + 1);
-                      
-                      // Show ellipsis
-                      const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
-                      const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
-                      
-                      if (showEllipsisBefore || showEllipsisAfter) {
-                        return (
-                          <span key={page} className="px-2 text-gray-400">
-                            ...
-                          </span>
-                        );
-                      }
-                      
-                      if (!showPage) return null;
-                      
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Next button */}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                      currentPage === totalPages
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                    }`}
-                  >
-                    Sau
-                    <i className="fas fa-chevron-right ml-1"></i>
-                  </button>
-                </div>
+                ) : (
+                  <span>
+                    Tổng số: <span className="font-medium">{filteredReports.length}</span> báo cáo
+                  </span>
+                )}
               </div>
-            )}
+              
+              <div className="flex items-center gap-4">
+                {/* Delete selected button */}
+                {selectedReports.length > 0 && (
+                  <button
+                    onClick={handleDeleteSelected}
+                    className="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <i className="fas fa-trash"></i>
+                    Xóa đã chọn ({selectedReports.length})
+                  </button>
+                )}
+                
+                {/* Pagination controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    {/* Previous button */}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      }`}
+                    >
+                      <i className="fas fa-chevron-left mr-1"></i>
+                      Trước
+                    </button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                        // Show first page, last page, current page, and pages around current
+                        const showPage = 
+                          page === 1 || 
+                          page === totalPages || 
+                          (page >= currentPage - 1 && page <= currentPage + 1);
+                        
+                        // Show ellipsis
+                        const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                        const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+                        
+                        if (showEllipsisBefore || showEllipsisAfter) {
+                          return (
+                            <span key={page} className="px-2 text-gray-400">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        if (!showPage) return null;
+                        
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                              currentPage === page
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Next button */}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === totalPages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      }`}
+                    >
+                      Sau
+                      <i className="fas fa-chevron-right ml-1"></i>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
