@@ -8,9 +8,9 @@ type Props = {
 export default function Footer({ className = "" }: Props) {
   const { t } = useTranslation(['common'])
   const currentYear = new Date().getFullYear()
-  
+
   return (
-    <footer className={`py-12 text-white bg-slate-800 ${className}`}>
+    <footer className={`py-12 text-white bg-slate-800 relative z-20 ${className}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-5 gap-6 mb-6">
           {/* Logo & Slogan */}
