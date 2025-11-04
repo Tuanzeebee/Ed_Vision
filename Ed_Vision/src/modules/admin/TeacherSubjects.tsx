@@ -3,26 +3,6 @@ import TeacherProfileHeader, { type TeacherData } from "@/components/ui/admin/Te
 import TeacherTabNavigation from "@/components/ui/admin/TeacherTabNavigation";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 // Subject data
 const subjectData = [
@@ -33,8 +13,6 @@ const subjectData = [
     year: "2024-2025",
     classes: 3,
     students: 120,
-    average: 7.8,
-    color: "bg-blue-500"
   },
   {
     code: "CS502", 
@@ -43,8 +21,6 @@ const subjectData = [
     year: "2024-2025",
     classes: 2,
     students: 85,
-    average: 8.2,
-    color: "bg-green-500"
   },
   {
     code: "CS503",
@@ -53,8 +29,6 @@ const subjectData = [
     year: "2024-2025",
     classes: 2,
     students: 75,
-    average: 8.5,
-    color: "bg-emerald-500"
   },
   {
     code: "CS504",
@@ -63,8 +37,6 @@ const subjectData = [
     year: "2024-2025",
     classes: 3,
     students: 95,
-    average: 7.9,
-    color: "bg-yellow-500"
   },
   {
     code: "CS505",
@@ -73,8 +45,6 @@ const subjectData = [
     year: "2024-2025", 
     classes: 1,
     students: 45,
-    average: 8.7,
-    color: "bg-purple-500"
   }
 ];
 
@@ -94,116 +64,6 @@ export default function TeacherSubjects() {
 
   const handleTabChange = (tabLabel: string) => {
     setActiveTab(tabLabel);
-  };
-
-  // Chart data
-  const chartData = {
-    labels: subjectData.map(subject => subject.name),
-    datasets: [
-      {
-        label: "Điểm trung bình",
-        data: subjectData.map(subject => subject.average),
-        backgroundColor: [
-          "#3b82f6",
-          "#10b981", 
-          "#06b6d4",
-          "#f59e0b",
-          "#8b5cf6"
-        ],
-        borderColor: [
-          "#2563eb",
-          "#059669",
-          "#0891b2", 
-          "#d97706",
-          "#7c3aed"
-        ],
-        borderWidth: 2,
-        borderRadius: 8,
-        borderSkipped: false,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        titleColor: "#fff",
-        bodyColor: "#fff", 
-        borderColor: "#e5e7eb",
-        borderWidth: 1,
-        cornerRadius: 8,
-        callbacks: {
-          label: function (context: { parsed: { y: number } }) {
-            return "Điểm TB: " + context.parsed.y + "/10";
-          },
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 10,
-        grid: {
-          color: "rgba(0, 0, 0, 0.1)",
-          drawBorder: false,
-        },
-        ticks: {
-          font: {
-            size: 12,
-          },
-          color: "#6b7280",
-          callback: function (value: string | number) {
-            return value + " điểm";
-          },
-        },
-        title: {
-          display: true,
-          text: "Điểm trung bình",
-          font: {
-            size: 14,
-            weight: "600",
-          },
-          color: "#374151",
-        },
-      },
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          font: {
-            size: 12,
-          },
-          color: "#6b7280",
-          maxRotation: 45,
-          minRotation: 0,
-        },
-        title: {
-          display: true,
-          text: "Môn học",
-          font: {
-            size: 14,
-            weight: "600",
-          },
-          color: "#374151",
-        },
-      },
-    },
-    elements: {
-      bar: {
-        borderWidth: 2,
-      },
-    },
-  };
-
-  const getProgressWidth = (average: number) => {
-    return `${(average / 10) * 100}%`;
   };
 
   return (
@@ -250,14 +110,6 @@ export default function TeacherSubjects() {
           </div>
         </div>
 
-        {/* Chart Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-6">Biểu đồ so sánh điểm trung bình môn học</h3>
-          <div className="h-96 w-full">
-            <Bar data={chartData} options={chartOptions as Parameters<typeof Bar>[0]['options']} />
-          </div>
-        </div>
-
         {/* Subject Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-6">Danh sách môn học giảng dạy</h3>
@@ -284,12 +136,6 @@ export default function TeacherSubjects() {
                   <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
                     Tổng số SV
                   </th>
-                  <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                    Điểm TB
-                  </th>
-                  <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-700">
-                    Thao tác
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -312,22 +158,6 @@ export default function TeacherSubjects() {
                     </td>
                     <td className="border border-gray-200 px-4 py-3 text-center text-gray-600">
                       {subject.students}
-                    </td>
-                    <td className="border border-gray-200 px-4 py-3 text-center">
-                      <div className="flex items-center justify-center">
-                        <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
-                          <div 
-                            className={`h-2 rounded-full ${subject.color}`}
-                            style={{ width: getProgressWidth(subject.average) }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">{subject.average}</span>
-                      </div>
-                    </td>
-                    <td className="border border-gray-200 px-4 py-3 text-center">
-                      <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors cursor-pointer">
-                        Chi tiết
-                      </button>
                     </td>
                   </tr>
                 ))}
