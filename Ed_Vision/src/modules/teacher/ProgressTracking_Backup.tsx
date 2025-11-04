@@ -17,41 +17,8 @@ import {
     X,
     Mail,
     CheckCircle,
-    GraduationCap,
-    Target,
-    Award,
-    Activity,
-    BarChart3,
-    LineChart
+    GraduationCap
 } from "lucide-react"
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    ArcElement,
-    Filler
-} from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
-
-// Register ChartJS
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    ArcElement,
-    Filler
-)
 
 // Dữ liệu tiến độ theo lớp
 const classProgressData = [
@@ -499,7 +466,7 @@ export default function ProgressTracking() {
                                                 <TableCell className="text-center">
                                                     <div>
                                                         <p className={`text-xl font-bold ${student.currentGPA >= 3.2 ? 'text-green-600' :
-                                                                student.currentGPA >= 2.5 ? 'text-yellow-600' : 'text-red-600'
+                                                            student.currentGPA >= 2.5 ? 'text-yellow-600' : 'text-red-600'
                                                             }`}>
                                                             {student.currentGPA}
                                                         </p>
@@ -511,7 +478,7 @@ export default function ProgressTracking() {
                                                         <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                                                             <div
                                                                 className={`h-2 rounded-full ${student.progress >= 70 ? 'bg-green-500' :
-                                                                        student.progress >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                                                    student.progress >= 50 ? 'bg-yellow-500' : 'bg-red-500'
                                                                     }`}
                                                                 style={{ width: `${student.progress}%` }}
                                                             ></div>
@@ -533,15 +500,15 @@ export default function ProgressTracking() {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <p className={`text-lg font-bold ${student.attendanceRate >= 90 ? 'text-green-600' :
-                                                            student.attendanceRate >= 70 ? 'text-yellow-600' : 'text-red-600'
+                                                        student.attendanceRate >= 70 ? 'text-yellow-600' : 'text-red-600'
                                                         }`}>
                                                         {student.attendanceRate}%
                                                     </p>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge className={`${student.riskLevel === 'low' ? 'bg-green-100 text-green-700 border-green-300' :
-                                                            student.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-                                                                'bg-red-100 text-red-700 border-red-300'
+                                                        student.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                                                            'bg-red-100 text-red-700 border-red-300'
                                                         }`}>
                                                         {student.status}
                                                     </Badge>

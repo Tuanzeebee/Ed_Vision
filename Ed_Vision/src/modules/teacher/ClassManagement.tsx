@@ -231,7 +231,7 @@ export default function ClassManagement() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-3xl font-bold mb-2">
-                            {showStudentDetail && selectedClass ? `Chi tiết sinh viên - Lớp ${selectedClass}` : 'Quản lý Lớp học'}
+                            {showStudentDetail && selectedClass ? `Chi tiết sinh viên - Lớp ${selectedClass}` : 'Quản lý Lớp Cố Vấn'}
                         </h2>
                         <p className="text-green-100">
                             {showStudentDetail && selectedClass ? 'Xem thông tin chi tiết từng sinh viên trong lớp' : 'Quản lý và theo dõi các lớp học được phân công'}
