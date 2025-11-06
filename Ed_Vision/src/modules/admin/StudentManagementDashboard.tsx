@@ -1,5 +1,9 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { studentService, type StudentOnlineStats } from "@/services/api/studentService";
+import { useToast } from "@/lib/useToast";
+import { io, Socket } from "socket.io-client";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -36,6 +40,61 @@ const CardContent = ({ children, className = "" }: { children: React.ReactNode; 
 
 export default function StudentManagementDashboard() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  
+  const [onlineStats, setOnlineStats] = useState<StudentOnlineStats>({
+    onlineCount: 0,
+    totalCount: 0
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Fetch online stats on mount and refresh every 30 seconds
+  useEffect(() => {
+    let socket: Socket | null = null;
+
+    const initializeSocket = async () => {
+      try {
+        // Initial fetch via REST API
+        const stats = await studentService.getOnlineStats();
+        setOnlineStats(stats);
+        setIsLoadingStats(false);
+
+        // Setup WebSocket connection for real-time updates
+        socket = io('http://localhost:3000/student-stats', {
+          transports: ['websocket', 'polling'],
+        });
+
+        socket.on('connect', () => {
+          console.log('WebSocket connected for student stats');
+        });
+
+        socket.on('studentOnlineStatsUpdated', (stats: StudentOnlineStats) => {
+          console.log('Received real-time student stats update:', stats);
+          setOnlineStats(stats);
+        });
+
+        socket.on('disconnect', () => {
+          console.log('WebSocket disconnected for student stats');
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('WebSocket connection error:', error);
+        });
+      } catch (error) {
+        console.error('Failed to fetch initial online stats:', error);
+        showToast('Không thể tải thống kê sinh viên trực tuyến', 'error');
+        setIsLoadingStats(false);
+      }
+    };
+
+    initializeSocket();
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [showToast]);
 
   // Dữ liệu mẫu cho biểu đồ sinh viên theo khoa
   const facultyData = {
@@ -127,8 +186,17 @@ export default function StudentManagementDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-700 mb-1">Sinh viên đang trực tuyến</p>
-                  <p className="text-3xl font-bold text-green-600">47</p>
-                  <p className="text-sm text-green-600 mt-1">trên tổng 18,247</p>
+                  {isLoadingStats ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                      <p className="text-sm text-green-600">Đang tải...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-green-600">{onlineStats.onlineCount}</p>
+                      <p className="text-sm text-green-600 mt-1">trên tổng {onlineStats.totalCount.toLocaleString()}</p>
+                    </>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-users text-green-600 text-xl"></i>
@@ -178,7 +246,7 @@ export default function StudentManagementDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Số lượng sinh viên theo từng khoa</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Số lượng sinh viên theo từng Trường</h3>
               <div className="h-80">
                 <Bar data={facultyData} options={chartOptions} />
               </div>

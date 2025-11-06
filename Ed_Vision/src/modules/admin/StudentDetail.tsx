@@ -1,6 +1,9 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { studentService, type StudentData } from "@/services/api/studentService";
+import { useToast } from "@/lib/useToast";
+import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -37,167 +40,499 @@ const CardContent = ({ children, className = "" }: { children: React.ReactNode; 
   </div>
 );
 
-// Dữ liệu mẫu cho sinh viên
-const studentData = {
-  id: 1,
-  name: "Tô Minh Vương",
-  studentCode: "28211102954",
-  gender: "Nam",
-  dateOfBirth: "01/01/2005",
-  cccd: "01348872347",
-  email: "abc@dtu.edu.vn",
-  avatar: "/src/assets/admin/avatarJohnSmithDetail.png",
-  currentAddress: {
-    street: "123 Đường Lê Lợi",
-    ward: "Phường Hải Châu I",
-    district: "Quận Hải Châu",
-    city: "Đà Nẵng",
-    country: "Việt Nam",
-    phone: "0905123456",
-    alternativeEmail: "vuong.personal@gmail.com"
-  },
-  emergencyContact: {
-    name: "Tô Văn Minh",
-    relationship: "Cha",
-    phone: "0912345678",
-    address: "456 Đường Nguyễn Văn Linh, Phường Thạc Gián, Quận Thanh Khê, Đà Nẵng",
-    email: "minh.to@email.com"
-  },
-  academicStatus: {
-    status: "At-Risk",
-    description: "Tiến độ thấp trong kỳ học hè",
-    statusColor: "yellow"
-  }
-};
-
-// Dữ liệu lịch sử học tập
-const studyHistory = [
-  {
-    subject: "Toán cao cấp",
-    assignmentScore: 8.5,
-    quizScore: 7.8,
-    status: "Đạt",
-    statusColor: "green"
+// Dữ liệu lịch sử học tập theo năm và kỳ
+const studyHistoryData: {
+  [year: string]: {
+    [semester: string]: Array<{
+      subject: string;
+      attendance: number | null;
+      regular: number | null;
+      midterm: number | null;
+      individualAssignment: number | null;
+      groupAssignment: number | null;
+      quiz1: number | null;
+      quiz2: number | null;
+      final: number | null;
+      weights: {
+        attendance: number;
+        regular: number;
+        midterm: number;
+        individualAssignment: number;
+        groupAssignment: number;
+        quiz1: number;
+        quiz2: number;
+        final: number;
+      };
+    }>;
+  };
+} = {
+  "2024-2025": {
+    "Kỳ 1": [
+      {
+        subject: "Toán cao cấp",
+        attendance: 9.0,
+        regular: 8.5,
+        midterm: 8.0,
+    individualAssignment: 8.8,
+    groupAssignment: null, // Không có điểm này
+    quiz1: 7.8,
+    quiz2: null, // Không có điểm này
+    final: 8.5,
+    weights: {
+      attendance: 10,
+      regular: 10,
+      midterm: 15,
+      individualAssignment: 10,
+      groupAssignment: 0,
+      quiz1: 5,
+      quiz2: 0,
+      final: 50
+    }
   },
   {
     subject: "Lý đại cương",
-    assignmentScore: 9.0,
-    quizScore: 8.2,
-    status: "Đạt",
-    statusColor: "green"
+    attendance: 9.5,
+    regular: 9.0,
+    midterm: 8.5,
+    individualAssignment: null, // Không có điểm này
+    groupAssignment: 9.2,
+    quiz1: 8.2,
+    quiz2: 8.5,
+    final: 9.0,
+    weights: {
+      attendance: 10,
+      regular: 10,
+      midterm: 15,
+      individualAssignment: 0,
+      groupAssignment: 10,
+      quiz1: 5,
+      quiz2: 5,
+      final: 45
+    }
   },
   {
     subject: "Lập trình cơ sở",
-    assignmentScore: 7.5,
-    quizScore: 6.9,
-    status: "Cần cải thiện",
-    statusColor: "yellow"
+    attendance: 8.0,
+    regular: 7.5,
+    midterm: 7.0,
+    individualAssignment: 7.8,
+    groupAssignment: 7.5,
+    quiz1: 6.9,
+    quiz2: 7.2,
+    final: 7.5,
+    weights: {
+      attendance: 10,
+      regular: 10,
+      midterm: 15,
+      individualAssignment: 5,
+      groupAssignment: 5,
+      quiz1: 5,
+      quiz2: 5,
+      final: 45
+    }
   },
   {
     subject: "Chủ nghĩa xã hội khoa học",
-    assignmentScore: 8.0,
-    quizScore: 7.5,
-    status: "Đạt",
-    statusColor: "green"
+    attendance: 8.5,
+    regular: 8.0,
+    midterm: 7.8,
+    individualAssignment: null,
+    groupAssignment: null,
+    quiz1: 7.5,
+    quiz2: null,
+    final: 8.0,
+    weights: {
+      attendance: 10,
+      regular: 15,
+      midterm: 20,
+      individualAssignment: 0,
+      groupAssignment: 0,
+      quiz1: 5,
+      quiz2: 0,
+      final: 50
+    }
   },
   {
     subject: "Tin học ứng dụng",
-    assignmentScore: 9.2,
-    quizScore: 8.5,
-    status: "Xuất sắc",
-    statusColor: "green"
+    attendance: 9.8,
+    regular: 9.2,
+    midterm: 9.0,
+    individualAssignment: 9.5,
+    groupAssignment: null,
+    quiz1: 8.5,
+    quiz2: 9.0,
+    final: 9.2,
+    weights: {
+      attendance: 10,
+      regular: 10,
+      midterm: 15,
+      individualAssignment: 10,
+      groupAssignment: 0,
+      quiz1: 5,
+      quiz2: 5,
+      final: 45
+    }
   },
   {
     subject: "CDIO",
-    assignmentScore: 8.8,
-    quizScore: 8.0,
-    status: "Đạt",
-    statusColor: "green"
+    attendance: 9.0,
+    regular: 8.8,
+    midterm: 8.5,
+    individualAssignment: 8.5,
+    groupAssignment: 9.0,
+    quiz1: 8.0,
+    quiz2: null,
+    final: 8.8,
+    weights: {
+      attendance: 10,
+      regular: 10,
+      midterm: 15,
+      individualAssignment: 5,
+      groupAssignment: 5,
+      quiz1: 5,
+      quiz2: 0,
+      final: 50
+    }
   }
-];
+],
+    "Kỳ 2": [
+      {
+        subject: "Cấu trúc dữ liệu",
+        attendance: 8.5,
+        regular: 8.8,
+        midterm: 8.2,
+        individualAssignment: 9.0,
+        groupAssignment: null,
+        quiz1: 8.0,
+        quiz2: 8.5,
+        final: 8.7,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 10,
+          groupAssignment: 0,
+          quiz1: 5,
+          quiz2: 5,
+          final: 45
+        }
+      },
+      {
+        subject: "Cơ sở dữ liệu",
+        attendance: 9.0,
+        regular: 8.5,
+        midterm: 8.8,
+        individualAssignment: null,
+        groupAssignment: 8.9,
+        quiz1: 8.2,
+        quiz2: null,
+        final: 9.0,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 0,
+          groupAssignment: 10,
+          quiz1: 5,
+          quiz2: 0,
+          final: 50
+        }
+      },
+      {
+        subject: "Mạng máy tính",
+        attendance: 8.8,
+        regular: 8.0,
+        midterm: 7.8,
+        individualAssignment: 8.5,
+        groupAssignment: 8.2,
+        quiz1: 7.5,
+        quiz2: 8.0,
+        final: 8.3,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 5,
+          groupAssignment: 5,
+          quiz1: 5,
+          quiz2: 5,
+          final: 45
+        }
+      },
+      {
+        subject: "Tiếng Anh chuyên ngành",
+        attendance: 9.5,
+        regular: 9.0,
+        midterm: 8.8,
+        individualAssignment: null,
+        groupAssignment: null,
+        quiz1: 8.5,
+        quiz2: 9.0,
+        final: 9.2,
+        weights: {
+          attendance: 10,
+          regular: 15,
+          midterm: 20,
+          individualAssignment: 0,
+          groupAssignment: 0,
+          quiz1: 5,
+          quiz2: 5,
+          final: 45
+        }
+      }
+    ],
+    "Kỳ hè": [
+      {
+        subject: "Phát triển ứng dụng Web",
+        attendance: 9.2,
+        regular: 9.0,
+        midterm: 8.5,
+        individualAssignment: 9.5,
+        groupAssignment: 9.3,
+        quiz1: 8.8,
+        quiz2: null,
+        final: 9.0,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 5,
+          groupAssignment: 5,
+          quiz1: 5,
+          quiz2: 0,
+          final: 50
+        }
+      },
+      {
+        subject: "Phân tích thiết kế hệ thống",
+        attendance: 8.7,
+        regular: 8.5,
+        midterm: 8.0,
+        individualAssignment: null,
+        groupAssignment: 8.8,
+        quiz1: 8.2,
+        quiz2: 8.5,
+        final: 8.6,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 0,
+          groupAssignment: 10,
+          quiz1: 5,
+          quiz2: 5,
+          final: 45
+        }
+      }
+    ]
+  },
+  "2023-2024": {
+    "Kỳ 1": [
+      {
+        subject: "Nhập môn lập trình",
+        attendance: 7.5,
+        regular: 7.8,
+        midterm: 7.2,
+        individualAssignment: 8.0,
+        groupAssignment: null,
+        quiz1: 7.0,
+        quiz2: null,
+        final: 7.5,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 10,
+          groupAssignment: 0,
+          quiz1: 5,
+          quiz2: 0,
+          final: 50
+        }
+      },
+      {
+        subject: "Giải tích 1",
+        attendance: 8.0,
+        regular: 7.5,
+        midterm: 7.8,
+        individualAssignment: null,
+        groupAssignment: null,
+        quiz1: 7.2,
+        quiz2: 7.5,
+        final: 7.8,
+        weights: {
+          attendance: 10,
+          regular: 15,
+          midterm: 20,
+          individualAssignment: 0,
+          groupAssignment: 0,
+          quiz1: 5,
+          quiz2: 5,
+          final: 45
+        }
+      },
+      {
+        subject: "Vật lý đại cương",
+        attendance: 7.8,
+        regular: 8.2,
+        midterm: 7.5,
+        individualAssignment: 8.0,
+        groupAssignment: null,
+        quiz1: 7.8,
+        quiz2: null,
+        final: 8.0,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 10,
+          groupAssignment: 0,
+          quiz1: 5,
+          quiz2: 0,
+          final: 50
+        }
+      }
+    ],
+    "Kỳ 2": [
+      {
+        subject: "Lập trình hướng đối tượng",
+        attendance: 8.2,
+        regular: 8.5,
+        midterm: 8.0,
+        individualAssignment: 8.8,
+        groupAssignment: 8.5,
+        quiz1: 8.0,
+        quiz2: 8.3,
+        final: 8.5,
+        weights: {
+          attendance: 10,
+          regular: 10,
+          midterm: 15,
+          individualAssignment: 5,
+          groupAssignment: 5,
+          quiz1: 5,
+          quiz2: 5,
+          final: 45
+        }
+      },
+      {
+        subject: "Giải tích 2",
+        attendance: 7.5,
+        regular: 7.8,
+        midterm: 7.2,
+        individualAssignment: null,
+        groupAssignment: null,
+        quiz1: 7.5,
+        quiz2: null,
+        final: 7.8,
+        weights: {
+          attendance: 10,
+          regular: 15,
+          midterm: 20,
+          individualAssignment: 0,
+          groupAssignment: 0,
+          quiz1: 5,
+          quiz2: 0,
+          final: 50
+        }
+      }
+    ],
+    "Kỳ hè": [
+      {
+        subject: "Thực tập doanh nghiệp",
+        attendance: 9.0,
+        regular: 8.8,
+        midterm: null,
+        individualAssignment: null,
+        groupAssignment: 9.2,
+        quiz1: null,
+        quiz2: null,
+        final: 9.0,
+        weights: {
+          attendance: 20,
+          regular: 20,
+          midterm: 0,
+          individualAssignment: 0,
+          groupAssignment: 20,
+          quiz1: 0,
+          quiz2: 0,
+          final: 40
+        }
+      }
+    ]
+  }
+};
 
 export default function StudentDetail() {
   const [selectedYear, setSelectedYear] = useState("2024-2025");
   const [selectedSemester, setSelectedSemester] = useState("Kỳ 1");
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({
-    currentAddress: { ...studentData.currentAddress },
-    emergencyContact: { ...studentData.emergencyContact }
-  });
   const { studentId } = useParams<{ studentId: string }>();
+  const { showToast } = useToast();
+  
+  const [student, setStudent] = useState<StudentData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // In a real app, you would fetch student data based on studentId
-  // For now, we'll use the sample data
-  console.log('Student ID from URL:', studentId);
+  // Get study history based on selected year and semester
+  const studyHistory = studyHistoryData[selectedYear]?.[selectedSemester] || [];
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    // Auto scroll đến phần địa chỉ hiện thời sau một chút delay
-    setTimeout(() => {
-      const addressSection = document.getElementById('current-address-section');
-      if (addressSection) {
-        addressSection.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center'
-        });
-        
-        // Thêm hiệu ứng highlight tạm thời
-        addressSection.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.3)';
-        setTimeout(() => {
-          addressSection.style.boxShadow = '';
-        }, 2000);
-      }
-    }, 300);
-  };
-
-  const handleConfirm = () => {
-    // Hiển thị popup xác nhận
-    const isConfirmed = window.confirm(
-      'Bạn có chắc chắn muốn lưu các thay đổi không?\n\n' +
-      'Các thông tin sẽ được cập nhật:\n' +
-      '• Địa chỉ hiện thời\n' +
-      '• Người liên hệ khẩn cấp'
-    );
-    
-    if (isConfirmed) {
-      // Cập nhật dữ liệu (trong thực tế sẽ gọi API)
-      console.log('Cập nhật dữ liệu:', editData);
-      setIsEditing(false);
+  // Fetch student data from backend
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      if (!studentId) return;
       
-      // Hiển thị thông báo thành công
-      alert('✓ Cập nhật thông tin thành công!');
-    }
-  };
-
-  const handleCancel = () => {
-    // Reset dữ liệu về trạng thái ban đầu
-    setEditData({
-      currentAddress: { ...studentData.currentAddress },
-      emergencyContact: { ...studentData.emergencyContact }
-    });
-    setIsEditing(false);
-  };
-
-  const handleInputChange = (section: 'currentAddress' | 'emergencyContact', field: string, value: string) => {
-    setEditData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
+      try {
+        setIsLoading(true);
+        const data = await studentService.getStudentById(parseInt(studentId));
+        setStudent(data);
+      } catch (error) {
+        console.error('Failed to fetch student:', error);
+        showToast('Không thể tải thông tin sinh viên', 'error');
+      } finally {
+        setIsLoading(false);
       }
-    }));
-  };
+    };
 
-  const getScoreColor = (score: number) => {
+    fetchStudentData();
+  }, [studentId, showToast]);
+
+  const getScoreColor = (score: number | null) => {
+    if (score === null) return "bg-gray-100 text-gray-500";
     if (score >= 8.5) return "bg-green-100 text-green-800";
     if (score >= 7.0) return "bg-blue-100 text-blue-800";
     return "bg-yellow-100 text-yellow-800";
   };
 
+  // Calculate total score based on weights
+  const calculateTotal = (record: typeof studyHistory[0]) => {
+    let total = 0;
+    const { weights } = record;
+    
+    if (record.attendance !== null) total += record.attendance * (weights.attendance / 100);
+    if (record.regular !== null) total += record.regular * (weights.regular / 100);
+    if (record.midterm !== null) total += record.midterm * (weights.midterm / 100);
+    if (record.individualAssignment !== null) total += record.individualAssignment * (weights.individualAssignment / 100);
+    if (record.groupAssignment !== null) total += record.groupAssignment * (weights.groupAssignment / 100);
+    if (record.quiz1 !== null) total += record.quiz1 * (weights.quiz1 / 100);
+    if (record.quiz2 !== null) total += record.quiz2 * (weights.quiz2 / 100);
+    if (record.final !== null) total += record.final * (weights.final / 100);
+    
+    return Math.round(total * 10) / 10; // Round to 1 decimal place
+  };
+
+  // Get status based on total score
+  const getStatus = (total: number) => {
+    if (total >= 9.5) return { text: "Xuất sắc", color: "green" };
+    if (total >= 8.5) return { text: "Giỏi", color: "green" };
+    if (total >= 7.0) return { text: "Khá", color: "blue" };
+    if (total >= 5.5) return { text: "Trung bình", color: "yellow" };
+    return { text: "Kém", color: "red" };
+  };
+
   const getStatusColor = (statusColor: string) => {
     switch (statusColor) {
       case "green": return "bg-green-100 text-green-800";
+      case "blue": return "bg-blue-100 text-blue-800";
       case "yellow": return "bg-yellow-100 text-yellow-800";
+      case "orange": return "bg-orange-100 text-orange-800";
       case "red": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
@@ -206,78 +541,107 @@ export default function StudentDetail() {
   const getStatusIcon = (statusColor: string) => {
     switch (statusColor) {
       case "green": return "fas fa-check-circle";
-      case "yellow": return "fas fa-exclamation-triangle";
+      case "blue": return "fas fa-check-circle";
+      case "yellow": return "fas fa-exclamation-circle";
+      case "orange": return "fas fa-exclamation-triangle";
       case "red": return "fas fa-times-circle";
       default: return "fas fa-circle";
     }
   };
 
-  // Dữ liệu cho biểu đồ tiến độ
-  const progressData = {
-    labels: ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Tuần 5', 'Tuần 6', 'Tuần 7', 'Tuần 8'],
-    datasets: [
-      {
-        label: 'Toán cao cấp',
-        data: [7.5, 7.8, 8.0, 8.2, 8.5, 8.3, 8.6, 8.5],
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.4
-      },
-      {
-        label: 'Lý đại cương',
-        data: [8.0, 8.2, 8.5, 8.7, 9.0, 8.8, 9.1, 9.0],
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.4
-      },
-      {
-        label: 'Lập trình cơ sở',
-        data: [6.5, 6.8, 7.0, 7.2, 7.5, 7.3, 7.6, 7.5],
-        borderColor: '#f59e0b',
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.4
-      },
-      {
-        label: 'CDIO',
-        data: [8.2, 8.4, 8.6, 8.5, 8.8, 8.7, 8.9, 8.8],
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.4
-      },
-      {
-        label: 'Chủ nghĩa xã hội khoa học',
-        data: [7.8, 7.9, 8.1, 8.0, 8.0, 7.9, 8.2, 8.0],
-        borderColor: '#ef4444',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.4
-      },
-      {
-        label: 'Tin học ứng dụng',
-        data: [8.8, 9.0, 9.1, 9.3, 9.2, 9.4, 9.3, 9.2],
-        borderColor: '#06b6d4',
-        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.4
-      }
-    ]
+  // Format date helper
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
   };
+
+  // Format gender helper
+  const formatGender = (gender?: string) => {
+    if (!gender) return 'N/A';
+    return gender === 'male' ? 'Nam' : gender === 'female' ? 'Nữ' : 'Khác';
+  };
+
+  // Convert cohort year to K format (e.g., 2022 -> K28, 2023 -> K29)
+  const getCohortLabel = (cohortYear?: number): string => {
+    if (!cohortYear) return 'N/A';
+    const kNumber = cohortYear - 2000 + 6; // 2022 -> 28, 2023 -> 29, etc.
+    return `K${kNumber}`;
+  };
+
+  // Get cohort from student code (first 2 digits)
+  const getCohortFromCode = (studentCode: string): string => {
+    if (!studentCode || studentCode.length < 2) return 'N/A';
+    const kNumber = studentCode.substring(0, 2);
+    return `K${kNumber}`;
+  };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <LoadingSpinner text="Đang tải thông tin sinh viên..." size="lg" />
+      </AdminLayout>
+    );
+  }
+
+  if (!student) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center h-64">
+          <i className="fas fa-exclamation-triangle text-gray-400 text-5xl mb-4"></i>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Không tìm thấy sinh viên</h3>
+          <p className="text-gray-600">Sinh viên không tồn tại hoặc đã bị xóa</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Generate chart data based on selected semester's subjects
+  const generateProgressData = () => {
+    const colors = [
+      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
+      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+      { border: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
+      { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
+      { border: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)' }
+    ];
+
+    const datasets = studyHistory.map((record, index) => {
+      const total = calculateTotal(record);
+      const baseScore = total - 1;
+      const variation = 0.3;
+      
+      // Generate realistic progress data (trending upward to final score)
+      const progressData = Array.from({ length: 8 }, (_, week) => {
+        const progress = week / 7; // 0 to 1
+        const score = baseScore + (total - baseScore) * progress;
+        const randomVariation = (Math.random() - 0.5) * variation;
+        return Math.round((score + randomVariation) * 10) / 10;
+      });
+      
+      // Ensure last week matches final total
+      progressData[7] = total;
+
+      return {
+        label: record.subject,
+        data: progressData,
+        borderColor: colors[index % colors.length].border,
+        backgroundColor: colors[index % colors.length].bg,
+        borderWidth: 3,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.4
+      };
+    });
+
+    return {
+      labels: ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Tuần 5', 'Tuần 6', 'Tuần 7', 'Tuần 8'],
+      datasets
+    };
+  };
+
+  const progressData = generateProgressData();
 
   const chartOptions = {
     responsive: true,
@@ -383,36 +747,6 @@ export default function StudentDetail() {
             <h1 className="text-xl font-bold text-gray-900 mb-2">Chi tiết sinh viên</h1>
             <p className="text-base text-gray-600">Chi tiết thông tin sinh viên và tiến độ học tập</p>
           </div>
-          {!isEditing ? (
-            <button 
-              onClick={handleEdit}
-              className="group bg-white border-2 border-orange-500 text-orange-500 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-orange-500 hover:text-white transform hover:scale-105 transition-all duration-300 cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
-                  <i className="fas fa-edit text-xs"></i>
-                </div>
-                <span>Cập nhật</span>
-              </div>
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button 
-                onClick={handleConfirm}
-                className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-600 transition-colors font-semibold cursor-pointer"
-              >
-                <i className="fas fa-check mr-2"></i>
-                Xác nhận
-              </button>
-              <button 
-                onClick={handleCancel}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-600 transition-colors font-semibold cursor-pointer"
-              >
-                <i className="fas fa-times mr-2"></i>
-                Hủy bỏ
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Student Personal Information */}
@@ -423,8 +757,8 @@ export default function StudentDetail() {
               <div className="flex-shrink-0 relative">
                 <div className="relative">
                   <img 
-                    src={studentData.avatar} 
-                    alt={studentData.name}
+                    src={student.profile?.avatarUrl || "/src/assets/admin/avatarJohnSmithDetail.png"} 
+                    alt={student.profile?.fullName || 'Student'}
                     className="w-24 h-24 rounded-xl border-4 border-white shadow-lg object-cover transform hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       e.currentTarget.src = "/src/assets/parent/avatarJohnSmith.png";
@@ -448,273 +782,51 @@ export default function StudentDetail() {
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <i className="fas fa-id-badge text-gray-500 text-sm"></i>
-                      <label className="block text-sm font-medium text-gray-600">Tên người dùng</label>
+                      <label className="block text-sm font-medium text-gray-600">Tên sinh viên</label>
                     </div>
-                    <p className="text-sm font-semibold text-gray-800">{studentData.name}</p>
+                    <p className="text-sm font-semibold text-gray-800">{student.profile?.fullName || 'N/A'}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <i className="fas fa-barcode text-gray-500 text-sm"></i>
                       <label className="block text-sm font-medium text-gray-600">Mã sinh viên</label>
                     </div>
-                    <p className="text-sm font-semibold text-gray-800">{studentData.studentCode}</p>
+                    <p className="text-sm font-semibold text-gray-800">{student.studentCode}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <i className="fas fa-users text-gray-500 text-sm"></i>
+                      <label className="block text-sm font-medium text-gray-600">Khóa</label>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {student.cohortYear 
+                        ? getCohortLabel(student.cohortYear)
+                        : getCohortFromCode(student.studentCode)
+                      }
+                    </p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <i className="fas fa-venus-mars text-gray-500 text-sm"></i>
                       <label className="block text-sm font-medium text-gray-600">Giới tính</label>
                     </div>
-                    <p className="text-sm text-gray-800">{studentData.gender}</p>
+                    <p className="text-sm text-gray-800">{formatGender(student.profile?.gender)}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <i className="fas fa-birthday-cake text-gray-500 text-sm"></i>
                       <label className="block text-sm font-medium text-gray-600">Ngày sinh</label>
                     </div>
-                    <p className="text-sm text-gray-800">{studentData.dateOfBirth}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <div className="flex items-center gap-2 mb-1">
-                      <i className="fas fa-id-card text-gray-500 text-sm"></i>
-                      <label className="block text-sm font-medium text-gray-600">CCCD</label>
-                    </div>
-                    <p className="text-sm text-gray-800">{studentData.cccd}</p>
+                    <p className="text-sm text-gray-800">{formatDate(student.profile?.dateOfBirth)}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <i className="fas fa-envelope text-gray-500 text-sm"></i>
-                      <label className="block text-sm font-medium text-gray-600">Email (DTU)</label>
+                      <label className="block text-sm font-medium text-gray-600">Email</label>
                     </div>
-                    <p className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">{studentData.email}</p>
+                    <p className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">{student.email}</p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Current Address */}
-        <div id="current-address-section" className="transition-all duration-500">
-          <Card className="bg-white border border-gray-200 shadow-md">
-            <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <i className="fas fa-map-marker-alt text-white text-sm"></i>
-              </div>
-              <h3 className="text-lg font-bold text-gray-800">Địa chỉ hiện thời</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-road text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Địa chỉ/Thôn</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.currentAddress.street}
-                    onChange={(e) => handleInputChange('currentAddress', 'street', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.currentAddress.street}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-building text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Phường/Xã</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.currentAddress.ward}
-                    onChange={(e) => handleInputChange('currentAddress', 'ward', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.currentAddress.ward}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-city text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Quận/Huyện</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.currentAddress.district}
-                    onChange={(e) => handleInputChange('currentAddress', 'district', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.currentAddress.district}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-map text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Tỉnh/Thành phố</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.currentAddress.city}
-                    onChange={(e) => handleInputChange('currentAddress', 'city', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.currentAddress.city}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-globe text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Quốc gia</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.currentAddress.country}
-                    onChange={(e) => handleInputChange('currentAddress', 'country', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.currentAddress.country}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-phone text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Điện thoại</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.currentAddress.phone}
-                    onChange={(e) => handleInputChange('currentAddress', 'phone', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800 hover:text-blue-600 cursor-pointer">{studentData.currentAddress.phone}</p>
-                )}
-              </div>
-              <div className="md:col-span-2 lg:col-span-1 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-envelope-open text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Email khác</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    value={editData.currentAddress.alternativeEmail}
-                    onChange={(e) => handleInputChange('currentAddress', 'alternativeEmail', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">{studentData.currentAddress.alternativeEmail}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        </div>
-
-        {/* Emergency Contact */}
-        <Card className="bg-white shadow-md border-l-4 border-red-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                <i className="fas fa-exclamation-triangle text-white text-sm"></i>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">
-                  Người Liên hệ Khẩn cấp
-                </h3>
-                <p className="text-sm text-gray-600">Thông tin liên hệ khi cần thiết</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-user-tie text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Tên</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.emergencyContact.name}
-                    onChange={(e) => handleInputChange('emergencyContact', 'name', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm font-bold text-gray-800">{studentData.emergencyContact.name}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-heart text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Quan hệ</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.emergencyContact.relationship}
-                    onChange={(e) => handleInputChange('emergencyContact', 'relationship', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.emergencyContact.relationship}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-phone-alt text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Số điện thoại</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.emergencyContact.phone}
-                    onChange={(e) => handleInputChange('emergencyContact', 'phone', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800 hover:text-red-600 cursor-pointer">{studentData.emergencyContact.phone}</p>
-                )}
-              </div>
-              <div className="md:col-span-2 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-map-marker-alt text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Địa chỉ</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.emergencyContact.address}
-                    onChange={(e) => handleInputChange('emergencyContact', 'address', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-800">{studentData.emergencyContact.address}</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <i className="fas fa-envelope text-gray-500 text-sm"></i>
-                  <label className="block text-sm font-medium text-gray-600">Email</label>
-                </div>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    value={editData.emergencyContact.email}
-                    onChange={(e) => handleInputChange('emergencyContact', 'email', e.target.value)}
-                    className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-                  />
-                ) : (
-                  <p className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">{studentData.emergencyContact.email}</p>
-                )}
               </div>
             </div>
           </CardContent>
@@ -767,20 +879,20 @@ export default function StudentDetail() {
               </div>
             </div>
 
-            {/* Alert Status */}
-            <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-3 mb-4">
+            {/* Alert Status - TODO: Implement when backend provides academic status */}
+            {/* <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-3 mb-4">
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mr-3">
                   <i className="fas fa-exclamation-triangle text-white text-sm"></i>
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-yellow-800">
-                    Cảnh báo: {studentData.academicStatus.status}
+                    Cảnh báo: At-Risk
                   </h4>
-                  <p className="text-sm text-yellow-700">{studentData.academicStatus.description}</p>
+                  <p className="text-sm text-yellow-700">Tiến độ thấp trong kỳ học hè</p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Progress Chart */}
             <div className="mb-4">
@@ -810,30 +922,72 @@ export default function StudentDetail() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-gray-200">
-              <table className="w-full border-collapse bg-white">
+            <div className="rounded-lg border border-gray-200 overflow-x-auto">
+              <table className="w-full border-collapse bg-white min-w-[1200px]">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border-0 px-4 py-3 text-left font-bold text-gray-700 text-sm">
+                    <th className="border-0 px-3 py-3 text-left font-bold text-gray-700 text-xs whitespace-nowrap sticky left-0 bg-gray-50 z-10">
                       <div className="flex items-center gap-2">
                         <i className="fas fa-book text-gray-500"></i>
                         Môn học
                       </div>
                     </th>
-                    <th className="border-0 px-4 py-3 text-center font-bold text-gray-700 text-sm">
-                      <div className="flex items-center justify-center gap-2">
-                        <i className="fas fa-pencil-alt text-gray-500"></i>
-                        Điểm BT
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-user-check text-gray-500"></i>
+                        Chuyên cần
                       </div>
                     </th>
-                    <th className="border-0 px-4 py-3 text-center font-bold text-gray-700 text-sm">
-                      <div className="flex items-center justify-center gap-2">
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-clipboard-list text-gray-500"></i>
+                        Thường kỳ
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-file-alt text-gray-500"></i>
+                        Giữa kỳ
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-user-edit text-gray-500"></i>
+                        BT Cá nhân
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-users text-gray-500"></i>
+                        BT Nhóm
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
                         <i className="fas fa-question-circle text-gray-500"></i>
-                        Điểm Quiz
+                        Quiz 1
                       </div>
                     </th>
-                    <th className="border-0 px-4 py-3 text-center font-bold text-gray-700 text-sm">
-                      <div className="flex items-center justify-center gap-2">
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-question-circle text-gray-500"></i>
+                        Quiz 2
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-file-signature text-gray-500"></i>
+                        Cuối kỳ
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap bg-blue-50">
+                      <div className="flex items-center justify-center gap-1">
+                        <i className="fas fa-calculator text-blue-600"></i>
+                        <span className="text-blue-700">Tổng</span>
+                      </div>
+                    </th>
+                    <th className="border-0 px-3 py-3 text-center font-bold text-gray-700 text-xs whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
                         <i className="fas fa-chart-line text-gray-500"></i>
                         Trạng thái
                       </div>
@@ -841,27 +995,69 @@ export default function StudentDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  {studyHistory.map((record, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="border-0 px-4 py-3 font-semibold text-gray-800 text-sm border-b border-gray-100">{record.subject}</td>
-                      <td className="border-0 px-4 py-3 text-center border-b border-gray-100">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${getScoreColor(record.assignmentScore)}`}>
-                          {record.assignmentScore}
-                        </span>
-                      </td>
-                      <td className="border-0 px-4 py-3 text-center border-b border-gray-100">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${getScoreColor(record.quizScore)}`}>
-                          {record.quizScore}
-                        </span>
-                      </td>
-                      <td className="border-0 px-4 py-3 text-center border-b border-gray-100">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(record.statusColor)}`}>
-                          <i className={`${getStatusIcon(record.statusColor)} mr-1`}></i>
-                          {record.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {studyHistory.map((record, index) => {
+                    const total = calculateTotal(record);
+                    const status = getStatus(total);
+                    
+                    return (
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
+                        <td className="border-0 px-3 py-3 font-semibold text-gray-800 text-xs border-b border-gray-100 sticky left-0 bg-white whitespace-nowrap">
+                          {record.subject}
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.attendance)}`}>
+                            {record.attendance !== null ? record.attendance : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.regular)}`}>
+                            {record.regular !== null ? record.regular : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.midterm)}`}>
+                            {record.midterm !== null ? record.midterm : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.individualAssignment)}`}>
+                            {record.individualAssignment !== null ? record.individualAssignment : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.groupAssignment)}`}>
+                            {record.groupAssignment !== null ? record.groupAssignment : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.quiz1)}`}>
+                            {record.quiz1 !== null ? record.quiz1 : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.quiz2)}`}>
+                            {record.quiz2 !== null ? record.quiz2 : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold min-w-[32px] ${getScoreColor(record.final)}`}>
+                            {record.final !== null ? record.final : '−'}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100 bg-blue-50">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${getScoreColor(total)}`}>
+                            {total}
+                          </span>
+                        </td>
+                        <td className="border-0 px-3 py-3 text-center border-b border-gray-100">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(status.color)}`}>
+                            <i className={`${getStatusIcon(status.color)} mr-1`}></i>
+                            {status.text}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

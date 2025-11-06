@@ -20,6 +20,7 @@ model Account {
   password_hash      String
   status             String?          @default("active") @db.VarChar(20)
   created_at         DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime         @default(now()) @db.Timestamptz(6)
   last_login_at      DateTime?        @db.Timestamptz(6)
   last_logout_at     DateTime?        @db.Timestamptz(6)
   role_id            Int?
@@ -116,9 +117,11 @@ model Program { //Chương trình vd: CMU
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
   department_id     Int
+  department_id     Int
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
   department        Department         @relation(fields: [department_id], references: [department_id])
+
 
   @@map("Program")
 }

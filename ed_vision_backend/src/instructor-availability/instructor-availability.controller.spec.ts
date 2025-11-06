@@ -78,7 +78,11 @@ describe('InstructorAvailabilityController', () => {
 
       const result = await controller.getAvailability(1);
       expect(result).toEqual(mockData);
-      expect(service.getAvailability).toHaveBeenCalledWith(1, undefined, undefined);
+      expect(service.getAvailability).toHaveBeenCalledWith(
+        1,
+        undefined,
+        undefined,
+      );
     });
 
     it('should pass date range parameters', async () => {
@@ -231,7 +235,10 @@ describe('InstructorAvailabilityController', () => {
       mockService.deleteAvailabilityDate.mockResolvedValue(undefined);
 
       await controller.deleteAvailabilityDate(1, '2025-10-25');
-      expect(service.deleteAvailabilityDate).toHaveBeenCalledWith(1, '2025-10-25');
+      expect(service.deleteAvailabilityDate).toHaveBeenCalledWith(
+        1,
+        '2025-10-25',
+      );
     });
   });
 
@@ -284,4 +291,3 @@ describe('InstructorAvailabilityController', () => {
     });
   });
 });
-

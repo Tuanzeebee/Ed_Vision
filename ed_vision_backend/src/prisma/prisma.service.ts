@@ -7,7 +7,10 @@ import { PrismaClient } from '@prisma/client';
  * Implements OnModuleDestroy to disconnect on shutdown
  */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   /**
    * Connect to database when module initializes
    */
@@ -22,4 +25,3 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     await this.$disconnect();
   }
 }
-

@@ -30,4 +30,3 @@ export interface AvailabilityResponse {
   availabilities: AvailabilityDateResponse[];
   statistics: AvailabilityStatistics;
 }
-

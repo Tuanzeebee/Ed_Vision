@@ -5,6 +5,7 @@ export interface AccountFilterParams {
   role?: string;
   status?: string;
   school?: string;
+  major?: string;
   page?: number;
   limit?: number;
 }
@@ -26,7 +27,9 @@ export interface ProfileInfo {
 
 export interface StudentInfo {
   studentCode: string;
-  major?: string;
+  programId?: number;
+  programName?: string;
+  departmentName?: string;
   cohortYear?: number;
   classId?: number;
 }
@@ -50,7 +53,9 @@ export interface AccountData {
   email: string;
   status: string;
   createdAt: string;
+  updatedAt: string;
   lastLoginAt?: string;
+  lastLogoutAt?: string;
   role?: RoleInfo;
   profile?: ProfileInfo;
   student?: StudentInfo;
@@ -70,6 +75,13 @@ export interface AccountListResponse {
   };
 }
 
+export interface FilterOptions {
+  schools: string[];
+  majors: { name: string; school: string }[];
+  roles: { code: string; name: string }[];
+  statuses: { code: string; name: string }[];
+}
+
 export interface CreateAccountDto {
   email: string;
   password: string;
@@ -84,7 +96,7 @@ export interface CreateAccountDto {
   };
   student?: {
     studentCode: string;
-    major?: string;
+    programId?: number;
     cohortYear?: number;
     classId?: number;
   };
@@ -101,21 +113,29 @@ export interface CreateAccountDto {
 }
 
 export interface UpdateAccountDto {
-  email?: string;
-  password?: string;
   status?: string;
-  roleCode?: string;
-  profile?: {
-    fullName?: string;
-    dateOfBirth?: string;
-    gender?: string;
-    address?: string;
-    phoneNumber?: string;
-    nationality?: string;
-  };
+  fullName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
+  phoneNumber?: string;
+  department?: string;
+  // Instructor-specific fields
+  employeeCode?: string;
+  academicTitle?: string;
+  position?: string;
+  departmentId?: number;
 }
 
 class AccountService {
+  /**
+   * Get filter options from database
+   */
+  async getFilterOptions(): Promise<FilterOptions> {
+    const response = await apiClient.get('/admin/accounts/filters/options');
+    return response.data;
+  }
+
   /**
    * Get all accounts with filters
    */
@@ -126,6 +146,7 @@ class AccountService {
     if (filters.role) params.append('role', filters.role);
     if (filters.status) params.append('status', filters.status);
     if (filters.school) params.append('school', filters.school);
+    if (filters.major) params.append('major', filters.major);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
 

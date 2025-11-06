@@ -5,16 +5,82 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentFilterDto } from './dto/student-filter.dto';
 import { StudentResponse } from './models/student-response.type';
 import { StudentListResponse } from './models/student-list.type';
+import { StudentOnlineStats } from './models/student-stats.type';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class StudentManagementService {
   constructor(private prisma: PrismaService) {}
 
+  async getOnlineStats(): Promise<StudentOnlineStats> {
+    // Get total count of students (all students in Student table)
+    const totalCount = await this.prisma.student.count();
+
+    // Get accounts with students where login is more recent than logout
+    // Using raw SQL for easier comparison
+    const onlineResult = await this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::int as count
+      FROM "Account" a
+      INNER JOIN "Student" s ON a.account_id = s.account_id
+      WHERE a.last_login_at IS NOT NULL
+        AND (
+          a.last_logout_at IS NULL
+          OR a.last_login_at > a.last_logout_at
+        )
+    `;
+
+    const onlineCount = Number(onlineResult[0]?.count || 0);
+
+    console.log('Online Stats:', { totalCount, onlineCount });
+
+    return {
+      onlineCount,
+      totalCount
+    };
+  }
+
+  async getFilterOptions() {
+    // Get all departments
+    const departments = await this.prisma.department.findMany({
+      where: { status: 'active' },
+      select: { name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    // Get all programs with their department
+    const programs = await this.prisma.program.findMany({
+      select: {
+        program_name: true,
+        department: {
+          select: { name: true }
+        }
+      },
+      orderBy: { program_name: 'asc' },
+    });
+
+    return {
+      departments: departments.map(d => d.name),
+      programs: programs.map(p => ({
+        name: p.program_name,
+        department: p.department.name
+      })),
+      statuses: [
+        { code: 'active', name: 'Đang học' },
+        { code: 'inactive', name: 'Tạm nghỉ' },
+        { code: 'at-risk', name: 'Cảnh báo' },
+        { code: 'blocked', name: 'Đã khóa' }
+      ]
+    };
+  }
+
   async findAll(filterDto: StudentFilterDto): Promise<StudentListResponse> {
+    console.log('=== Student findAll called ===');
+    console.log('Filter DTO received:', JSON.stringify(filterDto, null, 2));
+    
     const {
       search,
-      major,
+      department,
+      program,
       cohortYear,
       classId,
       status,
@@ -22,19 +88,7 @@ export class StudentManagementService {
       limit = 10,
     } = filterDto;
 
-    const where: {
-      OR?: Array<{
-        student_code?: { contains: string; mode: 'insensitive' };
-        account?: {
-          email?: { contains: string; mode: 'insensitive' };
-          profile?: { full_name?: { contains: string; mode: 'insensitive' } };
-        };
-      }>;
-      major?: { contains: string; mode: 'insensitive' };
-      cohort_year?: number;
-      class_id?: number;
-      status?: string;
-    } = {};
+    const where: any = {};
 
     if (search) {
       where.OR = [
@@ -48,8 +102,28 @@ export class StudentManagementService {
       ];
     }
 
-    if (major) {
-      where.major = { contains: major, mode: 'insensitive' };
+    // Filter by department through ClassGroup -> Program -> Department
+    if (department) {
+      where.classGroup = {
+        ...where.classGroup,
+        program: {
+          ...where.classGroup?.program,
+          department: {
+            name: department
+          }
+        }
+      };
+    }
+
+    // Filter by program through ClassGroup -> Program
+    if (program) {
+      where.classGroup = {
+        ...where.classGroup,
+        program: {
+          ...where.classGroup?.program,
+          program_name: program
+        }
+      };
     }
 
     if (cohortYear) {
@@ -76,7 +150,11 @@ export class StudentManagementService {
         },
         classGroup: {
           include: {
-            program: true,
+            program: {
+              include: {
+                department: true,
+              },
+            },
           },
         },
       },
@@ -94,6 +172,7 @@ export class StudentManagementService {
       cohortYear: student.cohort_year || undefined,
       status: student.status || 'active',
       createdAt: student.account.created_at.toISOString(),
+      gpa: undefined, // GPA will be calculated separately in the future
       profile: student.account.profile
         ? {
             fullName: student.account.profile.full_name,
@@ -101,6 +180,16 @@ export class StudentManagementService {
             gender: student.account.profile.gender || undefined,
             address: student.account.profile.address || undefined,
             avatarUrl: student.account.profile.avatar_url || undefined,
+          }
+        : undefined,
+      department: student.classGroup?.program?.department
+        ? {
+            name: student.classGroup.program.department.name,
+          }
+        : undefined,
+      program: student.classGroup?.program
+        ? {
+            programName: student.classGroup.program.program_name,
           }
         : undefined,
       classInfo: student.classGroup

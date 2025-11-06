@@ -21,12 +21,13 @@ function ParentItem({ item }: { item: MenuItemConfig }) {
       return location.pathname === '/admin/permissions' || location.pathname === '/admin/role-permissions'
     }
     
-    // Xử lý đặc biệt cho account management - coi cả /admin/users, /admin/account-management và /admin/accounts/add là active
+    // Xử lý đặc biệt cho account management - coi cả /admin/users, /admin/account-management, /admin/accounts/add và /admin/accounts/:id là active
     if (child.to === '/admin/users') {
       return location.pathname === '/admin/users' || 
              location.pathname === '/admin/account-management' || 
              location.pathname === '/admin/accounts' ||
-             location.pathname === '/admin/accounts/add'
+             location.pathname === '/admin/accounts/add' ||
+             location.pathname.startsWith('/admin/accounts/')
     }
     
     // Xử lý đặc biệt cho khảo sát - coi cả /admin/classes, /admin/questions và /admin/add-question là active
@@ -92,7 +93,8 @@ function LeafItem({ item }: { item: MenuItemConfig }) {
       return location.pathname === '/admin/users' || 
              location.pathname === '/admin/account-management' || 
              location.pathname === '/admin/accounts' ||
-             location.pathname === '/admin/accounts/add'
+             location.pathname === '/admin/accounts/add' ||
+             location.pathname.startsWith('/admin/accounts/')
     }
     if (item.to === '/admin/classes') {
       return location.pathname === '/admin/classes' || 

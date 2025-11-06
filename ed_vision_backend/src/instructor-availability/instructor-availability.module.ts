@@ -5,11 +5,7 @@ import { InstructorAvailabilityRepository } from './instructor-availability.repo
 
 @Module({
   controllers: [InstructorAvailabilityController],
-  providers: [
-    InstructorAvailabilityService,
-    InstructorAvailabilityRepository,
-  ],
+  providers: [InstructorAvailabilityService, InstructorAvailabilityRepository],
   exports: [InstructorAvailabilityService],
 })
 export class InstructorAvailabilityModule {}
-

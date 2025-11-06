@@ -15,12 +15,23 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentFilterDto } from './dto/student-filter.dto';
 import { StudentResponse } from './models/student-response.type';
 import { StudentListResponse } from './models/student-list.type';
+import { StudentOnlineStats } from './models/student-stats.type';
 
 @Controller('admin/students')
 export class StudentManagementController {
   constructor(
     private readonly studentManagementService: StudentManagementService,
   ) {}
+
+  @Get('stats/online')
+  async getOnlineStats(): Promise<StudentOnlineStats> {
+    return this.studentManagementService.getOnlineStats();
+  }
+
+  @Get('filters/options')
+  async getFilterOptions() {
+    return this.studentManagementService.getFilterOptions();
+  }
 
   @Get()
   async findAll(

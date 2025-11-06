@@ -1,4 +1,13 @@
-import { IsNotEmpty, IsString, IsInt, Min, Max, IsEnum, IsOptional, Matches } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsEnum,
+  IsOptional,
+  Matches,
+} from 'class-validator';
 
 export class CreateTimeSlotDto {
   @IsNotEmpty()
@@ -29,4 +38,3 @@ export class CreateTimeSlotDto {
   @IsString()
   note?: string;
 }
-
