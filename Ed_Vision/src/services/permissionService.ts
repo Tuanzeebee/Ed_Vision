@@ -1,0 +1,123 @@
+import { apiFetch } from '@/services/api/fetch'
+
+/**
+ * Service để load và sync permissions từ server
+ */
+export class PermissionService {
+  /**
+   * Load permissions cho user hiện tại từ server
+   */
+  static async loadUserPermissions(): Promise<Record<string, boolean>> {
+    try {
+      const user = PermissionService.getCurrentUser()
+      if (!user || !user.roleRel?.code) {
+        console.warn('No user or role found')
+        return {}
+      }
+
+      const roleCode = user.roleRel.code
+      const response = await apiFetch(`/admin/role-permissions/${roleCode}`)
+      
+      if (response && response.success) {
+        return response.data || {}
+      }
+      
+      return {}
+    } catch (error) {
+      console.error('Failed to load user permissions:', error)
+      return {}
+    }
+  }
+
+  /**
+   * Sync permissions với localStorage
+   */
+  static async syncPermissions(): Promise<void> {
+    try {
+      const permissions = await PermissionService.loadUserPermissions()
+      const user = PermissionService.getCurrentUser()
+      
+      if (user) {
+        // Update user object with new permissions
+        const updatedUser = {
+          ...user,
+          permissions
+        }
+        
+        // Save back to localStorage
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+        
+        console.log('Permissions synced successfully:', permissions)
+      }
+    } catch (error) {
+      console.error('Failed to sync permissions:', error)
+    }
+  }
+
+  /**
+   * Get current user from localStorage
+   */
+  static getCurrentUser(): any {
+    try {
+      const raw = localStorage.getItem('user')
+      if (!raw) return null
+      return JSON.parse(raw)
+    } catch (error) {
+      console.error('Failed to get current user:', error)
+      return null
+    }
+  }
+
+  /**
+   * Check if user has a specific permission
+   */
+  static hasPermission(permissionKey: string): boolean {
+    const user = PermissionService.getCurrentUser()
+    const permissions = user?.permissions || {}
+    return !!permissions[permissionKey]
+  }
+
+  /**
+   * Get all user permissions
+   */
+  static getUserPermissions(): Record<string, boolean> {
+    const user = PermissionService.getCurrentUser()
+    return user?.permissions || {}
+  }
+
+  /**
+   * Force refresh permissions from server
+   */
+  static async refreshPermissions(): Promise<void> {
+    console.log('Refreshing permissions from server...')
+    await PermissionService.syncPermissions()
+    
+    // Trigger a page reload to ensure all components get new permissions
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
+  }
+}
+
+/**
+ * Auto-sync permissions on app initialization
+ */
+export function initializePermissions() {
+  // Only run in browser
+  if (typeof window === 'undefined') return
+
+  // Check if user is logged in
+  const user = PermissionService.getCurrentUser()
+  if (!user) return
+
+  // Check if permissions are missing or outdated
+  if (!user.permissions || Object.keys(user.permissions).length === 0) {
+    console.log('User permissions missing, syncing from server...')
+    PermissionService.syncPermissions()
+  }
+
+  // Set up periodic sync every 5 minutes
+  setInterval(() => {
+    PermissionService.syncPermissions()
+  }, 5 * 60 * 1000) // 5 minutes
+}

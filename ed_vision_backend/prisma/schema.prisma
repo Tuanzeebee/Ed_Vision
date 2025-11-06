@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Meeting type for slots & appointments. Values intentionally lowercase to match frontend strings.
+enum MeetingType {
+  online
+  offline
+  both
+}
+  
 model Account {
   account_id         Int              @id @default(autoincrement())
   email              String           @unique @db.VarChar(255)
@@ -92,7 +99,7 @@ model Instructor {
   @@map("Instructor")
 }
 
-model Department { // Bảng Trường: vs ĐTQT
+model Department { //Trường vd: ĐTQT
   department_id Int          @id @default(autoincrement())
   code          String?      @unique @db.VarChar(20)
   name          String       @db.VarChar(150)
@@ -103,15 +110,16 @@ model Department { // Bảng Trường: vs ĐTQT
   @@map("Department")
 }
 
-model Program { // Bảng Chương trình: vd: CNPM CMU
+model Program { //Chương trình vd: CMU
   program_id        Int                @id @default(autoincrement())
   program_code      String             @unique @db.VarChar(20)
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
+  department_id     Int
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
-  department_id     Int                
   department        Department         @relation(fields: [department_id], references: [department_id])
+
   @@map("Program")
 }
 
@@ -135,8 +143,8 @@ model AdviserAssignment {
   assigned_date     DateTime?  @db.Date
   ended_date        DateTime?  @db.Date
   note              String?
-  classGroup    ClassGroup @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
-  instructor    Instructor @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
+  classGroup        ClassGroup @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
+  instructor        Instructor @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
 
   @@unique([class_id, instructor_id])
   @@map("AdviserAssignment")
@@ -190,9 +198,9 @@ model CurriculumCourse {
   term_number  Int     @db.SmallInt
   is_mandatory Boolean @default(true)
   note         String?
-  course     Course  @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
-  program    Program @relation(fields: [program_id], references: [program_id], onDelete: Cascade)
-  
+  course       Course  @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  program      Program @relation(fields: [program_id], references: [program_id], onDelete: Cascade)
+
   @@unique([program_id, course_id])
   @@map("CurriculumCourse")
 }
@@ -298,7 +306,9 @@ model InstructorWeeklySlot {
   is_open          Boolean                     @default(true)
   note             String?
   auto_accept      Boolean                     @default(false)
-  meeting_type     String?                     @default("offline") @db.VarChar(32)
+  meeting_type     MeetingType?                @default(offline)
+  meeting_location String?
+  meeting_link     String?
   appointments     Appointment[]
   week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
@@ -313,10 +323,8 @@ model Appointment {
   booker_role           String               @db.VarChar(20)
   student_id            Int?
   instructor_id         Int?
-  meeting_type          String               @db.VarChar(32)
+  meeting_type          MeetingType
   meeting_purpose       String?              @db.VarChar(255)
-  meeting_location      String?
-  meeting_link          String?
   status                String               @default("pending") @db.VarChar(32)
   cancel_reason         String?
   created_at            DateTime             @default(now()) @db.Timestamptz(6)

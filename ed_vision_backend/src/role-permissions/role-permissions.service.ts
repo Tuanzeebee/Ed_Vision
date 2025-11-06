@@ -43,7 +43,7 @@ export class RolePermissionsService {
     for (const [permissionKey, enabled] of entries) {
       const perm = await prisma.permission.findUnique({ where: { key: permissionKey } })
       if (!perm) {
-        // skip or optionally create permission placeholder
+        console.warn(`Permission not found: ${permissionKey}`)
         continue
       }
       createRows.push({ roleId: role.id, permissionId: perm.id, enabled: !!enabled })
@@ -54,6 +54,33 @@ export class RolePermissionsService {
     }
 
     return { success: true }
+  }
+
+  // get all roles
+  async getAllRoles() {
+    const prisma = (this.prisma as any)
+    const roles = await prisma.role.findMany({
+      include: {
+        _count: {
+          select: { 
+            accounts: true,
+            rolePermissions: {
+              where: { enabled: true }
+            }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    })
+    
+    return roles.map((role: any) => ({
+      id: role.code,
+      name: role.name,
+      role_name: role.name,
+      permission_count: role._count.rolePermissions,
+      account_count: role._count.accounts,
+      is_active: true
+    }))
   }
 
   // list all permission definitions
