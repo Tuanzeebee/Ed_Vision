@@ -9,4 +9,3 @@ export class BulkCreateAvailabilityDto {
   @Type(() => AddAvailabilityDateDto)
   availabilities: AddAvailabilityDateDto[];
 }
-

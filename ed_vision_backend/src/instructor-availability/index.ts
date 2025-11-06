@@ -12,4 +12,3 @@ export { BulkCreateAvailabilityDto } from './dto/bulk-create-availability.dto';
 
 // Export types
 export * from './models/availability.types';
-

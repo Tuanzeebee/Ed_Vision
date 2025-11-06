@@ -20,6 +20,7 @@ export interface InstructorResponse {
   academicTitle?: string;
   position?: string;
   status: string;
+  advisingClassCount?: number;
   createdAt: string;
   profile?: InstructorProfileResponse;
   department?: InstructorDepartmentInfo;

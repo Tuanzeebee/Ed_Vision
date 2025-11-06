@@ -1,13 +1,23 @@
-import { Injectable, BadRequestException, ConflictException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
-import { RolePermissionsService } from '../role-permissions/role-permissions.service'
-import { RegisterDto } from './dto/register.dto'
-import * as bcrypt from 'bcryptjs'
-import { OtpService } from './otp.service'
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { RolePermissionsService } from '../role-permissions/role-permissions.service';
+import { RegisterDto } from './dto/register.dto';
+import * as bcrypt from 'bcryptjs';
+import { OtpService } from './otp.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService, private readonly otpService: OtpService, private readonly rolePermissionsSvc: RolePermissionsService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly otpService: OtpService,
+    private readonly rolePermissionsSvc: RolePermissionsService,
+  ) {}
 
   /**
    * Register a new student account
@@ -17,35 +27,41 @@ export class AuthService {
    * - create account with pending status and send OTP
    */
   async register(dto: RegisterDto) {
-    const { email, password, confirmPassword } = dto
+    const { email, password, confirmPassword } = dto;
 
     // simple validation
     if (password !== confirmPassword) {
-      throw new BadRequestException('Mật khẩu xác nhận không khớp')
+      throw new BadRequestException('Mật khẩu xác nhận không khớp');
     }
 
-    const domain = '@dtu.edu.vn'
+    const domain = '@dtu.edu.vn';
     if (!email.toLowerCase().endsWith(domain)) {
-      throw new BadRequestException(`Chỉ cho phép đăng ký với email ${domain}`)
+      throw new BadRequestException(`Chỉ cho phép đăng ký với email ${domain}`);
     }
 
     // check existing account
-    const existing = await this.prisma.account.findUnique({ where: { email } })
+    const existing = await this.prisma.account.findUnique({ where: { email } });
     if (existing) {
       // If the account exists but is pending verification, resend OTP instead of blocking
       if (existing.status === 'pending') {
         // Trigger resend asynchronously and return immediately so frontend can navigate to OTP entry
-        this.otpService.sendOtpToEmail(email).then(() => {
-          // ok
-        }).catch((e) => {
-          console.error('Failed to resend OTP for existing pending account (async)', e)
-        })
-        return { message: 'Mã OTP xác thực đã được gửi lại', email }
+        this.otpService
+          .sendOtpToEmail(email)
+          .then(() => {
+            // ok
+          })
+          .catch((e) => {
+            console.error(
+              'Failed to resend OTP for existing pending account (async)',
+              e,
+            );
+          });
+        return { message: 'Mã OTP xác thực đã được gửi lại', email };
       }
-      throw new ConflictException('Email đã được đăng ký')
+      throw new ConflictException('Email đã được đăng ký');
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // create account with role student and pending status
     // create account and connect to Role by code (create role if missing)
@@ -57,29 +73,32 @@ export class AuthService {
         roleRel: {
           connectOrCreate: {
             where: { code: 'student' },
-            create: { code: 'student', name: 'Sinh viên' }
-          }
-        }
+            create: { code: 'student', name: 'Sinh viên' },
+          },
+        },
       },
       select: {
         account_id: true,
         email: true,
         status: true,
         created_at: true,
-        roleRel: { select: { code: true, name: true } }
+        roleRel: { select: { code: true, name: true } },
       },
-    })
+    });
 
     // send OTP asynchronously and don't block response to the client.
     // We don't rollback account creation here to avoid delaying the frontend transition to OTP entry.
-    this.otpService.sendOtpToEmail(email).then(() => {
-      // sent successfully - nothing to do here
-    }).catch((e) => {
-      // log the failure; do not delete the account to avoid surprising UX
-      console.error('Failed to send OTP email (async)', e)
-    })
+    this.otpService
+      .sendOtpToEmail(email)
+      .then(() => {
+        // sent successfully - nothing to do here
+      })
+      .catch((e) => {
+        // log the failure; do not delete the account to avoid surprising UX
+        console.error('Failed to send OTP email (async)', e);
+      });
 
-    return account
+    return account;
   }
 
   /**
@@ -87,46 +106,68 @@ export class AuthService {
    * Currently returns a placeholder accessToken. Replace with JWT issuance when ready.
    */
   async login(email: string, password: string) {
-  const account = await (this.prisma as any).account.findUnique({ where: { email }, include: { roleRel: true } })
-    if (!account) throw new UnauthorizedException('Email hoặc mật khẩu không đúng')
+    const account = await (this.prisma as any).account.findUnique({
+      where: { email },
+      include: { roleRel: true },
+    });
+    if (!account)
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
     if (account.status !== 'active') {
       // Not yet verified
-      throw new BadRequestException('Tài khoản chưa được kích hoạt. Vui lòng xác thực email')
+      throw new BadRequestException(
+        'Tài khoản chưa được kích hoạt. Vui lòng xác thực email',
+      );
     }
 
-    const match = await bcrypt.compare(password, account.password_hash)
-    if (!match) throw new UnauthorizedException('Email hoặc mật khẩu không đúng')
+    const match = await bcrypt.compare(password, account.password_hash);
+    if (!match)
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
     // For now return a simple token placeholder. Replace with real JWT in production.
     // update last_login_at
     try {
-      await (this.prisma as any).account.update({ where: { account_id: account.account_id }, data: { last_login_at: new Date() } })
+      await (this.prisma as any).account.update({
+        where: { account_id: account.account_id },
+        data: { last_login_at: new Date() },
+      });
     } catch (e) {
-      console.error('Failed to update last_login_at', e)
+      console.error('Failed to update last_login_at', e);
     }
 
-  const roleCode = account.roleRel?.code || 'student'
-  // attach permissions for the role so frontend can make immediate UI decisions
-  let perms = {}
-  try {
-    perms = await this.rolePermissionsSvc.getPermissionsForRole(roleCode)
-  } catch (e) {
-    perms = {}
-  }
+    const roleCode = account.roleRel?.code || 'student';
+    // attach permissions for the role so frontend can make immediate UI decisions
+    let perms = {};
+    try {
+      perms = await this.rolePermissionsSvc.getPermissionsForRole(roleCode);
+    } catch (e) {
+      perms = {};
+    }
 
-  return { accessToken: `dev-token-${account.account_id}`, account: { account_id: account.account_id, email: account.email, role: roleCode, last_login_at: new Date(), permissions: perms } }
+    return {
+      accessToken: `dev-token-${account.account_id}`,
+      account: {
+        account_id: account.account_id,
+        email: account.email,
+        role: roleCode,
+        last_login_at: new Date(),
+        permissions: perms,
+      },
+    };
   }
 
   async logout(email: string) {
-    const account = await this.prisma.account.findUnique({ where: { email } })
-    if (!account) throw new BadRequestException('Không tìm thấy tài khoản')
+    const account = await this.prisma.account.findUnique({ where: { email } });
+    if (!account) throw new BadRequestException('Không tìm thấy tài khoản');
     try {
-      await (this.prisma as any).account.update({ where: { account_id: account.account_id }, data: { last_logout_at: new Date() } })
-      return { ok: true }
+      await (this.prisma as any).account.update({
+        where: { account_id: account.account_id },
+        data: { last_logout_at: new Date() },
+      });
+      return { ok: true };
     } catch (e) {
-      console.error('Failed to update last_logout_at', e)
-      throw new InternalServerErrorException('Không thể ghi nhận đăng xuất')
+      console.error('Failed to update last_logout_at', e);
+      throw new InternalServerErrorException('Không thể ghi nhận đăng xuất');
     }
   }
 }

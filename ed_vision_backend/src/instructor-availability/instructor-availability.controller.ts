@@ -40,7 +40,9 @@ export class InstructorAvailabilityController {
    * NOTE: This must come BEFORE the :instructorId routes
    */
   @Get('profile/:accountId')
-  async getInstructorProfile(@Param('accountId', ParseIntPipe) accountId: number) {
+  async getInstructorProfile(
+    @Param('accountId', ParseIntPipe) accountId: number,
+  ) {
     return this.availabilityService.getInstructorProfile(accountId);
   }
 
@@ -64,7 +66,9 @@ export class InstructorAvailabilityController {
    * NOTE: This must come BEFORE the general :instructorId route
    */
   @Get(':instructorId/statistics')
-  async getStatistics(@Param('instructorId', ParseIntPipe) instructorId: number) {
+  async getStatistics(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+  ) {
     return this.availabilityService.getStatistics(instructorId);
   }
 
@@ -78,7 +82,11 @@ export class InstructorAvailabilityController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.availabilityService.getAvailability(instructorId, startDate, endDate);
+    return this.availabilityService.getAvailability(
+      instructorId,
+      startDate,
+      endDate,
+    );
   }
 
   /**
@@ -150,4 +158,3 @@ export class InstructorAvailabilityController {
     await this.availabilityService.deleteTimeSlot(instructorId, slotId);
   }
 }
-

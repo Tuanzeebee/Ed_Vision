@@ -9,7 +9,8 @@ export interface ProfileResponse {
 
 export interface StudentInfo {
   studentCode: string;
-  major?: string;
+  programName?: string;
+  departmentName?: string;
   cohortYear?: number;
   classId?: number;
 }
@@ -39,7 +40,9 @@ export interface AccountResponse {
   email: string;
   status: string;
   createdAt: string;
+  updatedAt: string;
   lastLoginAt?: string;
+  lastLogoutAt?: string;
   role?: RoleInfo;
   profile?: ProfileResponse;
   student?: StudentInfo;

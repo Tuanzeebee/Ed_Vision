@@ -13,6 +13,7 @@ model Account {
   password_hash      String
   status             String?          @default("active") @db.VarChar(20)
   created_at         DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime         @default(now()) @db.Timestamptz(6)
   last_login_at      DateTime?        @db.Timestamptz(6)
   last_logout_at     DateTime?        @db.Timestamptz(6)
   role_id            Int?
@@ -92,7 +93,7 @@ model Instructor {
   @@map("Instructor")
 }
 
-model Department { // Bảng Trường: vs ĐTQT
+model Department {
   department_id Int          @id @default(autoincrement())
   code          String?      @unique @db.VarChar(20)
   name          String       @db.VarChar(150)
@@ -103,15 +104,16 @@ model Department { // Bảng Trường: vs ĐTQT
   @@map("Department")
 }
 
-model Program { // Bảng Chương trình: vd: CNPM CMU
+model Program {
   program_id        Int                @id @default(autoincrement())
   program_code      String             @unique @db.VarChar(20)
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
+  department_id     Int
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
-  department_id     Int                
   department        Department         @relation(fields: [department_id], references: [department_id])
+
   @@map("Program")
 }
 
@@ -135,8 +137,8 @@ model AdviserAssignment {
   assigned_date     DateTime?  @db.Date
   ended_date        DateTime?  @db.Date
   note              String?
-  classGroup    ClassGroup @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
-  instructor    Instructor @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
+  classGroup        ClassGroup @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
+  instructor        Instructor @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
 
   @@unique([class_id, instructor_id])
   @@map("AdviserAssignment")
@@ -190,9 +192,9 @@ model CurriculumCourse {
   term_number  Int     @db.SmallInt
   is_mandatory Boolean @default(true)
   note         String?
-  course     Course  @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
-  program    Program @relation(fields: [program_id], references: [program_id], onDelete: Cascade)
-  
+  course       Course  @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  program      Program @relation(fields: [program_id], references: [program_id], onDelete: Cascade)
+
   @@unique([program_id, course_id])
   @@map("CurriculumCourse")
 }

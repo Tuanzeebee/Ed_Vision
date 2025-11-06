@@ -2,9 +2,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { Suspense } from "react";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
-import StudentDetails from "@/modules/parent/Parent_StudentDetails";
+import StudentDetails from "./modules/parent/Parent_StudentDetails";
 import AccountManagement from "./modules/admin/AccountManagement";
 import AddAccount from "./modules/admin/AddAccount";
+import AccountDetailPage from "./modules/admin/AccountDetailPage";
 import StudentManagementDashboard from "./modules/admin/StudentManagementDashboard";
 import AdminOverviewDashboard from "./modules/admin/AdminOverviewDashboard";
 import StudentDetail from "./modules/admin/StudentDetail";
@@ -98,7 +99,9 @@ function App() {
                                         {/* Admin routes - Management (protected) */}
                                         <Route path="/admin/users" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
                                         <Route path="/admin/account-management" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
+                                        <Route path="/admin/accounts" element={<ProtectedRoute><AccountManagement /></ProtectedRoute>} />
                                         <Route path="/admin/accounts/add" element={<ProtectedRoute><AddAccount /></ProtectedRoute>} />
+                                        <Route path="/admin/accounts/:id" element={<ProtectedRoute><AccountDetailPage /></ProtectedRoute>} />
                                         <Route path="/admin/students" element={<ProtectedRoute><StudentManagementDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/student-management" element={<ProtectedRoute><StudentManagementDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/students/list" element={<ProtectedRoute><StudentList /></ProtectedRoute>} />
