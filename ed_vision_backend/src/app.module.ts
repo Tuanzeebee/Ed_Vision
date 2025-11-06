@@ -9,11 +9,13 @@ import { AccountManagementModule } from './admin_be/account-management/account-m
 import { StudentManagementModule } from './admin_be/student-management/student-management.module';
 import { InstructorManagementModule } from './admin_be/instructor-management/instructor-management.module';
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
+import { BookingModule } from './booking/booking.module';
 
 @Module({
   imports: [
     PrismaModule,
     InstructorAvailabilityModule,
+    BookingModule,
     AuthModule,
     RolePermissionsModule,
     AccountManagementModule,

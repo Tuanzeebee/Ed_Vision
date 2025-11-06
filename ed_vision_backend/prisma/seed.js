@@ -65,6 +65,7 @@ async function main() {
 
   // ========== STUDENT ==========
   { key: 'student_course_overview',   name: 'Course Overview',                category: 'student' },
+  { key: 'student_profile_access',    name: 'Profile Access',                 category: 'student' },
   { key: 'student_upload_transcript', name: 'Upload Transcript',              category: 'student' },
   { key: 'student_adjust_parameters', name: 'Adjust Parameters',              category: 'student' },
   { key: 'student_academic_planning', name: 'Academic Planning',              category: 'student' },
@@ -75,6 +76,9 @@ async function main() {
   { key: 'student_live_learning',     name: 'Live Learning',                  category: 'student' },
   { key: 'student_study_rooms',       name: 'Study Rooms',                    category: 'student' },
   { key: 'student_video_room',        name: 'Video Room',                     category: 'student' },
+  
+  // ========== SURVEY ==========
+  { key: 'create_survey',             name: 'Create Survey',                  category: 'survey', sensitive: true },
 
   // ========== PARENT ==========
   { key: 'parent_dashboard',          name: 'Parent Dashboard',               category: 'parent' },
@@ -103,13 +107,21 @@ async function main() {
     if (data.length) await prisma.rolePermission.createMany({ data })
   }
 
-  // student defaults (allow course_overview, profile)
+  // student defaults (allow course_overview, upload_transcript, etc.)
   const studentRole = await prisma.role.findUnique({ where: { code: 'student' } })
   if (studentRole) {
     await prisma.rolePermission.deleteMany({ where: { roleId: studentRole.id } })
     const rows = []
     for (const p of allPerms) {
-      const enabled = ['student_course_overview', 'student_profile_access', 'student_upload_transcript'].includes(p.key)
+      const enabled = [
+        'student_course_overview', 
+        'student_upload_transcript',
+        'student_adjust_parameters',
+        'student_academic_planning',
+        'student_course_detail',
+        'student_financial_survey',
+        'student_choose_mascot'
+      ].includes(p.key)
       rows.push({ roleId: studentRole.id, permissionId: p.id, enabled })
     }
     if (rows.length) await prisma.rolePermission.createMany({ data: rows })
