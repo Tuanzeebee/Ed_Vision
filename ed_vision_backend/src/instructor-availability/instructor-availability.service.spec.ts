@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InstructorAvailabilityService } from './instructor-availability.service';
 import { InstructorAvailabilityRepository } from './instructor-availability.repository';
 
@@ -34,7 +38,9 @@ describe('InstructorAvailabilityService', () => {
       ],
     }).compile();
 
-    service = module.get<InstructorAvailabilityService>(InstructorAvailabilityService);
+    service = module.get<InstructorAvailabilityService>(
+      InstructorAvailabilityService,
+    );
     repository = module.get<InstructorAvailabilityRepository>(
       InstructorAvailabilityRepository,
     );
@@ -174,9 +180,9 @@ describe('InstructorAvailabilityService', () => {
         capacity: 10,
       };
 
-      await expect(service.addTimeSlot(instructorId, dateStr, dto)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.addTimeSlot(instructorId, dateStr, dto),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException if time slot overlaps', async () => {
@@ -199,9 +205,9 @@ describe('InstructorAvailabilityService', () => {
       mockRepository.findOrCreateWeek.mockResolvedValue(mockWeek);
       mockRepository.checkTimeSlotOverlap.mockResolvedValue(true);
 
-      await expect(service.addTimeSlot(instructorId, dateStr, dto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.addTimeSlot(instructorId, dateStr, dto),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -253,9 +259,9 @@ describe('InstructorAvailabilityService', () => {
 
       mockRepository.getSlotById.mockResolvedValue(null);
 
-      await expect(service.updateTimeSlot(instructorId, slotId, dto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.updateTimeSlot(instructorId, slotId, dto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if slot belongs to different instructor', async () => {
@@ -273,9 +279,9 @@ describe('InstructorAvailabilityService', () => {
 
       mockRepository.getSlotById.mockResolvedValue(mockSlot);
 
-      await expect(service.updateTimeSlot(instructorId, slotId, dto)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.updateTimeSlot(instructorId, slotId, dto),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -306,9 +312,9 @@ describe('InstructorAvailabilityService', () => {
 
       mockRepository.getSlotById.mockResolvedValue(null);
 
-      await expect(service.deleteTimeSlot(instructorId, slotId)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteTimeSlot(instructorId, slotId),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -325,4 +331,3 @@ describe('InstructorAvailabilityService', () => {
     });
   });
 });
-

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
 import LoadingSpinner from "../../components/ui/admin/LoadingSpinner";
-import { accountService, type AccountData } from "../../services/api/accountService";
+import { accountService, type AccountData, type FilterOptions } from "../../services/api/accountService";
 import { useToast } from "../../lib/useToast";
 
 // Icon components
@@ -75,14 +75,21 @@ const formatDate = (dateString?: string): string => {
   return date.toLocaleDateString('vi-VN');
 };
 
-const getSchoolOrDepartment = (account: AccountData): string => {
+const getDepartment = (account: AccountData): string => {
   if (account.instructor?.departmentName) {
     return account.instructor.departmentName;
   }
-  if (account.student?.major) {
-    return account.student.major;
+  if (account.student?.departmentName) {
+    return account.student.departmentName;
   }
-  return 'N/A';
+  return '--';
+};
+
+const getMajor = (account: AccountData): string => {
+  if (account.student?.programName) {
+    return account.student.programName;
+  }
+  return '--';
 };
 
 const getUserCode = (account: AccountData): string => {
@@ -136,8 +143,17 @@ export default function AccountManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedSchool, setSelectedSchool] = useState('Tất cả các trường');
+  const [selectedSchool, setSelectedSchool] = useState('');
+  const [selectedMajor, setSelectedMajor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Filter options from database
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    schools: [],
+    majors: [],
+    roles: [],
+    statuses: []
+  });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -148,18 +164,38 @@ export default function AccountManagement() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
+  // Fetch filter options on mount
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const options = await accountService.getFilterOptions();
+        setFilterOptions(options);
+      } catch (error) {
+        console.error('Failed to fetch filter options:', error);
+        showToast('Không thể tải danh sách bộ lọc', 'error');
+      }
+    };
+    fetchFilterOptions();
+  }, [showToast]);
+
   // Fetch data from API
   const fetchAccounts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await accountService.getAccounts({
+      const filters = {
         search: searchTerm || undefined,
         role: selectedRole || undefined,
         status: selectedStatus || undefined,
-        school: selectedSchool !== 'Tất cả các trường' ? selectedSchool : undefined,
+        school: selectedSchool || undefined,
+        major: selectedMajor || undefined,
         page: currentPage,
         limit: usersPerPage,
-      });
+      };
+      
+      // Debug log
+      console.log('Frontend sending filters:', filters);
+      
+      const response = await accountService.getAccounts(filters);
 
       setAccountsData(response.data);
       setTotalRecords(response.meta.total);
@@ -173,7 +209,7 @@ export default function AccountManagement() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, selectedRole, selectedStatus, selectedSchool, currentPage, showToast]);
+  }, [searchTerm, selectedRole, selectedStatus, selectedSchool, selectedMajor, currentPage, showToast]);
 
   useEffect(() => {
     fetchAccounts();
@@ -182,7 +218,27 @@ export default function AccountManagement() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedRole, selectedStatus, selectedSchool]);
+  }, [searchTerm, selectedRole, selectedStatus, selectedSchool, selectedMajor]);
+
+  // Reset major when school changes
+  useEffect(() => {
+    setSelectedMajor('');
+  }, [selectedSchool]);
+
+  // Handle reset filters
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setSelectedSchool('');
+    setSelectedMajor('');
+    setSelectedRole('');
+    setSelectedStatus('');
+    setCurrentPage(1);
+  };
+
+  // Get available majors for selected school
+  const availableMajors = selectedSchool 
+    ? filterOptions.majors.filter(m => m.school === selectedSchool)
+    : filterOptions.majors;
 
   // Handle lock/unlock account
   const handleLockAccount = async (accountId: number) => {
@@ -254,40 +310,57 @@ export default function AccountManagement() {
               <select 
                 value={selectedSchool}
                 onChange={(e) => setSelectedSchool(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-48 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-48 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
               >
-                <option>Tất cả các trường</option>
-                <option>Trường Khoa học máy tính</option>
-                <option>Trường Công nghệ</option>
-                <option>Trường Kinh tế và Kinh doanh</option>
-                <option>Trường Ngôn ngữ và Xã hội nhân văn</option>
-                <option>Trường Du lịch</option>
-                <option>Trường Y-Dược</option>
-                <option>Trường Đào tạo quốc tế</option>
-                <option>Viện Quản lý Nam Khuê</option>
-                <option>Viện Việt-Nhật</option>
+                <option value="">Tất cả các trường</option>
+                {filterOptions.schools.map((school) => (
+                  <option key={school} value={school}>{school}</option>
+                ))}
+              </select>
+              <select 
+                value={selectedMajor}
+                onChange={(e) => setSelectedMajor(e.target.value)}
+                disabled={!selectedSchool}
+                className={`px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-40 focus:outline-none focus:ring-2 focus:ring-blue-500 truncate ${
+                  !selectedSchool ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
+              >
+                <option value="">Tất cả ngành</option>
+                {availableMajors.map((major) => (
+                  <option key={major.name} value={major.name}>{major.name}</option>
+                ))}
               </select>
               <select 
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  console.log('Role changed to:', newRole);
+                  setSelectedRole(newRole);
+                }}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
               >
-                <option value="" className="text-gray-700">Tất cả vai trò</option>
-                <option value="leader" className="text-gray-700">Lãnh đạo</option>
-                <option value="teacher" className="text-gray-700">Giảng viên</option>
-                <option value="student" className="text-gray-700">Sinh viên</option>
-                <option value="parent" className="text-gray-700">Phụ huynh</option>
+                <option value="">Tất cả vai trò</option>
+                {filterOptions.roles.map((role) => (
+                  <option key={role.code} value={role.code}>{role.name}</option>
+                ))}
               </select>
               <select 
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
               >
-                <option value="" className="text-gray-700">Tất cả trạng thái</option>
-                <option value="active" className="text-gray-700">Hoạt động</option>
-                <option value="inactive" className="text-gray-700">Vắng mặt</option>
-                <option value="blocked" className="text-gray-700">Đã khóa</option>
+                <option value="">Tất cả trạng thái</option>
+                {filterOptions.statuses.map((status) => (
+                  <option key={status.code} value={status.code}>{status.name}</option>
+                ))}
               </select>
+              <button 
+                onClick={handleResetFilters}
+                className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
+              >
+                <i className="fas fa-undo mr-2"></i>
+                Reset bộ lọc
+              </button>
             </div>
           </div>
         </Card>
@@ -308,11 +381,12 @@ export default function AccountManagement() {
               <div className="grid grid-cols-12 gap-3 px-6 py-3 text-sm font-semibold text-gray-700">
               <div className="col-span-1">Mã số</div>
               <div className="col-span-2">Họ và tên</div>
-              <div className="col-span-2">Vai trò</div>
+              <div className="col-span-1">Vai trò</div>
               <div className="col-span-2">Trường</div>
-              <div className="col-span-2">Ngày đăng ký</div>
-              <div className="col-span-1">Trạng thái</div>
-              <div className="col-span-2 pl-10">Thao tác</div>
+              <div className="col-span-2">Ngành</div>
+              <div className="col-span-1 whitespace-nowrap">Ngày đăng ký</div>
+              <div className="col-span-1 pl-4">Trạng thái</div>
+              <div className="col-span-2 pl-20">Thao tác</div>
               </div>
             </div>
 
@@ -354,40 +428,40 @@ export default function AccountManagement() {
                   </div>
                 </div>
                 
-                <div className="col-span-2 flex items-center">
+                <div className="col-span-1 flex items-center">
                   <RoleBadge role={getRoleDisplayName(account.role?.code, account.role?.name)} />
                 </div>
                 
                 <div className="col-span-2 flex items-center">
-                  <span className="text-sm text-gray-600 truncate">{getSchoolOrDepartment(account)}</span>
+                  <span className="text-sm text-gray-600 truncate">{getDepartment(account)}</span>
                 </div>
                 
                 <div className="col-span-2 flex items-center">
-                  <span className="text-sm text-gray-600">{formatDate(account.createdAt)}</span>
+                  <span className="text-sm text-gray-600 break-words leading-tight">{getMajor(account)}</span>
                 </div>
                 
                 <div className="col-span-1 flex items-center">
+                  <span className="text-sm text-gray-600">{formatDate(account.createdAt)}</span>
+                </div>
+                
+                <div className="col-span-1 flex items-center pl-4">
                   <StatusBadge status={account.status as 'active' | 'inactive' | 'blocked'}>
                     {account.status === 'active' ? 'Hoạt động' : 
                      account.status === 'inactive' ? 'Vắng mặt' : 'Đã khóa'}
                   </StatusBadge>
                 </div>
                 
-                <div className="col-span-2 flex items-center space-x-1 pl-10">
+                <div className="col-span-2 flex items-center space-x-2 pl-20">
+                  {/* View Account Button - Icon only with tooltip */}
                   <button 
                     onClick={() => navigate(`/admin/accounts/${account.accountId}`)}
-                    title="Xem chi tiết"
+                    title="Xem tài khoản"
                     className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                   >
-                    <span className="text-blue-600 hover:text-blue-900">👁️</span>
+                    <i className="fas fa-eye text-blue-600"></i>
                   </button>
-                  <button 
-                    onClick={() => navigate(`/admin/accounts/edit/${account.accountId}`)}
-                    title="Chỉnh sửa"
-                    className="p-1.5 hover:bg-yellow-50 rounded-md transition-colors cursor-pointer"
-                  >
-                    <span className="text-yellow-600 hover:text-yellow-900">✏️</span>
-                  </button>
+
+                  {/* Lock/Unlock Button */}
                   {account.status === 'blocked' ? (
                     <button 
                       onClick={() => handleUnlockAccount(account.accountId)}
@@ -489,6 +563,7 @@ export default function AccountManagement() {
           </div>
         </Card>
       </div>
+
     </AdminLayout>
   );
 }

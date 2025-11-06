@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InstructorAvailabilityRepository } from './instructor-availability.repository';
 import { AddAvailabilityDateDto } from './dto/add-availability-date.dto';
 import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
@@ -12,19 +17,20 @@ import {
 
 @Injectable()
 export class InstructorAvailabilityService {
-  constructor(
-    private readonly repository: InstructorAvailabilityRepository,
-  ) {}
+  constructor(private readonly repository: InstructorAvailabilityRepository) {}
 
   /**
    * Get instructor profile by account_id
    * Returns instructor_id and other instructor details
    */
   async getInstructorProfile(accountId: number) {
-    const instructor = await this.repository.getInstructorByAccountId(accountId);
-    
+    const instructor =
+      await this.repository.getInstructorByAccountId(accountId);
+
     if (!instructor) {
-      throw new NotFoundException(`No instructor found for account_id: ${accountId}`);
+      throw new NotFoundException(
+        `No instructor found for account_id: ${accountId}`,
+      );
     }
 
     return {
@@ -47,10 +53,18 @@ export class InstructorAvailabilityService {
     endDate?: string,
   ): Promise<AvailabilityResponse> {
     // Default to showing from 30 days ago to next 6 months
-    const start = startDate ? this.parseDateString(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const end = endDate ? this.parseDateString(endDate) : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000);
+    const start = startDate
+      ? this.parseDateString(startDate)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const end = endDate
+      ? this.parseDateString(endDate)
+      : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000);
 
-    const weeks = await this.repository.getSlotsWithBookingCounts(instructorId, start, end);
+    const weeks = await this.repository.getSlotsWithBookingCounts(
+      instructorId,
+      start,
+      end,
+    );
 
     const availabilities: AvailabilityDateResponse[] = [];
     const statistics: AvailabilityStatistics = {
@@ -90,7 +104,12 @@ export class InstructorAvailabilityService {
       // Then, add time slots to the dates
       for (const slot of week.instructorWeeklySlots) {
         // Skip slots with missing required data
-        if (!slot.day_of_week || !slot.start_time_local || !slot.end_time_local || !slot.meeting_type) {
+        if (
+          !slot.day_of_week ||
+          !slot.start_time_local ||
+          !slot.end_time_local ||
+          !slot.meeting_type
+        ) {
           continue;
         }
 
@@ -137,12 +156,18 @@ export class InstructorAvailabilityService {
     }
 
     // Convert map to array and sort by date
-    availabilities.push(...Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date)));
+    availabilities.push(
+      ...Array.from(dateMap.values()).sort((a, b) =>
+        a.date.localeCompare(b.date),
+      ),
+    );
     statistics.totalDates = dateMap.size;
 
     // Count upcoming dates
     const today = new Date().toISOString().split('T')[0];
-    statistics.upcomingDates = availabilities.filter(a => a.date >= today).length;
+    statistics.upcomingDates = availabilities.filter(
+      (a) => a.date >= today,
+    ).length;
 
     return {
       availabilities,
@@ -276,14 +301,23 @@ export class InstructorAvailabilityService {
     }
 
     // Ensure required fields exist
-    if (!slot.start_time_local || !slot.end_time_local || !slot.day_of_week || !slot.meeting_type || !slot.week_id) {
+    if (
+      !slot.start_time_local ||
+      !slot.end_time_local ||
+      !slot.day_of_week ||
+      !slot.meeting_type ||
+      !slot.week_id
+    ) {
       throw new BadRequestException('Time slot has invalid data');
     }
 
     // If updating time, check for overlaps
     if (dto.startTime || dto.endTime) {
-      const startTime = dto.startTime || this.repository.formatTimeToString(slot.start_time_local);
-      const endTime = dto.endTime || this.repository.formatTimeToString(slot.end_time_local);
+      const startTime =
+        dto.startTime ||
+        this.repository.formatTimeToString(slot.start_time_local);
+      const endTime =
+        dto.endTime || this.repository.formatTimeToString(slot.end_time_local);
 
       if (startTime >= endTime) {
         throw new BadRequestException('Start time must be before end time');
@@ -305,13 +339,19 @@ export class InstructorAvailabilityService {
     const updatedSlot = await this.repository.updateTimeSlot(slotId, dto);
 
     // Ensure updated slot has required fields
-    if (!updatedSlot.start_time_local || !updatedSlot.end_time_local || !updatedSlot.meeting_type) {
+    if (
+      !updatedSlot.start_time_local ||
+      !updatedSlot.end_time_local ||
+      !updatedSlot.meeting_type
+    ) {
       throw new BadRequestException('Updated time slot has invalid data');
     }
 
     return {
       slotId: updatedSlot.slot_id,
-      startTime: this.repository.formatTimeToString(updatedSlot.start_time_local),
+      startTime: this.repository.formatTimeToString(
+        updatedSlot.start_time_local,
+      ),
       endTime: this.repository.formatTimeToString(updatedSlot.end_time_local),
       meetingType: updatedSlot.meeting_type,
       capacity: updatedSlot.capacity,
@@ -377,9 +417,11 @@ export class InstructorAvailabilityService {
     await this.repository.deleteAvailabilityDate(week.week_id, date);
 
     // Check if the week still has any availability dates or slots left
-    const remainingDates = await this.repository.getAvailabilityDatesForWeek(week.week_id);
+    const remainingDates = await this.repository.getAvailabilityDatesForWeek(
+      week.week_id,
+    );
     const remainingSlots = await this.repository.getSlotsForWeek(week.week_id);
-    
+
     if (remainingDates.length === 0 && remainingSlots.length === 0) {
       // No dates or slots left in this week, delete the week itself to keep database clean
       await this.repository.deleteWeek(week.week_id);
@@ -441,4 +483,3 @@ export class InstructorAvailabilityService {
     return date;
   }
 }
-

@@ -11,8 +11,71 @@ import * as bcrypt from 'bcrypt';
 export class AccountManagementService {
   constructor(private prisma: PrismaService) {}
 
+  async getFilterOptions() {
+    // Get all departments (schools)
+    const departments = await this.prisma.department.findMany({
+      where: { status: 'active' },
+      select: { name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    // Get all programs (majors) with their department
+    const programs = await this.prisma.program.findMany({
+      select: { 
+        program_name: true,
+        department: {
+          select: { name: true }
+        }
+      },
+      orderBy: { program_name: 'asc' },
+    });
+
+    // Get all roles except admin
+    const roles = await this.prisma.role.findMany({
+      where: { 
+        code: { not: 'admin' }
+      },
+      select: { code: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    return {
+      schools: departments.map(d => d.name),
+      majors: programs.map(p => ({
+        name: p.program_name,
+        school: p.department.name
+      })),
+      roles: roles.map(r => ({ code: r.code, name: r.name })),
+      statuses: [
+        { code: 'active', name: 'Hoạt động' },
+        { code: 'inactive', name: 'Vắng mặt' },
+        { code: 'blocked', name: 'Đã khóa' }
+      ]
+    };
+  }
+
   async findAll(filterDto: AccountFilterDto): Promise<AccountListResponse> {
-    const { search, role, status, page = 1, limit = 10 } = filterDto;
+    const { search, role, status, school, major, page = 1, limit = 10 } = filterDto;
+
+    // Debug log
+    console.log('Filter params:', { search, role, status, school, major, page, limit });
+
+    // Check for conflicting filters: school/major with non-student role
+    // If filtering by school or major AND role is explicitly set to non-student, return empty result
+    if ((school || major) && role && role !== 'student') {
+      console.log('Conflict detected: school/major filter with non-student role');
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+    }
 
     // Build where clause with proper typing
     interface WhereClause {
@@ -22,20 +85,28 @@ export class AccountManagementService {
       }>;
       roleRel?: {
         code?: string;
-        NOT: {
+        NOT?: {
           code: string;
         };
       };
       status?: string;
+      AND?: Array<any>;
+      student?: any;
     }
 
-    const where: WhereClause = {
+    // Start with empty AND array to build conditions
+    const andConditions: Array<any> = [];
+    
+    // Always exclude admin role
+    andConditions.push({
       roleRel: {
         NOT: {
           code: 'admin',
         },
       },
-    };
+    });
+
+    const where: WhereClause = {};
 
     if (search) {
       where.OR = [
@@ -44,18 +115,107 @@ export class AccountManagementService {
       ];
     }
 
-    if (role) {
-      where.roleRel = {
-        code: role,
-        NOT: {
-          code: 'admin',
-        },
-      };
-    }
-
     if (status) {
       where.status = status;
     }
+
+    // Determine effective role (major overrides role to student)
+    let effectiveRole = role;
+    if (major) {
+      effectiveRole = 'student';
+    }
+
+    if (effectiveRole) {
+      // Add role filter to AND conditions
+      andConditions.push({
+        roleRel: {
+          code: effectiveRole,
+        },
+      });
+    }
+
+    // Filter by major (program) - only for students
+    if (major) {
+      // Note: effectiveRole is already set to 'student' above
+      
+      if (school) {
+        // Both school and major filters - exact match for program_name
+        andConditions.push({
+          student: {
+            classGroup: {
+              program: {
+                program_name: { equals: major },
+                department: {
+                  name: { contains: school, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+        });
+      } else {
+        // Only major filter - exact match for program_name
+        andConditions.push({
+          student: {
+            classGroup: {
+              program: {
+                program_name: { equals: major },
+              },
+            },
+          },
+        });
+      }
+    } else if (school) {
+      // If school filter is applied:
+      // - If effectiveRole is 'student', show only students from that school
+      // - If effectiveRole is not set, show both instructors and students from that school
+      // - If effectiveRole is set to non-student (teacher/leader/parent), we already returned empty above
+      if (effectiveRole === 'student') {
+        // Only students from this school
+        andConditions.push({
+          student: {
+            classGroup: {
+              program: {
+                department: {
+                  name: { contains: school, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+        });
+      } else if (!effectiveRole) {
+        // No role specified - show both instructors and students from that school
+        andConditions.push({
+          OR: [
+            {
+              instructor: {
+                department: {
+                  name: { contains: school, mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              student: {
+                classGroup: {
+                  program: {
+                    department: {
+                      name: { contains: school, mode: 'insensitive' },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        });
+      }
+    }
+
+    // Assign AND conditions to where clause
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
+    }
+
+    // Debug: Log the final where clause
+    console.log('Where clause:', JSON.stringify(where, null, 2));
 
     // Count total
     const total = await this.prisma.account.count({ where });
@@ -70,7 +230,11 @@ export class AccountManagementService {
           include: {
             classGroup: {
               include: {
-                program: true,
+                program: {
+                  include: {
+                    department: true,
+                  },
+                },
               },
             },
           },
@@ -93,6 +257,7 @@ export class AccountManagementService {
       email: account.email,
       status: account.status || 'active',
       createdAt: account.created_at.toISOString(),
+      updatedAt: account.updated_at.toISOString(),
       lastLoginAt: account.last_login_at?.toISOString(),
       role: account.roleRel
         ? {
@@ -114,9 +279,9 @@ export class AccountManagementService {
       student: account.student
         ? {
             studentCode: account.student.student_code,
-            major:
-              account.student.major ||
-              account.student.classGroup?.program?.program_name,
+            programName: account.student.classGroup?.program?.program_name,
+            departmentName:
+              account.student.classGroup?.program?.department?.name,
             cohortYear: account.student.cohort_year || undefined,
             classId: account.student.class_id || undefined,
           }
@@ -164,7 +329,11 @@ export class AccountManagementService {
           include: {
             classGroup: {
               include: {
-                program: true,
+                program: {
+                  include: {
+                    department: true,
+                  },
+                },
               },
             },
           },
@@ -187,7 +356,9 @@ export class AccountManagementService {
       email: account.email,
       status: account.status || 'active',
       createdAt: account.created_at.toISOString(),
+      updatedAt: account.updated_at.toISOString(),
       lastLoginAt: account.last_login_at?.toISOString(),
+      lastLogoutAt: account.last_logout_at?.toISOString(),
       role: account.roleRel
         ? {
             id: account.roleRel.id,
@@ -208,9 +379,9 @@ export class AccountManagementService {
       student: account.student
         ? {
             studentCode: account.student.student_code,
-            major:
-              account.student.major ||
-              account.student.classGroup?.program?.program_name,
+            programName: account.student.classGroup?.program?.program_name,
+            departmentName:
+              account.student.classGroup?.program?.department?.name,
             cohortYear: account.student.cohort_year || undefined,
             classId: account.student.class_id || undefined,
           }
@@ -282,32 +453,118 @@ export class AccountManagementService {
   ): Promise<AccountResponse> {
     const account = await this.prisma.account.findUnique({
       where: { account_id: id },
-      include: { profile: true },
+      include: { 
+        profile: true,
+        instructor: true,
+      },
     });
 
     if (!account) {
       throw new NotFoundException(`Account with ID ${id} not found`);
     }
 
-    // Update account
-    await this.prisma.account.update({
-      where: { account_id: id },
-      data: {
-        status: updateAccountDto.status,
-      },
-    });
+    let hasChanges = false;
 
     // Update profile if exists
     if (account.profile) {
-      await this.prisma.profile.update({
-        where: { profile_id: account.profile.profile_id },
+      // Build update data object only with fields that are provided
+      const profileUpdateData: any = {};
+      
+      if (updateAccountDto.fullName !== undefined) {
+        profileUpdateData.full_name = updateAccountDto.fullName;
+        if (updateAccountDto.fullName !== account.profile.full_name) {
+          hasChanges = true;
+        }
+      }
+      
+      if (updateAccountDto.dateOfBirth !== undefined) {
+        profileUpdateData.date_of_birth = new Date(updateAccountDto.dateOfBirth);
+        const newDate = new Date(updateAccountDto.dateOfBirth).toDateString();
+        const oldDate = account.profile.date_of_birth?.toDateString();
+        if (newDate !== oldDate) {
+          hasChanges = true;
+        }
+      }
+      
+      if (updateAccountDto.gender !== undefined) {
+        profileUpdateData.gender = updateAccountDto.gender;
+        if (updateAccountDto.gender !== account.profile.gender) {
+          hasChanges = true;
+        }
+      }
+      
+      if (updateAccountDto.address !== undefined) {
+        profileUpdateData.address = updateAccountDto.address;
+        if (updateAccountDto.address !== account.profile.address) {
+          hasChanges = true;
+        }
+      }
+
+      // Only update profile if there's data to update
+      if (Object.keys(profileUpdateData).length > 0) {
+        await this.prisma.profile.update({
+          where: { profile_id: account.profile.profile_id },
+          data: profileUpdateData,
+        });
+      }
+    }
+
+    // Update instructor if exists and instructor-specific fields are provided
+    if (account.instructor) {
+      const instructorUpdateData: any = {};
+      
+      if (updateAccountDto.employeeCode !== undefined) {
+        instructorUpdateData.employee_code = updateAccountDto.employeeCode;
+        if (updateAccountDto.employeeCode !== account.instructor.employee_code) {
+          hasChanges = true;
+        }
+      }
+      
+      if (updateAccountDto.academicTitle !== undefined) {
+        instructorUpdateData.academic_title = updateAccountDto.academicTitle;
+        if (updateAccountDto.academicTitle !== account.instructor.academic_title) {
+          hasChanges = true;
+        }
+      }
+      
+      if (updateAccountDto.position !== undefined) {
+        instructorUpdateData.position = updateAccountDto.position;
+        if (updateAccountDto.position !== account.instructor.position) {
+          hasChanges = true;
+        }
+      }
+      
+      if (updateAccountDto.departmentId !== undefined) {
+        instructorUpdateData.department_id = updateAccountDto.departmentId;
+        if (updateAccountDto.departmentId !== account.instructor.department_id) {
+          hasChanges = true;
+        }
+      }
+
+      // Only update instructor if there's data to update
+      if (Object.keys(instructorUpdateData).length > 0) {
+        await this.prisma.instructor.update({
+          where: { instructor_id: account.instructor.instructor_id },
+          data: instructorUpdateData,
+        });
+      }
+    }
+
+    // Check if status has changed
+    if (updateAccountDto.status && updateAccountDto.status !== account.status) {
+      hasChanges = true;
+    }
+
+    console.log('Update check - hasChanges:', hasChanges);
+    console.log('UpdateAccountDto:', updateAccountDto);
+
+    // Only update Account if there are actual changes
+    if (hasChanges) {
+      await this.prisma.account.update({
+        where: { account_id: id },
         data: {
-          full_name: updateAccountDto.fullName,
-          date_of_birth: updateAccountDto.dateOfBirth
-            ? new Date(updateAccountDto.dateOfBirth)
-            : undefined,
-          gender: updateAccountDto.gender,
-          address: updateAccountDto.address,
+          status: updateAccountDto.status || account.status,
+          updated_at: new Date(), // Manually set updated_at
         },
       });
     }

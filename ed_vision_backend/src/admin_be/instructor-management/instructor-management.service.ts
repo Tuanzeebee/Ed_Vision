@@ -5,11 +5,35 @@ import { UpdateInstructorDto } from './dto/update-instructor.dto';
 import { InstructorFilterDto } from './dto/instructor-filter.dto';
 import { InstructorResponse } from './models/instructor-response.type';
 import { InstructorListResponse } from './models/instructor-list.type';
+import { InstructorOnlineStats } from './models/instructor-stats.type';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class InstructorManagementService {
   constructor(private prisma: PrismaService) {}
+
+  async getOnlineStats(): Promise<InstructorOnlineStats> {
+    // Get total instructor count
+    const totalCount = await this.prisma.instructor.count();
+
+    // Get online instructor count using raw SQL
+    const onlineResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*) as count
+      FROM "Instructor" i
+      INNER JOIN "Account" a ON i.account_id = a.account_id
+      WHERE a.last_login_at IS NOT NULL
+        AND (a.last_logout_at IS NULL OR a.last_login_at > a.last_logout_at)
+    `;
+
+    const onlineCount = Number(onlineResult[0]?.count || 0);
+
+    console.log('Instructor Online Stats:', { totalCount, onlineCount });
+
+    return {
+      totalCount,
+      onlineCount,
+    };
+  }
 
   async findAll(
     filterDto: InstructorFilterDto,
@@ -71,6 +95,11 @@ export class InstructorManagementService {
           },
         },
         department: true,
+        adviserAssignments: {
+          select: {
+            class_id: true,
+          },
+        },
       },
       skip: (page - 1) * limit,
       take: limit,
@@ -85,6 +114,7 @@ export class InstructorManagementService {
       academicTitle: instructor.academic_title || undefined,
       position: instructor.position || undefined,
       status: instructor.status || 'active',
+      advisingClassCount: instructor.adviserAssignments.length,
       createdAt: instructor.account.created_at.toISOString(),
       profile: instructor.account.profile
         ? {

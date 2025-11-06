@@ -23,6 +23,10 @@ export class AccountFilterDto {
   school?: string;
 
   @IsOptional()
+  @IsString({ message: 'Ngành học phải là chuỗi ký tự' })
+  major?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'Trang phải là số nguyên' })
   @Min(1, { message: 'Trang phải lớn hơn 0' })

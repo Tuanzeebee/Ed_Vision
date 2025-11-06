@@ -28,6 +28,11 @@ export class AccountManagementController {
     private readonly accountManagementService: AccountManagementService,
   ) {}
 
+  @Get('filters/options')
+  async getFilterOptions() {
+    return this.accountManagementService.getFilterOptions();
+  }
+
   @Get()
   async findAll(
     @Query() filterDto: AccountFilterDto,

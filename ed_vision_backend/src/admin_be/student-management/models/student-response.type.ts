@@ -12,6 +12,14 @@ export interface StudentClassInfo {
   programName?: string;
 }
 
+export interface StudentDepartment {
+  name: string;
+}
+
+export interface StudentProgram {
+  programName: string;
+}
+
 export interface StudentResponse {
   studentId: number;
   accountId: number;
@@ -21,6 +29,9 @@ export interface StudentResponse {
   cohortYear?: number;
   status: string;
   createdAt: string;
+  gpa?: number;
   profile?: StudentProfileResponse;
+  department?: StudentDepartment;
+  program?: StudentProgram;
   classInfo?: StudentClassInfo;
 }

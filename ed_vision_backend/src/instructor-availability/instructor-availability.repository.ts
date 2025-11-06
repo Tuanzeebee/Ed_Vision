@@ -38,7 +38,7 @@ export class InstructorAvailabilityRepository {
     }
 
     const weekStartDate = this.getWeekStartDate(date);
-    
+
     let week = await this.prisma.instructorAvailabilityWeek.findUnique({
       where: {
         instructor_id_week_start_date: {
@@ -65,7 +65,7 @@ export class InstructorAvailabilityRepository {
    */
   async findWeek(instructorId: number, date: Date) {
     const weekStartDate = this.getWeekStartDate(date);
-    
+
     return this.prisma.instructorAvailabilityWeek.findUnique({
       where: {
         instructor_id_week_start_date: {
@@ -213,10 +213,7 @@ export class InstructorAvailabilityRepository {
       },
       include: {
         instructorWeeklySlots: {
-          orderBy: [
-            { day_of_week: 'asc' },
-            { start_time_local: 'asc' },
-          ],
+          orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
         },
         instructorAvailabilityDates: {
           where: {
@@ -238,7 +235,11 @@ export class InstructorAvailabilityRepository {
   /**
    * Get slots with appointment counts
    */
-  async getSlotsWithBookingCounts(instructorId: number, startDate: Date, endDate: Date) {
+  async getSlotsWithBookingCounts(
+    instructorId: number,
+    startDate: Date,
+    endDate: Date,
+  ) {
     const weeks = await this.prisma.instructorAvailabilityWeek.findMany({
       where: {
         instructor_id: instructorId,
@@ -262,10 +263,7 @@ export class InstructorAvailabilityRepository {
               },
             },
           },
-          orderBy: [
-            { day_of_week: 'asc' },
-            { start_time_local: 'asc' },
-          ],
+          orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
         },
         instructorAvailabilityDates: {
           where: {
@@ -396,9 +394,9 @@ export class InstructorAvailabilityRepository {
 
       // Check if times overlap:
       // 1. New slot starts during existing slot
-      // 2. New slot ends during existing slot  
+      // 2. New slot ends during existing slot
       // 3. New slot completely contains existing slot
-      const overlaps = 
+      const overlaps =
         (startTimeDate >= slotStart && startTimeDate < slotEnd) ||
         (endTimeDate > slotStart && endTimeDate <= slotEnd) ||
         (startTimeDate <= slotStart && endTimeDate >= slotEnd);
@@ -445,4 +443,3 @@ export class InstructorAvailabilityRepository {
     return `${hours}:${minutes}`;
   }
 }
-

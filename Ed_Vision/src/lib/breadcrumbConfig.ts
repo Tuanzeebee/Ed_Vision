@@ -83,6 +83,10 @@ export const breadcrumbConfig: Record<string, {
     label: 'Thêm mới tài khoản',
     parent: '/admin/users'
   },
+  '/admin/accounts/:id': {
+    label: 'Chi tiết tài khoản',
+    parent: '/admin/accounts'
+  },
   // Reports and analytics
   '/admin/reports/learning': {
     label: 'Thống kê Tổng quát',

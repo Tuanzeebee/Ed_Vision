@@ -15,12 +15,18 @@ import { UpdateInstructorDto } from './dto/update-instructor.dto';
 import { InstructorFilterDto } from './dto/instructor-filter.dto';
 import { InstructorResponse } from './models/instructor-response.type';
 import { InstructorListResponse } from './models/instructor-list.type';
+import { InstructorOnlineStats } from './models/instructor-stats.type';
 
 @Controller('admin/instructors')
 export class InstructorManagementController {
   constructor(
     private readonly instructorManagementService: InstructorManagementService,
   ) {}
+
+  @Get('stats/online')
+  async getOnlineStats(): Promise<InstructorOnlineStats> {
+    return this.instructorManagementService.getOnlineStats();
+  }
 
   @Get()
   async findAll(

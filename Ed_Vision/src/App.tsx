@@ -3,9 +3,10 @@ import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
-import StudentDetails from "@/modules/parent/Parent_StudentDetails";
+import StudentDetails from "./modules/parent/Parent_StudentDetails";
 import AccountManagement from "./modules/admin/AccountManagement";
 import AddAccount from "./modules/admin/AddAccount";
+import AccountDetailPage from "./modules/admin/AccountDetailPage";
 import StudentManagementDashboard from "./modules/admin/StudentManagementDashboard";
 import AdminOverviewDashboard from "./modules/admin/AdminOverviewDashboard";
 import StudentDetail from "./modules/admin/StudentDetail";
@@ -107,7 +108,9 @@ function App() {
                                         {/* Admin routes - Management (protected by permission) */}
                                         <Route path="/admin/users" element={<ProtectedRoute permission="admin_users"><AccountManagement /></ProtectedRoute>} />
                                         <Route path="/admin/account-management" element={<ProtectedRoute permission="admin_users"><AccountManagement /></ProtectedRoute>} />
+                                        <Route path="/admin/accounts" element={<ProtectedRoute permission="admin_users"><AccountManagement /></ProtectedRoute>} />
                                         <Route path="/admin/accounts/add" element={<ProtectedRoute permission="admin_users"><AddAccount /></ProtectedRoute>} />
+                                        <Route path="/admin/accounts/:id" element={<ProtectedRoute permission="admin_users"><AccountDetailPage /></ProtectedRoute>} />
                                         <Route path="/admin/students" element={<ProtectedRoute permission="admin_students"><StudentManagementDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/student-management" element={<ProtectedRoute permission="admin_students"><StudentManagementDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/students/list" element={<ProtectedRoute permission="admin_students"><StudentList /></ProtectedRoute>} />

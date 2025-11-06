@@ -1,4 +1,13 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsEnum, Matches, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsEnum,
+  Matches,
+  IsBoolean,
+} from 'class-validator';
 
 export class UpdateTimeSlotDto {
   @IsOptional()
@@ -37,4 +46,3 @@ export class UpdateTimeSlotDto {
   @IsString()
   note?: string;
 }
-

@@ -1,71 +1,92 @@
-import { Injectable, BadRequestException, InternalServerErrorException, HttpException } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
-import * as nodemailer from 'nodemailer'
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  HttpException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class OtpService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   // Generate a numeric OTP code. Default length is 4 to match frontend UI.
   private generateCode(length = 4) {
-    const digits = '0123456789'
-    let code = ''
-    for (let i = 0; i < length; i++) code += digits[Math.floor(Math.random() * digits.length)]
-    return code
+    const digits = '0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++)
+      code += digits[Math.floor(Math.random() * digits.length)];
+    return code;
   }
 
   private getTransport() {
     // Read SMTP config from env
-    const host = process.env.SMTP_HOST
-    const port = Number(process.env.SMTP_PORT || 587)
-    const user = process.env.SMTP_USER
-    const pass = process.env.SMTP_PASS
+    const host = process.env.SMTP_HOST;
+    const port = Number(process.env.SMTP_PORT || 587);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
 
     if (!host || !user || !pass) {
-      throw new InternalServerErrorException('Thiếu cấu hình SMTP')
+      throw new InternalServerErrorException('Thiếu cấu hình SMTP');
     }
 
-    return nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } })
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
   }
 
   async sendOtpToEmail(email: string) {
     // ensure account exists
-    const account = await this.prisma.account.findUnique({ where: { email } })
+    const account = await this.prisma.account.findUnique({ where: { email } });
     if (!account) {
-      throw new BadRequestException('Không tìm thấy tài khoản')
+      throw new BadRequestException('Không tìm thấy tài khoản');
     }
 
     // Rate limiting: cooldown between sends and max sends per time window
-    const cooldownSec = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60)
-    const windowMinutes = Number(process.env.OTP_WINDOW_MINUTES || 30)
-    const maxPerWindow = Number(process.env.OTP_MAX_PER_WINDOW || 5)
+    const cooldownSec = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60);
+    const windowMinutes = Number(process.env.OTP_WINDOW_MINUTES || 30);
+    const maxPerWindow = Number(process.env.OTP_MAX_PER_WINDOW || 5);
 
     // check last OTP created
     const lastOtp = await (this.prisma as any).otp.findFirst({
       where: { account_id: account.account_id },
       orderBy: { created_at: 'desc' },
-    })
+    });
 
     if (lastOtp) {
-      const lastCreated = new Date(lastOtp.created_at).getTime()
-      const now = Date.now()
-      const elapsedSec = Math.floor((now - lastCreated) / 1000)
+      const lastCreated = new Date(lastOtp.created_at).getTime();
+      const now = Date.now();
+      const elapsedSec = Math.floor((now - lastCreated) / 1000);
       if (elapsedSec < cooldownSec) {
-        const wait = cooldownSec - elapsedSec
-        throw new BadRequestException(`Vui lòng đợi ${wait} giây trước khi yêu cầu mã mới`)
+        const wait = cooldownSec - elapsedSec;
+        throw new BadRequestException(
+          `Vui lòng đợi ${wait} giây trước khi yêu cầu mã mới`,
+        );
       }
     }
 
     // count OTPs in the window
-    const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000)
-    const recentCount = await (this.prisma as any).otp.count({ where: { account_id: account.account_id, created_at: { gte: windowStart } } })
+    const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
+    const recentCount = await (this.prisma as any).otp.count({
+      where: {
+        account_id: account.account_id,
+        created_at: { gte: windowStart },
+      },
+    });
     if (recentCount >= maxPerWindow) {
-      throw new HttpException('Quá nhiều yêu cầu OTP. Vui lòng thử lại sau', 429)
+      throw new HttpException(
+        'Quá nhiều yêu cầu OTP. Vui lòng thử lại sau',
+        429,
+      );
     }
 
     // Generate a 4-digit code to match the frontend input
-    const code = this.generateCode(4)
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+    const code = this.generateCode(4);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
     // Persist OTP
     await (this.prisma as any).otp.create({
@@ -74,11 +95,11 @@ export class OtpService {
         code,
         expires_at: expiresAt,
       },
-    })
+    });
 
     // Send email via SMTP transport (Mailjet in your .env)
-    const transporter = this.getTransport()
-    const from = process.env.EMAIL_FROM || process.env.SMTP_USER
+    const transporter = this.getTransport();
+    const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
     const expiryMinutes = 5; // đổi nếu bạn muốn
     // const verifyUrl = `https://edvision.yoursite.com/verify?email=${encodeURIComponent(email)}`; // (tuỳ chọn) nếu bạn có trang verify
 
@@ -222,42 +243,54 @@ The Ed_Vision Team`,
   `,
     };
 
-
     try {
-      const result = await transporter.sendMail(mailOptions)
+      const result = await transporter.sendMail(mailOptions);
       // log send result for debugging (do not log OTP code in production logs)
-      console.log('OTP email sent', { to: email, messageId: result.messageId, accepted: result.accepted })
-      return { ok: true }
+      console.log('OTP email sent', {
+        to: email,
+        messageId: result.messageId,
+        accepted: result.accepted,
+      });
+      return { ok: true };
     } catch (err) {
       // remove persisted OTP on failure to avoid orphaned codes
       try {
-        await (this.prisma as any).otp.deleteMany({ where: { account_id: account.account_id, code } })
+        await (this.prisma as any).otp.deleteMany({
+          where: { account_id: account.account_id, code },
+        });
       } catch (e) {
-        console.error('Failed to cleanup OTP after send failure', e)
+        console.error('Failed to cleanup OTP after send failure', e);
       }
-      console.error('Failed to send OTP email', err)
-      throw new InternalServerErrorException('Không thể gửi email xác thực')
+      console.error('Failed to send OTP email', err);
+      throw new InternalServerErrorException('Không thể gửi email xác thực');
     }
   }
 
   async verifyOtp(email: string, code: string) {
-    const account = await this.prisma.account.findUnique({ where: { email } })
-    if (!account) throw new BadRequestException('Không tìm thấy tài khoản')
+    const account = await this.prisma.account.findUnique({ where: { email } });
+    if (!account) throw new BadRequestException('Không tìm thấy tài khoản');
 
     const otp = await (this.prisma as any).otp.findFirst({
       where: { account_id: account.account_id, code, used: false },
       orderBy: { created_at: 'desc' },
-    })
+    });
 
-    if (!otp) throw new BadRequestException('Mã xác thực không hợp lệ')
-    if (otp.expires_at < new Date()) throw new BadRequestException('Mã xác thực đã hết hạn')
+    if (!otp) throw new BadRequestException('Mã xác thực không hợp lệ');
+    if (otp.expires_at < new Date())
+      throw new BadRequestException('Mã xác thực đã hết hạn');
 
     // mark used
-    await (this.prisma as any).otp.update({ where: { otp_id: otp.otp_id }, data: { used: true } })
+    await (this.prisma as any).otp.update({
+      where: { otp_id: otp.otp_id },
+      data: { used: true },
+    });
 
     // activate account
-    await this.prisma.account.update({ where: { account_id: account.account_id }, data: { status: 'active' } })
+    await this.prisma.account.update({
+      where: { account_id: account.account_id },
+      data: { status: 'active' },
+    });
 
-    return { ok: true }
+    return { ok: true };
   }
 }
