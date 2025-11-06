@@ -55,7 +55,8 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
-import ChatView from "./modules/student/ChatView";
+import { LiveLearning } from "./modules/student";
+import ChatStudent from "./modules/student/ChatStudent";
 import BookingScheduler from "./modules/booking/BookingScheduler";
 
 function App() {
@@ -89,7 +90,8 @@ function App() {
                                         <Route path="/student/financial-survey/step/1" element={<ProtectedRoute permission="student_financial_survey"><FinancialSurveyStep1 /></ProtectedRoute>} />
                                         <Route path="/student/choose-mascot" element={<ProtectedRoute permission="student_choose_mascot"><ChooseMascot /></ProtectedRoute>} />
                                         <Route path="/student/learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
-                                        <Route path="/student/chat-view" element={<ProtectedRoute permission="student_course_overview"><ChatView /></ProtectedRoute>} />
+                                        <Route path="/student/chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
+                                        <Route path="/student/live-learning" element={<ProtectedRoute permission="student_live_learning"><LiveLearning /></ProtectedRoute>} />
 
                                         {/* Route cho parent */}
                                         <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
