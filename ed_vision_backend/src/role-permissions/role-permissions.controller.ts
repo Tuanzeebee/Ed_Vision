@@ -23,6 +23,12 @@ export class RolePermissionsController {
     return { success: true };
   }
 
+  @Get('roles')
+  async getRoles() {
+    const roles = await this.svc.getAllRoles()
+    return { success: true, roles }
+  }
+
   @Get('permissions')
   async getPermissions() {
     // returns list of permission definitions

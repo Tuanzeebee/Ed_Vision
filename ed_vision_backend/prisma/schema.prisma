@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Meeting type for slots & appointments. Values intentionally lowercase to match frontend strings.
+enum MeetingType {
+  online
+  offline
+  both
+}
+  
 model Account {
   account_id         Int              @id @default(autoincrement())
   email              String           @unique @db.VarChar(255)
@@ -93,7 +100,7 @@ model Instructor {
   @@map("Instructor")
 }
 
-model Department {
+model Department { //Trường vd: ĐTQT
   department_id Int          @id @default(autoincrement())
   code          String?      @unique @db.VarChar(20)
   name          String       @db.VarChar(150)
@@ -104,15 +111,17 @@ model Department {
   @@map("Department")
 }
 
-model Program {
+model Program { //Chương trình vd: CMU
   program_id        Int                @id @default(autoincrement())
   program_code      String             @unique @db.VarChar(20)
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
   department_id     Int
+  department_id     Int
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
   department        Department         @relation(fields: [department_id], references: [department_id])
+
 
   @@map("Program")
 }
@@ -300,7 +309,9 @@ model InstructorWeeklySlot {
   is_open          Boolean                     @default(true)
   note             String?
   auto_accept      Boolean                     @default(false)
-  meeting_type     String?                     @default("offline") @db.VarChar(32)
+  meeting_type     MeetingType?                @default(offline)
+  meeting_location String?
+  meeting_link     String?
   appointments     Appointment[]
   week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
@@ -315,10 +326,8 @@ model Appointment {
   booker_role           String               @db.VarChar(20)
   student_id            Int?
   instructor_id         Int?
-  meeting_type          String               @db.VarChar(32)
+  meeting_type          MeetingType
   meeting_purpose       String?              @db.VarChar(255)
-  meeting_location      String?
-  meeting_link          String?
   status                String               @default("pending") @db.VarChar(32)
   cancel_reason         String?
   created_at            DateTime             @default(now()) @db.Timestamptz(6)

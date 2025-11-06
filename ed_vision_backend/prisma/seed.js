@@ -140,54 +140,18 @@ async function main() {
       category: 'teacher',
     },
 
-    // ========== STUDENT ==========
-    {
-      key: 'student_course_overview',
-      name: 'Course Overview',
-      category: 'student',
-    },
-    {
-      key: 'student_upload_transcript',
-      name: 'Upload Transcript',
-      category: 'student',
-    },
-    {
-      key: 'student_adjust_parameters',
-      name: 'Adjust Parameters',
-      category: 'student',
-    },
-    {
-      key: 'student_academic_planning',
-      name: 'Academic Planning',
-      category: 'student',
-    },
-    {
-      key: 'student_course_detail',
-      name: 'Course Detail',
-      category: 'student',
-    },
-    {
-      key: 'student_financial_survey',
-      name: 'Financial Survey',
-      category: 'student',
-    },
-    {
-      key: 'student_choose_mascot',
-      name: 'Choose Mascot',
-      category: 'student',
-    },
-    {
-      key: 'student_learning_adventure',
-      name: 'Learning Adventure',
-      category: 'student',
-    },
-    {
-      key: 'student_live_learning',
-      name: 'Live Learning',
-      category: 'student',
-    },
-    { key: 'student_study_rooms', name: 'Study Rooms', category: 'student' },
-    { key: 'student_video_room', name: 'Video Room', category: 'student' },
+  // ========== STUDENT ==========
+  { key: 'student_course_overview',   name: 'Course Overview',                category: 'student' },
+  { key: 'student_upload_transcript', name: 'Upload Transcript',              category: 'student' },
+  { key: 'student_adjust_parameters', name: 'Adjust Parameters',              category: 'student' },
+  { key: 'student_academic_planning', name: 'Academic Planning',              category: 'student' },
+  { key: 'student_course_detail',     name: 'Course Detail',                  category: 'student' },
+  { key: 'student_financial_survey',  name: 'Financial Survey',               category: 'student' },
+  { key: 'student_choose_mascot',     name: 'Choose Mascot',                  category: 'student' },
+  { key: 'student_learning_adventure',name: 'Learning Adventure',             category: 'student' },
+  { key: 'student_live_learning',     name: 'Live Learning',                  category: 'student' },
+  { key: 'student_study_rooms',       name: 'Study Rooms',                    category: 'student' },
+  { key: 'student_video_room',        name: 'Video Room',                     category: 'student' },
 
     // ========== PARENT ==========
     { key: 'parent_dashboard', name: 'Parent Dashboard', category: 'parent' },
@@ -241,21 +205,15 @@ async function main() {
   }
 
   // student defaults (allow course_overview, profile)
-  const studentRole = await prisma.role.findUnique({
-    where: { code: 'student' },
-  });
+  const studentRole = await prisma.role.findUnique({ where: { code: 'student' } })
   if (studentRole) {
     await prisma.rolePermission.deleteMany({
       where: { roleId: studentRole.id },
     });
     const rows = [];
     for (const p of allPerms) {
-      const enabled = [
-        'student_course_overview',
-        'student_profile_access',
-        'student_upload_transcript',
-      ].includes(p.key);
-      rows.push({ roleId: studentRole.id, permissionId: p.id, enabled });
+      const enabled = ['student_course_overview', 'student_profile_access', 'student_upload_transcript'].includes(p.key)
+      rows.push({ roleId: studentRole.id, permissionId: p.id, enabled })
     }
     if (rows.length) await prisma.rolePermission.createMany({ data: rows });
   }

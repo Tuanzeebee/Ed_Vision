@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class InstructorAvailabilityRepository {
@@ -171,7 +172,7 @@ export class InstructorAvailabilityRepository {
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    meetingType: string,
+    meetingType: 'online' | 'offline' | 'both' | string,
     capacity: number,
     note?: string,
   ) {
@@ -184,7 +185,8 @@ export class InstructorAvailabilityRepository {
         day_of_week: dayOfWeek,
         start_time_local: startTimeDate,
         end_time_local: endTimeDate,
-        meeting_type: meetingType,
+        // meetingType may be a string or enum; cast to any to satisfy generated Prisma types
+        meeting_type: meetingType as any,
         capacity,
         is_open: true,
         auto_accept: false,
@@ -310,7 +312,7 @@ export class InstructorAvailabilityRepository {
     data: {
       startTime?: string;
       endTime?: string;
-      meetingType?: string;
+  meetingType?: 'online' | 'offline' | 'both' | string;
       capacity?: number;
       isOpen?: boolean;
       autoAccept?: boolean;
