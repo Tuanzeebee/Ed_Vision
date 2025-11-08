@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarPlus,
@@ -15,15 +15,18 @@ import {
 import type { AvailableDate } from './types/appointment.types';
 import {
   formatDate,
-  getTodayString,
-  getMaxDateString,
   calculateEndTime,
   isTimeSlotOverlapping,
 } from './utils/appointmentUtils';
 import { useInstructorAvailability } from './hooks/useInstructorAvailability';
 import { useInstructorProfile } from './hooks/useInstructorProfile';
 import { instructorAvailabilityApi } from '../../services/teacher/api';
-import { cacheService } from '../../services/cache';
+import {
+  getCurrentWeek,
+  formatDateForAPI,
+  getDayName,
+  getDatesInWeek,
+} from '../../lib/weekUtils';
 
 interface ScheduleManagementProps {
   availableDates: AvailableDate[];
@@ -39,6 +42,9 @@ export default function ScheduleManagement({
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState('');
 
+  // Chỉ quản lý tuần hiện tại
+  const currentWeek = getCurrentWeek();
+
   // Get instructor profile from logged-in account
   const { instructorId, loading: profileLoading, error: profileError } = useInstructorProfile();
 
@@ -46,7 +52,7 @@ export default function ScheduleManagement({
   const {
     loading,
     error: apiError,
-    fetchAvailability,
+    fetchWeeklyAvailability,
     // fetchStatistics, // TODO: Use this for real-time statistics
     addAvailabilityDate,
     // bulkCreateAvailability, // TODO: Use this for bulk operations
@@ -73,6 +79,46 @@ export default function ScheduleManagement({
     return new Date(year, month - 1, day);
   };
 
+  // Chỉ load dữ liệu tuần hiện tại
+  const loadCurrentWeekData = useCallback(async () => {
+    if (!instructorId) return;
+    
+    const week = getCurrentWeek();
+    try {
+      const startDate = formatDateForAPI(week.startDate);
+      const endDate = formatDateForAPI(week.endDate);
+      // Chỉ load những ngày có sẵn, không tự động tạo tuần mới
+      const data = await fetchWeeklyAvailability(startDate, endDate, false);
+      
+      // Nếu không có dữ liệu (tuần chưa được tạo), tạo template tuần rỗng
+      if (!data || data.length === 0) {
+        const weekDates = getDatesInWeek(week);
+        const emptyWeekData: AvailableDate[] = weekDates.map((date: Date) => ({
+          date: formatDateForAPI(date),
+          isAvailable: false,
+          timeSlots: [],
+        }));
+        setAvailableDates(emptyWeekData);
+        showToast(`Khởi tạo tuần hiện tại ${week.displayText}`, 'info');
+      } else {
+        setAvailableDates(data);
+        showToast(`Đã tải lịch tuần hiện tại`, 'success');
+      }
+    } catch (err) {
+      // Nếu API lỗi, tạo template tuần rỗng để UI vẫn hiển thị được
+      const weekDates = getDatesInWeek(week);
+      const emptyWeekData: AvailableDate[] = weekDates.map((date: Date) => ({
+        date: formatDateForAPI(date),
+        isAvailable: false,
+        timeSlots: [],
+      }));
+      setAvailableDates(emptyWeekData);
+      showToast('Không thể tải dữ liệu. Hiển thị tuần trống.', 'warning');
+    }
+  }, [instructorId, fetchWeeklyAvailability, setAvailableDates, showToast]);
+
+
+
   // Show profile error if any
   useEffect(() => {
     if (profileError) {
@@ -87,64 +133,33 @@ export default function ScheduleManagement({
     }
   }, [startTime, duration]);
 
-  // Load availability data from backend with optimized caching
-  // Uses session-based tracking to prevent unnecessary reloads
+  // Load availability data cho tuần hiện tại
   useEffect(() => {
     // Don't load if instructor profile is still loading or not available
     if (profileLoading || !instructorId) {
       return;
     }
 
-    const loadAvailability = async () => {
+    const loadInitialData = async () => {
       // Check if this is truly the first load (session-based tracking)
       const hasLoadedThisSession = sessionStorage.getItem('scheduleDataLoaded');
 
-      // Check if we have cached data (memory or session storage)
-      const cacheKey = cacheService.getAvailabilityKey(instructorId);
-      const cachedData = cacheService.get<any>(cacheKey);
-
-      // Priority 1: Use cached data if available
-      if (cachedData && cachedData.availabilities && availableDates.length === 0) {
-        setAvailableDates(cachedData.availabilities.map((avail: any) => ({
-          date: avail.date,
-          weekId: avail.weekId,
-          timeSlots: avail.timeSlots.map((slot: any) => ({
-            slotId: slot.slotId,
-            start: slot.startTime,
-            end: slot.endTime,
-            meetingType: slot.meetingType,
-            capacity: slot.capacity,
-          })),
-        })));
-        sessionStorage.setItem('scheduleDataLoaded', 'true');
-        return;
-      }
-
-      // Priority 2: Load from backend if:
-      // - Never loaded this session AND
-      // - No local data exists (availableDates is empty)
+      // Load current week data if never loaded this session
       if (!hasLoadedThisSession && availableDates.length === 0) {
         try {
-          const data = await fetchAvailability();
-
-          // Update state with backend data
-          setAvailableDates(data);
+          // Chỉ load tuần hiện tại
+          await loadCurrentWeekData();
 
           // Mark as loaded for this session
           sessionStorage.setItem('scheduleDataLoaded', 'true');
-
-          if (data.length > 0) {
-            showToast('Đã tải lịch rảnh từ server!', 'info');
-          }
         } catch (err) {
           // Still mark as loaded to prevent retry loops
           sessionStorage.setItem('scheduleDataLoaded', 'true');
         }
       }
     };
-    loadAvailability();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instructorId, profileLoading]); // Reload when instructorId becomes available
+    loadInitialData();
+  }, [instructorId, profileLoading, loadCurrentWeekData]); // Reload when instructorId becomes available
 
   // Show API errors via toast
   useEffect(() => {
@@ -169,64 +184,92 @@ export default function ScheduleManagement({
       return;
     }
 
-    if (availableDates.find((d) => d.date === date)) {
-      showToast('Ngày này đã được thêm!', 'warning');
+    // Check if date already exists and is enabled
+    const existingDate = availableDates.find((d) => d.date === date);
+    if (existingDate?.isAvailable) {
+      showToast('Ngày này đã được bật!', 'warning');
       return;
     }
 
     try {
-      // Add to backend first
+      // Enable date in backend
       await addAvailabilityDate(date, []);
-      // Update local state
-      setAvailableDates([...availableDates, { date, timeSlots: [] }]);
+      
+      // Update local state - set isAvailable = true for existing date
+      const updatedDates = availableDates.map((d) =>
+        d.date === date ? { ...d, isAvailable: true } : d
+      );
+      setAvailableDates(updatedDates);
       setSelectedDate('');
-      showToast('Đã thêm ngày rảnh thành công!', 'success');
+      showToast('Đã bật ngày rảnh thành công!', 'success');
     } catch (err) {
-      showToast('Không thể thêm ngày rảnh. Vui lòng thử lại!', 'error');
+      showToast('Không thể bật ngày rảnh. Vui lòng thử lại!', 'error');
     }
   };
 
   const handleRemoveDate = async (index: number, skipConfirm: boolean = false) => {
-    const removedDate = availableDates[index];
-    const hasTimeSlots = removedDate?.timeSlots?.length > 0;
+    const dateToDisable = availableDates[index];
+    const hasTimeSlots = (dateToDisable?.timeSlots?.length || 0) > 0;
 
     if (!skipConfirm) {
       // Open custom confirmation modal instead of browser confirm
-      setDateToDelete({ index, date: removedDate });
+      setDateToDelete({ index, date: dateToDisable });
       setDeleteConfirmOpen(true);
       return;
     }
 
     try {
-      // Delete from backend first
-      await deleteAvailabilityDate(removedDate.date);
-      // Update local state
-      setAvailableDates(availableDates.filter((_, i) => i !== index));
+      // Disable date in backend (sets is_available = false and removes time slots)
+      await deleteAvailabilityDate(dateToDisable.date);
+      
+      // Update local state - set isAvailable = false and clear time slots
+      const updatedDates = availableDates.map((d) =>
+        d.date === dateToDisable.date 
+          ? { ...d, isAvailable: false, timeSlots: [] } 
+          : d
+      );
+      setAvailableDates(updatedDates);
 
-      // Only show toast if the date had time slots (important deletion)
-      // For empty dates (no slots), delete silently for better UX
+      // Show appropriate message
       if (hasTimeSlots) {
-        showToast(`Đã xóa ngày ${formatDate(removedDate.date)} và ${removedDate.timeSlots.length} khung giờ!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
+      } else {
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)}!`, 'success');
       }
     } catch (err) {
-      showToast('Không thể xóa ngày. Vui lòng thử lại!', 'error');
+      showToast('Không thể tắt ngày. Vui lòng thử lại!', 'error');
     }
   };
 
   const confirmDeleteDate = async () => {
     if (!dateToDelete) return;
 
-    showToast('Đang xóa ngày rảnh...', 'info');
+    showToast('Đang tắt ngày rảnh...', 'info');
     setDeleteConfirmOpen(false);
 
     try {
-      // Delete from backend first
-      await deleteAvailabilityDate(dateToDelete.date.date);
-      // Update local state
-      setAvailableDates(availableDates.filter((_, i) => i !== dateToDelete.index));
-      showToast(`Đã xóa ngày ${formatDate(dateToDelete.date.date)}!`, 'success');
+      const dateToDisable = dateToDelete.date;
+      const hasTimeSlots = (dateToDisable?.timeSlots?.length || 0) > 0;
+
+      // Disable date in backend (sets is_available = false and removes time slots)
+      await deleteAvailabilityDate(dateToDisable.date);
+      
+      // Update local state - set isAvailable = false and clear time slots (không xóa khỏi array)
+      const updatedDates = availableDates.map((d) =>
+        d.date === dateToDisable.date 
+          ? { ...d, isAvailable: false, timeSlots: [] } 
+          : d
+      );
+      setAvailableDates(updatedDates);
+
+      // Show appropriate message
+      if (hasTimeSlots) {
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
+      } else {
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)}!`, 'success');
+      }
     } catch (err) {
-      showToast('Không thể xóa ngày. Vui lòng thử lại!', 'error');
+      showToast('Không thể tắt ngày. Vui lòng thử lại!', 'error');
     } finally {
       setDateToDelete(null);
     }
@@ -259,7 +302,10 @@ export default function ScheduleManagement({
     }
 
     const dateIndex = availableDates.findIndex((d) => d.date === currentDateForTime);
-    if (dateIndex === -1) return;
+    if (dateIndex === -1) {
+      showToast('Lỗi: Không tìm thấy ngày để thêm khung giờ!', 'error');
+      return;
+    }
 
     if (isTimeSlotOverlapping(startTime, endTime, availableDates[dateIndex].timeSlots)) {
       showToast('Khung giờ này bị trùng với khung giờ đã có!', 'warning');
@@ -318,13 +364,14 @@ export default function ScheduleManagement({
     }
   };
 
-  // Statistics
-  const totalDates = availableDates.length;
-  const totalTimeSlots = availableDates.reduce((sum, date) => sum + date.timeSlots.length, 0);
-  const totalHours = availableDates.reduce((sum, date) => {
+  // Statistics - Only count enabled dates
+  const enabledDates = availableDates.filter(date => date.isAvailable);
+  const totalDates = enabledDates.length;
+  const totalTimeSlots = enabledDates.reduce((sum, date) => sum + (date.timeSlots?.length || 0), 0);
+  const totalHours = enabledDates.reduce((sum, date) => {
     return (
       sum +
-      date.timeSlots.reduce((slotSum, slot) => {
+      (date.timeSlots || []).reduce((slotSum, slot) => {
         const start = new Date(`2000-01-01T${slot.start}`);
         const end = new Date(`2000-01-01T${slot.end}`);
         return slotSum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -335,20 +382,9 @@ export default function ScheduleManagement({
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Reset time to compare only dates
 
-  const upcomingDates = availableDates.filter((date) => parseLocalDate(date.date) >= today).length;
+  const upcomingDates = enabledDates.filter((date) => parseLocalDate(date.date) >= today).length;
 
-  // Quick dates
-  const quickDates = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    return date;
-  });
-  // Fix: getDay() returns 0=Sunday, 1=Monday, 2=Tuesday, etc.
-  // So we need to map correctly
-  const getDayName = (dayIndex: number) => {
-    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    return days[dayIndex];
-  };
+
 
   return (
     <>
@@ -396,25 +432,28 @@ export default function ScheduleManagement({
                 Thiết lập ngày và giờ rảnh để sinh viên có thể đặt lịch hẹn
               </p>
             </div>
-            {/* Debug: Reload button */}
-            <button
-              onClick={async () => {
-                try {
-                  const data = await fetchAvailability();
-                  setAvailableDates(data);
-                  showToast('Đã tải lại dữ liệu từ server!', 'success');
-                } catch (err) {
-                  showToast('Không thể tải lại dữ liệu!', 'error');
-                }
-              }}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium flex items-center gap-2 border border-white/30"
-              title="Tải lại dữ liệu từ server"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Tải lại
-            </button>
+            {/* Hiển thị thông tin tuần hiện tại và refresh */}
+            <div className="flex items-center gap-3">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                <div className="text-center">
+                  <div className="text-sm font-medium">{currentWeek.displayText}</div>
+                  <div className="text-xs text-teal-200">Tuần hiện tại</div>
+                </div>
+              </div>
+              
+              {/* Refresh button */}
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem('scheduleDataLoaded');
+                  loadCurrentWeekData();
+                }}
+                disabled={loading}
+                className="px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors border border-white/30 disabled:opacity-50"
+                title="Tải lại dữ liệu"
+              >
+                🔄 Tải lại
+              </button>
+            </div>
           </div>
         </div>
 
@@ -445,64 +484,90 @@ export default function ScheduleManagement({
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Thêm ngày rảnh mới</h2>
 
-          {/* Quick Date Selection */}
+          {/* Quick Date Selection - Week View */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Chọn nhanh ngày trong tuần
+              Chọn nhanh ngày trong tuần hiện tại ({currentWeek.displayText})
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
-              {quickDates.map((date, index) => {
-                // Format date as YYYY-MM-DD in local timezone (not UTC)
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const dateString = `${year}-${month}-${day}`;
+              {availableDates.map((dateEntry, index) => {
+                // Use dates directly from API response - no client-side generation
+                const dateString = dateEntry.date;
+                const date = new Date(dateString + 'T00:00:00'); // Parse API date
 
-                const isToday = index === 0;
-                const isAdded = availableDates.some((d) => d.date === dateString);
-                const dateIndex = availableDates.findIndex((d) => d.date === dateString);
-                const hasTimeSlots = isAdded && availableDates[dateIndex]?.timeSlots.length > 0;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isToday = date.getTime() === today.getTime();
+                const isPast = date < today;
+                
+                // Data is already from availableDates, no need to find again
+                const dateIndex = index;
+                const isEnabled = dateEntry.isAvailable || false;
+                const hasTimeSlots = isEnabled && (dateEntry.timeSlots?.length || 0) > 0;
 
                 return (
                   <button
                     key={index}
                     onClick={() => {
-                      if (isAdded) {
+                      if (isPast && !isEnabled) {
+                        showToast('Không thể thêm ngày trong quá khứ!', 'error');
+                        return;
+                      }
+                      
+                      if (isEnabled) {
                         // Validate dateIndex before removing
                         if (dateIndex === -1) {
                           showToast('Lỗi: Không tìm thấy ngày để xóa!', 'error');
                           return;
                         }
-                        // Toggle: Remove date if already added
+                        // Toggle: Disable date if currently enabled
                         // Don't skip confirm if there are time slots
                         handleRemoveDate(dateIndex, !hasTimeSlots);
                       } else {
-                        // Add date if not added
+                        // Enable date if not enabled
                         handleAddDate(dateString);
                       }
                     }}
                     disabled={!instructorId}
                     className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 text-center ${!instructorId
                         ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
-                        : isAdded
-                          ? 'bg-green-50 border-green-500 hover:bg-green-100'
-                          : isToday
-                            ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
-                            : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        : isPast && !isEnabled
+                          ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60'
+                          : isEnabled
+                            ? 'bg-green-50 border-green-500 hover:bg-green-100'
+                            : isToday
+                              ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
+                              : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                       }`}
                   >
                     <div className="text-xs font-medium text-gray-600 mb-1">
                       {getDayName(date.getDay())}
                     </div>
-                    <div className="text-lg font-bold text-gray-900">
+                    <div className={`text-lg font-bold ${isPast && !isEnabled ? 'text-gray-400' : 'text-gray-900'}`}>
                       {date.getDate().toString().padStart(2, '0')}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       Th{date.getMonth() + 1}
                     </div>
-                    {isAdded && (
+                    {isEnabled && (
                       <div className="text-xs text-green-600 mt-1 font-medium flex items-center justify-center gap-1">
-                        <Check className="w-3 h-3" /> Đã thêm
+                        <Check className="w-3 h-3" /> 
+                        {hasTimeSlots ? `${dateEntry?.timeSlots?.length || 0} slot` : 'Đã bật'}
+                      </div>
+                    )}
+                    {!isEnabled && !isPast && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Chưa bật
+                      </div>
+                    )}
+                    {isPast && !isEnabled && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        Đã qua
+                      </div>
+                    )}
+                    {isToday && (
+                      <div className="text-xs text-blue-600 mt-1 font-medium">
+                        Hôm nay
                       </div>
                     )}
                   </button>
@@ -515,23 +580,27 @@ export default function ScheduleManagement({
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <label htmlFor="dateInput" className="block text-sm font-medium text-gray-700 mb-2">
-                Hoặc chọn ngày cụ thể
+                Hoặc chọn ngày cụ thể trong tuần hiện tại
               </label>
               <input
                 type="date"
                 id="dateInput"
-                min={getTodayString()}
-                max={getMaxDateString(6)}
+                min={formatDateForAPI(currentWeek.startDate)}
+                max={formatDateForAPI(currentWeek.endDate)}
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 disabled={!instructorId}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="Chọn ngày trong tuần hiện tại"
               />
+              <div className="text-xs text-gray-500 mt-1">
+                Chỉ có thể chọn ngày trong tuần hiện tại ({currentWeek.displayText})
+              </div>
             </div>
             <div className="flex items-end">
               <button
                 onClick={() => handleAddDate(selectedDate)}
-                disabled={!instructorId}
+                disabled={!instructorId || !selectedDate}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 <Plus className="h-4 w-4" />
@@ -541,20 +610,20 @@ export default function ScheduleManagement({
           </div>
         </div>
 
-        {/* Available Dates List */}
-        {availableDates.length === 0 ? (
+        {/* Available Dates List - Only show enabled dates */}
+        {availableDates.filter(d => d.isAvailable).length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalendarPlus className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có ngày rảnh nào</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có ngày rảnh nào được bật</h3>
             <p className="text-gray-600">
-              Hãy thêm ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn
+              Hãy bật ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {availableDates.map((dateObj, index) => {
+            {availableDates.filter(d => d.isAvailable).map((dateObj, index) => {
               const isUpcoming = parseLocalDate(dateObj.date) >= today;
 
               return (
@@ -597,9 +666,16 @@ export default function ScheduleManagement({
                       </button>
                       <button
                         onClick={() => {
+                          // Tìm index thực tế trong availableDates array
+                          const actualIndex = availableDates.findIndex(d => d.date === dateObj.date);
+                          if (actualIndex === -1) {
+                            showToast('Lỗi: Không tìm thấy ngày để xóa!', 'error');
+                            return;
+                          }
+                          
                           // Auto-detect: skip confirm if no time slots
                           const hasTimeSlots = dateObj.timeSlots.length > 0;
-                          handleRemoveDate(index, !hasTimeSlots);
+                          handleRemoveDate(actualIndex, !hasTimeSlots);
                         }}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
                       >
@@ -648,7 +724,15 @@ export default function ScheduleManagement({
                             </div>
                           </div>
                           <button
-                            onClick={() => handleRemoveTimeSlot(index, slotIndex)}
+                            onClick={() => {
+                              // Tìm index thực tế trong availableDates array
+                              const actualIndex = availableDates.findIndex(d => d.date === dateObj.date);
+                              if (actualIndex === -1) {
+                                showToast('Lỗi: Không tìm thấy ngày để xóa khung giờ!', 'error');
+                                return;
+                              }
+                              handleRemoveTimeSlot(actualIndex, slotIndex);
+                            }}
                             className="ml-3 text-blue-600 hover:text-red-600 transition-colors"
                             title="Xóa khung giờ"
                           >
