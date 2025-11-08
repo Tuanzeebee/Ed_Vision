@@ -49,15 +49,53 @@ export class InstructorAvailabilityRepository {
     });
 
     if (!week) {
+      // Create the week
       week = await this.prisma.instructorAvailabilityWeek.create({
         data: {
           instructor_id: instructorId,
           week_start_date: weekStartDate,
         },
       });
+
+      // Create all 7 days (Monday-Sunday) with is_available = false by default
+      await this.createDefaultWeekDates(week.week_id, weekStartDate);
     }
 
     return week;
+  }
+
+  /**
+   * Create default availability dates for a week (Monday-Sunday)
+   * All dates are created with is_available = false by default
+   */
+  async createDefaultWeekDates(weekId: number, weekStartDate: Date) {
+    const datesToCreate: {
+      week_id: number;
+      specific_date: Date;
+      is_available: boolean;
+      note?: string | null;
+    }[] = [];
+    
+    // Create 7 days starting from Monday (weekStartDate)
+    for (let i = 0; i < 7; i++) {
+      const specificDate = new Date(weekStartDate);
+      specificDate.setDate(weekStartDate.getDate() + i);
+      
+      datesToCreate.push({
+        week_id: weekId,
+        specific_date: specificDate,
+        is_available: false, // Default to false - instructor needs to enable manually
+        note: null,
+      });
+    }
+
+    // Bulk create all 7 dates
+    await this.prisma.instructorAvailabilityDate.createMany({
+      data: datesToCreate,
+      skipDuplicates: true, // Just in case
+    });
+
+    return datesToCreate;
   }
 
   /**
@@ -240,12 +278,21 @@ export class InstructorAvailabilityRepository {
     startDate: Date,
     endDate: Date,
   ) {
+    // Find weeks that overlap with the requested date range
+    // We need to find weeks where the week period intersects with our requested range
+    const weekStartBound = new Date(startDate);
+    weekStartBound.setDate(weekStartBound.getDate() - 7); // Look 1 week earlier
+    
+    const weekEndBound = new Date(endDate);
+    weekEndBound.setDate(weekEndBound.getDate() + 7); // Look 1 week later
+
     const weeks = await this.prisma.instructorAvailabilityWeek.findMany({
       where: {
         instructor_id: instructorId,
+        // Find weeks that potentially contain dates in our range
         week_start_date: {
-          gte: startDate,
-          lte: endDate,
+          gte: weekStartBound,
+          lte: weekEndBound,
         },
       },
       include: {
@@ -265,13 +312,9 @@ export class InstructorAvailabilityRepository {
           },
           orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
         },
+        // Don't filter dates here - get ALL dates for each week
+        // We'll filter in the service layer to ensure complete weeks
         instructorAvailabilityDates: {
-          where: {
-            specific_date: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
           orderBy: {
             specific_date: 'asc',
           },
@@ -279,7 +322,15 @@ export class InstructorAvailabilityRepository {
       },
     });
 
-    return weeks;
+    // Now filter dates in the service layer to get exact range
+    const filteredWeeks = weeks.map(week => ({
+      ...week,
+      instructorAvailabilityDates: week.instructorAvailabilityDates.filter(date => 
+        date.specific_date >= startDate && date.specific_date <= endDate
+      )
+    })).filter(week => week.instructorAvailabilityDates.length > 0);
+
+    return filteredWeeks;
   }
 
   /**

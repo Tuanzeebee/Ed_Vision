@@ -81,11 +81,14 @@ export class InstructorAvailabilityController {
     @Param('instructorId', ParseIntPipe) instructorId: number,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('autoCreate') autoCreate?: string, // 'true' hoặc 'false'
   ) {
+    const shouldAutoCreate = autoCreate === 'true';
     return this.availabilityService.getAvailability(
       instructorId,
       startDate,
       endDate,
+      shouldAutoCreate,
     );
   }
 
