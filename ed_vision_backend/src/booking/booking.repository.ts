@@ -87,13 +87,34 @@ export class BookingRepository {
   }
 
   async getStudentByAccountId(accountId: number) {
+    const now = new Date()
     return this.prisma.student.findUnique({
       where: { account_id: accountId },
       include: {
         account: {
           include: { profile: true },
         },
-        classGroup: true,
+        classGroup: {
+          include: {
+            adviserAssignments: {
+              where: {
+                OR: [{ ended_date: null }, { ended_date: { gt: now } }],
+              },
+              orderBy: [{ ended_date: 'asc' }, { assigned_date: 'desc' }],
+              take: 1,
+              include: {
+                instructor: {
+                  include: {
+                    account: {
+                      include: { profile: true },
+                    },
+                    department: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -114,6 +135,7 @@ export class BookingRepository {
   }
 
   async getStudentsForParent(parentId: number) {
+    const now = new Date()
     return this.prisma.parentStudentLink.findMany({
       where: { parent_id: parentId },
       include: {
@@ -122,7 +144,27 @@ export class BookingRepository {
             account: {
               include: { profile: true },
             },
-            classGroup: true,
+            classGroup: {
+              include: {
+                adviserAssignments: {
+                  where: {
+                    OR: [{ ended_date: null }, { ended_date: { gt: now } }],
+                  },
+                  orderBy: [{ ended_date: 'asc' }, { assigned_date: 'desc' }],
+                  take: 1,
+                  include: {
+                    instructor: {
+                      include: {
+                        account: {
+                          include: { profile: true },
+                        },
+                        department: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
