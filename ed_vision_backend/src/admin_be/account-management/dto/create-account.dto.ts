@@ -5,17 +5,21 @@ import {
   IsEnum,
   IsOptional,
   IsDateString,
+  IsBoolean,
+  IsInt,
+  Matches,
 } from 'class-validator';
 
 export class CreateAccountDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
+  @Matches(/@dtu\.edu\.vn$/, { message: 'Email phải có đuôi @dtu.edu.vn' })
   email: string;
 
   @IsString({ message: 'Mật khẩu phải là chuỗi ký tự' })
   @MinLength(8, { message: 'Mật khẩu phải có ít nhất 8 ký tự' })
   password: string;
 
-  @IsEnum(['admin', 'teacher', 'student', 'parent', 'leader'], {
+  @IsEnum(['leader', 'instructor', 'student', 'parent'], {
     message: 'Vai trò không hợp lệ',
   })
   role: string;
@@ -25,10 +29,10 @@ export class CreateAccountDto {
 
   @IsOptional()
   @IsDateString({}, { message: 'Ngày sinh không hợp lệ' })
-  dateOfBirth?: string;
+  birthDate?: string;
 
   @IsOptional()
-  @IsEnum(['Nam', 'Nữ', 'Khác'], { message: 'Giới tính không hợp lệ' })
+  @IsEnum(['male', 'female'], { message: 'Giới tính không hợp lệ' })
   gender?: string;
 
   @IsOptional()
@@ -37,23 +41,35 @@ export class CreateAccountDto {
 
   @IsOptional()
   @IsString({ message: 'Số điện thoại phải là chuỗi ký tự' })
-  phoneNumber?: string;
+  phone?: string;
 
   @IsOptional()
-  @IsString({ message: 'Mã sinh viên phải là chuỗi ký tự' })
-  studentCode?: string;
+  @IsInt({ message: 'Department ID phải là số nguyên' })
+  departmentId?: number;
 
   @IsOptional()
-  @IsString({ message: 'Mã giảng viên phải là chuỗi ký tự' })
-  employeeCode?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Khoa/Phòng ban phải là chuỗi ký tự' })
-  department?: string;
+  @IsString({ message: 'Ngành phải là chuỗi ký tự' })
+  major?: string;
 
   @IsOptional()
   @IsEnum(['active', 'inactive', 'blocked'], {
     message: 'Trạng thái không hợp lệ',
   })
   status?: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'sendEmail phải là boolean' })
+  sendEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean({ message: 'forcePasswordChange phải là boolean' })
+  forcePasswordChange?: boolean;
+
+  @IsOptional()
+  @IsBoolean({ message: 'twoFactor phải là boolean' })
+  twoFactor?: boolean;
+
+  @IsOptional()
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự' })
+  notes?: string;
 }

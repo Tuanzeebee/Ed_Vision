@@ -71,7 +71,7 @@ export default function Header({
     } else {
       // Fallback when not authenticated
       if (isAdminMode) {
-        navigate('/admin/overview')
+        navigate('/admin/dashboard')
       } else if (isTeacherMode) {
         navigate('/teacher/dashboard')
       } else {
@@ -243,11 +243,8 @@ export default function Header({
                       <button
                         onClick={() => {
                           setMenuOpen(false)
-                          if (isTeacherMode) {
-                            navigate('/teacher/profile')
-                          } else {
-                            navigate('/student/profile')
-                          }
+                          // Navigate to centralized /profile entry which will redirect by role
+                          navigate('/profile')
                         }}
                         className="px-2 py-1 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 rounded-md"
                       >

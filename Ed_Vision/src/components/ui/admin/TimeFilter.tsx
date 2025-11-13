@@ -6,20 +6,26 @@ interface TimeFilterProps {
 }
 
 export default function TimeFilter({ value, onChange, selectedYear, onYearChange }: TimeFilterProps) {
-  // Generate year options (last 5 years + current year)
+  // Generate year options (current year + 4 previous years)
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   return (
     <div className="flex items-center space-x-2">
       {/* Navigation Arrows */}
       <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
-        <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-l-md transition-colors">
+        <button 
+          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-l-md transition-colors"
+          aria-label="Previous period"
+        >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <button className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md transition-colors">
+        <button 
+          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md transition-colors"
+          aria-label="Next period"
+        >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
@@ -38,7 +44,7 @@ export default function TimeFilter({ value, onChange, selectedYear, onYearChange
         Hôm nay
       </button>
       
-      {/* Time Period Buttons */}
+      {/* Time Period Buttons (Week, Month, All) */}
       <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
         {[
           { value: 'tuần-này', label: 'Tuần' },
@@ -63,8 +69,8 @@ export default function TimeFilter({ value, onChange, selectedYear, onYearChange
         ))}
       </div>
       
-      {/* Year Selector */}
-      {selectedYear !== undefined && onYearChange && (
+      {/* Year Selector (only show when "Tất cả" is selected) */}
+      {value === 'tất-cả' && selectedYear !== undefined && onYearChange && (
         <select
           value={selectedYear}
           onChange={(e) => onYearChange(Number(e.target.value))}
@@ -72,7 +78,7 @@ export default function TimeFilter({ value, onChange, selectedYear, onYearChange
         >
           {years.map((year) => (
             <option key={year} value={year}>
-              {year === currentYear ? 'Hiện tại' : year}
+              {year === currentYear ? `${year} (Hiện tại)` : year}
             </option>
           ))}
         </select>

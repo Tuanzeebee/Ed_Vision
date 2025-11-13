@@ -9,7 +9,7 @@ export interface MenuItemData {
 export const adminMenu: MenuItemData[] = [
   { 
     label: "Trang chủ", 
-    to: "/admin/overview", 
+    to: "/admin/dashboard", 
     iconKey: "home" 
   },
   {
