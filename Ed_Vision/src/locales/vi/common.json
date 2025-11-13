@@ -90,7 +90,7 @@
       }
     },
     "educators": {
-      "teacherDashboard": "Bảng điều khiển Giáo viên",
+      "bookingScheduler": "Đặt lịch hẹn",
       "classManagement": "Quản lý Lớp học",
       "studentProgressTracking": "Theo dõi Tiến độ Học sinh",
       "parentCommunication": "Giao tiếp với Phụ huynh"

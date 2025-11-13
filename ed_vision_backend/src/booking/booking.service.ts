@@ -2,6 +2,31 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException, 
 import { BookingRepository } from './booking.repository';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 
+const mapAdvisorFromAssignment = (assignment: any) => {
+	if (!assignment) return null
+	const instructor = assignment.instructor
+	if (!instructor) {
+		return {
+			assignmentId: assignment.adviser_assign_id,
+			instructorId: assignment.instructor_id,
+		}
+	}
+	const account = instructor.account
+	const profile = account?.profile
+	return {
+		assignmentId: assignment.adviser_assign_id,
+		instructorId: instructor.instructor_id,
+		accountId: instructor.account_id,
+		employeeCode: instructor.employee_code,
+		academicTitle: instructor.academic_title ?? null,
+		position: instructor.position ?? null,
+		departmentId: instructor.department_id ?? null,
+		fullName: profile?.full_name ?? null,
+		avatarUrl: profile?.avatar_url ?? null,
+		email: account?.email ?? null,
+	}
+}
+
 @Injectable()
 export class BookingService {
 	constructor(private readonly repository: BookingRepository) {}
@@ -111,6 +136,8 @@ export class BookingService {
 		if (!student) return null
 		const profile = student.account?.profile
 		const classGroup = student.classGroup
+		const advisorAssignment = classGroup?.adviserAssignments?.[0]
+		const advisor = mapAdvisorFromAssignment(advisorAssignment)
 		return {
 			student_id: student.student_id,
 			account_id: student.account_id,
@@ -123,6 +150,7 @@ export class BookingService {
 			cohort_year: student.cohort_year ?? null,
 			status: student.status ?? null,
 			verified: (student.status ?? '').toLowerCase() === 'active',
+			advisor,
 		}
 	}
 
@@ -156,6 +184,8 @@ export class BookingService {
 				if (!student) return null
 				const profile = student.account?.profile
 				const classGroup = student.classGroup
+				const advisorAssignment = classGroup?.adviserAssignments?.[0]
+				const advisor = mapAdvisorFromAssignment(advisorAssignment)
 				return {
 					linkId: link.link_id,
 					studentId: student.student_id,
@@ -167,6 +197,7 @@ export class BookingService {
 					className: classGroup?.class_code ?? null,
 					status: student.status ?? null,
 					verified: (student.status ?? '').toLowerCase() === 'active',
+					advisor,
 				}
 			})
 			.filter((item): item is NonNullable<typeof item> => item !== null)
