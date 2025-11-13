@@ -8,8 +8,11 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  UploadedFile,
+  UseInterceptors,
   // UseGuards,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AccountManagementService } from './account-management.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
@@ -48,10 +51,15 @@ export class AccountManagementController {
   }
 
   @Post()
+  @UseInterceptors(FileInterceptor('avatar'))
   async create(
-    @Body() createAccountDto: CreateAccountDto,
+    @Body() body: any,
+    @UploadedFile() avatar?: any,
   ): Promise<AccountResponse> {
-    return this.accountManagementService.create(createAccountDto);
+    // Parse the JSON data from the 'data' field
+    const createAccountDto: CreateAccountDto = JSON.parse(body.data || '{}');
+    
+    return this.accountManagementService.create(createAccountDto, avatar);
   }
 
   @Patch(':id')

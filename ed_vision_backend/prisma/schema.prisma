@@ -117,7 +117,6 @@ model Program { //Chương trình vd: CMU
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
   department_id     Int
-  department_id     Int
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
   department        Department         @relation(fields: [department_id], references: [department_id])

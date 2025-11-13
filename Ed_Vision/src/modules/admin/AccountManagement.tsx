@@ -176,7 +176,8 @@ export default function AccountManagement() {
       }
     };
     fetchFilterOptions();
-  }, [showToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch data from API
   const fetchAccounts = useCallback(async () => {
