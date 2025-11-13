@@ -1,16 +1,14 @@
 import { useState, useEffect, useMemo } from "react"
 import AdminLayout from "../../components/ui/admin/AdminLayout"
 import LoadingSpinner from "../../components/ui/admin/LoadingSpinner"
-import CourseYearSelector from "../../lib/courseYearSelector"
+import TimeFilter from "../../components/ui/admin/TimeFilter"
 import { 
-  majorsBySchool, 
-  classesBySchoolAndMajor
-} from "../../lib/leadershipReportsConstants"
-import { 
-  getScopeStats, 
   getScoreDistributionBySchool, 
   getTopStudentsBySchool 
 } from "../../lib/reportUtils"
+import dashboardStatsService, { type DashboardStatsResponse } from "@/services/api/dashboardStatsService"
+import { useToast } from "@/lib/useToast"
+import { io, Socket } from "socket.io-client"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -54,40 +52,207 @@ interface FilteredData {
   teachers: number;
   atRisk: number;
   performance: number;
+  comparison?: {
+    students: {
+      value: number;
+      percentage: number;
+      trend: 'up' | 'down' | 'stable';
+    };
+    instructors: {
+      value: number;
+      percentage: number;
+      trend: 'up' | 'down' | 'stable';
+    };
+  };
 }
 
 export default function AdminOverviewDashboard() {
+  const { showToast } = useToast();
+  
+  // Helper function to get current academic year (e.g., "2025-2026")
+  const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    
+    // If we're in Aug-Dec (8-11), academic year is currentYear-nextYear
+    // If we're in Jan-Jul (0-7), academic year is previousYear-currentYear
+    if (currentMonth >= 7) { // August (7) or later
+      return `${currentYear}-${currentYear + 1}`;
+    } else {
+      return `${currentYear - 1}-${currentYear}`;
+    }
+  };
+
+  // Generate academic year options (current + 4 previous years)
+  const getAcademicYearOptions = () => {
+    const current = getCurrentAcademicYear();
+    const [startYear] = current.split('-').map(Number);
+    
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+      const year = startYear - i;
+      years.push(`${year}-${year + 1}`);
+    }
+    return years;
+  };
+  
+  // Time filter states
+  const [timeFilter, setTimeFilter] = useState('tháng-này');
+  const [selectedYearFilter, setSelectedYearFilter] = useState(new Date().getFullYear());
+  
   // Main filter states
   const [selectedSchool, setSelectedSchool] = useState("Tất cả các trường");
   const [courseYear, setCourseYear] = useState("Tất cả khóa");
   const [selectedMajor, setSelectedMajor] = useState("Tất cả");
   const [selectedClass, setSelectedClass] = useState("Tất cả");
   const [selectedSemester, setSelectedSemester] = useState("Kỳ 1");
-  const [selectedYear, setSelectedYear] = useState("2024-2025");
+  const [selectedYear, setSelectedYear] = useState(getCurrentAcademicYear());
   
   const [isLoading, setIsLoading] = useState(false);
   const [filteredData, setFilteredData] = useState<FilteredData | null>(null);
+
+  // Access time stats from backend
+  const [accessTimeStats, setAccessTimeStats] = useState<{
+    morning: number;
+    noon: number;
+    afternoon: number;
+    evening: number;
+  } | null>(null);
+
+  // Filter options from backend
+  const [filterOptions, setFilterOptions] = useState<{
+    schools: string[];
+    courseYears: string[];
+    majors: Array<{ name: string; school: string }>;
+    classes: Array<{ code: string; cohortYear: number; program: string; school: string }>;
+  } | null>(null);
+
+  // WebSocket real-time update trigger
+  const [realTimeUpdateTrigger, setRealTimeUpdateTrigger] = useState(0);
+
+  // Load filter options on mount
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const options = await dashboardStatsService.getFilterOptions();
+        setFilterOptions(options);
+        console.log('Filter options loaded:', options);
+      } catch (error) {
+        console.error('Failed to load filter options:', error);
+        showToast('Không thể tải filter options', 'error');
+      }
+    };
+
+    loadFilterOptions();
+  }, [showToast]);
+
+  // Helper function to get comparison period text
+  const getComparisonPeriodText = (timeFilter: string) => {
+    switch (timeFilter) {
+      case 'hôm-nay':
+        return 'hôm qua';
+      case 'tuần-này':
+        return 'tuần trước';
+      case 'tháng-này':
+        return 'tháng trước';
+      case 'tất-cả':
+        return 'năm trước';
+      default:
+        return 'kỳ trước';
+    }
+  };
+
+  // WebSocket for real-time account creation updates
+  useEffect(() => {
+    let studentSocket: Socket | null = null;
+    let instructorSocket: Socket | null = null;
+
+    const initializeWebSockets = () => {
+      // Setup WebSocket for Student account creation
+      studentSocket = io('http://localhost:3000/student-stats', {
+        transports: ['websocket', 'polling'],
+      });
+
+      studentSocket.on('connect', () => {
+        console.log('✅ WebSocket connected for student real-time updates');
+      });
+
+      studentSocket.on('studentOnlineStatsUpdated', () => {
+        console.log('📊 Student account created - triggering real-time update');
+        setRealTimeUpdateTrigger((prev) => prev + 1); // Trigger re-fetch
+      });
+
+      studentSocket.on('disconnect', () => {
+        console.log('❌ WebSocket disconnected for student updates');
+      });
+
+      studentSocket.on('connect_error', (error) => {
+        console.error('⚠️ Student WebSocket error:', error);
+      });
+
+      // Setup WebSocket for Instructor account creation
+      instructorSocket = io('http://localhost:3000/instructor-stats', {
+        transports: ['websocket', 'polling'],
+      });
+
+      instructorSocket.on('connect', () => {
+        console.log('✅ WebSocket connected for instructor real-time updates');
+      });
+
+      instructorSocket.on('instructorOnlineStatsUpdated', () => {
+        console.log('📊 Instructor account created - triggering real-time update');
+        setRealTimeUpdateTrigger((prev) => prev + 1); // Trigger re-fetch
+      });
+
+      instructorSocket.on('disconnect', () => {
+        console.log('❌ WebSocket disconnected for instructor updates');
+      });
+
+      instructorSocket.on('connect_error', (error) => {
+        console.error('⚠️ Instructor WebSocket error:', error);
+      });
+    };
+
+    initializeWebSockets();
+
+    // Cleanup on unmount
+    return () => {
+      if (studentSocket) {
+        console.log('🔌 Cleaning up student WebSocket connection');
+        studentSocket.disconnect();
+      }
+      if (instructorSocket) {
+        console.log('🔌 Cleaning up instructor WebSocket connection');
+        instructorSocket.disconnect();
+      }
+    };
+  }, []);
   
   // Get available majors based on selected school
   const availableMajors = useMemo(() => {
-    if (selectedSchool === "Tất cả các trường") {
+    if (!filterOptions || selectedSchool === "Tất cả các trường") {
       return [];
     }
-    return majorsBySchool[selectedSchool] || [];
-  }, [selectedSchool]);
+    return filterOptions.majors
+      .filter((m) => m.school === selectedSchool)
+      .map((m) => m.name);
+  }, [filterOptions, selectedSchool]);
   
   // Get available classes based on selected school and major
   const availableClasses = useMemo(() => {
-    if (selectedSchool === "Tất cả các trường") {
+    if (!filterOptions || selectedSchool === "Tất cả các trường") {
       return [];
     }
-    if (selectedMajor === "Tất cả") {
-      // If "All majors" selected, show all classes from all majors in the school
-      const schoolClasses = classesBySchoolAndMajor[selectedSchool] || {};
-      return Object.values(schoolClasses).flat();
+    
+    let filtered = filterOptions.classes.filter((c) => c.school === selectedSchool);
+    
+    if (selectedMajor !== "Tất cả") {
+      filtered = filtered.filter((c) => c.program === selectedMajor);
     }
-    return classesBySchoolAndMajor[selectedSchool]?.[selectedMajor] || [];
-  }, [selectedSchool, selectedMajor]);
+    
+    return filtered.map((c) => c.code);
+  }, [filterOptions, selectedSchool, selectedMajor]);
   
   // Reset filters when school changes
   useEffect(() => {
@@ -96,153 +261,129 @@ export default function AdminOverviewDashboard() {
     setSelectedClass("Tất cả");
   }, [selectedSchool]);
 
-  // Filter logic with loading state - Apply ALL filters with REALISTIC variation
+  // Filter logic - now uses backend API with time-based filtering
   useEffect(() => {
-    setIsLoading(true);
-    
-    const filterTimeout = setTimeout(() => {
-      // Get base stats from selected school
-      const baseStats = getScopeStats(selectedSchool);
+    const fetchDashboardStats = async () => {
+      setIsLoading(true);
       
-      // Apply progressive filtering based on all selected filters
-      let filteredStudents = baseStats.students;
-      let filteredTeachers = baseStats.teachers;
-      let filteredPerformance = baseStats.activeRate;
-      
-      // Filter by course year (khóa) - with realistic variation
-      if (courseYear !== "Tất cả khóa") {
-        // Not exactly 25%, but realistic variation between 20-30%
-        // Older cohorts (K28) usually have slightly more students due to retention
-        const courseYears = ["K28", "K29", "K30", "K31"];
-        const selectedIndex = courseYears.indexOf(courseYear);
-        
-        if (selectedIndex !== -1) {
-          // K28: 28%, K29: 26%, K30: 24%, K31: 22% (realistic distribution)
-          const coursePercentages = [0.28, 0.26, 0.24, 0.22];
-          const percentage = coursePercentages[selectedIndex];
-          filteredStudents = Math.floor(filteredStudents * percentage);
-          filteredTeachers = Math.floor(filteredTeachers * percentage);
-        } else {
-          // Fallback to ~25% with small variation
-          const percentage = 0.23 + Math.random() * 0.04; // 23-27%
-          filteredStudents = Math.floor(filteredStudents * percentage);
-          filteredTeachers = Math.floor(filteredTeachers * percentage);
-        }
-      }
-      
-      // Filter by major (ngành) - some majors are more popular than others
-      if (selectedMajor !== "Tất cả") {
-        const majorCount = availableMajors.length || 1;
-        
-        // Popular majors (SE, AI) get more students, others less
-        const popularMajors = ["Công nghệ Phần mềm", "Trí tuệ Nhân tạo", "Khoa học Dữ liệu"];
-        const isPopular = popularMajors.some(major => selectedMajor.includes(major));
-        
-        if (isPopular) {
-          // Popular majors get 15-20% more than average
-          const multiplier = 1.15 + Math.random() * 0.05;
-          filteredStudents = Math.floor((filteredStudents / majorCount) * multiplier);
-          filteredTeachers = Math.floor((filteredTeachers / majorCount) * multiplier);
-        } else {
-          // Other majors get 85-95% of average
-          const multiplier = 0.85 + Math.random() * 0.10;
-          filteredStudents = Math.floor((filteredStudents / majorCount) * multiplier);
-          filteredTeachers = Math.floor((filteredTeachers / majorCount) * multiplier);
-        }
-      }
-      
-      // Filter by class (lớp) - each class varies 30-45 students
-      if (selectedClass !== "Tất cả") {
-        filteredStudents = Math.floor(Math.random() * 16 + 30); // 30-45 students
-        filteredTeachers = Math.floor(Math.random() * 3 + 8); // 8-10 teachers
-      }
-      
-      // Filter by semester (kỳ) - affects performance
-      if (selectedSemester === "Kỳ Hè") {
-        filteredPerformance *= 0.93 + Math.random() * 0.04; // 93-97% (summer drop)
-      } else if (selectedSemester === "Kỳ 2") {
-        filteredPerformance *= 0.97 + Math.random() * 0.02; // 97-99% (slight drop)
-      }
-      
-      // Filter by year (năm học) - recent years have better performance
-      const yearDiff = 2025 - parseInt(selectedYear.split('-')[0]);
-      const yearPenalty = Math.min(0.1, yearDiff * 0.02); // Max 10% penalty
-      filteredPerformance *= Math.max(0.9, 1 - yearPenalty);
-      
-      console.log('Filtering data with REALISTIC variation:', {
-        selectedSchool,
-        courseYear,
-        selectedMajor,
-        selectedClass,
-        selectedSemester,
-        selectedYear,
-        result: {
-          students: filteredStudents,
-          teachers: filteredTeachers,
-          performance: filteredPerformance.toFixed(1)
-        }
-      });
-      
-      setFilteredData({
-        students: filteredStudents,
-        teachers: filteredTeachers,
-        atRisk: Math.floor(filteredStudents * (0.012 + Math.random() * 0.006)), // 1.2-1.8% at risk
-        performance: parseFloat(filteredPerformance.toFixed(1))
-      });
-      
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(filterTimeout);
-  }, [selectedSchool, courseYear, selectedMajor, selectedClass, selectedSemester, selectedYear, availableMajors.length]);
+      try {
+        const queryParams = {
+          timeFilter: timeFilter as any,
+          school: selectedSchool !== 'Tất cả các trường' ? selectedSchool : undefined,
+          courseYear: courseYear !== 'Tất cả khóa' ? courseYear : undefined,
+          major: selectedMajor !== 'Tất cả' ? selectedMajor : undefined,
+          class: selectedClass !== 'Tất cả' ? selectedClass : undefined,
+          semester: selectedSemester,
+          academicYear: selectedYear,
+          selectedYear: timeFilter === 'tất-cả' ? selectedYearFilter.toString() : undefined,
+        };
 
-  // Dữ liệu mẫu cho biểu đồ thời gian truy cập - with realistic variation based on filters
+        // Fetch dashboard stats
+        const statsResponse: DashboardStatsResponse = await dashboardStatsService.getDashboardStats(queryParams);
+
+        // Fetch access time stats
+        const accessTimeResponse = await dashboardStatsService.getAccessTimeStats(queryParams);
+
+        setFilteredData({
+          students: statsResponse.current.students,
+          teachers: statsResponse.current.instructors,
+          atRisk: statsResponse.current.atRisk,
+          performance: statsResponse.current.performance,
+          comparison: statsResponse.comparison,
+        });
+
+        setAccessTimeStats(accessTimeResponse.percentages);
+
+        console.log('Dashboard stats loaded:', {
+          timeRange: statsResponse.timeRange,
+          current: statsResponse.current,
+          previous: statsResponse.previous,
+          comparison: statsResponse.comparison,
+          filters: statsResponse.filters,
+        });
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+        showToast('Không thể tải thống kê dashboard', 'error');
+        
+        // Fallback to empty data on error
+        setFilteredData({
+          students: 0,
+          teachers: 0,
+          atRisk: 0,
+          performance: 0,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, [
+    timeFilter,
+    selectedYearFilter,
+    selectedSchool,
+    courseYear,
+    selectedMajor,
+    selectedClass,
+    selectedSemester,
+    selectedYear,
+    showToast,
+    realTimeUpdateTrigger, // Re-fetch when WebSocket triggers update
+  ]);
+
+  // Access time chart data from backend API
   const accessTimeData = useMemo(() => {
-    // Base distribution varies by semester and time
-    let morningPct = 28;
-    let afternoonPct = 40;
-    let eveningPct = 32;
-    
-    // Kỳ Hè: More afternoon/evening study
-    if (selectedSemester === "Kỳ Hè") {
-      morningPct = 22;
-      afternoonPct = 38;
-      eveningPct = 40;
+    if (!accessTimeStats) {
+      // Default data while loading
+      return {
+        labels: ['Sáng (4:30-10h)', 'Trưa (10-13h)', 'Chiều (13-18h)', 'Tối (18-23h + 0-4:30h)'],
+        datasets: [
+          {
+            data: [0, 0, 0, 0],
+            backgroundColor: [
+              '#FCD34D', // Yellow-400 - Sáng
+              '#FB923C', // Orange-400 - Trưa
+              '#3B82F6', // Blue-500 - Chiều
+              '#8B5CF6', // Purple-500 - Tối
+            ],
+            hoverBackgroundColor: [
+              '#FDE68A', // Yellow-200
+              '#FDBA74', // Orange-300
+              '#60A5FA', // Blue-400
+              '#A78BFA', // Purple-400
+            ],
+          },
+        ],
+      };
     }
-    
-    // Specific classes have different patterns
-    if (selectedClass !== "Tất cả") {
-      // Add small realistic variation for specific classes
-      const variation = Math.random() * 6 - 3; // -3 to +3
-      morningPct += variation;
-      afternoonPct -= variation / 2;
-      eveningPct -= variation / 2;
-    }
-    
+
     return {
-      labels: ['Sáng', 'Chiều', 'Tối'],
+      labels: ['Sáng (4:30-10h)', 'Trưa (10-13h)', 'Chiều (13-18h)', 'Tối (18-23h + 0-4:30h)'],
       datasets: [
         {
           data: [
-            Math.round(morningPct),
-            Math.round(afternoonPct),
-            Math.round(eveningPct)
+            accessTimeStats.morning,
+            accessTimeStats.noon,
+            accessTimeStats.afternoon,
+            accessTimeStats.evening,
           ],
           backgroundColor: [
-            '#FCD34D', // Yellow-400
-            '#3B82F6', // Blue-500
-            '#8B5CF6', // Purple-500
+            '#FCD34D', // Yellow-400 - Sáng
+            '#FB923C', // Orange-400 - Trưa
+            '#3B82F6', // Blue-500 - Chiều
+            '#8B5CF6', // Purple-500 - Tối
           ],
           borderWidth: 0,
           hoverBackgroundColor: [
-            '#F59E0B', // Yellow-500
-            '#2563EB', // Blue-600
-            '#7C3AED', // Purple-600
+            '#FDE68A', // Yellow-200
+            '#FDBA74', // Orange-300
+            '#60A5FA', // Blue-400
+            '#A78BFA', // Purple-400
           ],
         },
       ],
     };
-  }, [selectedSemester, selectedClass]);
+  }, [accessTimeStats]);
 
   // Dữ liệu mẫu cho biểu đồ GPA - with realistic variation
   const gpaData = useMemo(() => {
@@ -496,9 +637,19 @@ export default function AdminOverviewDashboard() {
     <AdminLayout>
       {/* Dashboard Header */}
       <div className="mb-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">PREDICA</h1>
-          <p className="text-gray-600">Tổng quan hệ thống quản lý học tập và hiệu suất sinh viên</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">PREDICA</h1>
+            <p className="text-gray-600">Tổng quan hệ thống quản lý học tập và hiệu suất sinh viên</p>
+          </div>
+          
+          {/* Time Filter Component */}
+          <TimeFilter 
+            value={timeFilter}
+            onChange={setTimeFilter}
+            selectedYear={selectedYearFilter}
+            onYearChange={setSelectedYearFilter}
+          />
         </div>
         
         {/* Main Filter Section */}
@@ -512,26 +663,24 @@ export default function AdminOverviewDashboard() {
                 onChange={(e) => setSelectedSchool(e.target.value)}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
               >
-                <option>Tất cả các trường</option>
-                <option>Trường Khoa học máy tính</option>
-                <option>Trường Công nghệ</option>
-                <option>Trường Kinh tế và Kinh doanh</option>
-                <option>Trường Ngôn ngữ và Xã hội nhân văn</option>
-                <option>Trường Du lịch</option>
-                <option>Trường Y-Dược</option>
-                <option>Trường Đào tạo quốc tế</option>
-                <option>Viện Quản lý Nam Khuê</option>
-                <option>Viện Việt-Nhật</option>
+                {filterOptions?.schools.map((school) => (
+                  <option key={school} value={school}>{school}</option>
+                ))}
               </select>
             </div>
             
             {/* Khóa */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Khóa</label>
-              <CourseYearSelector
+              <select
                 value={courseYear}
-                onChange={setCourseYear}
-              />
+                onChange={(e) => setCourseYear(e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+              >
+                {filterOptions?.courseYears.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
             
             {/* Ngành */}
@@ -590,11 +739,9 @@ export default function AdminOverviewDashboard() {
                 onChange={(e) => setSelectedYear(e.target.value)}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
               >
-                <option>2024-2025</option>
-                <option>2023-2024</option>
-                <option>2022-2023</option>
-                <option>2021-2022</option>
-                <option>2020-2021</option>
+                {getAcademicYearOptions().map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
               </select>
             </div>
             
@@ -607,7 +754,7 @@ export default function AdminOverviewDashboard() {
                   setSelectedMajor("Tất cả");
                   setSelectedClass("Tất cả");
                   setSelectedSemester("Kỳ 1");
-                  setSelectedYear("2024-2025");
+                  setSelectedYear(getCurrentAcademicYear());
                 }}
                 className="w-full px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium text-xs"
               >
@@ -623,7 +770,7 @@ export default function AdminOverviewDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 relative" style={{ minHeight: isLoading ? '120px' : 'auto' }}>
             {isLoading && (
               <LoadingSpinner 
-                text="Đang tải dữ liệu..." 
+                text="Đang tải dữ liệu thống kê..." 
                 size="md" 
                 position="center" 
               />
@@ -632,13 +779,25 @@ export default function AdminOverviewDashboard() {
               <>
                 <SimpleCard className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 p-4">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <p className="text-xs font-medium text-blue-700 mb-1">Tổng số Sinh viên</p>
-                      <p className="text-2xl font-bold text-blue-900">{filteredData?.students?.toLocaleString() || '12,847'}</p>
-                      <p className="text-xs text-green-600 font-medium mt-1">
-                        <ArrowUpIcon />
-                        <span className="ml-1">+1,542 sinh viên so với tháng trước</span>
-                      </p>
+                      <p className="text-2xl font-bold text-blue-900">{filteredData?.students.toLocaleString() || '0'}</p>
+                      {filteredData?.comparison?.students && (
+                        <p className={`text-xs font-medium mt-1 flex items-center ${
+                          filteredData.comparison.students.trend === 'up' 
+                            ? 'text-green-600' 
+                            : filteredData.comparison.students.trend === 'down'
+                            ? 'text-red-600'
+                            : 'text-gray-600'
+                        }`}>
+                          {filteredData.comparison.students.trend === 'up' && <ArrowUpIcon />}
+                          {filteredData.comparison.students.trend === 'down' && <ArrowDownIcon />}
+                          <span className="ml-1">
+                            {filteredData.comparison.students.trend === 'up' ? '+' : filteredData.comparison.students.trend === 'down' ? '' : ''}
+                            {filteredData.comparison.students.value} ({filteredData.comparison.students.percentage}%) so với {getComparisonPeriodText(timeFilter)}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
                       <UserGraduateIcon />
@@ -648,13 +807,25 @@ export default function AdminOverviewDashboard() {
 
                 <SimpleCard className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 p-4">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <p className="text-xs font-medium text-green-700 mb-1">Số lượng Giảng viên</p>
-                      <p className="text-2xl font-bold text-green-900">{filteredData?.teachers || '342'}</p>
-                      <p className="text-xs text-green-600 font-medium mt-1">
-                        <ArrowUpIcon />
-                        <span className="ml-1">+17 giảng viên so với tháng trước</span>
-                      </p>
+                      <p className="text-2xl font-bold text-green-900">{filteredData?.teachers || '0'}</p>
+                      {filteredData?.comparison?.instructors && (
+                        <p className={`text-xs font-medium mt-1 flex items-center ${
+                          filteredData.comparison.instructors.trend === 'up' 
+                            ? 'text-green-600' 
+                            : filteredData.comparison.instructors.trend === 'down'
+                            ? 'text-red-600'
+                            : 'text-gray-600'
+                        }`}>
+                          {filteredData.comparison.instructors.trend === 'up' && <ArrowUpIcon />}
+                          {filteredData.comparison.instructors.trend === 'down' && <ArrowDownIcon />}
+                          <span className="ml-1">
+                            {filteredData.comparison.instructors.trend === 'up' ? '+' : filteredData.comparison.instructors.trend === 'down' ? '' : ''}
+                            {filteredData.comparison.instructors.value} ({filteredData.comparison.instructors.percentage}%) so với {getComparisonPeriodText(timeFilter)}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
                       <ChalkboardTeacherIcon />
@@ -713,18 +884,22 @@ export default function AdminOverviewDashboard() {
                   <Doughnut data={accessTimeData} options={doughnutOptions} />
                 )}
               </div>
-              <div className="flex justify-center space-x-6 mt-4 text-sm">
+              <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs">
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-400 rounded-full mr-2"></div>
+                  <div className="w-4 h-4 bg-yellow-400 rounded-full mr-1.5"></div>
                   <span className="font-medium text-gray-700">Sáng ({accessTimeData.datasets[0].data[0]}%)</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
-                  <span className="font-medium text-gray-700">Chiều ({accessTimeData.datasets[0].data[1]}%)</span>
+                  <div className="w-4 h-4 bg-orange-400 rounded-full mr-1.5"></div>
+                  <span className="font-medium text-gray-700">Trưa ({accessTimeData.datasets[0].data[1]}%)</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-purple-500 rounded-full mr-2"></div>
-                  <span className="font-medium text-gray-700">Tối ({accessTimeData.datasets[0].data[2]}%)</span>
+                  <div className="w-4 h-4 bg-blue-500 rounded-full mr-1.5"></div>
+                  <span className="font-medium text-gray-700">Chiều ({accessTimeData.datasets[0].data[2]}%)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-purple-500 rounded-full mr-1.5"></div>
+                  <span className="font-medium text-gray-700">Tối ({accessTimeData.datasets[0].data[3]}%)</span>
                 </div>
               </div>
             </SimpleCard>

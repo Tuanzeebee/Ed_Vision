@@ -9,6 +9,7 @@ import { AccountManagementModule } from './admin_be/account-management/account-m
 import { StudentManagementModule } from './admin_be/student-management/student-management.module';
 import { InstructorManagementModule } from './admin_be/instructor-management/instructor-management.module';
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
+import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
 import { BookingModule } from './booking/booking.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { BookingModule } from './booking/booking.module';
     StudentManagementModule,
     InstructorManagementModule,
     SurveyManagementModule,
+    StatisticsOverviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],
