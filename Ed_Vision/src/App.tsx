@@ -30,6 +30,7 @@ import NotificationManagement from "./modules/admin/NotificationManagement";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
+
 // New auth components (some components navigate to /auth/* so provide routes)
 import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
@@ -93,6 +94,8 @@ function App() {
                                         <Route path="/student/learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
                                         <Route path="/student/chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
                                         <Route path="/student/live-learning" element={<ProtectedRoute permission="student_live_learning"><LiveLearning /></ProtectedRoute>} />
+                                        {/* student/profile and teacher/profile routes removed in favor of centralized /profile */}
+                                        {/* centralized entry that redirects to role-specific profile */}
 
                                         {/* Route cho parent */}
                                         <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
@@ -153,6 +156,7 @@ function App() {
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailDemo /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
+                                        {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}
                                         <Route path="/booking/scheduler" element={<ProtectedRoute permission="booking_scheduler"><BookingScheduler /></ProtectedRoute>} />

@@ -34,6 +34,7 @@ export function useInstructorAvailability(instructorId: number) {
       return response.availabilities.map((avail: AvailabilityDateResponse) => ({
         date: avail.date,
         weekId: avail.weekId,
+        isAvailable: avail.isAvailable,
         timeSlots: avail.timeSlots.map((slot: TimeSlotResponse) => ({
           slotId: slot.slotId,
           start: slot.startTime,
@@ -70,7 +71,7 @@ export function useInstructorAvailability(instructorId: number) {
    * Implements debouncing and prevents duplicate requests
    */
   const fetchAvailability = useCallback(
-    async (startDate?: string, endDate?: string, forceRefresh: boolean = false): Promise<AvailableDate[]> => {
+    async (startDate?: string, endDate?: string, forceRefresh: boolean = false, autoCreate: boolean = true): Promise<AvailableDate[]> => {
       // Validate instructorId
       if (!instructorId || instructorId <= 0) {
         console.warn('⚠ Invalid instructorId, skipping fetch');
@@ -100,7 +101,8 @@ export function useInstructorAvailability(instructorId: number) {
           instructorId,
           startDate,
           endDate,
-          forceRefresh // Skip cache if force refresh
+          forceRefresh, // Skip cache if force refresh
+          autoCreate // Whether to auto-create week if not exists
         );
         const frontendData = convertToFrontendFormat(response);
         return frontendData;
@@ -114,6 +116,19 @@ export function useInstructorAvailability(instructorId: number) {
       }
     },
     [instructorId, convertToFrontendFormat]
+  );
+
+  /**
+   * Fetch availability data for a specific week
+   * Returns exactly what backend provides - no client-side date generation
+   */
+  const fetchWeeklyAvailability = useCallback(
+    async (weekStartDate: string, weekEndDate: string, autoCreateWeek: boolean = false): Promise<AvailableDate[]> => {
+      // autoCreateWeek = false nghĩa là không tự động tạo tuần mới nếu chưa có
+      const backendData = await fetchAvailability(weekStartDate, weekEndDate, false, autoCreateWeek);
+      return backendData;
+    },
+    [fetchAvailability]
   );
 
   /**
@@ -267,6 +282,7 @@ export function useInstructorAvailability(instructorId: number) {
     loading,
     error,
     fetchAvailability,
+    fetchWeeklyAvailability,
     fetchStatistics,
     addAvailabilityDate,
     bulkCreateAvailability,

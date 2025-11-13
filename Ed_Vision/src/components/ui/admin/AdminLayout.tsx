@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const roleCode = (user?.roleRel?.code || user?.role || '').toString().toLowerCase()
   const roleLabel = roleCode ? roleCode : t('common:header.user.administrator')
 
-  const handleLogoClick = () => navigate('/admin/overview')
+  const handleLogoClick = () => navigate('/admin/dashboard')
 
   const { logout } = useAuth()
 

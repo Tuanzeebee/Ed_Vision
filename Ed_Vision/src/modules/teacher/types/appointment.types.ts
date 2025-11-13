@@ -10,6 +10,7 @@ export interface AvailableDate {
   date: string;
   timeSlots: TimeSlot[];
   weekId?: number; // Optional week ID from backend
+  isAvailable?: boolean; // Whether the date is enabled by instructor
 }
 
 // Backend-compatible types
