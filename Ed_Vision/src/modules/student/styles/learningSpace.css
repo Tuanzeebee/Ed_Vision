@@ -1,0 +1,62 @@
+/* Learning Space Custom Styles */
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom z-index for panels */
+.z-35 {
+  z-index: 35;
+}
+
+/* Dock item hover effects */
+.dock-item {
+  position: relative;
+}
+
+.dock-item .label {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.dock-item:hover .label {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Additional utility classes if needed */
+.hover\:brightness-120:hover {
+  filter: brightness(1.2);
+}
+
+.hover\:scale-115:hover {
+  transform: scale(1.15);
+}
