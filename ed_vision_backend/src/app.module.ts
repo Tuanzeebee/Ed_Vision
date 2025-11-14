@@ -11,6 +11,8 @@ import { InstructorManagementModule } from './admin_be/instructor-management/ins
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
 import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
 import { BookingModule } from './booking/booking.module';
+import { ClassManagementModule } from './teacher_be/class-management/class-management.module';
+import { SurveysModule } from './teacher_be/surveys/surveys.module';
 
 @Module({
   imports: [
@@ -24,8 +26,10 @@ import { BookingModule } from './booking/booking.module';
     InstructorManagementModule,
     SurveyManagementModule,
     StatisticsOverviewModule,
+    ClassManagementModule,
+    SurveysModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
