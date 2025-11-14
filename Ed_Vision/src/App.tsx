@@ -30,6 +30,7 @@ import NotificationManagement from "./modules/admin/NotificationManagement";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
+
 // New auth components (some components navigate to /auth/* so provide routes)
 import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
@@ -154,6 +155,7 @@ function App() {
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailDemo /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
+                                        {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}
                                         <Route path="/booking/scheduler" element={<ProtectedRoute permission="booking_scheduler"><BookingScheduler /></ProtectedRoute>} />

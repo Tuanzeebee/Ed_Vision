@@ -45,12 +45,14 @@ class InstructorAvailabilityApi {
    * @param startDate - Optional start date (YYYY-MM-DD)
    * @param endDate - Optional end date (YYYY-MM-DD)
    * @param skipCache - Force skip cache and fetch fresh data
+   * @param autoCreate - Whether to auto-create week if not exists (default: true)
    */
   async getAvailability(
     instructorId: number,
     startDate?: string,
     endDate?: string,
-    skipCache: boolean = false
+    skipCache: boolean = false,
+    autoCreate: boolean = true
   ): Promise<AvailabilityResponse> {
     try {
       // Generate cache key
@@ -70,6 +72,7 @@ class InstructorAvailabilityApi {
       const params: Record<string, string> = {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      params.autoCreate = autoCreate ? 'true' : 'false';
 
       const url = buildUrl(`${this.baseUrl}/${instructorId}`, params);
       
@@ -231,14 +234,25 @@ class InstructorAvailabilityApi {
       note?: string;
     }
   ): Promise<any> {
-    // Add time slot by adding the date with the new slot
-    const result = await this.addAvailabilityDate(instructorId, {
-      date,
-      timeSlots: [slotData],
-    });
+    const url = buildUrl(`${this.baseUrl}/${instructorId}/dates/${date}/slots`);
     
-    // Cache is already invalidated in addAvailabilityDate
-    return result;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(slotData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Không thể thêm khung giờ');
+    }
+
+    // Invalidate cache after modification
+    cacheService.invalidateInstructorCache(instructorId);
+    
+    return response.json();
   }
 
   /**

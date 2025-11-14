@@ -14,6 +14,7 @@ export interface AvailabilityDateResponse {
   date: string;
   dayOfWeek: number;
   weekId: number;
+  isAvailable: boolean;
   timeSlots: TimeSlotResponse[];
 }
 

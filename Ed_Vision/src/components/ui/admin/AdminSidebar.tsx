@@ -102,7 +102,7 @@ function LeafItem({ item }: { item: MenuItemConfig }) {
              location.pathname === '/admin/add-question' ||
              location.pathname === '/admin/questions/add'
     }
-    return location.pathname === item.to || (item.to !== "/admin/overview" && location.pathname.startsWith(item.to))
+    return location.pathname === item.to || (item.to !== "/admin/dashboard" && location.pathname.startsWith(item.to))
   })()
 
   return (
@@ -112,7 +112,7 @@ function LeafItem({ item }: { item: MenuItemConfig }) {
         className={`w-full flex items-center px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors ${
           isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
         }`}
-        end={item.to === "/admin/overview"} // chỉ Trang chủ cần exact match
+        end={item.to === "/admin/dashboard"} // chỉ Trang chủ cần exact match
       >
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <IconComponent isActive={isActive} />

@@ -51,6 +51,7 @@ export class InstructorAvailabilityService {
     instructorId: number,
     startDate?: string,
     endDate?: string,
+    autoCreate: boolean = true, // Mặc định vẫn tự động tạo để tương thích backward
   ): Promise<AvailabilityResponse> {
     // Default to showing from 30 days ago to next 6 months
     const start = startDate
@@ -59,6 +60,13 @@ export class InstructorAvailabilityService {
     const end = endDate
       ? this.parseDateString(endDate)
       : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000);
+
+    // Chỉ tự động tạo tuần nếu autoCreate = true
+    if (autoCreate && startDate && endDate) {
+      // If requesting a specific week, ensure it exists
+      const weekStart = this.parseDateString(startDate);
+      await this.repository.findOrCreateWeek(instructorId, weekStart);
+    }
 
     const weeks = await this.repository.getSlotsWithBookingCounts(
       instructorId,
@@ -79,13 +87,9 @@ export class InstructorAvailabilityService {
     const dateMap = new Map<string, AvailabilityDateResponse>();
 
     for (const week of weeks) {
-      // First, add all explicit availability dates (including those without slots)
+      // First, add all explicit availability dates (including those with is_available = false)
       if (week.instructorAvailabilityDates) {
         for (const dateRecord of week.instructorAvailabilityDates) {
-          if (!dateRecord.is_available) {
-            continue; // Skip dates marked as unavailable
-          }
-
           const dateStr = dateRecord.specific_date.toISOString().split('T')[0];
           const date = new Date(dateRecord.specific_date);
           const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Use UTC day
@@ -95,6 +99,7 @@ export class InstructorAvailabilityService {
               date: dateStr,
               dayOfWeek: dayOfWeek,
               weekId: week.week_id,
+              isAvailable: dateRecord.is_available, // Include availability status
               timeSlots: [],
             });
           }
@@ -125,6 +130,7 @@ export class InstructorAvailabilityService {
             date: dateStr,
             dayOfWeek: slot.day_of_week,
             weekId: week.week_id,
+            isAvailable: true, // If slot exists, date should be available
             timeSlots: [],
           });
         }
@@ -177,6 +183,8 @@ export class InstructorAvailabilityService {
 
   /**
    * Add a new availability date with optional time slots
+   * This method enables an existing date (sets is_available = true) 
+   * rather than creating a new date, since all dates are pre-created when the week is created
    */
   async addAvailabilityDate(
     instructorId: number,
@@ -185,11 +193,44 @@ export class InstructorAvailabilityService {
     const date = this.parseDateString(dto.date);
     const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Convert Sunday from 0 to 7, use UTC
 
-    // Find or create the week
+    // Find or create the week (this will also create all 7 default dates if new week)
     const week = await this.repository.findOrCreateWeek(instructorId, date);
 
-    // Create or update the availability date record
-    // This marks that the instructor has explicitly set this date as available
+    // Check if the date already exists and is available
+    const existingDate = await this.repository.findAvailabilityDate(week.week_id, date);
+    
+    // If date is already available and we're trying to add time slots, reject
+    if (existingDate && existingDate.is_available && dto.timeSlots && dto.timeSlots.length > 0) {
+      throw new ConflictException(`Date ${dto.date} is already available. Use addTimeSlot endpoint to add time slots.`);
+    }
+    
+    // If date is already available and we're just trying to enable it (no time slots), allow it (idempotent)
+    if (existingDate && existingDate.is_available && (!dto.timeSlots || dto.timeSlots.length === 0)) {
+      // Return existing date info
+      const allWeekSlots = await this.repository.getSlotsForWeek(week.week_id);
+      const existingTimeSlots = allWeekSlots.filter(slot => slot.day_of_week === dayOfWeek);
+      
+      return {
+        date: dto.date,
+        dayOfWeek,
+        weekId: week.week_id,
+        isAvailable: true,
+        timeSlots: existingTimeSlots.map(slot => ({
+          slotId: slot.slot_id,
+          startTime: this.repository.formatTimeToString(slot.start_time_local!),
+          endTime: this.repository.formatTimeToString(slot.end_time_local!),
+          meetingType: slot.meeting_type!,
+          capacity: slot.capacity,
+          isOpen: slot.is_open,
+          autoAccept: slot.auto_accept,
+          note: slot.note || undefined,
+          bookedCount: 0, // TODO: Get actual booking count
+        })),
+      };
+    }
+
+    // Enable the date (set is_available = true)
+    // This marks that the instructor has explicitly enabled this date
     await this.repository.upsertAvailabilityDate(
       week.week_id,
       date,
@@ -214,6 +255,7 @@ export class InstructorAvailabilityService {
       date: dto.date,
       dayOfWeek,
       weekId: week.week_id,
+      isAvailable: true, // Date was just enabled
       timeSlots,
     };
   }
@@ -380,7 +422,8 @@ export class InstructorAvailabilityService {
   }
 
   /**
-   * Delete all time slots for a specific date
+   * Disable availability for a specific date
+   * This sets is_available = false and removes all time slots for that date
    */
   async deleteAvailabilityDate(
     instructorId: number,
@@ -410,22 +453,25 @@ export class InstructorAvailabilityService {
       );
     }
 
-    // Delete all time slots for this date
+    if (!dateRecord.is_available) {
+      throw new BadRequestException(
+        `Date ${dateStr} is already disabled`,
+      );
+    }
+
+    // Delete all time slots for this date first
     await this.repository.deleteSlotsForDate(week.week_id, dayOfWeek);
 
-    // Delete the availability date record
-    await this.repository.deleteAvailabilityDate(week.week_id, date);
-
-    // Check if the week still has any availability dates or slots left
-    const remainingDates = await this.repository.getAvailabilityDatesForWeek(
+    // Disable the date (set is_available = false) instead of deleting the record
+    await this.repository.upsertAvailabilityDate(
       week.week_id,
+      date,
+      false, // is_available = false
+      dateRecord.note || undefined, // preserve existing note
     );
-    const remainingSlots = await this.repository.getSlotsForWeek(week.week_id);
 
-    if (remainingDates.length === 0 && remainingSlots.length === 0) {
-      // No dates or slots left in this week, delete the week itself to keep database clean
-      await this.repository.deleteWeek(week.week_id);
-    }
+    // Note: We don't delete the week or date records anymore
+    // All dates remain in the database, just marked as unavailable
   }
 
   /**
@@ -449,7 +495,8 @@ export class InstructorAvailabilityService {
    * Get statistics for instructor's availability
    */
   async getStatistics(instructorId: number): Promise<AvailabilityStatistics> {
-    const { statistics } = await this.getAvailability(instructorId);
+    // Để lấy thống kê, chúng ta cần tự động tạo tuần
+    const { statistics } = await this.getAvailability(instructorId, undefined, undefined, true);
     return statistics;
   }
 

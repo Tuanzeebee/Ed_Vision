@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { ToastContainer } from '@/components/ui/Toast'
@@ -46,6 +46,8 @@ type MeetingPurposeOption = {
 }
 
 export default function BookingScheduler({ instructorId: propInstructorId, instructorAccountId, student }: Props) {
+  const [searchParams] = useSearchParams()
+  const { instructorId: instructorIdParam } = useParams<{ instructorId?: string }>()
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [selectedDateIdx, setSelectedDateIdx] = useState<number>(0)
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
@@ -57,12 +59,32 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // prefer props over hardcoded id (use 3 as default since your DB has data for instructor 3)
-  const instructorId = propInstructorId ?? 3
+  // prefer explicit instructor id, fall back to route/query params and finally demo id 3
+  const routeInstructorId = useMemo(() => {
+    if (!instructorIdParam) return undefined
+    const parsed = Number(instructorIdParam)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+  }, [instructorIdParam])
+  const queryInstructorId = useMemo(() => {
+    const raw = searchParams.get('instructorId')
+    if (!raw) return undefined
+    const parsed = Number(raw)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+  }, [searchParams])
+  const explicitInstructorId = useMemo(() => {
+    if (typeof propInstructorId === 'number') return propInstructorId
+    if (typeof routeInstructorId === 'number') return routeInstructorId
+    if (typeof queryInstructorId === 'number') return queryInstructorId
+    return null
+  }, [propInstructorId, routeInstructorId, queryInstructorId])
+  const [activeInstructorId, setActiveInstructorId] = useState<number | null>(explicitInstructorId)
+  const [activeInstructorAccountId, setActiveInstructorAccountId] = useState<number | null>(instructorAccountId ?? null)
   const [instructorProfile, setInstructorProfile] = useState<any | null>(null)
   const [slotDetails, setSlotDetails] = useState<any | null>(null)
   const [studentInfo, setStudentInfo] = useState<any | null>(student ?? null)
+  const [studentInfoResolved, setStudentInfoResolved] = useState<boolean>(!!student)
   const [parentInfo, setParentInfo] = useState<any | null>(null)
+  const [parentInfoResolved, setParentInfoResolved] = useState<boolean>(false)
   const [linkedStudents, setLinkedStudents] = useState<any[]>([])
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const PURPOSE_OPTIONS: MeetingPurposeOption[] = useMemo(
@@ -90,6 +112,101 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
   // show backend or network errors to user briefly
   // (we'll render below calendar when present)
+
+  const fetchStudentInfo = useCallback(async () => {
+    if (studentInfoResolved) return
+    try {
+      const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
+      const r = await fetch('/api/booking/me/student', {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      if (!r.ok) return
+      const text = await r.text()
+      if (!text) return
+      let parsed: any = null
+      try {
+        parsed = JSON.parse(text)
+      } catch (e) {
+        return
+      }
+      const st = parsed?.student ?? parsed
+      if (st) setStudentInfo(st)
+    } catch (e) {
+      // ignore
+    } finally {
+      setStudentInfoResolved(true)
+    }
+  }, [studentInfoResolved])
+
+  const fetchParentInfo = useCallback(async () => {
+    if (parentInfoResolved) return
+    try {
+      const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
+      const r = await fetch('/api/booking/me/parent', {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      if (!r.ok) return
+      const text = await r.text()
+      if (!text) return
+      let parsed: any = null
+      try {
+        parsed = JSON.parse(text)
+      } catch (e) {
+        return
+      }
+      const parentData = Object.prototype.hasOwnProperty.call(parsed ?? {}, 'parent') ? parsed?.parent : parsed
+      if (parentData) {
+        setParentInfo(parentData)
+      } else {
+        setParentInfo(null)
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setParentInfoResolved(true)
+    }
+  }, [parentInfoResolved])
+
+  useEffect(() => {
+    let targetInstructorId: number | null = null
+    let targetAccountId: number | null = null
+
+    if (explicitInstructorId !== null) {
+      targetInstructorId = explicitInstructorId
+      targetAccountId = instructorAccountId ?? null
+    } else if (studentInfo?.advisor?.instructorId) {
+      targetInstructorId = studentInfo.advisor.instructorId
+      targetAccountId = studentInfo.advisor.accountId ?? null
+    } else if (studentInfoResolved && activeInstructorId === null) {
+      targetInstructorId = 3
+    }
+
+    if (targetInstructorId !== null && targetInstructorId !== activeInstructorId) {
+      setActiveInstructorId(targetInstructorId)
+      setAvailabilities([])
+      setWeekDates([])
+      setSelectedSlot(null)
+      setSelectedDateIdx(0)
+      setSlotDetails(null)
+      setSelectedFormat('online')
+    }
+
+    if (targetAccountId !== activeInstructorAccountId) {
+      setActiveInstructorAccountId(targetAccountId)
+    }
+  }, [explicitInstructorId, instructorAccountId, studentInfo, studentInfoResolved, activeInstructorId, activeInstructorAccountId])
+
+  useEffect(() => {
+    void fetchStudentInfo()
+  }, [fetchStudentInfo])
+
+  useEffect(() => {
+    void fetchParentInfo()
+  }, [fetchParentInfo])
 
   const fetchExistingAppointments = async () => {
     try {
@@ -149,64 +266,9 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         // ignore
       }
     }
-    // fetch current student info if not provided via props
-    const fetchStudent = async () => {
-      if (studentInfo) return
-      try {
-        const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
-        const r = await fetch('/api/booking/me/student', {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        })
-        if (!r.ok) return
-        // backend now returns { student: ... } or {}. handle empty body safely.
-        const text = await r.text()
-        if (!text) return
-        let parsed: any = null
-        try {
-          parsed = JSON.parse(text)
-        } catch (e) {
-          // not JSON — bail
-          return
-        }
-        const st = parsed?.student ?? parsed
-        if (st) setStudentInfo(st)
-      } catch (e) {
-        // ignore
-      }
-    }
-    const fetchParent = async () => {
-      if (parentInfo) return
-      try {
-        const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
-        const r = await fetch('/api/booking/me/parent', {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        })
-        if (!r.ok) return
-        const text = await r.text()
-        if (!text) return
-        let parsed: any = null
-        try {
-          parsed = JSON.parse(text)
-        } catch (e) {
-          return
-        }
-        const parentData = Object.prototype.hasOwnProperty.call(parsed ?? {}, 'parent') ? parsed?.parent : parsed
-        if (parentData) {
-          setParentInfo(parentData)
-        } else {
-          setParentInfo(null)
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
     void fetchSlot()
-    void fetchStudent()
-    void fetchParent()
+    void fetchStudentInfo()
+    void fetchParentInfo()
     void fetchExistingAppointments()
     setCurrentStep(2)
   }
@@ -267,11 +329,12 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
   // fetch availability on mount
   useEffect(() => {
+    if (!activeInstructorId) return
     const fetchAvailability = async () => {
       setLoading(true)
       setError(null)
       try {
-  const res = await fetch(`/api/instructor-availability/${instructorId}`)
+  const res = await fetch(`/api/instructor-availability/${activeInstructorId}`)
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
         const contentType = res.headers.get('content-type') || ''
         if (!contentType.includes('application/json')) {
@@ -351,15 +414,16 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
       }
     }
     fetchAvailability()
-  }, [instructorId])
+  }, [activeInstructorId])
 
   // fetch instructor profile when account id is provided
   useEffect(() => {
-    if (!instructorAccountId) return
+    const accountIdToFetch = activeInstructorAccountId ?? instructorAccountId ?? null
+    if (!accountIdToFetch) return
     let mounted = true
     const fetchProfile = async () => {
       try {
-  const res = await fetch(`/api/instructor-availability/profile/${instructorAccountId}`)
+  const res = await fetch(`/api/instructor-availability/profile/${accountIdToFetch}`)
         if (!res.ok) return
         const data = await res.json()
         if (mounted) setInstructorProfile(data)
@@ -369,7 +433,25 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     }
     fetchProfile()
     return () => { mounted = false }
-  }, [instructorAccountId])
+  }, [activeInstructorAccountId, instructorAccountId])
+
+  useEffect(() => {
+    const advisorProfile = studentInfo?.advisor
+    if (!advisorProfile) return
+  setInstructorProfile((prev: any) => {
+      if (prev && Object.keys(prev).length > 0) return prev
+      return {
+        full_name: advisorProfile.fullName ?? advisorProfile.full_name ?? null,
+        academic_title: advisorProfile.academicTitle ?? null,
+        position: advisorProfile.position ?? null,
+        employee_code: advisorProfile.employeeCode ?? null,
+        avatar_url: advisorProfile.avatarUrl ?? null,
+        email: advisorProfile.email ?? null,
+        instructor_id: advisorProfile.instructorId ?? null,
+        account_id: advisorProfile.accountId ?? null,
+      }
+    })
+  }, [studentInfo])
 
   useEffect(() => {
     if (!parentInfo) return
@@ -410,13 +492,16 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         const list = parsed?.students ?? []
         if (Array.isArray(list) && list.length > 0) {
           setLinkedStudents(list)
+          setStudentInfoResolved(false)
         } else {
           setLinkedStudents([])
           setSelectedStudentId(null)
           setStudentInfo(null)
+          setStudentInfoResolved(true)
         }
       } catch (e) {
         // ignore
+        if (!cancelled) setStudentInfoResolved(true)
       }
     }
     void loadParentStudents()
@@ -444,6 +529,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         ...prev,
         relationship: prev.relationship || selected.relationship || '',
       }))
+      setStudentInfoResolved(true)
     }
   }, [linkedStudents, selectedStudentId])
 
@@ -1139,14 +1225,21 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         Buổi tư vấn học tập
                       </div>
                       <h2 className="text-base sm:text-lg font-bold mb-1">
-                          {(() => {
-                            const slot = slotDetails?.slot ?? slotDetails
-                            return (
-                              slot?.week?.instructor?.account?.profile?.full_name
-                              || instructorProfile?.full_name
-                              || (instructorProfile ? (instructorProfile.employee_code || `Giảng viên #${instructorProfile.instructor_id}`) : `Giảng viên #${instructorId}`)
-                            )
-                          })()}
+                        {(() => {
+                          const slot = slotDetails?.slot ?? slotDetails
+                          const instructorFromSlot = slot?.week?.instructor?.account?.profile?.full_name
+                          const advisorName = studentInfo?.advisor?.fullName || studentInfo?.advisor?.full_name
+                          return (
+                            instructorFromSlot ||
+                            instructorProfile?.full_name ||
+                            advisorName ||
+                            (instructorProfile
+                              ? instructorProfile.employee_code || (instructorProfile.instructor_id ? `Giảng viên #${instructorProfile.instructor_id}` : 'Giảng viên')
+                              : activeInstructorId
+                                ? `Giảng viên #${activeInstructorId}`
+                                : 'Giảng viên')
+                          )
+                        })()}
                       </h2>
                       <p className="text-white/90 text-xs">
                         {(() => {

@@ -405,8 +405,22 @@ export class AccountManagementService {
     };
   }
 
-  async create(createAccountDto: CreateAccountDto): Promise<AccountResponse> {
-    const { password, role, fullName, ...profileData } = createAccountDto;
+  async create(
+    createAccountDto: CreateAccountDto,
+    avatar?: any,
+  ): Promise<AccountResponse> {
+    const {
+      password,
+      role,
+      fullName,
+      birthDate,
+      gender,
+      address,
+      phone,
+      departmentId,
+      major,
+      ...otherData
+    } = createAccountDto;
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -420,29 +434,84 @@ export class AccountManagementService {
       throw new NotFoundException(`Role ${role} not found`);
     }
 
-    // Create account with profile
-    const account = await this.prisma.account.create({
-      data: {
-        email: createAccountDto.email,
-        password_hash: hashedPassword,
-        role_id: roleRecord.id,
-        status: createAccountDto.status || 'active',
-        profile: {
-          create: {
-            full_name: fullName,
-            date_of_birth: profileData.dateOfBirth
-              ? new Date(profileData.dateOfBirth)
-              : undefined,
-            gender: profileData.gender,
-            address: profileData.address,
+    // Handle avatar upload (TODO: implement file storage)
+    let avatarUrl: string | undefined;
+    if (avatar) {
+      // For now, we'll just log it
+      // In production, you would upload to S3 or local storage
+      console.log('Avatar uploaded:', avatar.originalname);
+      // avatarUrl = await this.uploadFile(avatar);
+    }
+
+    // Create account with profile in a transaction
+    const account = await this.prisma.$transaction(async (tx) => {
+      // Create account
+      const newAccount = await tx.account.create({
+        data: {
+          email: createAccountDto.email,
+          password_hash: hashedPassword,
+          role_id: roleRecord.id,
+          status: otherData.status || 'active',
+          profile: {
+            create: {
+              full_name: fullName,
+              date_of_birth: birthDate ? new Date(birthDate) : undefined,
+              gender: gender,
+              address: address,
+              avatar_url: avatarUrl,
+            },
           },
         },
-      },
-      include: {
-        roleRel: true,
-        profile: true,
-      },
+        include: {
+          roleRel: true,
+          profile: true,
+        },
+      });
+
+      // Create role-specific data
+      if (role === 'student') {
+        // Generate student code (you may want to customize this)
+        const studentCode = `ST${Date.now()}`;
+
+        await tx.student.create({
+          data: {
+            account_id: newAccount.account_id,
+            student_code: studentCode,
+            major: major,
+            status: 'active',
+          },
+        });
+      } else if (role === 'instructor') {
+        // Generate employee code
+        const employeeCode = `INS${Date.now()}`;
+
+        await tx.instructor.create({
+          data: {
+            account_id: newAccount.account_id,
+            employee_code: employeeCode,
+            department_id: departmentId,
+            status: 'active',
+          },
+        });
+      } else if (role === 'parent') {
+        await tx.parent.create({
+          data: {
+            account_id: newAccount.account_id,
+            full_name: fullName,
+            email: createAccountDto.email,
+            phone_number: phone || '',
+          },
+        });
+      }
+      // For 'leader' role, no additional table entry is needed
+
+      return newAccount;
     });
+
+    // TODO: Send email if sendEmail is true
+    if (otherData.sendEmail) {
+      console.log('TODO: Send welcome email to', createAccountDto.email);
+    }
 
     return this.findOne(account.account_id);
   }
