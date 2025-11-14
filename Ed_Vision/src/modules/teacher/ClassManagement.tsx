@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/teacher/teacher_card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/teacher/teacher_table"
 import TeacherLayout from "./components/TeacherLayout"
+import { classManagementAPI } from "@/services/api/classManagementAPI"
 import {
     BookOpen,
     Users,
@@ -20,80 +21,6 @@ import {
     ChevronLeft
 } from "lucide-react"
 
-// Dữ liệu sinh viên mẫu
-const studentsData = {
-    "IT2021A": [
-        {
-            masv: "SV001",
-            name: "Nguyễn Văn An",
-            avatar: "/src/assets/teacher/Avatar_Student1.png",
-            email: "nguyenvanan@student.edu",
-            gpa: 3.8,
-            predictedGpa: 3.9,
-            attendance: 95,
-            status: "Excellent",
-            riskLevel: "None" // GPA >= 2.68
-        },
-        {
-            masv: "SV002",
-            name: "Trần Thị Bình",
-            avatar: "/src/assets/teacher/Avatar_Student2.png",
-            email: "tranthibinh@student.edu",
-            gpa: 1.8,
-            predictedGpa: 1.9,
-            attendance: 70,
-            status: "At Risk",
-            riskLevel: "High" // GPA < 2.0
-        },
-        {
-            masv: "SV003",
-            name: "Lê Văn Cường",
-            avatar: "/src/assets/teacher/Avatar_Student3.png",
-            email: "levancuong@student.edu",
-            gpa: 3.2,
-            predictedGpa: 3.4,
-            attendance: 85,
-            status: "Good",
-            riskLevel: "None" // GPA >= 3.2
-        },
-        {
-            masv: "SV005",
-            name: "Hoàng Thị Mai",
-            avatar: "/src/assets/teacher/Avatar_Student2.png",
-            email: "hoangthimai@student.edu",
-            gpa: 2.55,
-            predictedGpa: 2.65,
-            attendance: 82,
-            status: "Monitor",
-            riskLevel: "Monitor" // 2.4 <= GPA < 2.68
-        },
-        {
-            masv: "SV006",
-            name: "Phạm Văn Nam",
-            avatar: "/src/assets/teacher/Avatar_Student1.png",
-            email: "phamvannam@student.edu",
-            gpa: 2.2,
-            predictedGpa: 2.35,
-            attendance: 75,
-            status: "Warning",
-            riskLevel: "Medium" // 2.0 <= GPA < 2.4
-        }
-    ],
-    "KT2022A": [
-        {
-            masv: "SV004",
-            name: "Phạm Thị Dung",
-            avatar: "/src/assets/teacher/Avatar_Student1.png",
-            email: "phamthidung@student.edu",
-            gpa: 3.9,
-            predictedGpa: 4.0,
-            attendance: 98,
-            status: "Excellent",
-            riskLevel: "None" // GPA >= 3.2
-        }
-    ]
-}
-
 export default function ClassManagement() {
     const [selectedClass, setSelectedClass] = useState<string | null>(null)
     const [showStudentDetail, setShowStudentDetail] = useState(false)
@@ -106,6 +33,63 @@ export default function ClassManagement() {
     const [quickMessage, setQuickMessage] = useState('')
     const [selectedTemplate, setSelectedTemplate] = useState('')
 
+    // State for API data
+    const [classData, setClassData] = useState<any[]>([])
+    const [studentsData, setStudentsData] = useState<any[]>([])
+    const [statistics, setStatistics] = useState({
+        totalClasses: 0,
+        totalStudents: 0,
+        activeClasses: 0,
+        totalAtRisk: 0
+    })
+    const [loading, setLoading] = useState(false)
+
+    // Fetch classes on mount
+    useEffect(() => {
+        fetchClasses()
+        fetchStatistics()
+    }, [])
+
+    // Fetch students when class is selected
+    useEffect(() => {
+        if (selectedClass) {
+            fetchStudents(selectedClass)
+        }
+    }, [selectedClass])
+
+    const fetchClasses = async () => {
+        try {
+            setLoading(true)
+            const data = await classManagementAPI.getClasses()
+            setClassData(data)
+        } catch (error) {
+            console.error('Error fetching classes:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchStatistics = async () => {
+        try {
+            const data = await classManagementAPI.getStatistics()
+            setStatistics(data)
+        } catch (error) {
+            console.error('Error fetching statistics:', error)
+        }
+    }
+
+    const fetchStudents = async (classCode: string) => {
+        try {
+            setLoading(true)
+            const data = await classManagementAPI.getStudentsByClass(classCode)
+            setStudentsData(data)
+        } catch (error) {
+            console.error('Error fetching students:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     // Mẫu tin nhắn nhanh
     const messageTemplates = [
         { id: 'concern', label: '😟 Quan tâm', message: 'Thầy nhận thấy em đang gặp khó khăn. Em có thể chia sẻ với thầy không?' },
@@ -116,9 +100,9 @@ export default function ClassManagement() {
 
     // Utility function để filter students
     const getFilteredStudents = () => {
-        if (!selectedClass || !studentsData[selectedClass as keyof typeof studentsData]) return []
+        if (!studentsData || studentsData.length === 0) return []
 
-        return studentsData[selectedClass as keyof typeof studentsData].filter(student => {
+        return studentsData.filter(student => {
             const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 student.masv.toLowerCase().includes(searchTerm.toLowerCase())
             const matchesRisk = filterRisk === 'all' || student.riskLevel === filterRisk
@@ -137,92 +121,10 @@ export default function ClassManagement() {
         setCurrentPage(1)
     }
 
-    // Class data
-    const classData = [
-        {
-            id: "IT2021A",
-            name: "IT2021A",
-            major: "Công nghệ thông tin - Khóa 2021",
-            students: 42,
-            teacher: "TS. Nguyễn Văn A",
-            atRisk: 3,
-            status: "Đang hoạt động",
-            year: "Năm học 2024-2025",
-            icon: BookOpen,
-            iconBg: "bg-blue-100",
-            iconColor: "text-blue-600"
-        },
-        {
-            id: "IT2021B",
-            name: "IT2021B",
-            major: "Công nghệ thông tin - Khóa 2021",
-            students: 38,
-            teacher: "TS. Nguyễn Văn A",
-            atRisk: 2,
-            status: "Đang hoạt động",
-            year: "Năm học 2024-2025",
-            icon: BookOpen,
-            iconBg: "bg-blue-100",
-            iconColor: "text-blue-600"
-        },
-        {
-            id: "KT2022A",
-            name: "KT2022A",
-            major: "Kế toán - Khóa 2022",
-            students: 45,
-            teacher: "TS. Nguyễn Văn A",
-            atRisk: 5,
-            status: "Đang hoạt động",
-            year: "Năm học 2024-2025",
-            icon: Users,
-            iconBg: "bg-green-100",
-            iconColor: "text-green-600"
-        },
-        {
-            id: "QTKD2023A",
-            name: "QTKD2023A",
-            major: "Quản trị kinh doanh - Khóa 2023",
-            students: 40,
-            teacher: "TS. Nguyễn Văn A",
-            atRisk: 0,
-            status: "Đang hoạt động",
-            year: "Năm học 2024-2025",
-            icon: GraduationCap,
-            iconBg: "bg-purple-100",
-            iconColor: "text-purple-600"
-        },
-        {
-            id: "NN2022B",
-            name: "NN2022B",
-            major: "Ngôn ngữ Anh - Khóa 2022",
-            students: 35,
-            teacher: "TS. Nguyễn Văn A",
-            atRisk: 8,
-            status: "Tạm dừng",
-            year: "Năm học 2024-2025",
-            icon: BookOpen,
-            iconBg: "bg-orange-100",
-            iconColor: "text-orange-600"
-        },
-        {
-            id: "IT2024A",
-            name: "IT2024A",
-            major: "Công nghệ thông tin - Khóa 2024",
-            students: 48,
-            teacher: "TS. Nguyễn Văn A",
-            atRisk: 5,
-            status: "Đang hoạt động",
-            year: "Năm học 2024-2025",
-            icon: BookOpen,
-            iconBg: "bg-blue-100",
-            iconColor: "text-blue-600"
-        }
-    ]
-
-    const totalClasses = classData.length
-    const totalStudents = classData.reduce((sum, cls) => sum + cls.students, 0)
-    const activeClasses = classData.filter(cls => cls.status === "Đang hoạt động").length
-    const totalAtRisk = classData.reduce((sum, cls) => sum + cls.atRisk, 0)
+    const totalClasses = statistics.totalClasses
+    const totalStudents = statistics.totalStudents
+    const activeClasses = statistics.activeClasses
+    const totalAtRisk = statistics.totalAtRisk
 
     return (
         <TeacherLayout currentPage="class-management">
@@ -312,78 +214,90 @@ export default function ClassManagement() {
 
                     {/* Class Cards Grid */}
                     <div className="grid grid-cols-3 gap-6">
-                        {classData.map((classItem) => {
-                            const IconComponent = classItem.icon
-                            return (
-                                <Card key={classItem.id} className="hover:shadow-lg transition-shadow">
-                                    <CardContent className="p-6">
-                                        {/* Header with icon and status */}
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className={`w-12 h-12 ${classItem.iconBg} rounded-lg flex items-center justify-center`}>
-                                                <IconComponent className={`w-6 h-6 ${classItem.iconColor}`} />
+                        {loading ? (
+                            <div className="col-span-3 text-center py-12">
+                                <p className="text-gray-500">Đang tải dữ liệu...</p>
+                            </div>
+                        ) : classData.length === 0 ? (
+                            <div className="col-span-3 text-center py-12">
+                                <p className="text-gray-500">Không có dữ liệu lớp học</p>
+                            </div>
+                        ) : (
+                            classData.map((classItem) => {
+                                const IconComponent = BookOpen
+                                const iconBg = "bg-blue-100"
+                                const iconColor = "text-blue-600"
+                                return (
+                                    <Card key={classItem.id} className="hover:shadow-lg transition-shadow">
+                                        <CardContent className="p-6">
+                                            {/* Header with icon and status */}
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className={`w-12 h-12 ${iconBg} rounded-lg flex items-center justify-center`}>
+                                                    <IconComponent className={`w-6 h-6 ${iconColor}`} />
+                                                </div>
+                                                <Badge
+                                                    className={
+                                                        classItem.status === "Đang hoạt động"
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-yellow-100 text-yellow-800"
+                                                    }
+                                                >
+                                                    {classItem.status}
+                                                </Badge>
                                             </div>
-                                            <Badge
-                                                className={
-                                                    classItem.status === "Đang hoạt động"
-                                                        ? "bg-green-100 text-green-800"
-                                                        : "bg-yellow-100 text-yellow-800"
-                                                }
-                                            >
-                                                {classItem.status}
-                                            </Badge>
-                                        </div>
 
-                                        {/* Class name */}
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2">{classItem.name}</h3>
+                                            {/* Class name */}
+                                            <h3 className="text-lg font-bold text-gray-900 mb-2">{classItem.name}</h3>
 
-                                        {/* Major */}
-                                        <p className="text-sm text-gray-600 mb-4">{classItem.major}</p>
+                                            {/* Major */}
+                                            <p className="text-sm text-gray-600 mb-4">{classItem.major}</p>
 
-                                        {/* Details */}
-                                        <div className="space-y-2 mb-4">
-                                            <div className="flex justify-between">
-                                                <span className="text-sm text-gray-600">Sĩ số:</span>
-                                                <span className="text-sm text-slate-900">{classItem.students} sinh viên</span>
+                                            {/* Details */}
+                                            <div className="space-y-2 mb-4">
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-gray-600">Sĩ số:</span>
+                                                    <span className="text-sm text-slate-900">{classItem.students} sinh viên</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-gray-600">GVCV:</span>
+                                                    <span className="text-sm text-slate-900">{classItem.teacher}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-gray-600">At-Risk:</span>
+                                                    <span className={`text-sm ${classItem.atRisk > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                        {classItem.atRisk} sinh viên
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-sm text-gray-600">GVCV:</span>
-                                                <span className="text-sm text-slate-900">{classItem.teacher}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-sm text-gray-600">At-Risk:</span>
-                                                <span className={`text-sm ${classItem.atRisk > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                    {classItem.atRisk} sinh viên
-                                                </span>
-                                            </div>
-                                        </div>
 
-                                        {/* Footer */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center text-xs text-gray-500">
-                                                <Calendar className="w-3 h-3 mr-1" />
-                                                {classItem.year}
+                                            {/* Footer */}
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center text-xs text-gray-500">
+                                                    <Calendar className="w-3 h-3 mr-1" />
+                                                    {classItem.year}
+                                                </div>
+                                                <button
+                                                    className="flex items-center text-sm text-blue-500 hover:text-blue-600"
+                                                    onClick={() => {
+                                                        setSelectedClass(classItem.id)
+                                                        setShowStudentDetail(true)
+                                                    }}
+                                                >
+                                                    Xem chi tiết
+                                                    <ChevronRight className="w-4 h-4 ml-1" />
+                                                </button>
                                             </div>
-                                            <button
-                                                className="flex items-center text-sm text-blue-500 hover:text-blue-600"
-                                                onClick={() => {
-                                                    setSelectedClass(classItem.id)
-                                                    setShowStudentDetail(true)
-                                                }}
-                                            >
-                                                Xem chi tiết
-                                                <ChevronRight className="w-4 h-4 ml-1" />
-                                            </button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
+                                        </CardContent>
+                                    </Card>
+                                )
+                            })
+                        )}
                     </div>
                 </>
             ) : (
                 /* Student Detail View - Professional Table Layout */
                 <div>
-                    {selectedClass && studentsData[selectedClass as keyof typeof studentsData] ? (
+                    {selectedClass && studentsData.length > 0 ? (
                         <div className="space-y-6">
                             {/* Search and Filter Bar */}
                             <Card>
@@ -423,24 +337,24 @@ export default function ClassManagement() {
                                         <div className="flex items-center space-x-6 text-sm">
                                             <div className="text-center">
                                                 <p className="text-gray-500">Tổng SV</p>
-                                                <p className="font-bold text-gray-900">{studentsData[selectedClass as keyof typeof studentsData].length}</p>
+                                                <p className="font-bold text-gray-900">{studentsData.length}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-gray-500">Không rủi ro</p>
                                                 <p className="font-bold text-green-600">
-                                                    {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.riskLevel === 'None').length}
+                                                    {studentsData.filter((s: any) => s.riskLevel === 'None').length}
                                                 </p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-gray-500">Nguy cơ cao</p>
                                                 <p className="font-bold text-red-600">
-                                                    {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.riskLevel === 'High').length}
+                                                    {studentsData.filter((s: any) => s.riskLevel === 'High').length}
                                                 </p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-gray-500">Giỏi (≥3.2)</p>
                                                 <p className="font-bold text-green-600">
-                                                    {studentsData[selectedClass as keyof typeof studentsData].filter(s => s.gpa >= 3.2).length}
+                                                    {studentsData.filter((s: any) => s.gpa >= 3.2).length}
                                                 </p>
                                             </div>
                                         </div>
@@ -715,7 +629,7 @@ export default function ClassManagement() {
                                         </svg>
                                         <div>
                                             <p className="text-xs text-gray-500">Số điện thoại</p>
-                                            <p className="text-sm font-medium text-gray-900">0{Math.floor(Math.random() * 900000000) + 100000000}</p>
+                                            <p className="text-sm font-medium text-gray-900">{selectedStudentDetail.phone || 'Chưa cập nhật'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start">
@@ -725,9 +639,7 @@ export default function ClassManagement() {
                                         </svg>
                                         <div>
                                             <p className="text-xs text-gray-500">Địa chỉ</p>
-                                            <p className="text-sm font-medium text-gray-900">
-                                                {Math.floor(Math.random() * 500) + 1} {['Nguyễn Trãi', 'Láng Hạ', 'Giải Phóng', 'Đại Cồ Việt', 'Lê Văn Lương'][Math.floor(Math.random() * 5)]}, Hà Nội
-                                            </p>
+                                            <p className="text-sm font-medium text-gray-900">{selectedStudentDetail.address || 'Chưa cập nhật'}</p>
                                         </div>
                                     </div>
                                 </div>
