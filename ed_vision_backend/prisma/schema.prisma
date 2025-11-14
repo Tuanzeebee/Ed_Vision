@@ -7,23 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Meeting type for slots & appointments. Values intentionally lowercase to match frontend strings.
-enum MeetingType {
-  online
-  offline
-  both
-}
-  
 model Account {
   account_id         Int              @id @default(autoincrement())
   email              String           @unique @db.VarChar(255)
   password_hash      String
   status             String?          @default("active") @db.VarChar(20)
   created_at         DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime         @default(now()) @db.Timestamptz(6)
   last_login_at      DateTime?        @db.Timestamptz(6)
   last_logout_at     DateTime?        @db.Timestamptz(6)
   role_id            Int?
+  updated_at         DateTime         @default(now()) @db.Timestamptz(6)
   roleRel            Role?            @relation(fields: [role_id], references: [id])
   appointmentsBooked Appointment[]
   instructor         Instructor?
@@ -100,7 +93,7 @@ model Instructor {
   @@map("Instructor")
 }
 
-model Department { //Trường vd: ĐTQT
+model Department {
   department_id Int          @id @default(autoincrement())
   code          String?      @unique @db.VarChar(20)
   name          String       @db.VarChar(150)
@@ -111,17 +104,15 @@ model Department { //Trường vd: ĐTQT
   @@map("Department")
 }
 
-model Program { //Chương trình vd: CMU
+model Program {
   program_id        Int                @id @default(autoincrement())
   program_code      String             @unique @db.VarChar(20)
   program_name      String             @db.VarChar(255)
   duration_years    Int?               @default(4) @db.SmallInt
   department_id     Int
-  department_id     Int
   classGroups       ClassGroup[]
   curriculumCourses CurriculumCourse[]
   department        Department         @relation(fields: [department_id], references: [department_id])
-
 
   @@map("Program")
 }
@@ -309,9 +300,9 @@ model InstructorWeeklySlot {
   is_open          Boolean                     @default(true)
   note             String?
   auto_accept      Boolean                     @default(false)
-  meeting_type     MeetingType?                @default(offline)
-  meeting_location String?
   meeting_link     String?
+  meeting_location String?
+  meeting_type     MeetingType?                @default(offline)
   appointments     Appointment[]
   week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
@@ -326,7 +317,6 @@ model Appointment {
   booker_role           String               @db.VarChar(20)
   student_id            Int?
   instructor_id         Int?
-  meeting_type          MeetingType
   meeting_purpose       String?              @db.VarChar(255)
   status                String               @default("pending") @db.VarChar(32)
   cancel_reason         String?
@@ -336,6 +326,7 @@ model Appointment {
   attendance_checked_at DateTime?            @db.Timestamptz(6)
   attendance_status     String?              @db.VarChar(20)
   attended              Boolean?
+  meeting_type          MeetingType
   booker                Account              @relation(fields: [booker_account_id], references: [account_id])
   instructor            Instructor?          @relation(fields: [instructor_id], references: [instructor_id])
   slot                  InstructorWeeklySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
@@ -422,4 +413,10 @@ model RolePermission {
   @@unique([roleId, permissionId])
   @@index([roleId])
   @@map("RolePermission")
+}
+
+enum MeetingType {
+  online
+  offline
+  both
 }
