@@ -38,8 +38,9 @@ async function handleEventByRow(eventRow) {
     if (table === 'Account') {
       // account changes -> update dim_account; also forward to session handler for login/logout events
       const res = await processAccountEvent({ operation: op, payload, dataset });
-      // If payload contains session/logout info, let sessionETL handle it as well
-      if (payload && (payload.logout_time || payload.last_logout_at || payload.session_id || payload.login_time)) {
+      
+      // Forward to sessionETL khi có login/logout info
+      if (payload && (payload.last_logout_at || payload.last_login_at)) {
         try {
           await processSessionEvent({ operation: op, payload, dataset });
         } catch (e) {

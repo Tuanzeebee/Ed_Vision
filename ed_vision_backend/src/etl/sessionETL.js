@@ -1,14 +1,28 @@
 require('dotenv').config();
 const { BigQuery } = require('@google-cloud/bigquery');
+const crypto = require('crypto');
+const { PrismaClient } = require('@prisma/client');
+const { updateDailyActivity } = require('./dailyActivityETL');
+
 const bigquery = new BigQuery({ projectId: process.env.BIGQUERY_PROJECT_ID });
+const prisma = new PrismaClient();
 const DEFAULT_DATASET = process.env.BIGQUERY_DATASET;
 
 function getPeriod(dt) {
   if (!dt) return null;
-  const h = new Date(dt).getUTCHours();
+  // Lấy giờ địa phương (Vietnam timezone UTC+7)
+  const date = new Date(dt);
+  const h = date.getHours(); // Local hours, không phải UTC
   if (h >= 5 && h < 12) return 'morning';
   if (h >= 12 && h < 17) return 'afternoon';
   return 'evening';
+}
+
+// Tạo session_id từ account_id + login_time (vì schema không có bảng Session)
+function generateSessionId(accountId, loginTime) {
+  if (!accountId || !loginTime) return null;
+  const str = `${accountId}_${new Date(loginTime).toISOString()}`;
+  return crypto.createHash('sha256').update(str).digest('hex').substring(0, 32);
 }
 
 async function processSessionEvent(event) {
@@ -18,74 +32,117 @@ async function processSessionEvent(event) {
   const project = process.env.BIGQUERY_PROJECT_ID || bigquery.projectId;
   const tableId = `\`${project}.${dataset}.fact_user_session\``;
 
-  const session_id = payload.session_id || payload.sessionId || null;
+  // Lấy thông tin từ payload Account (không có bảng Session riêng)
   const account_sk = payload.account_id || payload.account_sk || null;
-  const role_code = payload.role_code || payload.role || null;
-  const login_time = payload.login_time || payload.loginTime || payload.created_at || null;
-  const logout_time = payload.logout_time || payload.logoutTime || null;
-  const created_at = payload.created_at || null;
+  let role_code = payload.role_code || payload.role || null;
+  
+  // Nếu payload không có role_code, query từ DB
+  if (!role_code && account_sk) {
+    try {
+      const account = await prisma.account.findUnique({
+        where: { account_id: Number(account_sk) },
+        include: { roleRel: true }
+      });
+      role_code = account?.roleRel?.code || 'unknown';
+    } catch (err) {
+      console.warn('sessionETL: failed to fetch role_code', err.message);
+      role_code = 'unknown';
+    }
+  }
+  
+  // Fallback nếu vẫn null
+  if (!role_code) {
+    role_code = 'unknown';
+  }
+  
+  // Login/logout time từ Account.last_login_at và Account.last_logout_at
+  const login_time = payload.last_login_at || payload.login_time || payload.loginTime || null;
+  const logout_time = payload.last_logout_at || payload.logout_time || payload.logoutTime || null;
+  
+  // Tạo session_id từ account_id + login_time (vì không có bảng Session)
+  let session_id = payload.session_id || payload.sessionId || null;
+  if (!session_id && account_sk && login_time) {
+    session_id = generateSessionId(account_sk, login_time);
+  }
 
-  if (!session_id) {
-    console.warn('sessionETL: missing session_id, skipping');
-    return { ok: false, reason: 'missing session_id' };
+  if (!account_sk || !login_time) {
+    console.warn('sessionETL: missing account_id or login_time, skipping', { account_sk, login_time });
+    return { ok: false, reason: 'missing account_id or login_time' };
   }
 
   try {
     const durationMin = login_time && logout_time ? Math.round((new Date(logout_time) - new Date(login_time)) / 60000) : null;
     const period = getPeriod(login_time);
 
-    // If this is an UPDATE that contains logout_time, try to MERGE/UPDATE the existing session row
-    if (op === 'UPDATE' && logout_time) {
-      const mergeSql = `MERGE ${tableId} T
-      USING (SELECT @session_id AS session_id, @account_sk AS account_sk, @login_time AS login_time, @logout_time AS logout_time,
-                    @session_duration_min AS session_duration_min, @period AS period, @updated_at AS updated_at) S
-      ON (T.session_id IS NOT NULL AND S.session_id IS NOT NULL AND T.session_id = S.session_id)
-         OR (T.account_sk = S.account_sk AND T.login_time = S.login_time)
-      WHEN MATCHED THEN
-        UPDATE SET logout_time = S.logout_time, session_duration_min = S.session_duration_min, period = S.period, updated_at = COALESCE(S.updated_at, T.updated_at)
-      WHEN NOT MATCHED THEN
-        INSERT (session_id, account_sk, role_code, login_time, logout_time, session_duration_min, period, created_at)
-        VALUES (S.session_id, S.account_sk, @role_code, S.login_time, S.logout_time, S.session_duration_min, S.period, S.updated_at)`;
+    // MERGE: update logout nếu session đã tồn tại, insert nếu chưa
+    const mergeSql = `MERGE ${tableId} T
+    USING (SELECT @session_id AS session_id, @account_sk AS account_sk, @login_time AS login_time) S
+    ON T.session_id = S.session_id OR (T.account_sk = S.account_sk AND T.login_time = S.login_time)
+    WHEN MATCHED THEN
+      UPDATE SET logout_time = @logout_time, session_duration_min = @session_duration_min, period = @period, role_code = COALESCE(@role_code, T.role_code)
+    WHEN NOT MATCHED THEN
+      INSERT (session_id, account_sk, role_code, login_time, logout_time, session_duration_min, period, created_at)
+      VALUES (@session_id, @account_sk, @role_code, @login_time, @logout_time, @session_duration_min, @period, @created_at)`;
 
-      const params = {
-        session_id,
-        account_sk: account_sk != null ? Number(account_sk) : null,
-        login_time: login_time ? new Date(login_time) : null,
-        logout_time: logout_time ? new Date(logout_time) : null,
-        session_duration_min: durationMin,
-        period,
-        updated_at: logout_time ? new Date(logout_time) : (created_at ? new Date(created_at) : new Date()),
-        role_code
-      };
-
-      try {
-        await bigquery.query({ query: mergeSql, params });
-        return { ok: true, action: 'merge_update' };
-      } catch (mergeErr) {
-        console.error('sessionETL merge error', mergeErr);
-        return { ok: false, error: String(mergeErr) };
-      }
-    }
-
-    // Otherwise treat as INSERT (login event or full session payload)
-    const row = {
-      session_id,
-      account_sk: account_sk != null ? Number(account_sk) : null,
-      role_code,
-      login_time: login_time ? new Date(login_time) : null,
+    const params = {
+      session_id: String(session_id || ''),
+      account_sk: Number(account_sk),
+      login_time: login_time ? new Date(login_time) : new Date(),
       logout_time: logout_time ? new Date(logout_time) : null,
-      session_duration_min: durationMin,
-      period,
-      created_at: created_at ? new Date(created_at) : new Date(),
-      etl_op: op || 'INSERT'
+      session_duration_min: durationMin !== null ? Number(durationMin) : null,
+      period: period || 'unknown',
+      role_code: String(role_code),
+      created_at: new Date()
+    };
+
+    const options = {
+      query: mergeSql,
+      params,
+      types: {
+        session_id: 'STRING',
+        account_sk: 'INT64',
+        login_time: 'TIMESTAMP',
+        logout_time: 'TIMESTAMP',
+        session_duration_min: 'INT64',
+        period: 'STRING',
+        role_code: 'STRING',
+        created_at: 'TIMESTAMP'
+      }
     };
 
     try {
-      await bigquery.dataset(dataset).table('fact_user_session').insert([row], { ignoreUnknownValues: true });
-      return { ok: true, action: 'insert' };
-    } catch (insErr) {
-      console.error('sessionETL insert error', insErr);
-      return { ok: false, error: String(insErr) };
+      await bigquery.query(options);
+      
+      // Trigger daily activity CHỈ KHI:
+      // 1. Login event mới (last_login_at > last_logout_at hoặc logout_time null)
+      // 2. First login của user trong ngày
+      // KHÔNG trigger khi logout
+      
+      // Detect login event: login_time phải mới hơn logout_time
+      const isLoginEvent = login_time && (
+        !logout_time || 
+        new Date(login_time) > new Date(logout_time)
+      );
+      
+      console.log(`sessionETL: login=${login_time}, logout=${logout_time}, isLoginEvent=${isLoginEvent}, account_sk=${account_sk}, role=${role_code}`);
+      
+      if (role_code && isLoginEvent && account_sk) {
+        const today = new Date().toISOString().split('T')[0];
+        const loginDate = new Date(login_time).toISOString().split('T')[0];
+        
+        // Chỉ update nếu login_time là hôm nay
+        if (loginDate === today) {
+          console.log(`sessionETL: triggering daily activity for ${role_code} account ${account_sk}`);
+          updateDailyActivity(role_code, today, account_sk).catch(err => {
+            console.warn('sessionETL: daily activity update failed', err.message);
+          });
+        }
+      }
+      
+      return { ok: true, action: logout_time ? 'merge_logout' : 'merge_login' };
+    } catch (mergeErr) {
+      console.error('sessionETL merge error', mergeErr);
+      return { ok: false, error: String(mergeErr) };
     }
   } catch (err) {
     console.error('sessionETL error', err);
