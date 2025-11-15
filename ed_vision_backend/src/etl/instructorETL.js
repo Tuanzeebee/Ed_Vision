@@ -16,27 +16,42 @@ async function processInstructorEvent(event) {
   let instructor_sk = payload.instructor_id || payload.instructor_sk || null;
   const account_id = payload.account_id || null;
   const employee_code = payload.employee_code || payload.employeeCode || null;
-  const full_name = payload.full_name || payload.fullName || null;
+  let full_name = payload.full_name || payload.fullName || null;
   const position = payload.position || null;
-  const status = payload.status || null;
+  const status = payload.status || 'active';
   const created_at = payload.created_at || null;
   let department_name = payload.department_name || null;
 
-  // try lookup instructor_sk by account_id if missing
-  if (!instructor_sk && account_id) {
-    try {
-      const inst = await prisma.instructor.findUnique({ where: { account_id: Number(account_id) }, select: { instructor_id: true, department_id: true } });
-      if (inst) {
-        instructor_sk = inst.instructor_id;
-        if (!department_name && inst.department_id) {
-          const dep = await prisma.department.findUnique({ where: { department_id: inst.department_id }, select: { name: true } });
-          if (dep) department_name = dep.name;
-        }
-      }
-    } catch (e) {
-      console.warn('instructorETL: prisma lookup failed', e.message || e);
-    }
+  if (!instructor_sk || !account_id) {
+    console.warn('instructorETL: missing instructor_sk or account_id, skipping');
+    return { ok: false, reason: 'missing required fields' };
   }
+
+  // Query Profile for full_name and Department for department_name
+  try {
+    const inst = await prisma.instructor.findUnique({
+      where: { instructor_id: Number(instructor_sk) },
+      include: {
+        account: { include: { profile: true } },
+        department: true
+      }
+    });
+    
+    if (inst) {
+      if (!full_name && inst.account?.profile?.full_name) {
+        full_name = inst.account.profile.full_name;
+      }
+      if (!department_name && inst.department?.name) {
+        department_name = inst.department.name;
+      }
+    }
+  } catch (e) {
+    console.warn('instructorETL: prisma lookup failed', e.message || e);
+  }
+
+  // Fallbacks
+  if (!full_name) full_name = 'Unknown';
+  if (!department_name) department_name = 'Unknown';
 
   try {
     if (op === 'DELETE') {
@@ -56,17 +71,32 @@ async function processInstructorEvent(event) {
       VALUES (S.instructor_sk, S.account_id, S.employee_code, S.full_name, S.department_name, S.position, S.status, S.created_at)`;
 
     const params = {
-      instructor_sk: instructor_sk != null ? Number(instructor_sk) : null,
-      account_id: account_id != null ? Number(account_id) : null,
-      employee_code,
-      full_name,
-      department_name,
-      position,
-      status,
-      created_at: created_at ? new Date(created_at) : null,
+      instructor_sk: Number(instructor_sk),
+      account_id: Number(account_id),
+      employee_code: String(employee_code || ''),
+      full_name: String(full_name),
+      department_name: String(department_name),
+      position: String(position || ''),
+      status: String(status),
+      created_at: created_at ? new Date(created_at) : new Date()
     };
 
-    await bigquery.query({ query: mergeSql, params });
+    const options = {
+      query: mergeSql,
+      params,
+      types: {
+        instructor_sk: 'INT64',
+        account_id: 'INT64',
+        employee_code: 'STRING',
+        full_name: 'STRING',
+        department_name: 'STRING',
+        position: 'STRING',
+        status: 'STRING',
+        created_at: 'TIMESTAMP'
+      }
+    };
+
+    await bigquery.query(options);
     return { ok: true, action: 'upsert' };
   } catch (err) {
     console.error('instructorETL error', err);
