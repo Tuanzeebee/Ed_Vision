@@ -57,7 +57,7 @@ export default function TeacherManagementDashboard() {
     const initializeSocket = async () => {
       try {
         setIsLoadingStats(true);
-        
+
         // Initial fetch
         const stats = await instructorService.getOnlineStats();
         setOnlineStats(stats);
@@ -106,7 +106,7 @@ export default function TeacherManagementDashboard() {
     const fetchInstructors = async () => {
       try {
         setIsLoading(true);
-        
+
         // Map filter values to API parameters
         const statusMap: { [key: string]: string } = {
           "Đang hoạt động": "active",
@@ -122,7 +122,7 @@ export default function TeacherManagementDashboard() {
         };
 
         const response = await instructorService.getInstructors(params);
-        
+
         // Filter by role on client side
         let filteredData = response.data;
         if (roleFilter === "Giảng viên") {
@@ -130,7 +130,7 @@ export default function TeacherManagementDashboard() {
         } else if (roleFilter === "Cố vấn") {
           filteredData = response.data.filter(instructor => (instructor.advisingClassCount || 0) > 0);
         }
-        
+
         // Filter by quality on client side
         if (qualityFilter !== "Tất cả chất lượng") {
           filteredData = filteredData.filter(instructor => {
@@ -138,12 +138,12 @@ export default function TeacherManagementDashboard() {
             return quality.label === qualityFilter.split(' (')[0];
           });
         }
-        
+
         // Apply pagination on filtered data
         const startIndex = (currentPage - 1) * teachersPerPage;
         const endIndex = startIndex + teachersPerPage;
         const paginatedData = filteredData.slice(startIndex, endIndex);
-        
+
         setInstructors(paginatedData);
         setTotalInstructors(filteredData.length);
         setTotalPages(Math.ceil(filteredData.length / teachersPerPage));
@@ -207,8 +207,8 @@ export default function TeacherManagementDashboard() {
 
   const renderStars = (count: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <i 
-        key={i} 
+      <i
+        key={i}
         className={`${i < count ? 'fas' : 'far'} fa-star text-yellow-400 text-xs`}
       />
     ));
@@ -278,18 +278,18 @@ export default function TeacherManagementDashboard() {
                 {/* Search */}
                 <div className="relative flex-1 max-w-xs">
                   <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                  <input 
-                    type="text" 
-                    placeholder="Nhập tên giảng viên..." 
+                  <input
+                    type="text"
+                    placeholder="Nhập tên giảng viên..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                   />
                 </div>
-                
+
                 {/* Filters */}
                 <div className="flex flex-wrap gap-2">
-                  <select 
+                  <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
                     className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
@@ -298,7 +298,7 @@ export default function TeacherManagementDashboard() {
                     <option>Giảng viên</option>
                     <option>Cố vấn</option>
                   </select>
-                  <select 
+                  <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
@@ -308,7 +308,7 @@ export default function TeacherManagementDashboard() {
                     <option>Nghỉ phép</option>
                     <option>Không hoạt động</option>
                   </select>
-                  <select 
+                  <select
                     value={qualityFilter}
                     onChange={(e) => setQualityFilter(e.target.value)}
                     className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
@@ -320,10 +320,10 @@ export default function TeacherManagementDashboard() {
                   </select>
                 </div>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => {
                     setSearchTerm("");
                     setRoleFilter("Tất cả vai trò");
@@ -344,10 +344,10 @@ export default function TeacherManagementDashboard() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
             {isLoading && (
-              <LoadingSpinner 
-                text="Đang tải dữ liệu..." 
-                size="md" 
-                position="top" 
+              <LoadingSpinner
+                text="Đang tải dữ liệu..."
+                size="md"
+                position="top"
               />
             )}
             <table className="w-full">
@@ -374,63 +374,63 @@ export default function TeacherManagementDashboard() {
                   </tr>
                 ) : !isLoading ? (
                   instructors.map((instructor) => (
-                    <tr 
-                      key={instructor.instructorId} 
+                    <tr
+                      key={instructor.instructorId}
                       className="hover:bg-gray-50"
                     >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{instructor.employeeCode}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <img 
-                          src={instructor.profile?.avatarUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"} 
-                          alt={instructor.profile?.fullName || 'Avatar'} 
-                          className="w-10 h-10 rounded-full mr-3" 
-                        />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{instructor.profile?.fullName || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{instructor.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPositionBadgeColor(instructor.position || '')}`}>
-                        {instructor.position || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(instructor.status)}`}>
-                        <span className={`w-2 h-2 ${getStatusDotColor(instructor.status)} rounded-full mr-1`}></span>
-                        {getStatusLabel(instructor.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        const quality = getQualityRating(instructor.advisingClassCount || 0);
-                        return (
-                          <div className="flex items-center">
-                            <div className="flex space-x-0.5">
-                              {renderStars(quality.stars)}
-                            </div>
-                            <span className={`ml-2 text-xs font-medium ${quality.color}`}>
-                              {quality.label}
-                            </span>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{instructor.employeeCode}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <img
+                            src={instructor.profile?.avatarUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"}
+                            alt={instructor.profile?.fullName || 'Avatar'}
+                            className="w-10 h-10 rounded-full mr-3"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{instructor.profile?.fullName || 'N/A'}</div>
+                            <div className="text-sm text-gray-500">{instructor.email}</div>
                           </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {instructor.advisingClassCount ? `${instructor.advisingClassCount} lớp` : '0 lớp'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button 
-                        onClick={() => handleViewTeacher(instructor.instructorId)}
-                        title="Xem chi tiết"
-                        className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                      >
-                        <span className="text-blue-600 hover:text-blue-900 text-lg">👁️</span>
-                      </button>
-                    </td>
-                  </tr>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPositionBadgeColor(instructor.position || '')}`}>
+                          {instructor.position || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(instructor.status)}`}>
+                          <span className={`w-2 h-2 ${getStatusDotColor(instructor.status)} rounded-full mr-1`}></span>
+                          {getStatusLabel(instructor.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(() => {
+                          const quality = getQualityRating(instructor.advisingClassCount || 0);
+                          return (
+                            <div className="flex items-center">
+                              <div className="flex space-x-0.5">
+                                {renderStars(quality.stars)}
+                              </div>
+                              <span className={`ml-2 text-xs font-medium ${quality.color}`}>
+                                {quality.label}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {instructor.advisingClassCount ? `${instructor.advisingClassCount} lớp` : '0 lớp'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleViewTeacher(instructor.instructorId)}
+                          title="Xem chi tiết"
+                          className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                        >
+                          <span className="text-blue-600 hover:text-blue-900 text-lg">👁️</span>
+                        </button>
+                      </td>
+                    </tr>
                   ))
                 ) : null}
               </tbody>
@@ -444,18 +444,18 @@ export default function TeacherManagementDashboard() {
                 Hiển thị <span className="font-medium">{(currentPage - 1) * teachersPerPage + 1}</span> đến <span className="font-medium">{Math.min(currentPage * teachersPerPage, totalInstructors)}</span> trong tổng số <span className="font-medium">{totalInstructors}</span> kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button 
+                <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
                 >
                   <i className="fas fa-chevron-left"></i>
                 </button>
-                
+
                 {/* Page numbers */}
                 {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum: number;
-                  
+
                   if (totalPages <= 5) {
                     pageNum = i + 1;
                   } else if (currentPage <= 3) {
@@ -465,26 +465,25 @@ export default function TeacherManagementDashboard() {
                   } else {
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <button
                       key={i}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer ${
-                        currentPage === pageNum
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer ${currentPage === pageNum
                           ? 'text-white bg-blue-600 border border-blue-600'
                           : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
-                
+
                 {totalPages > 5 && currentPage < totalPages - 2 && (
                   <>
                     <span className="px-2 text-gray-500">...</span>
-                    <button 
+                    <button
                       onClick={() => setCurrentPage(totalPages)}
                       className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
                     >
@@ -492,8 +491,8 @@ export default function TeacherManagementDashboard() {
                     </button>
                   </>
                 )}
-                
-                <button 
+
+                <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || totalPages === 0}
                   className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === totalPages || totalPages === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
