@@ -7,6 +7,7 @@ import uvicorn
 import os
 import re
 import io
+import shap
 
 import numpy as np
 import pandas as pd
@@ -478,11 +479,27 @@ async def predict_from_json(payload: PredictJSONRequest):
 
 
 @app.post("/explain_json")
-async def explain_from_json(payload: ExplainJSONRequest):
+async def explain_from_json(payload: PredictJSONRequest):
     """
-    XAI endpoint:
-    - Input giống /predict_json, thêm tham số top_k (số feature cần giải thích).
-    - Output: prediction + top_k features theo SHAP cho từng sinh viên.
+    XAI cho giảng viên: giải thích prediction theo SHAP.
+
+    Request:
+    {
+      "course_code": "DTE-IS 102",   # optional
+      "top_k": 8,                    # optional, default = 8
+      "rows": [
+        {
+          "student_id": "28211280315",
+          "no": 1,
+          "attend": 8.0,
+          "quiz1": 7.5,
+          "quiz2": 8.0,
+          "midterm": 6.5,
+          "project": 8.0
+        },
+        ...
+      ]
+    }
     """
     if ARTIFACTS == {}:
         raise HTTPException(status_code=500, detail="Model chưa được load.")
@@ -490,80 +507,87 @@ async def explain_from_json(payload: ExplainJSONRequest):
     if not payload.rows:
         raise HTTPException(status_code=400, detail="rows rỗng.")
 
-    if payload.top_k <= 0:
-        raise HTTPException(status_code=400, detail="top_k phải > 0.")
+    top_k = 8
+    if hasattr(payload, "top_k") and payload.top_k:
+        try:
+            top_k = int(payload.top_k)
+        except Exception:
+            top_k = 8
 
     # Convert list[dict] -> DataFrame
     df_raw = pd.DataFrame(payload.rows)
 
-    # Nếu có course_code chung mà thiếu trong từng row -> gán
+    # Gán course_code từ top-level nếu thiếu
     if payload.course_code is not None and "course_code" not in df_raw.columns:
         df_raw["course_code"] = payload.course_code
 
     if df_raw.empty:
         raise HTTPException(status_code=400, detail="DataFrame rỗng sau khi parse JSON.")
 
-    # Chuẩn hóa
+    # 1) Chuẩn hóa giống notebook
     df_course = process_course_df(df_raw)
 
-    # Build X
+    # 2) Build X_new giống hệt pipeline inference
     df_features, X_new = build_X_from_df_for_inference(
         df_course,
         artifacts=ARTIFACTS,
         weights_by_course=WEIGHTS_BY_COURSE
     )
 
+    # 3) Predict final trực tiếp bằng GradientBoosting (KHÔNG residual)
     gb_model = ARTIFACTS["gb_model"]
-    pred_gb = gb_model.predict(X_new)
-    pred_gb = np.clip(pred_gb, 0.0, 10.0)
+    y_pred = gb_model.predict(X_new)
+    y_pred = np.clip(y_pred, 0.0, 10.0)
 
-    # Chọn explainer: ưu tiên dùng SHAP_EXPLAINER global
-    global SHAP_EXPLAINER
-    explainer = SHAP_EXPLAINER
-    if explainer is None:
-        # fallback: tạo mới (ít khi xảy ra nếu startup đã ok)
-        explainer = shap.TreeExplainer(gb_model)
+    df_features["final_pred"] = y_pred
 
-    shap_values = explainer.shap_values(X_new)  # shape: (n_samples, n_features)
+    # 4) Tính SHAP values
+    explainer = shap.TreeExplainer(gb_model)
+    shap_values = explainer.shap_values(X_new)   # shape: (n_samples, n_features)
     feature_names = list(X_new.columns)
 
     explanations = []
-    top_k = payload.top_k
-
-    for i, (idx, row) in enumerate(df_features.iterrows()):
+    for i in range(X_new.shape[0]):
+        # Gộp (feature, value, shap_value)
+        row_vals = X_new.iloc[i].values
         row_shap = shap_values[i]
-        row_feat_vals = X_new.iloc[i]
 
-        # Sắp xếp theo |shap_value| giảm dần
-        order = np.argsort(np.abs(row_shap))[::-1]
-        top_idx = order[:top_k]
-
-        top_features = []
-        for j in top_idx:
-            fname = feature_names[j]
-            fval = float(row_feat_vals.iloc[j])
-            sval = float(row_shap[j])
-            top_features.append({
+        feats = []
+        for fname, fval, sval in zip(feature_names, row_vals, row_shap):
+            feats.append({
                 "feature": fname,
-                "value": fval,
-                "shap_value": sval
+                "value": float(fval),
+                "shap_value": float(sval)
             })
 
+        # sort theo |shap_value| desc, lấy top_k
+        feats_sorted = sorted(
+            feats,
+            key=lambda d: abs(d["shap_value"]),
+            reverse=True
+        )[:top_k]
+
         explanations.append({
-            "student_id": row.get("student_id"),
-            "course_code": row.get("course_code"),
-            "no": row.get("no"),
-            "final_pred": float(pred_gb[i]),
-            "top_features": top_features
+            "student_id": str(df_features.iloc[i].get("student_id")),
+            "course_code": str(df_features.iloc[i].get("course_code")),
+            "no": int(df_features.iloc[i].get("no")),
+            # final_pred là dự đoán cuối cùng (không residual)
+            "final_pred": float(df_features.iloc[i]["final_pred"]),
+            # baseline_final_weighted để thầy/cô so sánh
+            "baseline_final_weighted": float(
+                df_features.iloc[i].get("baseline_final_weighted", np.nan)
+            ) if not pd.isna(df_features.iloc[i].get("baseline_final_weighted", np.nan)) else None,
+            "top_features": feats_sorted
         })
 
-    return JSONResponse(content={
-        "n": len(explanations),
-        "model": "GradientBoostingRegressor",
-        "top_k": top_k,
-        "explanations": explanations
-    })
-
+    return JSONResponse(
+        content={
+            "n": len(explanations),
+            "model": "GradientBoostingRegressor",
+            "top_k": top_k,
+            "explanations": explanations
+        }
+    )
 
 if __name__ == "__main__":
     # Chạy: python main.py
