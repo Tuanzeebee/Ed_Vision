@@ -2,11 +2,14 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
+from functools import lru_cache
+from datetime import datetime, timedelta
 import uvicorn
 
 import os
 import re
 import io
+import hashlib
 
 import numpy as np
 import pandas as pd
@@ -14,6 +17,44 @@ import joblib
 
 # XAI
 import shap  # pip install shap
+
+# =============================
+# 0. Simple in-memory cache for SHAP results
+# =============================
+
+class SimpleCache:
+    """Simple in-memory cache với TTL"""
+    def __init__(self):
+        self.cache: Dict[str, tuple[Any, datetime]] = {}
+        self.ttl_minutes = 15  # Cache 15 phút
+    
+    def get(self, key: str) -> Optional[Any]:
+        if key in self.cache:
+            value, expiry = self.cache[key]
+            if datetime.now() < expiry:
+                print(f"[CACHE HIT] {key}")
+                return value
+            else:
+                print(f"[CACHE EXPIRED] {key}")
+                del self.cache[key]
+        return None
+    
+    def set(self, key: str, value: Any):
+        expiry = datetime.now() + timedelta(minutes=self.ttl_minutes)
+        self.cache[key] = (value, expiry)
+        print(f"[CACHE SET] {key} (expires in {self.ttl_minutes}min)")
+    
+    def clear(self):
+        self.cache.clear()
+        print("[CACHE] Cleared all entries")
+    
+    def get_stats(self):
+        return {
+            "size": len(self.cache),
+            "ttl_minutes": self.ttl_minutes
+        }
+
+SHAP_CACHE = SimpleCache()
 
 # =============================
 # 1. Config đường dẫn
@@ -682,7 +723,7 @@ async def predict_from_json(payload: PredictJSONRequest):
 @app.post("/explain_json")
 async def explain_from_json(payload: ExplainJSONRequest):
     """
-    XAI cho giảng viên: giải thích prediction theo SHAP.
+    XAI cho giảng viên: giải thích prediction theo SHAP với caching.
 
     Request:
     {
@@ -702,6 +743,8 @@ async def explain_from_json(payload: ExplainJSONRequest):
         ...
       ]
     }
+    
+    OPTIMIZATION: Cache SHAP results by request hash để tránh tính lại
     """
     if not ARTIFACTS:
         raise HTTPException(status_code=500, detail="Model chưa được load.")
@@ -710,6 +753,18 @@ async def explain_from_json(payload: ExplainJSONRequest):
         raise HTTPException(status_code=400, detail="rows rỗng.")
 
     top_k = payload.top_k or 8
+
+    # Generate cache key from request data
+    request_str = f"{payload.course_code}_{top_k}_{len(payload.rows)}"
+    for row in payload.rows[:3]:  # Hash first 3 rows for key
+        request_str += f"_{row.get('student_id', '')}_{row.get('attend', '')}_{row.get('midterm', '')}"
+    
+    cache_key = f"shap_{hashlib.md5(request_str.encode()).hexdigest()}"
+    
+    # Check cache first
+    cached_result = SHAP_CACHE.get(cache_key)
+    if cached_result is not None:
+        return JSONResponse(content=cached_result)
 
     # Convert list[dict] -> DataFrame
     df_raw = pd.DataFrame(payload.rows)
@@ -775,16 +830,34 @@ async def explain_from_json(payload: ExplainJSONRequest):
             "top_features": feats_sorted
         })
 
-    return JSONResponse(
-        content={
-            "n": len(explanations),
-            "model": "GradientBoostingRegressor",
-            "top_k": top_k,
-            "explanations": explanations
-        }
-    )
+    result = {
+        "n": len(explanations),
+        "model": "GradientBoostingRegressor",
+        "top_k": top_k,
+        "explanations": explanations
+    }
+    
+    # Cache result for future requests
+    SHAP_CACHE.set(cache_key, result)
+    
+    return JSONResponse(content=result)
+
+
+@app.get("/cache/stats")
+def get_cache_stats():
+    """Endpoint để monitor cache status"""
+    return JSONResponse(content={
+        "shap_cache": SHAP_CACHE.get_stats()
+    })
+
+
+@app.post("/cache/clear")
+def clear_cache():
+    """Endpoint để clear cache (admin only in production)"""
+    SHAP_CACHE.clear()
+    return JSONResponse(content={"success": True, "message": "Cache cleared"})
 
 
 if __name__ == "__main__":
-    # Chạy: python main.py
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Chạy: python predictscoreforteacheraddfeature.py
+    uvicorn.run("predictscoreforteacheraddfeature:app", host="0.0.0.0", port=8000, reload=True)

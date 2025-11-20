@@ -13,6 +13,7 @@ import { StatisticsOverviewModule } from './admin_be/statistics-overview/statist
 import { BookingModule } from './booking/booking.module';
 import { ClassManagementModule } from './teacher_be/class-management/class-management.module';
 import { SurveysModule } from './teacher_be/surveys/surveys.module';
+import { TeacherBeModule } from './teacher_be/teacher-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 @Module({
@@ -29,6 +30,7 @@ import { DatabaseModule } from './mongodb/database.module';
     StatisticsOverviewModule,
     ClassManagementModule,
     SurveysModule,
+    TeacherBeModule,
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
   ],
