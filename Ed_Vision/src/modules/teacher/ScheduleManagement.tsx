@@ -635,7 +635,7 @@ export default function ScheduleManagement({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
                     <div
                       className="flex items-center gap-3 mb-4 sm:mb-0 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate('/teacher/meeting-detail-demo', {
+                      onClick={() => navigate('/teacher/meeting-detail', {
                         state: {
                           date: dateObj.date,
                           timeSlots: dateObj.timeSlots
