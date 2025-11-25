@@ -10,6 +10,10 @@ import AmbiencePanel from './components/AmbiencePanel';
 import ThemePanel from './components/ThemePanel';
 import MusicPanel from './components/MusicPanel';
 import JournalPanel from './components/JournalPanel';
+import RoomPanel from './components/RoomPanel';
+import SettingsPanel from './components/SettingsPanel';
+import LearningMapPanel from './components/LearningMapPanel';
+import VideoCallRoom from './components/VideoCallRoom';
 
 type Props = {
   className?: string;
@@ -26,6 +30,11 @@ export default function LearningSpace({ className = '' }: Props) {
   const [themeVisible, setThemeVisible] = useState(false);
   const [musicPanelVisible, setMusicPanelVisible] = useState(false);
   const [journalVisible, setJournalVisible] = useState(false);
+  const [roomVisible, setRoomVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [learningMapVisible, setLearningMapVisible] = useState(false);
+  const [videoCallVisible, setVideoCallVisible] = useState(false);
+  const [currentRoomTitle, setCurrentRoomTitle] = useState('');
 
   // Music widget
   const [musicWidgetVisible, setMusicWidgetVisible] = useState(true);
@@ -52,6 +61,8 @@ export default function LearningSpace({ className = '' }: Props) {
     setThemeVisible(false);
     setMusicPanelVisible(false);
     setJournalVisible(false);
+    setSettingsVisible(false);
+    setLearningMapVisible(false);
   };
 
   const openPanel = (panel: string) => {
@@ -66,11 +77,20 @@ export default function LearningSpace({ className = '' }: Props) {
       case 'theme':
         setThemeVisible(true);
         break;
+      case 'room':
+        setRoomVisible(true);
+        break;
       case 'music':
         setMusicPanelVisible(true);
         break;
       case 'journal':
         setJournalVisible(true);
+        break;
+      case 'settings':
+        setSettingsVisible(true);
+        break;
+      case 'map':
+        setLearningMapVisible(true);
         break;
     }
   };
@@ -78,12 +98,12 @@ export default function LearningSpace({ className = '' }: Props) {
   const dockItems = [
     { id: 'theme', icon: 'fas fa-image', label: 'Theme', onClick: () => openPanel('theme') },
     { id: 'ambience', icon: 'fas fa-cloud-rain', label: 'Ambience', onClick: () => openPanel('ambience') },
-    { id: 'track', icon: 'fas fa-briefcase', label: 'Track', onClick: () => {} },
+    { id: 'room', icon: 'fas fa-video', label: 'Room', onClick: () => openPanel('room') },
     { id: 'pomo', icon: 'fas fa-clock', label: 'Pomo', onClick: () => openPanel('pomo') },
     { id: 'music', icon: 'fas fa-music', label: 'Music', onClick: () => openPanel('music') },
-    { id: 'todo', icon: 'fas fa-list-check', label: 'Todo', onClick: () => {} },
-    { id: 'stats', icon: 'fas fa-chart-line', label: 'Stats', onClick: () => {} },
-    { id: 'journal', icon: 'fas fa-book', label: 'Journal', onClick: () => openPanel('journal') },
+    { id: 'map', icon: 'fas fa-map', label: 'Learning Map', onClick: () => openPanel('map') },
+    { id: 'learn', icon: 'fas fa-tv', label: 'Learn', onClick: () => {} },
+    { id: 'settings', icon: 'fas fa-cog', label: 'Settings', onClick: () => openPanel('settings') },
   ];
 
   const handleChangeBackground = (url: string) => {
@@ -174,6 +194,20 @@ export default function LearningSpace({ className = '' }: Props) {
         onUploadBackground={handleUploadBackground}
       />
 
+      {/* Room Panel */}
+      <RoomPanel
+        visible={roomVisible}
+        onClose={() => setRoomVisible(false)}
+        onSelectRoom={(url) => {
+          setBackgroundImage(url);
+          setRoomVisible(false);
+        }}
+        onJoinCall={(roomTitle) => {
+          setCurrentRoomTitle(roomTitle);
+          setVideoCallVisible(true);
+        }}
+      />
+
       {/* Music Panel */}
       <MusicPanel
         visible={musicPanelVisible}
@@ -188,6 +222,25 @@ export default function LearningSpace({ className = '' }: Props) {
         onClose={() => setJournalVisible(false)}
         onSaveEntry={handleSaveJournalEntry}
         recentEntries={journalEntries}
+      />
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+      />
+
+      {/* Learning Map Panel */}
+      <LearningMapPanel
+        visible={learningMapVisible}
+        onClose={() => setLearningMapVisible(false)}
+      />
+
+      {/* Video Call Room */}
+      <VideoCallRoom
+        visible={videoCallVisible}
+        onClose={() => setVideoCallVisible(false)}
+        roomTitle={currentRoomTitle}
       />
 
       {/* Font Awesome CDN - Required for icons */}
