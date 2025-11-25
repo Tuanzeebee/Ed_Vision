@@ -13,7 +13,7 @@ type Props = {
 export default function DockMenu({ items, className = '' }: Props) {
   return (
     <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 ${className}`}>
-      <div className="backdrop-blur-[20px] bg-black/30 border border-white/10 rounded-full px-4 py-3 flex items-center gap-3 shadow-2xl">
+      <div className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-full px-4 py-3 flex items-center gap-3 shadow-2xl">
         {items.map((item) => (
           <div
             key={item.id}

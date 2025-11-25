@@ -7,10 +7,14 @@ import uvicorn
 import os
 import re
 import io
+import shap
 
 import numpy as np
 import pandas as pd
 import joblib
+
+# XAI
+import shap  # pip install shap
 
 # =============================
 # 1. Config đường dẫn
@@ -78,6 +82,9 @@ COLUMN_ALIASES: Dict[str, List[str]] = {
 class PredictJSONRequest(BaseModel):
     course_code: Optional[str] = None  # default course_code cho cả file nếu từng row không có
     rows: List[Dict[str, Any]]
+
+class ExplainJSONRequest(PredictJSONRequest):
+    top_k: int = 10  # số feature XAI trả ra cho mỗi sinh viên
 
 
 def normalize_col_name(col: str) -> str:
@@ -308,11 +315,12 @@ app = FastAPI(title="Final Score Prediction API", version="1.0.0")
 
 ARTIFACTS: dict = {}
 WEIGHTS_BY_COURSE: Dict[str, Dict[str, float]] = {}
+SHAP_EXPLAINER = None  # TreeExplainer cho gb_model
 
 
 @app.on_event("startup")
 def load_resources():
-    global ARTIFACTS, WEIGHTS_BY_COURSE
+    global ARTIFACTS, WEIGHTS_BY_COURSE, SHAP_EXPLAINER
 
     if not os.path.exists(ARTIFACTS_PATH):
         raise RuntimeError(f"Không tìm thấy artifacts: {ARTIFACTS_PATH}")
@@ -321,6 +329,15 @@ def load_resources():
     print("[INFO] Đã load model artifacts:", ARTIFACTS.keys())
 
     WEIGHTS_BY_COURSE = load_weights(WEIGHTS_FILE)
+
+    # Khởi tạo SHAP TreeExplainer cho GradientBoosting
+    try:
+        gb_model = ARTIFACTS["gb_model"]
+        SHAP_EXPLAINER = shap.TreeExplainer(gb_model)
+        print("[INFO] Đã khởi tạo SHAP TreeExplainer cho gb_model.")
+    except Exception as e:
+        SHAP_EXPLAINER = None
+        print(f"[WARN] Không khởi tạo được SHAP explainer: {e}")
 
 
 # =============================
@@ -365,6 +382,7 @@ async def predict_from_csv(file: UploadFile = File(...)):
     # Lấy model GB từ artifacts và dự đoán
     gb_model = ARTIFACTS["gb_model"]
     pred_gb = gb_model.predict(X_new)
+    pred_gb = np.clip(pred_gb, 0.0, 10.0)
 
     # Gán thẳng final_pred = pred_final_gb
     df_features["pred_final_gb"] = pred_gb
@@ -439,6 +457,7 @@ async def predict_from_json(payload: PredictJSONRequest):
     gb_model = ARTIFACTS["gb_model"]
     pred_gb = gb_model.predict(X_new)
     pred_gb = np.clip(pred_gb, 0.0, 10.0)
+
     df_features["pred_final_gb"] = pred_gb
     df_features["final_pred"] = pred_gb
     df_features["pred_source"] = "gb_model"
@@ -458,6 +477,117 @@ async def predict_from_json(payload: PredictJSONRequest):
 
     return JSONResponse(content={"n": len(records), "predictions": records})
 
+
+@app.post("/explain_json")
+async def explain_from_json(payload: PredictJSONRequest):
+    """
+    XAI cho giảng viên: giải thích prediction theo SHAP.
+
+    Request:
+    {
+      "course_code": "DTE-IS 102",   # optional
+      "top_k": 8,                    # optional, default = 8
+      "rows": [
+        {
+          "student_id": "28211280315",
+          "no": 1,
+          "attend": 8.0,
+          "quiz1": 7.5,
+          "quiz2": 8.0,
+          "midterm": 6.5,
+          "project": 8.0
+        },
+        ...
+      ]
+    }
+    """
+    if ARTIFACTS == {}:
+        raise HTTPException(status_code=500, detail="Model chưa được load.")
+
+    if not payload.rows:
+        raise HTTPException(status_code=400, detail="rows rỗng.")
+
+    top_k = 8
+    if hasattr(payload, "top_k") and payload.top_k:
+        try:
+            top_k = int(payload.top_k)
+        except Exception:
+            top_k = 8
+
+    # Convert list[dict] -> DataFrame
+    df_raw = pd.DataFrame(payload.rows)
+
+    # Gán course_code từ top-level nếu thiếu
+    if payload.course_code is not None and "course_code" not in df_raw.columns:
+        df_raw["course_code"] = payload.course_code
+
+    if df_raw.empty:
+        raise HTTPException(status_code=400, detail="DataFrame rỗng sau khi parse JSON.")
+
+    # 1) Chuẩn hóa giống notebook
+    df_course = process_course_df(df_raw)
+
+    # 2) Build X_new giống hệt pipeline inference
+    df_features, X_new = build_X_from_df_for_inference(
+        df_course,
+        artifacts=ARTIFACTS,
+        weights_by_course=WEIGHTS_BY_COURSE
+    )
+
+    # 3) Predict final trực tiếp bằng GradientBoosting (KHÔNG residual)
+    gb_model = ARTIFACTS["gb_model"]
+    y_pred = gb_model.predict(X_new)
+    y_pred = np.clip(y_pred, 0.0, 10.0)
+
+    df_features["final_pred"] = y_pred
+
+    # 4) Tính SHAP values
+    explainer = shap.TreeExplainer(gb_model)
+    shap_values = explainer.shap_values(X_new)   # shape: (n_samples, n_features)
+    feature_names = list(X_new.columns)
+
+    explanations = []
+    for i in range(X_new.shape[0]):
+        # Gộp (feature, value, shap_value)
+        row_vals = X_new.iloc[i].values
+        row_shap = shap_values[i]
+
+        feats = []
+        for fname, fval, sval in zip(feature_names, row_vals, row_shap):
+            feats.append({
+                "feature": fname,
+                "value": float(fval),
+                "shap_value": float(sval)
+            })
+
+        # sort theo |shap_value| desc, lấy top_k
+        feats_sorted = sorted(
+            feats,
+            key=lambda d: abs(d["shap_value"]),
+            reverse=True
+        )[:top_k]
+
+        explanations.append({
+            "student_id": str(df_features.iloc[i].get("student_id")),
+            "course_code": str(df_features.iloc[i].get("course_code")),
+            "no": int(df_features.iloc[i].get("no")),
+            # final_pred là dự đoán cuối cùng (không residual)
+            "final_pred": float(df_features.iloc[i]["final_pred"]),
+            # baseline_final_weighted để thầy/cô so sánh
+            "baseline_final_weighted": float(
+                df_features.iloc[i].get("baseline_final_weighted", np.nan)
+            ) if not pd.isna(df_features.iloc[i].get("baseline_final_weighted", np.nan)) else None,
+            "top_features": feats_sorted
+        })
+
+    return JSONResponse(
+        content={
+            "n": len(explanations),
+            "model": "GradientBoostingRegressor",
+            "top_k": top_k,
+            "explanations": explanations
+        }
+    )
 
 if __name__ == "__main__":
     # Chạy: python main.py
