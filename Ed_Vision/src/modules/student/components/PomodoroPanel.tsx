@@ -32,7 +32,7 @@ export default function PomodoroPanel({
       style={{ left: `${position.x}px`, top: `${position.y}px`, width: `${size.width}px` }}
     >
       <div
-        className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl relative"
+        className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl flex flex-col relative"
         style={{ height: `${size.height}px` }}
       >
         <div

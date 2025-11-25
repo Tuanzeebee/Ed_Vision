@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Track } from '../types/learningSpace';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
+import AnimatedList from './AnimatedList';
 
 type Props = {
   visible: boolean;
@@ -24,10 +25,53 @@ export default function MusicPanel({
 }: Props) {
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
   const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 1000, 600);
-  const [currentView, setCurrentView] = useState<'home' | 'playlist'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'playlist' | 'discover' | 'podcasts'>('home');
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>(['Acoustic', 'Piano jazz', 'Jazz', 'Indie pop']);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(84); // 1:24
+  const [duration, setDuration] = useState(228); // 3:48
+  const [showSongDetail, setShowSongDetail] = useState(false);
+  const [selectedSong, setSelectedSong] = useState<any>(null);
+  const [volume, setVolume] = useState(0.7); // 70% volume
+
+  // Lyrics data with timestamps
+  const lyrics = [
+    { time: 0, text: "In the silence of the night" },
+    { time: 15, text: "I hear your voice calling out to me" },
+    { time: 30, text: "Through the darkness and the light" },
+    { time: 45, text: "You're the only one I see" },
+    { time: 60, text: "But I can't follow to meet you" },
+    { time: 75, text: "You are far away out, out on the other side" },
+    { time: 90, text: "When the stars begin to fade" },
+    { time: 105, text: "And the morning breaks the sky" },
+    { time: 120, text: "I'll be waiting for the day" },
+    { time: 135, text: "When our worlds collide" },
+    { time: 150, text: "Can you feel my heartbeat" },
+    { time: 165, text: "Racing through the endless time" },
+    { time: 180, text: "Every moment incomplete" },
+    { time: 195, text: "Until you're finally mine" },
+    { time: 210, text: "Forever in my dreams" },
+    { time: 225, text: "You'll always be the one" },
+  ];
+
+  // Get current and next lyrics based on current time
+  const getCurrentLyrics = () => {
+    let currentIndex = 0;
+    for (let i = 0; i < lyrics.length; i++) {
+      if (currentTime >= lyrics[i].time) {
+        currentIndex = i;
+      } else {
+        break;
+      }
+    }
+    
+    const current = lyrics[currentIndex];
+    const next = lyrics[currentIndex + 1];
+    
+    return { current, next };
+  };
 
   if (!visible) return null;
 
@@ -66,6 +110,120 @@ export default function MusicPanel({
     { rank: 3, title: 'Closer', artist: 'The Chainsmokers', duration: '3:45', plays: 123 },
     { rank: 4, title: 'Lean On', artist: 'Major Lazer ft DJ Snake', duration: '3:45', plays: 98 },
   ];
+
+  const recentlyPlayed = [
+    { id: '1', title: 'FRIDAY', artist: 'SETH ANDERSON & LEAH WATTS', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop', plays: '50,960 Plays' },
+    { id: '2', title: 'URBAN', artist: 'Cold Heart (PNAU Remix)', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=300&h=300&fit=crop', plays: '44M Plays' },
+    { id: '3', title: 'FRIDAY NIGHT', artist: 'Dilemma', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop', plays: '38.5M Plays' },
+    { id: '4', title: 'URBAN', artist: 'Thunderstruck', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=300&h=300&fit=crop', plays: '21.8M Plays' },
+    { id: '5', title: 'View all', artist: '', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&h=300&fit=crop', plays: '' },
+  ];
+
+  const topBillboard = [
+    { rank: 1, title: 'Despacito', artist: 'Luis Fonsi', album: 'Despacito', duration: '3:31', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop' },
+    { rank: 2, title: 'Shape of You', artist: 'Ed Sheeran', album: 'Divide', duration: '3:31', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop' },
+    { rank: 3, title: 'See You Again', artist: 'Wiz Khalifa', album: 'Most Wanted, Vol. 2', duration: '3:31', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop' },
+    { rank: 4, title: 'Uptown Funk', artist: 'Mark Ronson', album: 'Uptown Funk', duration: '3:31', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop' },
+    { rank: 5, title: 'Sugar', artist: 'Maroon 5', album: 'Get Rich or Die Tryin\'', duration: '3:31', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop' },
+    { rank: 6, title: 'Thinking Out Loud', artist: 'Ed Sheeran', album: 'X', duration: '4:41', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop' },
+    { rank: 7, title: 'All of Me', artist: 'John Legend', album: 'Love in the Future', duration: '4:29', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop' },
+    { rank: 8, title: 'Someone Like You', artist: 'Adele', album: '21', duration: '4:45', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop' },
+    { rank: 9, title: 'Perfect', artist: 'Ed Sheeran', album: 'Divide', duration: '4:23', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop' },
+    { rank: 10, title: 'Hello', artist: 'Adele', album: '25', duration: '4:55', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop' },
+  ];
+
+  const featuredPodcasts = [
+    { id: '1', title: 'The Daily', host: 'The New York Times', image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=300&fit=crop', episodes: '1,234 episodes' },
+    { id: '2', title: 'Joe Rogan Experience', host: 'Joe Rogan', image: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=300&h=300&fit=crop', episodes: '2,089 episodes' },
+    { id: '3', title: 'TED Talks Daily', host: 'TED', image: 'https://images.unsplash.com/photo-1505682634904-d7c8d95cdc50?w=300&h=300&fit=crop', episodes: '3,456 episodes' },
+    { id: '4', title: 'Crime Junkie', host: 'audiochuck', image: 'https://images.unsplash.com/photo-1574192324001-ee41e18ed679?w=300&h=300&fit=crop', episodes: '456 episodes' },
+    { id: '5', title: 'Stuff You Should Know', host: 'iHeartPodcasts', image: 'https://images.unsplash.com/photo-1589903308904-1010c2294adc?w=300&h=300&fit=crop', episodes: '1,890 episodes' },
+  ];
+
+  const trendingPodcasts = [
+    { id: '1', title: 'Huberman Lab', host: 'Dr. Andrew Huberman', duration: '2h 15m', category: 'Science', image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=100&h=100&fit=crop' },
+    { id: '2', title: 'SmartLess', host: 'Jason Bateman, Sean Hayes, Will Arnett', duration: '1h 5m', category: 'Comedy', image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=100&h=100&fit=crop' },
+    { id: '3', title: 'The Tim Ferriss Show', host: 'Tim Ferriss', duration: '1h 45m', category: 'Business', image: 'https://images.unsplash.com/photo-1590859808308-3d2d9c515b1a?w=100&h=100&fit=crop' },
+    { id: '4', title: 'Serial', host: 'Sarah Koenig', duration: '45m', category: 'True Crime', image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=100&h=100&fit=crop' },
+    { id: '5', title: 'How I Built This', host: 'Guy Raz', duration: '1h 20m', category: 'Business', image: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=100&h=100&fit=crop' },
+  ];
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle progress circle click/drag for new circular design
+  const handleProgressCircleInteraction = (e: React.MouseEvent<SVGCircleElement>) => {
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+
+    const rect = svg.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const updateProgress = (clientX: number, clientY: number) => {
+      const angle = Math.atan2(clientY - centerY, clientX - centerX);
+      let percentage = (angle + Math.PI / 2) / (2 * Math.PI);
+      if (percentage < 0) percentage += 1;
+      
+      const newTime = Math.round(percentage * duration);
+      setCurrentTime(Math.max(0, Math.min(duration, newTime)));
+    };
+
+    updateProgress(e.clientX, e.clientY);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      updateProgress(e.clientX, e.clientY);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Handle volume adjustment
+  const handleVolumeChange = (delta: number) => {
+    const newVolume = Math.max(0, Math.min(1, volume + delta));
+    setVolume(newVolume);
+  };
+
+  // Handle volume circle click/drag
+  const handleVolumeCircleInteraction = (e: React.MouseEvent<SVGCircleElement>) => {
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+
+    const rect = svg.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const updateVolume = (clientX: number, clientY: number) => {
+      const angle = Math.atan2(clientY - centerY, clientX - centerX);
+      let percentage = (angle + Math.PI / 2) / (2 * Math.PI);
+      if (percentage < 0) percentage += 1;
+      
+      setVolume(Math.max(0, Math.min(1, percentage)));
+    };
+
+    updateVolume(e.clientX, e.clientY);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      updateVolume(e.clientX, e.clientY);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   return (
     <div
@@ -113,7 +271,7 @@ export default function MusicPanel({
 
           {/* Menu */}
           <div className="flex-1 px-3 space-y-1">
-            {!sidebarCollapsed && <div className="text-white/50 text-xs font-semibold px-3 mb-2">Menu: 4</div>}
+            {!sidebarCollapsed && <div className="text-white/50 text-xs font-semibold px-3 mb-2">Menu: 3</div>}
             <button 
               onClick={() => setCurrentView('home')}
               className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition ${
@@ -124,18 +282,26 @@ export default function MusicPanel({
               <i className="fas fa-home"></i>
               {!sidebarCollapsed && <span>Home</span>}
             </button>
-            <button className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition`} title="Discover">
+            <button 
+              onClick={() => setCurrentView('discover')}
+              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition ${
+                currentView === 'discover' ? 'bg-purple-600/50 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title="Discover"
+            >
               <i className="fas fa-compass"></i>
               {!sidebarCollapsed && <span>Discover</span>}
             </button>
-            <button className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition relative`} title="Podcasts">
+            <button
+              onClick={() => setCurrentView('podcasts')}
+              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition relative ${
+                currentView === 'podcasts' ? 'bg-purple-600/50 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title="Podcasts"
+            >
               <i className="fas fa-podcast"></i>
               {!sidebarCollapsed && <span>Podcasts</span>}
               {!sidebarCollapsed && <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded">NEW</span>}
-            </button>
-            <button className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition`} title="Radio">
-              <i className="fas fa-radio"></i>
-              {!sidebarCollapsed && <span>Radio</span>}
             </button>
 
             {!sidebarCollapsed && <div className="text-white/50 text-xs font-semibold px-3 pt-4 mb-2">Library: 3</div>}
@@ -162,50 +328,182 @@ export default function MusicPanel({
               {!sidebarCollapsed && <span>Artists</span>}
             </button>
           </div>
-
-          {/* User Profile */}
-          {!sidebarCollapsed && (
-            <div className="p-4 border-t border-white/10">
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"
-                  alt="User"
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex-1">
-                  <div className="text-white text-sm font-semibold">Vitaliy Dorozhko</div>
-                  <div className="text-white/50 text-xs">Premium Member</div>
-                </div>
-                <i className="fas fa-crown text-yellow-400"></i>
-              </div>
-            </div>
-          )}
-          {sidebarCollapsed && (
-            <div className="p-4 border-t border-white/10 flex justify-center">
-              <img
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"
-                alt="User"
-                className="w-10 h-10 rounded-full"
-              />
-            </div>
-          )}
         </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top Navigation */}
           <div className="h-12 flex items-center gap-3 px-6 border-b border-white/10">
-            <button className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white/60 hover:text-white">
-              <i className="fas fa-chevron-left"></i>
-            </button>
-            <button className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white/60 hover:text-white">
-              <i className="fas fa-chevron-right"></i>
-            </button>
+            {currentView === 'playlist' ? (
+              <>
+                <button 
+                  onClick={() => setCurrentView('home')}
+                  className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white/60 hover:text-white transition"
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
+                <button className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white/60 hover:text-white transition">
+                  <i className="fas fa-chevron-right"></i>
+                </button>
+              </>
+            ) : (
+              <h2 className="text-white font-semibold text-lg capitalize">{currentView}</h2>
+            )}
           </div>
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-auto scrollbar-none">
-            {currentView === 'home' ? (
+            {currentView === 'discover' ? (
+              <div className="p-6">
+                {/* Recently Played */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-semibold text-sm">RECENTLY PLAYED</h3>
+                  </div>
+                  <div className="grid grid-cols-5 gap-4">
+                    {recentlyPlayed.map((item) => (
+                      <div
+                        key={item.id}
+                        className="cursor-pointer hover:bg-white/5 rounded-xl p-3 transition group"
+                      >
+                        <div className="relative mb-3">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full aspect-square rounded-xl object-cover"
+                          />
+                          {item.id !== '5' && (
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center">
+                              <button className="w-12 h-12 bg-white/0 group-hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform scale-75 group-hover:scale-100">
+                                <i className="fas fa-play text-black ml-1"></i>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-white text-sm font-bold truncate">{item.title}</div>
+                        {item.artist && <div className="text-white/60 text-xs truncate">{item.artist}</div>}
+                        {item.plays && <div className="text-white/50 text-xs mt-1">{item.plays}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Top 100 Billboard */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-semibold text-sm">TOP 100 BILLBOARD</h3>
+                  </div>
+                  <div className="space-y-3">
+                      {topBillboard.map((song) => (
+                        <div 
+                          key={song.rank} 
+                          onClick={() => {
+                            setSelectedSong(song);
+                            setShowSongDetail(true);
+                          }}
+                          className="flex items-center gap-4 hover:bg-white/5 p-3 rounded-lg cursor-pointer transition group"
+                        >
+                          <div className="flex items-center gap-3 w-8">
+                            {song.rank === 2 ? (
+                              <div className="flex items-center gap-1">
+                                <i className="fas fa-arrow-up text-red-500 text-xs"></i>
+                                <span className="text-white/60 text-sm font-semibold">#{song.rank}</span>
+                              </div>
+                            ) : (
+                              <span className="text-white/60 text-sm font-semibold">#{song.rank}</span>
+                            )}
+                          </div>
+                          <img
+                            src={song.image}
+                            alt={song.title}
+                            className="w-12 h-12 rounded-lg"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-sm font-medium truncate">{song.title}</div>
+                            <div className="text-white/50 text-xs truncate">{song.artist}</div>
+                          </div>
+                          <div className="text-white/60 text-xs">{song.album}</div>
+                          <div className="flex items-center gap-4">
+                            <button className="opacity-0 group-hover:opacity-100 transition">
+                              <i className="fas fa-heart text-white/40 hover:text-red-400"></i>
+                            </button>
+                            <div className="text-white/60 text-xs w-12 text-right">{song.duration}</div>
+                            <button className="text-white/40 hover:text-white opacity-0 group-hover:opacity-100 transition">
+                              <i className="fas fa-ellipsis-h"></i>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                </div>
+              </div>
+            ) : currentView === 'podcasts' ? (
+              <div className="p-6">
+                {/* Featured Podcasts */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-semibold text-sm">FEATURED PODCASTS</h3>
+                    <button className="text-purple-400 text-sm hover:text-purple-300">See all</button>
+                  </div>
+                  <div className="grid grid-cols-5 gap-4">
+                    {featuredPodcasts.map((podcast) => (
+                      <div
+                        key={podcast.id}
+                        className="cursor-pointer hover:bg-white/5 rounded-xl p-3 transition group"
+                      >
+                        <div className="relative mb-3">
+                          <img
+                            src={podcast.image}
+                            alt={podcast.title}
+                            className="w-full aspect-square rounded-xl object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center">
+                            <button className="w-12 h-12 bg-white/0 group-hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform scale-75 group-hover:scale-100">
+                              <i className="fas fa-play text-black ml-1"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-white text-sm font-bold truncate">{podcast.title}</div>
+                        <div className="text-white/60 text-xs truncate">{podcast.host}</div>
+                        <div className="text-white/50 text-xs mt-1">{podcast.episodes}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Trending Episodes */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-semibold text-sm">TRENDING EPISODES</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {trendingPodcasts.map((episode) => (
+                      <div key={episode.id} className="flex items-center gap-4 hover:bg-white/5 p-3 rounded-lg cursor-pointer transition group">
+                        <img
+                          src={episode.image}
+                          alt={episode.title}
+                          className="w-16 h-16 rounded-lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white text-sm font-medium truncate">{episode.title}</div>
+                          <div className="text-white/50 text-xs truncate">{episode.host}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-white/40 text-xs bg-white/10 px-2 py-0.5 rounded">{episode.category}</span>
+                            <span className="text-white/40 text-xs">{episode.duration}</span>
+                          </div>
+                        </div>
+                        <button className="opacity-0 group-hover:opacity-100 transition">
+                          <i className="fas fa-bookmark text-white/40 hover:text-purple-400"></i>
+                        </button>
+                        <button className="text-white/40 hover:text-white opacity-0 group-hover:opacity-100 transition">
+                          <i className="fas fa-ellipsis-h"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : currentView === 'home' ? (
               <div className="p-6">
                 {/* Trending New Hits */}
                 <div className="mb-6">
@@ -267,7 +565,14 @@ export default function MusicPanel({
                   </div>
                   <div className="space-y-2">
                     {topCharts.map((song) => (
-                      <div key={song.rank} className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg cursor-pointer transition">
+                      <div 
+                        key={song.rank} 
+                        onClick={() => {
+                          setSelectedSong({ ...song, image: `https://images.unsplash.com/photo-${1493225457124 + song.rank}-a3eb161ffa5f?w=300&h=300&fit=crop` });
+                          setShowSongDetail(true);
+                        }}
+                        className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg cursor-pointer transition"
+                      >
                         <span className="text-white/60 text-sm font-semibold w-8">{String(song.rank).padStart(2, '0')}</span>
                         <img
                           src={`https://images.unsplash.com/photo-${1493225457124 + song.rank}-a3eb161ffa5f?w=100&h=100&fit=crop`}
@@ -343,7 +648,14 @@ export default function MusicPanel({
                       </thead>
                       <tbody>
                         {playlistTracks.map((track, index) => (
-                          <tr key={track.id} className="hover:bg-white/5 cursor-pointer transition group">
+                          <tr 
+                            key={track.id} 
+                            onClick={() => {
+                              setSelectedSong({ ...track, rank: index + 1, image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop' });
+                              setShowSongDetail(true);
+                            }}
+                            className="hover:bg-white/5 cursor-pointer transition group"
+                          >
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <span className="text-white/60 text-sm group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
@@ -362,6 +674,76 @@ export default function MusicPanel({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Music Player Bar */}
+          <div className="h-20 border-t border-white/10 flex items-center px-6 gap-6">
+            {/* Album Art & Info */}
+            <div className="flex items-center gap-3 w-64">
+              <img
+                src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop"
+                alt="Album"
+                className="w-14 h-14 rounded-lg"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-sm font-semibold truncate">I'm BRAVE</div>
+                <div className="text-white/60 text-xs truncate">Lauv</div>
+              </div>
+              <button className="text-white/60 hover:text-white transition">
+                <i className="far fa-heart"></i>
+              </button>
+              <button className="text-white/60 hover:text-white transition">
+                <i className="fas fa-download"></i>
+              </button>
+            </div>
+
+            {/* Player Controls */}
+            <div className="flex-1 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-4">
+                <button className="text-white/60 hover:text-white transition">
+                  <i className="fas fa-step-backward"></i>
+                </button>
+                <button className="text-white/60 hover:text-white transition">
+                  <i className="fas fa-backward"></i>
+                </button>
+                <button 
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition"
+                >
+                  <i className={`fas fa-${isPlaying ? 'pause' : 'play'} ${!isPlaying ? 'ml-0.5' : ''}`}></i>
+                </button>
+                <button className="text-white/60 hover:text-white transition">
+                  <i className="fas fa-forward"></i>
+                </button>
+                <button className="text-white/60 hover:text-white transition">
+                  <i className="fas fa-step-forward"></i>
+                </button>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full max-w-2xl flex items-center gap-3">
+                <span className="text-white/60 text-xs font-mono">{formatTime(currentTime)}</span>
+                <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer group">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 relative"
+                    style={{ width: `${(currentTime / duration) * 100}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition"></div>
+                  </div>
+                </div>
+                <span className="text-white/60 text-xs font-mono">{formatTime(duration)}</span>
+              </div>
+            </div>
+
+            {/* Volume & Options */}
+            <div className="flex items-center gap-3 w-48">
+              <button className="text-white/60 hover:text-white transition">
+                <i className="fas fa-random"></i>
+              </button>
+              <button className="text-white/60 hover:text-white transition">
+                <i className="fas fa-redo"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -485,6 +867,364 @@ export default function MusicPanel({
           onMouseDown={handleResize}
         ></div>
       </div>
+
+      {/* Song Detail Modal - Replaces Main Content and Right Sidebar */}
+      {showSongDetail && selectedSong && (
+        <div className="absolute inset-0 z-50 flex">
+          <div className="flex-1 backdrop-blur-[20px] bg-white/10 overflow-hidden relative">
+            {/* Back Button */}
+            <button
+              onClick={() => setShowSongDetail(false)}
+              className="absolute top-4 left-4 z-10 w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition"
+            >
+              <i className="fas fa-chevron-left text-lg"></i>
+            </button>
+
+            {/* Background Album Art */}
+            <div className="absolute inset-0 opacity-5">
+              <img
+                src={selectedSong.image}
+                alt={selectedSong.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Content */}
+            <div className="relative h-full flex items-center px-16 py-16">
+              {/* Left Section - Album & Info with AnimatedList */}
+              <div className="absolute left-0 top-0 bottom-0 w-[500px] pl-16">
+                <AnimatedList
+                  items={topBillboard}
+                  onItemSelect={(song, index) => {
+                    setSelectedSong(song);
+                    setCurrentTime(0);
+                  }}
+                  showGradients={false}
+                  enableArrowNavigation={true}
+                  displayScrollbar={false}
+                  itemHeight={320}
+                  renderItem={(song, index, isActive) => (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <img
+                        src={song.image}
+                        alt={song.title}
+                        className={`rounded-2xl shadow-2xl object-cover mb-6 transition-all duration-500 ${
+                          isActive ? 'w-64 h-64' : 'w-48 h-48'
+                        }`}
+                      />
+                      <div className="text-center px-4">
+                        <div className={`text-white font-bold mb-2 leading-tight transition-all duration-500 ${
+                          isActive ? 'text-3xl' : 'text-xl'
+                        }`}>
+                          {song.title}
+                        </div>
+                        <div className={`text-white/70 transition-all duration-500 ${
+                          isActive ? 'text-xl' : 'text-base'
+                        }`}>
+                          {song.artist}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                />
+              </div>
+
+              {/* Right - Circular Progress */}
+              <div className="flex flex-col items-center justify-center ml-auto mr-20">
+                <div className="relative w-[280px] h-[280px]">
+                  {/* Main Circle Container */}
+                  <div 
+                    className="absolute inset-0 rounded-full bg-white/[0.02] backdrop-blur-sm"
+                    style={{
+                      boxShadow: '0 0 25px rgba(148, 255, 181, 0.35)'
+                    }}
+                  />
+
+                  {/* Circular Timeline Ring */}
+                  <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 280 280">
+                    {/* Background Ring */}
+                    <circle
+                      cx="140"
+                      cy="140"
+                      r="135"
+                      fill="none"
+                      stroke="rgba(255,255,255,0.1)"
+                      strokeWidth="3"
+                    />
+                    
+                    {/* Progress Ring with Gradient */}
+                    <circle
+                      cx="140"
+                      cy="140"
+                      r="135"
+                      fill="none"
+                      stroke="url(#timelineGradient)"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(currentTime / duration) * 848} 848`}
+                      className="cursor-pointer transition-all"
+                      onMouseDown={handleProgressCircleInteraction}
+                    />
+                    
+                    <defs>
+                      <linearGradient id="timelineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#a7ff5a" />
+                        <stop offset="50%" stopColor="#94ffb5" />
+                        <stop offset="100%" stopColor="#a7ff5a" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+
+                  {/* Circular Thumb on Timeline */}
+                  <div 
+                    className="absolute w-2.5 h-2.5 rounded-full bg-[#a7ff5a] pointer-events-none transition-all"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      transform: `translate(-50%, -50%) rotate(${(currentTime / duration) * 360}deg) translateY(-135px)`,
+                      boxShadow: '0 0 12px rgba(167, 255, 90, 0.9), 0 0 20px rgba(167, 255, 90, 0.5)'
+                    }}
+                  />
+
+                  {/* Center Play/Pause Button */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <button
+                      onClick={() => setIsPlaying(!isPlaying)}
+                      className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 ease-out pointer-events-auto hover:scale-105"
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '2px solid rgba(167, 255, 90, 0.7)',
+                        boxShadow: '0 0 8px rgba(167, 255, 90, 0.4)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 16px rgba(167, 255, 90, 0.8)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 8px rgba(167, 255, 90, 0.4)';
+                      }}
+                    >
+                      {isPlaying ? (
+                        <div className="flex gap-1.5">
+                          <div className="w-2 h-7 rounded bg-[#a7ff5a]"></div>
+                          <div className="w-2 h-7 rounded bg-[#a7ff5a]"></div>
+                        </div>
+                      ) : (
+                        <div 
+                          className="w-0 h-0 ml-1"
+                          style={{
+                            borderLeft: '14px solid #a7ff5a',
+                            borderTop: '10px solid transparent',
+                            borderBottom: '10px solid transparent'
+                          }}
+                        />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Time Labels */}
+                  <div 
+                    className="absolute text-[10px] font-light pointer-events-none"
+                    style={{
+                      left: '50%',
+                      top: '8px',
+                      transform: 'translateX(-50%)',
+                      color: 'rgba(255, 255, 255, 0.7)'
+                    }}
+                  >
+                    {formatTime(currentTime)}
+                  </div>
+                  
+                  <div 
+                    className="absolute text-[10px] font-light pointer-events-none"
+                    style={{
+                      left: '50%',
+                      bottom: '8px',
+                      transform: 'translateX(-50%)',
+                      color: 'rgba(255, 255, 255, 0.7)'
+                    }}
+                  >
+                    {formatTime(duration)}
+                  </div>
+
+                  {/* Waveform Icon */}
+                  <div 
+                    className="absolute text-[11px] pointer-events-none"
+                    style={{
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: 'rgba(255, 255, 255, 0.7)'
+                    }}
+                  >
+                    <i className="fas fa-waveform-lines"></i>
+                  </div>
+
+                  {/* Side Icons Stack */}
+                  <div 
+                    className="absolute flex flex-col gap-2.5"
+                    style={{
+                      right: '-48px',
+                      top: '50%',
+                      transform: 'translateY(-50%)'
+                    }}
+                  >
+                    {/* Volume Control with Vertical Slider */}
+                    <div className="flex flex-col items-center gap-2 bg-black/40 rounded-full px-2.5 py-3 backdrop-blur-sm">
+                      <button 
+                        onClick={() => handleVolumeChange(0.1)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
+                        style={{ color: 'rgba(167, 255, 90, 0.85)' }}
+                        title="Volume Up"
+                      >
+                        <i className="fas fa-volume-up text-xs"></i>
+                      </button>
+                      
+                      {/* Vertical Volume Slider */}
+                      <div className="relative w-1 h-24 bg-white/10 rounded-full overflow-hidden">
+                        {/* Volume Fill */}
+                        <div 
+                          className="absolute bottom-0 w-full rounded-full transition-all duration-150"
+                          style={{
+                            height: `${volume * 100}%`,
+                            background: 'linear-gradient(to top, #a7ff5a, #94ffb5)'
+                          }}
+                        />
+                        
+                        {/* Interactive Overlay */}
+                        <div 
+                          className="absolute inset-0 cursor-pointer"
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const y = e.clientY - rect.top;
+                            const percentage = 1 - (y / rect.height);
+                            setVolume(Math.max(0, Math.min(1, percentage)));
+                          }}
+                          onMouseDown={(e) => {
+                            const handleMouseMove = (moveEvent: MouseEvent) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const y = moveEvent.clientY - rect.top;
+                              const percentage = 1 - (y / rect.height);
+                              setVolume(Math.max(0, Math.min(1, percentage)));
+                            };
+                            
+                            const handleMouseUp = () => {
+                              document.removeEventListener('mousemove', handleMouseMove);
+                              document.removeEventListener('mouseup', handleMouseUp);
+                            };
+                            
+                            document.addEventListener('mousemove', handleMouseMove);
+                            document.addEventListener('mouseup', handleMouseUp);
+                          }}
+                        />
+                        
+                        {/* Volume Thumb */}
+                        <div 
+                          className="absolute w-3 h-3 rounded-full bg-[#a7ff5a] pointer-events-none transition-all duration-150"
+                          style={{
+                            left: '50%',
+                            bottom: `${volume * 100}%`,
+                            transform: 'translate(-50%, 50%)',
+                            boxShadow: '0 0 8px rgba(167, 255, 90, 0.8)'
+                          }}
+                        />
+                      </div>
+                      
+                      <button 
+                        onClick={() => handleVolumeChange(-0.1)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
+                        style={{ color: 'rgba(167, 255, 90, 0.85)' }}
+                        title="Volume Down"
+                      >
+                        <i className="fas fa-volume-down text-xs"></i>
+                      </button>
+                      
+                      <div className="text-[9px] font-light text-white/60 mt-1">
+                        {Math.round(volume * 100)}%
+                      </div>
+                    </div>
+                    
+                    <div className="h-px bg-white/20 w-6 mx-auto my-1"></div>
+                    
+                    <button 
+                      className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
+                      style={{ color: 'rgba(167, 255, 90, 0.85)' }}
+                      title="Repeat"
+                    >
+                      <i className="fas fa-repeat text-sm"></i>
+                    </button>
+                    <button 
+                      className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
+                      style={{ color: 'rgba(167, 255, 90, 0.85)' }}
+                      title="Infinity"
+                    >
+                      <i className="fas fa-infinity text-sm"></i>
+                    </button>
+                    <button 
+                      className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
+                      style={{ color: 'rgba(167, 255, 90, 0.85)' }}
+                      title="Add to playlist"
+                    >
+                      <i className="fas fa-plus text-sm"></i>
+                    </button>
+                    <button 
+                      className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
+                      style={{ color: 'rgba(167, 255, 90, 0.85)' }}
+                      title="More"
+                    >
+                      <i className="fas fa-ellipsis text-sm"></i>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Song Title and Subtitle */}
+                <div className="text-center mt-5">
+                  <h3 className="text-sm font-medium text-white">
+                    {selectedSong?.title || "Unknown Track"}
+                  </h3>
+                  <p className="text-[11px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                    {selectedSong?.artist || "Unknown Artist"}
+                  </p>
+                </div>
+
+                {/* Lyrics - Dynamic based on current time */}
+                <div className="text-center max-w-lg mt-6">
+                  <div className="text-white/70 text-sm leading-relaxed">
+                    <p className="mb-1 transition-all duration-500 ease-in-out transform">
+                      {getCurrentLyrics().current?.text || "Instrumental"}
+                    </p>
+                    <p className="text-white/50 text-xs transition-all duration-500 ease-in-out transform opacity-60">
+                      {getCurrentLyrics().next?.text || "..."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Controls */}
+              <div className="absolute top-8 right-8 flex flex-col gap-3">
+                <button className="w-11 h-11 bg-white/8 hover:bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white transition">
+                  <i className="fas fa-volume-up text-lg"></i>
+                </button>
+                <button className="w-11 h-11 bg-white/8 hover:bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white transition">
+                  <i className="fas fa-infinity text-lg"></i>
+                </button>
+                <button className="w-11 h-11 bg-white/8 hover:bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white transition">
+                  <i className="fas fa-link text-base"></i>
+                </button>
+              </div>
+
+              {/* Bottom Right Controls */}
+              <div className="absolute bottom-8 right-8 flex items-center gap-3">
+                <button className="w-11 h-11 bg-white/8 hover:bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white transition">
+                  <i className="fas fa-plus text-lg"></i>
+                </button>
+                <button className="w-11 h-11 bg-white/8 hover:bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center text-white/70 hover:text-white transition">
+                  <i className="fas fa-bars text-base"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
