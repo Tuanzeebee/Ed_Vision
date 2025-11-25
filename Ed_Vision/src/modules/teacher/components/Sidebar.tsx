@@ -24,7 +24,7 @@ interface SidebarProps {
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [isGradeMenuOpen, setIsGradeMenuOpen] = useState(
-    currentPage === 'grade-management' || currentPage === 'prediction-view'
+    currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'prediction-view-v2'
   );
 
   const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
@@ -116,6 +116,18 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 <Brain className="w-4 h-4" />
                 <span>Xem dự đoán</span>
               </button>
+
+              <button
+                onClick={() => handleNavigation('/teacher/prediction-view-v2')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'prediction-view-v2'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <Brain className="w-4 h-4" />
+                <span>Dự đoán v2</span>
+              </button>
+              
             </div>
           )}
         </div>        <button
