@@ -64,7 +64,7 @@ export default function AmbiencePanel({
       style={{ left: `${position.x}px`, top: `${position.y}px`, width: `${size.width}px` }}
     >
       <div
-        className="backdrop-blur-[20px] bg-black/30 border border-white/10 rounded-3xl shadow-2xl flex flex-col"
+        className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl flex flex-col"
         style={{ height: `${size.height}px` }}
       >
         {/* Header */}
