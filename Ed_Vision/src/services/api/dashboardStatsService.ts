@@ -22,7 +22,10 @@ export interface DashboardStatsResponse {
     students: number;
     instructors: number;
     atRisk: number;
-    performance: number;
+    performance: {
+      student: number;
+      instructor: number;
+    };
   };
   previous: {
     students: number;
@@ -44,17 +47,41 @@ export interface DashboardStatsResponse {
 export interface AccessTimeStatsResponse {
   data: {
     morning: number;
-    noon: number;
     afternoon: number;
     evening: number;
   };
   percentages: {
     morning: number;
-    noon: number;
     afternoon: number;
     evening: number;
   };
   total: number;
+}
+
+// ===== MỚI THÊM: Interfaces cho GPA, Score Distribution, Top Students =====
+export interface GPADistributionResponse {
+  excellent: number;
+  good: number;
+  average: number;
+}
+
+export interface ScoreDistributionResponse {
+  schools: Array<{
+    schoolName: string;
+    scores: number[];
+  }>;
+}
+
+export interface TopStudentResponse {
+  students: Array<{
+    id: number;
+    name: string;
+    school: string;
+    major: string;
+    class: string;
+    gpa: number;
+    rank: number;
+  }>;
 }
 
 class DashboardStatsService {
@@ -81,6 +108,30 @@ class DashboardStatsService {
    */
   async getAccessTimeStats(query?: DashboardStatsQuery): Promise<AccessTimeStatsResponse> {
     const response = await apiClient.get<AccessTimeStatsResponse>('/admin/dashboard/access-time', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // ===== MỚI THÊM: Get GPA distribution =====
+  async getGPADistribution(query?: DashboardStatsQuery): Promise<GPADistributionResponse> {
+    const response = await apiClient.get<GPADistributionResponse>('/admin/dashboard/gpa-distribution', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // ===== MỚI THÊM: Get score distribution (0-10) =====
+  async getScoreDistribution(query?: DashboardStatsQuery): Promise<ScoreDistributionResponse> {
+    const response = await apiClient.get<ScoreDistributionResponse>('/admin/dashboard/score-distribution', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // ===== MỚI THÊM: Get top students =====
+  async getTopStudents(query?: DashboardStatsQuery): Promise<TopStudentResponse> {
+    const response = await apiClient.get<TopStudentResponse>('/admin/dashboard/top-students', {
       params: query,
     });
     return response.data;

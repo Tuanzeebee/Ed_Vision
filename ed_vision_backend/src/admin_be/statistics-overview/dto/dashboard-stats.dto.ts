@@ -46,15 +46,18 @@ export interface DashboardStatsResponse {
     students: number;
     instructors: number;
     atRisk: number;
-    performance: number;
+    performance: {
+      student: number;
+      instructor: number;
+    };
   };
   previous: {
     students: number;
     instructors: number;
   };
   comparison: {
-    students: ComparisonData;
-    instructors: ComparisonData;
+    students: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
+    instructors: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
   };
   timeRange: string;
   filters: {
@@ -62,21 +65,48 @@ export interface DashboardStatsResponse {
     courseYear?: string;
     major?: string;
     class?: string;
+    semester?: string;        // thêm
+    academicYear?: string;
   };
 }
 
 export interface AccessTimeStatsResponse {
   data: {
-    morning: number;    // 4:30 - 10:00
-    noon: number;       // 10:00 - 13:00
+    morning: number;    // 4:30 - 13:00
     afternoon: number;  // 13:00 - 18:00
-    evening: number;    // 18:00 - 23:00 + 0:00 - 4:30
+    evening: number;    // 18:00 - 4:30
   };
   percentages: {
     morning: number;
-    noon: number;
     afternoon: number;
     evening: number;
   };
   total: number;
+}
+
+// ===== MỚI THÊM: Response types cho GPA, Score Distribution, Top Students =====
+
+export interface GPADistributionResponse {
+  excellent: number;  // Xuất sắc/Giỏi (GPA >= 8.0) - phần trăm
+  good: number;       // Khá/Tốt (GPA 6.5-7.99) - phần trăm
+  average: number;    // Trung bình/Yếu (GPA < 6.5) - phần trăm
+}
+
+export interface ScoreDistributionResponse {
+  schools: Array<{
+    schoolName: string;
+    scores: number[];  // Array 11 phần tử [0-10] - số lượng sinh viên
+  }>;
+}
+
+export interface TopStudentResponse {
+  students: Array<{
+    id: number;
+    name: string;
+    school: string;
+    major: string;
+    class: string;
+    gpa: number;
+    rank: number;
+  }>;
 }

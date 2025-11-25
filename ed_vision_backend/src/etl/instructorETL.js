@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { BigQuery } = require('@google-cloud/bigquery');
 const { PrismaClient } = require('@prisma/client');
+const { throttler } = require('./bigQueryThrottler');
 const prisma = new PrismaClient();
 
 const bigquery = new BigQuery({ projectId: process.env.BIGQUERY_PROJECT_ID });
@@ -56,7 +57,7 @@ async function processInstructorEvent(event) {
   try {
     if (op === 'DELETE') {
       const deleteSql = `DELETE FROM ${tableId} WHERE instructor_sk = @instructor_sk OR instructor_sk IS NULL AND account_id = @account_id`;
-      await bigquery.query({ query: deleteSql, params: { instructor_sk: instructor_sk ? Number(instructor_sk) : null, account_id: account_id ? Number(account_id) : null } });
+      await throttler.execute(() => bigquery.query({ query: deleteSql, params: { instructor_sk: instructor_sk ? Number(instructor_sk) : null, account_id: account_id ? Number(account_id) : null } }));
       return { ok: true, action: 'delete' };
     }
 
@@ -96,7 +97,7 @@ async function processInstructorEvent(event) {
       }
     };
 
-    await bigquery.query(options);
+    await throttler.execute(() => bigquery.query(options));
     return { ok: true, action: 'upsert' };
   } catch (err) {
     console.error('instructorETL error', err);

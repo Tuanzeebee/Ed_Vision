@@ -1,82 +1,54 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Injectable, Logger } from '@nestjs/common';
+import { BigQuery } from '@google-cloud/bigquery';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   DashboardStatsQueryDto,
   DashboardStatsResponse,
   ComparisonData,
   AccessTimeStatsResponse,
+  GPADistributionResponse,
+  ScoreDistributionResponse,
+  TopStudentResponse,
 } from './dto/dashboard-stats.dto';
 
 @Injectable()
 export class StatisticsOverviewService {
-  constructor(private prisma: PrismaService) {}
+  private readonly bigquery: BigQuery;
+  private readonly logger = new Logger(StatisticsOverviewService.name);
+
+  constructor() {
+    this.bigquery = new BigQuery();
+  }
 
   /**
    * Get filter options for dashboard
    */
   async getFilterOptions() {
-    // Get all departments (schools)
-    const departments = await this.prisma.department.findMany({
-      where: { status: 'active' },
-      select: { name: true },
-      orderBy: { name: 'asc' },
-    });
+    const sqlDepartments = 'SELECT DISTINCT department_name FROM `vuong_dw.dim_student` WHERE department_name IS NOT NULL ORDER BY department_name';
+    const sqlMajors = 'SELECT DISTINCT major, department_name FROM `vuong_dw.dim_student` WHERE major IS NOT NULL ORDER BY major';
+    const sqlClasses = 'SELECT DISTINCT class_code, cohort_year, major as program, department_name as school FROM `vuong_dw.dim_student` WHERE class_code IS NOT NULL ORDER BY class_code';
 
-    // Get all programs (majors) with their department
-    const programs = await this.prisma.program.findMany({
-      select: {
-        program_name: true,
-        department: {
-          select: { name: true },
-        },
-      },
-      orderBy: { program_name: 'asc' },
-    });
+    const [deptRows] = await this.bigquery.query({ query: sqlDepartments });
+    const [majorRows] = await this.bigquery.query({ query: sqlMajors });
+    const [classRows] = await this.bigquery.query({ query: sqlClasses });
 
-    // Get all class groups with cohort years
-    const classGroups = await this.prisma.classGroup.findMany({
-      where: { status: 'active' },
-      select: {
-        class_code: true,
-        cohort_year: true,
-        program: {
-          select: {
-            program_name: true,
-            department: {
-              select: { name: true },
-            },
-          },
-        },
-      },
-      orderBy: { class_code: 'asc' },
-    });
+    const departments = (deptRows as any[]).map(r => r.department_name).filter(Boolean);
+    const programs = (majorRows as any[]).map(r => ({ program_name: r.major, department_name: r.department_name }));
+    const classGroups = (classRows as any[]).map(r => ({ class_code: r.class_code, cohort_year: r.cohort_year, program_name: r.program, department_name: r.school }));
 
-    // Extract unique cohort years and format as "K28", "K29", etc.
-    // Logic: Năm nhập học + 6 = K
-    // VD: 2022 + 6 = 2028 → K28
-    //     2023 + 6 = 2029 → K29
-    const cohortYears = Array.from(
-      new Set(classGroups.map((c) => c.cohort_year).filter((year) => year !== null)),
-    )
+    const cohortYears = Array.from(new Set(classGroups.map(c => c.cohort_year).filter(Boolean)))
       .sort()
-      .map((year) => {
-        const graduationYear = year + 6; // Năm nhập học + 6 năm = năm tốt nghiệp dự kiến
-        return `K${graduationYear.toString().slice(-2)}`; // 2028 → "K28"
+      .map((year: number) => {
+        const graduationYear = year + 6;
+        return `K${graduationYear.toString().slice(-2)}`;
       });
 
     return {
-      schools: ['Tất cả các trường', ...departments.map((d) => d.name)],
+      schools: ['Tất cả các trường', ...departments],
       courseYears: ['Tất cả khóa', ...cohortYears],
-      majors: programs.map((p) => ({
-        name: p.program_name,
-        school: p.department.name,
-      })),
-      classes: classGroups.map((c) => ({
-        code: c.class_code,
-        cohortYear: c.cohort_year,
-        program: c.program?.program_name,
-        school: c.program?.department?.name,
-      })),
+      majors: programs.map((p: any) => ({ name: p.program_name, school: p.department_name })),
+      classes: classGroups.map((c: any) => ({ code: c.class_code, cohortYear: c.cohort_year, program: c.program_name, school: c.department_name })),
     };
   }
 
@@ -88,188 +60,251 @@ export class StatisticsOverviewService {
   ): Promise<DashboardStatsResponse> {
     const { timeFilter = 'tháng-này' } = query;
 
-    // Calculate date ranges for current and previous periods
     const { currentStart, currentEnd, previousStart, previousEnd } =
       this.getDateRanges(timeFilter, query.selectedYear);
 
-    console.log('📅 Date ranges:', {
-      timeFilter,
-      current: { start: currentStart, end: currentEnd },
-      previous: { start: previousStart, end: previousEnd },
-    });
-
-    // Build WHERE clause for filtering (WITHOUT created_at - we'll add it separately)
-    const baseWhereStudent = this.buildStudentWhereClause(query);
-    const baseWhereInstructor = this.buildInstructorWhereClause(query);
-
-    // CURRENT PERIOD: Count accounts created WITHIN current period (gte start AND lte end)
-    const currentWhereStudent = {
-      ...baseWhereStudent,
-      account: {
-        ...baseWhereStudent.account,
-        created_at: {
-          gte: currentStart,
-          lte: currentEnd,
-        },
-      },
-    };
-
-    const currentWhereInstructor = {
-      ...baseWhereInstructor,
-      account: {
-        ...baseWhereInstructor.account,
-        created_at: {
-          gte: currentStart,
-          lte: currentEnd,
-        },
-      },
-    };
-
-    // PREVIOUS PERIOD: Count accounts created WITHIN previous period
-    const previousWhereStudent = {
-      ...baseWhereStudent,
-      account: {
-        ...baseWhereStudent.account,
-        created_at: {
-          gte: previousStart,
-          lte: previousEnd,
-        },
-      },
-    };
-
-    const previousWhereInstructor = {
-      ...baseWhereInstructor,
-      account: {
-        ...baseWhereInstructor.account,
-        created_at: {
-          gte: previousStart,
-          lte: previousEnd,
-        },
-      },
-    };
-
-    // TOTAL counts (for display) - ALL accounts up to current end
-    const totalWhereStudent = {
-      ...baseWhereStudent,
-      account: {
-        ...baseWhereStudent.account,
-        created_at: {
-          lte: currentEnd,
-        },
-      },
-    };
-
-    const totalWhereInstructor = {
-      ...baseWhereInstructor,
-      account: {
-        ...baseWhereInstructor.account,
-        created_at: {
-          lte: currentEnd,
-        },
-      },
-    };
-
-    console.log('🔍 Where clauses:', {
-      student: { current: currentWhereStudent, previous: previousWhereStudent, total: totalWhereStudent },
-      instructor: { current: currentWhereInstructor, previous: previousWhereInstructor, total: totalWhereInstructor },
-    });
-
-    // Get TOTAL counts (for display in cards)
-    const totalStudents = await this.prisma.student.count({
-      where: totalWhereStudent,
-    });
-    const totalInstructors = await this.prisma.instructor.count({
-      where: totalWhereInstructor,
-    });
-
-    // Get current period stats (NEW accounts in this period)
-    const currentStudents = await this.prisma.student.count({
-      where: currentWhereStudent,
-    });
-    const currentInstructors = await this.prisma.instructor.count({
-      where: currentWhereInstructor,
-    });
-
-    // Get previous period stats (NEW accounts in previous period)
-    const previousStudents = await this.prisma.student.count({
-      where: previousWhereStudent,
-    });
-    const previousInstructors = await this.prisma.instructor.count({
-      where: previousWhereInstructor,
-    });
-
-    console.log('📊 Counts:', {
-      total: { students: totalStudents, instructors: totalInstructors },
-      current: { students: currentStudents, instructors: currentInstructors },
-      previous: { students: previousStudents, instructors: previousInstructors },
-    });
-
-    // DEBUG: Get sample accounts to check created_at values
-    const sampleStudents = await this.prisma.student.findMany({
-      where: baseWhereStudent,
-      select: {
-        student_id: true,
-        account: {
-          select: {
-            account_id: true,
-            created_at: true,
-            email: true,
-          },
-        },
-      },
-      take: 10,
-      orderBy: {
-        account: {
-          created_at: 'desc',
-        },
-      },
-    });
-
-    console.log('🔍 Sample student accounts (last 10):', 
-      sampleStudents.map(s => ({
-        student_id: s.student_id,
-        account_id: s.account?.account_id,
-        email: s.account?.email,
-        created_at: s.account?.created_at,
-        created_at_iso: s.account?.created_at?.toISOString(),
-      }))
+    const hasFilters = Boolean(
+      query.school && query.school !== 'Tất cả các trường' ||
+      query.major && query.major !== 'Tất cả' ||
+      query.courseYear && query.courseYear !== 'Tất cả khóa' ||
+      query.class && query.class !== 'Tất cả'
     );
 
-    // Calculate at-risk students
-    const atRiskCount = await this.prisma.student.count({
-      where: {
-        ...totalWhereStudent,
-        status: 'at-risk',
-      },
+    let totalStudents = 0;
+    let previousStudents = 0;
+    let totalInstructors = 0;
+    let previousInstructors = 0;
+    let __debug: any = undefined;
+
+    const startDateStr = new Date(currentStart).toISOString().slice(0, 10);
+    const endDateStr = new Date(currentEnd).toISOString().slice(0, 10);
+    const prevStartDateStr = new Date(previousStart).toISOString().slice(0, 10);
+    const prevEndDateStr = new Date(previousEnd).toISOString().slice(0, 10);
+
+    if (!hasFilters) {
+      // Use aggregated fact table for totals (NO FILTERS)
+      const sqlFactLatestInRange = `
+        SELECT role_code, total_accounts
+        FROM \`vuong_dw.fact_daily_account_activity\`
+        WHERE activity_date = (
+          SELECT MAX(activity_date) FROM \`vuong_dw.fact_daily_account_activity\`
+          WHERE activity_date BETWEEN @startDate AND @endDate
+        )
+      `;
+
+      const [currentFactRows] = await this.bigquery.query({
+        query: sqlFactLatestInRange,
+        params: { startDate: startDateStr, endDate: endDateStr }
+      });
+
+      const [previousFactRows] = await this.bigquery.query({
+        query: sqlFactLatestInRange,
+        params: { startDate: prevStartDateStr, endDate: prevEndDateStr }
+      });
+
+      const currentMap = new Map((currentFactRows as any[]).map(r => [String(r.role_code), Number(r.total_accounts ?? 0)]));
+      const previousMap = new Map((previousFactRows as any[]).map(r => [String(r.role_code), Number(r.total_accounts ?? 0)]));
+
+      totalStudents = currentMap.get('student') ?? currentMap.get('students') ?? 0;
+      previousStudents = previousMap.get('student') ?? previousMap.get('students') ?? 0;
+      totalInstructors = currentMap.get('instructor') ?? currentMap.get('teacher') ?? currentMap.get('instructors') ?? 0;
+      previousInstructors = previousMap.get('instructor') ?? previousMap.get('teacher') ?? previousMap.get('instructors') ?? 0;
+
+      if (query && (query as any)._debug === 'true') {
+        __debug = {
+          mode: 'fact',
+          startDateStr,
+          endDateStr,
+          currentFactRows: (currentFactRows as any[]).length,
+          previousFactRows: (previousFactRows as any[]).length,
+        };
+      }
+    } else {
+      // WITH FILTERS: Query directly from dim_student/dim_instructor
+      const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
+
+      try {
+        // If frontend requested a specific academicYear or semester, count from
+        // fact_student_course_performance (fsp) joined to dim_student so that
+        // semester/year filters actually apply. Otherwise fall back to dim_student counts.
+        let semesterNumber: number | null = null;
+        if (query.semester === 'Kỳ 1') semesterNumber = 1;
+        else if (query.semester === 'Kỳ 2') semesterNumber = 2;
+        else if (query.semester === 'Kỳ Hè') semesterNumber = 3;
+
+        // Normalize academicYear input to canonical form (e.g. 2025/2026 -> 2025-2026)
+        let normalizedAcademicYear: string | undefined = undefined;
+        if (query.academicYear) {
+          normalizedAcademicYear = String(query.academicYear).trim().replace(/\s+/g, '').replace(/\//g, '-');
+        }
+
+        if (normalizedAcademicYear || semesterNumber !== null) {
+          const sqlStudentCountFsp = `
+            SELECT COUNT(DISTINCT fsp.student_sk) AS cnt
+            FROM \`vuong_dw.fact_student_course_performance\` fsp
+            INNER JOIN \`vuong_dw.dim_student\` ds ON fsp.student_sk = ds.student_sk
+            INNER JOIN \`vuong_dw.dim_account\` a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
+            WHERE a.status = 'active'
+              AND a.role_code IN ('student', 'students')
+              AND (${whereClauseStudent})
+              ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
+              ${normalizedAcademicYear ? 'AND fsp.academic_year = @academicYear' : ''}
+          `;
+
+          const studentCountParams: any = { ...params };
+          if (semesterNumber !== null) studentCountParams.semesterNumber = semesterNumber;
+          if (normalizedAcademicYear) studentCountParams.academicYear = normalizedAcademicYear;
+
+          const [currentStudentRows] = await this.bigquery.query({ query: sqlStudentCountFsp, params: studentCountParams });
+          totalStudents = Number((currentStudentRows as any[])[0]?.cnt ?? 0);
+          previousStudents = totalStudents;
+        } else {
+          const sqlStudentCount = `
+            SELECT COUNT(DISTINCT ds.student_sk) AS cnt
+            FROM \`vuong_dw.dim_student\` ds
+            INNER JOIN \`vuong_dw.dim_account\` a 
+              ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
+            WHERE a.status = 'active'
+              AND a.role_code IN ('student', 'students')
+              AND (${whereClauseStudent})
+          `;
+
+          const [currentStudentRows] = await this.bigquery.query({ query: sqlStudentCount, params });
+          totalStudents = Number((currentStudentRows as any[])[0]?.cnt ?? 0);
+          previousStudents = totalStudents;
+        }
+
+        let instructorWhere = 'TRUE';
+        const instructorParams: any = {};
+
+        if (query.school && query.school !== 'Tất cả các trường') {
+          instructorWhere = 'di.department_name = @school';
+          instructorParams.school = query.school;
+        }
+
+        const sqlInstructorCount = `
+          SELECT COUNT(DISTINCT di.instructor_sk) AS cnt
+          FROM \`vuong_dw.dim_instructor\` di
+          INNER JOIN \`vuong_dw.dim_account\` a 
+            ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          WHERE a.status = 'active'
+            AND a.role_code IN ('instructor', 'teacher', 'instructors')
+            AND (${instructorWhere})
+        `;
+
+        const [currentInstructorRows] = await this.bigquery.query({ query: sqlInstructorCount, params: instructorParams });
+        totalInstructors = Number((currentInstructorRows as any[])[0]?.cnt ?? 0);
+        previousInstructors = totalInstructors;
+
+        if (query && (query as any)._debug === 'true') {
+          __debug = {
+            mode: 'dim_tables_filtered',
+            whereClauseStudent,
+            instructorWhere,
+            params,
+            instructorParams,
+            totalStudents,
+            totalInstructors,
+            note: 'Filtering from dim tables - no time-based comparison (counts are the same for current and previous)',
+          };
+        }
+      } catch (error) {
+        this.logger.error('Error querying filtered data:', error);
+        this.logger.error('Error details:', JSON.stringify(error, null, 2));
+        throw error;
+      }
+    }
+
+    // Write debug file if requested
+    if (__debug) {
+      try {
+        const debugDir = path.join(process.cwd(), 'ed_vision_backend', 'tmp');
+        fs.mkdirSync(debugDir, { recursive: true });
+        const debugPath = path.join(debugDir, 'dashboard_stats_debug.json');
+        fs.writeFileSync(debugPath, JSON.stringify(__debug, null, 2), { encoding: 'utf8' });
+        this.logger.log(`Wrote debug file to ${debugPath}`);
+      } catch (err) {
+        this.logger.error('Failed to write debug file', err as any);
+      }
+    }
+
+    // atRisk
+    const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
+    const pCurrentEnd = new Date(currentEnd).toISOString();
+
+    const sqlAtRisk = `
+      SELECT COUNT(DISTINCT student_sk) AS cnt 
+      FROM \`vuong_dw.dim_student\` 
+      WHERE ${whereClauseStudent} 
+        AND status = 'at-risk' 
+        AND created_at <= @currentEnd
+    `;
+
+    const [atRiskRows] = await this.bigquery.query({
+      query: sqlAtRisk,
+      params: { ...params, currentEnd: pCurrentEnd }
     });
 
-    // Calculate average performance (placeholder)
-    const performance = 85.5;
+    const atRiskCount = Number((atRiskRows as any[])[0]?.cnt ?? 0);
 
-    // Calculate comparisons (comparing NEW accounts created in each period)
-    const studentComparison = this.calculateComparison(
-      currentStudents,
-      previousStudents,
-    );
-    const instructorComparison = this.calculateComparison(
-      currentInstructors,
-      previousInstructors,
-    );
+    // === PERFORMANCE: LẤY THEO NGÀY MỚI NHẤT TRONG KHOẢNG ===
+    const sqlPerformance = `
+      SELECT 
+        role_code,
+        performance_rate,
+        activity_date
+      FROM \`vuong_dw.fact_daily_account_activity\`
+      WHERE activity_date = (
+        SELECT MAX(activity_date) 
+        FROM \`vuong_dw.fact_daily_account_activity\`
+        WHERE activity_date BETWEEN @startDate AND @endDate
+      )
+      AND role_code IN ('student', 'students', 'instructor', 'teacher', 'instructors')
+    `;
 
-    return {
+    const [performanceRows] = await this.bigquery.query({
+      query: sqlPerformance,
+      params: { startDate: startDateStr, endDate: endDateStr }
+    });
+
+    const performanceMap = new Map<string, number>();
+    let performanceDate: string | null = null;
+
+    (performanceRows as any[]).forEach(r => {
+      const role = String(r.role_code);
+      const rate = Number(r.performance_rate ?? 0);
+      performanceMap.set(role, rate);
+      if (!performanceDate && r.activity_date) {
+        performanceDate = r.activity_date;
+      }
+    });
+
+    const studentPerformance = performanceMap.get('student') ?? performanceMap.get('students') ?? 0;
+    const instructorPerformance = performanceMap.get('instructor') ?? performanceMap.get('teacher') ?? performanceMap.get('instructors') ?? 0;
+
+    const performance: DashboardStatsResponse['current']['performance'] = {
+      student: studentPerformance,
+      instructor: instructorPerformance,
+    };
+
+    const studentComparison = this.calculateComparison(totalStudents, previousStudents);
+    const instructorComparison = this.calculateComparison(totalInstructors, previousInstructors);
+
+    // === RETURN ===
+    const response: DashboardStatsResponse = {
       current: {
-        students: totalStudents, // Display TOTAL
-        instructors: totalInstructors, // Display TOTAL
+        students: totalStudents,
+        instructors: totalInstructors,
         atRisk: atRiskCount,
-        performance: performance,
+        performance,
       },
       previous: {
-        students: previousStudents, // NEW in previous period
-        instructors: previousInstructors, // NEW in previous period
+        students: previousStudents,
+        instructors: previousInstructors,
       },
       comparison: {
-        students: studentComparison, // Comparison of NEW accounts
-        instructors: instructorComparison, // Comparison of NEW accounts
+        students: studentComparison,
+        instructors: instructorComparison,
       },
       timeRange: timeFilter,
       filters: {
@@ -279,19 +314,229 @@ export class StatisticsOverviewService {
         class: query.class !== 'Tất cả' ? query.class : undefined,
       },
     };
+
+    // === DEBUG ===
+    if ((query as any)._debug === 'true') {
+      const debugResponse = {
+        ...response,
+        _debug: {
+          performanceDate,
+          timeFilter,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          ...__debug,
+        },
+      };
+      try {
+        const debugDir = path.join(process.cwd(), 'ed_vision_backend', 'tmp');
+        fs.mkdirSync(debugDir, { recursive: true });
+        const debugPath = path.join(debugDir, 'dashboard_stats_debug.json');
+        fs.writeFileSync(debugPath, JSON.stringify(debugResponse, null, 2), { encoding: 'utf8' });
+        this.logger.log(`Wrote debug file to ${debugPath}`);
+      } catch (err) {
+        this.logger.error('Failed to write debug file', err as any);
+      }
+    }
+
+    return response;
   }
 
-  /**
-   * Calculate date ranges based on time filter
-   * All dates are in Vietnam timezone (UTC+7)
-   */
+  // ============================================================
+  // ===== MỚI THÊM: GPA Distribution từ BigQuery =====
+  // ============================================================
+  async getGPADistribution(query: DashboardStatsQueryDto): Promise<GPADistributionResponse> {
+    const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
+
+    // Xử lý semester_number
+    let semesterNumber: number | null = null;
+    if (query.semester === 'Kỳ 1') semesterNumber = 1;
+    else if (query.semester === 'Kỳ 2') semesterNumber = 2;
+    else if (query.semester === 'Kỳ Hè') semesterNumber = 3;
+
+    const sql = `
+      SELECT
+        SUM(CASE WHEN fsp.gpa >= 8.0 THEN 1 ELSE 0 END) AS excellent,
+        SUM(CASE WHEN fsp.gpa >= 6.5 AND fsp.gpa < 8.0 THEN 1 ELSE 0 END) AS good,
+        SUM(CASE WHEN fsp.gpa < 6.5 THEN 1 ELSE 0 END) AS average,
+        COUNT(*) AS total
+      FROM \`vuong_dw.fact_student_course_performance\` fsp
+      INNER JOIN \`vuong_dw.dim_student\` ds ON fsp.student_sk = ds.student_sk
+      WHERE (${whereClauseStudent})
+        ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
+        ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
+    `;
+
+    const queryParams = {
+      ...params,
+      ...(semesterNumber !== null && { semesterNumber }),
+      ...(query.academicYear && { academicYear: query.academicYear }),
+    };
+
+    const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
+    const row = (rows as any[])[0] || {};
+
+    const total = Number(row.total ?? 0);
+    if (total === 0) {
+      return { excellent: 0, good: 0, average: 0 };
+    }
+
+    return {
+      excellent: parseFloat(((Number(row.excellent ?? 0) / total) * 100).toFixed(2)),
+      good: parseFloat(((Number(row.good ?? 0) / total) * 100).toFixed(2)),
+      average: parseFloat(((Number(row.average ?? 0) / total) * 100).toFixed(2)),
+    };
+  }
+
+  // ============================================================
+  // ===== MỚI THÊM: Score Distribution (0-10) từ BigQuery =====
+  // ============================================================
+  async getScoreDistribution(query: DashboardStatsQueryDto): Promise<ScoreDistributionResponse> {
+    const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
+
+    let semesterNumber: number | null = null;
+    if (query.semester === 'Kỳ 1') semesterNumber = 1;
+    else if (query.semester === 'Kỳ 2') semesterNumber = 2;
+    else if (query.semester === 'Kỳ Hè') semesterNumber = 3;
+
+    // Query để lấy distribution theo từng trường
+    const sql = `
+      SELECT
+        ds.department_name,
+        FLOOR(fsp.gpa) AS score,
+        COUNT(*) AS student_count
+      FROM \`vuong_dw.fact_student_course_performance\` fsp
+      INNER JOIN \`vuong_dw.dim_student\` ds ON fsp.student_sk = ds.student_sk
+      WHERE (${whereClauseStudent})
+        ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
+        ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
+      GROUP BY ds.department_name, score
+      ORDER BY ds.department_name, score
+    `;
+
+    const queryParams = {
+      ...params,
+      ...(semesterNumber !== null && { semesterNumber }),
+      ...(query.academicYear && { academicYear: query.academicYear }),
+    };
+
+    const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
+
+    // Xử lý dữ liệu thành format chart cần
+    const schoolMap = new Map<string, number[]>();
+
+    (rows as any[]).forEach(row => {
+      const school = row.department_name || 'Unknown';
+      const score = Math.min(10, Math.max(0, Number(row.score))); // Đảm bảo 0-10
+      const count = Number(row.student_count);
+
+      if (!schoolMap.has(school)) {
+        schoolMap.set(school, new Array(11).fill(0)); // [0,1,2,...,10]
+      }
+
+      const scores = schoolMap.get(school)!;
+      scores[score] += count;
+    });
+
+    const schools = Array.from(schoolMap.entries()).map(([schoolName, scores]) => ({
+      schoolName,
+      scores,
+    }));
+
+    return { schools };
+  }
+
+  // ============================================================
+  // ===== MỚI THÊM: Top Students từ BigQuery =====
+  // ============================================================
+  async getTopStudents(query: DashboardStatsQueryDto): Promise<TopStudentResponse> {
+    const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
+
+    let semesterNumber: number | null = null;
+    if (query.semester === 'Kỳ 1') semesterNumber = 1;
+    else if (query.semester === 'Kỳ 2') semesterNumber = 2;
+    else if (query.semester === 'Kỳ Hè') semesterNumber = 3;
+
+    const limit = query.school === 'Tất cả các trường' ? 10 : 5;
+
+    const sql = `
+      SELECT
+        ds.student_sk AS id,
+        ds.full_name AS name,
+        ds.department_name AS school,
+        ds.major,
+        ds.class_code AS class,
+        fsp.gpa,
+        ROW_NUMBER() OVER (ORDER BY fsp.gpa DESC) AS rank
+      FROM \`vuong_dw.fact_student_course_performance\` fsp
+      INNER JOIN \`vuong_dw.dim_student\` ds ON fsp.student_sk = ds.student_sk
+      WHERE (${whereClauseStudent})
+        ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
+        ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
+      ORDER BY fsp.gpa DESC
+      LIMIT @limit
+    `;
+
+    const queryParams = {
+      ...params,
+      ...(semesterNumber !== null && { semesterNumber }),
+      ...(query.academicYear && { academicYear: query.academicYear }),
+      limit,
+    };
+
+    const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
+
+    const students = (rows as any[]).map(row => ({
+      id: Number(row.id),
+      name: String(row.name),
+      school: String(row.school),
+      major: String(row.major),
+      class: String(row.class),
+      gpa: Number(row.gpa),
+      rank: Number(row.rank),
+    }));
+
+    return { students };
+  }
+
+  // ============================================================
+  // ===== Access Time Stats (GIỮ NGUYÊN) =====
+  // ============================================================
+  async getAccessTimeStats(query: DashboardStatsQueryDto): Promise<AccessTimeStatsResponse> {
+    const sql = `
+      SELECT
+        SUM(CASE WHEN LOWER(period) = 'morning' THEN 1 ELSE 0 END) AS morning,
+        SUM(CASE WHEN LOWER(period) = 'afternoon' THEN 1 ELSE 0 END) AS afternoon,
+        SUM(CASE WHEN LOWER(period) = 'evening' THEN 1 ELSE 0 END) AS evening
+      FROM \`vuong_dw.fact_user_session\`
+      WHERE period IS NOT NULL
+    `;
+
+    const [rows] = await this.bigquery.query({ query: sql });
+    const counts = {
+      morning: Number((rows as any[])[0]?.morning ?? 0),
+      afternoon: Number((rows as any[])[0]?.afternoon ?? 0),
+      evening: Number((rows as any[])[0]?.evening ?? 0),
+    };
+
+    const total = counts.morning + counts.afternoon + counts.evening;
+    const percentages = {
+      morning: total > 0 ? parseFloat(((counts.morning / total) * 100).toFixed(2)) : 0,
+      afternoon: total > 0 ? parseFloat(((counts.afternoon / total) * 100).toFixed(2)) : 0,
+      evening: total > 0 ? parseFloat(((counts.evening / total) * 100).toFixed(2)) : 0,
+    };
+
+    return { data: counts, percentages, total };
+  }
+
+  // ============================================================
+  // ===== HELPER FUNCTIONS (GIỮ NGUYÊN) =====
+  // ============================================================
   private getDateRanges(timeFilter: string, selectedYear?: string) {
-    // Get current time in Vietnam timezone (UTC+7)
     const now = new Date();
-    const vietnamOffset = 7 * 60; // +7 hours in minutes
-    const localOffset = now.getTimezoneOffset(); // Current timezone offset
+    const vietnamOffset = 7 * 60;
+    const localOffset = now.getTimezoneOffset();
     const vietnamTime = new Date(now.getTime() + (vietnamOffset + localOffset) * 60 * 1000);
-    
+
     let currentStart: Date;
     let currentEnd: Date;
     let previousStart: Date;
@@ -299,253 +544,101 @@ export class StatisticsOverviewService {
 
     switch (timeFilter) {
       case 'hôm-nay':
-        // Today in Vietnam timezone: 00:00:00.000 to 23:59:59.999
-        currentStart = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          vietnamTime.getDate(), 
-          0 - 7, 0, 0, 0 // Subtract 7 hours to get Vietnam midnight in UTC
-        ));
-        currentEnd = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          vietnamTime.getDate(), 
-          23 - 7, 59, 59, 999 // Subtract 7 hours
-        ));
-        
-        // Yesterday in Vietnam timezone
-        previousStart = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          vietnamTime.getDate() - 1, 
-          0 - 7, 0, 0, 0
-        ));
-        previousEnd = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          vietnamTime.getDate() - 1, 
-          23 - 7, 59, 59, 999
-        ));
+        currentStart = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate(), 0 - 7, 0, 0, 0));
+        currentEnd = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate(), 23 - 7, 59, 59, 999));
+        previousStart = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate() - 1, 0 - 7, 0, 0, 0));
+        previousEnd = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate() - 1, 23 - 7, 59, 59, 999));
         break;
 
       case 'tuần-này':
-        // This week (Monday to Sunday) in Vietnam timezone
         const dayOfWeek = vietnamTime.getDay();
         const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
         const mondayDate = new Date(vietnamTime);
         mondayDate.setDate(vietnamTime.getDate() + diffToMonday);
-        
-        currentStart = new Date(Date.UTC(
-          mondayDate.getFullYear(),
-          mondayDate.getMonth(),
-          mondayDate.getDate(),
-          0 - 7, 0, 0, 0
-        ));
-        
+
+        currentStart = new Date(Date.UTC(mondayDate.getFullYear(), mondayDate.getMonth(), mondayDate.getDate(), 0 - 7, 0, 0, 0));
         const sundayDate = new Date(mondayDate);
         sundayDate.setDate(mondayDate.getDate() + 6);
-        currentEnd = new Date(Date.UTC(
-          sundayDate.getFullYear(),
-          sundayDate.getMonth(),
-          sundayDate.getDate(),
-          23 - 7, 59, 59, 999
-        ));
-        
-        // Last week
+        currentEnd = new Date(Date.UTC(sundayDate.getFullYear(), sundayDate.getMonth(), sundayDate.getDate(), 23 - 7, 59, 59, 999));
+
         const lastMondayDate = new Date(mondayDate);
         lastMondayDate.setDate(mondayDate.getDate() - 7);
-        previousStart = new Date(Date.UTC(
-          lastMondayDate.getFullYear(),
-          lastMondayDate.getMonth(),
-          lastMondayDate.getDate(),
-          0 - 7, 0, 0, 0
-        ));
-        
+        previousStart = new Date(Date.UTC(lastMondayDate.getFullYear(), lastMondayDate.getMonth(), lastMondayDate.getDate(), 0 - 7, 0, 0, 0));
+
         const lastSundayDate = new Date(sundayDate);
         lastSundayDate.setDate(sundayDate.getDate() - 7);
-        previousEnd = new Date(Date.UTC(
-          lastSundayDate.getFullYear(),
-          lastSundayDate.getMonth(),
-          lastSundayDate.getDate(),
-          23 - 7, 59, 59, 999
-        ));
+        previousEnd = new Date(Date.UTC(lastSundayDate.getFullYear(), lastSundayDate.getMonth(), lastSundayDate.getDate(), 23 - 7, 59, 59, 999));
         break;
 
       case 'tháng-này':
-        // This month in Vietnam timezone
-        currentStart = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          1, 
-          0 - 7, 0, 0, 0
-        ));
-        
+        currentStart = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), 1, 0 - 7, 0, 0, 0));
         const lastDayOfMonth = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth() + 1, 0);
-        currentEnd = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          lastDayOfMonth.getDate(), 
-          23 - 7, 59, 59, 999
-        ));
-        
-        // Last month
+        currentEnd = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), lastDayOfMonth.getDate(), 23 - 7, 59, 59, 999));
+
         const lastMonthDate = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth() - 1, 1);
-        previousStart = new Date(Date.UTC(
-          lastMonthDate.getFullYear(), 
-          lastMonthDate.getMonth(), 
-          1, 
-          0 - 7, 0, 0, 0
-        ));
-        
+        previousStart = new Date(Date.UTC(lastMonthDate.getFullYear(), lastMonthDate.getMonth(), 1, 0 - 7, 0, 0, 0));
+
         const lastDayOfPrevMonth = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), 0);
-        previousEnd = new Date(Date.UTC(
-          lastDayOfPrevMonth.getFullYear(), 
-          lastDayOfPrevMonth.getMonth(), 
-          lastDayOfPrevMonth.getDate(), 
-          23 - 7, 59, 59, 999
-        ));
+        previousEnd = new Date(Date.UTC(lastDayOfPrevMonth.getFullYear(), lastDayOfPrevMonth.getMonth(), lastDayOfPrevMonth.getDate(), 23 - 7, 59, 59, 999));
         break;
 
       case 'tất-cả':
-        // This year (or selected year) in Vietnam timezone
         const year = selectedYear ? parseInt(selectedYear) : vietnamTime.getFullYear();
         currentStart = new Date(Date.UTC(year, 0, 1, 0 - 7, 0, 0, 0));
         currentEnd = new Date(Date.UTC(year, 11, 31, 23 - 7, 59, 59, 999));
-        
-        // Previous year
         previousStart = new Date(Date.UTC(year - 1, 0, 1, 0 - 7, 0, 0, 0));
         previousEnd = new Date(Date.UTC(year - 1, 11, 31, 23 - 7, 59, 59, 999));
         break;
 
       default:
-        // Default to this month
-        currentStart = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          1, 
-          0 - 7, 0, 0, 0
-        ));
-        
+        currentStart = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), 1, 0 - 7, 0, 0, 0));
         const defaultLastDay = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth() + 1, 0);
-        currentEnd = new Date(Date.UTC(
-          vietnamTime.getFullYear(), 
-          vietnamTime.getMonth(), 
-          defaultLastDay.getDate(), 
-          23 - 7, 59, 59, 999
-        ));
-        
-        const defaultLastMonthDate = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth() - 1, 1);
-        previousStart = new Date(Date.UTC(
-          defaultLastMonthDate.getFullYear(), 
-          defaultLastMonthDate.getMonth(), 
-          1, 
-          0 - 7, 0, 0, 0
-        ));
-        
-        const defaultLastDayPrev = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), 0);
-        previousEnd = new Date(Date.UTC(
-          defaultLastDayPrev.getFullYear(), 
-          defaultLastDayPrev.getMonth(), 
-          defaultLastDayPrev.getDate(), 
-          23 - 7, 59, 59, 999
-        ));
-    }
+        currentEnd = new Date(Date.UTC(vietnamTime.getFullYear(), vietnamTime.getMonth(), defaultLastDay.getDate(), 23 - 7, 59, 59, 999));
 
-    console.log('📅 Date ranges calculated (Vietnam timezone UTC+7):', {
-      timeFilter,
-      vietnamNow: vietnamTime.toISOString(),
-      current: { 
-        start: currentStart.toISOString(), 
-        end: currentEnd.toISOString() 
-      },
-      previous: { 
-        start: previousStart.toISOString(), 
-        end: previousEnd.toISOString() 
-      },
-    });
+        const defaultLastMonthDate = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth() - 1, 1);
+        previousStart = new Date(Date.UTC(defaultLastMonthDate.getFullYear(), defaultLastMonthDate.getMonth(), 1, 0 - 7, 0, 0, 0));
+
+        const defaultLastDayPrev = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), 0);
+        previousEnd = new Date(Date.UTC(defaultLastDayPrev.getFullYear(), defaultLastDayPrev.getMonth(), defaultLastDayPrev.getDate(), 23 - 7, 59, 59, 999));
+    }
 
     return { currentStart, currentEnd, previousStart, previousEnd };
   }
 
-  /**
-   * Build WHERE clause for Student query with filters (WITHOUT date range)
-   */
-  private buildStudentWhereClause(query: DashboardStatsQueryDto) {
-    const where: any = {
-      account: {
-        status: 'active',
-      },
-    };
+  private buildBQStudentFilters(query: DashboardStatsQueryDto) {
+    const where: string[] = ['TRUE'];
+    const params: any = {};
 
-    // Filter by school (Department) - via ClassGroup -> Program -> Department
     if (query.school && query.school !== 'Tất cả các trường') {
-      where.classGroup = {
-        program: {
-          department: {
-            name: query.school,
-          },
-        },
-      };
+      where.push('(department_name = @school)');
+      params.school = query.school;
     }
 
-    // Filter by major (Program) - via ClassGroup -> Program
     if (query.major && query.major !== 'Tất cả') {
-      if (!where.classGroup) where.classGroup = {};
-      where.classGroup.program = {
-        ...where.classGroup.program,
-        program_name: query.major,
-      };
+      where.push('(major = @major)');
+      params.major = query.major;
     }
 
-    // Filter by course year (cohort_year) - extract year from "K28" -> 2022
-    // Logic: K28 = tốt nghiệp 2028 → nhập học 2022 (2028 - 6 = 2022)
     if (query.courseYear && query.courseYear !== 'Tất cả khóa') {
-      // Extract number from format like "K28" or "K29"
       const yearMatch = query.courseYear.match(/K(\d+)/);
       if (yearMatch) {
-        const lastTwoDigits = parseInt(yearMatch[1]); // "K28" -> 28
-        const graduationYear = 2000 + lastTwoDigits; // 28 -> 2028
-        const cohortYear = graduationYear - 6; // 2028 - 6 = 2022
-        where.cohort_year = cohortYear;
+        const lastTwo = Number(yearMatch[1]);
+        const graduationYear = 2000 + lastTwo;
+        const cohortYear = graduationYear - 6;
+        where.push('(cohort_year = @cohortYear)');
+        params.cohortYear = cohortYear;
       }
     }
 
-    // Filter by class (ClassGroup)
     if (query.class && query.class !== 'Tất cả') {
-      if (!where.classGroup) where.classGroup = {};
-      where.classGroup.class_code = query.class;
+      where.push('(class_code = @class)');
+      params.class = query.class;
     }
 
-    return where;
+    return { whereClauseStudent: where.join(' AND '), params };
   }
 
-  /**
-   * Build WHERE clause for Instructor query with filters (WITHOUT date range)
-   */
-  private buildInstructorWhereClause(query: DashboardStatsQueryDto) {
-    const where: any = {
-      account: {
-        status: 'active',
-      },
-    };
-
-    // Filter by school (Department)
-    if (query.school && query.school !== 'Tất cả các trường') {
-      where.department = {
-        name: query.school,
-      };
-    }
-
-    return where;
-  }
-
-  /**
-   * Calculate comparison between current and previous values
-   */
-  private calculateComparison(
-    current: number,
-    previous: number,
-  ): ComparisonData {
+  private calculateComparison(current: number, previous: number): ComparisonData {
     if (previous === 0) {
       return {
         value: current,
@@ -561,106 +654,6 @@ export class StatisticsOverviewService {
       value: diff,
       percentage: Math.abs(percentage),
       trend: diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable',
-    };
-  }
-
-  /**
-   * Get access time statistics based on last_login_at
-   * Time periods (Vietnam timezone UTC+7):
-   * - Sáng (Morning): 4:30 - 10:00
-   * - Trưa (Noon): 10:00 - 13:00
-   * - Chiều (Afternoon): 13:00 - 18:00
-   * - Tối (Evening): 18:00 - 23:00 + 0:00 - 4:30
-   * - Backup: 23:00 - 0:00 (excluded - no login allowed)
-   */
-  async getAccessTimeStats(
-    query: DashboardStatsQueryDto,
-  ): Promise<AccessTimeStatsResponse> {
-    // Get all accounts with last_login_at from Student and Instructor tables
-    const students = await this.prisma.student.findMany({
-      where: { status: 'active' },
-      select: {
-        account: {
-          select: {
-            last_login_at: true,
-          },
-        },
-      },
-    });
-
-    const instructors = await this.prisma.instructor.findMany({
-      where: { status: 'active' },
-      select: {
-        account: {
-          select: {
-            last_login_at: true,
-          },
-        },
-      },
-    });
-
-    // Combine all login times
-    const loginTimes: Date[] = [
-      ...students
-        .map((s) => s.account?.last_login_at)
-        .filter((t): t is Date => t !== null),
-      ...instructors
-        .map((i) => i.account?.last_login_at)
-        .filter((t): t is Date => t !== null),
-    ];
-
-    // Count logins by time period
-    const counts = {
-      morning: 0, // 4:30 - 10:00
-      noon: 0, // 10:00 - 13:00
-      afternoon: 0, // 13:00 - 18:00
-      evening: 0, // 18:00 - 23:00 + 0:00 - 4:30
-    };
-
-    loginTimes.forEach((loginTime) => {
-      // Convert UTC to Vietnam time (UTC+7)
-      const vietnamTime = new Date(loginTime.getTime() + 7 * 60 * 60 * 1000);
-      const hours = vietnamTime.getUTCHours();
-      const minutes = vietnamTime.getUTCMinutes();
-      const totalMinutes = hours * 60 + minutes;
-
-      // Time ranges in minutes
-      const morningStart = 4 * 60 + 30; // 4:30 = 270 minutes
-      const morningEnd = 10 * 60; // 10:00 = 600 minutes
-      const noonEnd = 13 * 60; // 13:00 = 780 minutes
-      const afternoonEnd = 18 * 60; // 18:00 = 1080 minutes
-      const eveningEnd = 23 * 60; // 23:00 = 1380 minutes
-
-      if (totalMinutes >= morningStart && totalMinutes < morningEnd) {
-        counts.morning++;
-      } else if (totalMinutes >= morningEnd && totalMinutes < noonEnd) {
-        counts.noon++;
-      } else if (totalMinutes >= noonEnd && totalMinutes < afternoonEnd) {
-        counts.afternoon++;
-      } else if (
-        totalMinutes >= afternoonEnd && totalMinutes < eveningEnd ||
-        totalMinutes >= 0 && totalMinutes < morningStart
-      ) {
-        // Evening: 18:00-23:00 OR 0:00-4:30
-        counts.evening++;
-      }
-      // 23:00-0:00 is backup time, excluded (no else clause)
-    });
-
-    const total = counts.morning + counts.noon + counts.afternoon + counts.evening;
-
-    // Calculate percentages
-    const percentages = {
-      morning: total > 0 ? parseFloat(((counts.morning / total) * 100).toFixed(2)) : 0,
-      noon: total > 0 ? parseFloat(((counts.noon / total) * 100).toFixed(2)) : 0,
-      afternoon: total > 0 ? parseFloat(((counts.afternoon / total) * 100).toFixed(2)) : 0,
-      evening: total > 0 ? parseFloat(((counts.evening / total) * 100).toFixed(2)) : 0,
-    };
-
-    return {
-      data: counts,
-      percentages,
-      total,
     };
   }
 }
