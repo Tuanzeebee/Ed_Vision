@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -137,9 +138,9 @@ export class InstructorAvailabilityController {
 
   /**
    * Update a time slot
-   * PUT /instructor-availability/:instructorId/slots/:slotId
+   * PATCH /instructor-availability/:instructorId/slots/:slotId
    */
-  @Put(':instructorId/slots/:slotId')
+  @Patch(':instructorId/slots/:slotId')
   async updateTimeSlot(
     @Param('instructorId', ParseIntPipe) instructorId: number,
     @Param('slotId', ParseIntPipe) slotId: number,

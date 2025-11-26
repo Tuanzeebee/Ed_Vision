@@ -53,7 +53,6 @@ import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
-import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
@@ -62,6 +61,8 @@ import ChatStudent from "./modules/student/ChatStudent";
 import BookingScheduler from "./modules/booking/BookingScheduler";
 import LearningSpace from "./modules/student/LearningSpace";
 import "./modules/student/styles/learningSpace.css";
+import MeetingDetailView from "./modules/teacher/MeetingDetailView";
+import CalendarOverview from "./modules/teacher/CalendarOverview";
 
 function App() {
         // Initialize permissions on app startup
@@ -155,8 +156,9 @@ function App() {
                                         <Route path="/teacher/requests" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/confirmed" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
-                                        <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailDemo /></ProtectedRoute>} />
+                                        <Route path="/teacher/meeting-detail" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailView /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
+                                        <Route path="/teacher/calendar-overview" element={<CalendarOverview />} />
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}

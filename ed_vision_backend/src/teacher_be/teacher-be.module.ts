@@ -8,6 +8,7 @@ import { MessagesModule } from './messages/messages.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { SurveysModule } from './surveys/surveys.module';
 import { PredictionModule } from './prediction/prediction.module';
+import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { PredictionModule } from './prediction/prediction.module';
         AppointmentsModule,
         SurveysModule,
         PredictionModule,
+        MeetingLogsModule,
     ],
     exports: [
         DashboardModule,
@@ -31,6 +33,7 @@ import { PredictionModule } from './prediction/prediction.module';
         AppointmentsModule,
         SurveysModule,
         PredictionModule,
+        MeetingLogsModule,
     ],
 })
 export class TeacherBeModule { }

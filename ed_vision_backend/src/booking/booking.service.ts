@@ -211,8 +211,12 @@ export class BookingService {
 		const appt = await this.repository.getAppointmentById(appointmentId);
 		if (!appt) throw new NotFoundException('Appointment not found');
 
-		// Only booker can cancel (for now)
-		if (appt.booker_account_id !== accountId) {
+		// Check if the user is either the booker or the instructor
+		const instructor = await this.repository.getInstructorByAccountId(accountId);
+		const isInstructor = instructor && appt.instructor_id === instructor.instructor_id;
+		const isBooker = appt.booker_account_id === accountId;
+
+		if (!isBooker && !isInstructor) {
 			throw new ForbiddenException('You are not allowed to cancel this appointment');
 		}
 
@@ -222,5 +226,149 @@ export class BookingService {
 
 		return this.repository.cancelAppointment(appointmentId, reason);
 	}
-}
 
+	/**
+	 * Get instructor record by account_id
+	 */
+	async getInstructorForAccount(accountId: number) {
+		if (!accountId) return null;
+		return this.repository.getInstructorByAccountId(accountId);
+	}
+
+	/**
+	 * Get appointments for instructor (pending requests)
+	 */
+	async getInstructorAppointments(accountId: number, statusFilter?: string[], bookerRole?: string) {
+		const instructor = await this.repository.getInstructorByAccountId(accountId);
+		if (!instructor) throw new NotFoundException('Instructor not found for this account');
+
+		const appointments = await this.repository.getAppointmentsForInstructor(
+			instructor.instructor_id,
+			statusFilter,
+			bookerRole, // Pass booker_role filter
+		);
+
+		// Transform to frontend-friendly format
+		return appointments.map((appt) => {
+			const student = appt.student;
+			const studentProfile = student?.account?.profile;
+			const classGroup = student?.classGroup;
+			const bookerProfile = appt.booker?.profile;
+			const contact = appt.appointmentContact;
+			const slot = appt.slot;
+
+			// Helper function to format time from PostgreSQL Time type
+			const formatTime = (timeValue: any): string => {
+				if (!timeValue) return '';
+				try {
+					const date = new Date(timeValue);
+					if (isNaN(date.getTime())) return '';
+					// Extract HH:MM format
+					const hours = date.getUTCHours().toString().padStart(2, '0');
+					const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+					return `${hours}:${minutes}`;
+				} catch (e) {
+					return '';
+				}
+			};
+
+			return {
+				id: appt.appointment_id,
+				appointmentId: appt.appointment_id,
+				slotId: appt.slot_id,
+				status: appt.status,
+				meetingType: appt.meeting_type,
+				meetingPurpose: appt.meeting_purpose,
+				createdAt: appt.created_at,
+				updatedAt: appt.updated_at,
+				canceledAt: appt.canceled_at,
+				cancelReason: appt.cancel_reason,
+				
+				// Slot details
+				slot: slot ? {
+					slotId: slot.slot_id,
+					dayOfWeek: slot.day_of_week,
+					startTime: formatTime(slot.start_time_local),
+					endTime: formatTime(slot.end_time_local),
+					meetingType: slot.meeting_type,
+					meetingLink: slot.meeting_link,
+					meetingLocation: slot.meeting_location,
+				} : null,
+
+				// Student info
+				studentId: student?.student_id,
+				studentName: studentProfile?.full_name ?? 'Unknown Student',
+				studentCode: student?.student_code,
+				studentClass: classGroup?.class_code ?? 'Unknown Class',
+				studentAvatar: studentProfile?.avatar_url,
+
+				// Parent/Booker info
+				bookerRole: appt.booker_role,
+				bookerAccountId: appt.booker_account_id,
+				parentName: contact?.contact_name ?? bookerProfile?.full_name ?? 'Unknown',
+				parentPhone: contact?.contact_phone,
+				parentEmail: contact?.contact_email,
+				parentAvatar: bookerProfile?.avatar_url,
+				relationshipToStudent: contact?.relationship_to_student,
+
+				// Computed fields for frontend
+				type: appt.meeting_type === 'online' ? 'online' : 'offline',
+				reason: appt.meeting_purpose ?? 'No reason provided',
+				requestedAt: appt.created_at?.toISOString(),
+				desiredDate: slot ? `${slot.day_of_week}` : 'Unknown',
+				desiredTime: slot ? `${formatTime(slot.start_time_local)} - ${formatTime(slot.end_time_local)}` : 'Unknown',
+				platform: appt.meeting_type === 'online' ? 'Google Meet' : undefined,
+			};
+		});
+	}
+
+	/**
+	 * Accept appointment (instructor only)
+	 */
+	async acceptAppointment(
+		accountId: number,
+		appointmentId: number,
+		data?: { meetingLink?: string; meetingLocation?: string; notes?: string },
+	) {
+		const instructor = await this.repository.getInstructorByAccountId(accountId);
+		if (!instructor) throw new ForbiddenException('Only instructors can accept appointments');
+
+		const appt = await this.repository.getAppointmentById(appointmentId);
+		if (!appt) throw new NotFoundException('Appointment not found');
+
+		if (appt.instructor_id !== instructor.instructor_id) {
+			throw new ForbiddenException('You can only accept your own appointments');
+		}
+
+		if (appt.status !== 'pending') {
+			throw new BadRequestException(`Cannot accept appointment with status: ${appt.status}`);
+		}
+
+		return this.repository.acceptAppointment(appointmentId, data);
+	}
+
+	/**
+	 * Reject appointment (instructor only)
+	 */
+	async rejectAppointment(
+		accountId: number,
+		appointmentId: number,
+		data: { reason: string; suggestedDate?: string; suggestedTime?: string; notes?: string },
+	) {
+		const instructor = await this.repository.getInstructorByAccountId(accountId);
+		if (!instructor) throw new ForbiddenException('Only instructors can reject appointments');
+
+		const appt = await this.repository.getAppointmentById(appointmentId);
+		if (!appt) throw new NotFoundException('Appointment not found');
+
+		if (appt.instructor_id !== instructor.instructor_id) {
+			throw new ForbiddenException('You can only reject your own appointments');
+		}
+
+		if (appt.status !== 'pending') {
+			throw new BadRequestException(`Cannot reject appointment with status: ${appt.status}`);
+		}
+
+		return this.repository.rejectAppointment(appointmentId, data);
+	}
+}

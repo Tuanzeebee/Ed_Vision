@@ -170,4 +170,96 @@ export class BookingRepository {
       },
     })
   }
+
+  // Get instructor by account_id
+  async getInstructorByAccountId(accountId: number) {
+    return this.prisma.instructor.findUnique({
+      where: { account_id: accountId },
+      include: {
+        account: {
+          include: { profile: true },
+        },
+      },
+    });
+  }
+
+  // Get appointments for instructor (as adviser)
+  async getAppointmentsForInstructor(instructorId: number, status?: string[], bookerRole?: string) {
+    const where: any = { instructor_id: instructorId };
+    if (status && status.length > 0) {
+      where.status = { in: status };
+    }
+    // Filter by booker_role if specified (e.g., only 'parent' bookings)
+    if (bookerRole) {
+      where.booker_role = bookerRole;
+    }
+
+    return this.prisma.appointment.findMany({
+      where,
+      include: {
+        slot: { 
+          include: { 
+            week: {
+              include: {
+                instructor: {
+                  include: {
+                    account: { include: { profile: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        instructor: { 
+          include: { 
+            account: { include: { profile: true } },
+          },
+        },
+        student: { 
+          include: { 
+            account: { include: { profile: true } },
+            classGroup: true,
+          },
+        },
+        booker: { 
+          include: { profile: true },
+        },
+        appointmentContact: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  // Accept appointment
+  async acceptAppointment(appointmentId: number, data?: { meetingLink?: string; meetingLocation?: string; notes?: string }) {
+    return this.prisma.appointment.update({
+      where: { appointment_id: appointmentId },
+      data: {
+        status: 'confirmed',
+        updated_at: new Date(),
+        cancel_reason: data?.notes ?? null, // Use cancel_reason for instructor notes
+      },
+    });
+  }
+
+  // Reject appointment
+  async rejectAppointment(appointmentId: number, data: { reason: string; suggestedDate?: string; suggestedTime?: string; notes?: string }) {
+    const rejectNotes = [
+      data.reason,
+      data.notes,
+      data.suggestedDate && data.suggestedTime ? `Suggested: ${data.suggestedDate} at ${data.suggestedTime}` : null,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    return this.prisma.appointment.update({
+      where: { appointment_id: appointmentId },
+      data: {
+        status: 'rejected',
+        canceled_at: new Date(),
+        updated_at: new Date(),
+        cancel_reason: rejectNotes,
+      },
+    });
+  }
 }
