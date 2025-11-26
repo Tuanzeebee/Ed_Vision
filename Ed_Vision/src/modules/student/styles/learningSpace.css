@@ -60,3 +60,107 @@
 .hover\:scale-115:hover {
   transform: scale(1.15);
 }
+
+/* Explosion and Confetti Animations */
+@keyframes boom-scale {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes boom-text {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes explosion-ring {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(8);
+    opacity: 0;
+  }
+}
+
+@keyframes explosion-ring-delayed {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(6);
+    opacity: 0;
+  }
+}
+
+@keyframes flash-boom {
+  0% {
+    opacity: 0.8;
+  }
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-boom-scale {
+  animation: boom-scale 1s ease-out forwards;
+}
+
+.animate-boom-text {
+  animation: boom-text 1s ease-out forwards;
+}
+
+.animate-explosion-ring {
+  animation: explosion-ring 0.8s ease-out forwards;
+}
+
+.animate-explosion-ring-delayed {
+  animation: explosion-ring-delayed 0.8s ease-out 0.2s forwards;
+}
+
+.animate-flash-boom {
+  animation: flash-boom 0.5s ease-out forwards;
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall 3s ease-in forwards;
+}
