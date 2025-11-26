@@ -150,6 +150,16 @@ export default function MeetingDetailView({
     const [day, month, year] = displayDate.split('/')
     return `${year}-${month}-${day}`
   }
+
+  // Helper function to check if a date is in the past
+  function isDateInPast(dateString: string): boolean {
+    // dateString is in YYYY-MM-DD format
+    const [year, month, day] = dateString.split('-').map(Number)
+    const dateToCheck = new Date(year, month - 1, day)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return dateToCheck < today
+  }
   
   // Fetch time slots from API when component mounts or date changes
   useEffect(() => {
@@ -251,6 +261,12 @@ export default function MeetingDetailView({
       return
     }
 
+    // Check if the date is in the past
+    if (apiDate && isDateInPast(apiDate)) {
+      showToast('Không thể xóa khung giờ của ngày đã qua!', 'error')
+      return
+    }
+
     if (confirm("Bạn có chắc chắn muốn xóa khung giờ này?")) {
       try {
         // Call API to delete slot from database
@@ -267,6 +283,12 @@ export default function MeetingDetailView({
   }
 
   const handleOpenTimeModal = () => {
+    // Check if the date is in the past
+    if (apiDate && isDateInPast(apiDate)) {
+      showToast('Không thể thêm khung giờ vào ngày đã qua!', 'error')
+      return
+    }
+
     setTimeModalOpen(true)
     setStartTime('')
     setEndTime('')
@@ -282,6 +304,13 @@ export default function MeetingDetailView({
 
     if (!apiDate) {
       showToast('Không xác định được ngày', 'error')
+      return
+    }
+
+    // Check if the date is in the past (double-check)
+    if (isDateInPast(apiDate)) {
+      showToast('Không thể thêm khung giờ vào ngày đã qua!', 'error')
+      setTimeModalOpen(false)
       return
     }
 
@@ -460,6 +489,21 @@ export default function MeetingDetailView({
 
           {/* Page Header */}
           <div className="mb-6">
+            {/* Warning for past dates */}
+            {apiDate && isDateInPast(apiDate) && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                    Đây là ngày đã qua
+                  </h3>
+                  <p className="text-sm text-yellow-700">
+                    Bạn không thể thêm hoặc xóa khung giờ cho ngày này. Chỉ có thể xem thông tin.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Chi tiết cuộc họp</h1>
@@ -473,8 +517,17 @@ export default function MeetingDetailView({
                 </div>
                 <Button 
                   onClick={handleOpenTimeModal}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={loading}
+                  className={`${
+                    apiDate && isDateInPast(apiDate)
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                  disabled={loading || (apiDate ? isDateInPast(apiDate) : false)}
+                  title={
+                    apiDate && isDateInPast(apiDate)
+                      ? 'Không thể thêm khung giờ vào ngày đã qua'
+                      : 'Thêm khung giờ mới'
+                  }
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Thêm khung giờ
@@ -509,7 +562,17 @@ export default function MeetingDetailView({
                   </div>
                   <button
                     onClick={() => handleRemoveSlot(slot.id)}
-                    className="text-gray-400 hover:text-red-600 transition-colors"
+                    disabled={apiDate ? isDateInPast(apiDate) : false}
+                    className={`transition-colors ${
+                      apiDate && isDateInPast(apiDate)
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-gray-400 hover:text-red-600'
+                    }`}
+                    title={
+                      apiDate && isDateInPast(apiDate)
+                        ? 'Không thể xóa khung giờ của ngày đã qua'
+                        : 'Xóa khung giờ này'
+                    }
                   >
                     <X className="w-5 h-5" />
                   </button>
