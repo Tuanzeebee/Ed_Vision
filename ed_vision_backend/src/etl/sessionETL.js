@@ -3,6 +3,7 @@ const { BigQuery } = require('@google-cloud/bigquery');
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const { updateDailyActivity } = require('./dailyActivityETL');
+const { throttler } = require('./bigQueryThrottler');
 
 const bigquery = new BigQuery({ projectId: process.env.BIGQUERY_PROJECT_ID });
 const prisma = new PrismaClient();
@@ -111,7 +112,7 @@ async function processSessionEvent(event) {
     };
 
     try {
-      await bigquery.query(options);
+      await throttler.execute(() => bigquery.query(options));
       
       // Trigger daily activity CHỈ KHI:
       // 1. Login event mới (last_login_at > last_logout_at hoặc logout_time null)
