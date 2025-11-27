@@ -137,14 +137,14 @@ export default function StudentLogin({
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen flex flex-col">
       {/* Header */}
       <header className="w-full py-3 px-4 md:px-6">
         <BackButton onBack={handleBack} />
       </header>
 
       {/* Main Content */}
-      <main className="flex items-center justify-center px-4 py-4">
+      <main className="flex-1 flex items-center justify-center px-4 py-4">
         <div className="w-full max-w-sm">
           {/* Login Card */}
           <Card className="bg-white rounded-xl shadow-md">

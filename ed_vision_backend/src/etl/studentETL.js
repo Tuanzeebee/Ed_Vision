@@ -1,9 +1,10 @@
 require('dotenv').config();
 const { BigQuery } = require('@google-cloud/bigquery');
+const { PrismaClient } = require('@prisma/client');
+const { throttler } = require('./bigQueryThrottler');
 
 const bigquery = new BigQuery({ projectId: process.env.BIGQUERY_PROJECT_ID });
 const DEFAULT_DATASET = process.env.BIGQUERY_DATASET;
-const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 /**
@@ -113,7 +114,7 @@ async function processStudentEvent(event) {
     };
 
     try {
-      await bigquery.query(options);
+      await throttler.execute(() => bigquery.query(options));
       return { ok: true, action: 'merge_upsert' };
     } catch (err) {
       console.error('studentETL merge error', err);
