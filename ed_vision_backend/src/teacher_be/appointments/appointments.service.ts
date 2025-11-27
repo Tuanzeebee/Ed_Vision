@@ -379,6 +379,127 @@ export class AppointmentsService {
         };
     }
 
+    async getWeekOverview(
+        instructorId: number,
+        startDate?: string,
+        endDate?: string,
+    ): Promise<any> {
+        const parseDate = (s?: string) => {
+            if (!s) return null;
+            const [y, m, d] = s.split('-').map(Number);
+            return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+        };
+        const mondayFrom = (date: Date) => {
+            const day = date.getUTCDay();
+            const diff = day === 0 ? -6 : 1 - day;
+            const monday = new Date(date);
+            monday.setUTCDate(date.getUTCDate() + diff);
+            monday.setUTCHours(0, 0, 0, 0);
+            return monday;
+        };
+        const formatDate = (d: Date) => {
+            const y = d.getFullYear();
+            const m = (d.getMonth() + 1).toString().padStart(2, '0');
+            const dt = d.getDate().toString().padStart(2, '0');
+            return `${y}-${m}-${dt}`;
+        };
+        const formatTime = (t: any) => {
+            if (!t) return '';
+            try {
+                const dt = new Date(t);
+                const hh = dt.getUTCHours().toString().padStart(2, '0');
+                const mm = dt.getUTCMinutes().toString().padStart(2, '0');
+                return `${hh}:${mm}`;
+            } catch {
+                return '';
+            }
+        };
+
+        const now = new Date();
+        const targetStart = parseDate(startDate) ?? now;
+        const weekStartDate = mondayFrom(targetStart);
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+
+        const week = await this.prisma.instructorAvailabilityWeek.findFirst({
+            where: {
+                instructor_id: instructorId,
+                week_start_date: weekStartDate,
+            },
+            include: {
+                instructorWeeklySlots: true,
+            },
+        });
+
+        const slots = week?.instructorWeeklySlots ?? [];
+
+        const availableSlots = slots.map((s: any) => {
+            const base = new Date(weekStartDate);
+            const diff = (s.day_of_week ?? 1) === 7 ? 6 : (s.day_of_week ?? 1) - 1;
+            base.setUTCDate(base.getUTCDate() + diff);
+            const dateStr = formatDate(base);
+            const start = formatTime(s.start_time_local);
+            const end = formatTime(s.end_time_local);
+            return { date: dateStr, time: `${start} - ${end}` };
+        });
+
+        const slotIds = slots.map((s: any) => s.slot_id);
+        const appointments = slotIds.length
+            ? await this.prisma.appointment.findMany({
+                  where: {
+                      slot_id: { in: slotIds },
+                      status: { in: ['pending', 'confirmed'] },
+                  },
+                  include: {
+                      slot: true,
+                      student: {
+                          include: {
+                              account: { include: { profile: true } },
+                              classGroup: true,
+                          },
+                      },
+                      booker: { include: { profile: true } },
+                      appointmentContact: true,
+                  },
+              })
+            : [];
+
+        const bookings = appointments.map((a: any) => {
+            const s = slots.find((x: any) => x.slot_id === a.slot_id);
+            const base = new Date(weekStartDate);
+            const dow = (s?.day_of_week ?? 1);
+            const diff = dow === 7 ? 6 : dow - 1;
+            base.setUTCDate(base.getUTCDate() + diff);
+            const dateStr = formatDate(base);
+            const timeStr = `${formatTime(s?.start_time_local)} - ${formatTime(s?.end_time_local)}`;
+            const isStudent = (a.booker_role || '').toLowerCase() === 'student';
+            const studentName = a.student?.account?.profile?.full_name || null;
+            const className = a.student?.classGroup?.class_code || undefined;
+            const parentDisplayName = a.appointmentContact?.contact_name || a.booker?.profile?.full_name || 'Unknown';
+            const avatar = isStudent
+                ? a.student?.account?.profile?.avatar_url || null
+                : a.booker?.profile?.avatar_url || null;
+            return {
+                id: a.appointment_id,
+                date: dateStr,
+                time: timeStr,
+                name: isStudent ? (studentName || 'Unknown') : parentDisplayName,
+                bookerType: isStudent ? 'student' : 'parent',
+                class: isStudent ? className : undefined,
+                studentName: !isStudent ? studentName || undefined : undefined,
+                type: (a.meeting_type as any) === 'online' ? 'online' : 'offline',
+                avatar,
+            };
+        });
+
+        return {
+            weekStart: formatDate(weekStartDate),
+            weekEnd: formatDate(weekEndDate),
+            availableSlots,
+            bookings,
+        };
+    }
+
     /**
      * Lấy meeting detail
      */
