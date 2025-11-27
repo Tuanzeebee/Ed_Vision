@@ -55,3 +55,11 @@ export const DialogTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = (
     </h2>
   )
 }
+
+export const DialogFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className = '', ...props }) => {
+  return (
+    <div className={`px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end gap-3 ${className}`} {...props}>
+      {children}
+    </div>
+  )
+}
