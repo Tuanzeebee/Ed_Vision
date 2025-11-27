@@ -274,6 +274,52 @@ class InstructorAvailabilityApi {
     // Invalidate cache after deletion
     cacheService.invalidateInstructorCache(instructorId);
   }
+
+  /**
+   * Update a time slot
+   * @param instructorId - Instructor ID
+   * @param slotId - Slot ID to update
+   * @param updateData - Data to update
+   */
+  async updateTimeSlot(
+    instructorId: number,
+    slotId: number,
+    updateData: {
+      startTime?: string;
+      endTime?: string;
+      meetingType?: 'online' | 'offline' | 'both';
+      capacity?: number;
+      isOpen?: boolean;
+      autoAccept?: boolean;
+      note?: string;
+      meetingLink?: string;
+      meetingLocation?: string;
+    }
+  ): Promise<any> {
+    const url = buildUrl(`${this.baseUrl}/${instructorId}/slots/${slotId}`);
+    
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || 'Không thể cập nhật khung giờ');
+    }
+
+    // Invalidate cache after update
+    cacheService.invalidateInstructorCache(instructorId);
+    
+    return response.json();
+  }
 }
 
 // Export singleton instance

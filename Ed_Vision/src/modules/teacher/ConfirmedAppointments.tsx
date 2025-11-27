@@ -15,16 +15,65 @@ interface ConfirmedAppointmentsProps {
   showToast: (message: string, type: string) => void;
 }
 
+// Helper function to get auth token
+const getAuthToken = () => {
+  return localStorage.getItem('dev-token') || 
+         localStorage.getItem('token') || 
+         '';
+};
+
+// Helper function to format date/time from slot data
+const formatDateTime = (slot: any) => {
+  if (!slot) return { date: 'Unknown', time: 'Unknown' };
+  
+  const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  const dayName = slot.dayOfWeek !== undefined && slot.dayOfWeek !== null 
+    ? dayNames[slot.dayOfWeek] 
+    : 'Unknown';
+  
+  const formatTime = (timeStr: any) => {
+    if (!timeStr) return '';
+    
+    // If it's already a formatted string (HH:MM), return it
+    if (typeof timeStr === 'string' && /^\d{2}:\d{2}$/.test(timeStr)) {
+      return timeStr;
+    }
+    
+    // Handle Date object or ISO string
+    try {
+      const date = new Date(timeStr);
+      // Check if valid date
+      if (isNaN(date.getTime())) return '';
+      
+      // Extract just the time portion (HH:MM)
+      const hours = date.getUTCHours().toString().padStart(2, '0');
+      const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } catch (e) {
+      return '';
+    }
+  };
+  
+  return {
+    date: dayName,
+    time: `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`,
+  };
+};
+
 export default function ConfirmedAppointments({
-  requests,
-  setRequests,
+  requests: propRequests,
+  setRequests: propSetRequests,
   showToast,
 }: ConfirmedAppointmentsProps) {
+  const [requests, setRequests] = useState<AppointmentRequest[]>(propRequests);
+  const [loading, setLoading] = useState(false);
+  
   // Cancel confirmed appointment modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelingRequestId, setCancelingRequestId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [customCancelReason, setCustomCancelReason] = useState('');
+  const [isCanceling, setIsCanceling] = useState(false);
 
   // Confirmed page filter and sort state
   const [confirmedClassFilter, setConfirmedClassFilter] = useState<string>('all');
@@ -33,6 +82,79 @@ export default function ConfirmedAppointments({
   // Pagination state
   const [confirmedPage, setConfirmedPage] = useState(1);
   const itemsPerPage = 5;
+
+  // Fetch confirmed appointments from API
+  const fetchConfirmedAppointments = async () => {
+    setLoading(true);
+    try {
+      const token = getAuthToken();
+      // Fetch confirmed appointments from parent only
+      const response = await fetch('/api/booking/instructor/requests?status=confirmed&bookerRole=parent', {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch confirmed appointments:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Transform API data to match AppointmentRequest type
+      const transformedRequests: AppointmentRequest[] = (Array.isArray(data) ? data : []).map((appt: any) => {
+        const { date, time } = formatDateTime(appt.slot);
+        
+        // Format requestedAt date properly
+        const formatRequestedAt = (dateStr: any) => {
+          if (!dateStr) return '';
+          try {
+            const date = new Date(dateStr);
+            return date.toLocaleString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            });
+          } catch (e) {
+            return '';
+          }
+        };
+        
+        return {
+          id: appt.appointmentId || appt.id,
+          parentName: appt.parentName || 'Unknown Parent',
+          parentAvatar: appt.parentAvatar || 'https://via.placeholder.com/50',
+          studentName: appt.studentName || 'Unknown Student',
+          studentClass: appt.studentClass || 'Unknown Class',
+          type: appt.type || (appt.meetingType === 'online' ? 'online' : 'offline'),
+          status: 'accepted', // Map 'confirmed' to 'accepted' for frontend
+          desiredDate: date,
+          desiredTime: time,
+          reason: appt.reason || appt.meetingPurpose || 'No reason provided',
+          requestedAt: formatRequestedAt(appt.requestedAt),
+          platform: appt.platform || (appt.meetingType === 'online' ? 'Google Meet' : undefined),
+        };
+      });
+
+      setRequests(transformedRequests);
+      propSetRequests(transformedRequests);
+    } catch (error) {
+      console.error('Error fetching confirmed appointments:', error);
+      showToast('Không thể tải danh sách lịch hẹn đã xác nhận', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchConfirmedAppointments();
+  }, []);
 
   const confirmedRequests = requests.filter((r) => r.status === 'accepted');
 
@@ -81,7 +203,7 @@ export default function ConfirmedAppointments({
     setCustomCancelReason('');
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (!cancelReason) {
       showToast('Vui lòng chọn lý do hủy lịch hẹn!', 'error');
       return;
@@ -93,21 +215,49 @@ export default function ConfirmedAppointments({
     }
 
     if (cancelingRequestId !== null) {
-      setRequests(requests.filter((req) => req.id !== cancelingRequestId));
+      setIsCanceling(true);
+      try {
+        const reasonMessages: Record<string, string> = {
+          schedule_conflict: 'Có lịch đột xuất',
+          personal_leave: 'Nghỉ phép',
+          meeting_conflict: 'Có cuộc họp quan trọng',
+          health_issue: 'Vấn đề sức khỏe',
+          time_error: 'Nhầm lẫn thời gian',
+          custom: customCancelReason,
+        };
 
-      const reasonMessages: Record<string, string> = {
-        schedule_conflict: 'Có lịch đột xuất',
-        personal_leave: 'Nghỉ phép',
-        meeting_conflict: 'Có cuộc họp quan trọng',
-        health_issue: 'Vấn đề sức khỏe',
-        time_error: 'Nhầm lẫn thời gian',
-        custom: customCancelReason,
-      };
+        const reasonText = reasonMessages[cancelReason];
+        const token = getAuthToken();
+        
+        // Call API to cancel the appointment with reason
+        const reasonParam = encodeURIComponent(reasonText);
+        const response = await fetch(`/api/booking/${cancelingRequestId}?reason=${reasonParam}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
 
-      const reasonText = reasonMessages[cancelReason];
-      showToast(`Đã hủy lịch hẹn. Lý do: ${reasonText}. Phụ huynh đã được thông báo.`, 'warning');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to cancel appointment');
+        }
 
-      handleCloseCancelModal();
+        // Update local state
+        setRequests(requests.filter((req) => req.id !== cancelingRequestId));
+
+        showToast(`Đã hủy lịch hẹn. Lý do: ${reasonText}. Phụ huynh đã được thông báo.`, 'warning');
+        handleCloseCancelModal();
+
+        // Refresh data
+        await fetchConfirmedAppointments();
+      } catch (error: any) {
+        console.error('Error canceling appointment:', error);
+        showToast(error.message || 'Không thể hủy lịch hẹn', 'error');
+      } finally {
+        setIsCanceling(false);
+      }
     }
   };
 
@@ -184,7 +334,14 @@ export default function ConfirmedAppointments({
           </div>
         )}
 
-        {confirmedRequests.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              <p className="text-gray-600">Đang tải lịch hẹn đã xác nhận...</p>
+            </div>
+          </div>
+        ) : confirmedRequests.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -472,16 +629,27 @@ export default function ConfirmedAppointments({
               <div className="flex gap-2">
                 <button
                   onClick={handleCloseCancelModal}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium"
+                  disabled={isCanceling}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Quay lại
                 </button>
                 <button
                   onClick={handleConfirmCancel}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
+                  disabled={isCanceling}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <X className="w-4 h-4" />
-                  Xác nhận hủy
+                  {isCanceling ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-4 h-4" />
+                      Xác nhận hủy
+                    </>
+                  )}
                 </button>
               </div>
             </div>

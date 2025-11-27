@@ -363,11 +363,13 @@ export class InstructorAvailabilityRepository {
     data: {
       startTime?: string;
       endTime?: string;
-  meetingType?: 'online' | 'offline' | 'both' | string;
+      meetingType?: 'online' | 'offline' | 'both' | string;
       capacity?: number;
       isOpen?: boolean;
       autoAccept?: boolean;
       note?: string;
+      meetingLink?: string;
+      meetingLocation?: string;
     },
   ) {
     const updateData: any = {};
@@ -392,6 +394,12 @@ export class InstructorAvailabilityRepository {
     }
     if (data.note !== undefined) {
       updateData.note = data.note;
+    }
+    if (data.meetingLink !== undefined) {
+      updateData.meeting_link = data.meetingLink;
+    }
+    if (data.meetingLocation !== undefined) {
+      updateData.meeting_location = data.meetingLocation;
     }
 
     return this.prisma.instructorWeeklySlot.update({
@@ -486,11 +494,12 @@ export class InstructorAvailabilityRepository {
 
   /**
    * Format Date to time string (HH:mm)
-   * Uses UTC to avoid timezone conversion issues
+   * Uses local time (GMT+0800) to match database timezone
    */
   formatTimeToString(date: Date): string {
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    // Database stores time in GMT+0800, so we need to use local time
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 }

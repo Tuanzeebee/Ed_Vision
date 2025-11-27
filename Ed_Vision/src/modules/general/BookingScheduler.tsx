@@ -59,7 +59,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // prefer explicit instructor id, fall back to route/query params and finally demo id 3
+  // prefer explicit instructor id, fall back to route/query params, or advisor from student info
   const routeInstructorId = useMemo(() => {
     if (!instructorIdParam) return undefined
     const parsed = Number(instructorIdParam)
@@ -181,9 +181,9 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     } else if (studentInfo?.advisor?.instructorId) {
       targetInstructorId = studentInfo.advisor.instructorId
       targetAccountId = studentInfo.advisor.accountId ?? null
-    } else if (studentInfoResolved && activeInstructorId === null) {
-      targetInstructorId = 3
     }
+    // Removed hardcoded fallback to instructor ID 3
+    // If no instructor is found, targetInstructorId remains null
 
     if (targetInstructorId !== null && targetInstructorId !== activeInstructorId) {
       setActiveInstructorId(targetInstructorId)
@@ -775,6 +775,25 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           <div className="p-4 sm:p-5">
             {currentStep === 1 && (
               <div id="step1" className="animate-in fade-in duration-300">
+                {!activeInstructorId && !loading ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-4">
+                      <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy giảng viên cố vấn</h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Vui lòng liên hệ với phòng Đào tạo để được phân công giảng viên cố vấn học tập.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                 <div className="text-center mb-5">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 mb-3 shadow">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -803,7 +822,21 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    Tuần từ 2 - 8 Tháng 12, 2024
+                    {weekDates.length > 0 ? (() => {
+                      const firstDate = new Date(weekDates[0] + 'T00:00:00Z')
+                      const lastDate = new Date(weekDates[weekDates.length - 1] + 'T00:00:00Z')
+                      const firstDay = firstDate.getUTCDate()
+                      const lastDay = lastDate.getUTCDate()
+                      const firstMonth = firstDate.getUTCMonth() + 1
+                      const lastMonth = lastDate.getUTCMonth() + 1
+                      const year = firstDate.getUTCFullYear()
+                      
+                      if (firstMonth === lastMonth) {
+                        return `Tuần từ ${firstDay} - ${lastDay} Tháng ${firstMonth}, ${year}`
+                      } else {
+                        return `Tuần từ ${firstDay} Tháng ${firstMonth} - ${lastDay} Tháng ${lastMonth}, ${year}`
+                      }
+                    })() : 'Chọn tuần'}
                   </h2>
 
                   {groupedTotal === 0 && (
@@ -1197,6 +1230,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                     </button>
                   </div>
                 </div>
+                </>
+                )}
               </div>
             )}
 
