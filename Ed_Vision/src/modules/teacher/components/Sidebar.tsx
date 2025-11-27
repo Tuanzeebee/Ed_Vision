@@ -28,7 +28,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   );
 
   const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
-    currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+    currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
   );
 
   const handleNavigation = (path: string) => {
@@ -48,7 +48,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto z-10">
+     <aside className="w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-20 bottom-0 overflow-y-auto z-10">
       <nav className="p-4 space-y-2">
         <button
           onClick={() => handleNavigation('/teacher/dashboard')}
@@ -198,6 +198,16 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           {/* Dropdown Menu */}
           {isAppointmentMenuOpen && (
             <div className="ml-4 space-y-1">
+                            <button
+                onClick={() => handleNavigation('/teacher/calendar-overview')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'calendar-overview'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Tổng quan lịch hẹn</span>
+              </button>
               <button
                 onClick={() => handleNavigation('/teacher/appointments')}
                 className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors text-sm ${currentPage === 'schedule'

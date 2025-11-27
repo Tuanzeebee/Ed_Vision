@@ -46,10 +46,23 @@ export class AppointmentsController {
         return this.appointmentsService.getAppointments(instructorId, filterDto);
     }
 
-    /**
-     * GET /teacher/appointments/:id
-     * Lấy chi tiết appointment
-     */
+    @Get('week-overview')
+    async getWeekOverview(
+        @Req() req: any,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
+        @Query('instructorId') instructorIdParam?: string,
+    ) {
+        const instructorId = instructorIdParam
+            ? parseInt(instructorIdParam, 10)
+            : req.user?.instructorId || 1;
+        return this.appointmentsService.getWeekOverview(
+            instructorId,
+            startDate,
+            endDate,
+        );
+    }
+
     @Get(':id')
     async getAppointmentDetail(@Req() req: any, @Param('id') id: string) {
         const instructorId = req.user?.instructorId || 1;
@@ -158,4 +171,5 @@ export class AppointmentsController {
             parseInt(year),
         );
     }
+
 }
