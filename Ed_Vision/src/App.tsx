@@ -36,9 +36,11 @@ import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
 import AuthStudentOTPVerification from "@/modules/auth/StudentOTPVerification";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
+import TeacherProfile from "@/modules/teacher/TeacherProfile";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
 import PredictionView from "@/modules/teacher/PredictionView";
+import PredictionViewV2 from "@/modules/teacher/pages/PredictionViewV2";
 import ProgressTracking from "@/modules/teacher/ProgressTracking";
 import TeacherReport from "@/modules/teacher/TeacherReport";
 import UploadTranscript from "./modules/student/UploadTranscript";
@@ -146,6 +148,7 @@ function App() {
                                         <Route path="/teacher/class-management" element={<ProtectedRoute permission="teacher_class_management"><ClassManagement /></ProtectedRoute>} />
                                         <Route path="/teacher/grade-management" element={<ProtectedRoute permission="teacher_grade_management"><GradeManagement /></ProtectedRoute>} />
                                         <Route path="/teacher/prediction-view" element={<ProtectedRoute permission="teacher_prediction_view"><PredictionView /></ProtectedRoute>} />
+                                        <Route path="/teacher/prediction-view-v2" element={<PredictionViewV2 />} />
                                         <Route path="/teacher/progress-tracking" element={<ProtectedRoute permission="teacher_progress_tracking"><ProgressTracking /></ProtectedRoute>} />
                                         <Route path="/teacher/reports-alerts" element={<ProtectedRoute permission="teacher_reports_alerts"><TeacherReport /></ProtectedRoute>} />
                                         <Route path="/teacher/messages" element={<ProtectedRoute permission="teacher_messages"><MessagesNotifications /></ProtectedRoute>} />
@@ -153,8 +156,12 @@ function App() {
                                         <Route path="/teacher/requests" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/confirmed" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
+                                        <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_dashboard"><TeacherProfile /></ProtectedRoute>} />
                                         <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailDemo /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
+        
+        
+                                        
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}

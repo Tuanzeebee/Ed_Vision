@@ -18,7 +18,9 @@ import {
     FileText,
     TrendingUp,
     ChevronDown,
+    ChevronLeft,
     Users,
+    UserCheck,
     SlidersHorizontal
 } from "lucide-react"
 
@@ -46,6 +48,20 @@ interface Student {
     lastConversationDate?: string
 }
 
+interface Parent {
+    id: string
+    name: string
+    avatar: string
+    studentName: string
+    className: string
+    lastMessage: string
+    lastMessageTime: string
+    unreadCount: number
+    isOnline: boolean
+    totalConversations?: number
+    lastConversationDate?: string
+}
+
 interface SuggestedQuestion {
     id: string
     category: string
@@ -64,7 +80,7 @@ interface ConversationHistory {
     sentiment: 'positive' | 'neutral' | 'negative'
 }
 
-type StudentGroup = 'atrisk' | 'normal'
+type StudentGroup = 'atrisk' | 'normal' | 'parents'
 
 export default function MessagesNotifications() {
     // Get studentId from URL params
@@ -80,6 +96,10 @@ export default function MessagesNotifications() {
     const [searchTerm, setSearchTerm] = useState('')
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
+
+    // Pagination state for chat messages
+    const [messagesPerPage] = useState(20) // Hiển thị 20 tin nhắn mỗi lần
+    const [currentMessagePage, setCurrentMessagePage] = useState(1)
 
     // Filter states
     const [selectedClass, setSelectedClass] = useState<string>('all')
@@ -176,6 +196,75 @@ export default function MessagesNotifications() {
             isOnline: false,
             riskLevel: 'high',
             totalConversations: 6,
+            lastConversationDate: '2024-10-23'
+        }
+    ]
+
+    // Mock data - Phụ huynh
+    const parents: Parent[] = [
+        {
+            id: 'p1',
+            name: 'Nguyễn Văn Hùng',
+            avatar: '/src/assets/teacher/Avatar_Student3.png',
+            studentName: 'Nguyễn Văn An',
+            className: 'CNTT-K19A',
+            lastMessage: 'Con em học tập có tiến bộ không thầy?',
+            lastMessageTime: '14:30',
+            unreadCount: 1,
+            isOnline: false,
+            totalConversations: 5,
+            lastConversationDate: '2024-10-25'
+        },
+        {
+            id: 'p2',
+            name: 'Trần Thị Mai',
+            avatar: '/src/assets/teacher/Avatar_Student1.png',
+            studentName: 'Trần Thị Bình',
+            className: 'CNTT-K19A',
+            lastMessage: 'Cảm ơn thầy đã quan tâm đến con ạ',
+            lastMessageTime: '11:20',
+            unreadCount: 0,
+            isOnline: true,
+            totalConversations: 8,
+            lastConversationDate: '2024-10-25'
+        },
+        {
+            id: 'p3',
+            name: 'Lê Văn Thành',
+            avatar: '/src/assets/teacher/Avatar_Student2.png',
+            studentName: 'Lê Văn Cường',
+            className: 'CNTT-K19B',
+            lastMessage: 'Con em mấy hôm nay ốm nên xin nghỉ học',
+            lastMessageTime: '08:00',
+            unreadCount: 2,
+            isOnline: false,
+            totalConversations: 3,
+            lastConversationDate: '2024-10-25'
+        },
+        {
+            id: 'p4',
+            name: 'Phạm Thị Lan',
+            avatar: '/src/assets/teacher/Avatar_Student1.png',
+            studentName: 'Phạm Thị Dung',
+            className: 'CNTT-K20A',
+            lastMessage: 'Con em học tập chăm chỉ lắm ạ',
+            lastMessageTime: 'Hôm qua',
+            unreadCount: 0,
+            isOnline: false,
+            totalConversations: 4,
+            lastConversationDate: '2024-10-24'
+        },
+        {
+            id: 'p5',
+            name: 'Hoàng Văn Tuấn',
+            avatar: '/src/assets/teacher/Avatar_Student3.png',
+            studentName: 'Hoàng Văn Em',
+            className: 'CNTT-K20A',
+            lastMessage: 'Thầy có thể tư vấn thêm cho con em không ạ?',
+            lastMessageTime: '2 ngày',
+            unreadCount: 1,
+            isOnline: false,
+            totalConversations: 2,
             lastConversationDate: '2024-10-23'
         }
     ]
@@ -409,8 +498,14 @@ export default function MessagesNotifications() {
     const atRiskStudents = students.filter(s => s.riskLevel === 'high' || s.riskLevel === 'medium')
     const normalStudents = students.filter(s => s.riskLevel === 'low' || !s.riskLevel)
 
-    // Lọc sinh viên theo nhóm hiện tại và các tiêu chí
-    const currentGroupStudents = activeGroup === 'atrisk' ? atRiskStudents : normalStudents
+    // Lọc theo nhóm hiện tại
+    const currentGroupStudents = activeGroup === 'atrisk' 
+        ? atRiskStudents 
+        : activeGroup === 'normal' 
+        ? normalStudents 
+        : []
+
+    const currentGroupParents = activeGroup === 'parents' ? parents : []
 
     const filteredStudents = currentGroupStudents.filter(student => {
         const matchSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -420,13 +515,36 @@ export default function MessagesNotifications() {
         return matchSearch && matchClass
     })
 
+    const filteredParents = currentGroupParents.filter(parent => {
+        const matchSearch = parent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            parent.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            parent.className.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchClass = selectedClass === 'all' || parent.className === selectedClass
+
+        return matchSearch && matchClass
+    })
+
     // Lấy danh sách các lớp unique
-    const classList = ['all', ...Array.from(new Set(students.map(s => s.className)))]
+    const classList = ['all', ...Array.from(new Set([...students.map(s => s.className), ...parents.map(p => p.className)]))]
 
     // Lọc lịch sử cuộc trò chuyện theo sinh viên được chọn
     const filteredConversationHistory = selectedStudent
         ? conversationHistories
         : []
+
+    // Pagination for chat messages - Chỉ load tin nhắn gần nhất
+    const totalMessages = chatMessages.length
+    const displayedMessages = chatMessages.slice(-currentMessagePage * messagesPerPage) // Lấy từ cuối lên
+    const hasMoreMessages = totalMessages > displayedMessages.length
+
+    const loadMoreMessages = () => {
+        setCurrentMessagePage(prev => prev + 1)
+    }
+
+    // Reset pagination khi chọn student mới
+    useEffect(() => {
+        setCurrentMessagePage(1)
+    }, [selectedStudent?.id])
 
     const getSentimentBadge = (sentiment: string) => {
         switch (sentiment) {
@@ -449,12 +567,12 @@ export default function MessagesNotifications() {
                 return '😐'
         }
     }
-
     return (
         <TeacherLayout currentPage="messages">
-            <div className="h-[calc(100vh-120px)] flex flex-col">
+            {/* Smooth scroll cho toàn bộ trang */}
+            <div className="flex flex-col scroll-smooth">
                 {/* Header với tabs */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg mb-4">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg mb-4 transition-all duration-300">
                     <div className="p-6">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
                             <div>
@@ -465,109 +583,139 @@ export default function MessagesNotifications() {
                                 {/* Quick Actions */}
                                 <Button
                                     onClick={() => setIsBulkModalOpen(true)}
-                                    className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
-                                    size="sm"
-                                >
-                                    <Megaphone className="w-4 h-4 mr-2" />
-                                    Thông báo hàng loạt
-                                </Button>
-                                <Button
-                                    onClick={() => setIsQuickModalOpen(true)}
-                                    className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30"
-                                    size="sm"
-                                >
-                                    <Zap className="w-4 h-4 mr-2" />
-                                    Tin nhắn nhanh
-                                </Button>
-                                <Button
-                                    onClick={() => setIsUrgentModalOpen(true)}
-                                    className="bg-red-500 hover:bg-red-600 text-white shadow-lg border border-red-600"
-                                    size="sm"
-                                >
-                                    <AlertTriangle className="w-4 h-4 mr-2" />
-                                    Cảnh báo khẩn cấp
-                                </Button>
-                            </div>
-                        </div>
+                                    className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30 transition-all duration-200 hover:scale-105"
+                                            size="sm"
+                                        >
+                                            <Megaphone className="w-4 h-4 mr-2" />
+                                            Thông báo hàng loạt
+                                        </Button>
+                                        <Button
+                                            onClick={() => setIsQuickModalOpen(true)}
+                                            className="bg-white/20 hover:bg-white/30 text-white shadow-lg border border-white/30 transition-all duration-200 hover:scale-105"
+                                            size="sm"
+                                        >
+                                            <Zap className="w-4 h-4 mr-2" />
+                                            Tin nhắn nhanh
+                                        </Button>
+                                        <Button
+                                            onClick={() => setIsUrgentModalOpen(true)}
+                                            className="bg-red-500 hover:bg-red-600 text-white shadow-lg border border-red-600 transition-all duration-200 hover:scale-105"
+                                            size="sm"
+                                        >
+                                            <AlertTriangle className="w-4 h-4 mr-2" />
+                                            Cảnh báo khẩn cấp
+                                        </Button>
+                                    </div>
+                                </div>
 
-                        {/* Tabs cho 2 nhóm sinh viên */}
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setActiveGroup('atrisk')}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${activeGroup === 'atrisk'
-                                    ? 'bg-white text-blue-600 shadow-lg'
-                                    : 'bg-white/10 text-white hover:bg-white/20'
-                                    }`}
-                            >
-                                <AlertTriangle className="w-5 h-5" />
-                                <span>Sinh viên cảnh báo</span>
-                                <Badge className="bg-red-500 text-white ml-2">
-                                    {atRiskStudents.length}
-                                </Badge>
-                            </button>
-                            <button
-                                onClick={() => setActiveGroup('normal')}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${activeGroup === 'normal'
-                                    ? 'bg-white text-blue-600 shadow-lg'
-                                    : 'bg-white/10 text-white hover:bg-white/20'
-                                    }`}
-                            >
-                                <Users className="w-5 h-5" />
-                                <span>Sinh viên bình thường</span>
-                                <Badge className="bg-green-500 text-white ml-2">
-                                    {normalStudents.length}
-                                </Badge>
-                            </button>
-                        </div>
-                    </div>
+                                {/* Tabs cho 2 nhóm sinh viên */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setActiveGroup('atrisk')}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 ${activeGroup === 'atrisk'
+                                            ? 'bg-white text-blue-600 shadow-lg scale-105'
+                                            : 'bg-white/10 text-white hover:bg-white/20'
+                                            }`}
+                                    >
+                                        <AlertTriangle className="w-5 h-5" />
+                                        <span>Sinh viên cảnh báo</span>
+                                        <Badge className="bg-red-500 text-white ml-2 transition-all">
+                                            {atRiskStudents.length}
+                                        </Badge>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveGroup('normal')}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 ${activeGroup === 'normal'
+                                            ? 'bg-white text-blue-600 shadow-lg scale-105'
+                                            : 'bg-white/10 text-white hover:bg-white/20'
+                                            }`}
+                                    >
+                                        <Users className="w-5 h-5" />
+                                        <span>Sinh viên bình thường</span>
+                                        <Badge className="bg-green-500 text-white ml-2 transition-all">
+                                            {normalStudents.length}
+                                        </Badge>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveGroup('parents')}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 ${activeGroup === 'parents'
+                                            ? 'bg-white text-blue-600 shadow-lg scale-105'
+                                            : 'bg-white/10 text-white hover:bg-white/20'
+                                            }`}
+                                    >
+                                        <UserCheck className="w-5 h-5" />
+                                        <span>Phụ huynh</span>
+                                        <Badge className="bg-purple-500 text-white ml-2 transition-all">
+                                            {parents.length}
+                                        </Badge>
+                                    </button>
+                                </div>
+                            </div>
 
-                    {/* Thống kê theo nhóm */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 pb-6">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Users className="w-4 h-4" />
-                                <span className="text-xs text-blue-100">
-                                    {activeGroup === 'atrisk' ? 'SV cảnh báo' : 'SV bình thường'}
-                                </span>
+                            {/* Thống kê theo nhóm */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 pb-6">
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Users className="w-4 h-4" />
+                                        <span className="text-xs text-blue-100">
+                                            {activeGroup === 'atrisk' ? 'SV cảnh báo' : activeGroup === 'normal' ? 'SV bình thường' : 'Phụ huynh'}
+                                        </span>
+                                    </div>
+                                    <div className="text-2xl font-bold">
+                                        {activeGroup === 'parents' ? parents.length : currentGroupStudents.length}
+                                    </div>
+                                </div>
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <AlertTriangle className="w-4 h-4" />
+                                        <span className="text-xs text-blue-100">Chưa đọc</span>
+                                    </div>
+                                    <div className="text-2xl font-bold text-yellow-300">
+                                        {activeGroup === 'parents' 
+                                            ? parents.filter(p => p.unreadCount > 0).length
+                                            : currentGroupStudents.filter(s => s.unreadCount > 0).length
+                                        }
+                                    </div>
+                                </div>
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Clock className="w-4 h-4" />
+                                        <span className="text-xs text-blue-100">Cuộc trò chuyện</span>
+                                    </div>
+                                    <div className="text-2xl font-bold">
+                                        {activeGroup === 'parents'
+                                            ? parents.reduce((sum, p) => sum + (p.totalConversations || 0), 0)
+                                            : currentGroupStudents.reduce((sum, s) => sum + (s.totalConversations || 0), 0)
+                                        }
+                                    </div>
+                                </div>
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <MessageCircle className="w-4 h-4" />
+                                        <span className="text-xs text-blue-100">
+                                            {activeGroup === 'parents' ? 'Trung bình/PH' : 'Trung bình/SV'}
+                                        </span>
+                                    </div>
+                                    <div className="text-2xl font-bold text-green-300">
+                                        {activeGroup === 'parents'
+                                            ? (parents.length > 0 
+                                                ? Math.round(parents.reduce((sum, p) => sum + (p.totalConversations || 0), 0) / parents.length)
+                                                : 0)
+                                            : (currentGroupStudents.length > 0
+                                                ? Math.round(currentGroupStudents.reduce((sum, s) => sum + (s.totalConversations || 0), 0) / currentGroupStudents.length)
+                                                : 0)
+                                        }
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-2xl font-bold">{currentGroupStudents.length}</div>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <AlertTriangle className="w-4 h-4" />
-                                <span className="text-xs text-blue-100">Chưa đọc</span>
-                            </div>
-                            <div className="text-2xl font-bold text-yellow-300">
-                                {currentGroupStudents.filter(s => s.unreadCount > 0).length}
-                            </div>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Clock className="w-4 h-4" />
-                                <span className="text-xs text-blue-100">Cuộc trò chuyện</span>
-                            </div>
-                            <div className="text-2xl font-bold">
-                                {currentGroupStudents.reduce((sum, s) => sum + (s.totalConversations || 0), 0)}
-                            </div>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <MessageCircle className="w-4 h-4" />
-                                <span className="text-xs text-blue-100">Trung bình/SV</span>
-                            </div>
-                            <div className="text-2xl font-bold text-green-300">
-                                {currentGroupStudents.length > 0
-                                    ? Math.round(currentGroupStudents.reduce((sum, s) => sum + (s.totalConversations || 0), 0) / currentGroupStudents.length)
-                                    : 0}
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                {/* Main Content - 3 Columns Layout */}
-                <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
-                    {/* Column 1 - Danh sách sinh viên */}
-                    <div className="col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden">
+                {/* Main Content - 3 Columns Layout - Cho phép scroll tự nhiên */}
+                <div className="flex-1 grid grid-cols-12 gap-4 pb-6">
+                    {/* Column 1 - Danh sách sinh viên - Hide on mobile when student selected */}
+                    <div className={`col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm ${
+                        selectedStudent ? 'hidden lg:flex' : 'flex'  // Hide on mobile when chat is active, always show on desktop
+                    }`}>
                         <div className="p-4 border-b space-y-3">
                             {/* Search bar */}
                             <div className="relative">
@@ -626,19 +774,29 @@ export default function MessagesNotifications() {
                                 </div>
                             )}                                {/* Count */}
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600">{filteredStudents.length} sinh viên</span>
+                                <span className="text-gray-600">
+                                    {activeGroup === 'parents' 
+                                        ? `${filteredParents.length} phụ huynh` 
+                                        : `${filteredStudents.length} sinh viên`
+                                    }
+                                </span>
                                 <Badge className="bg-red-100 text-red-700 text-xs">
-                                    {students.filter(s => s.unreadCount > 0).length} chưa đọc
+                                    {activeGroup === 'parents'
+                                        ? `${parents.filter(p => p.unreadCount > 0).length} chưa đọc`
+                                        : `${students.filter(s => s.unreadCount > 0).length} chưa đọc`
+                                    }
                                 </Badge>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto">
-                            {filteredStudents.map((student) => (
+                        {/* Danh sách sinh viên/phụ huynh - Cho phép scroll tự nhiên */}
+                        <div>
+                            {/* Hiển thị sinh viên */}
+                            {activeGroup !== 'parents' && filteredStudents.map((student) => (
                                 <div
                                     key={student.id}
                                     onClick={() => handleSelectStudent(student)}
-                                    className={`p-4 border-b cursor-pointer transition-colors hover:bg-gray-50 ${selectedStudent?.id === student.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+                                    className={`p-4 border-b cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:scale-[1.01] ${selectedStudent?.id === student.id ? 'bg-blue-50 border-l-4 border-l-blue-600 shadow-md' : ''
                                         }`}
                                 >
                                     <div className="flex items-start gap-3">
@@ -646,10 +804,10 @@ export default function MessagesNotifications() {
                                             <img
                                                 src={student.avatar}
                                                 alt={student.name}
-                                                className="w-12 h-12 rounded-full object-cover"
+                                                className="w-12 h-12 rounded-full object-cover transition-transform duration-200 hover:scale-110"
                                             />
                                             {student.isOnline && (
-                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -680,17 +838,78 @@ export default function MessagesNotifications() {
                                     </div>
                                 </div>
                             ))}
+                            
+                            {/* Hiển thị phụ huynh */}
+                            {activeGroup === 'parents' && filteredParents.map((parent) => (
+                                <div
+                                    key={parent.id}
+                                    onClick={() => setSelectedStudent(parent as any)}
+                                    className={`p-4 border-b cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:shadow-md hover:scale-[1.01] ${selectedStudent?.id === parent.id ? 'bg-purple-50 border-l-4 border-l-purple-600 shadow-md' : ''
+                                        }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="relative">
+                                            <img
+                                                src={parent.avatar}
+                                                alt={parent.name}
+                                                className="w-12 h-12 rounded-full object-cover transition-transform duration-200 hover:scale-110"
+                                            />
+                                            {parent.isOnline && (
+                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <div>
+                                                    <h4 className="font-medium text-gray-900 truncate">{parent.name}</h4>
+                                                    <p className="text-xs text-purple-600">PH: {parent.studentName}</p>
+                                                </div>
+                                                {parent.unreadCount > 0 && (
+                                                    <Badge className="bg-purple-600 text-white text-xs animate-pulse">{parent.unreadCount}</Badge>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500 mb-1">{parent.className}</p>
+                                            <p className="text-sm text-gray-600 truncate">{parent.lastMessage}</p>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <span className="text-xs text-gray-400">{parent.lastMessageTime}</span>
+                                            </div>
+                                            {/* Thêm thông tin số lần trao đổi */}
+                                            <div className="flex items-center gap-2 mt-2 pt-2 border-t">
+                                                <div className="flex items-center gap-1 text-xs text-purple-600">
+                                                    <Clock className="w-3 h-3" />
+                                                    <span className="font-medium">{parent.totalConversations} cuộc trao đổi</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Column 2 - Main Chat Area */}
-                    <div className={`col-span-12 flex flex-col bg-white rounded-xl shadow-sm overflow-hidden ${showHistory ? 'lg:col-span-5' : 'lg:col-span-6'}`}>
+                    {/* Column 2 - Main Chat Area - Tự động thay đổi theo nội dung */}
+                    <div className={`col-span-12 bg-white rounded-xl shadow-sm overflow-hidden ${
+                        selectedStudent 
+                            ? (showHistory 
+                                ? 'lg:col-span-5'  // With history panel
+                                : (showSuggestions 
+                                    ? 'lg:col-span-6'  // With suggestions panel
+                                    : 'lg:col-span-9'))  // Full width (no history, no suggestions)
+                            : 'lg:hidden'  // When no student: hidden on all screen sizes
+                    }`}>
                         {selectedStudent ? (
-                            <>
+                            <div className="flex flex-col min-h-[500px] max-h-[800px]">
                                 {/* Chat Header */}
-                                <div className="p-4 border-b bg-gray-50">
+                                <div className="p-4 border-b bg-gray-50 flex-shrink-0">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
+                                            {/* Back button - visible on mobile */}
+                                            <button
+                                                onClick={() => setSelectedStudent(null)}
+                                                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                            >
+                                                <ChevronLeft className="w-5 h-5" />
+                                            </button>
                                             <div className="relative">
                                                 <img
                                                     src={selectedStudent.avatar}
@@ -730,15 +949,32 @@ export default function MessagesNotifications() {
                                     </div>
                                 </div>
 
-                                {/* Chat Messages */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                                    {chatMessages.map((msg) => (
+                                {/* Chat Messages - Tự động mở rộng theo nội dung */}
+                                <div className="overflow-y-auto p-4 space-y-4 bg-gray-50 scroll-smooth max-h-[500px]">
+                                    {/* Nút tải thêm tin nhắn cũ hơn */}
+                                    {hasMoreMessages && (
+                                        <div className="flex justify-center mb-4">
+                                            <Button
+                                                onClick={loadMoreMessages}
+                                                variant="ghost"
+                                                size="sm"
+                                                className="bg-white hover:bg-gray-100 shadow-sm transition-all duration-200"
+                                            >
+                                                <ChevronDown className="w-4 h-4 mr-2 rotate-180" />
+                                                Tải thêm tin nhắn cũ ({totalMessages - displayedMessages.length} tin)
+                                            </Button>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Hiển thị messages theo pagination */}
+                                    {displayedMessages.map((msg, index) => (
                                         <div
                                             key={msg.id}
-                                            className={`flex ${msg.sender === 'teacher' ? 'justify-end' : 'justify-start'}`}
+                                            className={`flex ${msg.sender === 'teacher' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+                                            style={{ animationDelay: `${index * 0.05}s` }}
                                         >
                                             <div
-                                                className={`max-w-[70%] rounded-2xl px-4 py-2 ${msg.sender === 'teacher'
+                                                className={`max-w-[70%] rounded-2xl px-4 py-2 transition-all duration-200 hover:scale-105 hover:shadow-lg ${msg.sender === 'teacher'
                                                     ? 'bg-blue-600 text-white rounded-br-none'
                                                     : 'bg-white text-gray-900 border rounded-bl-none'
                                                     }`}
@@ -752,7 +988,7 @@ export default function MessagesNotifications() {
                                                         {msg.timestamp}
                                                     </span>
                                                     {msg.sender === 'teacher' && (
-                                                        <CheckCheck className={`w-3 h-3 ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
+                                                        <CheckCheck className={`w-3 h-3 transition-colors ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
                                                     )}
                                                 </div>
                                             </div>
@@ -760,8 +996,8 @@ export default function MessagesNotifications() {
                                     ))}
                                 </div>
 
-                                {/* Input Area */}
-                                <div className="p-4 border-t bg-white">
+                                {/* Input Area - Không co lại */}
+                                <div className="p-4 border-t bg-white flex-shrink-0">
                                     <div className="flex items-end gap-2">
                                         <div className="flex-1">
                                             <textarea
@@ -799,7 +1035,7 @@ export default function MessagesNotifications() {
                                         <span className="text-xs text-gray-400">Nhấn Enter để gửi, Shift + Enter để xuống dòng</span>
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-center p-8">
                                 <div>
@@ -945,46 +1181,49 @@ export default function MessagesNotifications() {
                         </>
                     )}
 
-                    {/* Column 3/4 - Câu hỏi gợi ý */}
-                    <div className={`col-span-12 bg-white rounded-xl shadow-sm overflow-hidden ${showHistory ? 'hidden' : 'lg:col-span-3 lg:block'}`}>
-                        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <MessageCircle className="w-4 h-4 text-purple-600" />
-                                Câu hỏi gợi ý
-                            </CardTitle>
-                            <p className="text-xs text-gray-600 mt-1">Mẫu câu hỏi tư vấn</p>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="max-h-[calc(100vh-350px)] overflow-y-auto">
-                                {['Học tập', 'Tâm lý', 'Tài chính', 'Xã hội', 'Chung'].map((category) => (
-                                    <div key={category} className="border-b last:border-b-0">
-                                        <div className="px-3 py-2 bg-gray-50 font-medium text-xs text-gray-700">
-                                            {category}
+                    {/* Column 3/4 - Câu hỏi gợi ý - Chỉ hiện khi bấm nút */}
+                    {showSuggestions && !showHistory && selectedStudent && (
+                        <div className="col-span-12 lg:col-span-3 bg-white rounded-xl shadow-sm">
+                            <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <MessageCircle className="w-4 h-4 text-purple-600" />
+                                    Câu hỏi gợi ý
+                                </CardTitle>
+                                <p className="text-xs text-gray-600 mt-1">Mẫu câu hỏi tư vấn</p>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {/* Tự mở rộng theo nội dung */}
+                                <div>
+                                    {['Học tập', 'Tâm lý', 'Tài chính', 'Xã hội', 'Chung'].map((category) => (
+                                        <div key={category} className="border-b last:border-b-0">
+                                            <div className="px-3 py-2 bg-gray-50 font-medium text-xs text-gray-700">
+                                                {category}
+                                            </div>
+                                            <div className="divide-y">
+                                                {suggestedQuestions
+                                                    .filter((q) => q.category === category)
+                                                    .map((suggestion) => (
+                                                        <button
+                                                            key={suggestion.id}
+                                                            onClick={() => handleUseSuggestion(suggestion.question)}
+                                                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors group"
+                                                            disabled={!selectedStudent}
+                                                        >
+                                                            <div className="flex items-start gap-2">
+                                                                <span className="text-base mt-0.5">{suggestion.icon}</span>
+                                                                <p className="text-xs text-gray-700 group-hover:text-blue-700 flex-1">
+                                                                    {suggestion.question}
+                                                                </p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                            </div>
                                         </div>
-                                        <div className="divide-y">
-                                            {suggestedQuestions
-                                                .filter((q) => q.category === category)
-                                                .map((suggestion) => (
-                                                    <button
-                                                        key={suggestion.id}
-                                                        onClick={() => handleUseSuggestion(suggestion.question)}
-                                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors group"
-                                                        disabled={!selectedStudent}
-                                                    >
-                                                        <div className="flex items-start gap-2">
-                                                            <span className="text-base mt-0.5">{suggestion.icon}</span>
-                                                            <p className="text-xs text-gray-700 group-hover:text-blue-700 flex-1">
-                                                                {suggestion.question}
-                                                            </p>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </div>
+                    )}
                 </div>
             </div>
 
