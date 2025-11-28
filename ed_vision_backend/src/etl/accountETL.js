@@ -2,6 +2,7 @@ require('dotenv').config();
 const { BigQuery } = require('@google-cloud/bigquery');
 const { PrismaClient } = require('@prisma/client');
 const { updateDailyActivity } = require('./dailyActivityETL');
+const { throttler } = require('./bigQueryThrottler');
 
 const bigquery = new BigQuery({ projectId: process.env.BIGQUERY_PROJECT_ID });
 const prisma = new PrismaClient();
@@ -81,7 +82,7 @@ async function processAccountEvent(event) {
     };
 
     try {
-      await bigquery.query(options);
+      await throttler.execute(() => bigquery.query(options));
       
       // Trigger daily activity update CHỈ KHI Account mới (INSERT)
       // KHÔNG trigger khi UPDATE vì:

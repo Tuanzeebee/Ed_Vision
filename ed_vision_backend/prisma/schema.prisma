@@ -33,7 +33,8 @@ model Account {
   student            Student?
   surveyResponses    SurveyResponse[]
   createdSurveys     Survey[]         @relation("AccountCreatedSurveys")
-
+  notifications      Notification[]      // In-app notifications delivered to this account
+  reminderSchedules  ReminderSchedule[]  // Scheduled reminders targeting this account
   @@map("Account")
 }
 
@@ -389,14 +390,63 @@ model AppointmentContact {
   @@map("AppointmentContact")
 }
 
+// Notification templates store reusable message templates. Use `code` as a stable lookup key
+// (e.g. "appointment.created", "survey.reminder"). `content` may contain placeholders
+// like `{student_name}` or `{date}` that will be replaced when rendering a `Notification`.
+model NotificationTemplate {
+  template_id   Int      @id @default(autoincrement())
+  code          String   @unique @db.VarChar(120) // Stable unique key (e.g. "appointment.created")
+  title         String?  @db.VarChar(255)          // Optional human-friendly title
+  content       String                             // Template body; may include placeholders
+  channel       String?  @db.VarChar(20)           // Default channel: 'email' | 'in_app' | 'both'
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @updatedAt @db.Timestamptz(6)
+
+  notifications Notification[]                     // Back-relation: notifications generated from this template
+  reminderSchedules ReminderSchedule[]            // Back-relation: reminder schedules referencing this template by `code`
+
+  @@map("NotificationTemplate")
+}
+
+// Rendered notifications delivered to accounts (in-app). These are the final messages
+// after templates + metadata are rendered; they are kept for display/audit purposes.
+model Notification {
+  notification_id Int       @id @default(autoincrement())
+  account_id      Int        // Receiver account
+  title           String    @db.VarChar(255) // Final title delivered to the user
+  body            String    // Final body delivered to the user
+  type            String?   @db.VarChar(50)  // Logical type, e.g. 'appointment', 'survey'
+  is_read         Boolean   @default(false)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  template_id     Int?      // Optional template reference
+
+  account         Account   @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  template        NotificationTemplate? @relation(fields: [template_id], references: [template_id], onDelete: SetNull)
+
+  @@map("Notification")
+}
+
+// Generic reminder schedule. Can reference a `NotificationTemplate` by its `code`, or
+// be tied to an `appointment` via `appointment_id`. `metadata` stores placeholders
+// used to render the template (JSON), for example: { "student_name": "Alice", "date": "..." }.
 model ReminderSchedule {
   reminder_id    Int          @id @default(autoincrement())
-  appointment_id Int?
-  remind_at      DateTime?    @db.Timestamptz(6)
-  channel        String?      @db.VarChar(32)
-  sent_at        DateTime?    @db.Timestamptz(6)
-  appointment    Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
+  appointment_id Int?         // Optional appointment link
+  account_id     Int          // Who will receive the reminder
+  template_code  String       @db.VarChar(120) // Maps to NotificationTemplate.code
+  remind_at      DateTime     @db.Timestamptz(6) // When to send
+  sent_at        DateTime?    @db.Timestamptz(6) // When it was sent (null = not sent)
+  channel        String?      @db.VarChar(32) // Preferred channel for this schedule
+  metadata       Json?        // JSON payload for rendering template placeholders
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  canceled       Boolean      @default(false)
 
+  appointment    Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
+  account        Account      @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  template       NotificationTemplate? @relation(fields: [template_code], references: [code], onDelete: SetNull)
+
+  @@index([remind_at, sent_at])
   @@map("ReminderSchedule")
 }
 

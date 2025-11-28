@@ -45,4 +45,12 @@ export class UpdateTimeSlotDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingLink?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingLocation?: string;
 }

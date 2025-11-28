@@ -1,6 +1,8 @@
-import { Controller, Post, Get, Delete, Body, Req, Param, ParseIntPipe, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Req, Param, ParseIntPipe, HttpCode, HttpStatus, UseGuards, Put, Query } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { AcceptAppointmentDto } from './dto/accept-appointment.dto';
+import { RejectAppointmentDto } from './dto/reject-appointment.dto';
 import { DevAuthGuard } from '../common/guards/dev-auth.guard';
 
 @Controller('booking')
@@ -29,14 +31,18 @@ export class BookingController {
 	}
 
 	/**
-	 * Cancel an appointment (booker only)
+	 * Cancel an appointment (booker or instructor)
 	 */
 	@Delete(':id')
 	@UseGuards(DevAuthGuard)
 	@HttpCode(HttpStatus.NO_CONTENT)
-	async cancel(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+	async cancel(
+		@Req() req: any, 
+		@Param('id', ParseIntPipe) id: number,
+		@Query('reason') reason?: string,
+	) {
 		const accountId = req.user?.account_id;
-		await this.bookingService.cancelAppointment(accountId, id);
+		await this.bookingService.cancelAppointment(accountId, id, reason);
 	}
 
 	/**
@@ -91,5 +97,52 @@ export class BookingController {
 			},
 		}
 	}
-}
 
+	/**
+	 * Get appointments for the current instructor (teacher)
+	 * Query params: 
+	 *   - status (optional) - filter by status (pending, confirmed, rejected, canceled)
+	 *   - bookerRole (optional) - filter by booker role (parent, student)
+	 */
+	@Get('instructor/requests')
+	@UseGuards(DevAuthGuard)
+	async getInstructorRequests(
+		@Req() req: any, 
+		@Query('status') status?: string,
+		@Query('bookerRole') bookerRole?: string,
+	) {
+		const accountId = req.user?.account_id;
+		const statusFilter = status ? status.split(',') : undefined;
+		return this.bookingService.getInstructorAppointments(accountId, statusFilter, bookerRole);
+	}
+
+	/**
+	 * Accept an appointment (instructor only)
+	 */
+	@Put(':id/accept')
+	@UseGuards(DevAuthGuard)
+	@HttpCode(HttpStatus.OK)
+	async acceptAppointment(
+		@Req() req: any,
+		@Param('id', ParseIntPipe) id: number,
+		@Body() dto: AcceptAppointmentDto,
+	) {
+		const accountId = req.user?.account_id;
+		return this.bookingService.acceptAppointment(accountId, id, dto);
+	}
+
+	/**
+	 * Reject an appointment (instructor only)
+	 */
+	@Put(':id/reject')
+	@UseGuards(DevAuthGuard)
+	@HttpCode(HttpStatus.OK)
+	async rejectAppointment(
+		@Req() req: any,
+		@Param('id', ParseIntPipe) id: number,
+		@Body() dto: RejectAppointmentDto,
+	) {
+		const accountId = req.user?.account_id;
+		return this.bookingService.rejectAppointment(accountId, id, dto);
+	}
+}
