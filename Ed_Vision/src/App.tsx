@@ -36,7 +36,6 @@ import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
 import AuthStudentOTPVerification from "@/modules/auth/StudentOTPVerification";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
-import TeacherProfile from "@/modules/teacher/TeacherProfile";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
 import PredictionView from "@/modules/teacher/PredictionView";
@@ -159,13 +158,8 @@ function App() {
                                         <Route path="/teacher/requests" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/confirmed" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
-                                        <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_dashboard"><TeacherProfile /></ProtectedRoute>} />
-                                        <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailDemo /></ProtectedRoute>} />
                                         <Route path="/teacher/meeting-detail" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailView /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
-        
-        
-                                        
                                         <Route path="/teacher/calendar-overview" element={<CalendarOverview />} />
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
