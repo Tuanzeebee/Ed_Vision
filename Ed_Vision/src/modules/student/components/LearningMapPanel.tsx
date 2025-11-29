@@ -10,7 +10,7 @@ type Props = {
   initialHeight?: number;
 };
 
-type LessonNode = {
+type ModuleNode = {
   id: number;
   title: string;
   status: 'locked' | 'available' | 'completed' | 'current';
@@ -32,32 +32,32 @@ export default function LearningMapPanel({
 
   if (!visible) return null;
 
-  // Define lesson nodes with their positions
-  const lessons: LessonNode[] = [
-    { id: 1, title: 'Lesson 1', status: 'completed', stars: 3, position: { x: 100, y: 450 } },
-    { id: 2, title: 'Lesson 2', status: 'completed', stars: 3, position: { x: 250, y: 350 } },
-    { id: 3, title: 'Lesson 3', status: 'completed', stars: 2, position: { x: 250, y: 200 } },
-    { id: 4, title: 'Lesson 4', status: 'completed', stars: 3, position: { x: 400, y: 150 } },
-    { id: 5, title: 'Lesson 5', status: 'current', position: { x: 550, y: 250 }, isBoss: true },
-    { id: 6, title: 'Lesson 6', status: 'available', position: { x: 700, y: 200 } },
-    { id: 7, title: 'Lesson 7', status: 'locked', position: { x: 850, y: 300 } },
+  // Define module nodes with their positions
+  const modules: ModuleNode[] = [
+    { id: 1, title: 'Module 1: Introduction to AI', status: 'completed', stars: 3, position: { x: 100, y: 450 } },
+    { id: 2, title: 'Module 2: AI Fundamentals', status: 'completed', stars: 3, position: { x: 250, y: 350 } },
+    { id: 3, title: 'Module 3: Machine Learning', status: 'completed', stars: 2, position: { x: 250, y: 200 } },
+    { id: 4, title: 'Module 4: Deep Learning', status: 'completed', stars: 3, position: { x: 400, y: 150 } },
+    { id: 5, title: 'Module 5: AI Applications', status: 'current', position: { x: 550, y: 250 }, isBoss: true },
+    { id: 6, title: 'Module 6: Ethics in AI', status: 'available', position: { x: 700, y: 200 } },
+    { id: 7, title: 'Module 7: AI Project', status: 'locked', position: { x: 850, y: 300 } },
   ];
 
   // Path points for connecting nodes
   const pathData = [
-    { from: lessons[0].position, to: lessons[1].position },
-    { from: lessons[1].position, to: lessons[2].position },
-    { from: lessons[2].position, to: lessons[3].position },
-    { from: lessons[3].position, to: lessons[4].position },
-    { from: lessons[4].position, to: lessons[5].position },
-    { from: lessons[5].position, to: lessons[6].position },
+    { from: modules[0].position, to: modules[1].position },
+    { from: modules[1].position, to: modules[2].position },
+    { from: modules[2].position, to: modules[3].position },
+    { from: modules[3].position, to: modules[4].position },
+    { from: modules[4].position, to: modules[5].position },
+    { from: modules[5].position, to: modules[6].position },
   ];
 
-  const getNodeIcon = (lesson: LessonNode) => {
-    if (lesson.isBoss) return '👑';
-    if (lesson.status === 'locked') return '🔒';
-    if (lesson.status === 'current') return '🎯';
-    if (lesson.status === 'completed') return '⭐';
+  const getNodeIcon = (module: ModuleNode) => {
+    if (module.isBoss) return '👑';
+    if (module.status === 'locked') return '🔒';
+    if (module.status === 'current') return '🎯';
+    if (module.status === 'completed') return '⭐';
     return '📚';
   };
 
@@ -87,7 +87,7 @@ export default function LearningMapPanel({
         >
           <div className="flex items-center gap-3">
             <i className="fas fa-map text-white/80 text-lg"></i>
-            <h2 className="text-xl font-semibold text-white">Learning Path - Mathematics Module 1</h2>
+            <h2 className="text-xl font-semibold text-white">Course: Artificial Intelligence Fundamentals</h2>
           </div>
           <button onClick={onClose} className="text-white/60 hover:text-white transition">
             <i className="fas fa-times text-xl"></i>
@@ -95,46 +95,31 @@ export default function LearningMapPanel({
         </div>
 
         {/* Top Stats Bar */}
-        <div className="flex-shrink-0 px-6 py-4 bg-black/20 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+        <div className="flex-shrink-0 px-6 py-3 bg-black/20 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-                <i className="fas fa-star text-white"></i>
+              <div className="w-9 h-9 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
+                <i className="fas fa-graduation-cap text-white text-sm"></i>
               </div>
               <div>
-                <div className="text-white/60 text-xs">Energy</div>
-                <div className="text-white font-bold">5/45</div>
+                <div className="text-white/60 text-xs">Progress</div>
+                <div className="text-white font-semibold text-sm">4/7 Modules</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-pink-600 rounded-lg flex items-center justify-center">
-                <i className="fas fa-fire text-white"></i>
+            <div className="flex items-center gap-2 ml-4">
+              <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+                <i className="fas fa-star text-white text-sm"></i>
               </div>
               <div>
-                <div className="text-white/60 text-xs">Points</div>
-                <div className="text-white font-bold">10</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
-                <i className="fas fa-clock text-white"></i>
-              </div>
-              <div>
-                <div className="text-white/60 text-xs">Time Left</div>
-                <div className="text-white font-bold">10:23h</div>
+                <div className="text-white/60 text-xs">Stars Earned</div>
+                <div className="text-white font-semibold text-sm">11/21</div>
               </div>
             </div>
           </div>
 
-          {/* Hearts */}
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((heart) => (
-              <div key={heart} className="w-8 h-8 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center">
-                <i className="fas fa-heart text-white text-sm"></i>
-              </div>
-            ))}
+          <div className="text-white/70 text-sm">
+            7 Modules • 52 Lessons Total
           </div>
         </div>
 
@@ -171,41 +156,41 @@ export default function LearningMapPanel({
             })}
           </svg>
 
-          {/* Lesson Nodes */}
+          {/* Module Nodes */}
           <div className="relative w-full h-full">
-            {lessons.map((lesson) => (
+            {modules.map((module) => (
               <div
-                key={lesson.id}
+                key={module.id}
                 className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
                 style={{
-                  left: `${lesson.position.x}px`,
-                  top: `${lesson.position.y}px`,
+                  left: `${module.position.x}px`,
+                  top: `${module.position.y}px`,
                 }}
               >
                 {/* Node Circle */}
                 <div
-                  className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${getNodeColor(lesson.status)} 
+                  className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${getNodeColor(module.status)} 
                     shadow-xl border-4 border-white/50 flex items-center justify-center
-                    ${lesson.status === 'current' ? 'animate-pulse ring-4 ring-red-400/50' : ''}
-                    ${lesson.status !== 'locked' ? 'hover:scale-110' : 'opacity-60'}
+                    ${module.status === 'current' ? 'animate-pulse ring-4 ring-red-400/50' : ''}
+                    ${module.status !== 'locked' ? 'hover:scale-110' : 'opacity-60'}
                     transition-all duration-300`}
                 >
                   {/* Icon/Emoji */}
-                  <div className="text-3xl">{getNodeIcon(lesson)}</div>
+                  <div className="text-3xl">{getNodeIcon(module)}</div>
                   
                   {/* Number Badge */}
                   <div className="absolute -top-2 -left-2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-300">
-                    <span className="text-gray-800 font-bold text-sm">{lesson.id}</span>
+                    <span className="text-gray-800 font-bold text-sm">{module.id}</span>
                   </div>
 
-                  {/* Stars for completed lessons */}
-                  {lesson.stars && (
+                  {/* Stars for completed modules */}
+                  {module.stars && (
                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5">
                       {[...Array(3)].map((_, i) => (
                         <div
                           key={i}
                           className={`w-4 h-4 rounded-sm flex items-center justify-center ${
-                            i < (lesson.stars || 0) ? 'bg-yellow-400' : 'bg-gray-400'
+                            i < (module.stars || 0) ? 'bg-yellow-400' : 'bg-gray-400'
                           }`}
                         >
                           <i className="fas fa-star text-white text-[8px]"></i>
@@ -215,7 +200,7 @@ export default function LearningMapPanel({
                   )}
 
                   {/* Boss Crown */}
-                  {lesson.isBoss && (
+                  {module.isBoss && (
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2">
                       <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
                         <i className="fas fa-crown text-white"></i>
@@ -227,9 +212,9 @@ export default function LearningMapPanel({
                 {/* Tooltip */}
                 <div className="absolute top-24 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <div className="bg-black/90 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap shadow-xl border border-white/20">
-                    {lesson.title}
-                    {lesson.status === 'locked' && <div className="text-white/60 text-[10px]">Complete previous lesson</div>}
-                    {lesson.status === 'current' && <div className="text-yellow-400 text-[10px]">Start learning!</div>}
+                    {module.title}
+                    {module.status === 'locked' && <div className="text-white/60 text-[10px]">Complete previous module</div>}
+                    {module.status === 'current' && <div className="text-yellow-400 text-[10px]">Click to start learning!</div>}
                   </div>
                 </div>
               </div>
@@ -252,17 +237,17 @@ export default function LearningMapPanel({
         <div className="flex-shrink-0 px-6 py-4 bg-black/20 border-t border-white/10 flex items-center justify-between">
           <button className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-full transition flex items-center gap-2">
             <i className="fas fa-info-circle"></i>
-            Module Info
+            Course Info
           </button>
           
           <div className="flex gap-3">
             <button className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-full transition flex items-center gap-2">
               <i className="fas fa-list"></i>
-              All Modules
+              All Courses
             </button>
             <button className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-full transition flex items-center gap-2">
               <i className="fas fa-play"></i>
-              Continue Learning
+              Start Module
             </button>
           </div>
         </div>
