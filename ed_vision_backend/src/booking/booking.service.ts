@@ -55,14 +55,14 @@ export class BookingService {
 			// verify link
 			const link = await this.repository.verifyParentStudentLink(parentRecord.parent_id, dto.studentId);
 			if (!link) throw new ForbiddenException('Parent is not linked to the requested student');
-			studentIdToUse = dto.studentId;
-			parentContactDefaults = {
-			contact_name: parentRecord.full_name,
-			contact_phone: parentRecord.phone_number,
-			contact_email: parentRecord.email,
-			relationship_to_student: parentRecord.relationship_type || dto.relationshipToStudent || null,
-			};
-		} else if (studentRecord) {
+		studentIdToUse = dto.studentId;
+		parentContactDefaults = {
+		contact_name: parentRecord.account.profile?.full_name || 'Parent',
+		contact_phone: parentRecord.account.profile?.phone_number || '',
+		contact_email: parentRecord.account.email,
+		relationship_to_student: parentRecord.relationship_type || dto.relationshipToStudent || null,
+		};
+	} else if (studentRecord) {
 			bookerRole = 'student';
 			studentIdToUse = studentRecord.student_id;
 		} else {
@@ -170,11 +170,11 @@ export class BookingService {
 		return {
 			parent_id: parent.parent_id,
 			account_id: parent.account_id,
-			full_name: parent.full_name,
-			fullName: parent.full_name,
-			phone_number: parent.phone_number,
-			phoneNumber: parent.phone_number,
-			email: parent.email,
+			full_name: parent.account.profile?.full_name || 'Parent',
+			fullName: parent.account.profile?.full_name || 'Parent',
+			phone_number: parent.account.profile?.phone_number || '',
+			phoneNumber: parent.account.profile?.phone_number || '',
+			email: parent.account.email,
 			relationship_type: parent.relationship_type ?? null,
 		}
 	}

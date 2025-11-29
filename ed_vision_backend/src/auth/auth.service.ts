@@ -20,23 +20,27 @@ export class AuthService {
   ) {}
 
   /**
-   * Register a new student account
-   * - enforce email domain @dtu.edu.vn
+   * Register a new account (student or parent)
+   * - If linkCode is provided: register as parent and link to student
+   * - If no linkCode: register as student with @dtu.edu.vn email
    * - ensure email uniqueness
    * - hash password
    * - create account with pending status and send OTP
    */
   async register(dto: RegisterDto) {
-    const { email, password, confirmPassword } = dto;
+    const { email, password, confirmPassword, linkCode } = dto;
 
     // simple validation
     if (password !== confirmPassword) {
       throw new BadRequestException('Mật khẩu xác nhận không khớp');
     }
 
-    const domain = '@dtu.edu.vn';
-    if (!email.toLowerCase().endsWith(domain)) {
-      throw new BadRequestException(`Chỉ cho phép đăng ký với email ${domain}`);
+    // Email domain validation: only enforce for students (no linkCode)
+    if (!linkCode) {
+      const domain = '@dtu.edu.vn';
+      if (!email.toLowerCase().endsWith(domain)) {
+        throw new BadRequestException(`Chỉ cho phép đăng ký với email ${domain}`);
+      }
     }
 
     // check existing account
@@ -63,7 +67,27 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // create account with role student and pending status
+    // Determine role based on linkCode presence
+    const roleCode = linkCode ? 'parent' : 'student';
+    const roleName = linkCode ? 'Phụ huynh' : 'Sinh viên';
+
+    // If linkCode provided, validate it and get student info
+    if (linkCode) {
+      const parentStudentLink = await this.prisma.parentStudentLink.findUnique({
+        where: { link_code: linkCode },
+        include: { student: true },
+      });
+
+      if (!parentStudentLink) {
+        throw new BadRequestException('Mã liên kết không hợp lệ');
+      }
+
+      // Check if this link is already used (has parent_id)
+      if (parentStudentLink.parent_id) {
+        throw new BadRequestException('Mã liên kết đã được sử dụng');
+      }
+    }
+
     // create account and connect to Role by code (create role if missing)
     const account = await (this.prisma as any).account.create({
       data: {
@@ -72,8 +96,8 @@ export class AuthService {
         status: 'pending',
         roleRel: {
           connectOrCreate: {
-            where: { code: 'student' },
-            create: { code: 'student', name: 'Sinh viên' },
+            where: { code: roleCode },
+            create: { code: roleCode, name: roleName },
           },
         },
       },
@@ -85,6 +109,14 @@ export class AuthService {
         roleRel: { select: { code: true, name: true } },
       },
     });
+
+    // Store linkCode temporarily in memory/session for OTP verification step
+    // We'll complete the parent-student link after OTP verification
+    // For now, just return the account info with linkCode
+    const result = {
+      ...account,
+      linkCode: linkCode || undefined,
+    };
 
     // send OTP asynchronously and don't block response to the client.
     // We don't rollback account creation here to avoid delaying the frontend transition to OTP entry.
@@ -98,7 +130,7 @@ export class AuthService {
         console.error('Failed to send OTP email (async)', e);
       });
 
-    return account;
+    return result;
   }
 
   /**

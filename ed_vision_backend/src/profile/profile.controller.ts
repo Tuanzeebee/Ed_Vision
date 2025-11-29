@@ -5,6 +5,8 @@ import { extname } from 'path';
 import { ProfileService } from './profile.service';
 import { DevAuthGuard } from '../common/guards/dev-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateParentOccupationDto } from './dto/update-parent-occupation.dto';
+import { UpdateInstructorWorkDto } from './dto/update-instructor-work.dto';
 
 @Controller('profile')
 @UseGuards(DevAuthGuard)
@@ -137,5 +139,67 @@ export class ProfileController {
 	) {
 		const accountId = req.user?.account_id;
 		return this.profileService.updateAcademicInfo(accountId, body);
+	}
+
+	/**
+	 * Update parent occupation information
+	 */
+	@Put('parent/occupation')
+	async updateParentOccupation(@Req() req: any, @Body() updateDto: UpdateParentOccupationDto) {
+		const accountId = req.user?.account_id;
+		return this.profileService.updateParentOccupation(accountId, updateDto);
+	}
+
+	/**
+	 * Update instructor work information
+	 */
+	@Put('instructor/work')
+	async updateInstructorWork(@Req() req: any, @Body() updateDto: any) {
+		const accountId = req.user?.account_id;
+		return this.profileService.updateInstructorWork(accountId, updateDto);
+	}
+
+	/**
+	 * Get available classes for instructor to advise
+	 */
+	@Get('instructor/available-classes')
+	async getAvailableClassesForInstructor() {
+		return this.profileService.getAvailableClassesForInstructor();
+	}
+
+	/**
+	 * Update instructor advised classes
+	 */
+	@Put('instructor/advised-classes')
+	async updateInstructorAdvisedClasses(@Req() req: any, @Body() updateDto: any) {
+		const accountId = req.user?.account_id;
+		return this.profileService.updateInstructorAdvisedClasses(accountId, updateDto);
+	}
+
+	/**
+	 * Get all departments (for dropdown)
+	 */
+	@Get('departments')
+	async getDepartments() {
+		return this.profileService.getDepartments();
+	}
+
+	/**
+	 * Generate parent link code for current student
+	 */
+	@Post('generate-parent-link')
+	async generateParentLink(@Req() req: any) {
+		const accountId = req.user?.account_id;
+		const linkCode = await this.profileService.generateParentLinkCode(accountId);
+		return { success: true, linkCode };
+	}
+
+	/**
+	 * Get student info by link code (public endpoint for parent registration)
+	 */
+	@Get('student-by-link/:linkCode')
+	async getStudentByLinkCode(@Req() req: any) {
+		const linkCode = req.params.linkCode;
+		return this.profileService.getStudentByLinkCode(linkCode);
 	}
 }

@@ -58,10 +58,12 @@ import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
 import ChatStudent from "./modules/student/ChatStudent";
-import BookingScheduler from "./modules/general/BookingScheduler";
+import BookingScheduler from "./modules/booking/BookingScheduler";
 import LearningSpace from "./modules/student/LearningSpace";
-import StudentProfilePage from "./modules/general/StudentProfilePage";
-import ProfileRedirect from "./modules/general/ProfileRedirect";
+import StudentProfilePage from "./modules/profile/StudentProfilePage";
+import ParentProfilePage from "./modules/profile/ParentProfilePage";
+import TeacherProfilePage from "./modules/profile/TeacherProfilePage";
+import ProfileRedirect from "./modules/profile/ProfileRedirect";
 import "./modules/student/styles/learningSpace.css";
 import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
@@ -169,6 +171,8 @@ function App() {
                                         {/* Profile Routes */}
                                         <Route path="/profile" element={<ProfileRedirect />} />
                                         <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
+                                        <Route path="/parent/profile" element={<ProtectedRoute permission="parent_profile"><ParentProfilePage /></ProtectedRoute>} />
+                                        <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_profile"><TeacherProfilePage /></ProtectedRoute>} />
 
                                 </Routes>
                         </Router>

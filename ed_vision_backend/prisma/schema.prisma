@@ -56,10 +56,9 @@ model Profile {
 model Parent {
   parent_id          Int                 @id @default(autoincrement())
   account_id         Int                 @unique
-  full_name          String              @db.VarChar(150)
-  email              String              @db.VarChar(255)
-  phone_number       String              @db.VarChar(30)
   relationship_type  String?             @db.VarChar(32)
+  occupation         String?             @db.VarChar(120)
+  workplace          String?             @db.VarChar(255)
   created_at         DateTime            @default(now()) @db.Timestamptz(6)
   updated_at         DateTime            @default(now()) @db.Timestamptz(6)
   account            Account             @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
@@ -155,12 +154,13 @@ model AdviserAssignment {
 }
 
 model ParentStudentLink {
-  link_id      Int     @id @default(autoincrement())
-  parent_id    Int
+  link_id      Int      @id @default(autoincrement())
+  parent_id    Int?
   student_id   Int
-  link_code    String? @unique @db.VarChar(10)
-  parent       Parent  @relation(fields: [parent_id], references: [parent_id], onDelete: Cascade)
-  student      Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  link_code    String?  @unique @db.VarChar(10)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  parent       Parent?  @relation(fields: [parent_id], references: [parent_id], onDelete: Cascade)
+  student      Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
 
   @@unique([parent_id, student_id])
   @@map("ParentStudentLink")
