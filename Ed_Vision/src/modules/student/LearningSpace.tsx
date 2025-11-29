@@ -17,6 +17,7 @@ import RoomPanel from './components/RoomPanel';
 import SettingsPanel from './components/SettingsPanel';
 import LearningMapPanel from './components/LearningMapPanel';
 import VideoCallRoom from './components/VideoCallRoom';
+import LearningModulePanel from './components/LearningModulePanel';
 
 type Props = {
   className?: string;
@@ -43,6 +44,7 @@ export default function LearningSpace({ className = '' }: Props) {
   const [learningMapVisible, setLearningMapVisible] = useState(false);
   const [videoCallVisible, setVideoCallVisible] = useState(false);
   const [currentRoomTitle, setCurrentRoomTitle] = useState('');
+  const [learningModuleVisible, setLearningModuleVisible] = useState(false);
 
   // Music widget
   const [musicWidgetVisible, setMusicWidgetVisible] = useState(true);
@@ -70,6 +72,7 @@ export default function LearningSpace({ className = '' }: Props) {
     setJournalVisible(false);
     setSettingsVisible(false);
     setLearningMapVisible(false);
+    setLearningModuleVisible(false);
     // Don't close pomodoro panel here
   };
 
@@ -85,6 +88,7 @@ export default function LearningSpace({ className = '' }: Props) {
       setJournalVisible(false);
       setSettingsVisible(false);
       setLearningMapVisible(false);
+      setLearningModuleVisible(false);
     } else {
       // Close all panels including pomo for other panels
       setPomoVisible(false);
@@ -112,6 +116,9 @@ export default function LearningSpace({ className = '' }: Props) {
         case 'map':
           setLearningMapVisible(true);
           break;
+        case 'learn':
+          setLearningModuleVisible(true);
+          break;
       }
     }
   };
@@ -123,7 +130,7 @@ export default function LearningSpace({ className = '' }: Props) {
     { id: 'pomo', icon: 'fas fa-clock', label: 'Pomo', onClick: () => openPanel('pomo') },
     { id: 'music', icon: 'fas fa-music', label: 'Music', onClick: () => openPanel('music') },
     { id: 'map', icon: 'fas fa-map', label: 'Learning Map', onClick: () => openPanel('map') },
-    { id: 'learn', icon: 'fas fa-tv', label: 'Learn', onClick: () => {} },
+    { id: 'learn', icon: 'fas fa-tv', label: 'Learn', onClick: () => openPanel('learn') },
     { id: 'settings', icon: 'fas fa-cog', label: 'Settings', onClick: () => openPanel('settings') },
   ];
 
@@ -310,6 +317,12 @@ export default function LearningSpace({ className = '' }: Props) {
       <LearningMapPanel
         visible={learningMapVisible}
         onClose={() => setLearningMapVisible(false)}
+      />
+
+      {/* Learning Module Panel */}
+      <LearningModulePanel
+        visible={learningModuleVisible}
+        onClose={() => setLearningModuleVisible(false)}
       />
 
       {/* Video Call Room */}
