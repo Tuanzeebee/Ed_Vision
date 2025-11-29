@@ -54,18 +54,21 @@ export class BookingController {
 	}
 
 	/**
-	 * Get the student record for the current logged-in account
+	 * @deprecated Use /profile/student instead for full profile data
+	 * Get basic student info for booking context only
 	 */
 	@Get('me/student')
 	@UseGuards(DevAuthGuard)
 	async getMeStudent(@Req() req: any) {
 		const accountId = req.user?.account_id
-		console.log('[booking] getMeStudent', { accountId })
 		const student = await this.bookingService.getStudentForAccount(accountId)
-		// always return a JSON body (null when not found) to avoid empty responses
 		return { student: student ?? null }
 	}
 
+	/**
+	 * @deprecated Use /profile/parent instead for full profile data
+	 * Get basic parent info for booking context only
+	 */
 	@Get('me/parent')
 	@UseGuards(DevAuthGuard)
 	async getMeParent(@Req() req: any) {

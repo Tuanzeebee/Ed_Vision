@@ -57,10 +57,10 @@ export class BookingService {
 			if (!link) throw new ForbiddenException('Parent is not linked to the requested student');
 			studentIdToUse = dto.studentId;
 			parentContactDefaults = {
-				contact_name: parentRecord.full_name,
-				contact_phone: parentRecord.phone_number,
-				contact_email: parentRecord.email,
-				relationship_to_student: link.relationship || dto.relationshipToStudent || null,
+			contact_name: parentRecord.full_name,
+			contact_phone: parentRecord.phone_number,
+			contact_email: parentRecord.email,
+			relationship_to_student: parentRecord.relationship_type || dto.relationshipToStudent || null,
 			};
 		} else if (studentRecord) {
 			bookerRole = 'student';
@@ -130,6 +130,10 @@ export class BookingService {
 		return slot
 	}
 
+	/**
+	 * Get basic student info for booking purposes only
+	 * For full profile, use ProfileService instead
+	 */
 	async getStudentForAccount(accountId: number) {
 		if (!accountId) return null
 		const student = await this.repository.getStudentByAccountId(accountId)
@@ -138,6 +142,7 @@ export class BookingService {
 		const classGroup = student.classGroup
 		const advisorAssignment = classGroup?.adviserAssignments?.[0]
 		const advisor = mapAdvisorFromAssignment(advisorAssignment)
+		
 		return {
 			student_id: student.student_id,
 			account_id: student.account_id,
@@ -154,11 +159,14 @@ export class BookingService {
 		}
 	}
 
+	/**
+	 * Get basic parent info for booking purposes only
+	 * For full profile, use ProfileService instead
+	 */
 	async getParentForAccount(accountId: number) {
 		if (!accountId) return null
 		const parent = await this.repository.getParentByAccountId(accountId)
 		if (!parent) return null
-		const profile = parent.account?.profile
 		return {
 			parent_id: parent.parent_id,
 			account_id: parent.account_id,
@@ -167,8 +175,6 @@ export class BookingService {
 			phone_number: parent.phone_number,
 			phoneNumber: parent.phone_number,
 			email: parent.email,
-			gender: profile?.gender ?? null,
-			avatar_url: profile?.avatar_url ?? null,
 			relationship_type: parent.relationship_type ?? null,
 		}
 	}
@@ -178,6 +184,7 @@ export class BookingService {
 		const parent = await this.repository.getParentByAccountId(accountId)
 		if (!parent) return []
 		const links = await this.repository.getStudentsForParent(parent.parent_id)
+		console.log('[getStudentsForParentAccount] Found links:', links.length)
 		const shaped = links
 			.map((link) => {
 				const student = link.student
@@ -186,21 +193,22 @@ export class BookingService {
 				const classGroup = student.classGroup
 				const advisorAssignment = classGroup?.adviserAssignments?.[0]
 				const advisor = mapAdvisorFromAssignment(advisorAssignment)
-				return {
-					linkId: link.link_id,
-					studentId: student.student_id,
-					relationship: link.relationship ?? null,
-					student_code: student.student_code,
-					full_name: profile?.full_name ?? null,
-					fullName: profile?.full_name ?? null,
-					class_id: student.class_id,
-					className: classGroup?.class_code ?? null,
-					status: student.status ?? null,
-					verified: (student.status ?? '').toLowerCase() === 'active',
-					advisor,
-				}
+			return {
+				linkId: link.link_id,
+				studentId: student.student_id,
+				studentCode: student.student_code,
+				student_code: student.student_code,
+				fullName: profile?.full_name ?? null,
+				full_name: profile?.full_name ?? null,
+				class_id: student.class_id,
+				className: classGroup?.class_code ?? null,
+				status: student.status ?? null,
+				verified: (student.status ?? '').toLowerCase() === 'active',
+				advisor,
+			}
 			})
 			.filter((item): item is NonNullable<typeof item> => item !== null)
+		console.log('[getStudentsForParentAccount] Returning:', JSON.stringify(shaped, null, 2))
 		return shaped
 	}
 	async listAppointmentsForAccount(accountId: number) {

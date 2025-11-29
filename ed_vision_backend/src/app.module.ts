@@ -17,6 +17,7 @@ import { TeacherBeModule } from './teacher_be/teacher-be.module';
 import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
+import { ProfileModule } from './profile/profile.module';
 @Module({
   imports: [
     PrismaModule,
@@ -24,6 +25,7 @@ import { DatabaseModule } from './mongodb/database.module';
     BookingModule,
     AuthModule,
     RolePermissionsModule,
+    ProfileModule,
     AccountManagementModule,
     StudentManagementModule,
     InstructorManagementModule,

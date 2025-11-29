@@ -20,6 +20,17 @@ export class InstructorAvailabilityRepository {
         position: true,
         department_id: true,
         status: true,
+        account: {
+          select: {
+            email: true,
+            profile: {
+              select: {
+                full_name: true,
+                avatar_url: true,
+              },
+            },
+          },
+        },
       },
     });
   }

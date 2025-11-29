@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/student/Input"
 import { BackButton } from "@/components/ui/student/Student_BackButton"
 import { ToastContainer } from "@/components/ui/Toast"
 import { useNavigate } from "react-router-dom"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { buildUrl } from '@/services/api/config'
 import { useToast } from '@/lib/useToast'
 
@@ -23,6 +23,16 @@ export default function StudentRegister({
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { toasts, error: showError, success: showSuccess, hideToast } = useToast()
+  const [linkCode, setLinkCode] = useState<string | null>(null)
+
+  // Read linkCode from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('linkCode')
+    if (code) {
+      setLinkCode(code)
+    }
+  }, [])
 
   const handleBack = () => {
     navigate("/student/landing")
@@ -46,15 +56,19 @@ export default function StudentRegister({
       return
     }
     
-    // Client-side: allow only DTU email domain
-    const domain = '@dtu.edu.vn'
-    if (!email?.toLowerCase()?.endsWith(domain)) {
-      showError(`Chỉ cho phép đăng ký với email ${domain}`)
-      return
+    // Client-side: allow only DTU email domain for students, any email for parents
+    if (!linkCode) {
+      const domain = '@dtu.edu.vn'
+      if (!email?.toLowerCase()?.endsWith(domain)) {
+        showError(`Chỉ cho phép đăng ký với email ${domain}`)
+        return
+      }
     }
 
     // Call backend register endpoint
-    const payload = { email, password, confirmPassword }
+    const payload = linkCode 
+      ? { email, password, confirmPassword, linkCode }
+      : { email, password, confirmPassword }
     console.debug('StudentRegister - calling backend', buildUrl('/auth/register'))
     fetch(buildUrl('/auth/register'), {
       method: 'POST',
@@ -69,10 +83,15 @@ export default function StudentRegister({
         return res.json()
       })
       .then(() => {
-        // success -> navigate to OTP page and pass email
+        // success -> navigate to OTP page and pass email + linkCode
         showSuccess('Đăng ký thành công! Kiểm tra email để xác thực.', 2000)
         setTimeout(() => {
-          navigate('/auth/otp-verification', { state: { email } })
+          navigate('/auth/otp-verification', { 
+            state: { 
+              email,
+              ...(linkCode && { linkCode }) // Pass linkCode if present
+            } 
+          })
         }, 1500)
       })
       .catch((err) => {
@@ -107,6 +126,21 @@ export default function StudentRegister({
 
               {/* Register Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Show parent registration info if linkCode exists */}
+                {linkCode && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-800">
+                      <i className="fas fa-info-circle mr-2"></i>
+                      Đang đăng ký tài khoản phụ huynh (Mã liên kết: {linkCode})
+                    </p>
+                  </div>
+                )}
+
+                {/* Hidden linkCode input */}
+                {linkCode && (
+                  <input type="hidden" name="linkCode" value={linkCode} />
+                )}
+
                 {/* Email Input */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -117,7 +151,7 @@ export default function StudentRegister({
                     id="email"
                     name="email"
                     required
-                    placeholder="Enter your DTU email"
+                    placeholder={linkCode ? "Enter your email" : "Enter your DTU email"}
                     className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"
                   />
                 </div>
