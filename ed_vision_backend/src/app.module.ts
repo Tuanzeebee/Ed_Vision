@@ -14,6 +14,7 @@ import { BookingModule } from './booking/booking.module';
 import { ClassManagementModule } from './teacher_be/class-management/class-management.module';
 import { SurveysModule } from './teacher_be/surveys/surveys.module';
 import { TeacherBeModule } from './teacher_be/teacher-be.module';
+import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
@@ -33,6 +34,7 @@ import { ProfileModule } from './profile/profile.module';
     ClassManagementModule,
     SurveysModule,
     TeacherBeModule,
+    StudentBeModule,
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
   ],

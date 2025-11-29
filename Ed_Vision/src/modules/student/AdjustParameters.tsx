@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import toast, { Toaster } from "react-hot-toast"
 import Header from "../../components/layout/Header"
 import Footer from "../../components/layout/Footer"
 
@@ -41,7 +42,72 @@ interface SemesterData {
 
 export default function AdjustParameters({}: Props) {
   const [activeView, setActiveView] = useState<'semester' | 'fullProgram'>('semester')
+  const [hasUploadedTranscript, setHasUploadedTranscript] = useState<boolean>(false)
+  const [isCheckingTranscript, setIsCheckingTranscript] = useState<boolean>(true)
   const navigate = useNavigate()
+
+  // Check if user has uploaded transcript
+  useEffect(() => {
+    const checkTranscriptStatus = () => {
+      // Check localStorage for upload success flag
+      const uploadSuccess = localStorage.getItem('transcript_uploaded')
+      
+      if (uploadSuccess === 'true') {
+        setHasUploadedTranscript(true)
+      } else {
+        setHasUploadedTranscript(false)
+        // Show warning and redirect after 3 seconds
+        toast.error('Please upload your transcript first!', { duration: 4000 })
+        
+        setTimeout(() => {
+          navigate('/student/upload-transcript')
+        }, 3000)
+      }
+      
+      setIsCheckingTranscript(false)
+    }
+
+    checkTranscriptStatus()
+  }, [navigate])
+
+  // Show loading while checking
+  if (isCheckingTranscript) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking transcript status...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Block access if no transcript uploaded
+  if (!hasUploadedTranscript) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <Toaster position="top-center" />
+        <Header />
+        <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+          <div className="bg-white rounded-xl shadow-lg p-8 space-y-6">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Upload Required</h1>
+            <p className="text-gray-600">
+              You need to upload your transcript before accessing this page.
+            </p>
+            <p className="text-sm text-gray-500">
+              Redirecting to upload page...
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   const semesters: SemesterData[] = [
     {
@@ -144,6 +210,33 @@ export default function AdjustParameters({}: Props) {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {/* Toast Notifications */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#fff',
+            color: '#363636',
+            padding: '16px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          },
+          success: {
+            style: {
+              background: '#10B981',
+              color: '#ffffff',
+            },
+          },
+          error: {
+            style: {
+              background: '#EF4444',
+              color: '#ffffff',
+            },
+          },
+        }}
+      />
+      
       <Header />
       
       {/* Main Content */}
@@ -154,7 +247,10 @@ export default function AdjustParameters({}: Props) {
             <div className="border-b border-gray-200">
               <div className="flex">
                 <button
-                  onClick={() => navigate('/student/instructions')}
+                  onClick={() => {
+                    navigate('/student/instructions')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="flex-1 max-w-sm hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
@@ -163,7 +259,10 @@ export default function AdjustParameters({}: Props) {
                   </div>
                 </button>
                 <button
-                  onClick={() => navigate('/student/upload-transcript')}
+                  onClick={() => {
+                    navigate('/student/upload-transcript')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="flex-1 max-w-sm hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center justify-center h-14 gap-3 relative">
@@ -408,7 +507,10 @@ export default function AdjustParameters({}: Props) {
                   <span className="text-lg font-semibold">Confirm Changes</span>
                 </Button>
                 <Button 
-                  onClick={() => navigate('/student/academic-planning')}
+                  onClick={() => {
+                    navigate('/student/academic-planning')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-8 py-3 rounded-xl h-auto"
                 >
                   <img src={iconArrowRight} alt="" className="w-6 h-6 mr-3" />

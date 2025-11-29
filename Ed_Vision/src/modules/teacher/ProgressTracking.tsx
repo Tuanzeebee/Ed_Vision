@@ -13,9 +13,14 @@ import {
     Calendar,
     BarChart3,
     Activity,
-    MessageSquare,
-    Send,
-    X
+    X,
+    Mail,
+    Phone,
+    Search,
+    Filter,
+    ChevronLeft,
+    ChevronRight,
+    ArrowUpDown
 } from "lucide-react"
 import {
     Chart as ChartJS,
@@ -29,7 +34,7 @@ import {
     Legend,
     Filler
 } from 'chart.js'
-import { Line, Bar } from 'react-chartjs-2'
+import { Line } from 'react-chartjs-2'
 
 ChartJS.register(
     CategoryScale,
@@ -43,26 +48,14 @@ ChartJS.register(
     Filler
 )
 
-// Dữ liệu lớp học
-const classesData = [
-    { id: 'IT2021A', name: 'IT2021A', totalStudents: 35, department: 'Công nghệ thông tin', semester: 'HK1 2024-2025' },
-    { id: 'IT2021B', name: 'IT2021B', totalStudents: 32, department: 'Công nghệ thông tin', semester: 'HK1 2024-2025' },
-    { id: 'IT2020A', name: 'IT2020A', totalStudents: 30, department: 'Công nghệ thông tin', semester: 'HK1 2024-2025' },
-    { id: 'IT2020B', name: 'IT2020B', totalStudents: 28, department: 'Công nghệ thông tin', semester: 'HK1 2024-2025' },
-    { id: 'IT2019A', name: 'IT2019A', totalStudents: 33, department: 'Công nghệ thông tin', semester: 'HK1 2024-2025' },
-    { id: 'IT2019B', name: 'IT2019B', totalStudents: 31, department: 'Công nghệ thông tin', semester: 'HK1 2024-2025' },
-    { id: 'DT2021A', name: 'DT2021A', totalStudents: 29, department: 'Điện tử viễn thông', semester: 'HK1 2024-2025' },
-    { id: 'DT2021B', name: 'DT2021B', totalStudents: 27, department: 'Điện tử viễn thông', semester: 'HK1 2024-2025' },
-]
-
 // Timeline milestones với dữ liệu tổng hợp
 const timelineMilestones = [
     {
         id: 1,
-        title: "Đầu học kỳ I",
-        date: "01/09/2024",
+        title: "Học kỳ 1",
+        date: "Tháng 9 - Tháng 12/2024",
         status: "completed",
-        description: "Khảo sát ban đầu và thiết lập baseline",
+        description: "Học kỳ 1 năm học 2024-2025",
         overview: {
             totalStudents: 245,
             avgGPA: 2.65,
@@ -94,10 +87,10 @@ const timelineMilestones = [
     },
     {
         id: 2,
-        title: "Giữa kỳ I",
-        date: "15/10/2024",
+        title: "Học kỳ 2",
+        date: "Tháng 1 - Tháng 5/2025",
         status: "in-progress",
-        description: "Đánh giá giữa kỳ và điều chỉnh",
+        description: "Học kỳ 2 năm học 2024-2025",
         overview: {
             totalStudents: 245,
             avgGPA: 2.82,
@@ -127,10 +120,10 @@ const timelineMilestones = [
     },
     {
         id: 3,
-        title: "Cuối kỳ I",
-        date: "15/01/2025",
+        title: "Học kỳ Hè",
+        date: "Tháng 6 - Tháng 8/2025",
         status: "upcoming",
-        description: "Đánh giá tổng kết học kỳ I",
+        description: "Học kỳ Hè năm 2025",
         overview: {
             totalStudents: 245,
             avgGPA: 2.95,
@@ -156,10 +149,10 @@ const timelineMilestones = [
     },
     {
         id: 4,
-        title: "Đầu kỳ II",
-        date: "10/02/2025",
+        title: "Học kỳ 1 (2025-2026)",
+        date: "Tháng 9 - Tháng 12/2025",
         status: "upcoming",
-        description: "Bắt đầu học kỳ II",
+        description: "Học kỳ 1 năm học 2025-2026",
         overview: {
             totalStudents: 245,
             avgGPA: 0,
@@ -187,18 +180,92 @@ const previousSemesterData = {
     teachingEffectiveness: 7.5
 }
 
-// (Removed top performers dataset — not used anymore)
+// Dữ liệu lớp học
+const classesData = [
+    { id: 'IT2021A', name: 'IT2021A', totalStudents: 40, department: 'Công nghệ thông tin' },
+    { id: 'IT2021B', name: 'IT2021B', totalStudents: 38, department: 'Công nghệ thông tin' },
+    { id: 'IT2020A', name: 'IT2020A', totalStudents: 35, department: 'Công nghệ thông tin' },
+    { id: 'IT2020B', name: 'IT2020B', totalStudents: 32, department: 'Công nghệ thông tin' },
+]
+
+// Mock data sinh viên cho heatmap (40 sinh viên mỗi lớp)
+const studentNames = [
+    'Nguyễn Hoàng Anh', 'Trần Minh Tuấn', 'Lê Thị Hương', 'Phạm Đức Mạnh', 'Hoàng Thu Trang',
+    'Võ Văn Hùng', 'Đặng Thị Lan', 'Bùi Quốc Khánh', 'Dương Thị Mai', 'Lý Thanh Tùng',
+    'Ngô Thị Hoa', 'Đỗ Minh Hiếu', 'Trịnh Thị Phương', 'Phan Văn Nam', 'Vũ Thị Ngọc',
+    'Tạ Minh Quang', 'Mai Thị Linh', 'Cao Văn Đạt', 'Lưu Thị Hà', 'Đinh Văn Toàn',
+    'Nguyễn Thị Kim', 'Trần Văn Long', 'Lê Minh Châu', 'Phạm Thị Dung', 'Hoàng Văn Khánh',
+    'Võ Thị Tuyết', 'Đặng Minh Trí', 'Bùi Thị Hằng', 'Dương Văn Thắng', 'Lý Thị Oanh',
+    'Ngô Văn Hải', 'Đỗ Thị Bích', 'Trịnh Văn Sơn', 'Phan Thị Yến', 'Vũ Minh Đức',
+    'Tạ Thị Nhung', 'Mai Văn Thành', 'Cao Thị Loan', 'Lưu Văn Tân', 'Đinh Thị Xuân',
+]
+
+const generateStudentsForClass = (classId: string, milestone: number) => {
+    const students = []
+    const totalStudents = classesData.find(c => c.id === classId)?.totalStudents || 40
+    
+    for (let i = 1; i <= totalStudents; i++) {
+        const studentId = `${classId}_${String(i).padStart(3, '0')}`
+        const studentName = studentNames[i - 1] || `Sinh viên ${i}`
+        
+        // Random data với phân bố realistic
+        const rand = Math.random()
+        let gpa, attendance, status
+        
+        if (rand < 0.4) { // 40% tốt
+            gpa = 2.5 + Math.random() * 1.5
+            attendance = 80 + Math.random() * 20
+            status = 'good'
+        } else if (rand < 0.65) { // 25% cần theo dõi
+            gpa = 2.0 + Math.random() * 0.5
+            attendance = 70 + Math.random() * 10
+            status = 'needs-attention'
+        } else if (rand < 0.85) { // 20% nguy cơ trung bình
+            gpa = 1.5 + Math.random() * 0.5
+            attendance = 60 + Math.random() * 10
+            status = 'medium-risk'
+        } else { // 15% nguy cơ cao
+            gpa = 0.8 + Math.random() * 0.7
+            attendance = 40 + Math.random() * 20
+            status = 'high-risk'
+        }
+        
+        students.push({
+            id: studentId,
+            name: studentName,
+            gpa: parseFloat(gpa.toFixed(2)),
+            attendance: parseFloat(attendance.toFixed(1)),
+            status,
+            email: `${studentName.toLowerCase().replace(/\s+/g, '.')}@university.edu.vn`,
+            phone: `090${String(i).padStart(7, '0')}`
+        })
+    }
+    
+    return students
+}
 
 export default function ProgressTracking() {
     const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null)
-    const [activeTab, setActiveTab] = useState<'overview' | 'comparison' | 'atrisk'>('overview')
     const [selectedClass, setSelectedClass] = useState<string | null>(null)
-    const [showClassDetail, setShowClassDetail] = useState(false)
-    const [selectedStudent, setSelectedStudent] = useState<any>(null)
-    const [showStudentDetail, setShowStudentDetail] = useState(false)
-    const [quickMessage, setQuickMessage] = useState('')
-    const [appointmentDate, setAppointmentDate] = useState('')
-    const [appointmentTime, setAppointmentTime] = useState('')
+    const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set())
+    
+    // Search, Filter, Sort, Pagination states
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [sortBy, setSortBy] = useState<'name' | 'gpa' | 'attendance'>('name')
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+    const [currentPage, setCurrentPage] = useState(1)
+    const studentsPerPage = 10
+
+    const toggleStudentExpand = (studentId: string) => {
+        const newExpanded = new Set(expandedStudents)
+        if (newExpanded.has(studentId)) {
+            newExpanded.delete(studentId)
+        } else {
+            newExpanded.add(studentId)
+        }
+        setExpandedStudents(newExpanded)
+    }
 
     // Chart data for GPA trend
     const trendChartData = {
@@ -263,23 +330,6 @@ export default function ProgressTracking() {
     const currentMilestone = selectedMilestone
         ? timelineMilestones.find(m => m.id === selectedMilestone)
         : timelineMilestones.find(m => m.status === 'in-progress') || timelineMilestones[0]
-
-    // Class comparison chart data
-    const classComparisonData = currentMilestone ? {
-        labels: currentMilestone.classMetrics.map(cm => {
-            const cls = classesData.find(c => c.id === cm.classId)
-            return cls?.name || cm.classId
-        }),
-        datasets: [{
-            label: 'GPA Trung vị',
-            data: currentMilestone.classMetrics.map(cm => cm.median),
-            backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        }, {
-            label: 'Điểm danh (%)',
-            data: currentMilestone.classMetrics.map(cm => cm.attendance),
-            backgroundColor: 'rgba(251, 146, 60, 0.8)',
-        }]
-    } : null
 
     return (
         <TeacherLayout currentPage="progress-tracking">
@@ -441,44 +491,63 @@ export default function ProgressTracking() {
                     </CardContent>
                 </Card>
 
-                {/* Tabs for different views */}
-                {currentMilestone && currentMilestone.status !== 'upcoming' && (
+                {/* View Selection - Nút Tổng quan + Dropdown chọn lớp */}
+                {selectedMilestone && (
                     <Card>
-                        <CardHeader className="border-b">
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => setActiveTab('overview')}
-                                    className={`px-6 py-2 rounded-lg font-semibold transition-all ${activeTab === 'overview'
-                                        ? 'bg-indigo-600 text-white shadow-lg'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    Tổng quan
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('comparison')}
-                                    className={`px-6 py-2 rounded-lg font-semibold transition-all ${activeTab === 'comparison'
-                                        ? 'bg-indigo-600 text-white shadow-lg'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    So sánh lớp
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('atrisk')}
-                                    className={`px-6 py-2 rounded-lg font-semibold transition-all ${activeTab === 'atrisk'
-                                        ? 'bg-indigo-600 text-white shadow-lg'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    Sinh viên nguy cơ ({currentMilestone.atRiskStudents.length})
-                                </button>
-                            </div>
+                        <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50">
+                            <CardTitle className="flex items-center gap-2">
+                                <Users className="w-5 h-5 text-purple-600" />
+                                Chọn chế độ xem
+                            </CardTitle>
                         </CardHeader>
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                                {/* Nút Tổng quan */}
+                                <button
+                                    onClick={() => {
+                                        setSelectedClass(null)
+                                        setExpandedStudents(new Set())
+                                    }}
+                                    className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+                                        !selectedClass
+                                            ? 'bg-indigo-600 text-white shadow-lg scale-105'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    📊 Tổng quan
+                                </button>
+
+                                <div className="text-gray-400 text-lg">hoặc</div>
+
+                                {/* Dropdown chọn lớp */}
+                                <select
+                                    value={selectedClass || ''}
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            setSelectedClass(e.target.value)
+                                            setExpandedStudents(new Set())
+                                        }
+                                    }}
+                                    className="flex-1 px-4 py-3 rounded-lg border-2 border-purple-200 bg-white text-gray-900 font-semibold shadow-sm hover:border-purple-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer"
+                                >
+                                    <option value="">-- Chọn lớp để xem chi tiết --</option>
+                                    {classesData.map((cls) => (
+                                        <option key={cls.id} value={cls.id}>
+                                            📚 {cls.name} ({cls.totalStudents} sinh viên)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Tổng quan - Chỉ hiển thị khi CHƯA chọn class */}
+                {currentMilestone && currentMilestone.status !== 'upcoming' && !selectedClass && (
+                    <Card>
                         <CardContent className="p-6">
                             {/* Overview Tab */}
-                            {activeTab === 'overview' && (
-                                <div className="space-y-6">
+                            <div className="space-y-6">
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                                             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -669,538 +738,565 @@ export default function ProgressTracking() {
                                         </Card>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Comparison Tab */}
-                            {activeTab === 'comparison' && classComparisonData && (
-                                <div className="space-y-6">
-                                    <div className="bg-white rounded-lg border border-gray-200 p-6">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            <BarChart3 className="w-5 h-5 text-indigo-600" />
-                                            So sánh các lớp - {currentMilestone.title}
-                                        </h3>
-                                        <div style={{ height: '400px' }}>
-                                            <Bar data={classComparisonData} options={percentageChartOptions} />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                            <Users className="w-5 h-5 text-indigo-600" />
-                                            Chi tiết từng lớp (Click để xem top performers & at-risk)
-                                        </h3>
-                                        {currentMilestone.classMetrics.map((cm) => {
-                                            const cls = classesData.find(c => c.id === cm.classId)
-                                            return (
-                                                <Card
-                                                    key={cm.classId}
-                                                    className="border-l-4 border-l-indigo-500 hover:shadow-xl transition-all cursor-pointer"
-                                                    onClick={() => {
-                                                        setSelectedClass(cm.classId)
-                                                        setShowClassDetail(true)
-                                                    }}
-                                                >
-                                                    <CardContent className="p-5">
-                                                        <div className="flex items-center justify-between mb-4">
-                                                            <div>
-                                                                <h4 className="text-xl font-bold text-gray-900">{cls?.name}</h4>
-                                                                <p className="text-sm text-gray-500">{cls?.department} - {cls?.totalStudents} sinh viên</p>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                {cm.trend === 'up' && (
-                                                                    <div className="flex items-center gap-1 bg-green-100 px-3 py-1 rounded-full">
-                                                                        <TrendingUp className="w-5 h-5 text-green-600" />
-                                                                        <span className="text-sm font-semibold text-green-700">Tiến bộ</span>
-                                                                    </div>
-                                                                )}
-                                                                {cm.trend === 'down' && (
-                                                                    <div className="flex items-center gap-1 bg-red-100 px-3 py-1 rounded-full">
-                                                                        <TrendingDown className="w-5 h-5 text-red-600" />
-                                                                        <span className="text-sm font-semibold text-red-700">Tụt hậu</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-5 gap-4">
-                                                            <div className="bg-blue-50 rounded-lg p-4 text-center">
-                                                                <p className="text-xs text-gray-600 mb-1">GPA</p>
-                                                                <p className="text-2xl font-bold text-blue-600">{cm.gpa.toFixed(2)}</p>
-                                                            </div>
-                                                            <div className="bg-green-50 rounded-lg p-4 text-center">
-                                                                <p className="text-xs text-gray-600 mb-1">Trung vị</p>
-                                                                <p className="text-2xl font-bold text-green-600">{cm.median.toFixed(2)}</p>
-                                                            </div>
-                                                            <div className="bg-orange-50 rounded-lg p-4 text-center">
-                                                                <p className="text-xs text-gray-600 mb-1">Điểm danh</p>
-                                                                <p className="text-2xl font-bold text-orange-600">{cm.attendance}%</p>
-                                                            </div>
-                                                            <div className="bg-teal-50 rounded-lg p-4 text-center">
-                                                                <p className="text-xs text-gray-600 mb-1">Hoàn thành BT</p>
-                                                                <p className="text-2xl font-bold text-teal-600">{cm.assignmentRate}%</p>
-                                                            </div>
-                                                            <div className="bg-red-50 rounded-lg p-4 text-center">
-                                                                <p className="text-xs text-gray-600 mb-1">Nguy cơ</p>
-                                                                <p className="text-2xl font-bold text-red-600">{cm.atRisk}/{cls?.totalStudents}</p>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* At-Risk Students Tab */}
-                            {activeTab === 'atrisk' && (
-                                <div className="space-y-4">
-                                    {currentMilestone.atRiskStudents.length === 0 ? (
-                                        <div className="text-center py-12">
-                                            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                                            <h3 className="text-xl font-bold text-gray-900 mb-2">Xuất sắc!</h3>
-                                            <p className="text-gray-600">Không có sinh viên nào ở mức nguy cơ tại mốc này.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <AlertTriangle className="w-6 h-6 text-red-600" />
-                                                    <div>
-                                                        <h3 className="font-bold text-red-900">
-                                                            Có {currentMilestone.atRiskStudents.length} sinh viên cần can thiệp
-                                                        </h3>
-                                                        <p className="text-sm text-red-700">
-                                                            Danh sách sinh viên có nguy cơ không hoàn thành chương trình
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {currentMilestone.atRiskStudents.map((student) => (
-                                                    <Card
-                                                        key={student.id}
-                                                        className="border-l-4 border-l-red-500 hover:shadow-lg transition-shadow cursor-pointer"
-                                                        onClick={() => {
-                                                            setSelectedStudent(student)
-                                                            setShowStudentDetail(true)
-                                                        }}
-                                                    >
-                                                        <CardContent className="p-5">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-4 flex-1">
-                                                                    <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                                                                        {student.name.charAt(0)}
-                                                                    </div>
-                                                                    <div className="flex-1">
-                                                                        <h4 className="text-lg font-bold text-gray-900">{student.name}</h4>
-                                                                        <p className="text-sm text-gray-500">{student.id} - Lớp {student.class}</p>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="flex items-center gap-6">
-                                                                    <div className="text-center">
-                                                                        <p className="text-xs text-gray-500 mb-1">GPA</p>
-                                                                        <p className={`text-2xl font-bold ${student.gpa < 1.5 ? 'text-red-600' :
-                                                                            student.gpa < 2.0 ? 'text-orange-600' :
-                                                                                'text-yellow-600'
-                                                                            }`}>{student.gpa.toFixed(2)}</p>
-                                                                    </div>
-
-                                                                    <div className="text-center">
-                                                                        <p className="text-xs text-gray-500 mb-1">Điểm danh</p>
-                                                                        <p className={`text-2xl font-bold ${student.attendance < 60 ? 'text-red-600' :
-                                                                            student.attendance < 75 ? 'text-orange-600' :
-                                                                                'text-yellow-600'
-                                                                            }`}>{student.attendance}%</p>
-                                                                    </div>
-
-                                                                    <div className="min-w-[200px]">
-                                                                        <p className="text-xs text-gray-500 mb-2">Vấn đề</p>
-                                                                        <div className="flex flex-wrap gap-1">
-                                                                            {student.issues.map((issue) => (
-                                                                                <Badge key={issue} className="bg-red-100 text-red-700 text-xs">
-                                                                                    {issue}
-                                                                                </Badge>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </CardContent>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Class Detail Modal */}
-                {showClassDetail && selectedClass && currentMilestone && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl flex items-center justify-between z-10">
-                                <div>
-                                    <h2 className="text-2xl font-bold mb-1">
-                                        Chi tiết lớp: {classesData.find(c => c.id === selectedClass)?.name}
-                                    </h2>
-                                    <p className="text-indigo-100">
-                                        {currentMilestone.title} - {classesData.find(c => c.id === selectedClass)?.totalStudents} sinh viên
-                                    </p>
+                {/* LEVEL 2 & 3: Class Detail với Expandable List View */}
+                {selectedMilestone && selectedClass && (() => {
+                    const milestone = timelineMilestones.find(m => m.id === selectedMilestone)
+                    const classMetric = milestone?.classMetrics.find(cm => cm.classId === selectedClass)
+                    const classInfo = classesData.find(c => c.id === selectedClass)
+                    
+                    if (!classMetric || !milestone) return null
+
+                    // Lấy dữ liệu của các mốc trước để so sánh trend
+                    const previousMilestones = timelineMilestones
+                        .filter(m => m.id < selectedMilestone)
+                        .map(m => ({
+                            title: m.title,
+                            metric: m.classMetrics.find(cm => cm.classId === selectedClass)
+                        }))
+
+                    const students = generateStudentsForClass(selectedClass, selectedMilestone)
+
+                    return (
+                        <Card className="border-2 border-purple-200">
+                            <CardHeader className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-2xl mb-1">
+                                            📊 {classInfo?.name} - {milestone.title}
+                                        </CardTitle>
+                                        <p className="text-purple-100">
+                                            {classInfo?.department} • {classInfo?.totalStudents} sinh viên
+                                        </p>
+                                    </div>
+                                    {classMetric.trend === 'up' && (
+                                        <Badge className="bg-green-500 text-white text-lg px-4 py-2">
+                                            <TrendingUp className="w-5 h-5 mr-1" />
+                                            Tiến bộ
+                                        </Badge>
+                                    )}
                                 </div>
-                                <button
-                                    onClick={() => setShowClassDetail(false)}
-                                    className="text-white hover:bg-white hover:text-indigo-600 rounded-full p-2 transition-all"
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-6">
+                                {/* LEVEL 2: 4 chỉ số quan trọng */}
+                                <div className="grid grid-cols-4 gap-4">
+                                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200">
+                                        <CardContent className="p-6 text-center">
+                                            <Target className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-blue-600 mb-1">GPA Trung vị</p>
+                                            <p className="text-4xl font-bold text-blue-900 mb-1">
+                                                {classMetric.median.toFixed(2)}
+                                            </p>
+                                            <Badge className={`${
+                                                classMetric.median >= 3.0 ? 'bg-green-500' :
+                                                classMetric.median >= 2.5 ? 'bg-blue-500' :
+                                                'bg-orange-500'
+                                            } text-white`}>
+                                                {classMetric.median >= 3.0 ? 'Tốt' :
+                                                 classMetric.median >= 2.5 ? 'Khá' : 'Trung bình'}
+                                            </Badge>
+                                        </CardContent>
+                                    </Card>
 
-                            <div className="p-6 space-y-6">
-                                {/* Class Overview Metrics */}
-                                {(() => {
-                                    const classMetric = currentMilestone.classMetrics.find(cm => cm.classId === selectedClass)
-                                    if (!classMetric) return null
+                                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200">
+                                        <CardContent className="p-6 text-center">
+                                            <Clock className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-orange-600 mb-1">Điểm danh</p>
+                                            <p className="text-4xl font-bold text-orange-900 mb-1">
+                                                {classMetric.attendance}%
+                                            </p>
+                                            <Badge className={`${
+                                                classMetric.attendance >= 90 ? 'bg-green-500' :
+                                                classMetric.attendance >= 80 ? 'bg-orange-500' :
+                                                'bg-red-500'
+                                            } text-white`}>
+                                                {classMetric.attendance >= 90 ? 'Cao' :
+                                                 classMetric.attendance >= 80 ? 'Tốt' : 'Cần cải thiện'}
+                                            </Badge>
+                                        </CardContent>
+                                    </Card>
 
-                                    return (
-                                        <>
-                                            <div className="grid grid-cols-4 gap-4">
-                                                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                                                    <CardContent className="p-4 text-center">
-                                                        <p className="text-sm text-blue-600 mb-1">GPA Trung vị</p>
-                                                        <p className="text-3xl font-bold text-blue-900">{classMetric.median.toFixed(2)}</p>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                                                    <CardContent className="p-4 text-center">
-                                                        <p className="text-sm text-orange-600 mb-1">Điểm danh TB</p>
-                                                        <p className="text-3xl font-bold text-orange-900">{classMetric.attendance}%</p>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                                                    <CardContent className="p-4 text-center">
-                                                        <p className="text-sm text-green-600 mb-1">Đúng tiến độ</p>
-                                                        <p className="text-3xl font-bold text-green-900">{classMetric.onTrack}</p>
-                                                    </CardContent>
-                                                </Card>
-                                                <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-                                                    <CardContent className="p-4 text-center">
-                                                        <p className="text-sm text-red-600 mb-1">Nguy cơ</p>
-                                                        <p className="text-3xl font-bold text-red-900">{classMetric.atRisk}</p>
-                                                    </CardContent>
-                                                </Card>
-                                            </div>
+                                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
+                                        <CardContent className="p-6 text-center">
+                                            <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-green-600 mb-1">Sinh viên tốt</p>
+                                            <p className="text-4xl font-bold text-green-900 mb-1">
+                                                {classMetric.onTrack}
+                                            </p>
+                                            <Badge className="bg-green-500 text-white">
+                                                {((classMetric.onTrack / (classInfo?.totalStudents || 1)) * 100).toFixed(0)}%
+                                            </Badge>
+                                        </CardContent>
+                                    </Card>
 
-                                            {/* At-Risk Students and Progress */}
-                                            <div className="space-y-6">
-                                                <div>
-                                                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                                        <Activity className="w-6 h-6 text-indigo-500" />
-                                                        Tiến độ lớp học qua các mốc
-                                                    </h3>
-                                                    <div className="grid grid-cols-1 gap-3">
-                                                        {timelineMilestones
-                                                            .filter(m => m.status !== 'upcoming' && m.classMetrics.some(cm => cm.classId === selectedClass))
-                                                            .map((milestone) => {
-                                                                const classData = milestone.classMetrics.find(cm => cm.classId === selectedClass)
-                                                                if (!classData) return null
+                                    <Card className="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200">
+                                        <CardContent className="p-6 text-center">
+                                            <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-red-600 mb-1">Sinh viên nguy cơ</p>
+                                            <p className="text-4xl font-bold text-red-900 mb-1">
+                                                {classMetric.atRisk}
+                                            </p>
+                                            <Badge className="bg-red-500 text-white">
+                                                {((classMetric.atRisk / (classInfo?.totalStudents || 1)) * 100).toFixed(0)}%
+                                            </Badge>
+                                        </CardContent>
+                                    </Card>
+                                </div>
 
-                                                                return (
-                                                                    <Card key={milestone.id} className="border-l-4 border-l-indigo-400">
-                                                                        <CardContent className="p-4">
-                                                                            <div className="flex items-center justify-between mb-3">
-                                                                                <div>
-                                                                                    <h4 className="font-bold text-gray-900">{milestone.title}</h4>
-                                                                                    <p className="text-xs text-gray-500">{milestone.date}</p>
-                                                                                </div>
-                                                                                {classData.trend === 'up' && (
-                                                                                    <Badge className="bg-green-100 text-green-700">
-                                                                                        <TrendingUp className="w-3 h-3 mr-1" />
-                                                                                        Tiến bộ
-                                                                                    </Badge>
-                                                                                )}
-                                                                                {classData.trend === 'down' && (
-                                                                                    <Badge className="bg-red-100 text-red-700">
-                                                                                        <TrendingDown className="w-3 h-3 mr-1" />
-                                                                                        Tụt hậu
-                                                                                    </Badge>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                <div className="bg-blue-50 rounded p-2 text-center">
-                                                                                    <p className="text-xs text-gray-600">GPA</p>
-                                                                                    <p className="text-lg font-bold text-blue-600">{classData.median.toFixed(2)}</p>
-                                                                                </div>
-                                                                                <div className="bg-orange-50 rounded p-2 text-center">
-                                                                                    <p className="text-xs text-gray-600">Điểm danh</p>
-                                                                                    <p className="text-lg font-bold text-orange-600">{classData.attendance}%</p>
-                                                                                </div>
-                                                                                <div className="bg-teal-50 rounded p-2 text-center">
-                                                                                    <p className="text-xs text-gray-600">Hoàn thành</p>
-                                                                                    <p className="text-lg font-bold text-teal-600">{classData.assignmentRate}%</p>
-                                                                                </div>
-                                                                                <div className="bg-green-50 rounded p-2 text-center">
-                                                                                    <p className="text-xs text-gray-600">On-track</p>
-                                                                                    <p className="text-lg font-bold text-green-600">{classData.onTrack}</p>
-                                                                                </div>
-                                                                                <div className="bg-red-50 rounded p-2 text-center">
-                                                                                    <p className="text-xs text-gray-600">At-risk</p>
-                                                                                    <p className="text-lg font-bold text-red-600">{classData.atRisk}</p>
-                                                                                </div>
-                                                                            </div>
-                                                                        </CardContent>
-                                                                    </Card>
-                                                                )
-                                                            })}
+                                {/* Trend Comparison */}
+                                {previousMilestones.length > 0 && (
+                                    <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200">
+                                        <CardContent className="p-6">
+                                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                <Activity className="w-5 h-5 text-indigo-600" />
+                                                Xu hướng qua các mốc
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-6">
+                                                {/* GPA Trend */}
+                                                <div className="bg-white rounded-lg p-4">
+                                                    <p className="text-sm font-semibold text-gray-700 mb-3">📈 GPA qua các mốc:</p>
+                                                    <div className="space-y-2">
+                                                        {previousMilestones.map((pm, idx) => pm.metric && (
+                                                            <div key={idx} className="flex items-center justify-between text-sm">
+                                                                <span className="text-gray-600">{pm.title}:</span>
+                                                                <span className="font-bold text-gray-900">{pm.metric.median.toFixed(2)}</span>
+                                                            </div>
+                                                        ))}
+                                                        <div className="flex items-center justify-between text-sm border-t-2 border-indigo-200 pt-2">
+                                                            <span className="text-indigo-600 font-semibold">{milestone.title}:</span>
+                                                            <span className="font-bold text-indigo-900 text-lg">{classMetric.median.toFixed(2)}</span>
+                                                        </div>
+                                                        {previousMilestones.length > 0 && previousMilestones[previousMilestones.length - 1].metric && (
+                                                            <div className="flex items-center justify-center gap-2 mt-2">
+                                                                {classMetric.median > previousMilestones[previousMilestones.length - 1].metric!.median ? (
+                                                                    <>
+                                                                        <TrendingUp className="w-5 h-5 text-green-600" />
+                                                                        <span className="text-green-600 font-semibold">
+                                                                            +{(classMetric.median - previousMilestones[previousMilestones.length - 1].metric!.median).toFixed(2)} (Tiến bộ)
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <TrendingDown className="w-5 h-5 text-red-600" />
+                                                                        <span className="text-red-600 font-semibold">
+                                                                            {(classMetric.median - previousMilestones[previousMilestones.length - 1].metric!.median).toFixed(2)} (Tụt hậu)
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
 
-                                                <div>
-                                                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                                        <AlertTriangle className="w-6 h-6 text-red-500" />
-                                                        Sinh viên cần can thiệp ({classMetric.atRisk})
-                                                    </h3>
-                                                    <div className="space-y-3">
-                                                        {classMetric.atRisk > 0 ? (
-                                                            currentMilestone.atRiskStudents
-                                                                .filter(s => s.class === selectedClass)
-                                                                .map((student) => (
-                                                                    <Card
-                                                                        key={student.id}
-                                                                        className="border-l-4 border-l-red-500 hover:shadow-lg transition-all cursor-pointer"
-                                                                        onClick={() => {
-                                                                            setSelectedStudent(student)
-                                                                            setShowStudentDetail(true)
-                                                                            setShowClassDetail(false)
-                                                                        }}
-                                                                    >
-                                                                        <CardContent className="p-4">
-                                                                            <div className="flex items-center gap-4">
-                                                                                <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                                                                    {student.name.charAt(0)}
-                                                                                </div>
-                                                                                <div className="flex-1">
-                                                                                    <h4 className="font-bold text-gray-900">{student.name}</h4>
-                                                                                    <p className="text-sm text-gray-500">{student.id}</p>
-                                                                                    <div className="flex flex-wrap gap-1 mt-1">
-                                                                                        {student.issues.map((issue) => (
-                                                                                            <Badge key={issue} className="bg-red-100 text-red-700 text-xs">
-                                                                                                {issue}
-                                                                                            </Badge>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div className="grid grid-cols-2 gap-2 text-center">
-                                                                                    <div className="bg-red-50 rounded-lg p-2">
-                                                                                        <p className="text-xs text-gray-600">GPA</p>
-                                                                                        <p className="text-lg font-bold text-red-600">{student.gpa.toFixed(2)}</p>
-                                                                                    </div>
-                                                                                    <div className="bg-orange-50 rounded-lg p-2">
-                                                                                        <p className="text-xs text-gray-600">Điểm danh</p>
-                                                                                        <p className="text-lg font-bold text-orange-600">{student.attendance}%</p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </CardContent>
-                                                                    </Card>
-                                                                ))
-                                                        ) : (
-                                                            <div className="text-center py-8">
-                                                                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-3" />
-                                                                <p className="text-gray-600">Không có sinh viên nào ở mức nguy cơ</p>
+                                                {/* Attendance Trend */}
+                                                <div className="bg-white rounded-lg p-4">
+                                                    <p className="text-sm font-semibold text-gray-700 mb-3">📊 Điểm danh qua các mốc:</p>
+                                                    <div className="space-y-2">
+                                                        {previousMilestones.map((pm, idx) => pm.metric && (
+                                                            <div key={idx} className="flex items-center justify-between text-sm">
+                                                                <span className="text-gray-600">{pm.title}:</span>
+                                                                <span className="font-bold text-gray-900">{pm.metric.attendance}%</span>
+                                                            </div>
+                                                        ))}
+                                                        <div className="flex items-center justify-between text-sm border-t-2 border-orange-200 pt-2">
+                                                            <span className="text-orange-600 font-semibold">{milestone.title}:</span>
+                                                            <span className="font-bold text-orange-900 text-lg">{classMetric.attendance}%</span>
+                                                        </div>
+                                                        {previousMilestones.length > 0 && previousMilestones[previousMilestones.length - 1].metric && (
+                                                            <div className="flex items-center justify-center gap-2 mt-2">
+                                                                {classMetric.attendance > previousMilestones[previousMilestones.length - 1].metric!.attendance ? (
+                                                                    <>
+                                                                        <TrendingUp className="w-5 h-5 text-green-600" />
+                                                                        <span className="text-green-600 font-semibold">
+                                                                            +{(classMetric.attendance - previousMilestones[previousMilestones.length - 1].metric!.attendance).toFixed(1)}% (Cải thiện)
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <TrendingDown className="w-5 h-5 text-red-600" />
+                                                                        <span className="text-red-600 font-semibold">
+                                                                            {(classMetric.attendance - previousMilestones[previousMilestones.length - 1].metric!.attendance).toFixed(1)}% (Giảm)
+                                                                        </span>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
-                                        </>
-                                    )
-                                })()}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                                        </CardContent>
+                                    </Card>
+                                )}
 
-                {/* Student Detail Modal */}
-                {showStudentDetail && selectedStudent && (
-                    <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-t-2xl flex items-center justify-between z-10">
-                                <div>
-                                    <h2 className="text-2xl font-bold">Chi tiết sinh viên</h2>
-                                    <p className="text-indigo-100">{selectedStudent.name} • {selectedStudent.id} • Lớp {selectedStudent.class}</p>
-                                </div>
-                                <button onClick={() => setShowStudentDetail(false)} className="p-2 rounded-full hover:bg-white hover:text-indigo-600 text-white">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <div className="p-6 space-y-6">
-                                {/* Alert Banner - More Prominent */}
-                                <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 p-5 rounded-xl">
-                                    <div className="flex items-start gap-3">
-                                        <AlertTriangle className="w-8 h-8 text-red-600 flex-shrink-0 mt-1" />
-                                        <div className="flex-1">
-                                            <h4 className="font-bold text-red-900 text-lg mb-3">⚠️ Cảnh báo nguy cơ học vụ</h4>
-                                            <div className="space-y-2">
-                                                {selectedStudent.gpa < 1.5 && (
-                                                    <div className="flex items-center gap-2 bg-red-100 p-3 rounded-lg">
-                                                        <span className="text-2xl">🔴</span>
-                                                        <div>
-                                                            <p className="font-semibold text-red-900">GPA rất thấp: {selectedStudent.gpa.toFixed(2)}</p>
-                                                            <p className="text-sm text-red-700">Khả năng rớt môn cao, cần can thiệp ngay</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {selectedStudent.gpa >= 1.5 && selectedStudent.gpa < 2.0 && (
-                                                    <div className="flex items-center gap-2 bg-orange-100 p-3 rounded-lg">
-                                                        <span className="text-2xl">🟠</span>
-                                                        <div>
-                                                            <p className="font-semibold text-orange-900">GPA thấp: {selectedStudent.gpa.toFixed(2)}</p>
-                                                            <p className="text-sm text-orange-700">Cần theo dõi và hỗ trợ thêm</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {selectedStudent.attendance < 60 && (
-                                                    <div className="flex items-center gap-2 bg-red-100 p-3 rounded-lg">
-                                                        <span className="text-2xl">🔴</span>
-                                                        <div>
-                                                            <p className="font-semibold text-red-900">Điểm danh rất thấp: {selectedStudent.attendance}%</p>
-                                                            <p className="text-sm text-red-700">Nguy cơ bỏ học, cần liên hệ ngay</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {selectedStudent.attendance >= 60 && selectedStudent.attendance < 75 && (
-                                                    <div className="flex items-center gap-2 bg-orange-100 p-3 rounded-lg">
-                                                        <span className="text-2xl">🟠</span>
-                                                        <div>
-                                                            <p className="font-semibold text-orange-900">Điểm danh thấp: {selectedStudent.attendance}%</p>
-                                                            <p className="text-sm text-orange-700">Cần nhắc nhở về tần suất đi học</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {selectedStudent.issues.includes('Assignment') && (
-                                                    <div className="flex items-center gap-2 bg-yellow-100 p-3 rounded-lg">
-                                                        <span className="text-2xl">🟡</span>
-                                                        <div>
-                                                            <p className="font-semibold text-yellow-900">Bài tập chưa hoàn thành</p>
-                                                            <p className="text-sm text-yellow-700">Nhiều bài tập chưa nộp hoặc nộp trễ</p>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                {/* LEVEL 3: Expandable List View with Search, Filter, Sort, Pagination */}
+                                <Card className="border-2 border-purple-300">
+                                    <CardHeader className="bg-gradient-to-r from-purple-100 to-indigo-100 border-b-2 border-purple-200">
+                                        <CardTitle className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Users className="w-5 h-5 text-purple-600" />
+                                                Danh sách sinh viên
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {(() => {
+                                            // Filter students by search query
+                                            let filteredStudents = students.filter(student => {
+                                                const matchesSearch = searchQuery === '' || 
+                                                    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                    student.id.toLowerCase().includes(searchQuery.toLowerCase())
+                                                
+                                                const matchesStatus = statusFilter === 'all' || student.status === statusFilter
+                                                
+                                                return matchesSearch && matchesStatus
+                                            })
 
-                                {/* Student Info */}
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="col-span-1 flex items-center gap-4">
-                                        <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
-                                            {selectedStudent.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold text-gray-900">{selectedStudent.name}</h3>
-                                            <p className="text-sm text-gray-500">Mã: {selectedStudent.id}</p>
-                                            <p className="text-sm text-gray-500">Lớp: {selectedStudent.class}</p>
-                                        </div>
-                                    </div>
+                                            // Sort students
+                                            filteredStudents = [...filteredStudents].sort((a, b) => {
+                                                let compareValue = 0
+                                                if (sortBy === 'name') {
+                                                    compareValue = a.name.localeCompare(b.name)
+                                                } else if (sortBy === 'gpa') {
+                                                    compareValue = a.gpa - b.gpa
+                                                } else if (sortBy === 'attendance') {
+                                                    compareValue = a.attendance - b.attendance
+                                                }
+                                                return sortOrder === 'asc' ? compareValue : -compareValue
+                                            })
 
-                                    <div className="col-span-2 grid grid-cols-3 gap-3">
-                                        <div className="bg-red-50 rounded p-3 text-center">
-                                            <p className="text-xs text-gray-600">GPA</p>
-                                            <p className={`text-2xl font-bold ${selectedStudent.gpa < 1.5 ? 'text-red-600' : selectedStudent.gpa < 2.0 ? 'text-orange-600' : 'text-yellow-600'}`}>{selectedStudent.gpa.toFixed(2)}</p>
-                                        </div>
-                                        <div className="bg-orange-50 rounded p-3 text-center">
-                                            <p className="text-xs text-gray-600">Điểm danh</p>
-                                            <p className={`text-2xl font-bold ${selectedStudent.attendance < 60 ? 'text-red-600' : selectedStudent.attendance < 75 ? 'text-orange-600' : 'text-yellow-600'}`}>{selectedStudent.attendance}%</p>
-                                        </div>
-                                        <div className="bg-gray-50 rounded p-3 text-center">
-                                            <p className="text-xs text-gray-600">Vấn đề</p>
-                                            <div className="flex flex-wrap justify-center gap-2 mt-1">
-                                                {selectedStudent.issues.map((issue: any) => (
-                                                    <Badge key={issue} className="bg-red-100 text-red-700 text-xs">{issue}</Badge>
-                                                ))}
+                                            // Pagination
+                                            const totalPages = Math.ceil(filteredStudents.length / studentsPerPage)
+                                            const startIndex = (currentPage - 1) * studentsPerPage
+                                            const endIndex = startIndex + studentsPerPage
+                                            const paginatedStudents = filteredStudents.slice(startIndex, endIndex)
+
+                                            // Status counts
+                                            const statusCounts = {
+                                                all: students.length,
+                                                good: students.filter(s => s.status === 'good').length,
+                                                'needs-attention': students.filter(s => s.status === 'needs-attention').length,
+                                                'medium-risk': students.filter(s => s.status === 'medium-risk').length,
+                                                'high-risk': students.filter(s => s.status === 'high-risk').length,
+                                            }
+
+                                            return (
+                                                <>
+                                                    {/* Search, Filter, Sort Controls */}
+                                                    <div className="p-4 bg-gray-50 border-b space-y-3">
+                                                        {/* Search Bar */}
+                                                        <div className="relative">
+                                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Tìm kiếm theo tên hoặc MSSV..."
+                                                                value={searchQuery}
+                                                                onChange={(e) => {
+                                                                    setSearchQuery(e.target.value)
+                                                                    setCurrentPage(1) // Reset to first page
+                                                                }}
+                                                                className="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                                                            />
+                                                        </div>
+
+                                                        {/* Filter and Sort Controls */}
+                                                        <div className="flex items-center gap-3 flex-wrap">
+                                                            {/* Status Filter */}
+                                                            <div className="flex items-center gap-2">
+                                                                <Filter className="w-4 h-4 text-gray-600" />
+                                                                <span className="text-sm font-medium text-gray-700">Lọc:</span>
+                                                                <div className="flex gap-1">
+                                                                    {[
+                                                                        { value: 'all', label: 'Tất cả', color: 'bg-gray-500' },
+                                                                        { value: 'good', label: 'Tốt', color: 'bg-blue-500' },
+                                                                        { value: 'needs-attention', label: 'Cần theo dõi', color: 'bg-yellow-500' },
+                                                                        { value: 'medium-risk', label: 'Nguy cơ TB', color: 'bg-orange-500' },
+                                                                        { value: 'high-risk', label: 'Nguy cơ cao', color: 'bg-red-500' },
+                                                                    ].map((filter) => (
+                                                                        <button
+                                                                            key={filter.value}
+                                                                            onClick={() => {
+                                                                                setStatusFilter(filter.value)
+                                                                                setCurrentPage(1)
+                                                                            }}
+                                                                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                                                                                statusFilter === filter.value
+                                                                                    ? `${filter.color} text-white shadow-md`
+                                                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                                            }`}
+                                                                        >
+                                                                            {filter.label} ({statusCounts[filter.value as keyof typeof statusCounts]})
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Sort Controls */}
+                                                            <div className="flex items-center gap-2 ml-auto">
+                                                                <ArrowUpDown className="w-4 h-4 text-gray-600" />
+                                                                <span className="text-sm font-medium text-gray-700">Sắp xếp:</span>
+                                                                <select
+                                                                    value={sortBy}
+                                                                    onChange={(e) => setSortBy(e.target.value as 'name' | 'gpa' | 'attendance')}
+                                                                    className="px-3 py-1 border-2 border-gray-300 rounded-lg text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                                                                >
+                                                                    <option value="name">Tên</option>
+                                                                    <option value="gpa">GPA</option>
+                                                                    <option value="attendance">Điểm danh</option>
+                                                                </select>
+                                                                <button
+                                                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                                                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition-all"
+                                                                >
+                                                                    {sortOrder === 'asc' ? '↑ Tăng' : '↓ Giảm'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Results Info */}
+                                                        <div className="text-sm text-gray-600">
+                                                            Hiển thị <span className="font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredStudents.length)}</span> trong <span className="font-semibold">{filteredStudents.length}</span> sinh viên
+                                                            {searchQuery && ` (tìm kiếm: "${searchQuery}")`}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Student List */}
+                                                    <div className="divide-y divide-gray-200">
+                                                        {paginatedStudents.length > 0 ? (
+                                                            paginatedStudents.map((student) => {
+                                                                const isExpanded = expandedStudents.has(student.id)
+                                                                const statusConfig = {
+                                                                    good: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700', icon: '✅', label: 'Tốt' },
+                                                                    'needs-attention': { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700', icon: '👀', label: 'Cần theo dõi' },
+                                                                    'medium-risk': { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700', icon: '⚠️', label: 'Nguy cơ TB' },
+                                                                    'high-risk': { bg: 'bg-red-50 border-red-200', text: 'text-red-700', icon: '🚨', label: 'Nguy cơ cao' }
+                                                                }
+                                                                const config = statusConfig[student.status as keyof typeof statusConfig]
+                                                                
+                                                                return (
+                                                    <div key={student.id} className={`transition-all ${isExpanded ? config.bg : 'hover:bg-gray-50'}`}>
+                                                        {/* Row Header - Always Visible */}
+                                                        <button
+                                                            onClick={() => toggleStudentExpand(student.id)}
+                                                            className="w-full p-4 flex items-center justify-between text-left"
+                                                        >
+                                                            <div className="flex items-center gap-4 flex-1">
+                                                                <div className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                                                                    ▶
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className="font-bold text-gray-900">{student.name}</span>
+                                                                        <span className="text-sm text-gray-500">({student.id})</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-6">
+                                                                    <div className="text-center">
+                                                                        <p className="text-xs text-gray-500">GPA</p>
+                                                                        <p className={`text-lg font-bold ${config.text}`}>
+                                                                            {student.gpa.toFixed(2)}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <p className="text-xs text-gray-500">Att</p>
+                                                                        <p className={`text-lg font-bold ${config.text}`}>
+                                                                            {student.attendance.toFixed(0)}%
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="min-w-[120px]">
+                                                                        <Badge className={`${
+                                                                            student.status === 'good' ? 'bg-blue-500' :
+                                                                            student.status === 'needs-attention' ? 'bg-yellow-500' :
+                                                                            student.status === 'medium-risk' ? 'bg-orange-500' :
+                                                                            'bg-red-500'
+                                                                        } text-white`}>
+                                                                            {config.icon} {config.label}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+
+                                                        {/* Expanded Content */}
+                                                        {isExpanded && (
+                                                            <div className={`px-16 pb-6 border-t ${config.bg}`}>
+                                                                <div className="pt-4 space-y-4">
+                                                                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                                        📊 Chi tiết:
+                                                                    </h4>
+                                                                    
+                                                                    {/* Details */}
+                                                                    <div className="bg-white rounded-lg p-4 space-y-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-gray-700">• GPA qua các môn:</span>
+                                                                            <span className="text-gray-900 font-medium">
+                                                                                Toán {(student.gpa - 0.2).toFixed(1)} | 
+                                                                                Lý {(student.gpa + 0.3).toFixed(1)} | 
+                                                                                Hóa {(student.gpa - 0.1).toFixed(1)}
+                                                                            </span>
+                                                                        </div>
+                                                                        
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-gray-700">• Điểm danh:</span>
+                                                                            <span className="text-gray-900 font-medium">
+                                                                                {Math.floor(student.attendance * 20 / 100)}/20 buổi ({student.attendance.toFixed(0)}%)
+                                                                                {student.attendance < 80 && <span className="text-orange-600 ml-2">- Vắng {20 - Math.floor(student.attendance * 20 / 100)} buổi gần đây</span>}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-gray-700">• Bài tập:</span>
+                                                                            <span className="text-gray-900 font-medium">
+                                                                                {Math.floor((student.gpa / 4) * 20)}/20 bài ({((student.gpa / 4) * 100).toFixed(0)}%)
+                                                                                {student.gpa < 2.5 && <span className="text-orange-600 ml-2">- Thiếu {20 - Math.floor((student.gpa / 4) * 20)} bài tuần này</span>}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-gray-700">• Xu hướng:</span>
+                                                                            <span className={`font-medium flex items-center gap-1 ${
+                                                                                student.gpa >= 3.0 ? 'text-green-600' :
+                                                                                student.gpa >= 2.5 ? 'text-blue-600' :
+                                                                                'text-red-600'
+                                                                            }`}>
+                                                                                {student.gpa >= 3.0 ? (
+                                                                                    <>
+                                                                                        <TrendingUp className="w-4 h-4" />
+                                                                                        Tiến bộ đều đặn
+                                                                                    </>
+                                                                                ) : student.gpa >= 2.5 ? (
+                                                                                    <>
+                                                                                        <Activity className="w-4 h-4" />
+                                                                                        Ổn định
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <TrendingDown className="w-4 h-4" />
+                                                                                        Suy giảm so với tháng trước
+                                                                                    </>
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {/* Recommendation for at-risk students */}
+                                                                        {(student.status === 'needs-attention' || student.status === 'medium-risk' || student.status === 'high-risk') && (
+                                                                            <div className={`mt-3 p-3 rounded-lg ${
+                                                                                student.status === 'high-risk' ? 'bg-red-100 border-2 border-red-300' : 
+                                                                                student.status === 'medium-risk' ? 'bg-orange-100 border-2 border-orange-300' : 
+                                                                                'bg-yellow-100 border-2 border-yellow-300'
+                                                                            }`}>
+                                                                                <p className={`text-sm font-semibold ${
+                                                                                    student.status === 'high-risk' ? 'text-red-900' : 
+                                                                                    student.status === 'medium-risk' ? 'text-orange-900' : 
+                                                                                    'text-yellow-900'
+                                                                                }`}>
+                                                                                    {student.status === 'high-risk' ? '🚨 Khuyến nghị: Cần gặp gỡ và hỗ trợ KHẨN CẤP - Nguy cơ rất cao' : 
+                                                                                     student.status === 'medium-risk' ? '⚠️ Khuyến nghị: Cần gặp gỡ và lập kế hoạch hỗ trợ - Nguy cơ trung bình' : 
+                                                                                     '👀 Khuyến nghị: Theo dõi sát hơn, khuyến khích và động viên'}
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Action Buttons */}
+                                                                    <div className="flex gap-3 pt-2">
+                                                                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                                                                            <Mail className="w-4 h-4" />
+                                                                            Gửi tin nhắn
+                                                                        </button>
+                                                                        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                                                                            <Calendar className="w-4 h-4" />
+                                                                            Hẹn gặp
+                                                                        </button>
+                                                                        <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                                                                            <Activity className="w-4 h-4" />
+                                                                            Xem hồ sơ
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })
+                                        ) : (
+                                            <div className="p-12 text-center">
+                                                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                                <p className="text-gray-500 text-lg">Không tìm thấy sinh viên nào</p>
+                                                <p className="text-gray-400 text-sm mt-2">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                        )}
+                                                    </div>
 
-                                {/* Quick Message Templates and Custom Message */}
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                            <MessageSquare className="w-5 h-5 text-indigo-600" />
-                                            Tin nhắn mẫu - Click để chọn
-                                        </h4>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button onClick={() => setQuickMessage('Em chào thầy! Em xin hẹn thầy gặp để trao đổi về kết quả học tập. Em cảm ơn thầy ạ!')} className="text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors">
-                                                <p className="text-sm font-medium text-blue-900">📅 Hẹn gặp trao đổi</p>
-                                                <p className="text-xs text-blue-700 mt-1">Mời sinh viên đến gặp để thảo luận kết quả học tập</p>
-                                            </button>
-                                            <button onClick={() => setQuickMessage('Em ơi, thầy thấy em vắng nhiều buổi học gần đây. Em có vấn đề gì không? Hãy liên hệ với thầy nhé!')} className="text-left p-3 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg transition-colors">
-                                                <p className="text-sm font-medium text-orange-900">⚠️ Nhắc nhở điểm danh</p>
-                                                <p className="text-xs text-orange-700 mt-1">Nhắc nhở về tình trạng vắng học nhiều</p>
-                                            </button>
-                                            <button onClick={() => setQuickMessage('Em chào thầy! Thầy nhận thấy em chưa nộp một số bài tập. Em cần hỗ trợ gì không? Hãy liên hệ thầy để được giúp đỡ nhé!')} className="text-left p-3 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors">
-                                                <p className="text-sm font-medium text-yellow-900">📝 Nhắc nộp bài tập</p>
-                                                <p className="text-xs text-yellow-700 mt-1">Nhắc nhở về bài tập chưa hoàn thành</p>
-                                            </button>
-                                            <button onClick={() => setQuickMessage('Em chào thầy! Thầy thấy em đang gặp khó khăn trong học tập. Thầy sẵn sàng hỗ trợ em, hãy đến gặp thầy nhé!')} className="text-left p-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors">
-                                                <p className="text-sm font-medium text-red-900">🆘 Cần hỗ trợ khẩn</p>
-                                                <p className="text-xs text-red-700 mt-1">Đề nghị gặp mặt để hỗ trợ học tập</p>
-                                            </button>
-                                            <button onClick={() => setQuickMessage('Em chào thầy! Thầy muốn động viên em tiếp tục cố gắng. Nếu cần giúp đỡ gì, em hãy liên hệ với thầy nhé!')} className="text-left p-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors">
-                                                <p className="text-sm font-medium text-green-900">💪 Động viên khuyến khích</p>
-                                                <p className="text-xs text-green-700 mt-1">Gửi lời động viên và hỗ trợ tinh thần</p>
-                                            </button>
-                                            <button onClick={() => setQuickMessage('Em chào thầy! Phụ huynh của em cần liên hệ với thầy để trao đổi về tình hình học tập. Cảm ơn em!')} className="text-left p-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors">
-                                                <p className="text-sm font-medium text-purple-900">👨‍👩‍👦 Liên hệ phụ huynh</p>
-                                                <p className="text-xs text-purple-700 mt-1">Yêu cầu phụ huynh liên hệ</p>
-                                            </button>
-                                        </div>
-                                    </div>
+                                                    {/* Pagination */}
+                                                    {totalPages > 1 && (
+                                                        <div className="p-4 bg-gray-50 border-t flex items-center justify-between">
+                                                            <div className="text-sm text-gray-600">
+                                                                Trang <span className="font-semibold">{currentPage}</span> / <span className="font-semibold">{totalPages}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                                                    disabled={currentPage === 1}
+                                                                    className="px-3 py-2 rounded-lg font-medium transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-2 border-gray-300 hover:bg-gray-100 disabled:hover:bg-white"
+                                                                >
+                                                                    <ChevronLeft className="w-4 h-4" />
+                                                                    Trước
+                                                                </button>
+                                                                
+                                                                {/* Page numbers */}
+                                                                <div className="flex gap-1">
+                                                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                                        let pageNum
+                                                                        if (totalPages <= 5) {
+                                                                            pageNum = i + 1
+                                                                        } else if (currentPage <= 3) {
+                                                                            pageNum = i + 1
+                                                                        } else if (currentPage >= totalPages - 2) {
+                                                                            pageNum = totalPages - 4 + i
+                                                                        } else {
+                                                                            pageNum = currentPage - 2 + i
+                                                                        }
+                                                                        return (
+                                                                            <button
+                                                                                key={pageNum}
+                                                                                onClick={() => setCurrentPage(pageNum)}
+                                                                                className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                                                                                    currentPage === pageNum
+                                                                                        ? 'bg-purple-600 text-white shadow-md'
+                                                                                        : 'bg-white border-2 border-gray-300 hover:bg-gray-100'
+                                                                                }`}
+                                                                            >
+                                                                                {pageNum}
+                                                                            </button>
+                                                                        )
+                                                                    })}
+                                                                </div>
 
-                                    <div>
-                                        <h4 className="font-semibold text-gray-900 mb-2">Tin nhắn tùy chỉnh</h4>
-                                        <textarea value={quickMessage} onChange={(e) => setQuickMessage(e.target.value)} placeholder="Nhập tin nhắn hoặc chọn tin nhắn mẫu ở trên..." className="w-full border border-gray-300 rounded-lg p-3 h-32 focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                                        <div className="flex items-center gap-3 mt-3">
-                                            <button onClick={() => { console.log('Gửi tin nhắn tới', selectedStudent.id, quickMessage); setQuickMessage(''); }} className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
-                                                <Send className="w-5 h-5" /> Gửi tin nhắn
-                                            </button>
-                                            <button onClick={() => setQuickMessage('')} className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
-                                                Xóa
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Appointment Section */}
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                        <Calendar className="w-5 h-5 text-green-600" />
-                                        Đặt lịch hẹn gặp
-                                    </h4>
-                                    <div className="flex gap-3">
-                                        <input type="date" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} className="border border-gray-300 rounded-lg p-2 flex-1 focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                                        <input type="time" value={appointmentTime} onChange={(e) => setAppointmentTime(e.target.value)} className="border border-gray-300 rounded-lg p-2 flex-1 focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                                        <button onClick={() => { console.log('Đặt lịch', selectedStudent.id, appointmentDate, appointmentTime); setAppointmentDate(''); setAppointmentTime(''); }} className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap">
-                                            <Calendar className="w-5 h-5" /> Đặt lịch
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                                                                <button
+                                                                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                                                                    disabled={currentPage === totalPages}
+                                                                    className="px-3 py-2 rounded-lg font-medium transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed bg-white border-2 border-gray-300 hover:bg-gray-100 disabled:hover:bg-white"
+                                                                >
+                                                                    Sau
+                                                                    <ChevronRight className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )
+                                        })()}
+                                    </CardContent>
+                                </Card>
+                            </CardContent>
+                        </Card>
+                    )
+                })()}
             </div>
         </TeacherLayout>
     )
 }
+ 
