@@ -266,8 +266,11 @@ The Ed_Vision Team`,
     }
   }
 
-  async verifyOtp(email: string, code: string) {
-    const account = await this.prisma.account.findUnique({ where: { email } });
+  async verifyOtp(email: string, code: string, linkCode?: string) {
+    const account = await this.prisma.account.findUnique({ 
+      where: { email },
+      include: { roleRel: true },
+    });
     if (!account) throw new BadRequestException('Không tìm thấy tài khoản');
 
     const otp = await (this.prisma as any).otp.findFirst({
@@ -290,6 +293,44 @@ The Ed_Vision Team`,
       where: { account_id: account.account_id },
       data: { status: 'active' },
     });
+
+    // If this is a parent registration (has linkCode), create Parent record and link
+    if (linkCode && account.roleRel?.code === 'parent') {
+      // Validate linkCode and get the pending link
+      const parentStudentLink = await this.prisma.parentStudentLink.findUnique({
+        where: { link_code: linkCode },
+        include: { student: { include: { account: { include: { profile: true } } } } },
+      });
+
+      if (!parentStudentLink) {
+        throw new BadRequestException('Mã liên kết không hợp lệ');
+      }
+
+      if (parentStudentLink.parent_id) {
+        throw new BadRequestException('Mã liên kết đã được sử dụng');
+      }
+
+      // Get profile info if exists
+      const profile = await this.prisma.profile.findUnique({
+        where: { account_id: account.account_id },
+      });
+
+      // Create Parent record
+      const parent = await this.prisma.parent.create({
+        data: {
+          account_id: account.account_id,
+          relationship_type: null, // Will be updated later if needed
+        },
+      });
+
+      // Update the link with parent_id
+      await this.prisma.parentStudentLink.update({
+        where: { link_id: parentStudentLink.link_id },
+        data: { parent_id: parent.parent_id },
+      });
+
+      console.log(`Parent ${parent.parent_id} linked to student ${parentStudentLink.student_id}`);
+    }
 
     return { ok: true };
   }

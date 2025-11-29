@@ -298,7 +298,7 @@ export class AccountManagementService {
       parent: account.parent
         ? {
             parentId: account.parent.parent_id,
-            phoneNumber: account.parent.phone_number,
+            phoneNumber: account.profile?.phone_number || undefined,
             relationshipType: account.parent.relationship_type || undefined,
           }
         : undefined,
@@ -398,7 +398,7 @@ export class AccountManagementService {
       parent: account.parent
         ? {
             parentId: account.parent.parent_id,
-            phoneNumber: account.parent.phone_number,
+            phoneNumber: account.profile?.phone_number || undefined,
             relationshipType: account.parent.relationship_type || undefined,
           }
         : undefined,
@@ -497,9 +497,7 @@ export class AccountManagementService {
         await tx.parent.create({
           data: {
             account_id: newAccount.account_id,
-            full_name: fullName,
-            email: createAccountDto.email,
-            phone_number: phone || '',
+            relationship_type: null,
           },
         });
       }

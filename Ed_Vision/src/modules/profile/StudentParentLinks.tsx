@@ -102,7 +102,7 @@ export default function StudentParentLinks({
       }
 
       // Redirect to register page with the link code
-      window.location.href = `/register?linkCode=${linkCode}`;
+      window.location.href = `/auth/register?linkCode=${linkCode}`;
     } catch (error: any) {
       console.error('Error generating parent link:', error);
       alert(error.message || 'Có lỗi xảy ra khi tạo mã liên kết');
@@ -227,7 +227,7 @@ export default function StudentParentLinks({
           <button
             onClick={handleRegisterParent}
             disabled={isGeneratingLink}
-            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isGeneratingLink ? (
               <>
