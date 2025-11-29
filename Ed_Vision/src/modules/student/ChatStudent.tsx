@@ -31,6 +31,8 @@ export default function ChatStudent({}: Props) {
   const [groupDialogSize, setGroupDialogSize] = useState({ width: 512, height: 600 })
   const [isResizingDialog, setIsResizingDialog] = useState(false)
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'general' | 'notifications' | 'privacy' | 'appearance'>('general')
 
   // Notifications state
   const [notifications, setNotifications] = useState<Array<{
@@ -429,11 +431,14 @@ export default function ChatStudent({}: Props) {
               </div>
 
               <div className="mt-auto pt-6 space-y-1">
-                <button className={navCollapsed ? 'w-full flex items-center justify-center py-3 text-gray-500 rounded-lg' : 'w-full flex items-center space-x-3 px-3 py-3 text-gray-500 hover:bg-gray-50 rounded-lg'}>
+                <button 
+                  onClick={() => setSettingsOpen(true)}
+                  className={navCollapsed ? 'w-full flex items-center justify-center py-3 text-gray-500 hover:bg-gray-50 rounded-lg' : 'w-full flex items-center space-x-3 px-3 py-3 text-gray-500 hover:bg-gray-50 rounded-lg'}
+                >
                   <i className="fas fa-cog text-lg flex-shrink-0" />
                   {!navCollapsed && <span className="sidebar-label font-medium text-sm">Cài đặt</span>}
                 </button>
-                <button className={navCollapsed ? 'w-full flex items-center justify-center py-3 text-gray-500 rounded-lg' : 'w-full flex items-center space-x-3 px-3 py-3 text-gray-500 hover:bg-gray-50 rounded-lg'}>
+                <button className={navCollapsed ? 'w-full flex items-center justify-center py-3 text-gray-500 hover:bg-gray-50 rounded-lg' : 'w-full flex items-center space-x-3 px-3 py-3 text-gray-500 hover:bg-gray-50 rounded-lg'}>
                   <i className="fas fa-question-circle text-lg flex-shrink-0" />
                   {!navCollapsed && <span className="sidebar-label font-medium text-sm">Trợ giúp</span>}
                 </button>
@@ -467,7 +472,7 @@ export default function ChatStudent({}: Props) {
                 <div className="flex space-x-2">
                   <button 
                     onClick={() => {
-                      addNotification('success', 'Đặt lịch thành công', 'Lịch hẹn với cố vấn vào 14:00 ngày 15/11/2025 đã được xác nhận.')
+                      navigate('/student/booking/scheduler')
                     }}
                     className="flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
                   >
@@ -1991,6 +1996,390 @@ export default function ChatStudent({}: Props) {
                 <button className="flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                   <i className="fas fa-envelope text-sm" />
                   <span>Gửi email</span>
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Settings Dialog */}
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0">
+            <DialogHeader className="pb-4 border-b border-gray-100 px-6 pt-6 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-xl font-semibold text-gray-900">Cài đặt Chat</DialogTitle>
+                <button 
+                  onClick={() => setSettingsOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Đóng"
+                >
+                  <i className="fas fa-times text-lg" />
+                </button>
+              </div>
+            </DialogHeader>
+            
+            <div className="flex flex-1 overflow-hidden">
+              {/* Settings Sidebar */}
+              <div className="w-56 border-r border-gray-100 bg-gray-50 p-4 overflow-y-auto">
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => setSettingsTab('general')}
+                    className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      settingsTab === 'general'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <i className="fas fa-sliders-h text-base" />
+                    <span>Chung</span>
+                  </button>
+                  <button
+                    onClick={() => setSettingsTab('notifications')}
+                    className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      settingsTab === 'notifications'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <i className="fas fa-bell text-base" />
+                    <span>Thông báo</span>
+                  </button>
+                  <button
+                    onClick={() => setSettingsTab('privacy')}
+                    className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      settingsTab === 'privacy'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <i className="fas fa-shield-alt text-base" />
+                    <span>Quyền riêng tư</span>
+                  </button>
+                  <button
+                    onClick={() => setSettingsTab('appearance')}
+                    className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      settingsTab === 'appearance'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <i className="fas fa-palette text-base" />
+                    <span>Giao diện</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Settings Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {settingsTab === 'general' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Cài đặt chung</h3>
+                      
+                      {/* Auto-download */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Tự động tải xuống file</div>
+                            <div className="text-xs text-gray-500 mt-1">Tự động tải xuống ảnh, video và tài liệu</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Enter to send */}
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Enter để gửi tin nhắn</div>
+                            <div className="text-xs text-gray-500 mt-1">Sử dụng Shift+Enter để xuống dòng</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Message preview */}
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Xem trước tin nhắn</div>
+                            <div className="text-xs text-gray-500 mt-1">Hiển thị nội dung tin nhắn trong thông báo</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Language */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="font-medium text-gray-900 text-sm mb-2">Ngôn ngữ</div>
+                          <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option>Tiếng Việt</option>
+                            <option>English</option>
+                            <option>中文</option>
+                          </select>
+                        </div>
+
+                        {/* Font size */}
+                        <div className="py-3">
+                          <div className="font-medium text-gray-900 text-sm mb-2">Kích thước chữ</div>
+                          <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option>Nhỏ</option>
+                            <option selected>Trung bình</option>
+                            <option>Lớn</option>
+                            <option>Rất lớn</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'notifications' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Thông báo</h3>
+                      
+                      <div className="space-y-4">
+                        {/* Desktop notifications */}
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Thông báo trên máy tính</div>
+                            <div className="text-xs text-gray-500 mt-1">Nhận thông báo ngay cả khi không mở ứng dụng</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Sound */}
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Âm thanh thông báo</div>
+                            <div className="text-xs text-gray-500 mt-1">Phát âm thanh khi có tin nhắn mới</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Message notifications */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="font-medium text-gray-900 text-sm mb-3">Thông báo tin nhắn</div>
+                          <div className="space-y-2">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="radio" name="msgNotif" className="text-blue-600 focus:ring-blue-500" defaultChecked />
+                              <span className="text-sm text-gray-700">Tất cả tin nhắn</span>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="radio" name="msgNotif" className="text-blue-600 focus:ring-blue-500" />
+                              <span className="text-sm text-gray-700">Chỉ từ cố vấn và nhóm</span>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="radio" name="msgNotif" className="text-blue-600 focus:ring-blue-500" />
+                              <span className="text-sm text-gray-700">Tắt thông báo</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Do not disturb */}
+                        <div className="py-3">
+                          <div className="font-medium text-gray-900 text-sm mb-2">Không làm phiền</div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-gray-600 mb-1 block">Từ</label>
+                              <input type="time" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" defaultValue="22:00" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600 mb-1 block">Đến</label>
+                              <input type="time" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" defaultValue="07:00" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'privacy' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Quyền riêng tư & Bảo mật</h3>
+                      
+                      <div className="space-y-4">
+                        {/* Last seen */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="font-medium text-gray-900 text-sm mb-3">Trạng thái hoạt động</div>
+                          <div className="space-y-2">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="radio" name="lastSeen" className="text-blue-600 focus:ring-blue-500" defaultChecked />
+                              <span className="text-sm text-gray-700">Mọi người</span>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="radio" name="lastSeen" className="text-blue-600 focus:ring-blue-500" />
+                              <span className="text-sm text-gray-700">Chỉ bạn bè</span>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input type="radio" name="lastSeen" className="text-blue-600 focus:ring-blue-500" />
+                              <span className="text-sm text-gray-700">Không ai</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Read receipts */}
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Xác nhận đã đọc</div>
+                            <div className="text-xs text-gray-500 mt-1">Cho người khác biết bạn đã đọc tin nhắn</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Typing indicator */}
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Hiển thị đang nhập</div>
+                            <div className="text-xs text-gray-500 mt-1">Cho người khác biết khi bạn đang soạn tin nhắn</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Blocked users */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-medium text-gray-900 text-sm">Người dùng đã chặn</div>
+                            <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">Quản lý</button>
+                          </div>
+                          <div className="text-xs text-gray-500">Không có người dùng nào bị chặn</div>
+                        </div>
+
+                        {/* Two-factor auth */}
+                        <div className="py-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <div className="font-medium text-gray-900 text-sm">Xác thực hai yếu tố</div>
+                              <div className="text-xs text-gray-500 mt-1">Tăng cường bảo mật tài khoản</div>
+                            </div>
+                            <button className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                              Bật
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'appearance' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Giao diện</h3>
+                      
+                      <div className="space-y-4">
+                        {/* Theme */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="font-medium text-gray-900 text-sm mb-3">Chủ đề</div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <button className="p-3 border-2 border-blue-500 rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                              <div className="w-full h-12 bg-white border border-gray-200 rounded mb-2"></div>
+                              <div className="text-xs font-medium text-center">Sáng</div>
+                            </button>
+                            <button className="p-3 border-2 border-transparent rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                              <div className="w-full h-12 bg-gray-800 rounded mb-2"></div>
+                              <div className="text-xs font-medium text-center">Tối</div>
+                            </button>
+                            <button className="p-3 border-2 border-transparent rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                              <div className="w-full h-12 bg-gradient-to-r from-white to-gray-800 rounded mb-2"></div>
+                              <div className="text-xs font-medium text-center">Tự động</div>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Accent color */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="font-medium text-gray-900 text-sm mb-3">Màu chủ đạo</div>
+                          <div className="flex space-x-3">
+                            {['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-red-500'].map((color) => (
+                              <button key={color} className={`w-10 h-10 ${color} rounded-full border-2 ${color === 'bg-blue-500' ? 'border-gray-800' : 'border-transparent'} hover:scale-110 transition-transform`}></button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Bubble style */}
+                        <div className="py-3 border-b border-gray-100">
+                          <div className="font-medium text-gray-900 text-sm mb-3">Kiểu bong bóng chat</div>
+                          <div className="space-y-3">
+                            <button className="w-full p-3 border-2 border-blue-500 rounded-lg bg-white hover:bg-gray-50 transition-colors text-left">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-1">
+                                  <div className="text-xs font-medium mb-2">Bo tròn (Mặc định)</div>
+                                  <div className="flex space-x-2">
+                                    <div className="px-3 py-1.5 bg-gray-100 rounded-2xl text-xs">Xin chào</div>
+                                    <div className="px-3 py-1.5 bg-blue-500 text-white rounded-2xl text-xs">Hi bạn!</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                            <button className="w-full p-3 border-2 border-transparent rounded-lg bg-white hover:bg-gray-50 transition-colors text-left">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-1">
+                                  <div className="text-xs font-medium mb-2">Vuông góc</div>
+                                  <div className="flex space-x-2">
+                                    <div className="px-3 py-1.5 bg-gray-100 rounded text-xs">Xin chào</div>
+                                    <div className="px-3 py-1.5 bg-blue-500 text-white rounded text-xs">Hi bạn!</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Background */}
+                        <div className="py-3">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="font-medium text-gray-900 text-sm">Hình nền chat</div>
+                            <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">Thay đổi</button>
+                          </div>
+                          <div className="w-full h-24 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-gray-200"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+              <div className="text-xs text-gray-500">
+                Ed Vision Chat v1.0.0
+              </div>
+              <div className="flex space-x-3">
+                <button 
+                  onClick={() => setSettingsOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Hủy
+                </button>
+                <button 
+                  onClick={() => {
+                    setSettingsOpen(false)
+                    addNotification('success', 'Đã lưu cài đặt', 'Các thay đổi của bạn đã được lưu thành công.')
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+                >
+                  Lưu thay đổi
                 </button>
               </div>
             </div>
