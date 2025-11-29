@@ -118,7 +118,10 @@ export default function InstructionsPage({}: Props) {
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate('/student/upload-transcript')}
+                  onClick={() => {
+                    navigate('/student/upload-transcript')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="flex-1 max-w-sm hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
@@ -127,7 +130,10 @@ export default function InstructionsPage({}: Props) {
                   </div>
                 </button>
                 <button
-                  onClick={() => navigate('/student/adjust-parameters')}
+                  onClick={() => {
+                    navigate('/student/adjust-parameters')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="flex-1 max-w-sm hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center justify-center h-14 gap-3 relative">
@@ -258,7 +264,10 @@ export default function InstructionsPage({}: Props) {
               {/* Action Buttons */}
               <div className="text-center space-y-3 pt-4">
                 <Button 
-                  onClick={() => navigate('/student/upload-transcript')}
+                  onClick={() => {
+                    navigate('/student/upload-transcript')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg h-auto inline-flex items-center gap-3"
                 >
                   <img src={iconStart} alt="" className="w-5 h-5" />
