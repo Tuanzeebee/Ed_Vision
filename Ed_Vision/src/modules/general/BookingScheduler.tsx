@@ -115,6 +115,12 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
   const fetchStudentInfo = useCallback(async () => {
     if (studentInfoResolved) return
+    // Skip if student prop is already provided (parent role passes student via prop)
+    if (student) {
+      setStudentInfo(student)
+      setStudentInfoResolved(true)
+      return
+    }
     try {
       const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
       const r = await fetch('/api/booking/me/student', {
@@ -132,13 +138,16 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         return
       }
       const st = parsed?.student ?? parsed
-      if (st) setStudentInfo(st)
+      // Only set studentInfo if we got valid student data (not {student: null} for parent role)
+      if (st && st !== null && typeof st === 'object' && Object.keys(st).length > 1) {
+        setStudentInfo(st)
+      }
     } catch (e) {
       // ignore
     } finally {
       setStudentInfoResolved(true)
     }
-  }, [studentInfoResolved])
+  }, [studentInfoResolved, student])
 
   const fetchParentInfo = useCallback(async () => {
     if (parentInfoResolved) return
@@ -515,7 +524,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     setSelectedStudentId((prev) => {
       const existing = linkedStudents.find((st) => st.studentId === prev)
       if (existing) return prev
-      return linkedStudents[0]?.studentId ?? null
+      const firstId = linkedStudents[0]?.studentId ?? null
+      return firstId
     })
   }, [linkedStudents])
 
@@ -1269,7 +1279,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                             instructorProfile?.full_name ||
                             advisorName ||
                             (instructorProfile
-                              ? instructorProfile.employee_code || (instructorProfile.instructor_id ? `Giảng viên #${instructorProfile.instructor_id}` : 'Giảng viên')
+                              ? instructorProfile.full_name || instructorProfile.employee_code || (instructorProfile.instructor_id ? `Giảng viên #${instructorProfile.instructor_id}` : 'Giảng viên')
                               : activeInstructorId
                                 ? `Giảng viên #${activeInstructorId}`
                                 : 'Giảng viên')
@@ -1283,34 +1293,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         })()}
                       </p>
                     </div>
-                    <div className="bg-white/20 rounded-xl p-2 backdrop-blur-sm">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                    </div>
-                    {isParentRole && (
-                      <div className="bg-white/15 rounded-lg p-2.5 backdrop-blur-sm text-xs">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="opacity-90">Liên hệ phụ huynh</span>
-                          <span className="font-semibold">{contactFields.name || '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="opacity-90">Điện thoại</span>
-                          <span className="font-semibold">{contactFields.phone || '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="opacity-90">Email</span>
-                          <span className="font-semibold truncate max-w-[160px]" title={contactFields.email}>
-                            {contactFields.email || '—'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                    
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">

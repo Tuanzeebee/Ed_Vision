@@ -3,8 +3,8 @@ type AcademicInfo = {
   major: string;
   year: string;
   class: string;
-  gpa: number;
-  credits: number;
+  gpa?: number;
+  credits?: number;
 };
 
 type Props = {
@@ -35,29 +35,29 @@ export default function StudentAcademicInfo({ academicInfo, onEdit }: Props) {
 
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Ngành học</label>
-          <p className="text-sm font-medium text-gray-900">{academicInfo.major}</p>
+          <p className="text-sm font-medium text-gray-900">{academicInfo.major || "—"}</p>
         </div>
 
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Khóa</label>
-          <p className="text-sm font-medium text-gray-900">{academicInfo.year}</p>
+          <p className="text-sm font-medium text-gray-900">{academicInfo.year || "—"}</p>
         </div>
 
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Lớp</label>
-          <p className="text-sm font-medium text-gray-900">{academicInfo.class}</p>
+          <p className="text-sm font-medium text-gray-900">{academicInfo.class || "—"}</p>
         </div>
 
         <div className="pt-4 border-t border-gray-200">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-blue-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-blue-600">
-                {academicInfo.gpa.toFixed(2)}
+                {academicInfo.gpa !== undefined ? academicInfo.gpa.toFixed(2) : "—"}
               </p>
               <p className="text-xs text-gray-600 mt-1">GPA hiện tại</p>
             </div>
             <div className="bg-indigo-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-indigo-600">{academicInfo.credits}</p>
+              <p className="text-2xl font-bold text-indigo-600">{academicInfo.credits !== undefined ? academicInfo.credits : "—"}</p>
               <p className="text-xs text-gray-600 mt-1">Tín chỉ tích lũy</p>
             </div>
           </div>

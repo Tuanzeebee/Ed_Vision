@@ -42,6 +42,7 @@ model Profile {
   profile_id    Int       @id @default(autoincrement())
   account_id    Int       @unique
   full_name     String    @db.VarChar(150)
+  phone_number  String?   @db.VarChar(30)
   date_of_birth DateTime? @db.Date
   gender        String?   @db.VarChar(16)
   address       String?
@@ -157,7 +158,6 @@ model ParentStudentLink {
   link_id      Int     @id @default(autoincrement())
   parent_id    Int
   student_id   Int
-  relationship String? @db.VarChar(32)
   link_code    String? @unique @db.VarChar(10)
   parent       Parent  @relation(fields: [parent_id], references: [parent_id], onDelete: Cascade)
   student      Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)

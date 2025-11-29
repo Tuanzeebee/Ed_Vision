@@ -63,25 +63,33 @@ export class TokenManager {
    * Check if token expired due to tab being closed for too long
    */
   private static isTokenExpiredFromTabClose(): boolean {
-    const sessionDataStr = sessionStorage.getItem(this.SESSION_TOKEN_KEY)
-    if (!sessionDataStr) {
-      // No session data means tab was potentially closed and reopened
-      // Check if localStorage token exists and when it was last updated
-      const tokenDataStr = localStorage.getItem(this.TOKEN_KEY)
-      if (!tokenDataStr) return true
-
-      try {
-        const tokenData: TokenData = JSON.parse(tokenDataStr)
-        const now = Date.now()
-        const timeSinceLastActivity = now - tokenData.lastActivity
-        
-        // If more than 5 minutes since last activity and no session data, consider expired
-        return timeSinceLastActivity > (this.TAB_CLOSE_TIMEOUT_MINUTES * 60 * 1000)
-      } catch (error) {
-        return true
-      }
+    // Check if localStorage token exists and when it was last updated
+    const tokenDataStr = localStorage.getItem(this.TOKEN_KEY)
+    if (!tokenDataStr) {
+      return true
     }
-    return false
+
+    try {
+      const tokenData: TokenData = JSON.parse(tokenDataStr)
+      const now = Date.now()
+      const timeSinceLastActivity = now - tokenData.lastActivity
+      
+      // If more than 5 minutes since last activity, consider expired
+      const isExpired = timeSinceLastActivity > (this.TAB_CLOSE_TIMEOUT_MINUTES * 60 * 1000)
+      
+      if (!isExpired) {
+        // Token is still valid, ensure session data exists
+        const sessionDataStr = sessionStorage.getItem(this.SESSION_TOKEN_KEY)
+        if (!sessionDataStr) {
+          sessionStorage.setItem(this.SESSION_TOKEN_KEY, JSON.stringify({ tabOpened: now }))
+        }
+      }
+      
+      return isExpired
+    } catch (error) {
+      console.error('Error checking token expiry:', error)
+      return true
+    }
   }
 
   /**

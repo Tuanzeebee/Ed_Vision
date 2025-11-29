@@ -41,6 +41,9 @@ export class InstructorAvailabilityService {
       position: instructor.position,
       department_id: instructor.department_id,
       status: instructor.status,
+      full_name: instructor.account?.profile?.full_name || null,
+      avatar_url: instructor.account?.profile?.avatar_url || null,
+      email: instructor.account?.email || null,
     };
   }
 
