@@ -10,11 +10,44 @@ interface AuthState {
 }
 
 export const useAuth = () => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    user: null,
-    isLoading: true,
-    timeRemaining: 0
+  // Initialize auth state from localStorage immediately to prevent flash
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    try {
+      const token = TokenManager.getToken()
+      if (!token || TokenManager.isTokenExpired()) {
+        return {
+          isAuthenticated: false,
+          user: null,
+          isLoading: false,
+          timeRemaining: 0
+        }
+      }
+
+      const userDataStr = localStorage.getItem('user')
+      let user = null
+      try {
+        user = userDataStr ? JSON.parse(userDataStr) : null
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+      }
+
+      const timeRemaining = TokenManager.getTimeRemaining()
+
+      return {
+        isAuthenticated: true,
+        user,
+        isLoading: false,
+        timeRemaining
+      }
+    } catch (error) {
+      console.error('Error initializing auth state:', error)
+      return {
+        isAuthenticated: false,
+        user: null,
+        isLoading: false,
+        timeRemaining: 0
+      }
+    }
   })
   // navigation handled via full page redirects on logout; keep router hook available if needed elsewhere
   

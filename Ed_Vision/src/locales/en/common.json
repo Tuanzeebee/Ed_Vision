@@ -73,7 +73,11 @@
       "ourFeatures": "Our Features",
       "research": "Research",
       "forEducators": "For Educators",
-      "forEnterprise": "For Enterprise"
+      "forEnterprise": "For Enterprise",
+      "learn": "Learn",
+      "predict": "Predict",
+      "plan": "Plan",
+      "communicate": "Communicate"
     },
     "features": {
       "gradeForecasting": {
@@ -87,6 +91,56 @@
       "studyOptimization": {
         "title": "Study Optimization",
         "description": "Personalized study plans"
+      }
+    },
+    "menu": {
+      "learn": {
+        "courseOverview": {
+          "title": "Course Overview",
+          "description": "View all your enrolled subjects"
+        },
+        "uploadTranscript": {
+          "title": "Upload Transcript",
+          "description": "Update your academic records"
+        },
+        "courseDetail": {
+          "title": "Course Detail",
+          "description": "Detailed course information"
+        }
+      },
+      "predict": {
+        "gradeForecast": {
+          "title": "Grade Forecast",
+          "description": "Predict next-semester scores"
+        },
+        "predictionHistory": {
+          "title": "Prediction History",
+          "description": "View past predictions"
+        }
+      },
+      "plan": {
+        "academicPlanning": {
+          "title": "Academic Planning",
+          "description": "Plan your semester schedule"
+        },
+        "adjustParameters": {
+          "title": "Adjust Parameters",
+          "description": "Fine-tune prediction settings"
+        }
+      },
+      "communicate": {
+        "chatWithTeachers": {
+          "title": "Chat with Teachers",
+          "description": "Real-time messaging"
+        },
+        "messages": {
+          "title": "Messages",
+          "description": "View all messages"
+        },
+        "appointments": {
+          "title": "Appointments",
+          "description": "Schedule meetings"
+        }
       }
     },
     "educators": {

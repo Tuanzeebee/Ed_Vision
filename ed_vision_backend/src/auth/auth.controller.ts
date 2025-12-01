@@ -4,6 +4,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { InstructorStatsGateway } from '../admin_be/instructor-management/instructor-stats.gateway';
 import { StudentStatsGateway } from '../admin_be/student-management/student-stats.gateway';
 
@@ -70,6 +72,23 @@ export class AuthController {
     await this.broadcastStudentStats();
     
     return { success: true, data: result };
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const result = await this.authService.forgotPassword(dto.email);
+    return { success: true, message: result };
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const result = await this.authService.resetPassword(
+      dto.email,
+      dto.code,
+      dto.newPassword,
+      dto.confirmPassword
+    );
+    return { success: true, message: result };
   }
 
   private async broadcastInstructorStats() {
