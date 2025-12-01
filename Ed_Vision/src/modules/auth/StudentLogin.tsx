@@ -29,8 +29,7 @@ export default function StudentLogin({
   }
 
   const handleResetPassword = () => {
-    // Navigate to reset password page (to be created later)
-    console.log("Navigate to reset password")
+    navigate("/auth/forgot-password")
   }
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)

@@ -47,9 +47,9 @@ export class OtpService {
     }
 
     // Rate limiting: cooldown between sends and max sends per time window
-    const cooldownSec = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60);
+    const cooldownSec = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 30); // Giảm từ 60 xuống 30 giây
     const windowMinutes = Number(process.env.OTP_WINDOW_MINUTES || 30);
-    const maxPerWindow = Number(process.env.OTP_MAX_PER_WINDOW || 5);
+    const maxPerWindow = Number(process.env.OTP_MAX_PER_WINDOW || 10); // Tăng từ 5 lên 10 lần
 
     // check last OTP created
     const lastOtp = await (this.prisma as any).otp.findFirst({
@@ -244,25 +244,29 @@ The Ed_Vision Team`,
     };
 
     try {
-      const result = await transporter.sendMail(mailOptions);
+      // Add timeout to prevent hanging - 10 seconds max
+      const sendPromise = transporter.sendMail(mailOptions);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email send timeout')), 10000)
+      );
+      
+      const result = await Promise.race([sendPromise, timeoutPromise]) as any;
+      
       // log send result for debugging (do not log OTP code in production logs)
       console.log('OTP email sent', {
         to: email,
-        messageId: result.messageId,
-        accepted: result.accepted,
+        messageId: result?.messageId,
+        accepted: result?.accepted,
       });
       return { ok: true };
     } catch (err) {
-      // remove persisted OTP on failure to avoid orphaned codes
-      try {
-        await (this.prisma as any).otp.deleteMany({
-          where: { account_id: account.account_id, code },
-        });
-      } catch (e) {
-        console.error('Failed to cleanup OTP after send failure', e);
-      }
-      console.error('Failed to send OTP email', err);
-      throw new InternalServerErrorException('Không thể gửi email xác thực');
+      // Don't remove OTP on failure - user can still use it if email arrives late
+      // Just log the error
+      console.error('Failed to send OTP email (OTP still valid)', err);
+      
+      // Return success anyway - OTP is in database and user can use it
+      // This prevents blocking user flow due to slow email delivery
+      return { ok: true, emailDeliveryDelayed: true };
     }
   }
 
@@ -294,6 +298,53 @@ The Ed_Vision Team`,
       data: { status: 'active' },
     });
 
+    // Create Profile record if it doesn't exist
+    const existingProfile = await this.prisma.profile.findUnique({
+      where: { account_id: account.account_id },
+    });
+
+    if (!existingProfile) {
+      // Extract name from email (before @)
+      const emailName = email.split('@')[0];
+      const defaultName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+
+      await this.prisma.profile.create({
+        data: {
+          account_id: account.account_id,
+          full_name: defaultName, // Will be updated by user later
+          phone_number: null,
+          date_of_birth: null,
+          gender: null,
+          address: null,
+          avatar_url: null,
+          nationality: null,
+        },
+      });
+    }
+
+    // If this is a student registration (no linkCode), create Student record
+    if (!linkCode && account.roleRel?.code === 'student') {
+      const existingStudent = await this.prisma.student.findUnique({
+        where: { account_id: account.account_id },
+      });
+
+      if (!existingStudent) {
+        // Extract student code from email (before @)
+        const studentCode = email.split('@')[0];
+
+        await this.prisma.student.create({
+          data: {
+            account_id: account.account_id,
+            student_code: studentCode,
+            major: null,
+            cohort_year: null,
+            class_id: null,
+            status: 'active',
+          },
+        });
+      }
+    }
+
     // If this is a parent registration (has linkCode), create Parent record and link
     if (linkCode && account.roleRel?.code === 'parent') {
       // Validate linkCode and get the pending link
@@ -310,24 +361,27 @@ The Ed_Vision Team`,
         throw new BadRequestException('Mã liên kết đã được sử dụng');
       }
 
-      // Get profile info if exists
-      const profile = await this.prisma.profile.findUnique({
+      // Create Parent record if doesn't exist
+      let parent = await this.prisma.parent.findUnique({
         where: { account_id: account.account_id },
       });
 
-      // Create Parent record
-      const parent = await this.prisma.parent.create({
-        data: {
-          account_id: account.account_id,
-          relationship_type: null, // Will be updated later if needed
-        },
-      });
+      if (!parent) {
+        parent = await this.prisma.parent.create({
+          data: {
+            account_id: account.account_id,
+            relationship_type: null, // Will be updated later if needed
+          },
+        });
+      }
 
-      // Update the link with parent_id
-      await this.prisma.parentStudentLink.update({
-        where: { link_id: parentStudentLink.link_id },
-        data: { parent_id: parent.parent_id },
-      });
+      // Update the link with parent_id if not already set
+      if (!parentStudentLink.parent_id) {
+        await this.prisma.parentStudentLink.update({
+          where: { link_id: parentStudentLink.link_id },
+          data: { parent_id: parent.parent_id },
+        });
+      }
 
       console.log(`Parent ${parent.parent_id} linked to student ${parentStudentLink.student_id}`);
     }

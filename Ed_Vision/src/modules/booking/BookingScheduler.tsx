@@ -394,12 +394,22 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           }
           setWeekDates(dates)
 
-          // default select first day in the week that has any slot OR is marked available, otherwise first day
+          // default select first day in the week that has any slot OR is marked available AND is today or in the future
           let selIdx = 0
           const map = new Map(mapped.map((x: any) => [x.date, x]))
+          
+          // Get today in Vietnam timezone (GMT+7)
+          const now = new Date()
+          const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+          const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
+          
           for (let i = 0; i < dates.length; i++) {
+            const dateObj = new Date(dates[i] + 'T00:00:00Z')
+            const isPast = dateObj < today
             const d = map.get(dates[i])
-            if (d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
+            
+            // Only select if not in the past and has availability
+            if (!isPast && d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
               selIdx = i
               break
             }
@@ -865,14 +875,21 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                       const dayNum = dateObj.getUTCDate()
                                       const map = new Map(availabilities.map((x: any) => [x.date, x]))
                                       const d = map.get(dateStr)
-                                      const available = !!(d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable))
+                                      
+                                      // Check if date is in the past (before today in Vietnam timezone GMT+7)
+                                      const now = new Date()
+                                      const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+                                      const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
+                                      const isPast = dateObj < today
+                                      
+                                      const available = !isPast && !!(d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable))
                                       return (
                                         <div
                                           key={dateStr}
                                           role="button"
                                           onClick={() => available && setSelectedDateIdx(idx)}
                                           className={`rounded-lg p-2 text-center transition-all cursor-pointer ${
-                                            !available
+                                            !available || isPast
                                               ? 'bg-gray-100 border border-gray-200 opacity-50 cursor-not-allowed'
                                               : selectedDateIdx === idx
                                                 ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md scale-105'

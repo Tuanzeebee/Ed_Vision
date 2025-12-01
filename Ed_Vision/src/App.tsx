@@ -35,6 +35,8 @@ import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
 import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
 import AuthStudentOTPVerification from "@/modules/auth/StudentOTPVerification";
+import AuthForgotPassword from "@/modules/auth/ForgotPassword";
+import AuthResetPassword from "@/modules/auth/ResetPassword";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
@@ -90,6 +92,8 @@ function App() {
                                         <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
                                         <Route path="/auth/register" element={<AuthRedirectWrapper><AuthStudentRegister /></AuthRedirectWrapper>} />
                                         <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
+                                        <Route path="/auth/forgot-password" element={<AuthRedirectWrapper><AuthForgotPassword /></AuthRedirectWrapper>} />
+                                        <Route path="/auth/reset-password" element={<AuthRedirectWrapper><AuthResetPassword /></AuthRedirectWrapper>} />
                                         <Route path="/student/course-overview" element={<ProtectedRoute permission="student_course_overview"><StudentCourseOverview /></ProtectedRoute>} />
                                         <Route path="/student/upload-transcript" element={<ProtectedRoute permission="student_upload_transcript"><UploadTranscript /></ProtectedRoute>} />
                                         <Route path="/student/instructions" element={<ProtectedRoute permission="student_course_overview"><InstructionsPage /></ProtectedRoute>} />
