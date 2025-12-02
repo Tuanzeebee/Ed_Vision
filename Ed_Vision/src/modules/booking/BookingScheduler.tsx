@@ -59,7 +59,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // prefer explicit instructor id, fall back to route/query params and finally demo id 3
+  // prefer explicit instructor id, fall back to route/query params, or advisor from student info
   const routeInstructorId = useMemo(() => {
     if (!instructorIdParam) return undefined
     const parsed = Number(instructorIdParam)
@@ -115,6 +115,12 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
   const fetchStudentInfo = useCallback(async () => {
     if (studentInfoResolved) return
+    // Skip if student prop is already provided (parent role passes student via prop)
+    if (student) {
+      setStudentInfo(student)
+      setStudentInfoResolved(true)
+      return
+    }
     try {
       const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
       const r = await fetch('/api/booking/me/student', {
@@ -132,13 +138,16 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         return
       }
       const st = parsed?.student ?? parsed
-      if (st) setStudentInfo(st)
+      // Only set studentInfo if we got valid student data (not {student: null} for parent role)
+      if (st && st !== null && typeof st === 'object' && Object.keys(st).length > 1) {
+        setStudentInfo(st)
+      }
     } catch (e) {
       // ignore
     } finally {
       setStudentInfoResolved(true)
     }
-  }, [studentInfoResolved])
+  }, [studentInfoResolved, student])
 
   const fetchParentInfo = useCallback(async () => {
     if (parentInfoResolved) return
@@ -181,9 +190,9 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     } else if (studentInfo?.advisor?.instructorId) {
       targetInstructorId = studentInfo.advisor.instructorId
       targetAccountId = studentInfo.advisor.accountId ?? null
-    } else if (studentInfoResolved && activeInstructorId === null) {
-      targetInstructorId = 3
     }
+    // Removed hardcoded fallback to instructor ID 3
+    // If no instructor is found, targetInstructorId remains null
 
     if (targetInstructorId !== null && targetInstructorId !== activeInstructorId) {
       setActiveInstructorId(targetInstructorId)
@@ -385,12 +394,22 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           }
           setWeekDates(dates)
 
-          // default select first day in the week that has any slot OR is marked available, otherwise first day
+          // default select first day in the week that has any slot OR is marked available AND is today or in the future
           let selIdx = 0
           const map = new Map(mapped.map((x: any) => [x.date, x]))
+          
+          // Get today in Vietnam timezone (GMT+7)
+          const now = new Date()
+          const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+          const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
+          
           for (let i = 0; i < dates.length; i++) {
+            const dateObj = new Date(dates[i] + 'T00:00:00Z')
+            const isPast = dateObj < today
             const d = map.get(dates[i])
-            if (d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
+            
+            // Only select if not in the past and has availability
+            if (!isPast && d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
               selIdx = i
               break
             }
@@ -515,7 +534,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     setSelectedStudentId((prev) => {
       const existing = linkedStudents.find((st) => st.studentId === prev)
       if (existing) return prev
-      return linkedStudents[0]?.studentId ?? null
+      const firstId = linkedStudents[0]?.studentId ?? null
+      return firstId
     })
   }, [linkedStudents])
 
@@ -775,6 +795,25 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           <div className="p-4 sm:p-5">
             {currentStep === 1 && (
               <div id="step1" className="animate-in fade-in duration-300">
+                {!activeInstructorId && !loading ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-4">
+                      <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy giảng viên cố vấn</h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Vui lòng liên hệ với phòng Đào tạo để được phân công giảng viên cố vấn học tập.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                 <div className="text-center mb-5">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 mb-3 shadow">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -803,7 +842,21 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    Tuần từ 2 - 8 Tháng 12, 2024
+                    {weekDates.length > 0 ? (() => {
+                      const firstDate = new Date(weekDates[0] + 'T00:00:00Z')
+                      const lastDate = new Date(weekDates[weekDates.length - 1] + 'T00:00:00Z')
+                      const firstDay = firstDate.getUTCDate()
+                      const lastDay = lastDate.getUTCDate()
+                      const firstMonth = firstDate.getUTCMonth() + 1
+                      const lastMonth = lastDate.getUTCMonth() + 1
+                      const year = firstDate.getUTCFullYear()
+                      
+                      if (firstMonth === lastMonth) {
+                        return `Tuần từ ${firstDay} - ${lastDay} Tháng ${firstMonth}, ${year}`
+                      } else {
+                        return `Tuần từ ${firstDay} Tháng ${firstMonth} - ${lastDay} Tháng ${lastMonth}, ${year}`
+                      }
+                    })() : 'Chọn tuần'}
                   </h2>
 
                   {groupedTotal === 0 && (
@@ -822,14 +875,21 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                       const dayNum = dateObj.getUTCDate()
                                       const map = new Map(availabilities.map((x: any) => [x.date, x]))
                                       const d = map.get(dateStr)
-                                      const available = !!(d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable))
+                                      
+                                      // Check if date is in the past (before today in Vietnam timezone GMT+7)
+                                      const now = new Date()
+                                      const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+                                      const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
+                                      const isPast = dateObj < today
+                                      
+                                      const available = !isPast && !!(d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable))
                                       return (
                                         <div
                                           key={dateStr}
                                           role="button"
                                           onClick={() => available && setSelectedDateIdx(idx)}
                                           className={`rounded-lg p-2 text-center transition-all cursor-pointer ${
-                                            !available
+                                            !available || isPast
                                               ? 'bg-gray-100 border border-gray-200 opacity-50 cursor-not-allowed'
                                               : selectedDateIdx === idx
                                                 ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md scale-105'
@@ -1197,6 +1257,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                     </button>
                   </div>
                 </div>
+                </>
+                )}
               </div>
             )}
 
@@ -1234,7 +1296,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                             instructorProfile?.full_name ||
                             advisorName ||
                             (instructorProfile
-                              ? instructorProfile.employee_code || (instructorProfile.instructor_id ? `Giảng viên #${instructorProfile.instructor_id}` : 'Giảng viên')
+                              ? instructorProfile.full_name || instructorProfile.employee_code || (instructorProfile.instructor_id ? `Giảng viên #${instructorProfile.instructor_id}` : 'Giảng viên')
                               : activeInstructorId
                                 ? `Giảng viên #${activeInstructorId}`
                                 : 'Giảng viên')
@@ -1248,34 +1310,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         })()}
                       </p>
                     </div>
-                    <div className="bg-white/20 rounded-xl p-2 backdrop-blur-sm">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                    </div>
-                    {isParentRole && (
-                      <div className="bg-white/15 rounded-lg p-2.5 backdrop-blur-sm text-xs">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="opacity-90">Liên hệ phụ huynh</span>
-                          <span className="font-semibold">{contactFields.name || '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="opacity-90">Điện thoại</span>
-                          <span className="font-semibold">{contactFields.phone || '—'}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="opacity-90">Email</span>
-                          <span className="font-semibold truncate max-w-[160px]" title={contactFields.email}>
-                            {contactFields.email || '—'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                    
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">

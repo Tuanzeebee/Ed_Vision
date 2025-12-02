@@ -17,6 +17,7 @@ export default function StudentOTPVerification({
   const navigate = useNavigate()
   const location = useLocation()
   const email = location.state?.email || "example@dtu.edu.vn"
+  const linkCode = location.state?.linkCode || null // Get linkCode from navigation state
   const [otp, setOtp] = useState(["", "", "", ""])
   const [countdown, setCountdown] = useState(60)
   const [isResendDisabled, setIsResendDisabled] = useState(true)
@@ -89,7 +90,11 @@ export default function StudentOTPVerification({
       fetch('http://localhost:3000/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: otpCode }),
+        body: JSON.stringify({ 
+          email, 
+          code: otpCode,
+          ...(linkCode && { linkCode }) // Include linkCode if present (parent registration)
+        }),
       })
         .then(async (res) => {
           if (!res.ok) {

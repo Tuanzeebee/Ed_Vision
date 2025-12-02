@@ -205,7 +205,7 @@ async function main() {
   }
 
   // student defaults (allow course_overview, profile)
-  const studentRole = await prisma.role.findUnique({ where: { code: 'student' } })
+  const studentRole = await prisma.role.findUnique({ where: { code: 'student' } });
   if (studentRole) {
     await prisma.rolePermission.deleteMany({
       where: { roleId: studentRole.id },

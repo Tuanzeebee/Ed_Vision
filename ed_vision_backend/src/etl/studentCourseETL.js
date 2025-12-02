@@ -59,7 +59,7 @@ async function processStudentCourseEvent(event) {
       }
 
       // Query ALL completed course records from Postgres (source of truth) to avoid race conditions
-// This ensures accurate aggregation even when multiple events process simultaneously
+      // This ensures accurate aggregation even when multiple events process simultaneously
       let new_total_credits = 0;
       let new_gpa = 0;
 
@@ -121,7 +121,7 @@ async function processStudentCourseEvent(event) {
         VALUES (S.record_sk, S.student_sk, S.academic_year, S.semester_number, S.total_credits, S.gpa, S.gpa_category, S.updated_at)`;
 
       const params = {
-record_sk: record_sk != null ? Number(record_sk) : null,
+        record_sk: record_sk != null ? Number(record_sk) : null,
         student_sk: Number(student_sk),
         academic_year: String(academic_year),
         semester_number: Number(semester_number),

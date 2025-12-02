@@ -73,7 +73,11 @@
       "ourFeatures": "Tính năng của chúng tôi",
       "research": "Nghiên cứu",
       "forEducators": "Dành cho Giáo viên",
-      "forEnterprise": "Dành cho Doanh nghiệp"
+      "forEnterprise": "Dành cho Doanh nghiệp",
+      "learn": "Học tập",
+      "predict": "Dự đoán",
+      "plan": "Lập kế hoạch",
+      "communicate": "Giao tiếp"
     },
     "features": {
       "gradeForecasting": {
@@ -87,6 +91,56 @@
       "studyOptimization": {
         "title": "Tối ưu hóa Học tập",
         "description": "Kế hoạch học tập cá nhân hóa"
+      }
+    },
+    "menu": {
+      "learn": {
+        "courseOverview": {
+          "title": "Tổng quan Khóa học",
+          "description": "Xem tất cả môn học đã đăng ký"
+        },
+        "uploadTranscript": {
+          "title": "Tải lên Bảng điểm",
+          "description": "Cập nhật hồ sơ học tập"
+        },
+        "courseDetail": {
+          "title": "Chi tiết Khóa học",
+          "description": "Thông tin chi tiết môn học"
+        }
+      },
+      "predict": {
+        "gradeForecast": {
+          "title": "Dự đoán Điểm",
+          "description": "Dự đoán điểm học kỳ tiếp theo"
+        },
+        "predictionHistory": {
+          "title": "Lịch sử Dự đoán",
+          "description": "Xem các dự đoán trước đây"
+        }
+      },
+      "plan": {
+        "academicPlanning": {
+          "title": "Lập kế hoạch Học tập",
+          "description": "Lên kế hoạch cho học kỳ"
+        },
+        "adjustParameters": {
+          "title": "Điều chỉnh Tham số",
+          "description": "Tinh chỉnh cài đặt dự đoán"
+        }
+      },
+      "communicate": {
+        "chatWithTeachers": {
+          "title": "Chat với Giảng viên",
+          "description": "Nhắn tin thời gian thực"
+        },
+        "messages": {
+          "title": "Tin nhắn",
+          "description": "Xem tất cả tin nhắn"
+        },
+        "appointments": {
+          "title": "Lịch hẹn",
+          "description": "Đặt lịch gặp mặt"
+        }
       }
     },
     "educators": {

@@ -8,6 +8,8 @@ export interface TimeSlotResponse {
   autoAccept: boolean;
   note?: string;
   bookedCount?: number;
+  meetingLink?: string;
+  meetingLocation?: string;
 }
 
 export interface AvailabilityDateResponse {

@@ -32,9 +32,90 @@ export default function Header({
   // Use auth hook for authentication state
   const { isAuthenticated, user, getDashboardPath, logout } = useAuth()
 
-  // Local UI state for the profile menu 
+  // Local UI state for the profile menu and avatar
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  
+  // Initialize avatar and name from user object immediately (no flash)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    if (!isAuthenticated) return null
+    return user?.avatarUrl || user?.avatar_url || user?.avatar || null
+  })
+  
+  const [displayName, setDisplayName] = useState<string | null>(() => {
+    if (!isAuthenticated) return null
+    return user?.fullName || user?.full_name || user?.name || null
+  })
+
+  // Fetch avatar and profile name from profile API
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!isAuthenticated) {
+        setAvatarUrl(null)
+        setDisplayName(null)
+        return
+      }
+
+      // Check if user object already has full data
+      const existingAvatar = user?.avatarUrl || user?.avatar_url || user?.avatar
+      const existingName = user?.fullName || user?.full_name || user?.name
+      
+      if (existingAvatar && existingName) {
+        setAvatarUrl(existingAvatar)
+        setDisplayName(existingName)
+        return
+      }
+
+      // Fetch from profile API
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(buildUrl('/profile/me'), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        })
+
+        if (response.ok) {
+          const profileData = await response.json()
+          const avatar = profileData?.profile?.avatarUrl || profileData?.avatarUrl || null
+          const fullName = profileData?.profile?.fullName || profileData?.profile?.full_name || profileData?.fullName || null
+          
+          if (avatar) {
+            setAvatarUrl(avatar)
+          }
+          
+          if (fullName) {
+            setDisplayName(fullName)
+          }
+          
+          // Update user object in localStorage
+          const userStr = localStorage.getItem('user')
+          if (userStr) {
+            try {
+              const userObj = JSON.parse(userStr)
+              if (avatar) {
+                userObj.avatarUrl = avatar
+                userObj.avatar = avatar
+              }
+              if (fullName) {
+                userObj.fullName = fullName
+                userObj.full_name = fullName
+                userObj.name = fullName
+              }
+              localStorage.setItem('user', JSON.stringify(userObj))
+            } catch (e) {
+              console.error('Failed to update user data in localStorage', e)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile data:', error)
+      }
+    }
+
+    fetchProfile()
+  }, [isAuthenticated, user?.avatarUrl, user?.avatar_url, user?.avatar, user?.fullName, user?.full_name, user?.name])
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -58,8 +139,8 @@ export default function Header({
 
   // Auth state is managed by useAuth hook - no need for manual event listeners
 
-  // Get user display info
-  const studentName = user?.fullName || user?.name || user?.email || (isAdminMode ? "Admin User" : isTeacherMode ? "Teacher" : "Guest")
+  // Get user display info - prioritize fullName from state or user object, fallback to email
+  const studentName = displayName || user?.fullName || user?.full_name || user?.name || user?.email || (isAdminMode ? "Admin User" : isTeacherMode ? "Teacher" : "Guest")
   const roleCode = (user?.roleRel?.code || user?.role || '') as string
   const studentRole = roleCode ? roleCode : (isAdminMode ? t('common:header.user.administrator') : isTeacherMode ? "Giảng viên" : t('common:header.user.student'))
 
@@ -82,6 +163,15 @@ export default function Header({
 
   // mark unused prop as referenced to satisfy strict linting
   void isLandingPage
+
+  // Bell Icon Component
+  function BellIcon() {
+    return (
+      <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+    )
+  }
 
   return (
     <header className={`bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 ${className}`}>
@@ -107,82 +197,154 @@ export default function Header({
               <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
             )}
           </div>          {/* Navigation - chỉ hiển thị khi không phải admin mode và teacher mode */}
-          {showNavigation && !isAdminMode && !isTeacherMode && (
-            <nav className="hidden md:flex items-center space-x-8">
-              {/* Our Features Dropdown */}
+          {showNavigation && !isAdminMode && !isTeacherMode && isAuthenticated && (
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+              {/* Learn Dropdown */}
               <div className="relative group">
-                <button className="flex items-center space-x-1 text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                  <span>{t('common:header.navigation.ourFeatures')}</span>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
+                  {t('common:header.navigation.learn')}
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <div className="py-3">
-                    <a href="#" className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
+                <div className="absolute top-full left-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2 space-y-1">
+                    <a href="/student/course-overview" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-blue-50 text-blue-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                       </div>
                       <div>
-                        <div className="font-medium">{t('common:header.features.gradeForecasting.title')}</div>
-                        <div className="text-xs text-gray-500">{t('common:header.features.gradeForecasting.description')}</div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.learn.courseOverview.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.learn.courseOverview.description')}</div>
                       </div>
                     </a>
-                    <a href="#" className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                        </svg>
+                    <a href="/student/upload-transcript" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-purple-50 text-purple-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                       </div>
                       <div>
-                        <div className="font-medium">{t('common:header.features.performanceAnalytics.title')}</div>
-                        <div className="text-xs text-gray-500">{t('common:header.features.performanceAnalytics.description')}</div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.learn.uploadTranscript.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.learn.uploadTranscript.description')}</div>
                       </div>
                     </a>
-                    <a href="#" className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
-                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                        </svg>
+                    <a href="/student/course-detail" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-indigo-50 text-indigo-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                       </div>
                       <div>
-                        <div className="font-medium">{t('common:header.features.studyOptimization.title')}</div>
-                        <div className="text-xs text-gray-500">{t('common:header.features.studyOptimization.description')}</div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.learn.courseDetail.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.learn.courseDetail.description')}</div>
                       </div>
                     </a>
                   </div>
                 </div>
               </div>
 
-              {/* Research */}
-              <a href="#" className="text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                {t('common:header.navigation.research')}
-              </a>
-
-              {/* For Educators Dropdown */}
+              {/* Predict Dropdown */}
               <div className="relative group">
-                <button className="flex items-center space-x-1 text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                  <span>{t('common:header.navigation.forEducators')}</span>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:border hover:border-purple-100">
+                  <svg className="w-4 h-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  {t('common:header.navigation.predict')}
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <div className="py-2">
-                    <a href="/booking/scheduler" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.bookingScheduler')}</a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.classManagement')}</a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.studentProgressTracking')}</a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{t('common:header.educators.parentCommunication')}</a>
+                <div className="absolute top-full left-0 w-72 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2 space-y-1">
+                    <a href="/student/grade-forecast" className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-white hover:from-purple-100 transition-colors border border-purple-100/50">
+                      <div className="mt-1 p-1.5 rounded-md bg-purple-600 text-white shadow-sm">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-purple-600">{t('common:header.menu.predict.gradeForecast.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.predict.gradeForecast.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/prediction-history" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-slate-100 text-slate-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.predict.predictionHistory.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.predict.predictionHistory.description')}</div>
+                      </div>
+                    </a>
                   </div>
                 </div>
               </div>
 
-              {/* For Enterprise */}
-              <a href="#" className="text-gray-700 hover:text-purple-500 transition-colors font-medium cursor-pointer">
-                {t('common:header.navigation.forEnterprise')}
-              </a>
+              {/* Plan Dropdown */}
+              <div className="relative group">
+                <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
+                  {t('common:header.navigation.plan')}
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute top-full left-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2 space-y-1">
+                    <a href="/student/academic-planning" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-green-50 text-green-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.plan.academicPlanning.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.plan.academicPlanning.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/adjust-parameters" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-orange-50 text-orange-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.plan.adjustParameters.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.plan.adjustParameters.description')}</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Communicate Dropdown */}
+              <div className="relative group">
+                <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
+                  {t('common:header.navigation.communicate')}
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute top-full right-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2 space-y-1">
+                    <a href="/student/chat" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-blue-50 text-blue-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.communicate.chatWithTeachers.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.communicate.chatWithTeachers.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/messages" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-pink-50 text-pink-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.communicate.messages.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.communicate.messages.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/booking/scheduler" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-indigo-50 text-indigo-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.communicate.appointments.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.communicate.appointments.description')}</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
             </nav>
           )}
 
@@ -190,6 +352,27 @@ export default function Header({
           <div className="flex items-center space-x-4">
             {/* Language Switcher */}
             <LanguageSwitcher />
+
+            {/* Bell Icon - Only for Teacher and Admin Mode */}
+            {(isTeacherMode || isAdminMode) && isAuthenticated && (
+              <div className="relative">
+                <button 
+                  aria-label="Notifications" 
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    if (isTeacherMode) {
+                      navigate('/teacher/messages')
+                    } else if (isAdminMode) {
+                      navigate('/admin/notifications')
+                    }
+                  }}
+                >
+                  <BellIcon />
+                </button>
+                {/* Notification badge */}
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
+              </div>
+            )}
 
             {/* If not authenticated show login/register buttons, otherwise show profile dropdown */}
             {!isAuthenticated ? (
@@ -223,9 +406,16 @@ export default function Header({
                   className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"
                   aria-expanded={menuOpen}
                 >
-                  <img src={user?.avatar || STUDENT_ASSETS.defaultAvatar}
+                  <img 
+                    src={avatarUrl || user?.avatarUrl || user?.avatar_url || user?.avatar || STUDENT_ASSETS.defaultAvatar}
                     alt="User Avatar"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500" />
+                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"
+                    onError={(e) => {
+                      // Fallback to default avatar if image fails to load
+                      const target = e.target as HTMLImageElement
+                      target.src = STUDENT_ASSETS.defaultAvatar
+                    }}
+                  />
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-semibold text-gray-900">{studentName}</p>
                     <p className="text-xs text-gray-500">{studentRole}</p>
@@ -237,37 +427,56 @@ export default function Header({
 
                 {/* Dropdown menu */}
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 min-w-max bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
-                    <div className="flex flex-col py-1 px-2">
-                      {/* Profile button */}
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50">
+                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                      <p className="text-sm font-bold text-slate-800">{studentName}</p>
+                      <p className="text-xs text-slate-500">{studentRole}</p>
+                    </div>
+                    <div className="p-1">
+                      {/* View Profile - Only for student and teacher, not admin */}
+                      {!isAdminMode && (
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false)
+                            if (isTeacherMode) {
+                              navigate('/teacher/profile')
+                            } else {
+                              navigate('/profile')
+                            }
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg w-full"
+                        >
+                          <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          View Profile
+                        </button>
+                      )}
+                      
+                      {/* Settings */}
                       <button
                         onClick={() => {
                           setMenuOpen(false)
-                          // Navigate to centralized /profile entry which will redirect by role
-                          navigate('/profile')
+                          if (isTeacherMode) {
+                            navigate('/teacher/settings')
+                          } else if (isAdminMode) {
+                            navigate('/admin/settings')
+                          } else {
+                            navigate('/settings')
+                          }
                         }}
-                        className="px-2 py-1 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 rounded-md"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg w-full"
                       >
-                        <svg
-                          className="w-4 h-4 text-purple-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M5.121 17.804A13.937 13.937 0 0112 15c2.761 0 5.286.7 7.379 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
+                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        Profile
+                        Settings
                       </button>
-
-                      {/* Divider */}
-                      <div className="my-1 border-t border-gray-100"></div>
-
-                      {/* Logout button */}
+                      
+                      <div className="h-px bg-slate-100 my-1"></div>
+                      
+                      {/* Logout */}
                       <button
                         onClick={async () => {
                           setMenuOpen(false)
@@ -283,30 +492,18 @@ export default function Header({
                           } catch (e) {
                             console.error('Logout notify failed', e)
                           } finally {
-                            // Use the logout function from useAuth hook
                             logout()
                           }
                         }}
-                        className="px-2 py-1 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 rounded-md"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg w-full"
                       >
-                        <svg
-                          className="w-4 h-4 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7"
-                          />
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         Logout
                       </button>
                     </div>
                   </div>
-
                 )}
               </div>
             )}

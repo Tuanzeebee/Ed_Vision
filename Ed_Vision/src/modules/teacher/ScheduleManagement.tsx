@@ -211,6 +211,16 @@ export default function ScheduleManagement({
     const dateToDisable = availableDates[index];
     const hasTimeSlots = (dateToDisable?.timeSlots?.length || 0) > 0;
 
+    // Check if the date is in the past
+    const selectedDateObj = parseLocalDate(dateToDisable.date);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (selectedDateObj < todayDate) {
+      showToast('Không thể xóa ngày rảnh đã qua!', 'error');
+      return;
+    }
+
     if (!skipConfirm) {
       // Open custom confirmation modal instead of browser confirm
       setDateToDelete({ index, date: dateToDisable });
@@ -243,6 +253,18 @@ export default function ScheduleManagement({
 
   const confirmDeleteDate = async () => {
     if (!dateToDelete) return;
+
+    // Check if the date is in the past (double-check)
+    const selectedDateObj = parseLocalDate(dateToDelete.date.date);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (selectedDateObj < todayDate) {
+      showToast('Không thể xóa ngày rảnh đã qua!', 'error');
+      setDeleteConfirmOpen(false);
+      setDateToDelete(null);
+      return;
+    }
 
     showToast('Đang tắt ngày rảnh...', 'info');
     setDeleteConfirmOpen(false);
@@ -282,6 +304,16 @@ export default function ScheduleManagement({
   };
 
   const handleOpenTimeModal = (date: string) => {
+    // Check if the date is in the past
+    const selectedDateObj = parseLocalDate(date);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (selectedDateObj < todayDate) {
+      showToast('Không thể thêm khung giờ vào ngày đã qua!', 'error');
+      return;
+    }
+
     setCurrentDateForTime(date);
     setTimeModalOpen(true);
     setStartTime('');
@@ -296,6 +328,18 @@ export default function ScheduleManagement({
       showToast('Vui lòng nhập đầy đủ thời gian!', 'error');
       return;
     }
+
+    // Check if the date is in the past
+    const selectedDateObj = parseLocalDate(currentDateForTime);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (selectedDateObj < todayDate) {
+      showToast('Không thể thêm khung giờ vào ngày đã qua!', 'error');
+      setTimeModalOpen(false);
+      return;
+    }
+
     if (startTime >= endTime) {
       showToast('Giờ bắt đầu phải nhỏ hơn giờ kết thúc!', 'error');
       return;
@@ -513,6 +557,11 @@ export default function ScheduleManagement({
                         showToast('Không thể thêm ngày trong quá khứ!', 'error');
                         return;
                       }
+
+                      if (isPast && isEnabled) {
+                        showToast('Không thể xóa ngày rảnh đã qua!', 'error');
+                        return;
+                      }
                       
                       if (isEnabled) {
                         // Validate dateIndex before removing
@@ -528,9 +577,11 @@ export default function ScheduleManagement({
                         handleAddDate(dateString);
                       }
                     }}
-                    disabled={!instructorId}
+                    disabled={!instructorId || (isPast && isEnabled)}
                     className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 text-center ${!instructorId
                         ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                        : isPast && isEnabled
+                          ? 'bg-green-50 border-green-300 cursor-not-allowed opacity-60'
                         : isPast && !isEnabled
                           ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60'
                           : isEnabled
@@ -539,6 +590,15 @@ export default function ScheduleManagement({
                               ? 'bg-blue-50 border-blue-500 hover:bg-blue-100'
                               : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                       }`}
+                    title={
+                      isPast && isEnabled 
+                        ? 'Không thể xóa ngày đã qua'
+                        : isPast && !isEnabled
+                          ? 'Ngày đã qua'
+                          : isEnabled
+                            ? 'Click để tắt ngày này'
+                            : 'Click để bật ngày này'
+                    }
                   >
                     <div className="text-xs font-medium text-gray-600 mb-1">
                       {getDayName(date.getDay())}
@@ -635,7 +695,7 @@ export default function ScheduleManagement({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
                     <div
                       className="flex items-center gap-3 mb-4 sm:mb-0 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate('/teacher/meeting-detail-demo', {
+                      onClick={() => navigate('/teacher/meeting-detail', {
                         state: {
                           date: dateObj.date,
                           timeSlots: dateObj.timeSlots
@@ -659,7 +719,13 @@ export default function ScheduleManagement({
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleOpenTimeModal(dateObj.date)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-1"
+                        disabled={!isUpcoming}
+                        className={`px-4 py-2 rounded-lg font-medium flex items-center gap-1 transition-colors ${
+                          isUpcoming
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                        }`}
+                        title={!isUpcoming ? 'Không thể thêm giờ vào ngày đã qua' : 'Thêm khung giờ mới'}
                       >
                         <Plus className="w-4 h-4" />
                         Thêm giờ
@@ -677,7 +743,13 @@ export default function ScheduleManagement({
                           const hasTimeSlots = dateObj.timeSlots.length > 0;
                           handleRemoveDate(actualIndex, !hasTimeSlots);
                         }}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
+                        disabled={!isUpcoming}
+                        className={`px-4 py-2 rounded-lg font-medium flex items-center transition-colors ${
+                          isUpcoming
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                        }`}
+                        title={!isUpcoming ? 'Không thể xóa ngày đã qua' : 'Tắt ngày rảnh này'}
                       >
                         <X className="w-4 h-4" />
                       </button>

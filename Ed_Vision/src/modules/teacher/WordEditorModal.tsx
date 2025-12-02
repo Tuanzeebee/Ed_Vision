@@ -23,6 +23,12 @@ import {
   Download
 } from "lucide-react"
 import type { Student } from "./StudentSelectionModal"
+import {
+  getInstructorInfo,
+  getStudentsByTimeSlot,
+  createMeetingLog,
+  type InstructorInfo,
+} from "@/services/teacher/api/meetingLogs"
 
 type TimeSlot = {
   startTime: string
@@ -51,6 +57,130 @@ export default function WordEditorModal({
   const [fontFamily, setFontFamily] = useState("Times New Roman")
   const [fontSize, setFontSize] = useState("14")
   const editorRef = useRef<HTMLDivElement>(null)
+
+  // State cho instructor info
+  const [instructorInfo, setInstructorInfo] = useState<InstructorInfo | null>(null)
+  const [isLoadingInstructor, setIsLoadingInstructor] = useState(false)
+  
+  // State cho students
+  const [autoLoadedStudents, setAutoLoadedStudents] = useState<Student[]>([])
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false)
+  
+  // State cho saving
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Lấy thông tin instructor khi component mount
+  useEffect(() => {
+    const fetchInstructorInfo = async () => {
+      if (!isOpen) return
+      
+      // Get user from localStorage (already logged in)
+      const userDataStr = localStorage.getItem('user')
+      if (!userDataStr) {
+        console.error('⚠️ User not found in localStorage')
+        alert('Vui lòng đăng nhập để tiếp tục')
+        return
+      }
+
+      try {
+        const userData = JSON.parse(userDataStr)
+        const accountId = userData.account_id
+        
+        if (!accountId) {
+          console.error('⚠️ account_id not found in user data:', userData)
+          alert('Không tìm thấy thông tin tài khoản. Vui lòng đăng nhập lại.')
+          return
+        }
+
+        console.log('🔍 Fetching instructor info for account_id:', accountId)
+        setIsLoadingInstructor(true)
+        
+        const info = await getInstructorInfo(accountId)
+        setInstructorInfo(info)
+        console.log('✅ Instructor info loaded from database:', info)
+        
+      } catch (error) {
+        console.error('❌ Error fetching instructor info:', error)
+        alert('Không thể tải thông tin giảng viên. Vui lòng kiểm tra kết nối.')
+      } finally {
+        setIsLoadingInstructor(false)
+      }
+    }
+
+    fetchInstructorInfo()
+  }, [isOpen])
+
+  // Lấy danh sách sinh viên khi có đủ thông tin
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!isOpen || !instructorInfo || !date || !timeSlot.startTime || !timeSlot.endTime) return
+      
+      setIsLoadingStudents(true)
+      try {
+        console.log('🔍 Fetching students with:', {
+          instructor_id: instructorInfo.instructor_id,
+          date,
+          startTime: timeSlot.startTime,
+          endTime: timeSlot.endTime
+        })
+        
+        const data = await getStudentsByTimeSlot(
+          instructorInfo.instructor_id,
+          date, // format: YYYY-MM-DD
+          timeSlot.startTime, // format: HH:mm (e.g., "09:00")
+          timeSlot.endTime // format: HH:mm (e.g., "10:00")
+        )
+        
+        // Map sang định dạng Student để tương thích với component
+        const students: Student[] = data.students.map(s => ({
+          id: s.id.toString(),
+          studentCode: s.student_code,
+          name: s.name,
+          className: s.class_name,
+          email: s.email,
+        }))
+        
+        setAutoLoadedStudents(students)
+        console.log('✅ Auto-loaded students from API:', students)
+        
+        if (students.length === 0) {
+          console.log('⚠️ No students found for this time slot')
+        }
+      } catch (error) {
+        console.error('❌ Error fetching students:', error)
+        setAutoLoadedStudents([])
+      } finally {
+        setIsLoadingStudents(false)
+      }
+    }
+
+    fetchStudents()
+  }, [isOpen, instructorInfo, date, timeSlot.startTime, timeSlot.endTime])
+
+  // Sử dụng selectedStudents từ props nếu có, nếu không dùng autoLoadedStudents
+  const displayStudents = selectedStudents.length > 0 ? selectedStudents : autoLoadedStudents
+
+  // Tự động lấy danh sách lớp từ sinh viên đã CHỌN (không phải auto-load)
+  // Chỉ hiển thị lớp khi giảng viên đã pick từ StudentSelectionModal
+  const getClassGroups = () => {
+    // CHỈ lấy từ selectedStudents (đã pick), KHÔNG lấy từ autoLoadedStudents
+    if (selectedStudents.length === 0) return []
+    
+    // Group students by class
+    const classMap = new Map<string, number>()
+    selectedStudents.forEach(student => {
+      const className = student.className
+      classMap.set(className, (classMap.get(className) || 0) + 1)
+    })
+    
+    // Convert to array and sort by student count descending
+    return Array.from(classMap.entries()).map(([className, count]) => ({
+      className,
+      count
+    })).sort((a, b) => b.count - a.count)
+  }
+
+  const classGroups = getClassGroups()
 
   const formatText = (command: string, value?: string) => {
     document.execCommand(command, false, value)
@@ -95,9 +225,37 @@ export default function WordEditorModal({
     }
   }
 
-  const saveDocument = () => {
-    // const content = editorRef.current?.innerHTML
-    alert("Đã lưu tài liệu thành công!")
+  const saveDocument = async () => {
+    if (!instructorInfo) {
+      alert('Chưa có thông tin giảng viên. Vui lòng thử lại.')
+      return
+    }
+
+    const content = editorRef.current?.innerHTML
+    if (!content) {
+      alert('Nội dung nhật ký không được để trống')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await createMeetingLog({
+        instructor_id: instructorInfo.instructor_id,
+        date: date, // format: YYYY-MM-DD
+        start_time: timeSlot.startTime, // format: HH:mm
+        end_time: timeSlot.endTime, // format: HH:mm
+        content: content,
+        student_ids: displayStudents.map(s => parseInt(s.id)),
+        location: '', // Có thể lấy từ form nếu cần
+      })
+      
+      alert('Đã lưu nhật ký thành công!')
+    } catch (error) {
+      console.error('Error saving meeting log:', error)
+      alert('Lỗi khi lưu nhật ký. Vui lòng thử lại.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const saveAndClose = () => {
@@ -177,6 +335,16 @@ export default function WordEditorModal({
               <p className="text-sm text-gray-600">
                 Khung giờ: {timeSlot.startTime} - {timeSlot.endTime} - {weekday}, {date}
               </p>
+              {isLoadingInstructor && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Đang tải thông tin giảng viên từ database...
+                </p>
+              )}
+              {!isLoadingInstructor && !instructorInfo && (
+                <p className="text-xs text-red-600 mt-1">
+                  ⚠️ Không thể tải thông tin giảng viên. Vui lòng kiểm tra kết nối.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -190,9 +358,10 @@ export default function WordEditorModal({
             <Button
               onClick={saveDocument}
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={isSaving || isLoadingInstructor}
             >
               <Save className="w-4 h-4 mr-2" />
-              Lưu
+              {isSaving ? 'Đang lưu...' : 'Lưu'}
             </Button>
             <button
               onClick={onClose}
@@ -384,10 +553,16 @@ export default function WordEditorModal({
 
                 <div style={{ marginBottom: "20px" }}>
                   <p>
-                    <strong>Họ và tên người thực hiện:</strong> TS. Nguyễn Văn A
+                    <strong>Họ và tên người thực hiện:</strong>{' '}
+                    {isLoadingInstructor 
+                      ? 'Đang tải...' 
+                      : instructorInfo?.full_name || '_______________'}
                   </p>
                   <p>
-                    <strong>Khoa:</strong> Công nghệ thông tin
+                    <strong>Khoa:</strong>{' '}
+                    {isLoadingInstructor 
+                      ? 'Đang tải...'
+                      : instructorInfo?.department.name || '_______________'}
                   </p>
                 </div>
 
@@ -396,7 +571,10 @@ export default function WordEditorModal({
                     <strong>Trường:</strong> Đại học Duy Tân
                   </p>
                   <p>
-                    <strong>Bộ môn:</strong> Khoa học máy tính
+                    <strong>Bộ môn:</strong>{' '}
+                    {isLoadingInstructor
+                      ? 'Đang tải...'
+                      : instructorInfo?.position || '_______________'}
                   </p>
                 </div>
 
@@ -453,26 +631,48 @@ export default function WordEditorModal({
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
-                          1
-                        </td>
-                        <td style={{ border: "1px solid #000", padding: "8px" }}>K28 CMU TPM 1</td>
-                        <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
-                          {selectedStudents.length}
-                        </td>
-                        <td style={{ border: "1px solid #000", padding: "8px" }}></td>
-                      </tr>
-                      {[2, 3, 4, 5].map((num) => (
-                        <tr key={num}>
-                          <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
-                            {num}
-                          </td>
-                          <td style={{ border: "1px solid #000", padding: "8px" }}></td>
-                          <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}></td>
-                          <td style={{ border: "1px solid #000", padding: "8px" }}></td>
-                        </tr>
-                      ))}
+                      {classGroups.length > 0 ? (
+                        classGroups.map((group, index) => (
+                          <tr key={group.className}>
+                            <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
+                              {index + 1}
+                            </td>
+                            <td style={{ border: "1px solid #000", padding: "8px" }}>
+                              {group.className}
+                            </td>
+                            <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
+                              {group.count}
+                            </td>
+                            <td style={{ border: "1px solid #000", padding: "8px" }}></td>
+                          </tr>
+                        ))
+                      ) : (
+                        // Hiển thị dòng mặc định nếu chưa có sinh viên
+                        <>
+                          <tr>
+                            <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
+                              1
+                            </td>
+                            <td style={{ border: "1px solid #000", padding: "8px" }}>
+                              {isLoadingStudents ? 'Đang tải...' : '_______________'}
+                            </td>
+                            <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
+                              {isLoadingStudents ? '...' : '0'}
+                            </td>
+                            <td style={{ border: "1px solid #000", padding: "8px" }}></td>
+                          </tr>
+                          {[2, 3, 4, 5].map((num) => (
+                            <tr key={num}>
+                              <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}>
+                                {num}
+                              </td>
+                              <td style={{ border: "1px solid #000", padding: "8px" }}></td>
+                              <td style={{ border: "1px solid #000", padding: "8px", textAlign: "center" }}></td>
+                              <td style={{ border: "1px solid #000", padding: "8px" }}></td>
+                            </tr>
+                          ))}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -488,13 +688,17 @@ export default function WordEditorModal({
                     <strong>Danh sách sinh viên tham gia:</strong>
                   </p>
                   <div style={{ marginLeft: "20px", marginTop: "10px" }}>
-                    {selectedStudents.length === 0 ? (
+                    {isLoadingStudents ? (
                       <p style={{ fontStyle: "italic", color: "#666" }}>
-                        Chưa chọn sinh viên nào. Nhấn nút "Chọn sinh viên" để thêm.
+                        Đang tải danh sách sinh viên...
+                      </p>
+                    ) : displayStudents.length === 0 ? (
+                      <p style={{ fontStyle: "italic", color: "#666" }}>
+                        Chưa có sinh viên nào đặt lịch cho khung giờ này.
                       </p>
                     ) : (
                       <ol style={{ marginLeft: "20px" }}>
-                        {selectedStudents.map((student) => (
+                        {displayStudents.map((student) => (
                           <li key={student.id} style={{ marginBottom: "5px" }}>
                             {student.name} - MSSV: {student.studentCode} - Lớp {student.className}
                           </li>
@@ -553,7 +757,9 @@ export default function WordEditorModal({
                           <p style={{ marginTop: "60px", fontStyle: "italic" }}>
                             (Ký, ghi rõ họ & tên)
                           </p>
-                          <p style={{ marginTop: "10px" }}>TS. Nguyễn Văn A</p>
+                          <p style={{ marginTop: "10px" }}>
+                            {instructorInfo?.full_name || '_______________'}
+                          </p>
                         </td>
                       </tr>
                     </tbody>
@@ -586,11 +792,15 @@ export default function WordEditorModal({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={onClose} variant="outline">
+            <Button onClick={onClose} variant="outline" disabled={isSaving}>
               Đóng
             </Button>
-            <Button onClick={saveAndClose} className="bg-blue-600 hover:bg-blue-700">
-              Lưu & Đóng
+            <Button 
+              onClick={saveAndClose} 
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={isSaving || isLoadingInstructor}
+            >
+              {isSaving ? 'Đang lưu...' : 'Lưu & Đóng'}
             </Button>
           </div>
         </div>

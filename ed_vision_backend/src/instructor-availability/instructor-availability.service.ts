@@ -41,6 +41,9 @@ export class InstructorAvailabilityService {
       position: instructor.position,
       department_id: instructor.department_id,
       status: instructor.status,
+      full_name: instructor.account?.profile?.full_name || null,
+      avatar_url: instructor.account?.profile?.avatar_url || null,
+      email: instructor.account?.email || null,
     };
   }
 
@@ -145,6 +148,8 @@ export class InstructorAvailabilityService {
           autoAccept: slot.auto_accept,
           note: slot.note ?? undefined,
           bookedCount: slot._count?.appointments || 0,
+          meetingLink: slot.meeting_link ?? undefined,
+          meetingLocation: slot.meeting_location ?? undefined,
         };
 
         const dateEntry = dateMap.get(dateStr);
@@ -225,6 +230,8 @@ export class InstructorAvailabilityService {
           autoAccept: slot.auto_accept,
           note: slot.note || undefined,
           bookedCount: 0, // TODO: Get actual booking count
+          meetingLink: slot.meeting_link ?? undefined,
+          meetingLocation: slot.meeting_location ?? undefined,
         })),
       };
     }
@@ -320,6 +327,8 @@ export class InstructorAvailabilityService {
       autoAccept: slot.auto_accept,
       note: slot.note ?? undefined,
       bookedCount: 0,
+      meetingLink: slot.meeting_link ?? undefined,
+      meetingLocation: slot.meeting_location ?? undefined,
     };
   }
 
@@ -400,6 +409,8 @@ export class InstructorAvailabilityService {
       isOpen: updatedSlot.is_open,
       autoAccept: updatedSlot.auto_accept,
       note: updatedSlot.note ?? undefined,
+      meetingLink: updatedSlot.meeting_link ?? undefined,
+      meetingLocation: updatedSlot.meeting_location ?? undefined,
     };
   }
 

@@ -35,6 +35,8 @@ import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
 import AuthStudentLogin from "@/modules/auth/StudentLogin";
 import AuthStudentRegister from "@/modules/auth/StudentRegister";
 import AuthStudentOTPVerification from "@/modules/auth/StudentOTPVerification";
+import AuthForgotPassword from "@/modules/auth/ForgotPassword";
+import AuthResetPassword from "@/modules/auth/ResetPassword";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
@@ -53,7 +55,6 @@ import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
-import MeetingDetailDemo from "@/modules/teacher/MeetingDetailDemo"
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
@@ -61,7 +62,13 @@ import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
 import ChatStudent from "./modules/student/ChatStudent";
 import BookingScheduler from "./modules/booking/BookingScheduler";
 import LearningSpace from "./modules/student/LearningSpace";
+import StudentProfilePage from "./modules/profile/StudentProfilePage";
+import ParentProfilePage from "./modules/profile/ParentProfilePage";
+import TeacherProfilePage from "./modules/profile/TeacherProfilePage";
+import ProfileRedirect from "./modules/profile/ProfileRedirect";
 import "./modules/student/styles/learningSpace.css";
+import MeetingDetailView from "./modules/teacher/MeetingDetailView";
+import CalendarOverview from "./modules/teacher/CalendarOverview";
 
 function App() {
         // Initialize permissions on app startup
@@ -85,6 +92,8 @@ function App() {
                                         <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
                                         <Route path="/auth/register" element={<AuthRedirectWrapper><AuthStudentRegister /></AuthRedirectWrapper>} />
                                         <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
+                                        <Route path="/auth/forgot-password" element={<AuthRedirectWrapper><AuthForgotPassword /></AuthRedirectWrapper>} />
+                                        <Route path="/auth/reset-password" element={<AuthRedirectWrapper><AuthResetPassword /></AuthRedirectWrapper>} />
                                         <Route path="/student/course-overview" element={<ProtectedRoute permission="student_course_overview"><StudentCourseOverview /></ProtectedRoute>} />
                                         <Route path="/student/upload-transcript" element={<ProtectedRoute permission="student_upload_transcript"><UploadTranscript /></ProtectedRoute>} />
                                         <Route path="/student/instructions" element={<ProtectedRoute permission="student_course_overview"><InstructionsPage /></ProtectedRoute>} />
@@ -155,12 +164,20 @@ function App() {
                                         <Route path="/teacher/requests" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/confirmed" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
-                                        <Route path="/teacher/meeting-detail-demo" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailDemo /></ProtectedRoute>} />
+                                        <Route path="/teacher/meeting-detail" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailView /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
+                                        <Route path="/teacher/calendar-overview" element={<CalendarOverview />} />
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}
                                         <Route path="/booking/scheduler" element={<ProtectedRoute permission="booking_scheduler"><BookingScheduler /></ProtectedRoute>} />
+                                        
+                                        {/* Profile Routes */}
+                                        <Route path="/profile" element={<ProfileRedirect />} />
+                                        <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
+                                        <Route path="/parent/profile" element={<ProtectedRoute permission="parent_profile"><ParentProfilePage /></ProtectedRoute>} />
+                                        <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_profile"><TeacherProfilePage /></ProtectedRoute>} />
+
                                 </Routes>
                         </Router>
                 </Suspense>

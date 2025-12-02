@@ -25,7 +25,7 @@ export interface InstructorInfo {
 
 export interface ParentInfo {
   parentId: number;
-  phoneNumber: string;
+  phoneNumber?: string;
   relationshipType?: string;
 }
 

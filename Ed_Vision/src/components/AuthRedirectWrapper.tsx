@@ -22,6 +22,18 @@ export default function AuthRedirectWrapper({ children }: Props) {
 
     // Only redirect if user is authenticated and on auth pages
     if (isAuthenticated) {
+      // Check if there's a linkCode in the URL params or navigation state (parent registration flow)
+      const searchParams = new URLSearchParams(location.search)
+      const hasLinkCodeInUrl = searchParams.has('linkCode')
+      const hasLinkCodeInState = (location.state as any)?.linkCode
+      const hasLinkCode = hasLinkCodeInUrl || hasLinkCodeInState
+      
+      // Allow access to register/otp pages if linkCode is present (parent registration)
+      if (hasLinkCode && (location.pathname === '/auth/register' || location.pathname === '/auth/otp-verification')) {
+        console.log('LinkCode detected in parent registration flow, allowing access')
+        return
+      }
+
       const authPages = ['/auth/login', '/auth/register', '/auth/otp-verification', '/student/login', '/student/register', '/student/otp-verification']
       if (authPages.includes(location.pathname)) {
         const dashboardPath = getDashboardPath()
@@ -29,7 +41,7 @@ export default function AuthRedirectWrapper({ children }: Props) {
         navigate(dashboardPath, { replace: true })
       }
     }
-  }, [isAuthenticated, isLoading, location.pathname, navigate, getDashboardPath])
+  }, [isAuthenticated, isLoading, location.pathname, location.search, location.state, navigate, getDashboardPath])
 
   // Show loading while checking auth
   if (isLoading) {
