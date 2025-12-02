@@ -61,4 +61,13 @@ export class StatisticsOverviewController {
   async getTopStudents(@Query() query: DashboardStatsQueryDto) {
     return this.statisticsOverviewService.getTopStudents(query);
   }
+
+  /**
+   * GET /admin/dashboard/learning-summary
+   * Get learning dashboard summary (by semester & academic year)
+   */
+  @Get('learning-summary')
+  async getLearningDashboardSummary(@Query() query: DashboardStatsQueryDto) {
+    return this.statisticsOverviewService.getLearningDashboardSummary(query);
+  }
 }

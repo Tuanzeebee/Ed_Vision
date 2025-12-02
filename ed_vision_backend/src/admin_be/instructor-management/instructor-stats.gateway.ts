@@ -5,7 +5,6 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
 import { InstructorOnlineStats } from './models/instructor-stats.type';
 
 @WebSocketGateway({
@@ -21,21 +20,16 @@ export class InstructorStatsGateway
   @WebSocketServer()
   server: Server;
 
-  private readonly logger = new Logger(InstructorStatsGateway.name);
-
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    // connection established (silent)
   }
 
   handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+    // client disconnected (silent)
   }
 
   // Method to broadcast online stats to all connected clients
   broadcastOnlineStats(stats: InstructorOnlineStats) {
-    this.logger.log(
-      `Broadcasting instructor online stats: ${JSON.stringify(stats)}`,
-    );
     this.server.emit('instructorOnlineStatsUpdated', stats);
   }
 }

@@ -1,9 +1,9 @@
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsIn, IsNumberString } from 'class-validator';
 
 export class DashboardStatsQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(['hôm-nay', 'tuần-này', 'tháng-này', 'tất-cả'])
+  @IsIn(['hôm-nay', 'tuần-này', 'tháng-này', 'năm-này', 'tất-cả'])
   timeFilter?: string = 'tháng-này';
 
   @IsOptional()
@@ -33,6 +33,16 @@ export class DashboardStatsQueryDto {
   @IsOptional()
   @IsString()
   selectedYear?: string; // Year from TimeFilter
+
+  @IsOptional()
+  @IsString()
+  // Optional anchor date used for offset navigation (format: YYYY-MM-DD)
+  anchorDate?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  // Optional sinceYear used when requesting 'tất-cả' across multiple years (format: YYYY)
+  sinceYear?: string;
 }
 
 export interface ComparisonData {
@@ -58,6 +68,7 @@ export interface DashboardStatsResponse {
   comparison: {
     students: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
     instructors: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
+    atRisk?: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
   };
   timeRange: string;
   filters: {
@@ -109,4 +120,62 @@ export interface TopStudentResponse {
     gpa: number;
     rank: number;
   }>;
+}
+
+export interface LearningStatsContext {
+  currentLabel: string;
+  previousLabel?: string;
+}
+
+export interface LearningDashboardStatsResponse {
+  current: {
+    students: number;
+    instructors: number;
+    warning?: number;  // GPA 2.0 - 2.5 (nguy cơ)
+    atRisk: number;    // GPA < 2.0 (buộc thôi học)
+    performance: {
+      student: number;
+      instructor: number;
+    };
+  };
+  previous?: {
+    students: number;
+    warning?: number;
+    atRisk?: number;
+    instructors?: number;
+  };
+  comparison?: {
+    students?: ComparisonData | null;
+    instructors?: ComparisonData | null;
+    warning?: ComparisonData | null;
+    atRisk?: ComparisonData | null;
+  };
+  gpaDistribution?: {
+    excellent: number;
+    veryGood: number;
+    good: number;
+    average: number;
+    weak: number;
+  };
+  scoreDistribution?: ScoreDistributionResponse;
+  topStudents?: Array<{
+    id: number;
+    name: string;
+    school: string;
+    major: string;
+    class: string;
+    gpa: number;
+    gpaCategory?: string;
+    rank: number;
+  }>;
+  filters?: {
+    school?: string;
+    courseYear?: string;
+    major?: string;
+    class?: string;
+    academicYear?: string;
+    semester?: string;
+  };
+  learningContext?: LearningStatsContext;
+  timeRange?: string;
 }

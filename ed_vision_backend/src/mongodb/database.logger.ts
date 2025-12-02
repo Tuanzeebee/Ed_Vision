@@ -25,7 +25,7 @@ export class DatabaseLogger implements OnModuleInit {
 
     // Nếu đã kết nối rồi thì in luôn
     if (conn.readyState === 1) {
-      console.log('[MongoDB] Already connected');
+      // MongoDB already connected (silent)
     }
   }
 }

@@ -9,6 +9,8 @@ export interface DashboardStatsQuery {
   semester?: string;
   academicYear?: string;
   selectedYear?: string;
+  // Optional anchorDate (YYYY-MM-DD) used for offset navigation
+  anchorDate?: string;
 }
 
 export interface ComparisonData {
@@ -34,6 +36,7 @@ export interface DashboardStatsResponse {
   comparison: {
     students: ComparisonData;
     instructors: ComparisonData;
+    atRisk?: ComparisonData;
   };
   timeRange: string;
   filters: {
@@ -84,6 +87,32 @@ export interface TopStudentResponse {
   }>;
 }
 
+export interface LearningStatsContext {
+  currentLabel: string;
+  previousLabel: string;
+}
+
+export interface LearningDashboardStatsResponse extends DashboardStatsResponse {
+  learningContext?: LearningStatsContext;
+}
+
+export interface LearningDashboardSummaryResponse {
+  current: {
+    students: number;
+    instructors: number;
+    warning?: number;  // GPA 2.0 - 2.5 (nguy cơ)
+    atRisk: number;    // GPA < 2.0 (buộc thôi học)
+    performance: { student: number; instructor: number };
+  };
+  previous?: { students: number; warning?: number; atRisk: number };
+  comparison?: { students?: ComparisonData | null; warning?: ComparisonData | null; atRisk?: ComparisonData | null };
+  gpaDistribution: { excellent: number; veryGood: number; good: number; average: number; weak: number };
+  scoreDistribution: { labels: number[]; schools: Array<{ schoolName: string; scores: number[] }> };
+  topStudents: Array<{ id: number; name: string; school: string; major: string; class: string; gpa: number; gpaCategory: string; rank: number }>;
+  filters: { school?: string; courseYear?: string; major?: string; class?: string; academicYear: string; semester: string };
+  learningContext: { currentLabel: string; previousLabel?: string };
+}
+
 class DashboardStatsService {
   /**
    * Get filter options for dashboard
@@ -132,6 +161,22 @@ class DashboardStatsService {
   // ===== MỚI THÊM: Get top students =====
   async getTopStudents(query?: DashboardStatsQuery): Promise<TopStudentResponse> {
     const response = await apiClient.get<TopStudentResponse>('/admin/dashboard/top-students', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // ===== MỚI: Learning dashboard stats (semester + academicYear) =====
+  async getLearningDashboardStats(query?: DashboardStatsQuery): Promise<LearningDashboardStatsResponse> {
+    const response = await apiClient.get<LearningDashboardStatsResponse>('/admin/dashboard/learning-stats', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // Consolidated learning summary endpoint (server-side aggregates)
+  async getLearningDashboardSummary(query?: DashboardStatsQuery): Promise<LearningDashboardSummaryResponse> {
+    const response = await apiClient.get<LearningDashboardSummaryResponse>('/admin/dashboard/learning-summary', {
       params: query,
     });
     return response.data;
