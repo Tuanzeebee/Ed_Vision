@@ -1,9 +1,9 @@
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsIn, IsNumberString } from 'class-validator';
 
 export class DashboardStatsQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(['hôm-nay', 'tuần-này', 'tháng-này', 'tất-cả'])
+  @IsIn(['hôm-nay', 'tuần-này', 'tháng-này', 'năm-này', 'tất-cả'])
   timeFilter?: string = 'tháng-này';
 
   @IsOptional()
@@ -33,6 +33,16 @@ export class DashboardStatsQueryDto {
   @IsOptional()
   @IsString()
   selectedYear?: string; // Year from TimeFilter
+
+  @IsOptional()
+  @IsString()
+  // Optional anchor date used for offset navigation (format: YYYY-MM-DD)
+  anchorDate?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  // Optional sinceYear used when requesting 'tất-cả' across multiple years (format: YYYY)
+  sinceYear?: string;
 }
 
 export interface ComparisonData {
@@ -46,15 +56,19 @@ export interface DashboardStatsResponse {
     students: number;
     instructors: number;
     atRisk: number;
-    performance: number;
+    performance: {
+      student: number;
+      instructor: number;
+    };
   };
   previous: {
     students: number;
     instructors: number;
   };
   comparison: {
-    students: ComparisonData;
-    instructors: ComparisonData;
+    students: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
+    instructors: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
+    atRisk?: { value: number; percentage: number; trend: 'up' | 'down' | 'stable' };
   };
   timeRange: string;
   filters: {
@@ -62,21 +76,106 @@ export interface DashboardStatsResponse {
     courseYear?: string;
     major?: string;
     class?: string;
+    semester?: string;        // thêm
+    academicYear?: string;
   };
 }
 
 export interface AccessTimeStatsResponse {
   data: {
-    morning: number;    // 4:30 - 10:00
-    noon: number;       // 10:00 - 13:00
+    morning: number;    // 4:30 - 13:00
     afternoon: number;  // 13:00 - 18:00
-    evening: number;    // 18:00 - 23:00 + 0:00 - 4:30
+    evening: number;    // 18:00 - 4:30
   };
   percentages: {
     morning: number;
-    noon: number;
     afternoon: number;
     evening: number;
   };
   total: number;
+}
+
+// ===== MỚI THÊM: Response types cho GPA, Score Distribution, Top Students =====
+
+export interface GPADistributionResponse {
+  excellent: number;  // Xuất sắc/Giỏi (GPA >= 8.0) - phần trăm
+  good: number;       // Khá/Tốt (GPA 6.5-7.99) - phần trăm
+  average: number;    // Trung bình/Yếu (GPA < 6.5) - phần trăm
+}
+
+export interface ScoreDistributionResponse {
+  schools: Array<{
+    schoolName: string;
+    scores: number[];  // Array 11 phần tử [0-10] - số lượng sinh viên
+  }>;
+}
+
+export interface TopStudentResponse {
+  students: Array<{
+    id: number;
+    name: string;
+    school: string;
+    major: string;
+    class: string;
+    gpa: number;
+    rank: number;
+  }>;
+}
+
+export interface LearningStatsContext {
+  currentLabel: string;
+  previousLabel?: string;
+}
+
+export interface LearningDashboardStatsResponse {
+  current: {
+    students: number;
+    instructors: number;
+    warning?: number;  // GPA 2.0 - 2.5 (nguy cơ)
+    atRisk: number;    // GPA < 2.0 (buộc thôi học)
+    performance: {
+      student: number;
+      instructor: number;
+    };
+  };
+  previous?: {
+    students: number;
+    warning?: number;
+    atRisk?: number;
+    instructors?: number;
+  };
+  comparison?: {
+    students?: ComparisonData | null;
+    instructors?: ComparisonData | null;
+    warning?: ComparisonData | null;
+    atRisk?: ComparisonData | null;
+  };
+  gpaDistribution?: {
+    excellent: number;
+    veryGood: number;
+    good: number;
+    average: number;
+    weak: number;
+  };
+  scoreDistribution?: ScoreDistributionResponse;
+  topStudents?: Array<{
+    id: number;
+    name: string;
+    school: string;
+    major: string;
+    class: string;
+    gpa: number;
+    gpaCategory?: string;
+    rank: number;
+  }>;
+  filters?: {
+    school?: string;
+    courseYear?: string;
+    major?: string;
+    class?: string;
+    academicYear?: string;
+    semester?: string;
+  };
+  learningContext?: LearningStatsContext;
+  timeRange?: string;
 }

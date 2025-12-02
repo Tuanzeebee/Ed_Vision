@@ -9,7 +9,7 @@ export interface MenuItemConfig {
 export const adminMenu: MenuItemConfig[] = [
   { 
     label: "Trang chủ", 
-    to: "/admin/overview", 
+    to: "/admin/dashboard", 
     iconKey: "home" 
   },
   {
