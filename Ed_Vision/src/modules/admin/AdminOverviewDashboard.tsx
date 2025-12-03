@@ -52,7 +52,6 @@ const UserGraduateIcon = () => <i className="fas fa-user-graduate text-gray-400"
 const ChalkboardTeacherIcon = () => <i className="fas fa-chalkboard-teacher text-gray-400"></i>;
 const ArrowUpIcon = () => <i className="fas fa-arrow-up"></i>;
 const ArrowDownIcon = () => <i className="fas fa-arrow-down"></i>;
-const ExclamationTriangleIcon = () => <i className="fas fa-exclamation-triangle"></i>;
 
 export default function AdminOverviewDashboard() {
   const { showToast } = useToast();
@@ -97,6 +96,7 @@ export default function AdminOverviewDashboard() {
   const [selectedYear, setSelectedYear] = useState<string>(getCurrentAcademicYear());
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingLearning, setIsLoadingLearning] = useState(false);
   const [overviewStats, setOverviewStats] = useState<DashboardStatsResponse | null>(null);
   const [learningStats, setLearningStats] = useState<LearningDashboardSummaryResponse | null>(null);
 
@@ -210,7 +210,7 @@ export default function AdminOverviewDashboard() {
     }
   }, []);
 
-  // Fetch dữ liệu thống kê tổng quan (time-based snapshot)
+  // Fetch dữ liệu thống kê tổng quan (time-based snapshot) - chỉ cho KPI cards và access time
   useEffect(() => {
     if (adminViewMode !== 'overview') return;
     const fetchOverview = async () => {
@@ -230,6 +230,7 @@ export default function AdminOverviewDashboard() {
         };
         const statsResponse: DashboardStatsResponse =
           await dashboardStatsService.getDashboardStats(queryParams);
+        // Fetch access time với cùng filter thời gian
         const accessTimeResponse = await dashboardStatsService.getAccessTimeStats(queryParams);
         setOverviewStats(statsResponse);
         setAccessTimeStats(accessTimeResponse.percentages);
@@ -252,14 +253,17 @@ export default function AdminOverviewDashboard() {
     realTimeUpdateTrigger,
   ]);
 
-  // Fetch dữ liệu học tập (theo kỳ, năm học)
+  // Fetch dữ liệu học tập (theo kỳ, năm học) - luôn fetch bất kể adminViewMode để hiển thị biểu đồ
   useEffect(() => {
-    if (adminViewMode !== 'learning') return;
     // Chờ filterOptions load xong để có đúng academicYear và semester từ dữ liệu thực
     if (!filterOptions) return;
     
     const fetchLearning = async () => {
-      setIsLoading(true);
+      setIsLoadingLearning(true);
+      // Khi ở mode learning, cũng set isLoading cho KPI cards
+      if (adminViewMode === 'learning') {
+        setIsLoading(true);
+      }
       try {
         const params: any = {
           semester: selectedSemester,
@@ -274,7 +278,10 @@ export default function AdminOverviewDashboard() {
       } catch (error) {
         showToast('Không thể tải dữ liệu học tập', 'error');
       } finally {
-        setIsLoading(false);
+        setIsLoadingLearning(false);
+        if (adminViewMode === 'learning') {
+          setIsLoading(false);
+        }
       }
     };
     fetchLearning();
@@ -381,15 +388,18 @@ export default function AdminOverviewDashboard() {
     };
   }, [learningStats]);
 
-  // Dữ liệu phân phối điểm số (0-10)
+  // Dữ liệu phân phối điểm GPA (0-4)
   const scoreDistributionData = useMemo(() => {
+    const defaultLabels = ['0', '0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0'];
     if (!learningStats || !learningStats.scoreDistribution) {
       return {
-        labels: ['0','1','2','3','4','5','6','7','8','9','10'],
+        labels: defaultLabels,
         datasets: [],
+        schoolAverages: {} as Record<string, number>,
       };
     }
-    const labels = learningStats.scoreDistribution.labels.map(String);
+    // Luôn sử dụng labels chuẩn GPA 0-4 với bước nhảy 0.5
+    const labels = defaultLabels; // ['0', '0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0']
     const colors = [
       'rgba(59, 130, 246, 0.8)',
       'rgba(245, 158, 11, 0.8)',
@@ -401,6 +411,11 @@ export default function AdminOverviewDashboard() {
       'rgba(168, 85, 247, 0.8)',
       'rgba(236, 72, 153, 0.8)',
     ];
+    // Lưu GPA trung bình cho mỗi trường
+    const schoolAverages: Record<string, number> = {};
+    learningStats.scoreDistribution.schools.forEach((s) => {
+      schoolAverages[s.schoolName] = s.averageGpa ?? 0;
+    });
     const datasets = learningStats.scoreDistribution.schools.map((s, idx) => ({
       label: s.schoolName,
       data: s.scores,
@@ -412,6 +427,7 @@ export default function AdminOverviewDashboard() {
     return {
       labels,
       datasets,
+      schoolAverages,
     };
   }, [learningStats]);
 
@@ -466,10 +482,13 @@ export default function AdminOverviewDashboard() {
         tooltip: {
           callbacks: {
             label: function (context: { dataset: { label?: string }; parsed: { y: number | null } }) {
-              let label = context.dataset.label || 'Số lượng';
-              if (label) label += ': ';
-              label += (context.parsed.y ?? 0) + ' sinh viên';
-              return label;
+              const schoolName = context.dataset.label || 'Trường';
+              const studentCount = context.parsed.y ?? 0;
+              const averageGpa = scoreDistributionData.schoolAverages?.[schoolName] ?? 0;
+              return [
+                `${schoolName}: ${studentCount} sinh viên`,
+                `GPA trung bình: ${averageGpa.toFixed(2)}`
+              ];
             },
           },
         },
@@ -492,7 +511,7 @@ export default function AdminOverviewDashboard() {
           grid: { display: false },
           title: {
             display: true,
-            text: 'Điểm số (0-10)',
+            text: 'GPA (0-4)',
             font: { size: 12 },
           },
         },
@@ -854,14 +873,14 @@ export default function AdminOverviewDashboard() {
 
       {/* Các biểu đồ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        {/* Thống kê thời gian truy cập */}
+        {/* Thống kê thời gian truy cập - chỉ chịu ảnh hưởng bởi TimeFilter */}
         <SimpleCard className="p-4">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Thống kê thời gian truy cập</h3>
           <div
             className="h-48 w-full relative"
-            style={{ minHeight: isLoading ? '200px' : 'auto' }}
+            style={{ minHeight: isLoading && adminViewMode === 'overview' ? '200px' : 'auto' }}
           >
-            {isLoading ? (
+            {isLoading && adminViewMode === 'overview' ? (
               <LoadingSpinner text="Đang tải biểu đồ..." size="md" position="center" />
             ) : (
               <Doughnut data={accessTimeData} options={doughnutOptions} />
@@ -889,14 +908,14 @@ export default function AdminOverviewDashboard() {
           </div>
         </SimpleCard>
 
-        {/* Thống kê phân trăm GPA */}
+        {/* Thống kê phân trăm GPA - chịu ảnh hưởng bởi filter học tập */}
         <SimpleCard className="p-4">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Thống kê phân trăm GPA</h3>
           <div
             className="h-48 w-full relative"
-            style={{ minHeight: isLoading ? '200px' : 'auto' }}
+            style={{ minHeight: isLoadingLearning ? '200px' : 'auto' }}
           >
-            {isLoading ? (
+            {isLoadingLearning ? (
               <LoadingSpinner text="Đang tải biểu đồ..." size="md" position="center" />
             ) : (
               <Doughnut data={gpaData} options={doughnutOptions} />
@@ -922,7 +941,7 @@ export default function AdminOverviewDashboard() {
         </SimpleCard>
       </div>
 
-      {/* Danh sách sinh viên tiêu biểu */}
+      {/* Danh sách sinh viên tiêu biểu - chịu ảnh hưởng bởi filter học tập */}
       <SimpleCard className="p-4 mb-6">
         <h3 className="text-base font-semibold text-gray-900 mb-4">
           Danh sách Sinh viên tiêu biểu{' '}
@@ -940,6 +959,11 @@ export default function AdminOverviewDashboard() {
             ) : ''}
           </span>
         </h3>
+        {isLoadingLearning ? (
+          <div className="h-32 relative">
+            <LoadingSpinner text="Đang tải danh sách..." size="md" position="center" />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {filteredTopStudents.map((student: any, idx: number) => {
             const gradientColors = [
@@ -995,15 +1019,16 @@ export default function AdminOverviewDashboard() {
             );
           })}
         </div>
+        )}
       </SimpleCard>
 
-      {/* Biểu đồ phân phối điểm số */}
+      {/* Biểu đồ phân phối điểm GPA - chịu ảnh hưởng bởi filter học tập */}
       <SimpleCard className="p-4">
         <h3 className="text-base font-semibold text-gray-900 mb-4">
-          Biểu đồ phân phối điểm số (0-10)
+          Biểu đồ phân phối điểm GPA (0-4)
           <span className="text-sm font-normal text-gray-600 ml-2">
             {selectedSchool === "Tất cả các trường"
-              ? "(So sánh 9 trường)"
+              ? `(So sánh ${scoreDistributionData.datasets.length} trường)`
               : selectedClass !== "Tất cả"
               ? `(${selectedClass})`
               : selectedMajor !== "Tất cả"
@@ -1014,8 +1039,8 @@ export default function AdminOverviewDashboard() {
           </span>
         </h3>
         {/* Biểu đồ phân phối điểm (Chart.js Bar) */}
-        <div className="h-64 relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
-          {isLoading ? (
+        <div className="h-64 relative" style={{ minHeight: isLoadingLearning ? '200px' : 'auto' }}>
+          {isLoadingLearning ? (
             <LoadingSpinner text="Đang tải biểu đồ phân phối..." size="md" position="center" />
           ) : (
             <Bar data={scoreDistributionData} options={barOptions} />

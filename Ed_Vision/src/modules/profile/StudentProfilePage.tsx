@@ -12,15 +12,6 @@ type Props = {
   // Add any specific props if needed
 };
 
-// Types mapped from Prisma schema (subset used by frontend)
-type ApiProfile = {
-  full_name?: string;
-  date_of_birth?: string | null;
-  gender?: string | null;
-  address?: string | null;
-  avatar_url?: string | null;
-  nationality?: string | null;
-};
 
 type ApiStudent = {
   student_id?: number;
@@ -52,7 +43,7 @@ export default function StudentProfilePage({}: Props) {
   const [parentLinks, setParentLinks] = useState<ApiParentLink[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditAcademicModalOpen, setIsEditAcademicModalOpen] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [_uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const loadProfile = async () => {
     const endpoint = buildUrl("/profile/student");

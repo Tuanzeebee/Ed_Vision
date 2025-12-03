@@ -31,7 +31,7 @@ export default function MusicPanel({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(84); // 1:24
-  const [duration, setDuration] = useState(228); // 3:48
+  const [duration, _setDuration] = useState(228); // 3:48
   const [showSongDetail, setShowSongDetail] = useState(false);
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [volume, setVolume] = useState(0.7); // 70% volume
@@ -191,38 +191,6 @@ export default function MusicPanel({
   const handleVolumeChange = (delta: number) => {
     const newVolume = Math.max(0, Math.min(1, volume + delta));
     setVolume(newVolume);
-  };
-
-  // Handle volume circle click/drag
-  const handleVolumeCircleInteraction = (e: React.MouseEvent<SVGCircleElement>) => {
-    const svg = e.currentTarget.ownerSVGElement;
-    if (!svg) return;
-
-    const rect = svg.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const updateVolume = (clientX: number, clientY: number) => {
-      const angle = Math.atan2(clientY - centerY, clientX - centerX);
-      let percentage = (angle + Math.PI / 2) / (2 * Math.PI);
-      if (percentage < 0) percentage += 1;
-      
-      setVolume(Math.max(0, Math.min(1, percentage)));
-    };
-
-    updateVolume(e.clientX, e.clientY);
-
-    const handleMouseMove = (e: MouseEvent) => {
-      updateVolume(e.clientX, e.clientY);
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
   };
 
   return (
@@ -895,7 +863,7 @@ export default function MusicPanel({
               <div className="absolute left-0 top-0 bottom-0 w-[500px] pl-16">
                 <AnimatedList
                   items={topBillboard}
-                  onItemSelect={(song, index) => {
+                  onItemSelect={(song, _index) => {
                     setSelectedSong(song);
                     setCurrentTime(0);
                   }}
@@ -903,7 +871,7 @@ export default function MusicPanel({
                   enableArrowNavigation={true}
                   displayScrollbar={false}
                   itemHeight={320}
-                  renderItem={(song, index, isActive) => (
+                  renderItem={(song, _index, isActive) => (
                     <div className="flex flex-col items-center justify-center h-full">
                       <img
                         src={song.image}

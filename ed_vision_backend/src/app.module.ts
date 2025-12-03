@@ -10,6 +10,7 @@ import { StudentManagementModule } from './admin_be/student-management/student-m
 import { InstructorManagementModule } from './admin_be/instructor-management/instructor-management.module';
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
 import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
+import { NotificationModule } from './admin_be/notification/notification.module';
 import { BookingModule } from './booking/booking.module';
 import { ClassManagementModule } from './teacher_be/class-management/class-management.module';
 import { SurveysModule } from './teacher_be/surveys/surveys.module';
@@ -31,6 +32,7 @@ import { ProfileModule } from './profile/profile.module';
     InstructorManagementModule,
     SurveyManagementModule,
     StatisticsOverviewModule,
+    NotificationModule,
     ClassManagementModule,
     SurveysModule,
     TeacherBeModule,

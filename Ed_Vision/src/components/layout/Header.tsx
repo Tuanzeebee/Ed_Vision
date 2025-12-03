@@ -6,6 +6,7 @@ import LanguageSwitcher from "../LanguageSwitcher"
 import { useEffect, useRef, useState } from 'react'
 import { buildUrl } from '@/services/api/config'
 import { useAuth } from '@/hooks/useAuth'
+import NotificationDropdown from './NotificationDropdown'
 
 type Props = {
   className?: string
@@ -179,15 +180,6 @@ export default function Header({
 
   // mark unused prop as referenced to satisfy strict linting
   void isLandingPage
-
-  // Bell Icon Component
-  function BellIcon() {
-    return (
-      <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-      </svg>
-    )
-  }
 
   return (
     <header className={`bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 ${className}`}>
@@ -402,25 +394,12 @@ export default function Header({
             {/* Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Bell Icon - Only for Teacher and Admin Mode */}
+            {/* Notification Dropdown - For Teacher and Admin Mode */}
             {(isTeacherMode || isAdminMode) && isAuthenticated && (
-              <div className="relative">
-                <button 
-                  aria-label="Notifications" 
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  onClick={() => {
-                    if (isTeacherMode) {
-                      navigate('/teacher/messages')
-                    } else if (isAdminMode) {
-                      navigate('/admin/notifications')
-                    }
-                  }}
-                >
-                  <BellIcon />
-                </button>
-                {/* Notification badge */}
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
-              </div>
+              <NotificationDropdown 
+                isAdminMode={isAdminMode} 
+                isTeacherMode={isTeacherMode} 
+              />
             )}
 
             {/* If not authenticated show login/register buttons, otherwise show profile dropdown */}
