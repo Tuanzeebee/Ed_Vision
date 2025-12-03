@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   // create app with reduced logger (only warnings/errors)
@@ -22,6 +24,10 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Serve uploaded files (avatars, etc.) as static files
+  const uploadsPath = join(__dirname, '..', 'uploads');
+  app.use('/uploads', express.static(uploadsPath));
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   await app.listen(port);

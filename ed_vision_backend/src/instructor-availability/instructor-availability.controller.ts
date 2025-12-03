@@ -48,6 +48,28 @@ export class InstructorAvailabilityController {
   }
 
   /**
+   * Check if instructor is an adviser (has adviser assignments)
+   * GET /instructor-availability/:instructorId/is-adviser
+   */
+  @Get(':instructorId/is-adviser')
+  async checkIsAdviser(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+  ) {
+    return this.availabilityService.checkIsAdviser(instructorId);
+  }
+
+  /**
+   * Get classes that instructor is assigned as adviser
+   * GET /instructor-availability/:instructorId/adviser-classes
+   */
+  @Get(':instructorId/adviser-classes')
+  async getAdviserClasses(
+    @Param('instructorId', ParseIntPipe) instructorId: number,
+  ) {
+    return this.availabilityService.getAdviserClasses(instructorId);
+  }
+
+  /**
    * Delete all time slots for a specific date
    * DELETE /instructor-availability/:instructorId/dates/:date
    * IMPORTANT: Must come BEFORE general :instructorId routes to avoid conflicts
