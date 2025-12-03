@@ -627,10 +627,10 @@ export default function ContentApproval() {
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold text-gray-900">Phê duyệt Nội dung</h1>
             <TimeFilter 
-              value={timeFilter} 
-              onChange={setTimeFilter}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
+              viewMode={timeFilter as 'day' | 'month' | 'year' | 'all'}
+              selectedDate={new Date(selectedYear, 0, 1)}
+              onViewModeChange={(mode) => setTimeFilter(mode)}
+              onDateChange={(date) => setSelectedYear(date.getFullYear())}
             />
           </div>
           <p className="text-gray-600">Quản lý và phê duyệt nội dung học tập do giảng viên gửi lên</p>

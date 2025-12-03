@@ -89,116 +89,135 @@ export default function TeacherDetailProfile() {
           onTabChange={handleTabChange}
         />
 
-        {/* Content Grid - Show content with fallback data */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column - Basic Information */}
-          <div className="space-y-6">
-            {/* Basic Info */}
-            <Card className="p-6">
-              <CardContent>
-                <h3 className="text-xl font-bold text-gray-800 mb-6">Thông tin cơ bản</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Họ và tên</label>
-                    <p className="text-lg font-semibold text-gray-800">{teacherData?.name?.replace('TS. ', '') || 'Tô Minh Vương'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
-                    <p className="text-lg text-blue-600">{teacherData?.email || 'vuongdeptrai@dtu.edu.vn'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Số điện thoại</label>
-                    <p className="text-lg text-gray-800">{teacherData?.phone || '0368182380'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Khoa/Bộ môn</label>
-                    <p className="text-lg text-gray-800">{teacherData?.department || 'Công nghệ Thông tin'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Chuyên ngành</label>
-                    <p className="text-lg text-gray-800">{teacherData?.specialization || 'Kỹ thuật phần mềm'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Mô tả</label>
-                    <p className="text-gray-700 leading-relaxed">{teacherData?.description || 'Giảng viên có hơn 15 năm kinh nghiệm giảng dạy trong lĩnh vực Công nghệ Thông tin.'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Detailed Info, Achievements, Activities */}
-          <div className="space-y-6">
-            {/* Detailed Information */}
-            <Card className="p-6">
-              <CardContent>
-                <h3 className="text-xl font-bold text-gray-800 mb-6">Thông tin chi tiết</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Ngày sinh</label>
-                    <p className="text-gray-800">{teacherData?.dateOfBirth || '01/01/1936'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Giới tính</label>
-                    <p className="text-gray-800">{teacherData?.gender || 'Nam'}</p>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Địa chỉ</label>
-                    <p className="text-gray-800">{teacherData?.address || '108 Đống Đa, TP Đà Nẵng'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Học hàm/học vị</label>
-                    <p className="text-gray-800">{teacherData?.position || 'Tiến sĩ'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Trạng thái</label>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
-                      {teacherData?.status || 'Đang hoạt động'}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Outstanding Achievements */}
-            <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
-              <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
-                <i className="fas fa-trophy mr-2"></i>
-                Thành tích nổi bật
-              </h3>
-              <div className="space-y-3">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-start">
-                    <i className={`${achievement.icon} ${achievement.color} mt-1 mr-3`}></i>
-                    <p className="text-blue-700">{achievement.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent Activities */}
-            <div className="bg-green-50 rounded-lg border border-green-200 p-6">
-              <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
-                <i className="fas fa-clock mr-2"></i>
-                Hoạt động gần đây
-              </h3>
-              <div className="space-y-3">
-                {recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-start">
-                    <i className={`${activity.icon} ${activity.color} mt-1 mr-3`}></i>
+        {/* Content Grid - Show content based on teacherData from API */}
+        {teacherData ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Basic Information */}
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <Card className="p-6">
+                <CardContent>
+                  <h3 className="text-xl font-bold text-gray-800 mb-6">Thông tin cơ bản</h3>
+                  <div className="space-y-4">
                     <div>
-                      <p className="text-green-700 font-medium">{activity.title}</p>
-                      {activity.date && (
-                        <p className="text-green-600 text-sm">{activity.date}</p>
-                      )}
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Họ và tên</label>
+                      <p className="text-lg font-semibold text-gray-800">{teacherData.name}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+                      <p className="text-lg text-blue-600">{teacherData.email}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Số điện thoại</label>
+                      <p className="text-lg text-gray-800">{teacherData.phone || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Khoa/Bộ môn</label>
+                      <p className="text-lg text-gray-800">{teacherData.department}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Chuyên ngành</label>
+                      <p className="text-lg text-gray-800">{teacherData.specialization || teacherData.department}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Mô tả</label>
+                      <p className="text-gray-700 leading-relaxed">{teacherData.description || 'Chưa có mô tả.'}</p>
                     </div>
                   </div>
-                ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Detailed Info, Achievements, Activities */}
+            <div className="space-y-6">
+              {/* Detailed Information */}
+              <Card className="p-6">
+                <CardContent>
+                  <h3 className="text-xl font-bold text-gray-800 mb-6">Thông tin chi tiết</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Ngày sinh</label>
+                      <p className="text-gray-800">{teacherData.dateOfBirth || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Giới tính</label>
+                      <p className="text-gray-800">{teacherData.gender || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Địa chỉ</label>
+                      <p className="text-gray-800">{teacherData.address || 'Chưa cập nhật'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Học hàm/học vị</label>
+                      <p className="text-gray-800">{teacherData.position}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Trạng thái</label>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        teacherData.status === 'Đang hoạt động' 
+                          ? 'bg-green-100 text-green-800' 
+                          : teacherData.status === 'Nghỉ phép'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full mr-1 ${
+                          teacherData.status === 'Đang hoạt động' 
+                            ? 'bg-green-400' 
+                            : teacherData.status === 'Nghỉ phép'
+                              ? 'bg-yellow-400'
+                              : 'bg-red-400'
+                        }`}></span>
+                        {teacherData.status}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Outstanding Achievements */}
+              <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
+                <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
+                  <i className="fas fa-trophy mr-2"></i>
+                  Thành tích nổi bật
+                </h3>
+                <div className="space-y-3">
+                  {achievements.map((achievement, index) => (
+                    <div key={index} className="flex items-start">
+                      <i className={`${achievement.icon} ${achievement.color} mt-1 mr-3`}></i>
+                      <p className="text-blue-700">{achievement.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activities */}
+              <div className="bg-green-50 rounded-lg border border-green-200 p-6">
+                <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
+                  <i className="fas fa-clock mr-2"></i>
+                  Hoạt động gần đây
+                </h3>
+                <div className="space-y-3">
+                  {recentActivities.map((activity, index) => (
+                    <div key={index} className="flex items-start">
+                      <i className={`${activity.icon} ${activity.color} mt-1 mr-3`}></i>
+                      <div>
+                        <p className="text-green-700 font-medium">{activity.title}</p>
+                        {activity.date && (
+                          <p className="text-green-600 text-sm">{activity.date}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Đang tải thông tin...</span>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

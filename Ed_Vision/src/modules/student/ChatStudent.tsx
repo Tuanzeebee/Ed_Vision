@@ -29,8 +29,10 @@ export default function ChatStudent({}: Props) {
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null)
   const [showStudentDetail, setShowStudentDetail] = useState(false)
   const [groupDialogSize, setGroupDialogSize] = useState({ width: 512, height: 600 })
-  const [isResizingDialog, setIsResizingDialog] = useState(false)
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
+  const isResizingDialogState = useState(false)
+  const setIsResizingDialog = isResizingDialogState[1]
+  const resizeStartState = useState({ x: 0, y: 0, width: 0, height: 0 })
+  const setResizeStart = resizeStartState[1]
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'general' | 'notifications' | 'privacy' | 'appearance'>('general')
 

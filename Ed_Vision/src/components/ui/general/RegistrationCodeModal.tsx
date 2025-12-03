@@ -14,11 +14,6 @@ export default function RegistrationCodeModal({
   registrationCode,
   onRegister,
 }: Props) {
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(registrationCode);
-    // Optionally show a toast notification
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-0 overflow-hidden rounded-xl">

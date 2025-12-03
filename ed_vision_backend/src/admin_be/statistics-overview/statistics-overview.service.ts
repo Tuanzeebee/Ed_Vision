@@ -570,7 +570,7 @@ export class StatisticsOverviewService {
       WHERE period IS NOT NULL;
     `;
 
-    // Phân phối điểm theo trường (0..10)
+    // Phân phối GPA theo trường (thang 0-4, bước nhảy 0.5)
     const sqlScoreDistribution = `
       WITH filtered AS (
         SELECT
@@ -585,11 +585,12 @@ export class StatisticsOverviewService {
       )
       SELECT
         department_name,
-        CAST(FLOOR(gpa) AS INT64) AS score,
-        COUNT(*) AS student_count
+        CAST(FLOOR(gpa * 2) / 2 AS FLOAT64) AS gpa_bucket,
+        COUNT(*) AS student_count,
+        SUM(gpa) AS total_gpa
       FROM filtered
-      GROUP BY department_name, score
-      ORDER BY department_name, score;
+      GROUP BY department_name, gpa_bucket
+      ORDER BY department_name, gpa_bucket;
     `;
 
     // Top students
@@ -699,25 +700,50 @@ export class StatisticsOverviewService {
         );
       }
 
-      // Phân phối điểm theo trường
-      const labels = Array.from({ length: 11 }, (_, i) => i);
-      const schoolMap = new Map<string, number[]>();
+      // Phân phối GPA theo trường - thang 0-4 với bước nhảy 0.5 (9 mốc)
+      const gpaBuckets = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
+      const schoolMap = new Map<string, { counts: number[]; totalGpa: number; totalStudents: number; weightedSum: number }>();
 
       (scoreRows as any[]).forEach((r: any) => {
         const school = r.department_name || 'Unknown';
-        const score = Math.min(10, Math.max(0, Number(r.score ?? 0)));
+        let gpaBucket = Number(r.gpa_bucket ?? 0);
+        // Đảm bảo GPA nằm trong khoảng 0-4
+        gpaBucket = Math.max(0, Math.min(4.0, gpaBucket));
+        // Làm tròn về mốc gần nhất
+        const roundedGpa = Math.round(gpaBucket * 2) / 2;
+        const bucketIndex = gpaBuckets.indexOf(roundedGpa);
         const count = Number(r.student_count ?? 0);
-        if (!schoolMap.has(school)) schoolMap.set(school, new Array(11).fill(0));
-        const arr = schoolMap.get(school)!;
-        arr[score] += count;
+        const totalGpa = Number(r.total_gpa ?? 0);
+        
+        if (!schoolMap.has(school)) {
+          schoolMap.set(school, { counts: new Array(9).fill(0), totalGpa: 0, totalStudents: 0, weightedSum: 0 });
+        }
+        const schoolData = schoolMap.get(school)!;
+        if (bucketIndex >= 0 && bucketIndex < 9) {
+          schoolData.counts[bucketIndex] += count;
+          // Tính tổng GPA ước lượng từ bucket (gpaBucket * số sinh viên)
+          schoolData.weightedSum += gpaBucket * count;
+        }
+        // Nếu có total_gpa từ SQL thì dùng, nếu không thì dùng weighted sum
+        if (totalGpa > 0) {
+          schoolData.totalGpa += totalGpa;
+        }
+        schoolData.totalStudents += count;
       });
 
       const scoreDistribution = {
-        labels,
-        schools: Array.from(schoolMap.entries()).map(([schoolName, scores]) => ({
-          schoolName,
-          scores,
-        })),
+        labels: gpaBuckets.map(g => g.toFixed(1)),
+        schools: Array.from(schoolMap.entries()).map(([schoolName, data]) => {
+          // Ưu tiên dùng totalGpa nếu có, nếu không thì dùng weightedSum
+          const avgGpa = data.totalStudents > 0 
+            ? (data.totalGpa > 0 ? data.totalGpa : data.weightedSum) / data.totalStudents 
+            : 0;
+          return {
+            schoolName,
+            scores: data.counts,
+            averageGpa: Math.round(avgGpa * 100) / 100,
+          };
+        }),
       };
 
       const topStudents = topRows.map((r: any) => ({
@@ -1035,18 +1061,20 @@ export class StatisticsOverviewService {
     else if (query.semester === 'Kỳ 2') semesterNumber = 2;
     else if (query.semester === 'Kỳ Hè') semesterNumber = 3;
 
+    // Nhóm GPA theo thang 0.5: 0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0
     const sql = `
       SELECT
         ds.department_name,
-        FLOOR(fsp.gpa) AS score,
-        COUNT(*) AS student_count
+        CAST(FLOOR(fsp.gpa * 2) / 2 AS FLOAT64) AS gpa_bucket,
+        COUNT(*) AS student_count,
+        SUM(fsp.gpa) AS total_gpa
       FROM vuong_dw.fact_student_course_performance fsp
       INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
-      GROUP BY ds.department_name, score
-      ORDER BY ds.department_name, score;
+      GROUP BY ds.department_name, gpa_bucket
+      ORDER BY ds.department_name, gpa_bucket;
     `;
 
     const queryParams = {
@@ -1057,21 +1085,47 @@ export class StatisticsOverviewService {
 
     const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
 
-    const schoolMap = new Map<string, number[]>();
+    // Các mốc GPA: 0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 (9 buckets)
+    const gpaBuckets = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
+    const schoolMap = new Map<string, { counts: number[]; totalGpa: number; totalStudents: number; weightedSum: number }>();
     (rows as any[]).forEach(row => {
       const school = row.department_name || 'Unknown';
-      const score = Math.min(10, Math.max(0, Number(row.score))); // Đảm bảo 0-10
+      let gpaBucket = Number(row.gpa_bucket);
+      // Đảm bảo GPA nằm trong khoảng 0-4
+      gpaBucket = Math.max(0, Math.min(4.0, gpaBucket));
+      // Làm tròn về mốc gần nhất
+      const roundedGpa = Math.round(gpaBucket * 2) / 2;
+      const bucketIndex = gpaBuckets.indexOf(roundedGpa);
       const count = Number(row.student_count);
-      if (!schoolMap.has(school)) schoolMap.set(school, new Array(11).fill(0));
-      const scores = schoolMap.get(school)!;
-      scores[score] += count;
+      const totalGpa = Number(row.total_gpa ?? 0);
+      
+      if (!schoolMap.has(school)) {
+        schoolMap.set(school, { counts: new Array(9).fill(0), totalGpa: 0, totalStudents: 0, weightedSum: 0 });
+      }
+      const schoolData = schoolMap.get(school)!;
+      if (bucketIndex >= 0 && bucketIndex < 9) {
+        schoolData.counts[bucketIndex] += count;
+        // Tính tổng GPA ước lượng từ bucket
+        schoolData.weightedSum += gpaBucket * count;
+      }
+      if (totalGpa > 0) {
+        schoolData.totalGpa += totalGpa;
+      }
+      schoolData.totalStudents += count;
     });
 
     return {
-      schools: Array.from(schoolMap.entries()).map(([schoolName, scores]) => ({
-        schoolName,
-        scores,
-      })),
+      labels: gpaBuckets.map(g => g.toFixed(1)),
+      schools: Array.from(schoolMap.entries()).map(([schoolName, data]) => {
+        const avgGpa = data.totalStudents > 0 
+          ? (data.totalGpa > 0 ? data.totalGpa : data.weightedSum) / data.totalStudents 
+          : 0;
+        return {
+          schoolName,
+          scores: data.counts,
+          averageGpa: Math.round(avgGpa * 100) / 100,
+        };
+      }),
     };
   }
 
@@ -1130,6 +1184,25 @@ export class StatisticsOverviewService {
 
   // ===== ACCESS TIME =====
   async getAccessTimeStats(query: DashboardStatsQueryDto): Promise<AccessTimeStatsResponse> {
+    // Xác định khoảng thời gian cần lấy dữ liệu
+    // Nếu có timeFilter thì sử dụng nó, ngược lại mặc định là ngày hôm nay
+    const timeFilter = query.timeFilter || 'hôm-nay';
+    const anchorDate = query.anchorDate;
+    const selectedYear = query.selectedYear;
+    const sinceYear = query.sinceYear;
+    
+    // Lấy khoảng thời gian dựa trên filter
+    const { currentStart, currentEnd } = this.getDateRanges(
+      timeFilter,
+      selectedYear,
+      anchorDate,
+      sinceYear,
+    );
+    
+    // Format dates cho SQL
+    const startDateStr = currentStart.toISOString().split('T')[0];
+    const endDateStr = currentEnd.toISOString().split('T')[0];
+    
     const sql = `
       SELECT
         SUM(CASE WHEN LOWER(period) = 'morning' THEN 1 ELSE 0 END) AS morning,
@@ -1137,6 +1210,8 @@ export class StatisticsOverviewService {
         SUM(CASE WHEN LOWER(period) = 'evening' THEN 1 ELSE 0 END) AS evening
       FROM vuong_dw.fact_user_session
       WHERE period IS NOT NULL
+        AND DATE(login_time) >= '${startDateStr}'
+        AND DATE(login_time) <= '${endDateStr}'
     `;
     const [rows] = await this.bigquery.query({ query: sql });
     const counts = {
@@ -1151,6 +1226,18 @@ export class StatisticsOverviewService {
       evening: total > 0 ? parseFloat(((counts.evening / total) * 100).toFixed(2)) : 0,
     };
     return { data: counts, percentages, total };
+  }
+
+  // Debug: Get recent sessions from BigQuery
+  async debugSessions() {
+    const sql = `
+      SELECT session_id, account_sk, login_time, period, role_code
+      FROM vuong_dw.fact_user_session
+      ORDER BY login_time DESC
+      LIMIT 20
+    `;
+    const [rows] = await this.bigquery.query({ query: sql });
+    return { sessions: rows };
   }
 
   // =================== HELPER FUNCTIONS ===================
