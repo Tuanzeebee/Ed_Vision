@@ -61,3 +61,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 #Google BigQuery key file
 /edvision-bigquery-key.json
+
+# User uploaded files
+uploads/avatars/

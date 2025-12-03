@@ -271,7 +271,6 @@ model SurveyAnswer {
   question    SurveyQuestion? @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
   response    SurveyResponse? @relation(fields: [response_id], references: [response_id], onDelete: Cascade)
 
-  @@unique([response_id, question_id])
   @@map("SurveyAnswer")
 }
 

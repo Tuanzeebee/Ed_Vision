@@ -77,7 +77,8 @@
       "learn": "Learn",
       "predict": "Predict",
       "plan": "Plan",
-      "communicate": "Communicate"
+      "communicate": "Communicate",
+      "survey": "Survey"
     },
     "features": {
       "gradeForecasting": {
@@ -140,6 +141,16 @@
         "appointments": {
           "title": "Appointments",
           "description": "Schedule meetings"
+        }
+      },
+      "survey": {
+        "takeSurvey": {
+          "title": "Take Survey",
+          "description": "Complete surveys and questionnaires"
+        },
+        "surveyHistory": {
+          "title": "Survey History",
+          "description": "View your past survey responses"
         }
       }
     },

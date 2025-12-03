@@ -77,7 +77,8 @@
       "learn": "Học tập",
       "predict": "Dự đoán",
       "plan": "Lập kế hoạch",
-      "communicate": "Giao tiếp"
+      "communicate": "Giao tiếp",
+      "survey": "Khảo sát"
     },
     "features": {
       "gradeForecasting": {
@@ -140,6 +141,16 @@
         "appointments": {
           "title": "Lịch hẹn",
           "description": "Đặt lịch gặp mặt"
+        }
+      },
+      "survey": {
+        "takeSurvey": {
+          "title": "Làm khảo sát",
+          "description": "Hoàn thành các bảng khảo sát"
+        },
+        "surveyHistory": {
+          "title": "Lịch sử khảo sát",
+          "description": "Xem các khảo sát đã hoàn thành"
         }
       }
     },
