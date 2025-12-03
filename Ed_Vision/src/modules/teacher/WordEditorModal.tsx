@@ -350,14 +350,14 @@ export default function WordEditorModal({
           <div className="flex items-center gap-2">
             <Button
               onClick={onSelectStudents}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 !text-white"
             >
               <Users className="w-4 h-4 mr-2" />
               Chọn sinh viên
             </Button>
             <Button
               onClick={saveDocument}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 !text-white"
               disabled={isSaving || isLoadingInstructor}
             >
               <Save className="w-4 h-4 mr-2" />
@@ -778,26 +778,26 @@ export default function WordEditorModal({
             </span>
             <button
               onClick={printDocument}
-              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 font-medium"
             >
               <Printer className="w-4 h-4" />
               In tài liệu
             </button>
             <button
               onClick={exportToPDF}
-              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 font-medium"
             >
               <Download className="w-4 h-4" />
               Xuất PDF
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={onClose} variant="outline" disabled={isSaving}>
+            <Button onClick={onClose} variant="outline" disabled={isSaving} className="!text-gray-700">
               Đóng
             </Button>
             <Button 
               onClick={saveAndClose} 
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 !text-white"
               disabled={isSaving || isLoadingInstructor}
             >
               {isSaving ? 'Đang lưu...' : 'Lưu & Đóng'}

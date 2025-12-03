@@ -60,16 +60,20 @@ export class MeetingLogsService {
    */
   async getStudentsBySlot(slotId: number): Promise<StudentInSlotResponse> {
     // Lấy thông tin slot trước
-    const slot = await this.prisma.instructorWeeklySlot.findUnique({
+    const slot = await this.prisma.instructorDailySlot.findUnique({
       where: { slot_id: slotId },
       include: {
-        week: {
+        date: {
           include: {
-            instructor: {
+            week: {
               include: {
-                account: {
+                instructor: {
                   include: {
-                    profile: true,
+                    account: {
+                      include: {
+                        profile: true,
+                      },
+                    },
                   },
                 },
               },
@@ -102,11 +106,9 @@ export class MeetingLogsService {
       throw new NotFoundException(`Không tìm thấy slot với ID: ${slotId}`);
     }
 
-    // Tính toán ngày cụ thể từ week_start_date và day_of_week
-    const weekStartDate = slot.week ? new Date(slot.week.week_start_date) : new Date();
-    const specificDate = new Date(weekStartDate);
-    const dayOfWeek = slot.day_of_week || 1;
-    specificDate.setDate(weekStartDate.getDate() + (dayOfWeek - 1));
+    // Lấy ngày cụ thể từ date record
+    const specificDate = slot.date ? new Date(slot.date.specific_date) : new Date();
+    const dayOfWeek = specificDate.getUTCDay() || 7; // Sunday = 0 -> 7
 
     const students = slot.appointments
       .filter((appointment) => appointment.student !== null)
@@ -174,7 +176,7 @@ export class MeetingLogsService {
       const startTimeDate = new Date(`1970-01-01T${startTime}:00.000+08:00`);
       const endTimeDate = new Date(`1970-01-01T${endTime}:00.000+08:00`);
 
-      // Tìm week
+      // Tìm week và dates với slots
       const week =
         await this.prisma.instructorAvailabilityWeek.findUnique({
           where: {
@@ -193,28 +195,34 @@ export class MeetingLogsService {
                 },
               },
             },
-            instructorWeeklySlots: {
+            instructorAvailabilityDates: {
               where: {
-                day_of_week: dayOfWeek,
-                start_time_local: startTimeDate,
-                end_time_local: endTimeDate,
+                specific_date: targetDate,
               },
               include: {
-                appointments: {
+                slots: {
                   where: {
-                    status: {
-                      in: ['confirmed', 'pending'],
-                    },
+                    start_time_local: startTimeDate,
+                    end_time_local: endTimeDate,
                   },
                   include: {
-                    student: {
+                    appointments: {
+                      where: {
+                        status: {
+                          in: ['confirmed', 'pending'],
+                        },
+                      },
                       include: {
-                        account: {
+                        student: {
                           include: {
-                            profile: true,
+                            account: {
+                              include: {
+                                profile: true,
+                              },
+                            },
+                            classGroup: true,
                           },
                         },
-                        classGroup: true,
                       },
                     },
                   },
@@ -224,7 +232,11 @@ export class MeetingLogsService {
           },
         });
 
-      if (!week || week.instructorWeeklySlots.length === 0) {
+      // Extract slot from nested structure
+      const dateRecord = week?.instructorAvailabilityDates?.[0];
+      const slot = dateRecord?.slots?.[0];
+
+      if (!week || !dateRecord || !slot) {
         // Trả về empty response thay vì throw error
         return {
           slot_id: null,
@@ -241,8 +253,6 @@ export class MeetingLogsService {
           capacity: 0,
         };
       }
-
-      const slot = week.instructorWeeklySlots[0];
 
       const students = slot.appointments
         .filter((appointment) => appointment.student !== null)
@@ -264,7 +274,7 @@ export class MeetingLogsService {
       return {
         slot_id: slot.slot_id,
         date: date,
-        day_of_week: slot.day_of_week || dayOfWeek,
+        day_of_week: dayOfWeek,
         start_time: startTime,
         end_time: endTime,
         period_label: slot.period_label || '',

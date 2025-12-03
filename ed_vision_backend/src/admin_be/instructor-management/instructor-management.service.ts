@@ -345,19 +345,24 @@ export class InstructorManagementService {
     const weekEndDate = new Date(weekStartDate);
     weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
 
-    // Get instructor's weekly slots
+    // Get instructor's weekly availability with slots
     const week = await this.prisma.instructorAvailabilityWeek.findFirst({
       where: {
         instructor_id: instructorId,
         week_start_date: weekStartDate,
       },
       include: {
-        instructorWeeklySlots: true,
+        instructorAvailabilityDates: {
+          include: {
+            slots: true,
+          },
+        },
       },
     });
 
-    const slots = week?.instructorWeeklySlots ?? [];
-    const slotIds = slots.map((s: any) => s.slot_id);
+    const availabilityDates = week?.instructorAvailabilityDates ?? [];
+    const allSlots = availabilityDates.flatMap((ad) => ad.slots);
+    const slotIds = allSlots.map((s: any) => s.slot_id);
 
     // Get appointments for these slots
     const appointments = slotIds.length
@@ -366,7 +371,11 @@ export class InstructorManagementService {
             slot_id: { in: slotIds },
           },
           include: {
-            slot: true,
+            slot: {
+              include: {
+                date: true,
+              },
+            },
             student: {
               include: {
                 account: { include: { profile: true } },
@@ -385,9 +394,18 @@ export class InstructorManagementService {
       const currentDate = new Date(weekStartDate);
       currentDate.setUTCDate(weekStartDate.getUTCDate() + i);
       const dateStr = formatDate(currentDate);
-      const dayOfWeek = i === 6 ? 7 : i + 1; // 1=Monday, 7=Sunday
 
-      const daySlots = slots.filter((s: any) => s.day_of_week === dayOfWeek);
+      // Find availability and slots for this day
+      const dayAvailability = availabilityDates.find((ad) => {
+        const adDate = new Date(ad.specific_date);
+        return (
+          adDate.getUTCFullYear() === currentDate.getUTCFullYear() &&
+          adDate.getUTCMonth() === currentDate.getUTCMonth() &&
+          adDate.getUTCDate() === currentDate.getUTCDate()
+        );
+      });
+
+      const daySlots = dayAvailability?.slots ?? [];
       const daySchedule: any[] = daySlots.map((slot: any) => {
         const startTime = formatTime(slot.start_time_local);
         const endTime = formatTime(slot.end_time_local);
@@ -491,8 +509,8 @@ export class InstructorManagementService {
       instructor_id: instructorId,
       status: { in: ['pending', 'confirmed'] },
       slot: {
-        week: {
-          week_start_date: { lte: sevenDaysLater },
+        date: {
+          specific_date: { lte: sevenDaysLater },
         },
       },
     };
@@ -504,7 +522,7 @@ export class InstructorManagementService {
       include: {
         slot: {
           include: {
-            week: true,
+            date: true,
           },
         },
         student: {
@@ -516,8 +534,7 @@ export class InstructorManagementService {
         appointmentContact: true,
       },
       orderBy: [
-        { slot: { week: { week_start_date: 'asc' } } },
-        { slot: { day_of_week: 'asc' } },
+        { slot: { date: { specific_date: 'asc' } } },
         { slot: { start_time_local: 'asc' } },
       ],
       skip: (page - 1) * limit,
@@ -534,26 +551,27 @@ export class InstructorManagementService {
       }
     };
 
-    const formatDate = (weekStart: Date, dayOfWeek: number) => {
-      const date = new Date(weekStart);
-      date.setDate(date.getDate() + (dayOfWeek - 1));
+    const formatDate = (date: Date) => {
       return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     };
 
-    const data = appointments.map((apt) => ({
-      id: apt.appointment_id.toString(),
-      time: `${formatTime(apt.slot.start_time_local)} - ${formatTime(apt.slot.end_time_local)}`,
-      date: formatDate(apt.slot.week?.week_start_date || new Date(), apt.slot.day_of_week || 1),
-      name:
-        apt.booker_role?.toLowerCase() === 'student'
-          ? apt.student?.account?.profile?.full_name || 'Unknown'
-          : apt.appointmentContact?.contact_name || apt.booker?.profile?.full_name || 'Unknown',
-      bookerRole: apt.booker_role,
-      meetingPurpose: apt.meeting_purpose,
-      format: apt.meeting_type,
-      status: apt.status,
-      description: apt.meeting_purpose || '',
-    }));
+    const data = appointments.map((apt) => {
+      const slotDate = new Date(apt.slot.date.specific_date);
+      return {
+        id: apt.appointment_id.toString(),
+        time: `${formatTime(apt.slot.start_time_local)} - ${formatTime(apt.slot.end_time_local)}`,
+        date: formatDate(slotDate),
+        name:
+          apt.booker_role?.toLowerCase() === 'student'
+            ? apt.student?.account?.profile?.full_name || 'Unknown'
+            : apt.appointmentContact?.contact_name || apt.booker?.profile?.full_name || 'Unknown',
+        bookerRole: apt.booker_role,
+        meetingPurpose: apt.meeting_purpose,
+        format: apt.meeting_type,
+        status: apt.status,
+        description: apt.meeting_purpose || '',
+      };
+    });
 
     return {
       data,
@@ -589,7 +607,7 @@ export class InstructorManagementService {
       include: {
         slot: {
           include: {
-            week: true,
+            date: true,
           },
         },
         student: {
@@ -615,28 +633,29 @@ export class InstructorManagementService {
       }
     };
 
-    const formatDate = (weekStart: Date, dayOfWeek: number) => {
-      const date = new Date(weekStart);
-      date.setDate(date.getDate() + (dayOfWeek - 1));
+    const formatDate = (date: Date) => {
       return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     };
 
-    const data = appointments.map((apt) => ({
-      id: apt.appointment_id.toString(),
-      time: `${formatTime(apt.slot.start_time_local)} - ${formatTime(apt.slot.end_time_local)}`,
-      date: formatDate(apt.slot.week?.week_start_date || new Date(), apt.slot.day_of_week || 1),
-      name:
-        apt.booker_role?.toLowerCase() === 'student'
-          ? apt.student?.account?.profile?.full_name || 'Unknown'
-          : apt.appointmentContact?.contact_name || apt.booker?.profile?.full_name || 'Unknown',
-      bookerRole: apt.booker_role,
-      relationship: apt.booker_role === 'student' ? 'Sinh viên' : 'Phụ huynh',
-      meetingPurpose: apt.meeting_purpose,
-      format: apt.meeting_type,
-      status: apt.status,
-      description: apt.meeting_purpose || '',
-      result: apt.status === 'cancelled' ? apt.cancel_reason : '',
-    }));
+    const data = appointments.map((apt) => {
+      const slotDate = new Date(apt.slot.date.specific_date);
+      return {
+        id: apt.appointment_id.toString(),
+        time: `${formatTime(apt.slot.start_time_local)} - ${formatTime(apt.slot.end_time_local)}`,
+        date: formatDate(slotDate),
+        name:
+          apt.booker_role?.toLowerCase() === 'student'
+            ? apt.student?.account?.profile?.full_name || 'Unknown'
+            : apt.appointmentContact?.contact_name || apt.booker?.profile?.full_name || 'Unknown',
+        bookerRole: apt.booker_role,
+        relationship: apt.booker_role === 'student' ? 'Sinh viên' : 'Phụ huynh',
+        meetingPurpose: apt.meeting_purpose,
+        format: apt.meeting_type,
+        status: apt.status,
+        description: apt.meeting_purpose || '',
+        result: apt.status === 'cancelled' ? apt.cancel_reason : '',
+      };
+    });
 
     return {
       data,

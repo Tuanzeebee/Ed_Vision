@@ -50,18 +50,18 @@ export default function Header({
 
   // Fetch avatar and profile name from profile API
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfile = async (forceRefetch = false) => {
       if (!isAuthenticated) {
         setAvatarUrl(null)
         setDisplayName(null)
         return
       }
 
-      // Check if user object already has full data
+      // Check if user object already has full data (skip if force refetch)
       const existingAvatar = user?.avatarUrl || user?.avatar_url || user?.avatar
       const existingName = user?.fullName || user?.full_name || user?.name
       
-      if (existingAvatar && existingName) {
+      if (!forceRefetch && existingAvatar && existingName) {
         setAvatarUrl(existingAvatar)
         setDisplayName(existingName)
         return
@@ -116,6 +116,22 @@ export default function Header({
     }
 
     fetchProfile()
+
+    // Listen for avatar-updated event from profile pages
+    const handleAvatarUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string }>
+      if (customEvent.detail?.url) {
+        setAvatarUrl(customEvent.detail.url)
+      } else {
+        // Refetch profile if no URL provided
+        fetchProfile(true)
+      }
+    }
+
+    window.addEventListener('avatar-updated', handleAvatarUpdated)
+    return () => {
+      window.removeEventListener('avatar-updated', handleAvatarUpdated)
+    }
   }, [isAuthenticated, user?.avatarUrl, user?.avatar_url, user?.avatar, user?.fullName, user?.full_name, user?.name])
 
   useEffect(() => {

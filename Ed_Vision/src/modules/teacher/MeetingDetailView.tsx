@@ -452,20 +452,21 @@ export default function MeetingDetailView({
 
   return (
     <TeacherLayout currentPage="appointment">
+      <div className="dark:bg-white dark:text-gray-900">
       {/* Loading State */}
       {profileLoading && (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Đang tải thông tin...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-600">Đang tải thông tin...</p>
           </div>
         </div>
       )}
 
       {/* Error State */}
       {!profileLoading && !instructorId && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-          <p className="text-red-800">
+        <div className="bg-red-50 dark:bg-red-50 border border-red-200 dark:border-red-200 rounded-lg p-6 mb-6">
+          <p className="text-red-800 dark:text-red-800">
             Không thể tải thông tin giảng viên. Vui lòng đăng nhập lại.
           </p>
         </div>
@@ -475,29 +476,29 @@ export default function MeetingDetailView({
       {!profileLoading && instructorId && (
         <>
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-600 mb-6">
             <button 
               onClick={handleBackToSchedule}
-              className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+              className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-600 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Thiết lập lịch rảnh</span>
             </button>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 font-medium">Chi tiết ngày {currentDate}</span>
+            <span className="text-gray-900 dark:text-gray-900 font-medium">Chi tiết ngày {currentDate}</span>
           </div>
 
           {/* Page Header */}
           <div className="mb-6">
             {/* Warning for past dates */}
             {apiDate && isDateInPast(apiDate) && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 flex items-start gap-3">
-                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="bg-yellow-50 dark:bg-yellow-50 border border-yellow-200 dark:border-yellow-200 rounded-lg p-4 mb-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                  <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-800 mb-1">
                     Đây là ngày đã qua
                   </h3>
-                  <p className="text-sm text-yellow-700">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-700">
                     Bạn không thể thêm hoặc xóa khung giờ cho ngày này. Chỉ có thể xem thông tin.
                   </p>
                 </div>
@@ -506,12 +507,12 @@ export default function MeetingDetailView({
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Chi tiết cuộc họp</h1>
-                <p className="text-gray-600">{currentWeekday}, {currentDate}</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-900 mb-2">📅 Chi tiết cuộc họp</h1>
+                <p className="text-gray-600 dark:text-gray-600">{currentWeekday}, {currentDate}</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="bg-blue-100 px-4 py-2 rounded-lg">
-                  <span className="text-sm font-medium text-blue-800">
+                <div className="bg-blue-100 dark:bg-blue-100 px-4 py-2 rounded-lg">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-800">
                     {timeSlots.length} khung giờ đã thiết lập
                   </span>
                 </div>
@@ -519,8 +520,8 @@ export default function MeetingDetailView({
                   onClick={handleOpenTimeModal}
                   className={`${
                     apiDate && isDateInPast(apiDate)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700'
+                      ? 'bg-gray-400 dark:bg-gray-400 cursor-not-allowed !text-white'
+                      : 'bg-green-600 dark:bg-green-600 hover:bg-green-700 dark:hover:bg-green-700 !text-white'
                   }`}
                   disabled={loading || (apiDate ? isDateInPast(apiDate) : false)}
                   title={
@@ -545,7 +546,7 @@ export default function MeetingDetailView({
           const MeetingIcon = meetingConfig.icon
 
           return (
-            <Card key={slot.id} className="slot-card hover:shadow-md transition-shadow relative">
+            <Card key={slot.id} className="slot-card hover:shadow-md transition-shadow relative dark:bg-white dark:border-gray-300">
               <CardContent className="p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
@@ -554,10 +555,10 @@ export default function MeetingDetailView({
                       <Clock className={`w-6 h-6 ${colorConfig.text}`} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900">
                         {slot.startTime} - {slot.endTime}
                       </h3>
-                      <p className="text-sm text-gray-600">{slot.duration} phút</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-600">{slot.duration} phút</p>
                     </div>
                   </div>
                   <button
@@ -595,31 +596,31 @@ export default function MeetingDetailView({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Đã đặt:</span>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm text-gray-600 dark:text-gray-600">Đã đặt:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-900">
                       {slot.bookedSlots}/{slot.totalSlots}
                     </span>
                   </div>
                   
                   {/* Meeting Link for Online/Both */}
                   {(slot.meetingType === 'online' || slot.meetingType === 'both') && (
-                    <div className="border-t border-gray-100 pt-3">
+                    <div className="border-t border-gray-100 dark:border-gray-300 pt-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Link họp:</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-600">Link họp:</span>
                         {slot.meetingLink ? (
                           <div className="flex items-center gap-2">
                             <a 
                               href={slot.meetingLink} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline truncate max-w-[100px]"
+                              className="text-xs text-blue-600 dark:text-blue-600 hover:underline truncate max-w-[100px]"
                               title={slot.meetingLink}
                             >
                               {slot.meetingLink}
                             </a>
                             <button
                               onClick={(e) => handleOpenLinkLocationModal(slot, e)}
-                              className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                              className="text-xs text-gray-500 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-600 transition-colors"
                               title="Chỉnh sửa"
                             >
                               ✏️
@@ -628,7 +629,7 @@ export default function MeetingDetailView({
                         ) : (
                           <button
                             onClick={(e) => handleOpenLinkLocationModal(slot, e)}
-                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                            className="text-xs text-blue-600 dark:text-blue-600 hover:text-blue-700 dark:hover:text-blue-700 font-medium flex items-center gap-1"
                           >
                             <LinkIcon className="w-3 h-3" />
                             Thêm link
@@ -640,17 +641,17 @@ export default function MeetingDetailView({
                   
                   {/* Meeting Location for Offline */}
                   {slot.meetingType === 'offline' && (
-                    <div className="border-t border-gray-100 pt-3">
+                    <div className="border-t border-gray-100 dark:border-gray-300 pt-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Địa điểm:</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-600">Địa điểm:</span>
                         {slot.meetingLocation ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-700 truncate max-w-[100px]" title={slot.meetingLocation}>
+                            <span className="text-xs text-gray-700 dark:text-gray-700 truncate max-w-[100px]" title={slot.meetingLocation}>
                               {slot.meetingLocation}
                             </span>
                             <button
                               onClick={(e) => handleOpenLinkLocationModal(slot, e)}
-                              className="text-xs text-gray-500 hover:text-orange-600 transition-colors"
+                              className="text-xs text-gray-500 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-600 transition-colors"
                               title="Chỉnh sửa"
                             >
                               ✏️
@@ -659,7 +660,7 @@ export default function MeetingDetailView({
                         ) : (
                           <button
                             onClick={(e) => handleOpenLinkLocationModal(slot, e)}
-                            className="text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1"
+                            className="text-xs text-orange-600 dark:text-orange-600 hover:text-orange-700 dark:hover:text-orange-700 font-medium flex items-center gap-1"
                           >
                             <MapPinned className="w-3 h-3" />
                             Thêm địa điểm
@@ -674,7 +675,7 @@ export default function MeetingDetailView({
                 <div className="border-t border-gray-200 pt-4">
                   <Button
                     onClick={() => handleOpenEditor(slot)}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-blue-600 hover:bg-blue-700 !text-white dark:!text-white"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Tạo nhật ký cố vấn
@@ -688,35 +689,35 @@ export default function MeetingDetailView({
           )}
 
           {/* Summary Section */}
-          <Card>
+          <Card className="dark:bg-white dark:border-gray-300">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 mb-4">
                 📊 Tổng quan ngày {currentDate}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center bg-blue-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-blue-600 mb-1">
+            <div className="text-center bg-blue-50 dark:bg-blue-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-600 mb-1">
                 {timeSlots.length}
               </div>
-              <div className="text-sm text-gray-600">Khung giờ</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">Khung giờ</div>
             </div>
-            <div className="text-center bg-green-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-green-600 mb-1">
+            <div className="text-center bg-green-50 dark:bg-green-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-600 mb-1">
                 {totalSlots}
               </div>
-              <div className="text-sm text-gray-600">Tổng slots</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">Tổng slots</div>
             </div>
-            <div className="text-center bg-orange-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-orange-600 mb-1">
+            <div className="text-center bg-orange-50 dark:bg-orange-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-600 mb-1">
                 {totalBooked}
               </div>
-              <div className="text-sm text-gray-600">Đã đặt</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">Đã đặt</div>
             </div>
-            <div className="text-center bg-purple-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-purple-600 mb-1">
+            <div className="text-center bg-purple-50 dark:bg-purple-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-600 mb-1">
                 {bookingRate}%
               </div>
-              <div className="text-sm text-gray-600">Tỷ lệ đặt</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">Tỷ lệ đặt</div>
             </div>
               </div>
             </CardContent>
@@ -765,7 +766,7 @@ export default function MeetingDetailView({
             }
           }}
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">Thêm khung giờ rảnh</h3>
@@ -888,13 +889,13 @@ export default function MeetingDetailView({
               <div className="flex gap-3">
                 <button
                   onClick={() => setTimeModalOpen(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="flex-1 bg-gray-400 hover:bg-gray-500 !text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleAddTimeSlot}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 bg-green-600 hover:bg-green-700 !text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Thêm giờ
@@ -908,7 +909,7 @@ export default function MeetingDetailView({
       {/* Link/Location Fixed Floating Panel */}
       {linkLocationModalOpen && currentEditingSlotForLink && (
         <div 
-          className="fixed w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 animate-in slide-in-from-right-5 duration-300"
+          className="fixed w-96 bg-white dark:bg-white rounded-xl shadow-2xl border border-gray-200 dark:border-gray-300 z-50 animate-in slide-in-from-right-5 duration-300"
           style={{
             top: `${panelPosition.top}px`,
             left: `${panelPosition.left}px`,
@@ -948,7 +949,7 @@ export default function MeetingDetailView({
             {/* Meeting Link Input (for online/both) */}
             {(currentEditingSlotForLink.meetingType === 'online' || currentEditingSlotForLink.meetingType === 'both') && (
               <div className="mb-4">
-                <label htmlFor="meetingLink" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <label htmlFor="meetingLink" className="block text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <Monitor className="w-4 h-4 text-blue-600" />
                   Link cuộc họp online
                 </label>
@@ -972,7 +973,7 @@ export default function MeetingDetailView({
             {/* Meeting Location Input (for offline) */}
             {currentEditingSlotForLink.meetingType === 'offline' && (
               <div className="mb-4">
-                <label htmlFor="meetingLocation" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <label htmlFor="meetingLocation" className="block text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-orange-600" />
                   Địa điểm họp trực tiếp
                 </label>
@@ -1016,13 +1017,13 @@ export default function MeetingDetailView({
           <div className="px-5 py-4 bg-gray-50 rounded-b-xl border-t border-gray-200 flex gap-3">
             <button
               onClick={() => setLinkLocationModalOpen(false)}
-              className="flex-1 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-colors border border-gray-300"
+              className="flex-1 bg-gray-400 hover:bg-gray-500 !text-white px-4 py-2.5 rounded-lg font-medium transition-colors"
             >
               Hủy
             </button>
             <button
               onClick={handleSaveLinkLocation}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 !text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               <CheckCircle className="w-4 h-4" />
               Lưu
@@ -1050,6 +1051,7 @@ export default function MeetingDetailView({
           </div>
         </div>
       )}
+      </div>
     </TeacherLayout>
   )
 }

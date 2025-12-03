@@ -6,15 +6,19 @@ export class BookingRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSlotById(slotId: number) {
-    return this.prisma.instructorWeeklySlot.findUnique({
+    return this.prisma.instructorDailySlot.findUnique({
       where: { slot_id: slotId },
       include: {
-        week: {
+        date: {
           include: {
-            instructor: {
+            week: {
               include: {
-                account: {
-                  include: { profile: true },
+                instructor: {
+                  include: {
+                    account: {
+                      include: { profile: true },
+                    },
+                  },
                 },
               },
             },
@@ -57,7 +61,7 @@ export class BookingRepository {
     return this.prisma.appointment.findMany({
       where: { booker_account_id: accountId },
       include: {
-        slot: { include: { week: true } },
+        slot: { include: { date: { include: { week: true } } } },
         instructor: { include: { account: { select: { account_id: true } } } },
         student: { include: { account: { select: { account_id: true } } } },
         appointmentContact: true,
@@ -70,7 +74,7 @@ export class BookingRepository {
     return this.prisma.appointment.findUnique({
       where: { appointment_id: appointmentId },
       include: {
-        slot: { include: { week: true } },
+        slot: { include: { date: { include: { week: true } } } },
         instructor: true,
         student: true,
         booker: true,
@@ -199,11 +203,15 @@ export class BookingRepository {
       include: {
         slot: { 
           include: { 
-            week: {
+            date: {
               include: {
-                instructor: {
+                week: {
                   include: {
-                    account: { include: { profile: true } },
+                    instructor: {
+                      include: {
+                        account: { include: { profile: true } },
+                      },
+                    },
                   },
                 },
               },

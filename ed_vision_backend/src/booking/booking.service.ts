@@ -81,8 +81,8 @@ export class BookingService {
 		// Determine status: auto-accept -> confirmed, else pending
 		const status = slot.auto_accept ? 'confirmed' : 'pending';
 
-		// Determine instructor_id from slot.week
-		const instructorId = slot.week?.instructor_id ?? null;
+		// Determine instructor_id from slot.date.week
+		const instructorId = slot.date?.week?.instructor_id ?? null;
 
 		const payload: any = {
 			slot_id: dto.slotId,
@@ -116,7 +116,8 @@ export class BookingService {
 		}
 
 		// If online and slot has no meeting_link, generate a transient link for immediate response (do not persist on slot)
-		if ((meetingType === 'online' || (full?.meeting_type === 'online')) && full?.slot && !(full.slot as any).meeting_link) {
+		const fullWithSlot = full as any;
+		if ((meetingType === 'online' || (full?.meeting_type === 'online')) && fullWithSlot?.slot && !fullWithSlot.slot.meeting_link) {
 			// attach a transient field meeting_link on the returned object
 			(full as any).transient_meeting_link = `meet.google.com/${Math.random().toString(36).slice(2, 11)}`;
 		}
@@ -184,7 +185,6 @@ export class BookingService {
 		const parent = await this.repository.getParentByAccountId(accountId)
 		if (!parent) return []
 		const links = await this.repository.getStudentsForParent(parent.parent_id)
-		console.log('[getStudentsForParentAccount] Found links:', links.length)
 		const shaped = links
 			.map((link) => {
 				const student = link.student
@@ -208,7 +208,7 @@ export class BookingService {
 			}
 			})
 			.filter((item): item is NonNullable<typeof item> => item !== null)
-		console.log('[getStudentsForParentAccount] Returning:', JSON.stringify(shaped, null, 2))
+		// Debug logs removed to reduce console noise in production
 		return shaped
 	}
 	async listAppointmentsForAccount(accountId: number) {
@@ -258,12 +258,13 @@ export class BookingService {
 
 		// Transform to frontend-friendly format
 		return appointments.map((appt) => {
-			const student = appt.student;
+			const apptAny = appt as any;
+			const student = apptAny.student;
 			const studentProfile = student?.account?.profile;
 			const classGroup = student?.classGroup;
-			const bookerProfile = appt.booker?.profile;
-			const contact = appt.appointmentContact;
-			const slot = appt.slot;
+			const bookerProfile = apptAny.booker?.profile;
+			const contact = apptAny.appointmentContact;
+			const slot = apptAny.slot;
 
 			// Helper function to format time from PostgreSQL Time type
 			const formatTime = (timeValue: any): string => {
@@ -292,10 +293,11 @@ export class BookingService {
 				canceledAt: appt.canceled_at,
 				cancelReason: appt.cancel_reason,
 				
-				// Slot details
+				// Slot details - get day from date.specific_date
 				slot: slot ? {
 					slotId: slot.slot_id,
-					dayOfWeek: slot.day_of_week,
+					dayOfWeek: slot.date ? new Date(slot.date.specific_date).getUTCDay() || 7 : null,
+					specificDate: slot.date?.specific_date,
 					startTime: formatTime(slot.start_time_local),
 					endTime: formatTime(slot.end_time_local),
 					meetingType: slot.meeting_type,
@@ -323,7 +325,7 @@ export class BookingService {
 				type: appt.meeting_type === 'online' ? 'online' : 'offline',
 				reason: appt.meeting_purpose ?? 'No reason provided',
 				requestedAt: appt.created_at?.toISOString(),
-				desiredDate: slot ? `${slot.day_of_week}` : 'Unknown',
+				desiredDate: slot?.date?.specific_date ? new Date(slot.date.specific_date).toISOString().split('T')[0] : 'Unknown',
 				desiredTime: slot ? `${formatTime(slot.start_time_local)} - ${formatTime(slot.end_time_local)}` : 'Unknown',
 				platform: appt.meeting_type === 'online' ? 'Google Meet' : undefined,
 			};
