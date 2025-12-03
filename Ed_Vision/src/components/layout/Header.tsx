@@ -337,6 +337,39 @@ export default function Header({
                   </div>
                 </div>
               </div>
+
+              {/* Survey Dropdown */}
+              <div className="relative group">
+                <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
+                  <svg className="w-4 h-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                  {t('common:header.navigation.survey')}
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute top-full right-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2 space-y-1">
+                    <a href="/student/survey" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-emerald-50 text-emerald-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.survey.takeSurvey.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.survey.takeSurvey.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/survey-history" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-amber-50 text-amber-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.survey.surveyHistory.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.survey.surveyHistory.description')}</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
             </nav>
           )}
 

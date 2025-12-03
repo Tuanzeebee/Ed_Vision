@@ -11,6 +11,13 @@ const apiClient = axios.create({
   },
 });
 
+// Helper to get token from multiple sources
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('dev-token') || 
+         TokenManager.getToken() || 
+         localStorage.getItem('token');
+};
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {

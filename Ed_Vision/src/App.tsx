@@ -57,6 +57,8 @@ import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDas
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import ProtectedRoute from '@/components/ProtectedRoute'
+import RequireInputSurvey from '@/components/RequireInputSurvey'
+import { Outlet } from 'react-router-dom'
 import ParentDashboard from "./modules/parent/ParentDashboardNew";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
@@ -70,6 +72,7 @@ import ProfileRedirect from "./modules/profile/ProfileRedirect";
 import "./modules/student/styles/learningSpace.css";
 import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
+import StudentSurvey from "./modules/survey/StudentSurvey";
 
 function App() {
         // Initialize permissions on app startup
@@ -95,18 +98,21 @@ function App() {
                                         <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
                                         <Route path="/auth/forgot-password" element={<AuthRedirectWrapper><AuthForgotPassword /></AuthRedirectWrapper>} />
                                         <Route path="/auth/reset-password" element={<AuthRedirectWrapper><AuthResetPassword /></AuthRedirectWrapper>} />
-                                        <Route path="/student/course-overview" element={<ProtectedRoute permission="student_course_overview"><StudentCourseOverview /></ProtectedRoute>} />
-                                        <Route path="/student/upload-transcript" element={<ProtectedRoute permission="student_upload_transcript"><UploadTranscript /></ProtectedRoute>} />
-                                        <Route path="/student/instructions" element={<ProtectedRoute permission="student_course_overview"><InstructionsPage /></ProtectedRoute>} />
-                                        <Route path="/student/adjust-parameters" element={<ProtectedRoute permission="student_adjust_parameters"><AdjustParameters /></ProtectedRoute>} />
-                                        <Route path="/student/academic-planning" element={<ProtectedRoute permission="student_academic_planning"><AcademicPlanningDashboard /></ProtectedRoute>} />
-                                        <Route path="/student/course-detail" element={<ProtectedRoute permission="student_course_detail"><CourseDetailView /></ProtectedRoute>} />
-                                        <Route path="/student/financial-survey/step/1" element={<ProtectedRoute permission="student_financial_survey"><FinancialSurveyStep1 /></ProtectedRoute>} />
-                                        <Route path="/student/choose-mascot" element={<ProtectedRoute permission="student_choose_mascot"><ChooseMascot /></ProtectedRoute>} />
-                                        <Route path="/student/learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
-                                        <Route path="/student/chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
-                                        <Route path="/student/learning-space" element={<ProtectedRoute permission="student_learning_space"><LearningSpace /></ProtectedRoute>} />
-                                        <Route path="/student/notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
+                                        <Route path="/student" element={<RequireInputSurvey><Outlet /></RequireInputSurvey>}>
+                                                <Route path="course-overview" element={<ProtectedRoute permission="student_course_overview"><StudentCourseOverview /></ProtectedRoute>} />
+                                                <Route path="upload-transcript" element={<ProtectedRoute permission="student_upload_transcript"><UploadTranscript /></ProtectedRoute>} />
+                                                <Route path="instructions" element={<ProtectedRoute permission="student_course_overview"><InstructionsPage /></ProtectedRoute>} />
+                                                <Route path="adjust-parameters" element={<ProtectedRoute permission="student_adjust_parameters"><AdjustParameters /></ProtectedRoute>} />
+                                                <Route path="academic-planning" element={<ProtectedRoute permission="student_academic_planning"><AcademicPlanningDashboard /></ProtectedRoute>} />
+                                                <Route path="course-detail" element={<ProtectedRoute permission="student_course_detail"><CourseDetailView /></ProtectedRoute>} />
+                                                <Route path="financial-survey/step/1" element={<ProtectedRoute permission="student_financial_survey"><FinancialSurveyStep1 /></ProtectedRoute>} />
+                                                <Route path="choose-mascot" element={<ProtectedRoute permission="student_choose_mascot"><ChooseMascot /></ProtectedRoute>} />
+                                                <Route path="learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
+                                                <Route path="chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
+                                                <Route path="learning-space" element={<ProtectedRoute permission="student_learning_space"><LearningSpace /></ProtectedRoute>} />
+                                                <Route path="student-notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
+                                                <Route path="profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
+                                        </Route>
 
                                         {/* Route cho parent */}
                                         <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
@@ -178,7 +184,7 @@ function App() {
                                         
                                         {/* Profile Routes */}
                                         <Route path="/profile" element={<ProfileRedirect />} />
-                                        <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
+                                        <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><RequireInputSurvey><StudentProfilePage /></RequireInputSurvey></ProtectedRoute>} />
                                         <Route path="/parent/profile" element={<ProtectedRoute permission="parent_profile"><ParentProfilePage /></ProtectedRoute>} />
                                         <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_profile"><TeacherProfilePage /></ProtectedRoute>} />
 
