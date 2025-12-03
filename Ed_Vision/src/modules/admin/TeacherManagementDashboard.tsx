@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import instructorService, { type InstructorOnlineStats, type Instructor } from "@/services/api/instructorService";
 import { useToast } from "@/lib/useToast";
-import { io, Socket } from "socket.io-client";
+import useWebSocketStats from "@/hooks/useWebSocketStats";
 
 // Simple Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -42,6 +42,9 @@ export default function TeacherManagementDashboard() {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
+  // Use WebSocket hook for real-time updates
+  const wsTrigger = useWebSocketStats();
+
   // Calculate quality based on advising class count
   const getQualityRating = (advisingClassCount: number = 0) => {
     if (advisingClassCount === 0) return { stars: 3, label: "Trung bình", color: "text-yellow-600" };
@@ -50,56 +53,23 @@ export default function TeacherManagementDashboard() {
     return { stars: 3, label: "Trung bình", color: "text-yellow-600" };
   };
 
-  // Fetch online stats with WebSocket for real-time updates
+  // Fetch online stats - triggered by WebSocket updates
   useEffect(() => {
-    let socket: Socket | null = null;
-
-    const initializeSocket = async () => {
+    const fetchOnlineStats = async () => {
       try {
         setIsLoadingStats(true);
-
-        // Initial fetch
         const stats = await instructorService.getOnlineStats();
         setOnlineStats(stats);
-        setIsLoadingStats(false);
-
-        // Connect to WebSocket for real-time updates
-        socket = io('http://localhost:3000/instructor-stats', {
-          transports: ['websocket', 'polling'],
-        });
-
-        socket.on('connect', () => {
-          console.log('WebSocket connected for instructor stats');
-        });
-
-        socket.on('instructorOnlineStatsUpdated', (stats: InstructorOnlineStats) => {
-          console.log('Received real-time instructor stats update:', stats);
-          setOnlineStats(stats);
-        });
-
-        socket.on('disconnect', () => {
-          console.log('WebSocket disconnected');
-        });
-
-        socket.on('connect_error', (error) => {
-          console.error('WebSocket connection error:', error);
-        });
       } catch (error) {
         console.error('Failed to fetch online stats:', error);
         showToast('Không thể tải thống kê giảng viên trực tuyến', 'error');
+      } finally {
         setIsLoadingStats(false);
       }
     };
 
-    initializeSocket();
-
-    return () => {
-      if (socket) {
-        console.log('Cleaning up WebSocket connection');
-        socket.disconnect();
-      }
-    };
-  }, [showToast]);
+    fetchOnlineStats();
+  }, [wsTrigger, showToast]);
 
   // Fetch instructors from API
   useEffect(() => {
@@ -114,11 +84,12 @@ export default function TeacherManagementDashboard() {
           "Nghỉ phép": "on_leave"
         };
 
+        // Fetch all instructors for client-side filtering
         const params = {
           search: searchTerm || undefined,
           status: statusFilter !== "Tất cả trạng thái" ? statusMap[statusFilter] : undefined,
-          page: currentPage,
-          limit: 100, // Get all to filter by role on client side
+          page: 1,
+          limit: 1000, // Get all to filter by role on client side
         };
 
         const response = await instructorService.getInstructors(params);
@@ -126,9 +97,9 @@ export default function TeacherManagementDashboard() {
         // Filter by role on client side
         let filteredData = response.data;
         if (roleFilter === "Giảng viên") {
-          filteredData = response.data.filter(instructor => (instructor.advisingClassCount || 0) === 0);
+          filteredData = filteredData.filter(instructor => (instructor.advisingClassCount || 0) === 0);
         } else if (roleFilter === "Cố vấn") {
-          filteredData = response.data.filter(instructor => (instructor.advisingClassCount || 0) > 0);
+          filteredData = filteredData.filter(instructor => (instructor.advisingClassCount || 0) > 0);
         }
 
         // Filter by quality on client side
@@ -139,14 +110,18 @@ export default function TeacherManagementDashboard() {
           });
         }
 
+        // Calculate total and pages from filtered data
+        const totalFiltered = filteredData.length;
+        const calculatedTotalPages = Math.ceil(totalFiltered / teachersPerPage);
+        
         // Apply pagination on filtered data
         const startIndex = (currentPage - 1) * teachersPerPage;
         const endIndex = startIndex + teachersPerPage;
         const paginatedData = filteredData.slice(startIndex, endIndex);
 
         setInstructors(paginatedData);
-        setTotalInstructors(filteredData.length);
-        setTotalPages(Math.ceil(filteredData.length / teachersPerPage));
+        setTotalInstructors(totalFiltered);
+        setTotalPages(calculatedTotalPages);
       } catch (error) {
         console.error('Failed to fetch instructors:', error);
         showToast('Không thể tải danh sách giảng viên', 'error');
@@ -423,11 +398,15 @@ export default function TeacherManagementDashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => handleViewTeacher(instructor.instructorId)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleViewTeacher(instructor.instructorId);
+                          }}
                           title="Xem chi tiết"
-                          className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                          className="p-2 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                         >
-                          <span className="text-blue-600 hover:text-blue-900 text-lg">👁️</span>
+                          <i className="fas fa-eye text-blue-600 hover:text-blue-900"></i>
                         </button>
                       </td>
                     </tr>

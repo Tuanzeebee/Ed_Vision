@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { TokenManager } from '@/lib/tokenManager';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -13,7 +14,9 @@ const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    // Dùng TokenManager để lấy token đúng cách
+    const token = TokenManager.getToken();
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,10 +31,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('accessToken');
-      window.location.href = '/login';
+    // Chỉ redirect khi 401 và không phải development
+    if (error.response?.status === 401 && !import.meta.env.DEV) {
+      TokenManager.clearToken();
+      window.location.href = '/auth/login';
     }
     return Promise.reject(error);
   }

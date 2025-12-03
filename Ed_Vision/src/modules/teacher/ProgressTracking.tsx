@@ -13,9 +13,7 @@ import {
     Calendar,
     BarChart3,
     Activity,
-    X,
     Mail,
-    Phone,
     Search,
     Filter,
     ChevronLeft,
@@ -200,7 +198,7 @@ const studentNames = [
     'Tạ Thị Nhung', 'Mai Văn Thành', 'Cao Thị Loan', 'Lưu Văn Tân', 'Đinh Thị Xuân',
 ]
 
-const generateStudentsForClass = (classId: string, milestone: number) => {
+const generateStudentsForClass = (classId: string, _milestone: number) => {
     const students = []
     const totalStudents = classesData.find(c => c.id === classId)?.totalStudents || 40
     

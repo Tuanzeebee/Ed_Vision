@@ -17,7 +17,7 @@ type Props = {
 export default function RoomPanel({
   visible,
   onClose,
-  onSelectRoom,
+  onSelectRoom: _onSelectRoom,
   onJoinCall,
   initialX = (window.innerWidth - 900) / 2,
   initialY = (window.innerHeight - 600 - 80) / 2,

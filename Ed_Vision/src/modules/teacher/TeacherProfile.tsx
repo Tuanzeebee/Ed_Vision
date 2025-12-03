@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import TeacherLayout from './components/TeacherLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/teacher/teacher_card'
 import { Button } from '@/components/ui/teacher/teacher_button'
@@ -35,7 +34,6 @@ interface TeacherProfile {
 }
 
 export default function TeacherProfile() {
-    const navigate = useNavigate()
     const [isEditing, setIsEditing] = useState(false)
     const [profile, setProfile] = useState<TeacherProfile | null>(null)
     const [editedProfile, setEditedProfile] = useState<TeacherProfile | null>(null)

@@ -8,7 +8,7 @@ type Props = {
   onOpenPanel?: () => void;
 };
 
-export default function PomodoroOverlay({ visible, focusTitle, timeLeft, onClose, onPause, onStop, onOpenPanel }: Props) {
+export default function PomodoroOverlay({ visible, focusTitle, timeLeft, onClose: _onClose, onPause, onStop, onOpenPanel }: Props) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;

@@ -27,6 +27,7 @@ import PermissionManagement from "./modules/admin/PermissionManagement";
 import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import ContentApproval from "./modules/admin/ContentApproval";
 import NotificationManagement from "./modules/admin/NotificationManagement";
+import NotificationPage from "./pages/NotificationPage";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
@@ -105,6 +106,7 @@ function App() {
                                         <Route path="/student/learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
                                         <Route path="/student/chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
                                         <Route path="/student/learning-space" element={<ProtectedRoute permission="student_learning_space"><LearningSpace /></ProtectedRoute>} />
+                                        <Route path="/student/notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
 
                                         {/* Route cho parent */}
                                         <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
@@ -146,6 +148,7 @@ function App() {
 
                                         {/* Admin routes - System Management (protected by permission) */}
                                         <Route path="/admin/notifications" element={<ProtectedRoute permission="admin_notifications"><NotificationManagement /></ProtectedRoute>} />
+                                        <Route path="/admin/my-notifications" element={<ProtectedRoute permission="admin_dashboard"><NotificationPage userRole="admin" /></ProtectedRoute>} />
                                         <Route path="/admin/content-approval" element={<ProtectedRoute permission="admin_content_approval"><ContentApproval /></ProtectedRoute>} />
                                         <Route path="/admin/permissions" element={<ProtectedRoute permission="admin_permissions"><PermissionManagement /></ProtectedRoute>} />
                                         <Route path="/admin/role-permissions" element={<ProtectedRoute permission="admin_role_permissions"><RolePermissionManagement /></ProtectedRoute>} />
@@ -167,6 +170,7 @@ function App() {
                                         <Route path="/teacher/meeting-detail" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailView /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
                                         <Route path="/teacher/calendar-overview" element={<CalendarOverview />} />
+                                        <Route path="/teacher/notifications" element={<ProtectedRoute permission="teacher_notification"><NotificationPage userRole="teacher" /></ProtectedRoute>} />
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}
