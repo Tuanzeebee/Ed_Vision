@@ -18,11 +18,11 @@ export class StudentStatsGateway implements OnGatewayConnection, OnGatewayDiscon
   server: Server;
 
   handleConnection(client: Socket) {
-    console.log(`[StudentStatsGateway] Client connected: ${client.id}`);
+    // connection established (silent)
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`[StudentStatsGateway] Client disconnected: ${client.id}`);
+    // client disconnected (silent)
   }
 
   broadcastOnlineStats(stats: StudentOnlineStats) {

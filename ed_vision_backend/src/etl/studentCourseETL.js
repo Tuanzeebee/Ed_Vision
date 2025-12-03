@@ -104,8 +104,8 @@ async function processStudentCourseEvent(event) {
 
       // Calculate GPA category based on aggregated GPA (not individual course score)
       if (new_gpa >= 3.65) gpa_category = 'excellent';
-      else if (new_gpa >= 3.26) gpa_category = 'good';
-      else if (new_gpa >= 2.5) gpa_category = 'fair';
+      else if (new_gpa >= 3.26) gpa_category = 'very good';
+      else if (new_gpa >= 2.5) gpa_category = 'good';
       else if (new_gpa >= 2.0) gpa_category = 'average';
       else gpa_category = 'poor';
 

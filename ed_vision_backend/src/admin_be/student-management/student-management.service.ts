@@ -31,8 +31,6 @@ export class StudentManagementService {
 
     const onlineCount = Number(onlineResult[0]?.count || 0);
 
-    console.log('Online Stats:', { totalCount, onlineCount });
-
     return {
       onlineCount,
       totalCount

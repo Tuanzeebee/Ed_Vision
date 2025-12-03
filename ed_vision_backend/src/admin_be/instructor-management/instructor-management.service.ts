@@ -27,8 +27,6 @@ export class InstructorManagementService {
 
     const onlineCount = Number(onlineResult[0]?.count || 0);
 
-    console.log('Instructor Online Stats:', { totalCount, onlineCount });
-
     return {
       totalCount,
       onlineCount,
