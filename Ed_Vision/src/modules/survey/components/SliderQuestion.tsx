@@ -6,16 +6,24 @@ interface SliderQuestionProps {
   value?: number;
   onChange: (value: number) => void;
   config: SliderConfig;
+  minValue?: number; // Từ DB
+  maxValue?: number; // Từ DB
 }
 
 export default function SliderQuestion({
   value,
   onChange,
   config,
+  minValue,
+  maxValue,
 }: SliderQuestionProps) {
   const currentValue = value ?? config.defaultValue;
   const gradientType = config.gradientType ?? "default";
   const gradient = sliderGradients[gradientType];
+
+  // Sử dụng minValue/maxValue từ DB nếu có, ngược lại dùng config
+  const min = minValue ?? config.min;
+  const max = maxValue ?? config.max;
 
   return (
     <div className={cn("rounded-xl p-4", gradient.bg)}>
@@ -25,8 +33,8 @@ export default function SliderQuestion({
       </div>
       <input
         type="range"
-        min={config.min}
-        max={config.max}
+        min={min}
+        max={max}
         step={config.step ?? 1}
         value={currentValue}
         onChange={(e) => onChange(Number(e.target.value))}

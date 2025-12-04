@@ -35,6 +35,16 @@ export default function RequireInputSurvey({ children }: Props) {
 
   const { isLoading, hasCompletedInputSurvey } = useInputSurveyCheck(shouldCheck);
 
+  // DEBUG
+  console.log('[RequireInputSurvey]', {
+    path: location.pathname,
+    isStudent,
+    isSurveyPage,
+    shouldCheck,
+    isLoading,
+    hasCompletedInputSurvey,
+  });
+
   // Nếu không phải student hoặc đang ở trang survey → render children
   if (!isStudent || isSurveyPage) {
     return <>{children}</>;

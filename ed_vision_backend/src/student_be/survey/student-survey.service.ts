@@ -57,8 +57,8 @@ export class StudentSurveyService {
       },
     });
 
-    // Kiểm tra xem user đã hoàn thành input survey nào chưa
-    let hasCompletedInputSurvey = false;
+    // Kiểm tra xem user đã hoàn thành TẤT CẢ input survey chưa
+    // Nếu không có input survey nào trong DB → coi như đã hoàn thành
     let pendingInputSurvey: SurveyListItemDto | undefined;
 
     for (const survey of inputSurveys) {
@@ -69,9 +69,7 @@ export class StudentSurveyService {
         },
       });
 
-      if (response) {
-        hasCompletedInputSurvey = true;
-      } else {
+      if (!response) {
         // Có input survey chưa làm
         pendingInputSurvey = {
           surveyId: survey.survey_id,
@@ -87,6 +85,9 @@ export class StudentSurveyService {
         break; // Chỉ cần 1 input survey pending
       }
     }
+
+    // hasCompletedInputSurvey = true nếu không có pending input survey
+    const hasCompletedInputSurvey = !pendingInputSurvey;
 
     // Lấy periodic surveys đang active và chưa làm
     const now = new Date();
@@ -196,6 +197,8 @@ export class StudentSurveyService {
         questionType: this.mapQuestionType(q.question_type || 'multiple_choice'),
         category: q.category || undefined,
         isRequired: q.question_type !== 'free_text', // free_text không bắt buộc
+        minValue: q.min_value ?? undefined,
+        maxValue: q.max_value ?? undefined,
         options: q.surveyOptions.map((opt) => ({
           optionId: opt.option_id,
           text: opt.option_text || '',
