@@ -60,6 +60,8 @@ export default function QuestionRenderer({
           value={answer as number}
           onChange={(value) => onAnswerChange(question.id, value)}
           config={question.sliderConfig}
+          minValue={question.min_value}
+          maxValue={question.max_value}
         />
       );
 
