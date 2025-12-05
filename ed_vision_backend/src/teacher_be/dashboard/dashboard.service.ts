@@ -40,12 +40,14 @@ export class DashboardService {
                         profile: true,
                     },
                 },
+                classGroup: true,
                 courseRecords: {
                     where: {
-                        academicTerm: this.buildTermFilter(filterDto),
+                        raw_score: { not: null }, // Chỉ lấy môn có điểm
                     },
                     include: {
                         course: true,
+                        academicTerm: true,
                     },
                 },
             },
@@ -109,32 +111,26 @@ export class DashboardService {
     }
 
     /**
-     * Tính toán thống kê từ dữ liệu sinh viên
+     * Tính toán thống kê từ dữ liệu sinh viên (dùng logic giống ClassManagement)
      */
     private async calculateStats(students: any[]): Promise<DashboardStats> {
         const totalStudents = students.length;
 
-        // Tính GPA cho từng sinh viên
+        // Tính GPA cho từng sinh viên (4-point scale)
         const studentGPAs = students.map((student) => {
             const records = student.courseRecords;
-            if (!records || records.length === 0) return 0;
+            if (!records || records.length === 0) return null;
 
-            // Lấy các môn đã có điểm cuối kỳ
-            const completedRecords = records.filter(
-                (r: any) =>
-                    r.converted_numeric_score !== null && r.status === 'completed',
-            );
+            const recordsWithScore = records.filter((r: any) => r.raw_score !== null);
+            if (recordsWithScore.length === 0) return null;
 
-            if (completedRecords.length === 0) return 0;
-
-            const totalScore = completedRecords.reduce(
-                (sum: number, r: any) => sum + parseFloat(r.converted_numeric_score || 0),
-                0,
-            );
-            return totalScore / completedRecords.length;
+            return this.calculateGPA(recordsWithScore);
         });
 
-        const validGPAs = studentGPAs.filter((gpa) => gpa > 0);
+        const validGPAs = studentGPAs.filter((gpa) => gpa !== null) as number[];
+        const studentsWithGPA = validGPAs.length;
+        const studentsWithoutGPA = totalStudents - studentsWithGPA;
+
         const averageGPA =
             validGPAs.length > 0
                 ? validGPAs.reduce((sum, gpa) => sum + gpa, 0) / validGPAs.length
@@ -149,17 +145,17 @@ export class DashboardService {
 
         const minGPA = sortedGPAs.length > 0 ? sortedGPAs[0] : 0;
 
-        // Phân phối điểm
+        // Phân phối điểm (4-point scale)
         const gradeDistribution = {
-            low: validGPAs.filter((gpa) => gpa < 5.0).length,
-            medium: validGPAs.filter((gpa) => gpa >= 5.0 && gpa < 8.0).length,
-            high: validGPAs.filter((gpa) => gpa >= 8.0).length,
+            low: validGPAs.filter((gpa) => gpa < 2.0).length,      // < 2.0 (At Risk)
+            medium: validGPAs.filter((gpa) => gpa >= 2.0 && gpa < 3.2).length,  // 2.0-3.19 (Average)
+            high: validGPAs.filter((gpa) => gpa >= 3.2).length,    // >= 3.2 (Excellent)
         };
 
-        // Sinh viên at-risk (GPA < 2.5 theo schema frontend)
-        const atRiskCount = validGPAs.filter((gpa) => gpa < 2.5).length;
+        // Sinh viên at-risk (GPA < 2.0)
+        const atRiskCount = validGPAs.filter((gpa) => gpa < 2.0).length;
         const atRiskPercentage =
-            totalStudents > 0 ? (atRiskCount / totalStudents) * 100 : 0;
+            studentsWithGPA > 0 ? (atRiskCount / studentsWithGPA) * 100 : 0;
 
         // Tính số lớp (unique class_id)
         const uniqueClassIds = new Set(
@@ -180,38 +176,60 @@ export class DashboardService {
     }
 
     /**
-     * Xác định sinh viên at-risk
+     * Tính GPA từ courseRecords (giống logic trong ClassManagement)
+     */
+    private calculateGPA(courseRecords: any[]): number {
+        if (courseRecords.length === 0) return 0;
+
+        let totalPoints = 0;
+        let totalCredits = 0;
+
+        courseRecords.forEach(record => {
+            const score = parseFloat(record.raw_score?.toString() || '0');
+            const credits = record.course?.credits_unit || 3;
+
+            // Convert 10-point scale to 4-point scale
+            let point4Scale = 0;
+            if (score >= 9.0) point4Scale = 4.0;
+            else if (score >= 8.5) point4Scale = 3.7;
+            else if (score >= 8.0) point4Scale = 3.5;
+            else if (score >= 7.0) point4Scale = 3.0;
+            else if (score >= 6.5) point4Scale = 2.5;
+            else if (score >= 5.5) point4Scale = 2.0;
+            else if (score >= 5.0) point4Scale = 1.5;
+            else if (score >= 4.0) point4Scale = 1.0;
+            else point4Scale = 0;
+
+            totalPoints += point4Scale * credits;
+            totalCredits += credits;
+        });
+
+        return totalCredits > 0 ? totalPoints / totalCredits : 0;
+    }
+
+    /**
+     * Xác định sinh viên at-risk (dùng logic giống ClassManagement)
      */
     private identifyAtRiskStudents(students: any[]): AtRiskStudent[] {
         const atRiskStudents: AtRiskStudent[] = [];
 
         for (const student of students) {
             const records = student.courseRecords || [];
-            const completedRecords = records.filter(
-                (r: any) =>
-                    r.converted_numeric_score !== null && r.status === 'completed',
-            );
+            const recordsWithScore = records.filter((r: any) => r.raw_score !== null);
 
-            if (completedRecords.length === 0) continue;
+            if (recordsWithScore.length === 0) continue;
 
-            const gpa =
-                completedRecords.reduce(
-                    (sum: number, r: any) => sum + parseFloat(r.converted_numeric_score || 0),
-                    0,
-                ) / completedRecords.length;
+            const gpa = this.calculateGPA(recordsWithScore);
 
-            // At-risk if GPA < 2.5
-            if (gpa < 2.5) {
+            // At-risk if GPA < 2.0 (4-point scale)
+            if (gpa < 2.0) {
                 const debtCourses = records.filter(
-                    (r: any) => r.status === 'failed' || r.status === 'planned',
+                    (r: any) => r.status === 'failed'
                 ).length;
 
-                // Estimate absences (placeholder - would need actual attendance data)
-                const absences = Math.floor(Math.random() * 15);
-
                 let riskLevel: 'high' | 'medium' | 'low' = 'low';
-                if (gpa < 1.5) riskLevel = 'high';
-                else if (gpa < 2.0) riskLevel = 'medium';
+                if (gpa < 1.0) riskLevel = 'high';
+                else if (gpa < 1.5) riskLevel = 'medium';
 
                 atRiskStudents.push({
                     studentId: student.student_id.toString(),
@@ -220,7 +238,7 @@ export class DashboardService {
                     class: student.classGroup?.class_code || 'Unknown',
                     avatar: student.account?.profile?.avatar_url,
                     gpa: Math.round(gpa * 100) / 100,
-                    absences,
+                    absences: 0, // Chờ dữ liệu attendance thật
                     debtCourses,
                     riskLevel,
                 });

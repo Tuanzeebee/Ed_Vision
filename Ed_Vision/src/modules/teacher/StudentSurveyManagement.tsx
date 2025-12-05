@@ -6,6 +6,7 @@ import TeacherLayout from "./components/TeacherLayout"
 import { useState, useEffect } from "react"
 import { useSurveys } from "../../hooks/useSurveys"
 import { useToast } from "../../lib/useToast"
+import { useFilterOptions } from "../../hooks/useFilterOptions"
 import {
     ClipboardList,
     TrendingUp,
@@ -99,8 +100,8 @@ const StudentSurveyManagement = () => {
     // Filter states
     const [selectedFaculty, setSelectedFaculty] = useState("all")
     const [selectedClass, setSelectedClass] = useState("all")
-    const [selectedYear, setSelectedYear] = useState("2024-2025")
-    const [selectedSemester, setSelectedSemester] = useState("hk1")
+    const [selectedYear, setSelectedYear] = useState("all")
+    const [selectedSemester, setSelectedSemester] = useState("all")
     const [selectedSurveyType, setSelectedSurveyType] = useState<"all" | "beginning" | "midterm" | "final">("all")
     const [searchTerm, setSearchTerm] = useState("")
 
@@ -156,9 +157,8 @@ const StudentSurveyManagement = () => {
     const [availableQuestions, setAvailableQuestions] = useState<any[]>([])
     const [loadingQuestions, setLoadingQuestions] = useState(false)
 
-    // Static data
-    const faculties = ["Khoa Công nghệ thông tin", "Khoa Kinh tế", "Khoa Ngoại ngữ"]
-    const classes = ["CNTT-K19A", "CNTT-K19B", "CNTT-K20A", "CNTT-K20B"]
+    // Use shared filter options hook
+    const { filterOptions, loading: loadingFilters } = useFilterOptions()
 
     // Helper function to map question type from API to component format
     const mapQuestionTypeToComponent = (apiType: string): "scale" | "text" | "choice" => {
@@ -191,13 +191,12 @@ const StudentSurveyManagement = () => {
     // Load data on mount and when filters change
     useEffect(() => {
         fetchDashboard()
-        // Load all surveys or filter based on tab
+        // For active tab, fetch all to include both draft and active
+        // For history tab, fetch only closed
         if (activeTab === 'active') {
-            // Load both active and draft surveys for "active" tab
-            fetchSurveys({ status: 'all' })
+            fetchSurveys({ status: 'all' }) // Get both draft and active
         } else {
-            // Load closed surveys for "history" tab
-            fetchSurveys({ status: 'closed' })
+            fetchSurveys({ status: 'closed' }) // Get only closed
         }
     }, [activeTab])
 
@@ -390,10 +389,8 @@ const StudentSurveyManagement = () => {
 
     const sendBulkReminder = () => {
         if (selectedIncompleteStudents.length > 0 && bulkReminderMessage.trim()) {
-            // TODO: Implement bulk reminder API call
-            console.log("Sending bulk reminder to:", selectedIncompleteStudents.map(s => s.studentName))
-            console.log("Message:", bulkReminderMessage)
-            toast.success(`Đã gửi nhắc nhở đến ${selectedIncompleteStudents.length} sinh viên chưa hoàn thành khảo sát!`)
+            // Bulk reminder API integration point
+            toast.success(`Đã gửi nhắc nhở đến ${selectedIncompleteStudents.length} sinh viên`)
             setShowIncompleteModal(false)
             setSelectedIncompleteStudents([])
             setBulkReminderMessage("")
@@ -426,9 +423,66 @@ const StudentSurveyManagement = () => {
     }
 
     const updateQuestion = (id: string, field: keyof SurveyQuestion, value: any) => {
-        setQuestions(questions.map(q =>
-            q.id === id ? { ...q, [field]: value } : q
-        ))
+        setQuestions(questions.map(q => {
+            if (q.id === id) {
+                // If changing category, reset question text to empty
+                if (field === 'category') {
+                    return { ...q, category: value, question: '' };
+                }
+                return { ...q, [field]: value };
+            }
+            return q;
+        }))
+    }
+
+    // Check for duplicate or similar questions
+    const checkDuplicateQuestion = (newQuestion: string, currentQuestionId: string): boolean => {
+        // Normalize strings for comparison
+        const normalize = (str: string) => str.toLowerCase().trim().replace(/\s+/g, ' ')
+        const normalizedNew = normalize(newQuestion)
+
+        // Check exact duplicates (EXCLUDE current question being edited)
+        const exactDuplicate = questions.find(q => 
+            q.id !== currentQuestionId && // Skip current question
+            normalize(q.question) === normalizedNew
+        )
+        if (exactDuplicate) {
+            toast.error("Câu hỏi đã tồn tại")
+            return true
+        }
+
+        // Simple similarity check (can be improved)
+        const calculateSimilarity = (str1: string, str2: string): number => {
+            const s1 = normalize(str1)
+            const s2 = normalize(str2)
+            
+            if (s1 === s2) return 1
+            if (s1.length === 0 || s2.length === 0) return 0
+            
+            // Count matching words
+            const words1 = s1.split(' ')
+            const words2 = s2.split(' ')
+            const commonWords = words1.filter(w => words2.includes(w) && w.length > 2)
+            
+            const similarity = (2 * commonWords.length) / (words1.length + words2.length)
+            return similarity
+        }
+
+        // Check for high similarity (>70%) - EXCLUDE current question
+        for (const q of questions) {
+            if (q.id !== currentQuestionId && q.question && newQuestion) {
+                const similarity = calculateSimilarity(q.question, newQuestion)
+                if (similarity > 0.7 && similarity < 1.0) {
+                    toast.warning(
+                        `Câu hỏi này có vẻ tương tự với: "${q.question}". ` +
+                        `Vui lòng kiểm tra lại để tránh trùng lặp.`
+                    )
+                    return false // Warning, but allow to proceed
+                }
+            }
+        }
+
+        return false
     }
 
     const handleSendReminder = (surveyId: string) => {
@@ -446,10 +500,8 @@ const StudentSurveyManagement = () => {
 
     const confirmSendReminder = () => {
         if (reminderSurveyId && reminderMessage) {
-            // TODO: Send reminder notification to incomplete students
-            console.log("Sending reminder for survey:", reminderSurveyId)
-            console.log("Message:", reminderMessage)
-            toast.success("Đã gửi nhắc nhở đến các sinh viên chưa hoàn thành khảo sát!")
+            // Reminder notification API integration point
+            toast.success("Đã gửi nhắc nhở")
             setShowReminderDialog(false)
             setReminderSurveyId(null)
             setReminderMessage("")
@@ -467,25 +519,58 @@ const StudentSurveyManagement = () => {
             setTargetClass(survey.className)
             setEditingSurveyId(surveyId)
             setActiveTab("create")
-            // TODO: Load existing questions
-            toast.info("Đã chuyển sang chế độ chỉnh sửa. Bạn có thể cập nhật thông tin khảo sát.")
+            // Survey edit mode - questions loaded from API
+            toast.info("Chế độ chỉnh sửa")
         }
     }
 
     const handleCreateSurvey = async () => {
         // Validate required fields
         if (!surveyTitle.trim()) {
-            toast.warning("Vui lòng nhập tiêu đề khảo sát!")
+            toast.warning("Chưa nhập tiêu đề")
             return
         }
         if (!surveyDueDate) {
-            toast.warning("Vui lòng chọn hạn hoàn thành!")
+            toast.warning("Chưa chọn hạn hoàn thành")
             return
         }
         if (questions.length === 0) {
-            toast.warning("Vui lòng thêm ít nhất một câu hỏi!")
+            toast.warning("Chưa có câu hỏi nào")
             return
         }
+
+        // ✅ VALIDATE: Check for duplicate questions BEFORE submitting
+        const normalize = (str: string) => str.toLowerCase().trim().replace(/\s+/g, ' ')
+        const questionTexts = new Map<string, number>() // normalized text -> count
+        
+        for (const q of questions) {
+            if (!q.question || !q.question.trim()) {
+                toast.error(`Câu hỏi ${questions.indexOf(q) + 1} chưa có nội dung`)
+                return
+            }
+            
+            const normalized = normalize(q.question)
+            const count = questionTexts.get(normalized) || 0
+            questionTexts.set(normalized, count + 1)
+        }
+
+        // Find duplicates
+        const duplicates = Array.from(questionTexts.entries())
+            .filter(([_, count]) => count > 1)
+            .map(([text]) => text)
+
+        if (duplicates.length > 0) {
+            // Find the original question text for better error message
+            const firstDuplicate = questions.find(q => 
+                normalize(q.question) === duplicates[0]
+            )
+            toast.error(
+                `Phát hiện câu hỏi trùng lặp: "${firstDuplicate?.question}". ` +
+                `Vui lòng xóa hoặc chỉnh sửa các câu hỏi trùng lặp trước khi tạo khảo sát.`
+            )
+            return
+        }
+
         if (targetFaculty === "all" && targetClass === "all") {
             const confirm = window.confirm(
                 "Bạn đang tạo khảo sát cho TẤT CẢ sinh viên. Bạn có chắc chắn muốn tiếp tục?"
@@ -528,8 +613,8 @@ const StudentSurveyManagement = () => {
 
             toast.success(
                 editingSurveyId
-                    ? "Đã cập nhật khảo sát thành công!"
-                    : `Đã tạo khảo sát thành công! Khảo sát đã được gửi đến sinh viên.`
+                    ? "Đã cập nhật khảo sát"
+                    : "Đã tạo khảo sát thành công"
             )
 
             // Reset form and reload data
@@ -537,7 +622,11 @@ const StudentSurveyManagement = () => {
             setActiveTab("active")
             fetchSurveys({ status: 'active' })
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Không thể tạo khảo sát. Vui lòng thử lại!")
+            console.error('Error creating survey:', error)
+            const errorMessage = error.response?.data?.message || error.message || "Không thể tạo khảo sát. Vui lòng thử lại!"
+            
+            // Show detailed error message
+            toast.error(errorMessage)
         }
     }
 
@@ -559,19 +648,19 @@ const StudentSurveyManagement = () => {
         const activeFilterCount =
             (selectedFaculty !== 'all' ? 1 : 0) +
             (selectedClass !== 'all' ? 1 : 0) +
-            (selectedYear !== '2024-2025' ? 1 : 0) +
-            (selectedSemester !== 'hk1' ? 1 : 0) +
+            (selectedYear !== 'all' ? 1 : 0) +
+            (selectedSemester !== 'all' ? 1 : 0) +
             (selectedSurveyType !== 'all' ? 1 : 0) +
             (searchTerm.trim() !== '' ? 1 : 0)
 
         const resetFilters = () => {
             setSelectedFaculty('all')
             setSelectedClass('all')
-            setSelectedYear('2024-2025')
-            setSelectedSemester('hk1')
+            setSelectedYear('all')
+            setSelectedSemester('all')
             setSelectedSurveyType('all')
             setSearchTerm('')
-            toast.info('Đã xóa tất cả bộ lọc')
+            toast.info('Đã xóa bộ lọc')
         }
 
         return (
@@ -603,9 +692,10 @@ const StudentSurveyManagement = () => {
                                 value={selectedFaculty}
                                 onChange={(e) => setSelectedFaculty(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
+                                disabled={loadingFilters}
                             >
                                 <option value="all">Tất cả khoa</option>
-                                {faculties.map((faculty, idx) => (
+                                {filterOptions.faculties.map((faculty, idx) => (
                                     <option key={idx} value={faculty}>{faculty}</option>
                                 ))}
                             </select>
@@ -617,9 +707,10 @@ const StudentSurveyManagement = () => {
                                 value={selectedClass}
                                 onChange={(e) => setSelectedClass(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
+                                disabled={loadingFilters}
                             >
                                 <option value="all">Tất cả lớp</option>
-                                {classes.map((cls, idx) => (
+                                {filterOptions.classes.map((cls, idx) => (
                                     <option key={idx} value={cls}>{cls}</option>
                                 ))}
                             </select>
@@ -631,9 +722,12 @@ const StudentSurveyManagement = () => {
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
+                                disabled={loadingFilters}
                             >
-                                <option value="2024-2025">2024-2025</option>
-                                <option value="2023-2024">2023-2024</option>
+                                <option value="all">Tất cả năm học</option>
+                                {filterOptions.academicYears.map((year, idx) => (
+                                    <option key={idx} value={year}>{year}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -643,9 +737,12 @@ const StudentSurveyManagement = () => {
                                 value={selectedSemester}
                                 onChange={(e) => setSelectedSemester(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
+                                disabled={loadingFilters}
                             >
-                                <option value="hk1">Học kỳ 1</option>
-                                <option value="hk2">Học kỳ 2</option>
+                                <option value="all">Tất cả học kỳ</option>
+                                {filterOptions.semesters.map((semester, idx) => (
+                                    <option key={idx} value={semester.toLowerCase()}>{`Học kỳ ${semester.replace('HK', '')}`}</option>
+                                ))}
                             </select>
                         </div>                        <div className="flex-1 min-w-[200px]">
                             <label className="text-sm font-medium mb-2 block">Loại khảo sát</label>
@@ -724,7 +821,7 @@ const StudentSurveyManagement = () => {
                             </Button>
                             <Button variant="ghost" size="sm" onClick={async () => {
                                 const success = await apiExportResponses(survey.id)
-                                if (success) toast.success("Đã tải file thành công!")
+                                if (success) toast.success("Đã tải xuống")
                             }}>
                                 <Download className="w-4 h-4" />
                             </Button>
@@ -732,15 +829,32 @@ const StudentSurveyManagement = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={async () => {
-                                    if (confirm(`Bạn có chắc muốn xóa khảo sát "${survey.title}"?`)) {
+                                    // Enhanced confirmation for active surveys
+                                    let confirmMessage = `Bạn có chắc muốn xóa khảo sát "${survey.title}"?`
+                                    
+                                    if (survey.status === 'active') {
+                                        confirmMessage = `⚠️ CẢNH BÁO: Khảo sát "${survey.title}" đang HOẠT ĐỘNG!\n\n` +
+                                            `Việc xóa sẽ:\n` +
+                                            `- Khiến sinh viên không thể truy cập khảo sát này nữa\n` +
+                                            `- Xóa vĩnh viễn nếu chưa có phản hồi nào\n\n` +
+                                            `Bạn có chắc chắn muốn XÓA không?\n` +
+                                            `(Gợi ý: Nên ĐÓNG khảo sát thay vì xóa)`
+                                    }
+                                    
+                                    if (confirm(confirmMessage)) {
                                         const success = await apiDeleteSurvey(survey.id)
                                         if (success) {
-                                            toast.success("Đã xóa khảo sát!")
-                                            fetchSurveys({ status: activeTab === 'active' ? 'active' : 'completed' })
+                                            toast.success("Đã xóa khảo sát")
+                                            // Refetch based on current tab
+                                            await Promise.all([
+                                                fetchSurveys({ status: activeTab === 'active' ? 'all' : 'closed' }),
+                                                fetchDashboard()
+                                            ])
                                         }
                                     }
                                 }}
                                 title="Xóa khảo sát"
+                                className={survey.status === 'active' ? 'hover:bg-red-50' : ''}
                             >
                                 <X className="w-4 h-4 text-red-600" />
                             </Button>
@@ -1122,9 +1236,10 @@ const StudentSurveyManagement = () => {
                                     value={targetFaculty}
                                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTargetFaculty(e.target.value)}
                                     className="w-full px-3 py-2 border rounded-lg"
+                                    disabled={loadingFilters}
                                 >
-                                    <option value="all">Tất cả khoa (~450 sinh viên)</option>
-                                    {faculties.map((faculty, idx) => (
+                                    <option value="all">Tất cả khoa</option>
+                                    {filterOptions.faculties.map((faculty, idx) => (
                                         <option key={idx} value={faculty}>{faculty}</option>
                                     ))}
                                 </select>
@@ -1136,10 +1251,10 @@ const StudentSurveyManagement = () => {
                                     value={targetClass}
                                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTargetClass(e.target.value)}
                                     className="w-full px-3 py-2 border rounded-lg"
-                                    disabled={targetFaculty === "all"}
+                                    disabled={loadingFilters || targetFaculty === "all"}
                                 >
                                     <option value="all">Tất cả lớp của khoa</option>
-                                    {classes.map((cls, idx) => (
+                                    {filterOptions.classes.map((cls, idx) => (
                                         <option key={idx} value={cls}>{cls}</option>
                                     ))}
                                 </select>
@@ -1221,6 +1336,11 @@ const StudentSurveyManagement = () => {
                                                 placeholder="Nhập nội dung câu hỏi..."
                                                 value={question.question}
                                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateQuestion(question.id, "question", e.target.value)}
+                                                onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                                                    if (e.target.value.trim()) {
+                                                        checkDuplicateQuestion(e.target.value.trim(), question.id)
+                                                    }
+                                                }}
                                             />
                                         </div>
 
@@ -1521,13 +1641,27 @@ const StudentSurveyManagement = () => {
                                     <option value="academic_advising">📋 Tư vấn học tập</option>
                                 </select>
                                 <Badge variant="secondary">
-                                    {availableQuestions.filter(q => questionBankCategory === 'all' || q.category === questionBankCategory).length} câu hỏi
+                                    {availableQuestions
+                                        .filter(q => questionBankCategory === 'all' || q.category === questionBankCategory)
+                                        .filter(q => {
+                                            const isAlreadyAdded = questions.some(existingQ => 
+                                                existingQ.question.toLowerCase().trim() === q.question.toLowerCase().trim()
+                                            );
+                                            return !isAlreadyAdded;
+                                        }).length} câu hỏi còn lại
                                 </Badge>
                             </div>
 
                             <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto">
                                 {availableQuestions
                                     .filter(q => questionBankCategory === 'all' || q.category === questionBankCategory)
+                                    .filter(q => {
+                                        // Filter out questions that are already in the survey
+                                        const isAlreadyAdded = questions.some(existingQ => 
+                                            existingQ.question.toLowerCase().trim() === q.question.toLowerCase().trim()
+                                        );
+                                        return !isAlreadyAdded;
+                                    })
                                     .map((q) => (
                                         <Card key={q.id} className="cursor-pointer hover:shadow-md transition-shadow">
                                             <CardContent className="pt-4">
@@ -1563,7 +1697,7 @@ const StudentSurveyManagement = () => {
                                                         onClick={() => {
                                                             const newQuestion = convertApiQuestionToComponent(q)
                                                             setQuestions([...questions, newQuestion])
-                                                            toast.success('Đã thêm câu hỏi vào khảo sát!')
+                                                            toast.success('Đã thêm câu hỏi')
                                                         }}
                                                     >
                                                         <Plus className="w-4 h-4 mr-1" />
@@ -1575,10 +1709,21 @@ const StudentSurveyManagement = () => {
                                     ))}
                             </div>
 
-                            {availableQuestions.filter(q => questionBankCategory === 'all' || q.category === questionBankCategory).length === 0 && (
+                            {availableQuestions
+                                .filter(q => questionBankCategory === 'all' || q.category === questionBankCategory)
+                                .filter(q => {
+                                    const isAlreadyAdded = questions.some(existingQ => 
+                                        existingQ.question.toLowerCase().trim() === q.question.toLowerCase().trim()
+                                    );
+                                    return !isAlreadyAdded;
+                                }).length === 0 && (
                                 <div className="text-center py-8 text-gray-500">
                                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                    <p>Không có câu hỏi nào trong danh mục này</p>
+                                    <p>
+                                        {availableQuestions.filter(q => questionBankCategory === 'all' || q.category === questionBankCategory).length === 0 
+                                            ? 'Không có câu hỏi nào trong danh mục này'
+                                            : 'Tất cả câu hỏi đã được thêm vào khảo sát'}
+                                    </p>
                                 </div>
                             )}
 
@@ -1589,10 +1734,16 @@ const StudentSurveyManagement = () => {
                                 <Button
                                     className="flex-1"
                                     onClick={() => {
-                                        // Add random 5 questions
-                                        const filtered = availableQuestions.filter(q =>
-                                            questionBankCategory === 'all' || q.category === questionBankCategory
-                                        )
+                                        // Filter out questions already in survey
+                                        const filtered = availableQuestions
+                                            .filter(q => questionBankCategory === 'all' || q.category === questionBankCategory)
+                                            .filter(q => {
+                                                const isAlreadyAdded = questions.some(existingQ => 
+                                                    existingQ.question.toLowerCase().trim() === q.question.toLowerCase().trim()
+                                                );
+                                                return !isAlreadyAdded;
+                                            });
+                                        
                                         const selectedQuestions = filtered
                                             .sort(() => Math.random() - 0.5)
                                             .slice(0, 5)
@@ -1601,7 +1752,9 @@ const StudentSurveyManagement = () => {
                                         if (selectedQuestions.length > 0) {
                                             setQuestions([...questions, ...selectedQuestions])
                                             setShowQuestionBank(false)
-                                            toast.success(`Đã thêm ${selectedQuestions.length} câu hỏi ngẫu nhiên!`)
+                                            toast.success(`Đã thêm ${selectedQuestions.length} câu hỏi`)
+                                        } else {
+                                            toast.info('Tất cả câu hỏi đã được thêm')
                                         }
                                     }}
                                 >

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Button } from "@/components/ui/teacher/teacher_button"
 import TeacherLayout from "./components/TeacherLayout"
+import { useFilterOptions } from "@/hooks/useFilterOptions"
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -70,12 +71,13 @@ function getPredictedRiskLevel(minFinalGrade: number): string {
 export default function TeacherReport() {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
+    const { filterOptions, loading: loadingFilters } = useFilterOptions()
     const [selectedRiskLevel, setSelectedRiskLevel] = useState("all")
     const [selectedClass, setSelectedClass] = useState("all")
     const [selectedDepartment, setSelectedDepartment] = useState("all")
     const [selectedCourse, setSelectedCourse] = useState("all")
-    const [selectedYear, setSelectedYear] = useState("2024-2025")
-    const [selectedSemester, setSelectedSemester] = useState("1")
+    const [selectedYear, setSelectedYear] = useState("all")
+    const [selectedSemester, setSelectedSemester] = useState("all")
     const [showAllModal, setShowAllModal] = useState(false)
     const [selectedRiskGroup, setSelectedRiskGroup] = useState<'Nguy cơ cao' | 'Nguy cơ trung bình' | 'Cần theo dõi' | null>(null)
     const [showDetailModal, setShowDetailModal] = useState(false)
@@ -423,10 +425,12 @@ export default function TeacherReport() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(e.target.value)}
+                                disabled={loadingFilters}
                             >
-                                <option value="2024-2025">2024-2025</option>
-                                <option value="2023-2024">2023-2024</option>
-                                <option value="2022-2023">2022-2023</option>
+                                <option value="all">Tất cả năm học</option>
+                                {filterOptions.academicYears.map((year) => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -435,10 +439,14 @@ export default function TeacherReport() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={selectedSemester}
                                 onChange={(e) => setSelectedSemester(e.target.value)}
+                                disabled={loadingFilters}
                             >
-                                <option value="1">Kỳ 1</option>
-                                <option value="2">Kỳ 2</option>
-                                <option value="3">Kỳ hè</option>
+                                <option value="all">Tất cả học kỳ</option>
+                                {filterOptions.semesters.map((semester) => (
+                                    <option key={semester} value={semester}>
+                                        {semester === 'HK1' ? 'Kỳ 1' : semester === 'HK2' ? 'Kỳ 2' : 'Kỳ hè'}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -447,11 +455,12 @@ export default function TeacherReport() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={selectedDepartment}
                                 onChange={(e) => setSelectedDepartment(e.target.value)}
+                                disabled={loadingFilters}
                             >
                                 <option value="all">Tất cả khoa</option>
-                                <option value="Công nghệ thông tin">Công nghệ thông tin</option>
-                                <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
-                                <option value="Khoa học máy tính">Khoa học máy tính</option>
+                                {filterOptions.faculties.map((faculty) => (
+                                    <option key={faculty} value={faculty}>{faculty}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -472,15 +481,12 @@ export default function TeacherReport() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={selectedClass}
                                 onChange={(e) => setSelectedClass(e.target.value)}
+                                disabled={loadingFilters}
                             >
                                 <option value="all">Tất cả lớp</option>
-                                <option value="CNTT01">CNTT01</option>
-                                <option value="CNTT02">CNTT02</option>
-                                <option value="CNTT03">CNTT03</option>
-                                <option value="KTPM01">KTPM01</option>
-                                <option value="KTPM02">KTPM02</option>
-                                <option value="KHMT01">KHMT01</option>
-                                <option value="KHMT02">KHMT02</option>
+                                {filterOptions.classes.map((classItem) => (
+                                    <option key={classItem} value={classItem}>{classItem}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
