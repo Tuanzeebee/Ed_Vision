@@ -23,6 +23,80 @@ export class SurveysService {
     constructor(private prisma: PrismaService) { }
 
     /**
+     * Calculate similarity between two strings (0-1)
+     * Uses Levenshtein distance algorithm
+     */
+    private calculateSimilarity(str1: string, str2: string): number {
+        const s1 = str1.toLowerCase().trim();
+        const s2 = str2.toLowerCase().trim();
+
+        if (s1 === s2) return 1;
+        if (s1.length === 0 || s2.length === 0) return 0;
+
+        const matrix: number[][] = [];
+
+        // Initialize matrix
+        for (let i = 0; i <= s2.length; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= s1.length; j++) {
+            matrix[0][j] = j;
+        }
+
+        // Fill matrix
+        for (let i = 1; i <= s2.length; i++) {
+            for (let j = 1; j <= s1.length; j++) {
+                if (s2.charAt(i - 1) === s1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        matrix[i][j - 1] + 1,     // insertion
+                        matrix[i - 1][j] + 1      // deletion
+                    );
+                }
+            }
+        }
+
+        const maxLength = Math.max(s1.length, s2.length);
+        const distance = matrix[s2.length][s1.length];
+        return 1 - distance / maxLength;
+    }
+
+    /**
+     * Find similar questions in database
+     * Returns questions with similarity >= threshold
+     */
+    private async findSimilarQuestions(
+        questionText: string,
+        questionType: string,
+        threshold: number = 0.8, // 80% similarity threshold
+    ): Promise<Array<{ question: any; similarity: number }>> {
+        // Get all questions of the same type
+        const existingQuestions = await this.prisma.surveyQuestion.findMany({
+            where: {
+                question_type: questionType,
+                is_active: true,
+            },
+            include: {
+                surveyOptions: true,
+            },
+        });
+
+        const similarQuestions: Array<{ question: any; similarity: number }> = [];
+
+        for (const q of existingQuestions) {
+            const similarity = this.calculateSimilarity(questionText, q.question_text);
+            if (similarity >= threshold) {
+                similarQuestions.push({ question: q, similarity });
+            }
+        }
+
+        // Sort by similarity (highest first)
+        return similarQuestions.sort((a, b) => b.similarity - a.similarity);
+    }
+
+    /**
      * Map question type from DB to frontend format
      */
     private mapQuestionType(
@@ -405,32 +479,86 @@ export class SurveysService {
         });
 
         // Link questions to survey
+        const createdQuestionIds: number[] = [];
+        
         for (let i = 0; i < dto.questions.length; i++) {
             const questionDto = dto.questions[i];
             const questionType = this.mapQuestionTypeToDb(questionDto.type);
 
-            // Create question
-            const question = await this.prisma.surveyQuestion.create({
-                data: {
-                    question_text: questionDto.question,
-                    question_type: questionType,
-                    category: questionDto.category || null,
-                    is_active: true,
+            // Step 1: Check for similar questions (semantic similarity)
+            const similarQuestions = await this.findSimilarQuestions(
+                questionDto.question,
+                questionType,
+                0.85, // 85% similarity threshold
+            );
+
+            let question: any = null;
+
+            if (similarQuestions.length > 0) {
+                const mostSimilar = similarQuestions[0];
+                
+                // If 100% match, use existing question
+                if (mostSimilar.similarity === 1) {
+                    question = mostSimilar.question;
+                } 
+                // If very similar (85-99%), throw error with suggestion
+                else if (mostSimilar.similarity >= 0.85) {
+                    throw new BadRequestException(
+                        `Câu hỏi "${questionDto.question}" có nội dung tương tự với câu hỏi đã có: "${mostSimilar.question.question_text}" (độ trùng lặp: ${Math.round(mostSimilar.similarity * 100)}%). Vui lòng sử dụng câu hỏi có sẵn hoặc thay đổi nội dung câu hỏi.`,
+                    );
+                }
+            }
+
+            // Step 2: Create new question if no similar question found
+            if (!question) {
+                question = await this.prisma.surveyQuestion.create({
+                    data: {
+                        question_text: questionDto.question,
+                        question_type: questionType,
+                        category: questionDto.category || null,
+                        is_active: true,
+                    },
+                    include: {
+                        surveyOptions: true,
+                    },
+                });
+
+                // Create options if multiple choice
+                if (questionDto.options && questionDto.options.length > 0) {
+                    await this.prisma.surveyOption.createMany({
+                        data: questionDto.options.map((opt, idx) => ({
+                            question_id: question!.question_id,
+                            option_text: opt,
+                            option_value: idx + 1,
+                        })),
+                    });
+                }
+            }
+
+            // Step 3: Check if question already added in current request
+            if (createdQuestionIds.includes(question.question_id)) {
+                throw new BadRequestException(
+                    `Câu hỏi "${questionDto.question}" đã được thêm vào khảo sát này`,
+                );
+            }
+
+            // Step 4: Check if question already linked to this survey
+            const existingLink = await this.prisma.surveyQuestionLink.findUnique({
+                where: {
+                    survey_id_question_id: {
+                        survey_id: dbSurvey.survey_id,
+                        question_id: question.question_id,
+                    },
                 },
             });
 
-            // Create options if multiple choice
-            if (questionDto.options && questionDto.options.length > 0) {
-                await this.prisma.surveyOption.createMany({
-                    data: questionDto.options.map((opt, idx) => ({
-                        question_id: question.question_id,
-                        option_text: opt,
-                        option_value: idx + 1,
-                    })),
-                });
+            if (existingLink) {
+                throw new BadRequestException(
+                    `Câu hỏi này đã tồn tại trong khảo sát`,
+                );
             }
 
-            // Link question to survey
+            // Step 5: Link question to survey
             await this.prisma.surveyQuestionLink.create({
                 data: {
                     survey_id: dbSurvey.survey_id,
@@ -438,6 +566,8 @@ export class SurveysService {
                     order_index: i + 1,
                 },
             });
+
+            createdQuestionIds.push(question.question_id);
         }
 
         // Reload with questions
@@ -475,6 +605,28 @@ export class SurveysService {
         },
     ): Promise<Survey> {
         const accountId = await this.getAccountIdFromInstructorId(instructorId);
+
+        // Check for duplicate question IDs in the request
+        const uniqueQuestionIds = new Set(dto.questionIds);
+        if (uniqueQuestionIds.size !== dto.questionIds.length) {
+            throw new BadRequestException(
+                'Không thể thêm cùng một câu hỏi nhiều lần vào khảo sát',
+            );
+        }
+
+        // Validate all questions exist
+        const questions = await this.prisma.surveyQuestion.findMany({
+            where: {
+                question_id: { in: dto.questionIds },
+                is_active: true,
+            },
+        });
+
+        if (questions.length !== dto.questionIds.length) {
+            throw new BadRequestException(
+                'Một số câu hỏi không tồn tại hoặc không hoạt động',
+            );
+        }
 
         // Create survey
         const dbSurvey = await this.prisma.survey.create({
@@ -625,17 +777,214 @@ export class SurveysService {
             throw new NotFoundException('Không tìm thấy khảo sát');
         }
 
-        if (survey.is_active) {
-            throw new BadRequestException('Không thể xóa khảo sát đang hoạt động');
+        // ✅ ONLY CHECK: Survey has responses
+        // Allow deleting draft, active, or started surveys WITHOUT responses
+        if (survey.surveyResponses && survey.surveyResponses.length > 0) {
+            throw new BadRequestException(
+                `Không thể xóa khảo sát đã có ${survey.surveyResponses.length} phản hồi từ sinh viên. ` +
+                `Vui lòng đóng khảo sát thay vì xóa để giữ lại dữ liệu.`,
+            );
         }
 
-        if (survey.surveyResponses && survey.surveyResponses.length > 0) {
-            throw new BadRequestException('Không thể xóa khảo sát đã có phản hồi');
+        // ⚠️ WARNING for active surveys (but still allow)
+        if (survey.is_active) {
+            console.warn(
+                `[SURVEY DELETE] Deleting active survey ${surveyId} by instructor ${instructorId}`,
+            );
         }
 
         await this.prisma.survey.delete({
             where: { survey_id: parseInt(surveyId) },
         });
+
+        return { success: true };
+    }
+
+    /**
+     * Thêm câu hỏi vào survey (sau khi survey đã tạo)
+     */
+    async addQuestionToSurvey(
+        instructorId: number,
+        surveyId: string,
+        questionId: number,
+    ): Promise<{ success: boolean }> {
+        const accountId = await this.getAccountIdFromInstructorId(instructorId);
+
+        // Verify survey ownership
+        const survey = await this.prisma.survey.findFirst({
+            where: {
+                survey_id: parseInt(surveyId),
+                created_by: accountId,
+            },
+            include: {
+                surveyQuestions: true,
+                surveyResponses: true,
+            },
+        });
+
+        if (!survey) {
+            throw new NotFoundException('Không tìm thấy khảo sát');
+        }
+
+        // Cannot modify survey that has responses
+        if (survey.surveyResponses && survey.surveyResponses.length > 0) {
+            throw new BadRequestException(
+                'Không thể thêm câu hỏi vào khảo sát đã có phản hồi',
+            );
+        }
+
+        // Cannot modify active survey
+        if (survey.is_active) {
+            throw new BadRequestException(
+                'Không thể thêm câu hỏi vào khảo sát đang hoạt động',
+            );
+        }
+
+        // Check if question exists
+        const question = await this.prisma.surveyQuestion.findUnique({
+            where: { question_id: questionId, is_active: true },
+        });
+
+        if (!question) {
+            throw new NotFoundException('Không tìm thấy câu hỏi');
+        }
+
+        // Check if already linked
+        const existingLink = await this.prisma.surveyQuestionLink.findUnique({
+            where: {
+                survey_id_question_id: {
+                    survey_id: parseInt(surveyId),
+                    question_id: questionId,
+                },
+            },
+        });
+
+        if (existingLink) {
+            throw new BadRequestException('Câu hỏi đã có trong khảo sát');
+        }
+
+        // Get max order_index
+        const maxOrder = survey.surveyQuestions.length > 0
+            ? Math.max(...survey.surveyQuestions.map(q => q.order_index || 0))
+            : 0;
+
+        // Link question
+        await this.prisma.surveyQuestionLink.create({
+            data: {
+                survey_id: parseInt(surveyId),
+                question_id: questionId,
+                order_index: maxOrder + 1,
+            },
+        });
+
+        return { success: true };
+    }
+
+    /**
+     * Xóa câu hỏi khỏi survey
+     */
+    async removeQuestionFromSurvey(
+        instructorId: number,
+        surveyId: string,
+        questionId: number,
+    ): Promise<{ success: boolean }> {
+        const accountId = await this.getAccountIdFromInstructorId(instructorId);
+
+        // Verify survey ownership
+        const survey = await this.prisma.survey.findFirst({
+            where: {
+                survey_id: parseInt(surveyId),
+                created_by: accountId,
+            },
+            include: {
+                surveyResponses: true,
+            },
+        });
+
+        if (!survey) {
+            throw new NotFoundException('Không tìm thấy khảo sát');
+        }
+
+        // Cannot modify survey that has responses
+        if (survey.surveyResponses && survey.surveyResponses.length > 0) {
+            throw new BadRequestException(
+                'Không thể xóa câu hỏi khỏi khảo sát đã có phản hồi',
+            );
+        }
+
+        // Cannot modify active survey
+        if (survey.is_active) {
+            throw new BadRequestException(
+                'Không thể xóa câu hỏi khỏi khảo sát đang hoạt động',
+            );
+        }
+
+        // Delete link
+        const deleted = await this.prisma.surveyQuestionLink.deleteMany({
+            where: {
+                survey_id: parseInt(surveyId),
+                question_id: questionId,
+            },
+        });
+
+        if (deleted.count === 0) {
+            throw new NotFoundException('Câu hỏi không có trong khảo sát');
+        }
+
+        return { success: true };
+    }
+
+    /**
+     * Cập nhật thứ tự câu hỏi trong survey
+     */
+    async reorderQuestions(
+        instructorId: number,
+        surveyId: string,
+        questionOrder: { questionId: number; order: number }[],
+    ): Promise<{ success: boolean }> {
+        const accountId = await this.getAccountIdFromInstructorId(instructorId);
+
+        // Verify survey ownership
+        const survey = await this.prisma.survey.findFirst({
+            where: {
+                survey_id: parseInt(surveyId),
+                created_by: accountId,
+            },
+            include: {
+                surveyResponses: true,
+            },
+        });
+
+        if (!survey) {
+            throw new NotFoundException('Không tìm thấy khảo sát');
+        }
+
+        // Cannot modify survey that has responses
+        if (survey.surveyResponses && survey.surveyResponses.length > 0) {
+            throw new BadRequestException(
+                'Không thể sắp xếp lại câu hỏi cho khảo sát đã có phản hồi',
+            );
+        }
+
+        // Cannot modify active survey
+        if (survey.is_active) {
+            throw new BadRequestException(
+                'Không thể sắp xếp lại câu hỏi cho khảo sát đang hoạt động',
+            );
+        }
+
+        // Update order for each question
+        for (const item of questionOrder) {
+            await this.prisma.surveyQuestionLink.updateMany({
+                where: {
+                    survey_id: parseInt(surveyId),
+                    question_id: item.questionId,
+                },
+                data: {
+                    order_index: item.order,
+                },
+            });
+        }
 
         return { success: true };
     }
@@ -820,8 +1169,8 @@ export class SurveysService {
             );
         }
 
-        // TODO: Implement actual reminder sending
-        console.log(`Sending reminder for survey ${survey.title}`);
+        // Reminder sending logic would go here
+        // Integration with notification service
 
         return {
             success: true,

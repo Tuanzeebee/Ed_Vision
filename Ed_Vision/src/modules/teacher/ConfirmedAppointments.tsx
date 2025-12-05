@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { AppointmentRequest } from './types/appointment.types';
 import { Button } from '@/components/ui/teacher/teacher_button';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 
 interface ConfirmedAppointmentsProps {
   requests: AppointmentRequest[];
@@ -65,6 +66,7 @@ export default function ConfirmedAppointments({
   setRequests: propSetRequests,
   showToast,
 }: ConfirmedAppointmentsProps) {
+  const { filterOptions, loading: loadingFilters } = useFilterOptions()
   const [requests, setRequests] = useState<AppointmentRequest[]>(propRequests);
   const [loading, setLoading] = useState(false);
   
@@ -290,9 +292,10 @@ export default function ConfirmedAppointments({
                   value={confirmedClassFilter}
                   onChange={(e) => setConfirmedClassFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  disabled={loadingFilters}
                 >
                   <option value="all">Tất cả lớp ({confirmedRequests.length})</option>
-                  {uniqueClasses.map((className) => (
+                  {filterOptions.classes.map((className) => (
                     <option key={className} value={className}>
                       {className} ({confirmedRequests.filter((r) => r.studentClass === className).length})
                     </option>

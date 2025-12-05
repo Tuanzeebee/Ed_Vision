@@ -496,10 +496,8 @@ async function main() {
       const parent = await prisma.parent.create({
         data: {
           account_id: parentAcc.account_id,
-          full_name: 'Nguyễn Văn Phụ Huynh',
-          email: parentEmail,
-          phone_number: '0123456789',
           relationship_type: 'parent',
+          occupation: 'Giáo viên',
         },
       });
       console.log('  ✓ Created parent record, parent_id=', parent.parent_id);

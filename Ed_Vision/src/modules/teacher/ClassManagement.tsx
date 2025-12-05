@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/teacher/teacher_card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/teacher/teacher_table"
 import TeacherLayout from "./components/TeacherLayout"
-import { classManagementAPI } from "@/services/api/classManagementAPI"
+import { classManagementAPI } from "@/services/teacher/api"
+import toast, { Toaster } from 'react-hot-toast'
 import {
     BookOpen,
     Users,
@@ -18,7 +19,10 @@ import {
     TrendingUp,
     TrendingDown,
     Search,
-    ChevronLeft
+    ChevronLeft,
+    Upload,
+    CheckCircle,
+    RefreshCw
 } from "lucide-react"
 
 export default function ClassManagement() {
@@ -32,6 +36,11 @@ export default function ClassManagement() {
     const [selectedStudentDetail, setSelectedStudentDetail] = useState<any>(null)
     const [quickMessage, setQuickMessage] = useState('')
     const [selectedTemplate, setSelectedTemplate] = useState('')
+
+    // Upload Class List states
+    const [showUploadModal, setShowUploadModal] = useState(false)
+    const [uploadFile, setUploadFile] = useState<File | null>(null)
+    const [uploadClassCode, setUploadClassCode] = useState('')
 
     // State for API data
     const [classData, setClassData] = useState<any[]>([])
@@ -90,6 +99,84 @@ export default function ClassManagement() {
         }
     }
 
+    const handleRefresh = async () => {
+        try {
+            setLoading(true)
+            console.log('🔄 Refreshing data...')
+            
+            // Clear cache
+            classManagementAPI.clearCache()
+            
+            // Refetch all data
+            await Promise.all([
+                fetchClasses(),
+                fetchStatistics()
+            ])
+            
+            // Refetch students if a class is selected
+            if (selectedClass) {
+                await fetchStudents(selectedClass)
+            }
+            
+            toast.success('Data refreshed successfully!')
+        } catch (error) {
+            console.error('Error refreshing:', error)
+            toast.error('Failed to refresh data')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setUploadFile(file)
+        }
+    }
+
+    const handleUploadSubmit = async () => {
+        if (!uploadFile || !uploadClassCode) {
+            toast.error('Please select file and enter class code')
+            return
+        }
+
+        try {
+            setLoading(true)
+            const formData = new FormData()
+            formData.append('file', uploadFile)
+            formData.append('class_code', uploadClassCode)
+
+            console.log('Uploading:', { class_code: uploadClassCode, file: uploadFile.name })
+            const result = await classManagementAPI.uploadClassList(formData)
+            console.log('Upload result:', result)
+
+            if (result.success) {
+                toast.success(result.message || 'Upload successful!')
+                // Auto close modal after 1.5 seconds and refresh
+                setTimeout(() => {
+                    resetUploadModal()
+                }, 1500)
+                await fetchClasses()
+                await fetchStatistics()
+            } else {
+                toast.error(result.message || 'Upload failed')
+            }
+        } catch (error: any) {
+            console.error('Upload error:', error)
+            console.error('Error response:', error.response?.data)
+            const errorMessage = error.response?.data?.message || error.message || 'Upload failed'
+            toast.error(errorMessage)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const resetUploadModal = () => {
+        setShowUploadModal(false)
+        setUploadFile(null)
+        setUploadClassCode('')
+    }
+
     // Mẫu tin nhắn nhanh
     const messageTemplates = [
         { id: 'concern', label: '😟 Quan tâm', message: 'Thầy nhận thấy em đang gặp khó khăn. Em có thể chia sẻ với thầy không?' },
@@ -128,6 +215,7 @@ export default function ClassManagement() {
 
     return (
         <TeacherLayout currentPage="class-management">
+            <Toaster position="top-right" />
             {/* Page Header */}
             <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-xl shadow-lg mb-6">
                 <div className="flex items-center justify-between">
@@ -139,15 +227,37 @@ export default function ClassManagement() {
                             {showStudentDetail && selectedClass ? 'Xem thông tin chi tiết từng sinh viên trong lớp' : 'Quản lý và theo dõi các lớp học được phân công'}
                         </p>
                     </div>
-                    {showStudentDetail && (
-                        <button
-                            onClick={() => setShowStudentDetail(false)}
-                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30"
-                        >
-                            <X className="w-4 h-4" />
-                            <span>Quay lại</span>
-                        </button>
-                    )}
+                    <div className="flex items-center space-x-3">
+                        {!showStudentDetail && (
+                            <>
+                                <button
+                                    onClick={handleRefresh}
+                                    disabled={loading}
+                                    className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2.5 rounded-lg flex items-center space-x-2 transition-all shadow-md hover:shadow-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Refresh data and clear cache"
+                                >
+                                    <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                                    <span>Refresh</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowUploadModal(true)}
+                                    className="bg-white text-green-600 hover:bg-green-50 px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all shadow-md hover:shadow-lg font-semibold"
+                                >
+                                    <Upload className="w-5 h-5" />
+                                    <span>Upload danh sách lớp</span>
+                                </button>
+                            </>
+                        )}
+                        {showStudentDetail && (
+                            <button
+                                onClick={() => setShowStudentDetail(false)}
+                                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30"
+                            >
+                                <X className="w-4 h-4" />
+                                <span>Quay lại</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -354,7 +464,13 @@ export default function ClassManagement() {
                                             <div className="text-center">
                                                 <p className="text-gray-500">Giỏi (≥3.2)</p>
                                                 <p className="font-bold text-green-600">
-                                                    {studentsData.filter((s: any) => s.gpa >= 3.2).length}
+                                                    {studentsData.filter((s: any) => s.gpa !== null && s.gpa >= 3.2).length}
+                                                </p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-gray-500">Chưa có điểm</p>
+                                                <p className="font-bold text-gray-600">
+                                                    {studentsData.filter((s: any) => s.gpa === null).length}
                                                 </p>
                                             </div>
                                         </div>
@@ -412,60 +528,84 @@ export default function ClassManagement() {
 
                                                             <TableCell className="text-center">
                                                                 <div className="flex flex-col items-center space-y-1">
-                                                                    <span className={`text-lg font-bold ${student.gpa >= 3.2 ? 'text-green-600' :
-                                                                        student.gpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'
-                                                                        }`}>
-                                                                        {student.gpa}
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        {student.gpa >= 3.2 ? 'Giỏi' : student.gpa >= 2.68 ? 'Khá' : 'Yếu'}
-                                                                    </span>
+                                                                    {student.gpa !== null ? (
+                                                                        <>
+                                                                            <span className={`text-lg font-bold ${student.gpa >= 3.2 ? 'text-green-600' :
+                                                                                student.gpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'
+                                                                                }`}>
+                                                                                {student.gpa}
+                                                                            </span>
+                                                                            <span className="text-xs text-gray-500">
+                                                                                {student.gpa >= 3.2 ? 'Giỏi' : student.gpa >= 2.68 ? 'Khá' : 'Yếu'}
+                                                                            </span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-gray-400 text-sm">N/A</span>
+                                                                    )}
                                                                 </div>
                                                             </TableCell>
 
                                                             <TableCell className="text-center">
                                                                 <div className="flex flex-col items-center space-y-1">
-                                                                    <span className={`text-lg font-bold ${student.predictedGpa >= 3.2 ? 'text-green-600' :
-                                                                        student.predictedGpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'
-                                                                        }`}>
-                                                                        {student.predictedGpa}
-                                                                    </span>
-                                                                    <div className="flex items-center space-x-1">
-                                                                        {student.predictedGpa > student.gpa ? (
-                                                                            <TrendingUp className="w-3 h-3 text-green-500" />
-                                                                        ) : student.predictedGpa < student.gpa ? (
-                                                                            <TrendingDown className="w-3 h-3 text-red-500" />
-                                                                        ) : (
-                                                                            <span className="text-xs text-gray-500">—</span>
-                                                                        )}
-                                                                    </div>
+                                                                    {student.predictedGpa !== null ? (
+                                                                        <>
+                                                                            <span className={`text-lg font-bold ${student.predictedGpa >= 3.2 ? 'text-green-600' :
+                                                                                student.predictedGpa >= 2.68 ? 'text-yellow-600' : 'text-red-600'
+                                                                                }`}>
+                                                                                {student.predictedGpa}
+                                                                            </span>
+                                                                            <div className="flex items-center space-x-1">
+                                                                                {student.predictedGpa > student.gpa ? (
+                                                                                    <TrendingUp className="w-3 h-3 text-green-500" />
+                                                                                ) : student.predictedGpa < student.gpa ? (
+                                                                                    <TrendingDown className="w-3 h-3 text-red-500" />
+                                                                                ) : (
+                                                                                    <span className="text-xs text-gray-500">—</span>
+                                                                                )}
+                                                                            </div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-gray-400 text-sm">N/A</span>
+                                                                    )}
                                                                 </div>
                                                             </TableCell>
 
                                                             <TableCell className="text-center">
                                                                 <div className="flex flex-col items-center space-y-1">
-                                                                    <span className={`text-lg font-bold ${student.attendance >= 90 ? 'text-green-600' :
-                                                                        student.attendance >= 70 ? 'text-yellow-600' : 'text-red-600'
-                                                                        }`}>
-                                                                        {student.attendance}%
-                                                                    </span>
-                                                                    <User className="w-3 h-3 text-gray-400" />
+                                                                    {student.attendance !== null ? (
+                                                                        <>
+                                                                            <span className={`text-lg font-bold ${student.attendance >= 90 ? 'text-green-600' :
+                                                                                student.attendance >= 70 ? 'text-yellow-600' : 'text-red-600'
+                                                                                }`}>
+                                                                                {student.attendance}%
+                                                                            </span>
+                                                                            <User className="w-3 h-3 text-gray-400" />
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-gray-400 text-sm">N/A</span>
+                                                                    )}
                                                                 </div>
                                                             </TableCell>
 
                                                             <TableCell className="text-center">
-                                                                <Badge
-                                                                    className={`text-xs font-medium ${student.riskLevel === 'High' ? 'bg-red-100 text-red-700 border-red-300' :
-                                                                        student.riskLevel === 'Medium' ? 'bg-orange-100 text-orange-700 border-orange-300' :
-                                                                            student.riskLevel === 'Monitor' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-                                                                                'bg-green-100 text-green-700 border-green-300'
-                                                                        }`}
-                                                                >
-                                                                    {student.riskLevel === 'High' ? '🔴 Nguy cơ cao' :
-                                                                        student.riskLevel === 'Medium' ? '� Nguy cơ TB' :
-                                                                            student.riskLevel === 'Monitor' ? '� Cần theo dõi' :
-                                                                                '🟢 Không rủi ro'}
-                                                                </Badge>
+                                                                {student.riskLevel !== null ? (
+                                                                    <Badge
+                                                                        className={`text-xs font-medium ${student.riskLevel === 'High' ? 'bg-red-100 text-red-700 border-red-300' :
+                                                                            student.riskLevel === 'Medium' ? 'bg-orange-100 text-orange-700 border-orange-300' :
+                                                                                student.riskLevel === 'Monitor' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                                                                                    'bg-green-100 text-green-700 border-green-300'
+                                                                            }`}
+                                                                    >
+                                                                        {student.riskLevel === 'High' ? '🔴 Nguy cơ cao' :
+                                                                            student.riskLevel === 'Medium' ? '🟠 Nguy cơ TB' :
+                                                                                student.riskLevel === 'Monitor' ? '🟡 Cần theo dõi' :
+                                                                                    '🟢 Không rủi ro'}
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge className="text-xs font-medium bg-gray-100 text-gray-600 border-gray-300">
+                                                                        ⚪ Chưa có dữ liệu
+                                                                    </Badge>
+                                                                )}
                                                             </TableCell>
 
                                                             <TableCell className="text-center">
@@ -779,6 +919,100 @@ export default function ClassManagement() {
                     </div>
                 </div>
             )}
+            {/* Upload Modal - Simplified like PredictionViewV2 */}
+            {showUploadModal && (
+                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full">
+                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-t-2xl">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <Upload className="w-10 h-10 bg-white/20 rounded-lg p-2" />
+                                    <h3 className="text-xl font-bold">Upload Class List</h3>
+                                </div>
+                                <button onClick={resetUploadModal} className="text-white hover:text-gray-200">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="p-6 space-y-4">
+                            {/* Class Code Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Class Code <span className="text-red-500">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={uploadClassCode} 
+                                    onChange={(e) => setUploadClassCode(e.target.value.toUpperCase())} 
+                                    placeholder="e.g. CMU-TPM7" 
+                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
+                                    required 
+                                />
+                            </div>
+
+                            {/* File Upload Dropzone */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Excel/CSV File <span className="text-red-500">*</span>
+                                </label>
+                                <input 
+                                    type="file" 
+                                    accept=".xls,.xlsx,.csv" 
+                                    onChange={handleFileChange} 
+                                    className="hidden" 
+                                    id="file-upload" 
+                                />
+                                <label 
+                                    htmlFor="file-upload" 
+                                    className={`flex items-center justify-center w-full px-4 py-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                                        uploadFile 
+                                            ? 'border-green-500 bg-green-50' 
+                                            : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {uploadFile ? (
+                                        <div className="text-center">
+                                            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
+                                            <p className="font-semibold text-gray-800">{uploadFile.name}</p>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                {(uploadFile.size / 1024).toFixed(2)} KB
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                            <p className="text-gray-600 font-medium">Click to select file</p>
+                                            <p className="text-sm text-gray-400 mt-1">Supports Excel (.xlsx, .xls) or CSV</p>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+
+                            {/* Upload Button */}
+                            <button
+                                onClick={handleUploadSubmit}
+                                disabled={loading || !uploadClassCode || !uploadFile}
+                                className={`w-full py-3 rounded-lg font-semibold transition-all ${
+                                    loading || !uploadClassCode || !uploadFile
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg'
+                                }`}
+                            >
+                                {loading ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Uploading...
+                                    </span>
+                                ) : (
+                                    'Upload Class List'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </TeacherLayout>
     )
 }
+
