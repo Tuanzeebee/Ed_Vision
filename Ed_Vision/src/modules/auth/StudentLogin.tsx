@@ -8,6 +8,7 @@ import { useState } from "react"
 import { buildUrl } from '@/services/api/config'
 import { useToast } from '@/lib/useToast'
 import { TokenManager } from '@/lib/tokenManager'
+import { checkInputSurveyCompleted } from '@/hooks/useInputSurveyCheck'
 
 type Props = {
   onGoogleLogin?: () => void
@@ -107,8 +108,19 @@ export default function StudentLogin({
         // Normalize to lowercase for comparison
         const role = (typeof roleCode === 'string') ? roleCode.toLowerCase() : ''
 
-        // Navigate immediately without toast
+        // Navigate based on role
         if (role === 'student' || role === 'student_role' || role === '') {
+          // Check if student has completed input survey
+          try {
+            const surveyStatus = await checkInputSurveyCompleted();
+            if (!surveyStatus.completed) {
+              // Chưa làm survey input → bắt buộc làm survey trước
+              navigate('/student/survey', { state: { mandatory: true } });
+              return;
+            }
+          } catch (err) {
+            console.warn('Could not check survey status, proceeding to instructions');
+          }
           navigate('/student/instructions')
         } else if (role === 'teacher') {
           navigate('/teacher/dashboard')

@@ -5,7 +5,7 @@ import { TokenManager } from '@/lib/tokenManager'
  * Hook để đảm bảo sessionStorage được đánh dấu khi tab đang mở
  * Không cần track activity thường xuyên vì logic mới dựa trên tab open/close
  */
-export const useActivityTracker = (isAuthenticated: boolean, timeRemaining?: number) => {
+export const useActivityTracker = (isAuthenticated: boolean, _timeRemaining?: number) => {
   const updateActivity = useCallback(() => {
     if (isAuthenticated) {
       TokenManager.updateActivity()

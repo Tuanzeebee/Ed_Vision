@@ -4,6 +4,7 @@ import AdminLayout from "@/components/ui/admin/AdminLayout";
 import TimeFilter from "@/components/ui/admin/TimeFilter";
 import ConfirmDialog from "@/components/ui/admin/ConfirmDialog";
 import NotificationDetailModal from "@/components/ui/admin/NotificationDetailModal";
+import apiClient from "@/services/api/apiClient";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
@@ -89,13 +90,11 @@ interface NotificationHistory {
   readCount?: number; // Số người đã đọc
 }
 
-// ✅ NotificationChart với props động theo timeFilter
-const NotificationChart = memo(function NotificationChart({ timeFilter }: { timeFilter: string }) {
+// ✅ NotificationChart với props động theo viewMode
+const NotificationChart = memo(function NotificationChart({ viewMode }: { viewMode: 'day' | 'month' | 'year' | 'all' }) {
   const getChartData = useMemo(() => {
-    const now = new Date();
-    
-    switch (timeFilter) {
-      case 'hôm-nay': {
+    switch (viewMode) {
+      case 'day': {
         const labels = ['0h-4h', '4h-8h', '8h-12h', '12h-16h', '16h-20h', '20h-24h'];
         return {
           labels,
@@ -130,50 +129,7 @@ const NotificationChart = memo(function NotificationChart({ timeFilter }: { time
         };
       }
       
-      case 'tuần-này': {
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay() + 1);
-        
-        const labels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'].map((day, index) => {
-          const date = new Date(startOfWeek);
-          date.setDate(startOfWeek.getDate() + index);
-          return `${day}\n${date.getDate()}/${date.getMonth() + 1}`;
-        });
-        
-        return {
-          labels,
-          datasets: [
-            { 
-              label: 'Thông báo đã gửi', 
-              data: [12, 8, 15, 10, 18, 6, 9], 
-              backgroundColor: 'rgba(59, 130, 246, 0.8)', 
-              borderColor: 'rgba(59, 130, 246, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Đã đọc', 
-              data: [9, 6, 11, 8, 14, 4, 7], 
-              backgroundColor: 'rgba(34, 197, 94, 0.8)', 
-              borderColor: 'rgba(34, 197, 94, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Chưa đọc', 
-              data: [3, 2, 4, 2, 4, 2, 2], 
-              backgroundColor: 'rgba(239, 68, 68, 0.8)', 
-              borderColor: 'rgba(239, 68, 68, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            }
-          ],
-          maxY: 50,
-          xAxisTitle: 'Ngày trong tuần'
-        };
-      }
-      
-      case 'tháng-này': {
+      case 'month': {
         const labels = ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4'];
         return {
           labels,
@@ -208,7 +164,8 @@ const NotificationChart = memo(function NotificationChart({ timeFilter }: { time
         };
       }
       
-      case 'tất-cả': {
+      case 'year':
+      case 'all': {
         const labels = ['Tháng 1', 'Tháng 3', 'Tháng 6', 'Tháng 9', 'Tháng 12'];
         return {
           labels,
@@ -251,7 +208,7 @@ const NotificationChart = memo(function NotificationChart({ timeFilter }: { time
           xAxisTitle: 'Thời gian'
         };
     }
-  }, [timeFilter]);
+  }, [viewMode]);
 
   const chartOptions = {
     responsive: true,
@@ -263,9 +220,9 @@ const NotificationChart = memo(function NotificationChart({ timeFilter }: { time
       title: {
         display: true,
         text: `Xu hướng gửi thông báo (${
-          timeFilter === 'hôm-nay' ? 'Hôm nay' : 
-          timeFilter === 'tuần-này' ? 'Tuần này' : 
-          timeFilter === 'tháng-này' ? 'Tháng này' : 'Tất cả'
+          viewMode === 'day' ? 'Hôm nay' : 
+          viewMode === 'month' ? 'Tháng này' : 
+          viewMode === 'year' ? 'Năm nay' : 'Tất cả'
         })`,
         font: {
           size: 14,
@@ -305,8 +262,9 @@ const NotificationChart = memo(function NotificationChart({ timeFilter }: { time
 
 export default function NotificationManagement() {
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
-  const [timeFilter, setTimeFilter] = useState('tuần-này');
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  // TimeFilter states - giống AdminOverviewDashboard
+  const [viewMode, setViewMode] = useState<'day' | 'month' | 'year' | 'all'>('day');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Editing state
   const [editingNotification, setEditingNotification] = useState<number | null>(null);
@@ -559,7 +517,18 @@ export default function NotificationManagement() {
     localStorage.setItem('notificationHistory', JSON.stringify(notificationHistory));
   }, [notificationHistory]);
 
-  // ✅ Real-time statistics based on timeFilter
+  // Helper: Map viewMode sang text so sánh
+  const getComparisonText = () => {
+    switch (viewMode) {
+      case 'day': return 'hôm qua';
+      case 'month': return 'tháng trước';
+      case 'year': return 'năm trước';
+      case 'all': return 'kỳ trước';
+      default: return 'hôm qua';
+    }
+  };
+
+  // ✅ Real-time statistics based on viewMode
   const statistics = useMemo(() => {
     // Filter sent notifications only
     const sentNotifications = notificationHistory.filter(h => h.action === 'sent');
@@ -823,70 +792,77 @@ export default function NotificationManagement() {
       title: 'Xác nhận gửi thông báo',
       message: `Bạn có chắc chắn muốn gửi ${selectedNotifications.length} thông báo đã chọn?`,
       onConfirm: () => {
-        const notifications = draftNotifications.filter((n: Notification) => selectedNotifications.includes(n.id));
-        
-        // Add to history with simulated recipient counts
-        const historyEntries = notifications.map((n: Notification) => {
-          // ===== MÔ PHỎNG DỮ LIỆU TỈ LỆ ĐỌC =====
-          // Hiện tại đang MÔ PHỎNG số liệu người nhận và tỉ lệ đọc
-          // Trong thực tế, dữ liệu này sẽ đến từ Backend API
-          
-          // 1. Tính số lượng người nhận dựa trên đối tượng
-          let totalRecipients = 0;
-          if (n.target === 'Sinh viên') totalRecipients = Math.floor(Math.random() * 200) + 100; // 100-300
-          else if (n.target === 'Giảng viên') totalRecipients = Math.floor(Math.random() * 50) + 20; // 20-70
-          else if (n.target === 'Phụ huynh') totalRecipients = Math.floor(Math.random() * 150) + 80; // 80-230
-          else if (n.target === 'Lãnh đạo') totalRecipients = Math.floor(Math.random() * 20) + 5; // 5-25
-          else totalRecipients = Math.floor(Math.random() * 300) + 150; // Tất cả: 150-450
-          
-          // 2. Mô phỏng số người đã đọc (70-90% của tổng số)
-          const readRate = 0.7 + Math.random() * 0.2; // Random từ 70% đến 90%
-          const readCount = Math.floor(totalRecipients * readRate);
-          
-          // 3. Số người chưa đọc = totalRecipients - readCount
-          // Được tính tự động trong UI
-          // ======================================
-          
-          return {
-            id: Date.now() + Math.random(),
-            action: 'sent' as const,
-            title: n.title,
-            content: n.content,
-            type: n.type,
-            target: n.target,
-            priority: n.priority,
-            actionDate: new Date().toLocaleString('vi-VN'),
-            createdDate: n.createdDate,
-            attachments: n.attachments,
-            totalRecipients,
-            readCount
-          };
-        });
-        
-        setNotificationHistory((prev: NotificationHistory[]) => [...historyEntries, ...prev]);
-        
-        // Remove from drafts
-        setDraftNotifications((prev: Notification[]) => prev.filter((n: Notification) => !selectedNotifications.includes(n.id)));
-        
-        // Clear selection
-        setSelectedNotifications([]);
-        
-        // Close confirm dialog
+        // Đóng dialog ngay
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         
-        // Show success message after a short delay
-        setTimeout(() => {
+        const notifications = draftNotifications.filter((n: Notification) => selectedNotifications.includes(n.id));
+        
+        // Gửi từng thông báo qua API (song song)
+        const sendPromises = notifications.map(n => 
+          apiClient.post('/notifications/send', {
+            title: n.title,
+            body: n.content,
+            type: n.type,
+            target: n.target,
+          }).then(response => ({
+            notification: n,
+            count: response.data.count || 0,
+            success: true
+          })).catch(error => {
+            console.error('Error sending notification:', error);
+            return { notification: n, count: 0, success: false };
+          })
+        );
+        
+        Promise.all(sendPromises).then(results => {
+          let totalSent = 0;
+          const historyEntries: NotificationHistory[] = [];
+          
+          results.forEach(result => {
+            if (result.success) {
+              totalSent += result.count;
+              historyEntries.push({
+                id: Date.now() + Math.random(),
+                action: 'sent' as const,
+                title: result.notification.title,
+                content: result.notification.content,
+                type: result.notification.type,
+                target: result.notification.target,
+                priority: result.notification.priority,
+                actionDate: new Date().toLocaleString('vi-VN'),
+                createdDate: result.notification.createdDate,
+                attachments: result.notification.attachments,
+                totalRecipients: result.count,
+                readCount: 0
+              });
+            }
+          });
+          
+          if (historyEntries.length > 0) {
+            setNotificationHistory((prev: NotificationHistory[]) => [...historyEntries, ...prev]);
+          }
+          
+          // Xóa khỏi danh sách draft
+          setDraftNotifications((prev: Notification[]) => prev.filter((n: Notification) => !selectedNotifications.includes(n.id)));
+          
+          // Clear selection
+          setSelectedNotifications([]);
+          
+          // Dispatch event để cập nhật dropdown
+          window.dispatchEvent(new CustomEvent('notificationChange'));
+          
+          // Hiển thị thông báo thành công
           setConfirmDialog({
             isOpen: true,
             title: 'Gửi thành công',
-            message: `Đã gửi ${notifications.length} thông báo thành công!`,
+            message: `Đã gửi ${historyEntries.length} thông báo đến ${totalSent} người nhận!`,
             confirmText: 'Đóng',
             onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
             onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
             type: 'success',
             hideCancel: true
           });
-        }, 100);
+        });
       },
       onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
       type: 'warning'
@@ -1164,10 +1140,10 @@ export default function NotificationManagement() {
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold text-gray-900">Quản lý Thông báo</h1>
             <TimeFilter 
-              value={timeFilter} 
-              onChange={setTimeFilter}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
+              viewMode={viewMode}
+              selectedDate={selectedDate}
+              onViewModeChange={setViewMode}
+              onDateChange={setSelectedDate}
             />
           </div>
           <p className="text-gray-600">Tạo và quản lý thông báo gửi đến sinh viên và giảng viên</p>
@@ -1225,7 +1201,7 @@ export default function NotificationManagement() {
                 <p className="text-sm font-medium text-blue-700">Tổng số thông báo</p>
                 <p className="text-3xl font-bold text-blue-900">{statistics.total}</p>
                 <p className={`text-sm font-medium flex items-center mt-1 ${statistics.totalDiff >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
-                  {statistics.totalDiff >= 0 ? '↗' : '↘'} {statistics.totalDiff >= 0 ? '+' : ''}{statistics.totalDiff} so với {timeFilter === 'hôm-nay' ? 'hôm qua' : timeFilter === 'tuần-này' ? 'tuần trước' : timeFilter === 'tháng-này' ? 'tháng trước' : 'năm trước'}
+                  {statistics.totalDiff >= 0 ? '↗' : '↘'} {statistics.totalDiff >= 0 ? '+' : ''}{statistics.totalDiff} so với {getComparisonText()}
                 </p>
               </div>
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
@@ -1242,7 +1218,7 @@ export default function NotificationManagement() {
                 <p className="text-sm font-medium text-green-700">Đã đọc</p>
                 <p className="text-3xl font-bold text-green-900">{statistics.read}</p>
                 <p className={`text-sm font-medium flex items-center mt-1 ${statistics.readDiff >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                  {statistics.readDiff >= 0 ? '↗' : '↘'} {statistics.readDiff >= 0 ? '+' : ''}{statistics.readDiff} so với {timeFilter === 'hôm-nay' ? 'hôm qua' : timeFilter === 'tuần-này' ? 'tuần trước' : timeFilter === 'tháng-này' ? 'tháng trước' : 'năm trước'}
+                  {statistics.readDiff >= 0 ? '↗' : '↘'} {statistics.readDiff >= 0 ? '+' : ''}{statistics.readDiff} so với {getComparisonText()}
                 </p>
               </div>
               <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
@@ -1259,7 +1235,7 @@ export default function NotificationManagement() {
                 <p className="text-sm font-medium text-red-700">Chưa đọc</p>
                 <p className="text-3xl font-bold text-red-900">{statistics.unread}</p>
                 <p className={`text-sm font-medium flex items-center mt-1 ${statistics.unreadDiff >= 0 ? 'text-red-700' : 'text-green-600'}`}>
-                  {statistics.unreadDiff >= 0 ? '↗' : '↘'} {statistics.unreadDiff >= 0 ? '+' : ''}{statistics.unreadDiff} so với {timeFilter === 'hôm-nay' ? 'hôm qua' : timeFilter === 'tuần-này' ? 'tuần trước' : timeFilter === 'tháng-này' ? 'tháng trước' : 'năm trước'}
+                  {statistics.unreadDiff >= 0 ? '↗' : '↘'} {statistics.unreadDiff >= 0 ? '+' : ''}{statistics.unreadDiff} so với {getComparisonText()}
                 </p>
               </div>
               <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-lg">
@@ -1274,7 +1250,7 @@ export default function NotificationManagement() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="h-80 w-full">
-              <NotificationChart timeFilter={timeFilter} />
+              <NotificationChart viewMode={viewMode} />
             </div>
           </CardContent>
         </Card>

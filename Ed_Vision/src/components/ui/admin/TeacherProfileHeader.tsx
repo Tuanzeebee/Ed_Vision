@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import instructorService, { type Instructor } from "@/services/api/instructorService";
 
 // Simple Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -14,15 +15,16 @@ const CardContent = ({ children, className = "" }: { children: React.ReactNode; 
   </div>
 );
 
-// Teacher data interface
+// Teacher data interface (derived from API Instructor data)
 export interface TeacherData {
   id: string;
+  employeeCode: string;
   name: string;
   position: string;
   department: string;
   specialization?: string;
   email: string;
-  phone: string;
+  phone?: string;
   avatar: string;
   status: string;
   onlineStatus: string;
@@ -33,28 +35,57 @@ export interface TeacherData {
   gender?: string;
   address?: string;
   description?: string;
+  academicTitle?: string;
 }
 
-// Default teacher data (in practice, this would come from API)
-const getDefaultTeacherData = (teacherId?: string): TeacherData => ({
-  id: teacherId || "GV123",
-  name: "TS. Tô Minh Vương",
-  position: "Tiến sĩ",
-  department: "Công nghệ Thông tin",
-  specialization: "Kỹ thuật phần mềm",
-  email: "vuongdeptrai@dtu.edu.vn",
-  phone: "0368182380",
-  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-  status: "Đang hoạt động",
-  onlineStatus: "Đang trực tuyến",
-  rating: 4.8,
-  qualityLevel: "Tốt",
-  totalReviews: 245,
-  dateOfBirth: "01/01/1936",
-  gender: "Nam",
-  address: "36 Hoa Thanh Quế",
-  description: "Giảng viên có hơn 15 năm kinh nghiệm giảng dạy trong lĩnh vực Công nghệ Thông tin. Đã công bố hơn 50 công trình nghiên cứu khoa học, hướng dẫn nhiều nghiên cứu sinh và tham gia các dự án nghiên cứu cấp Bộ."
-});
+// Convert API Instructor to TeacherData
+const mapInstructorToTeacherData = (instructor: Instructor): TeacherData => {
+  const getQualityLevel = (advisingCount: number = 0) => {
+    if (advisingCount >= 2) return "Tốt";
+    if (advisingCount === 1) return "Khá";
+    return "Trung bình";
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "active": return "Đang hoạt động";
+      case "on_leave": return "Nghỉ phép";
+      case "inactive": return "Không hoạt động";
+      default: return status;
+    }
+  };
+
+  const getGenderLabel = (gender?: string | null) => {
+    if (!gender) return undefined;
+    switch (gender.toLowerCase()) {
+      case "male": return "Nam";
+      case "female": return "Nữ";
+      case "other": return "Khác";
+      default: return gender;
+    }
+  };
+
+  return {
+    id: instructor.instructorId.toString(),
+    employeeCode: instructor.employeeCode,
+    name: instructor.profile?.fullName || 'N/A',
+    position: instructor.position || instructor.academicTitle || 'Giảng viên',
+    academicTitle: instructor.academicTitle,
+    department: instructor.department?.departmentName || 'Chưa phân công',
+    email: instructor.email,
+    phone: undefined, // Phone is in Profile table but not exposed in API yet
+    avatar: instructor.profile?.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    status: getStatusLabel(instructor.status),
+    onlineStatus: "Đang trực tuyến", // This could be computed from last_login_at
+    rating: 4.8, // TODO: Get from actual reviews
+    qualityLevel: getQualityLevel(instructor.advisingClassCount),
+    totalReviews: 245, // TODO: Get from actual reviews
+    dateOfBirth: instructor.profile?.dateOfBirth ? new Date(instructor.profile.dateOfBirth).toLocaleDateString('vi-VN') : undefined,
+    gender: getGenderLabel(instructor.profile?.gender),
+    address: instructor.profile?.address || undefined,
+    description: `Giảng viên thuộc ${instructor.department?.departmentName || 'khoa'}.`
+  };
+};
 
 type Props = {
   teacherData?: TeacherData;
@@ -68,21 +99,41 @@ export default function TeacherProfileHeader({
   onTeacherDataChange 
 }: Props) {
   const { teacherId } = useParams();
-  const [teacherData, setTeacherData] = useState<TeacherData>(() => 
-    propTeacherData || getDefaultTeacherData(teacherId)
-  );
+  const [teacherData, setTeacherData] = useState<TeacherData | null>(propTeacherData || null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Use ref to store callback to avoid infinite loop
+  const onTeacherDataChangeRef = useRef(onTeacherDataChange);
+  onTeacherDataChangeRef.current = onTeacherDataChange;
 
-  // Update teacher data when props change or teacherId changes
+  // Fetch teacher data from API
   useEffect(() => {
-    if (propTeacherData) {
-      setTeacherData(propTeacherData);
-    } else if (teacherId && teacherId !== teacherData.id) {
-      // In practice, fetch teacher data from API based on teacherId
-      const newData = getDefaultTeacherData(teacherId);
-      setTeacherData(newData);
-      onTeacherDataChange?.(newData);
-    }
-  }, [propTeacherData, teacherId, teacherData.id, onTeacherDataChange]);
+    const fetchTeacherData = async () => {
+      if (propTeacherData) {
+        setTeacherData(propTeacherData);
+        return;
+      }
+
+      if (!teacherId) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        const instructor = await instructorService.getInstructorById(Number(teacherId));
+        const mappedData = mapInstructorToTeacherData(instructor);
+        setTeacherData(mappedData);
+        onTeacherDataChangeRef.current?.(mappedData);
+      } catch (err) {
+        console.error('Failed to fetch teacher data:', err);
+        setError('Không thể tải thông tin giảng viên');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTeacherData();
+  }, [propTeacherData, teacherId]);
 
   const renderStars = () => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -94,9 +145,50 @@ export default function TeacherProfileHeader({
   };
 
   const handleActionClick = (action: string) => {
-    console.log(`${action} clicked for teacher:`, teacherData.id);
+    console.log(`${action} clicked for teacher:`, teacherData?.id);
     // Implement action handlers here
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Đang tải thông tin giảng viên...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card className="p-6">
+        <CardContent>
+          <div className="flex items-center justify-center py-8 text-red-600">
+            <i className="fas fa-exclamation-circle mr-2"></i>
+            <span>{error}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No data state
+  if (!teacherData) {
+    return (
+      <Card className="p-6">
+        <CardContent>
+          <div className="flex items-center justify-center py-8 text-gray-500">
+            <span>Không tìm thấy thông tin giảng viên</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -116,13 +208,15 @@ export default function TeacherProfileHeader({
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-gray-800">{teacherData.name}</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {teacherData.academicTitle ? `${teacherData.academicTitle}. ` : ''}{teacherData.name}
+                  </h2>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                     {teacherData.position}
                   </span>
                 </div>
                 <p className="text-gray-600 mb-2">
-                  Mã GV: <span className="font-medium">{teacherData.id}</span> – Khoa {teacherData.department}
+                  Mã GV: <span className="font-medium">{teacherData.employeeCode}</span> – {teacherData.department}
                 </p>
                 <div className="flex items-center gap-4 mb-3">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

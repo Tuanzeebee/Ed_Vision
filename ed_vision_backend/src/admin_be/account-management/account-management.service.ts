@@ -57,13 +57,9 @@ export class AccountManagementService {
   async findAll(filterDto: AccountFilterDto): Promise<AccountListResponse> {
     const { search, role, status, school, major, page = 1, limit = 10 } = filterDto;
 
-    // Debug log
-    console.log('Filter params:', { search, role, status, school, major, page, limit });
-
     // Check for conflicting filters: school/major with non-student role
     // If filtering by school or major AND role is explicitly set to non-student, return empty result
     if ((school || major) && role && role !== 'student') {
-      console.log('Conflict detected: school/major filter with non-student role');
       return {
         data: [],
         meta: {
@@ -213,9 +209,6 @@ export class AccountManagementService {
     if (andConditions.length > 0) {
       where.AND = andConditions;
     }
-
-    // Debug: Log the final where clause
-    console.log('Where clause:', JSON.stringify(where, null, 2));
 
     // Count total
     const total = await this.prisma.account.count({ where });
@@ -437,9 +430,7 @@ export class AccountManagementService {
     // Handle avatar upload (TODO: implement file storage)
     let avatarUrl: string | undefined;
     if (avatar) {
-      // For now, we'll just log it
-      // In production, you would upload to S3 or local storage
-      console.log('Avatar uploaded:', avatar.originalname);
+      // For now, upload to S3 or local storage
       // avatarUrl = await this.uploadFile(avatar);
     }
 
@@ -508,7 +499,7 @@ export class AccountManagementService {
 
     // TODO: Send email if sendEmail is true
     if (otherData.sendEmail) {
-      console.log('TODO: Send welcome email to', createAccountDto.email);
+      // TODO: Implement email sending
     }
 
     return this.findOne(account.account_id);
@@ -621,9 +612,6 @@ export class AccountManagementService {
     if (updateAccountDto.status && updateAccountDto.status !== account.status) {
       hasChanges = true;
     }
-
-    console.log('Update check - hasChanges:', hasChanges);
-    console.log('UpdateAccountDto:', updateAccountDto);
 
     // Only update Account if there are actual changes
     if (hasChanges) {

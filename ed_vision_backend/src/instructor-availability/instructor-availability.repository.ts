@@ -7,6 +7,51 @@ export class InstructorAvailabilityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Check if instructor is an adviser (has AdviserAssignment)
+   */
+  async isInstructorAdviser(instructorId: number): Promise<boolean> {
+    const count = await this.prisma.adviserAssignment.count({
+      where: { instructor_id: instructorId },
+    });
+    return count > 0;
+  }
+
+  /**
+   * Get all classes that instructor is assigned as adviser
+   */
+  async getAdviserClasses(instructorId: number) {
+    return this.prisma.adviserAssignment.findMany({
+      where: { instructor_id: instructorId },
+      include: {
+        classGroup: {
+          select: {
+            class_id: true,
+            class_code: true,
+            cohort_year: true,
+            status: true,
+            program: {
+              select: {
+                program_id: true,
+                program_name: true,
+              },
+            },
+            _count: {
+              select: {
+                students: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        classGroup: {
+          class_code: 'asc',
+        },
+      },
+    });
+  }
+
+  /**
    * Get instructor by account_id
    */
   async getInstructorByAccountId(accountId: number) {
@@ -204,12 +249,20 @@ export class InstructorAvailabilityRepository {
   }
 
   /**
-   * Get all slots for a week
+   * Get all slots for a week (via dates)
    */
   async getSlotsForWeek(weekId: number) {
-    return this.prisma.instructorWeeklySlot.findMany({
+    // Get all dates for this week first
+    const dates = await this.prisma.instructorAvailabilityDate.findMany({
       where: { week_id: weekId },
-      orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
+      select: { date_id: true },
+    });
+    const dateIds = dates.map(d => d.date_id);
+    
+    return this.prisma.instructorDailySlot.findMany({
+      where: { date_id: { in: dateIds } },
+      include: { date: true },
+      orderBy: [{ date: { specific_date: 'asc' } }, { start_time_local: 'asc' }],
     });
   }
 
@@ -217,8 +270,7 @@ export class InstructorAvailabilityRepository {
    * Create a time slot for a specific date
    */
   async createTimeSlot(
-    weekId: number,
-    dayOfWeek: number,
+    dateId: number,
     startTime: string,
     endTime: string,
     meetingType: 'online' | 'offline' | 'both' | string,
@@ -228,10 +280,9 @@ export class InstructorAvailabilityRepository {
     const startTimeDate = this.parseTimeToDate(startTime);
     const endTimeDate = this.parseTimeToDate(endTime);
 
-    return this.prisma.instructorWeeklySlot.create({
+    return this.prisma.instructorDailySlot.create({
       data: {
-        week_id: weekId,
-        day_of_week: dayOfWeek,
+        date_id: dateId,
         start_time_local: startTimeDate,
         end_time_local: endTimeDate,
         // meetingType may be a string or enum; cast to any to satisfy generated Prisma types
@@ -261,9 +312,6 @@ export class InstructorAvailabilityRepository {
         },
       },
       include: {
-        instructorWeeklySlots: {
-          orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
-        },
         instructorAvailabilityDates: {
           where: {
             specific_date: {
@@ -273,6 +321,11 @@ export class InstructorAvailabilityRepository {
           },
           orderBy: {
             specific_date: 'asc',
+          },
+          include: {
+            slots: {
+              orderBy: { start_time_local: 'asc' },
+            },
           },
         },
       },
@@ -307,27 +360,28 @@ export class InstructorAvailabilityRepository {
         },
       },
       include: {
-        instructorWeeklySlots: {
+        // Get ALL dates for each week with their slots
+        instructorAvailabilityDates: {
+          orderBy: {
+            specific_date: 'asc',
+          },
           include: {
-            _count: {
-              select: {
-                appointments: {
-                  where: {
-                    status: {
-                      in: ['pending', 'confirmed'],
+            slots: {
+              include: {
+                _count: {
+                  select: {
+                    appointments: {
+                      where: {
+                        status: {
+                          in: ['pending', 'confirmed'],
+                        },
+                      },
                     },
                   },
                 },
               },
+              orderBy: { start_time_local: 'asc' },
             },
-          },
-          orderBy: [{ day_of_week: 'asc' }, { start_time_local: 'asc' }],
-        },
-        // Don't filter dates here - get ALL dates for each week
-        // We'll filter in the service layer to ensure complete weeks
-        instructorAvailabilityDates: {
-          orderBy: {
-            specific_date: 'asc',
           },
         },
       },
@@ -348,19 +402,18 @@ export class InstructorAvailabilityRepository {
    * Delete a specific time slot
    */
   async deleteTimeSlot(slotId: number) {
-    return this.prisma.instructorWeeklySlot.delete({
+    return this.prisma.instructorDailySlot.delete({
       where: { slot_id: slotId },
     });
   }
 
   /**
-   * Delete all slots for a specific date (day of week in a week)
+   * Delete all slots for a specific date
    */
-  async deleteSlotsForDate(weekId: number, dayOfWeek: number) {
-    const result = await this.prisma.instructorWeeklySlot.deleteMany({
+  async deleteSlotsForDate(dateId: number) {
+    const result = await this.prisma.instructorDailySlot.deleteMany({
       where: {
-        week_id: weekId,
-        day_of_week: dayOfWeek,
+        date_id: dateId,
       },
     });
     return result;
@@ -413,7 +466,7 @@ export class InstructorAvailabilityRepository {
       updateData.meeting_location = data.meetingLocation;
     }
 
-    return this.prisma.instructorWeeklySlot.update({
+    return this.prisma.instructorDailySlot.update({
       where: { slot_id: slotId },
       data: updateData,
     });
@@ -423,22 +476,24 @@ export class InstructorAvailabilityRepository {
    * Get a single slot by ID
    */
   async getSlotById(slotId: number) {
-    return this.prisma.instructorWeeklySlot.findUnique({
+    return this.prisma.instructorDailySlot.findUnique({
       where: { slot_id: slotId },
       include: {
-        week: true,
+        date: {
+          include: {
+            week: true,
+          },
+        },
       },
     });
   }
 
   /**
    * Check if a time slot overlaps with existing slots
-   * NOTE: We check overlap within the SAME WEEK only
-   * This allows same time slots on same day_of_week in different weeks
+   * NOTE: We check overlap within the SAME DATE only
    */
   async checkTimeSlotOverlap(
-    weekId: number,
-    dayOfWeek: number,
+    dateId: number,
     startTime: string,
     endTime: string,
     excludeSlotId?: number,
@@ -446,11 +501,10 @@ export class InstructorAvailabilityRepository {
     const startTimeDate = this.parseTimeToDate(startTime);
     const endTimeDate = this.parseTimeToDate(endTime);
 
-    // Get all slots for this week and day
-    const existingSlots = await this.prisma.instructorWeeklySlot.findMany({
+    // Get all slots for this date
+    const existingSlots = await this.prisma.instructorDailySlot.findMany({
       where: {
-        week_id: weekId,
-        day_of_week: dayOfWeek,
+        date_id: dateId,
         slot_id: excludeSlotId ? { not: excludeSlotId } : undefined,
       },
     });

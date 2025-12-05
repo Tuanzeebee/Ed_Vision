@@ -152,6 +152,16 @@ async function main() {
   { key: 'student_live_learning',     name: 'Live Learning',                  category: 'student' },
   { key: 'student_study_rooms',       name: 'Study Rooms',                    category: 'student' },
   { key: 'student_video_room',        name: 'Video Room',                     category: 'student' },
+  // Permissions used in frontend routes
+  { key: 'student_profile',           name: 'Student Profile',                category: 'student' },
+  { key: 'student_chat_student',      name: 'Student Chat',                   category: 'student' },
+  { key: 'student_learning_space',    name: 'Learning Space',                 category: 'student' },
+  { key: 'student_survey',            name: 'Student Survey',                 category: 'student' },
+
+  // Booking & profile keys referenced in App.tsx
+  { key: 'booking_scheduler',         name: 'Booking Scheduler',              category: 'booking' },
+  { key: 'parent_profile',            name: 'Parent Profile',                 category: 'parent' },
+  { key: 'teacher_profile',           name: 'Teacher Profile',                category: 'teacher' },
 
     // ========== PARENT ==========
     { key: 'parent_dashboard', name: 'Parent Dashboard', category: 'parent' },
@@ -212,7 +222,7 @@ async function main() {
     });
     const rows = [];
     for (const p of allPerms) {
-      const enabled = ['student_course_overview', 'student_profile_access', 'student_upload_transcript'].includes(p.key)
+      const enabled = ['student_course_overview', 'student_profile', 'student_upload_transcript'].includes(p.key)
       rows.push({ roleId: studentRole.id, permissionId: p.id, enabled })
     }
     if (rows.length) await prisma.rolePermission.createMany({ data: rows });
@@ -486,10 +496,8 @@ async function main() {
       const parent = await prisma.parent.create({
         data: {
           account_id: parentAcc.account_id,
-          full_name: 'Nguyễn Văn Phụ Huynh',
-          email: parentEmail,
-          phone_number: '0123456789',
           relationship_type: 'parent',
+          occupation: 'Giáo viên',
         },
       });
       console.log('  ✓ Created parent record, parent_id=', parent.parent_id);

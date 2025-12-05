@@ -427,23 +427,30 @@ export class AppointmentsService {
                 week_start_date: weekStartDate,
             },
             include: {
-                instructorWeeklySlots: true,
+                instructorAvailabilityDates: {
+                    include: {
+                        slots: true,
+                    },
+                },
             },
         });
 
-        const slots = week?.instructorWeeklySlots ?? [];
+        // Flatten slots from all dates
+        const allSlots: any[] = [];
+        for (const dateRecord of week?.instructorAvailabilityDates ?? []) {
+            for (const slot of dateRecord.slots) {
+                allSlots.push({ ...slot, date: dateRecord.specific_date });
+            }
+        }
 
-        const availableSlots = slots.map((s: any) => {
-            const base = new Date(weekStartDate);
-            const diff = (s.day_of_week ?? 1) === 7 ? 6 : (s.day_of_week ?? 1) - 1;
-            base.setUTCDate(base.getUTCDate() + diff);
-            const dateStr = formatDate(base);
+        const availableSlots = allSlots.map((s: any) => {
+            const dateStr = formatDate(s.date);
             const start = formatTime(s.start_time_local);
             const end = formatTime(s.end_time_local);
             return { date: dateStr, time: `${start} - ${end}` };
         });
 
-        const slotIds = slots.map((s: any) => s.slot_id);
+        const slotIds = allSlots.map((s: any) => s.slot_id);
         const appointments = slotIds.length
             ? await this.prisma.appointment.findMany({
                   where: {
@@ -465,12 +472,8 @@ export class AppointmentsService {
             : [];
 
         const bookings = appointments.map((a: any) => {
-            const s = slots.find((x: any) => x.slot_id === a.slot_id);
-            const base = new Date(weekStartDate);
-            const dow = (s?.day_of_week ?? 1);
-            const diff = dow === 7 ? 6 : dow - 1;
-            base.setUTCDate(base.getUTCDate() + diff);
-            const dateStr = formatDate(base);
+            const s = allSlots.find((x: any) => x.slot_id === a.slot_id);
+            const dateStr = s?.date ? formatDate(s.date) : '';
             const timeStr = `${formatTime(s?.start_time_local)} - ${formatTime(s?.end_time_local)}`;
             const isStudent = (a.booker_role || '').toLowerCase() === 'student';
             const studentName = a.student?.account?.profile?.full_name || null;

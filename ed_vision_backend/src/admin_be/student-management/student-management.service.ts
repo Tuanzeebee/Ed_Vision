@@ -16,13 +16,17 @@ export class StudentManagementService {
     // Get total count of students (all students in Student table)
     const totalCount = await this.prisma.student.count();
 
-    // Get accounts with students where login is more recent than logout
-    // Using raw SQL for easier comparison
+    // Get online student count - only count accounts that:
+    // 1. Are linked to a student (via account_id in Student table)
+    // 2. Have role = 'student' in Role table (via role_id)
+    // 3. Are currently logged in (last_login_at > last_logout_at or last_logout_at is null)
     const onlineResult = await this.prisma.$queryRaw<[{ count: bigint }]>`
       SELECT COUNT(*)::int as count
       FROM "Account" a
       INNER JOIN "Student" s ON a.account_id = s.account_id
-      WHERE a.last_login_at IS NOT NULL
+      INNER JOIN "Role" r ON a.role_id = r.id
+      WHERE r.code = 'student'
+        AND a.last_login_at IS NOT NULL
         AND (
           a.last_logout_at IS NULL
           OR a.last_login_at > a.last_logout_at
@@ -30,8 +34,6 @@ export class StudentManagementService {
     `;
 
     const onlineCount = Number(onlineResult[0]?.count || 0);
-
-    console.log('Online Stats:', { totalCount, onlineCount });
 
     return {
       onlineCount,

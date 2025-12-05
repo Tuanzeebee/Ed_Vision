@@ -1,5 +1,4 @@
 import { useState } from "react";
-import RegistrationCodeModal from "@/components/ui/general/RegistrationCodeModal";
 import { TokenManager } from "@/lib/tokenManager";
 
 type Parent = {
@@ -60,10 +59,10 @@ const relationshipAvatarColors: Record<string, { bg: string; text: string }> = {
 
 export default function StudentParentLinks({
   linkedParents,
-  registrationCode = "PH2024-A7B3",
-  onRegisterParent,
+  registrationCode: _registrationCode = "PH2024-A7B3",
+  onRegisterParent: _onRegisterParent,
 }: Props) {
-  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [_isCodeModalOpen, _setIsCodeModalOpen] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   const handleRegisterParent = async () => {

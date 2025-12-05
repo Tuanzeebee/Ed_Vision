@@ -124,6 +124,23 @@ export default function TeacherProfilePage({}: Props) {
           throw new Error('Cập nhật avatar thất bại');
         }
 
+        // Update localStorage user object with new avatar
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            const userObj = JSON.parse(userStr);
+            userObj.avatarUrl = url;
+            userObj.avatar = url;
+            userObj.avatar_url = url;
+            localStorage.setItem('user', JSON.stringify(userObj));
+          } catch (e) {
+            console.error('Failed to update localStorage user', e);
+          }
+        }
+
+        // Dispatch custom event to notify Header and other components
+        window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { url } }));
+
         await refetchProfile();
       } catch (error: any) {
         console.error('Error uploading avatar:', error);

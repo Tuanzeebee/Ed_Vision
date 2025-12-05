@@ -589,10 +589,10 @@ export default function LeadershipReports() {
             
             {/* Time Filter */}
             <TimeFilter 
-              value={timeFilter}
-              onChange={setTimeFilter}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
+              viewMode={timeFilter as 'day' | 'month' | 'year' | 'all'}
+              selectedDate={new Date(selectedYear, 0, 1)}
+              onViewModeChange={(mode) => setTimeFilter(mode)}
+              onDateChange={(date) => setSelectedYear(date.getFullYear())}
             />
           </div>
           <p className="text-gray-600">Hiển thị báo cáo dữ liệu và phân tích ({getTimeFilterLabel()})</p>

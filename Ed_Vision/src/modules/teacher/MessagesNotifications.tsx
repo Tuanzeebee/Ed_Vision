@@ -4,6 +4,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teac
 import { Button } from "@/components/ui/teacher/teacher_button"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import TeacherLayout from "./components/TeacherLayout"
+import { useFilterOptions } from "@/hooks/useFilterOptions"
 import {
     MessageCircle,
     Send,
@@ -86,6 +87,7 @@ export default function MessagesNotifications() {
     // Get studentId from URL params
     const [searchParams] = useSearchParams()
     const studentIdFromUrl = searchParams.get('studentId')
+    const { filterOptions, loading: loadingFilters } = useFilterOptions()
 
     // Tab state cho 2 nhóm sinh viên
     const [activeGroup, setActiveGroup] = useState<StudentGroup>('atrisk')
@@ -754,9 +756,10 @@ export default function MessagesNotifications() {
                                             value={selectedClass}
                                             onChange={(e) => setSelectedClass(e.target.value)}
                                             className="w-full text-sm border rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            disabled={loadingFilters}
                                         >
                                             <option value="all">Tất cả lớp</option>
-                                            {classList.filter(c => c !== 'all').map(className => (
+                                            {filterOptions.classes.map(className => (
                                                 <option key={className} value={className}>{className}</option>
                                             ))}
                                         </select>

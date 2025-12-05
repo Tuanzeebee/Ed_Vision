@@ -13,7 +13,7 @@ export async function checkMongoConnection(): Promise<boolean> {
       console.warn('[MongoDB] Disconnected');
       return false;
     case 1: // connected
-      console.log('[MongoDB] Already connected');
+      // MongoDB already connected (silent)
       return true;
     case 2: // connecting
       console.log('[MongoDB] Connecting...');

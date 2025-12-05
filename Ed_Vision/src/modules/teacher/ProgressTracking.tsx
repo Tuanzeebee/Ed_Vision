@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import TeacherLayout from "./components/TeacherLayout"
+import { useFilterOptions } from "@/hooks/useFilterOptions"
 import {
     TrendingUp,
     TrendingDown,
@@ -13,9 +14,7 @@ import {
     Calendar,
     BarChart3,
     Activity,
-    X,
     Mail,
-    Phone,
     Search,
     Filter,
     ChevronLeft,
@@ -200,7 +199,7 @@ const studentNames = [
     'Tạ Thị Nhung', 'Mai Văn Thành', 'Cao Thị Loan', 'Lưu Văn Tân', 'Đinh Thị Xuân',
 ]
 
-const generateStudentsForClass = (classId: string, milestone: number) => {
+const generateStudentsForClass = (classId: string, _milestone: number) => {
     const students = []
     const totalStudents = classesData.find(c => c.id === classId)?.totalStudents || 40
     
@@ -245,6 +244,7 @@ const generateStudentsForClass = (classId: string, milestone: number) => {
 }
 
 export default function ProgressTracking() {
+    const { filterOptions, loading: loadingFilters } = useFilterOptions()
     const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null)
     const [selectedClass, setSelectedClass] = useState<string | null>(null)
     const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set())
@@ -529,11 +529,12 @@ export default function ProgressTracking() {
                                         }
                                     }}
                                     className="flex-1 px-4 py-3 rounded-lg border-2 border-purple-200 bg-white text-gray-900 font-semibold shadow-sm hover:border-purple-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer"
+                                    disabled={loadingFilters}
                                 >
                                     <option value="">-- Chọn lớp để xem chi tiết --</option>
-                                    {classesData.map((cls) => (
-                                        <option key={cls.id} value={cls.id}>
-                                            📚 {cls.name} ({cls.totalStudents} sinh viên)
+                                    {filterOptions.classes.map((className) => (
+                                        <option key={className} value={className}>
+                                            📚 {className}
                                         </option>
                                     ))}
                                 </select>

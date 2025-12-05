@@ -15,7 +15,7 @@ import {
 export class StatisticsOverviewController {
   constructor(
     private readonly statisticsOverviewService: StatisticsOverviewService,
-  ) {}
+  ) { }
 
   /**
    * GET /admin/dashboard/stats
@@ -46,5 +46,37 @@ export class StatisticsOverviewController {
     @Query() query: DashboardStatsQueryDto,
   ): Promise<AccessTimeStatsResponse> {
     return this.statisticsOverviewService.getAccessTimeStats(query);
+  }
+  @Get('gpa-distribution')
+  async getGPADistribution(@Query() query: DashboardStatsQueryDto) {
+    return this.statisticsOverviewService.getGPADistribution(query);
+  }
+
+  @Get('score-distribution')
+  async getScoreDistribution(@Query() query: DashboardStatsQueryDto) {
+    return this.statisticsOverviewService.getScoreDistribution(query);
+  }
+
+  @Get('top-students')
+  async getTopStudents(@Query() query: DashboardStatsQueryDto) {
+    return this.statisticsOverviewService.getTopStudents(query);
+  }
+
+  /**
+   * GET /admin/dashboard/learning-summary
+   * Get learning dashboard summary (by semester & academic year)
+   */
+  @Get('learning-summary')
+  async getLearningDashboardSummary(@Query() query: DashboardStatsQueryDto) {
+    return this.statisticsOverviewService.getLearningDashboardSummary(query);
+  }
+
+  /**
+   * GET /admin/dashboard/debug-sessions
+   * Debug: Get recent sessions from BigQuery
+   */
+  @Get('debug-sessions')
+  async debugSessions() {
+    return this.statisticsOverviewService.debugSessions();
   }
 }

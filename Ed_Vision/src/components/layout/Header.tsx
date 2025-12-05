@@ -6,6 +6,7 @@ import LanguageSwitcher from "../LanguageSwitcher"
 import { useEffect, useRef, useState } from 'react'
 import { buildUrl } from '@/services/api/config'
 import { useAuth } from '@/hooks/useAuth'
+import NotificationDropdown from './NotificationDropdown'
 
 type Props = {
   className?: string
@@ -49,18 +50,18 @@ export default function Header({
 
   // Fetch avatar and profile name from profile API
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfile = async (forceRefetch = false) => {
       if (!isAuthenticated) {
         setAvatarUrl(null)
         setDisplayName(null)
         return
       }
 
-      // Check if user object already has full data
+      // Check if user object already has full data (skip if force refetch)
       const existingAvatar = user?.avatarUrl || user?.avatar_url || user?.avatar
       const existingName = user?.fullName || user?.full_name || user?.name
       
-      if (existingAvatar && existingName) {
+      if (!forceRefetch && existingAvatar && existingName) {
         setAvatarUrl(existingAvatar)
         setDisplayName(existingName)
         return
@@ -115,6 +116,22 @@ export default function Header({
     }
 
     fetchProfile()
+
+    // Listen for avatar-updated event from profile pages
+    const handleAvatarUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string }>
+      if (customEvent.detail?.url) {
+        setAvatarUrl(customEvent.detail.url)
+      } else {
+        // Refetch profile if no URL provided
+        fetchProfile(true)
+      }
+    }
+
+    window.addEventListener('avatar-updated', handleAvatarUpdated)
+    return () => {
+      window.removeEventListener('avatar-updated', handleAvatarUpdated)
+    }
   }, [isAuthenticated, user?.avatarUrl, user?.avatar_url, user?.avatar, user?.fullName, user?.full_name, user?.name])
 
   useEffect(() => {
@@ -163,15 +180,6 @@ export default function Header({
 
   // mark unused prop as referenced to satisfy strict linting
   void isLandingPage
-
-  // Bell Icon Component
-  function BellIcon() {
-    return (
-      <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-      </svg>
-    )
-  }
 
   return (
     <header className={`bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 ${className}`}>
@@ -345,6 +353,39 @@ export default function Header({
                   </div>
                 </div>
               </div>
+
+              {/* Survey Dropdown */}
+              <div className="relative group">
+                <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
+                  <svg className="w-4 h-4 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                  {t('common:header.navigation.survey')}
+                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute top-full right-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2 space-y-1">
+                    <a href="/student/survey" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-emerald-50 text-emerald-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.survey.takeSurvey.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.survey.takeSurvey.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/survey-history" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-amber-50 text-amber-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.survey.surveyHistory.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.survey.surveyHistory.description')}</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
             </nav>
           )}
 
@@ -353,25 +394,12 @@ export default function Header({
             {/* Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Bell Icon - Only for Teacher and Admin Mode */}
+            {/* Notification Dropdown - For Teacher and Admin Mode */}
             {(isTeacherMode || isAdminMode) && isAuthenticated && (
-              <div className="relative">
-                <button 
-                  aria-label="Notifications" 
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  onClick={() => {
-                    if (isTeacherMode) {
-                      navigate('/teacher/messages')
-                    } else if (isAdminMode) {
-                      navigate('/admin/notifications')
-                    }
-                  }}
-                >
-                  <BellIcon />
-                </button>
-                {/* Notification badge */}
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
-              </div>
+              <NotificationDropdown 
+                isAdminMode={isAdminMode} 
+                isTeacherMode={isTeacherMode} 
+              />
             )}
 
             {/* If not authenticated show login/register buttons, otherwise show profile dropdown */}

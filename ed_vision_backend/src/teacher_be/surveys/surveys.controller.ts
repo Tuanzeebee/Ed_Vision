@@ -171,4 +171,58 @@ export class SurveysController {
         const instructorId = req.user?.instructorId || 1;
         return this.surveysService.createSurveyFromExistingQuestions(instructorId, dto);
     }
+
+    /**
+     * POST /teacher/surveys/:id/questions/:questionId
+     * Thêm câu hỏi vào survey
+     */
+    @Post(':id/questions/:questionId')
+    async addQuestionToSurvey(
+        @Req() req: any,
+        @Param('id') surveyId: string,
+        @Param('questionId') questionId: string,
+    ) {
+        const instructorId = req.user?.instructorId || 1;
+        return this.surveysService.addQuestionToSurvey(
+            instructorId,
+            surveyId,
+            parseInt(questionId),
+        );
+    }
+
+    /**
+     * DELETE /teacher/surveys/:id/questions/:questionId
+     * Xóa câu hỏi khỏi survey
+     */
+    @Delete(':id/questions/:questionId')
+    async removeQuestionFromSurvey(
+        @Req() req: any,
+        @Param('id') surveyId: string,
+        @Param('questionId') questionId: string,
+    ) {
+        const instructorId = req.user?.instructorId || 1;
+        return this.surveysService.removeQuestionFromSurvey(
+            instructorId,
+            surveyId,
+            parseInt(questionId),
+        );
+    }
+
+    /**
+     * PUT /teacher/surveys/:id/questions/reorder
+     * Sắp xếp lại thứ tự câu hỏi
+     */
+    @Put(':id/questions/reorder')
+    async reorderQuestions(
+        @Req() req: any,
+        @Param('id') surveyId: string,
+        @Body() body: { questionOrder: { questionId: number; order: number }[] },
+    ) {
+        const instructorId = req.user?.instructorId || 1;
+        return this.surveysService.reorderQuestions(
+            instructorId,
+            surveyId,
+            body.questionOrder,
+        );
+    }
 }
