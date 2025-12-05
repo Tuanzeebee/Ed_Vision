@@ -8,9 +8,11 @@ export class DevAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest()
     const token = this.extractToken(req)
+    
     if (!token) throw new UnauthorizedException('Thiếu mã xác thực')
 
     const accountId = this.parseAccountIdFromToken(token)
+    
     if (!accountId) throw new UnauthorizedException('Token không hợp lệ')
 
     const account = await this.prisma.account.findUnique({
@@ -44,9 +46,37 @@ export class DevAuthGuard implements CanActivate {
 
   private parseAccountIdFromToken(token: string): number | null {
     if (!token) return null
+    
+    // 1. Thử parse dev token format: xxx-{accountId}
     const parts = token.split('-')
-    const candidate = parts[parts.length - 1]
-    const id = parseInt(candidate, 10)
-    return Number.isNaN(id) ? null : id
+    const lastPart = parts[parts.length - 1]
+    const devId = parseInt(lastPart, 10)
+    if (!Number.isNaN(devId) && devId > 0) {
+      return devId
+    }
+    
+    // 2. Thử decode JWT token
+    try {
+      // JWT có 3 phần ngăn cách bởi dấu chấm
+      const jwtParts = token.split('.')
+      if (jwtParts.length === 3) {
+        // Decode payload (phần thứ 2)
+        const payload = JSON.parse(Buffer.from(jwtParts[1], 'base64').toString('utf8'))
+        
+        // Lấy account_id từ payload (có thể là sub, account_id, id, userId, etc.)
+        const accountId = payload.sub || payload.account_id || payload.id || payload.userId
+        if (typeof accountId === 'number') {
+          return accountId
+        }
+        if (typeof accountId === 'string') {
+          const parsed = parseInt(accountId, 10)
+          if (!Number.isNaN(parsed)) return parsed
+        }
+      }
+    } catch (e) {
+      // Not a valid JWT token
+    }
+    
+    return null
   }
 }

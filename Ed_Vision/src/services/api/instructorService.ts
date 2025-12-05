@@ -72,6 +72,13 @@ const instructorService = {
     );
     return response.data;
   },
+
+  async getInstructorById(instructorId: number): Promise<Instructor> {
+    const response = await axios.get<Instructor>(
+      `${API_BASE_URL}/admin/instructors/${instructorId}`
+    );
+    return response.data;
+  },
 };
 
 export default instructorService;

@@ -53,6 +53,8 @@ export class SurveyQuestionDto {
   questionType: string; // 'scale' | 'yes_no' | 'multiple_choice' | 'free_text' | 'rating'
   category?: string;
   isRequired: boolean;
+  minValue?: number;
+  maxValue?: number;
   options?: SurveyQuestionOptionDto[];
 }
 

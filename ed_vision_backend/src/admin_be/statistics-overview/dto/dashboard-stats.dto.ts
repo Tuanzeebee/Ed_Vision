@@ -104,9 +104,11 @@ export interface GPADistributionResponse {
 }
 
 export interface ScoreDistributionResponse {
+  labels?: string[];  // Labels cho các mốc GPA: ['0', '0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0']
   schools: Array<{
     schoolName: string;
-    scores: number[];  // Array 11 phần tử [0-10] - số lượng sinh viên
+    scores: number[];  // Array 9 phần tử cho các mốc GPA 0-4 (bước 0.5) - số lượng sinh viên
+    averageGpa?: number;  // GPA trung bình của trường
   }>;
 }
 

@@ -84,6 +84,8 @@ export interface SurveyQuestionDto {
   questionType: string; // 'likert' | 'yes-no' | 'single-choice' | 'free-text' | 'slider'
   category?: string;
   isRequired: boolean;
+  minValue?: number;
+  maxValue?: number;
   options?: SurveyQuestionOptionDto[];
 }
 

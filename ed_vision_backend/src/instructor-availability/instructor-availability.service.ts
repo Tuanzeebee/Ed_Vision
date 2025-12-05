@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InstructorAvailabilityRepository } from './instructor-availability.repository';
 import { AddAvailabilityDateDto } from './dto/add-availability-date.dto';
@@ -18,6 +19,52 @@ import {
 @Injectable()
 export class InstructorAvailabilityService {
   constructor(private readonly repository: InstructorAvailabilityRepository) {}
+
+  /**
+   * Verify that instructor is an adviser (has AdviserAssignment)
+   * Throws ForbiddenException if not an adviser
+   */
+  private async verifyIsAdviser(instructorId: number): Promise<void> {
+    const isAdviser = await this.repository.isInstructorAdviser(instructorId);
+    if (!isAdviser) {
+      throw new ForbiddenException(
+        'Chỉ cố vấn học tập mới có thể thiết lập lịch rảnh. Bạn chưa được phân công làm cố vấn cho lớp nào.',
+      );
+    }
+  }
+
+  /**
+   * Get list of classes that instructor is assigned as adviser
+   */
+  async getAdviserClasses(instructorId: number) {
+    const assignments = await this.repository.getAdviserClasses(instructorId);
+    
+    return assignments.map((assignment) => ({
+      assignmentId: assignment.adviser_assign_id,
+      classId: assignment.classGroup.class_id,
+      classCode: assignment.classGroup.class_code,
+      cohortYear: assignment.classGroup.cohort_year,
+      status: assignment.classGroup.status,
+      programId: assignment.classGroup.program?.program_id || null,
+      programName: assignment.classGroup.program?.program_name || null,
+      studentCount: assignment.classGroup._count.students,
+      assignedDate: assignment.assigned_date,
+      endedDate: assignment.ended_date,
+      note: assignment.note,
+    }));
+  }
+
+  /**
+   * Check if instructor is an adviser
+   */
+  async checkIsAdviser(instructorId: number): Promise<{ isAdviser: boolean; classCount: number }> {
+    const isAdviser = await this.repository.isInstructorAdviser(instructorId);
+    const classes = isAdviser ? await this.repository.getAdviserClasses(instructorId) : [];
+    return {
+      isAdviser,
+      classCount: classes.length,
+    };
+  }
 
   /**
    * Get instructor profile by account_id
@@ -109,60 +156,61 @@ export class InstructorAvailabilityService {
         }
       }
 
-      // Then, add time slots to the dates
-      for (const slot of week.instructorWeeklySlots) {
-        // Skip slots with missing required data
-        if (
-          !slot.day_of_week ||
-          !slot.start_time_local ||
-          !slot.end_time_local ||
-          !slot.meeting_type
-        ) {
-          continue;
-        }
-
-        const slotDate = this.getDateFromWeekAndDay(
-          week.week_start_date,
-          slot.day_of_week,
-        );
-        const dateStr = slotDate.toISOString().split('T')[0];
-
-        // Create date entry if it doesn't exist (for backward compatibility)
+      // Then, add time slots from the dates (new model: slots are under dates)
+      for (const dateRecord of week.instructorAvailabilityDates) {
+        const dateStr = dateRecord.specific_date.toISOString().split('T')[0];
+        const date = new Date(dateRecord.specific_date);
+        const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
+        
+        // Ensure date entry exists
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, {
             date: dateStr,
-            dayOfWeek: slot.day_of_week,
+            dayOfWeek: dayOfWeek,
             weekId: week.week_id,
-            isAvailable: true, // If slot exists, date should be available
+            isAvailable: dateRecord.is_available,
             timeSlots: [],
           });
         }
 
-        const timeSlot: TimeSlotResponse = {
-          slotId: slot.slot_id,
-          startTime: this.repository.formatTimeToString(slot.start_time_local),
-          endTime: this.repository.formatTimeToString(slot.end_time_local),
-          meetingType: slot.meeting_type,
-          capacity: slot.capacity,
-          isOpen: slot.is_open,
-          autoAccept: slot.auto_accept,
-          note: slot.note ?? undefined,
-          bookedCount: slot._count?.appointments || 0,
-          meetingLink: slot.meeting_link ?? undefined,
-          meetingLocation: slot.meeting_location ?? undefined,
-        };
+        // Add slots from this date (slots are now in dateRecord.slots)
+        const slots = (dateRecord as any).slots || [];
+        for (const slot of slots) {
+          // Skip slots with missing required data
+          if (
+            !slot.start_time_local ||
+            !slot.end_time_local ||
+            !slot.meeting_type
+          ) {
+            continue;
+          }
 
-        const dateEntry = dateMap.get(dateStr);
-        if (dateEntry) {
-          dateEntry.timeSlots.push(timeSlot);
+          const timeSlot: TimeSlotResponse = {
+            slotId: slot.slot_id,
+            startTime: this.repository.formatTimeToString(slot.start_time_local),
+            endTime: this.repository.formatTimeToString(slot.end_time_local),
+            meetingType: slot.meeting_type,
+            capacity: slot.capacity,
+            isOpen: slot.is_open,
+            autoAccept: slot.auto_accept,
+            note: slot.note ?? undefined,
+            bookedCount: slot._count?.appointments || 0,
+            meetingLink: slot.meeting_link ?? undefined,
+            meetingLocation: slot.meeting_location ?? undefined,
+          };
+
+          const dateEntry = dateMap.get(dateStr);
+          if (dateEntry) {
+            dateEntry.timeSlots.push(timeSlot);
+          }
+
+          // Update statistics
+          statistics.totalTimeSlots++;
+          const hours = this.calculateHours(timeSlot.startTime, timeSlot.endTime);
+          statistics.totalHours += hours;
+          statistics.totalCapacity += slot.capacity;
+          statistics.bookedSlots += timeSlot.bookedCount || 0;
         }
-
-        // Update statistics
-        statistics.totalTimeSlots++;
-        const hours = this.calculateHours(timeSlot.startTime, timeSlot.endTime);
-        statistics.totalHours += hours;
-        statistics.totalCapacity += slot.capacity;
-        statistics.bookedSlots += timeSlot.bookedCount || 0;
       }
     }
 
@@ -195,6 +243,9 @@ export class InstructorAvailabilityService {
     instructorId: number,
     dto: AddAvailabilityDateDto,
   ): Promise<AvailabilityDateResponse> {
+    // Verify instructor is an adviser
+    await this.verifyIsAdviser(instructorId);
+
     const date = this.parseDateString(dto.date);
     const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Convert Sunday from 0 to 7, use UTC
 
@@ -211,16 +262,16 @@ export class InstructorAvailabilityService {
     
     // If date is already available and we're just trying to enable it (no time slots), allow it (idempotent)
     if (existingDate && existingDate.is_available && (!dto.timeSlots || dto.timeSlots.length === 0)) {
-      // Return existing date info
+      // Return existing date info - get slots for this specific date
       const allWeekSlots = await this.repository.getSlotsForWeek(week.week_id);
-      const existingTimeSlots = allWeekSlots.filter(slot => slot.day_of_week === dayOfWeek);
+      const existingTimeSlots = allWeekSlots.filter((slot: any) => slot.date_id === existingDate.date_id);
       
       return {
         date: dto.date,
         dayOfWeek,
         weekId: week.week_id,
         isAvailable: true,
-        timeSlots: existingTimeSlots.map(slot => ({
+        timeSlots: existingTimeSlots.map((slot: any) => ({
           slotId: slot.slot_id,
           startTime: this.repository.formatTimeToString(slot.start_time_local!),
           endTime: this.repository.formatTimeToString(slot.end_time_local!),
@@ -275,25 +326,25 @@ export class InstructorAvailabilityService {
     dateStr: string,
     dto: CreateTimeSlotDto,
   ): Promise<TimeSlotResponse> {
+    // Verify instructor is an adviser
+    await this.verifyIsAdviser(instructorId);
+
     // Validate time
     if (dto.startTime >= dto.endTime) {
       throw new BadRequestException('Start time must be before end time');
     }
 
     const date = this.parseDateString(dateStr);
-    const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Use UTC day
 
     // Find or create the week
     const week = await this.repository.findOrCreateWeek(instructorId, date);
 
-    // Create or update the availability date record
-    // This ensures the date is tracked even when adding slots directly
-    await this.repository.upsertAvailabilityDate(week.week_id, date, true);
+    // Create or update the availability date record and get the date_id
+    const dateRecord = await this.repository.upsertAvailabilityDate(week.week_id, date, true);
 
-    // Check for overlapping slots
+    // Check for overlapping slots using date_id
     const hasOverlap = await this.repository.checkTimeSlotOverlap(
-      week.week_id,
-      dayOfWeek,
+      dateRecord.date_id,
       dto.startTime,
       dto.endTime,
     );
@@ -303,8 +354,7 @@ export class InstructorAvailabilityService {
     }
 
     const slot = await this.repository.createTimeSlot(
-      week.week_id,
-      dayOfWeek,
+      dateRecord.date_id,
       dto.startTime,
       dto.endTime,
       dto.meetingType,
@@ -346,8 +396,9 @@ export class InstructorAvailabilityService {
       throw new NotFoundException('Time slot not found');
     }
 
-    // Verify the slot belongs to this instructor
-    if (!slot.week || slot.week.instructor_id !== instructorId) {
+    // Verify the slot belongs to this instructor (via date.week)
+    const slotDate = (slot as any).date;
+    if (!slotDate?.week || slotDate.week.instructor_id !== instructorId) {
       throw new BadRequestException('This time slot does not belong to you');
     }
 
@@ -355,9 +406,8 @@ export class InstructorAvailabilityService {
     if (
       !slot.start_time_local ||
       !slot.end_time_local ||
-      !slot.day_of_week ||
       !slot.meeting_type ||
-      !slot.week_id
+      !slot.date_id
     ) {
       throw new BadRequestException('Time slot has invalid data');
     }
@@ -375,8 +425,7 @@ export class InstructorAvailabilityService {
       }
 
       const hasOverlap = await this.repository.checkTimeSlotOverlap(
-        slot.week_id,
-        slot.day_of_week,
+        slot.date_id,
         startTime,
         endTime,
         slotId, // Exclude current slot from overlap check
@@ -424,8 +473,9 @@ export class InstructorAvailabilityService {
       throw new NotFoundException('Time slot not found');
     }
 
-    // Verify the slot belongs to this instructor
-    if (!slot.week || slot.week.instructor_id !== instructorId) {
+    // Verify the slot belongs to this instructor (via date.week)
+    const slotDate = (slot as any).date;
+    if (!slotDate?.week || slotDate.week.instructor_id !== instructorId) {
       throw new BadRequestException('This time slot does not belong to you');
     }
 
@@ -440,6 +490,9 @@ export class InstructorAvailabilityService {
     instructorId: number,
     dateStr: string,
   ): Promise<void> {
+    // Verify instructor is an adviser
+    await this.verifyIsAdviser(instructorId);
+
     const date = this.parseDateString(dateStr);
     const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay(); // Use UTC day
 
@@ -471,7 +524,7 @@ export class InstructorAvailabilityService {
     }
 
     // Delete all time slots for this date first
-    await this.repository.deleteSlotsForDate(week.week_id, dayOfWeek);
+    await this.repository.deleteSlotsForDate(dateRecord.date_id);
 
     // Disable the date (set is_available = false) instead of deleting the record
     await this.repository.upsertAvailabilityDate(

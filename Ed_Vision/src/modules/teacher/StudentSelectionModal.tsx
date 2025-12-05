@@ -249,13 +249,13 @@ export default function StudentSelectionModal({
           <Button
             onClick={handleClose}
             variant="outline"
-            className="flex-1"
+            className="flex-1 !text-gray-700"
           >
             Hủy
           </Button>
           <Button
             onClick={handleConfirm}
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 !text-white"
           >
             Xác nhận
           </Button>

@@ -80,6 +80,8 @@ model Student {
   account            Account               @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   classGroup         ClassGroup?           @relation(fields: [class_id], references: [class_id])
   courseRecords      StudentCourseRecord[]
+  predictionResults  PredictionResult[]
+  surveyFactors      StudentSurveyFactors?
 
   @@map("Student")
 }
@@ -98,6 +100,7 @@ model Instructor {
   account                     Account                      @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   department                  Department?                  @relation(fields: [department_id], references: [department_id])
   instructorAvailabilityWeeks InstructorAvailabilityWeek[]
+  predictionResults           PredictionResult[]
 
   @@map("Instructor")
 }
@@ -173,6 +176,7 @@ model AcademicTerm {
   is_summer            Boolean               @default(false)
   status               String?               @default("active") @db.VarChar(20)
   studentCourseRecords StudentCourseRecord[]
+  predictionResults    PredictionResult[]
 
   @@unique([academic_year, semester_number])
   @@map("AcademicTerm")
@@ -189,6 +193,7 @@ model Course {
   description          String?
   curriculumCourses    CurriculumCourse[]
   studentCourseRecords StudentCourseRecord[]
+  predictionResults    PredictionResult[]
 
   @@map("Course")
 }
@@ -231,6 +236,9 @@ model SurveyQuestion {
   question_type String?              @db.VarChar(20)
   category      String?              @db.VarChar(50)
   is_active     Boolean              @default(true)
+  code          String?              @unique @db.VarChar(100)  // Identifier ổn định, e.g., 'study_time'
+  min_value     Float?               // Min cho slider
+  max_value     Float?               // Max cho slider
   surveyAnswers SurveyAnswer[]
   surveyOptions SurveyOption[]
   questionLinks SurveyQuestionLink[]
@@ -311,7 +319,6 @@ model InstructorAvailabilityWeek {
   created_at                  DateTime                     @default(now()) @db.Timestamptz(6)
   instructorAvailabilityDates InstructorAvailabilityDate[]
   instructor                  Instructor?                  @relation(fields: [instructor_id], references: [instructor_id], onDelete: Cascade)
-  instructorWeeklySlots       InstructorWeeklySlot[]
 
   @@unique([instructor_id, week_start_date])
   @@map("InstructorAvailabilityWeek")
@@ -325,31 +332,33 @@ model InstructorAvailabilityDate {
   note          String?
   created_at    DateTime                   @default(now()) @db.Timestamptz(6)
   week          InstructorAvailabilityWeek @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
+  slots         InstructorDailySlot[]
 
   @@unique([week_id, specific_date])
   @@map("InstructorAvailabilityDate")
 }
 
-model InstructorWeeklySlot {
-  slot_id          Int                         @id @default(autoincrement())
-  week_id          Int?
-  day_of_week      Int?                        @db.SmallInt
-  start_time_local DateTime?                   @db.Time(6)
-  end_time_local   DateTime?                   @db.Time(6)
-  period_label     String?                     @db.VarChar(16)
-  capacity         Int                         @default(10) @db.SmallInt
-  is_open          Boolean                     @default(true)
+model InstructorDailySlot {
+  slot_id          Int                        @id @default(autoincrement())
+  date_id          Int                        // NEW: replace week_id + day_of_week
+  start_time_local DateTime?                  @db.Time(6)
+  end_time_local   DateTime?                  @db.Time(6)
+  period_label     String?                    @db.VarChar(16)
+  capacity         Int                        @default(10) @db.SmallInt
+  is_open          Boolean                    @default(true)
   note             String?
-  auto_accept      Boolean                     @default(false)
+  auto_accept      Boolean                    @default(false)
   meeting_link     String?
   meeting_location String?
-  meeting_type     MeetingType?                @default(offline)
+  meeting_type     MeetingType?               @default(offline)
   appointments     Appointment[]
-  week             InstructorAvailabilityWeek? @relation(fields: [week_id], references: [week_id], onDelete: Cascade)
 
-  @@unique([week_id, day_of_week, start_time_local])
-  @@map("InstructorWeeklySlot")
+  date             InstructorAvailabilityDate @relation(fields: [date_id], references: [date_id], onDelete: Cascade)
+
+  @@unique([date_id, start_time_local])
+  @@map("InstructorDailySlot")
 }
+
 
 model Appointment {
   appointment_id        Int                  @id @default(autoincrement())
@@ -370,7 +379,7 @@ model Appointment {
   meeting_type          MeetingType
   booker                Account              @relation(fields: [booker_account_id], references: [account_id])
   instructor            Instructor?          @relation(fields: [instructor_id], references: [instructor_id])
-  slot                  InstructorWeeklySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
+  slot                  InstructorDailySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
   student               Student?             @relation(fields: [student_id], references: [student_id])
   appointmentContact    AppointmentContact?
   reminderSchedules     ReminderSchedule[]
@@ -524,4 +533,47 @@ model EventLog {
   @@index([failed, processed, processing, created_at(sort: Desc)], name: "idx_eventlog_unprocessed")
   @@index([table_name, created_at(sort: Desc)], name: "idx_eventlog_table_created_at")
   @@map("EventLog")
+}
+
+model PredictionResult {
+  prediction_id           Int       @id @default(autoincrement())
+  student_id              Int       // Sinh viên được dự đoán
+  course_id               Int       // Môn học cụ thể
+  instructor_id           Int?      // Giảng viên thực hiện dự đoán (nếu là mô hình giảng viên)
+  model_type              String    @db.VarChar(20)  // 'teacher' hoặc 'student'
+  predicted_gpa           Decimal?  @db.Decimal(5, 2)  // GPA dự đoán (cho cả hai mô hình)
+  predicted_fail_warning  Boolean?  // True nếu dự đoán rớt (chỉ cho mô hình giảng viên)
+  prediction_confidence   Float?    // Độ tin cậy của dự đoán
+  model_version           String    @db.VarChar(50)  // Phiên bản mô hình (e.g., 'v1.0_teacher')
+  input_source            String?   @db.VarChar(50)  // 'uploaded_file' hoặc 'existing_data'
+  enriched_for_student    Boolean   @default(false)  // Đánh dấu nếu đã dùng để làm giàu mô hình sinh viên
+  prediction_status       String    @default("active") @db.VarChar(20)  // 'active', 'outdated', 'historical'
+  term_id                 Int?      // Liên kết với AcademicTerm để biết học kỳ
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime  @updatedAt @db.Timestamptz(6)
+  
+  student                 Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  course                  Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  instructor              Instructor? @relation(fields: [instructor_id], references: [instructor_id])
+  academicTerm            AcademicTerm? @relation(fields: [term_id], references: [term_id])
+  
+  // Unique constraint: Một sinh viên chỉ có một dự đoán cho một môn từ một mô hình tại một thời điểm
+  @@unique([student_id, course_id, model_type, model_version])
+  @@map("PredictionResult")
+}
+
+model StudentSurveyFactors {
+  factor_id              Int       @id @default(autoincrement())
+  student_id             Int       // Sinh viên
+  study_time_hours       Float?    // Thời gian học tập (giờ/tuần, hỏi trực tiếp)
+  work_time_hours        Float?    // Thời gian đi làm (giờ/tuần, hỏi trực tiếp)
+  financial_support_score Float?   // Hỗ trợ tài chính (score từ AI, 0-100)
+  mental_health_score    Float?    // Tinh thần (score từ AI, 0-100)
+  updated_at             DateTime  @updatedAt @db.Timestamptz(6)
+  
+  student                Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  
+  // Unique: Một sinh viên chỉ có một bộ yếu tố (có thể update nếu survey lại)
+  @@unique([student_id])
+  @@map("StudentSurveyFactors")
 }

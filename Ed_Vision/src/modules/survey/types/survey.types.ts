@@ -51,6 +51,8 @@ export interface Question {
   freeTextConfig?: FreeTextConfig;
   placeholder?: string; // For text/textarea
   maxLength?: number;   // For text/textarea
+  min_value?: number;   // Từ DB cho slider
+  max_value?: number;   // Từ DB cho slider
 }
 
 export interface SurveyConfig {

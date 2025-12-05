@@ -70,4 +70,13 @@ export class StatisticsOverviewController {
   async getLearningDashboardSummary(@Query() query: DashboardStatsQueryDto) {
     return this.statisticsOverviewService.getLearningDashboardSummary(query);
   }
+
+  /**
+   * GET /admin/dashboard/debug-sessions
+   * Debug: Get recent sessions from BigQuery
+   */
+  @Get('debug-sessions')
+  async debugSessions() {
+    return this.statisticsOverviewService.debugSessions();
+  }
 }

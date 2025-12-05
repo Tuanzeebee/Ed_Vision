@@ -12,15 +12,6 @@ type Props = {
   // Add any specific props if needed
 };
 
-// Types mapped from Prisma schema (subset used by frontend)
-type ApiProfile = {
-  full_name?: string;
-  date_of_birth?: string | null;
-  gender?: string | null;
-  address?: string | null;
-  avatar_url?: string | null;
-  nationality?: string | null;
-};
 
 type ApiStudent = {
   student_id?: number;
@@ -52,7 +43,7 @@ export default function StudentProfilePage({}: Props) {
   const [parentLinks, setParentLinks] = useState<ApiParentLink[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditAcademicModalOpen, setIsEditAcademicModalOpen] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [_uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const loadProfile = async () => {
     const endpoint = buildUrl("/profile/student");
@@ -159,6 +150,23 @@ export default function StudentProfilePage({}: Props) {
         if (!updateRes.ok) {
           throw new Error('Cập nhật avatar thất bại');
         }
+
+        // Update localStorage user object with new avatar
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            const userObj = JSON.parse(userStr);
+            userObj.avatarUrl = url;
+            userObj.avatar = url;
+            userObj.avatar_url = url;
+            localStorage.setItem('user', JSON.stringify(userObj));
+          } catch (e) {
+            console.error('Failed to update localStorage user', e);
+          }
+        }
+
+        // Dispatch custom event to notify Header and other components
+        window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { url } }));
 
         // Refetch profile to show new avatar
         await refetchProfile();

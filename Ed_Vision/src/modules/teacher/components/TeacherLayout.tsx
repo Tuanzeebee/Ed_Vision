@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import Sidebar from './Sidebar';
 
 interface TeacherLayoutProps {
@@ -24,8 +23,8 @@ export default function TeacherLayout({ children, currentPage, onNavigate }: Tea
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Header chung với config cho teacher */}
+        <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+            {/* Header cố định trên cùng */}
             <Header
                 showNavigation={false}
                 isLandingPage={false}
@@ -33,21 +32,21 @@ export default function TeacherLayout({ children, currentPage, onNavigate }: Tea
                 isTeacherMode={true}
             />
 
-            <div className="flex flex-1 relative">
-                <Sidebar
-                    currentPage={currentPage}
-                    onNavigate={handleNavigation}
-                />
+            {/* Body: Sidebar + Main */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar - cố định width, ẩn scrollbar nhưng vẫn scroll được */}
+                <aside className="w-64 min-w-[256px] max-w-[256px] flex-shrink-0 h-full bg-white border-r border-gray-200 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <Sidebar
+                        currentPage={currentPage}
+                        onNavigate={handleNavigation}
+                    />
+                </aside>
 
-                <div className="flex-1 ml-64 flex flex-col min-h-0">
-                    <main className="flex-1 p-6">
-                        {children}
-                    </main>
-                </div>
+                {/* Main content - có scroll riêng */}
+                <main className="flex-1 p-6 bg-gray-50 overflow-y-auto">
+                    {children}
+                </main>
             </div>
-
-            {/* Footer tràn qua sidebar - chỉ hiển thị khi scroll xuống cuối */}
-            <Footer />
         </div>
     );
 }

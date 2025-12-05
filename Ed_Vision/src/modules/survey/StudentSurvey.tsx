@@ -102,13 +102,13 @@ const mapQuestionFromApi = (apiQuestion: SurveyDetailDto['questions'][0]): Quest
         ...baseQuestion,
         type: 'slider',
         sliderConfig: {
-          min: 0,
-          max: apiQuestion.options?.length ? Math.max(...apiQuestion.options.map(o => o.value)) : 10,
-          defaultValue: 5,
+          min: apiQuestion.minValue ?? 0,
+          max: apiQuestion.maxValue ?? 10,
+          defaultValue: Math.round((apiQuestion.minValue ?? 0 + apiQuestion.maxValue ?? 10) / 2),
           unit: 'Điểm',
           gradientType: 'stress',
-          leftLabel: apiQuestion.options?.[0]?.text || '0',
-          rightLabel: apiQuestion.options?.[apiQuestion.options.length - 1]?.text || '10',
+          leftLabel: String(apiQuestion.minValue ?? 0),
+          rightLabel: String(apiQuestion.maxValue ?? 10),
         },
       };
     default:
@@ -145,7 +145,9 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
 
   // Block navigation for mandatory surveys
   useEffect(() => {
-    if (!isMandatory || screen === "thankYou" || screen === "completed") return;
+    // Chỉ block khi: mandatory VÀ là input survey (không phải periodic)
+    const isMandatorySurvey = isMandatory && isInputSurvey;
+    if (!isMandatorySurvey || screen === "thankYou" || screen === "completed") return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -211,7 +213,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
       }
       document.removeEventListener('click', onDocumentClick, true);
     };
-  }, [isMandatory, screen]);
+  }, [isMandatory, isInputSurvey, screen]);
 
   // Load survey status / detail
   useEffect(() => {
@@ -589,17 +591,35 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
   const confirmExit = () => {
     setShowExitConfirm(false);
     
-    // Nếu là khảo sát bắt buộc, không cho thoát
-    if (isMandatory || isInputSurvey) {
+    // Chỉ bắt buộc khi: từ redirect mandatory VÀ đây là input survey
+    const isMandatorySurvey = isMandatory && isInputSurvey;
+    if (isMandatorySurvey) {
       return;
+    }
+    
+    // Nếu đang thoát khỏi periodic survey (không phải input survey),
+    // set cache = true tạm thời để RequireInputSurvey không redirect lại
+    // API sẽ được gọi và update cache đúng sau đó
+    if (!isInputSurvey) {
+      try {
+        const raw = localStorage.getItem('user');
+        if (raw) {
+          const user = JSON.parse(raw);
+          user.hasCompletedInputSurvey = true; // Tạm set true để tránh redirect loop
+          delete user.pendingInputSurveyId;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      } catch (e) {
+        // ignore
+      }
     }
     
     // Quay về trang chủ hoặc trang trước
     const from = location.state?.from?.pathname;
     if (from && from !== '/student/survey') {
-      navigate(from);
+      navigate(from, { replace: true });
     } else {
-      navigate('/student/instructions');
+      navigate('/student/instructions', { replace: true });
     }
   };
 
@@ -609,7 +629,8 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
 
   // Render Exit Confirmation Modal
   const renderExitConfirmModal = () => {
-    const isMandatorySurvey = isMandatory || isInputSurvey;
+    // Chỉ bắt buộc khi: từ redirect mandatory VÀ đây là input survey
+    const isMandatorySurvey = isMandatory && isInputSurvey;
     
     return (
       <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
@@ -644,6 +665,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
           <DialogFooter className="flex gap-2 sm:gap-2">
             {isMandatorySurvey ? (
               <Button
+                type="button"
                 onClick={cancelExit}
                 className="flex-1 bg-gradient-to-r from-indigo-400 to-purple-400 text-white"
               >
@@ -652,6 +674,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
             ) : (
               <>
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={cancelExit}
                   className="flex-1"
@@ -659,6 +682,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
                   Tiếp tục làm
                 </Button>
                 <Button
+                  type="button"
                   onClick={confirmExit}
                   className="flex-1 bg-red-500 hover:bg-red-600 text-white"
                 >
@@ -825,6 +849,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
       {/* Exit Button - góc phải trên màn hình (fixed) */}
       {(screen === "welcome" || screen === "survey") && (
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={handleExitClick}

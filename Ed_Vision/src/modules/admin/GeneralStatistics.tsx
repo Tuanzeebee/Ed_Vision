@@ -85,10 +85,10 @@ export default function GeneralStatistics() {
             
             {/* Enhanced Time Filter */}
             <TimeFilter 
-              value={timeFilter}
-              onChange={setTimeFilter}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
+              viewMode={timeFilter as 'day' | 'month' | 'year' | 'all'}
+              selectedDate={new Date(selectedYear, 0, 1)}
+              onViewModeChange={(mode) => setTimeFilter(mode)}
+              onDateChange={(date) => setSelectedYear(date.getFullYear())}
             />
           </div>
           <p className="text-gray-600">Tổng quan hoạt động học tập và hiệu suất hệ thống AI giáo dục đại học ({getTimeFilterLabel()})</p>

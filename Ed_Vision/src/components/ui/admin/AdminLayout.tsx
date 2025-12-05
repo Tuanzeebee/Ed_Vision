@@ -6,15 +6,8 @@ import { buildUrl } from '@/services/api/config'
 import AdminSidebar from './AdminSidebar'
 import AutoBreadcrumb from './AutoBreadcrumb'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import NotificationDropdown from '@/components/layout/NotificationDropdown'
 import { STUDENT_ASSETS } from '@/assets/student'
-
-function BellIcon() {
-  return (
-    <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-  )
-}
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -146,12 +139,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="flex items-center space-x-4">
               <LanguageSwitcher />
 
-              <div className="relative">
-                <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-gray-100">
-                  <BellIcon />
-                </button>
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
-              </div>
+              <NotificationDropdown isAdminMode={true} />
 
               {/* Avatar + tên + vai trò + caret giống style cũ */}
               <div className="relative" ref={menuRef}>
