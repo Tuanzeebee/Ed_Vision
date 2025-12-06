@@ -260,11 +260,11 @@ export class BookingService {
 
 				// Nếu có instructor, tạo reminder cho instructor
 				if (instructorId) {
-					const instructorAccount = await this.repository.getInstructorAccountId(instructorId);
+					const instructorAccount = await this.repository.getInstructorById(instructorId);
 					if (instructorAccount) {
 						await this.reminderScheduler.createRemindersForAppointment(
 							appointment.appointment_id,
-							instructorAccount,
+							instructorAccount.account_id,
 							appointmentTimeUTC,
 						);
 					}
@@ -280,7 +280,7 @@ export class BookingService {
 		// GỬI INSTANT NOTIFICATION cho teacher ngay khi student book lịch
 		try {
 			if (instructorId) {
-				const instructorAccount = await this.repository.getInstructorAccountId(instructorId);
+				const instructorAccount = await this.repository.getInstructorById(instructorId);
 				if (instructorAccount) {
 					const studentName = fullWithSlot?.student?.account?.profile?.full_name || 'Sinh viên';
 					
@@ -321,7 +321,7 @@ export class BookingService {
 					await this.prisma.notificationRecipient.create({
 						data: {
 							master_id: master.id,
-							account_id: instructorAccount,
+							account_id: instructorAccount.account_id,
 							is_read: false,
 							delivered_at: now,
 						},
@@ -337,9 +337,9 @@ export class BookingService {
 						attachments: null,
 						createdAt: now.toISOString(),
 					};
-					this.notificationGateway.broadcastNotification(payload, [instructorAccount]);
+					this.notificationGateway.broadcastNotification(payload, [instructorAccount.account_id]);
 
-					this.logger.log(`Sent instant notification to instructor ${instructorAccount} for appointment ${appointment.appointment_id}`);
+					this.logger.log(`Sent instant notification to instructor ${instructorAccount.account_id} for appointment ${appointment.appointment_id}`);
 				}
 			}
 		} catch (error) {
