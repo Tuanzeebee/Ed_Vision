@@ -4,13 +4,25 @@ import {
   getSystemNotifications,
   markAsRead,
   markAllAsRead,
-  subscribeToNotifications
+  subscribeToNotifications,
+  fetchNotifications
 } from '@/stores/notificationStore';
 import type { SystemNotification } from '@/stores/notificationStore';
 
 interface NotificationPageProps {
-  userRole?: 'student' | 'teacher' | 'admin';
+  userRole?: 'student' | 'teacher' | 'admin' | 'parent';
 }
+
+// Get API base URL
+const API_BASE_URL = (import.meta.env && (import.meta.env.VITE_API_BASE_URL as string)) || 'http://localhost:3000';
+
+// Helper function to get full URL for attachments
+const getAttachmentUrl = (url: string) => {
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
+};
 
 export default function NotificationPage({ userRole = 'student' }: NotificationPageProps) {
   const navigate = useNavigate();
@@ -27,7 +39,11 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
   };
 
   useEffect(() => {
-    loadNotifications();
+    // Fetch notifications from API first, then load from cache
+    fetchNotifications().then(() => {
+      loadNotifications();
+    });
+    
     const unsubscribe = subscribeToNotifications(loadNotifications);
     return unsubscribe;
   }, []);
@@ -82,7 +98,8 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
     switch (userRole) {
       case 'admin': return '/admin/dashboard';
       case 'teacher': return '/teacher/dashboard';
-      default: return '/student/dashboard';
+      case 'parent': return '/parent/dashboard';
+      default: return '/student/instructions';
     }
   };
 
@@ -260,7 +277,7 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                         {selectedNotification.attachments.map((file, idx) => (
                           <a
                             key={idx}
-                            href={file.url}
+                            href={getAttachmentUrl(file.url)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"

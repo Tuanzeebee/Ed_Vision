@@ -14,6 +14,7 @@ type Props = {
   isLandingPage?: boolean
   isAdminMode?: boolean
   isTeacherMode?: boolean
+  isParentMode?: boolean
   onLogin?: () => void
   onRegister?: () => void
 }
@@ -24,6 +25,7 @@ export default function Header({
   isLandingPage = false,
   isAdminMode = false,
   isTeacherMode = false,
+  isParentMode = false,
   onLogin,
   onRegister
 }: Props) {
@@ -394,11 +396,12 @@ export default function Header({
             {/* Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Notification Dropdown - For Teacher and Admin Mode */}
-            {(isTeacherMode || isAdminMode) && isAuthenticated && (
+            {/* Notification Dropdown - For All Authenticated Users */}
+            {isAuthenticated && (
               <NotificationDropdown 
                 isAdminMode={isAdminMode} 
-                isTeacherMode={isTeacherMode} 
+                isTeacherMode={isTeacherMode}
+                isParentMode={isParentMode}
               />
             )}
 
@@ -431,7 +434,7 @@ export default function Header({
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((s) => !s)}
-                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
                   aria-expanded={menuOpen}
                 >
                   <img 
