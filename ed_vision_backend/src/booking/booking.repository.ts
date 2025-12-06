@@ -287,6 +287,17 @@ export class BookingRepository {
     });
   }
 
+  async getInstructorById(instructorId: number) {
+    return this.prisma.instructor.findUnique({
+      where: { instructor_id: instructorId },
+      include: {
+        account: {
+          include: { profile: true },
+        },
+      },
+    });
+  }
+
   // Get appointments for instructor (as adviser)
   async getAppointmentsForInstructor(instructorId: number, status?: string[], bookerRole?: string) {
     const where: any = { instructor_id: instructorId };
