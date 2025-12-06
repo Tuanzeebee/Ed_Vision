@@ -270,4 +270,13 @@ export class BookingRepository {
       },
     });
   }
+
+  // Get instructor account_id
+  async getInstructorAccountId(instructorId: number): Promise<number | null> {
+    const instructor = await this.prisma.instructor.findUnique({
+      where: { instructor_id: instructorId },
+      select: { account_id: true },
+    });
+    return instructor?.account_id ?? null;
+  }
 }

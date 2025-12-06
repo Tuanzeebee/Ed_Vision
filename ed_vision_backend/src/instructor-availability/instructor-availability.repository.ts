@@ -559,12 +559,12 @@ export class InstructorAvailabilityRepository {
 
   /**
    * Format Date to time string (HH:mm)
-   * Uses local time (GMT+0800) to match database timezone
+   * Uses UTC to match how we store time in parseTimeToDate
    */
   formatTimeToString(date: Date): string {
-    // Database stores time in GMT+0800, so we need to use local time
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+    // Use UTC hours/minutes since we stored with setUTCHours in parseTimeToDate
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 }

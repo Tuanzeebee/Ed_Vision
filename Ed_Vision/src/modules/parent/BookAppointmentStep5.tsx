@@ -76,7 +76,7 @@ export default function BookAppointmentStep5({
   return (
     <div className="bg-green-50 min-h-screen flex flex-col">
       {/* Header */}
-      <Header />
+      <Header isParentMode={true} />
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">

@@ -21,6 +21,8 @@ export interface SystemNotification {
     type: string;
     url: string;
   }>;
+  source?: 'new' | 'legacy'; // Nguồn dữ liệu: new = NotificationRecipient, legacy = Notification
+  masterId?: number; // ID của NotificationMaster (nếu có)
 }
 
 const READ_STATUS_KEY = 'notificationReadStatus';
@@ -114,10 +116,16 @@ export async function fetchNotifications(): Promise<void> {
       content: n.body,
       type: n.type || 'Thông Tin Chung',
       target: '',
-      priority: 'Trung bình',
+      priority: n.priority || 'Trung bình',
       createdDate: new Date(n.created_at).toLocaleString('vi-VN'),
       isRead: n.is_read,
+      attachments: n.attachments || undefined,
+      // Lưu source để biết dùng bảng nào khi mark as read
+      source: n.source || (n.master_id ? 'new' : 'legacy'),
+      masterId: n.master_id,
     }));
+    
+    dispatchNotificationChange();
   } catch (e) {
     console.error('Error fetching notifications from API:', e);
   }
@@ -141,8 +149,10 @@ export function getUnreadCount(): number {
 
 /**
  * Đánh dấu thông báo đã đọc
+ * @param notificationId - ID của thông báo
+ * @param source - Nguồn: 'new' (NotificationRecipient) hoặc 'legacy' (Notification). Nếu không truyền sẽ tự tìm trong cache.
  */
-export function markAsRead(notificationId: number): void {
+export function markAsRead(notificationId: number, source?: 'new' | 'legacy'): void {
   try {
     if (isAdmin()) {
       // Admin: lưu localStorage
@@ -151,10 +161,19 @@ export function markAsRead(notificationId: number): void {
       readStatus[notificationId] = true;
       localStorage.setItem(READ_STATUS_KEY, JSON.stringify(readStatus));
     } else {
-      // Non-admin: gọi API
-      apiClient.put(`/notifications/${notificationId}/read`).catch(console.error);
-      // Update cache
+      // Tìm source từ cache nếu không được truyền
       const notification = apiNotificationsCache.find(n => n.id === notificationId);
+      const notificationSource = source || notification?.source;
+      
+      // Non-admin: gọi API với source parameter
+      const url = notificationSource 
+        ? `/notifications/${notificationId}/read?source=${notificationSource}`
+        : `/notifications/${notificationId}/read`;
+      apiClient.put(url).then(() => {
+        // Refresh cache sau khi đánh dấu đã đọc
+        fetchNotifications().then(() => dispatchNotificationChange());
+      }).catch(console.error);
+      // Update cache ngay lập tức (optimistic update)
       if (notification) notification.isRead = true;
     }
     
@@ -181,9 +200,11 @@ export function markAllAsRead(): void {
       
       localStorage.setItem(READ_STATUS_KEY, JSON.stringify(readStatus));
     } else {
-      // Non-admin: gọi API
-      apiClient.put('/notifications/read-all').catch(console.error);
-      // Update cache
+      // Non-admin: gọi API và refresh cache
+      apiClient.put('/notifications/read-all').then(() => {
+        fetchNotifications().then(() => dispatchNotificationChange());
+      }).catch(console.error);
+      // Update cache ngay lập tức (optimistic update)
       apiNotificationsCache.forEach(n => n.isRead = true);
     }
     

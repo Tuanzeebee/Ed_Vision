@@ -1,6 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { BookingRepository } from './booking.repository';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { ReminderSchedulerService } from '../admin_be/notification/reminder-scheduler.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationGateway } from '../admin_be/notification/notification.gateway';
 
 const mapAdvisorFromAssignment = (assignment: any) => {
 	if (!assignment) return null
@@ -29,7 +32,14 @@ const mapAdvisorFromAssignment = (assignment: any) => {
 
 @Injectable()
 export class BookingService {
-	constructor(private readonly repository: BookingRepository) {}
+	private readonly logger = new Logger(BookingService.name);
+
+	constructor(
+		private readonly repository: BookingRepository,
+		private readonly reminderScheduler: ReminderSchedulerService,
+		private readonly prisma: PrismaService,
+		private readonly notificationGateway: NotificationGateway,
+	) {}
 
 	/**
 	 * Book an appointment for a student (student or parent)
@@ -120,6 +130,144 @@ export class BookingService {
 		if ((meetingType === 'online' || (full?.meeting_type === 'online')) && fullWithSlot?.slot && !fullWithSlot.slot.meeting_link) {
 			// attach a transient field meeting_link on the returned object
 			(full as any).transient_meeting_link = `meet.google.com/${Math.random().toString(36).slice(2, 11)}`;
+		}
+
+		// Tạo reminder nhắc nhở trước cuộc hẹn (10 phút, 5 phút, 1 phút)
+		try {
+			if (fullWithSlot?.slot?.date?.specific_date && fullWithSlot?.slot?.start_time_local) {
+				// specific_date là ngày (YYYY-MM-DD) lưu dạng Date trong DB
+				// start_time_local là giờ local (HH:MM) lưu dạng Time trong DB
+				const specificDate = new Date(fullWithSlot.slot.date.specific_date);
+				const startTime = new Date(fullWithSlot.slot.start_time_local);
+				
+				// Log raw values để debug
+				this.logger.log(`[Reminder] Raw specific_date: ${fullWithSlot.slot.date.specific_date}`);
+				this.logger.log(`[Reminder] Raw start_time_local: ${fullWithSlot.slot.start_time_local}`);
+				this.logger.log(`[Reminder] Parsed specificDate: ${specificDate.toISOString()}`);
+				this.logger.log(`[Reminder] Parsed startTime: ${startTime.toISOString()}`);
+				
+				// ===== FIX TIMEZONE =====
+				// specific_date: DATE type trong DB (lưu ngày không có time)
+				// start_time_local: TIME type trong DB (lưu giờ local VN)
+				// 
+				// VÍ DỤ: Slot 21:15 VN ngày 06/12/2025
+				// - Cần tạo: 2025-12-06T14:15:00Z (UTC)
+				
+				// Lấy ngày từ specific_date
+				const year = specificDate.getUTCFullYear();
+				const month = specificDate.getUTCMonth();
+				const day = specificDate.getUTCDate();
+				
+				// Lấy giờ VN từ start_time_local
+				const hoursVN = startTime.getUTCHours();
+				const minutesVN = startTime.getUTCMinutes();
+				
+				// Tạo datetime string dạng: "2025-12-06T21:15:00+07:00"
+				const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+				const timeStr = `${String(hoursVN).padStart(2, '0')}:${String(minutesVN).padStart(2, '0')}:00`;
+				const datetimeVN = `${dateStr}T${timeStr}+07:00`;
+				
+				// Parse thành UTC
+				const appointmentTimeUTC = new Date(datetimeVN);
+				
+				this.logger.log(`[Reminder] Date: ${dateStr}, Time VN: ${timeStr}`);
+				this.logger.log(`[Reminder] DateTime VN: ${datetimeVN}`);
+				this.logger.log(`[Reminder] appointmentTimeUTC: ${appointmentTimeUTC.toISOString()}`);
+				this.logger.log(`[Reminder] Now (UTC): ${new Date().toISOString()}`);
+
+				// Tạo reminder cho người đặt lịch (student hoặc parent)
+				await this.reminderScheduler.createRemindersForAppointment(
+					appointment.appointment_id,
+					accountId,
+					appointmentTimeUTC,
+				);
+
+				// Nếu có instructor, tạo reminder cho instructor
+				if (instructorId) {
+					const instructorAccount = await this.repository.getInstructorAccountId(instructorId);
+					if (instructorAccount) {
+						await this.reminderScheduler.createRemindersForAppointment(
+							appointment.appointment_id,
+							instructorAccount,
+							appointmentTimeUTC,
+						);
+					}
+				}
+
+				this.logger.log(`Created reminders for appointment ${appointment.appointment_id}`);
+			}
+		} catch (error) {
+			this.logger.error(`Failed to create reminders for appointment ${appointment.appointment_id}:`, error);
+			// Không throw error, vì appointment đã được tạo thành công
+		}
+
+		// GỬI INSTANT NOTIFICATION cho teacher ngay khi student book lịch
+		try {
+			if (instructorId) {
+				const instructorAccount = await this.repository.getInstructorAccountId(instructorId);
+				if (instructorAccount) {
+					const studentName = fullWithSlot?.student?.account?.profile?.full_name || 'Sinh viên';
+					
+					// Format date
+					const slotDate = fullWithSlot?.slot?.date?.specific_date 
+						? new Date(fullWithSlot.slot.date.specific_date).toLocaleDateString('vi-VN', { 
+							weekday: 'long', 
+							year: 'numeric', 
+							month: 'long', 
+							day: 'numeric' 
+						})
+						: '';
+					
+					// Format time - FIX: start_time_local là TIME type, giờ đã là VN time
+					let slotTime = '';
+					if (fullWithSlot?.slot?.start_time_local) {
+						const timeObj = new Date(fullWithSlot.slot.start_time_local);
+						const hours = timeObj.getUTCHours(); // Giờ VN lưu dạng UTC trong TIME type
+						const minutes = timeObj.getUTCMinutes();
+						slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+					}
+
+					// Tạo notification master
+					const master = await this.prisma.notificationMaster.create({
+						data: {
+							title: '📅 Lịch hẹn mới',
+							body: `Sinh viên ${studentName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
+							type: 'appointment_created',
+							priority: 'Cao',
+							target: 'individual',
+							channel: 'in_app',
+							created_by: accountId, // Student who created
+						},
+					});
+
+					// Tạo notification recipient cho instructor
+					const now = new Date();
+					await this.prisma.notificationRecipient.create({
+						data: {
+							master_id: master.id,
+							account_id: instructorAccount,
+							is_read: false,
+							delivered_at: now,
+						},
+					});
+
+					// Push real-time qua WebSocket
+					const payload = {
+						masterId: master.id,
+						title: '📅 Lịch hẹn mới',
+						body: `Sinh viên ${studentName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
+						type: 'appointment_created',
+						target: 'individual',
+						attachments: null,
+						createdAt: now.toISOString(),
+					};
+					this.notificationGateway.broadcastNotification(payload, [instructorAccount]);
+
+					this.logger.log(`Sent instant notification to instructor ${instructorAccount} for appointment ${appointment.appointment_id}`);
+				}
+			}
+		} catch (error) {
+			this.logger.error(`Failed to send instant notification:`, error);
 		}
 
 		return full;

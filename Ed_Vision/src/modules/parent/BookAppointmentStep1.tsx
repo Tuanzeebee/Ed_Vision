@@ -51,7 +51,7 @@ export default function BookAppointmentStep1({ onContinue, onBack, onClose }: Pr
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header />
+      <Header isParentMode={true} />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Steps */}

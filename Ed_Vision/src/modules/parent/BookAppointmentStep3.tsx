@@ -61,7 +61,7 @@ export default function BookAppointmentStep3({ onBack, onContinue, onSaveDraft, 
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
-      <Header />
+      <Header isParentMode={true} />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}
