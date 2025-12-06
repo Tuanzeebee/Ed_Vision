@@ -416,10 +416,13 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           }
           setSelectedDateIdx(selIdx)
           const selDate = map.get(dates[selIdx])
-          const firstSlot = selDate?.timeSlots?.[0]
-          if (firstSlot) {
-            setSelectedSlot(firstSlot.slotId)
-            setSelectedFormat(firstSlot.meetingType === 'online' ? 'online' : 'offline')
+          // Find the first valid slot (open and not at capacity)
+          const firstValidSlot = selDate?.timeSlots?.find((slot: ApiTimeSlot) => 
+            slot.isOpen && ((slot.bookedCount ?? 0) < slot.capacity)
+          )
+          if (firstValidSlot) {
+            setSelectedSlot(firstValidSlot.slotId)
+            setSelectedFormat(firstValidSlot.meetingType === 'online' ? 'online' : 'offline')
           }
         }
       } catch (e: any) {
@@ -749,6 +752,19 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
       {/* Main Content */}
       <main className="flex-1">
         <div className="p-4 bg-white min-h-screen">
+          {/* Back Button - positioned below header with blue styling */}
+          <div className="mb-4">
+            <button
+              onClick={() => navigate('/appointments')}
+              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Quay lại
+            </button>
+          </div>
+
           <div className="bg-white rounded-xl overflow-hidden">
         {/* Progress Bar */}
         <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
@@ -947,17 +963,23 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       Buổi sáng
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                      {groupedSlots.morning.map((s) => (
+                      {groupedSlots.morning.map((s) => {
+                        const isDisabled = !s.isOpen || ((s.bookedCount ?? 0) >= s.capacity)
+                        
+                        return (
                         <div
                           key={s.slotId}
                           onClick={() => {
+                            if (isDisabled) return // Block clicking on disabled slots
                             setSelectedSlot(s.slotId)
                             setSelectedFormat(s.meetingType === 'online' ? 'online' : 'offline')
                           }}
-                          className={`relative rounded-lg p-3 cursor-pointer transition-all ${
-                            selectedSlot === s.slotId
-                              ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md'
-                              : 'bg-white border-2 border-gray-200 hover:shadow-md hover:border-blue-300'
+                          className={`relative rounded-lg p-3 transition-all ${
+                            isDisabled
+                              ? 'bg-gray-100 border-2 border-gray-200 opacity-60 cursor-not-allowed'
+                              : selectedSlot === s.slotId
+                                ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md cursor-pointer'
+                                : 'bg-white border-2 border-gray-200 hover:shadow-md hover:border-blue-300 cursor-pointer'
                           }`}
                         >
                           <span className={`absolute top-3 right-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs ${selectedSlot === s.slotId ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
@@ -978,18 +1000,29 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     data-format="offline"
                                     data-slot={s.slotId}
                                     onClick={(e) => {
+                                      if (isDisabled) return
                                       e.stopPropagation()
                                       setSelectedSlot(s.slotId)
                                       setSelectedFormat('offline')
                                     }}
-                                    className={`format-option border border-blue-200 rounded-md px-2 py-1 text-center flex-1 cursor-pointer ${
-                                      selectedSlot === s.slotId && selectedFormat === 'offline' ? 'bg-blue-600 text-white' : 'bg-white'
+                                    className={`format-option border rounded-md px-2 py-1 text-center flex-1 ${
+                                      isDisabled
+                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : selectedSlot === s.slotId && selectedFormat === 'offline'
+                                          ? 'border-blue-200 bg-blue-600 text-white cursor-pointer'
+                                          : 'border-blue-200 bg-white text-gray-700 cursor-pointer hover:bg-blue-50'
                                     }`}
                                   >
                                     <div className="flex items-center justify-center space-x-1">
-                                      <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                      </svg>
+                                      {isDisabled ? (
+                                        <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                      ) : (
+                                        <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                      )}
                                       <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>Trực tiếp</span>
                                     </div>
                                   </div>
@@ -998,18 +1031,29 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     data-format="online"
                                     data-slot={s.slotId}
                                     onClick={(e) => {
+                                      if (isDisabled) return
                                       e.stopPropagation()
                                       setSelectedSlot(s.slotId)
                                       setSelectedFormat('online')
                                     }}
-                                    className={`format-option border border-green-200 rounded-md px-2 py-1 text-center flex-1 cursor-pointer ${
-                                      selectedSlot === s.slotId && selectedFormat === 'online' ? 'bg-green-600 text-white' : 'bg-white'
+                                    className={`format-option border border-green-200 rounded-md px-2 py-1 text-center flex-1 ${
+                                      isDisabled
+                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : selectedSlot === s.slotId && selectedFormat === 'online'
+                                          ? 'bg-green-600 text-white cursor-pointer'
+                                          : 'bg-white cursor-pointer hover:bg-green-50' 
                                     }`}
                                   >
                                     <div className="flex items-center justify-center space-x-1">
-                                      <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18" />
-                                      </svg>
+                                      {isDisabled ? (
+                                        <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                      ) : (
+                                        <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18" />
+                                        </svg>
+                                      )}
                                       <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>Trực tuyến</span>
                                     </div>
                                   </div>
@@ -1027,8 +1071,15 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                               {s.meetingType === 'online' ? 'Link sẽ được gửi vào email' : ''}
                             </div>
                           )}
+                          
+                          {!s.isOpen && (
+                            <div className="text-xs text-red-500 font-medium mt-1">
+                              Không khả dụng
+                            </div>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1045,17 +1096,23 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       Buổi chiều
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                      {groupedSlots.afternoon.map((s) => (
+                      {groupedSlots.afternoon.map((s) => {
+                        const isDisabled = !s.isOpen || ((s.bookedCount ?? 0) >= s.capacity)
+                        
+                        return (
                         <div
                           key={s.slotId}
                           onClick={() => {
+                            if (isDisabled) return // Block clicking on disabled slots
                             setSelectedSlot(s.slotId)
                             setSelectedFormat(s.meetingType === 'online' ? 'online' : 'offline')
                           }}
-                          className={`relative rounded-lg p-3 cursor-pointer transition-all ${
-                            selectedSlot === s.slotId
-                              ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md'
-                              : 'bg-white border-2 border-gray-200 hover:shadow-md hover:border-blue-300'
+                          className={`relative rounded-lg p-3 transition-all ${
+                            isDisabled
+                              ? 'bg-gray-100 border-2 border-gray-200 opacity-60 cursor-not-allowed'
+                              : selectedSlot === s.slotId
+                                ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md cursor-pointer'
+                                : 'bg-white border-2 border-gray-200 hover:shadow-md hover:border-blue-300 cursor-pointer'
                           }`}
                         >
                           <span className={`absolute top-3 right-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs ${selectedSlot === s.slotId ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
@@ -1075,18 +1132,29 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     data-format="offline"
                                     data-slot={s.slotId}
                                     onClick={(e) => {
+                                      if (isDisabled) return
                                       e.stopPropagation()
                                       setSelectedSlot(s.slotId)
                                       setSelectedFormat('offline')
                                     }}
-                                    className={`format-option border border-blue-200 rounded-md px-2 py-1 text-center flex-1 cursor-pointer ${
-                                      selectedSlot === s.slotId && selectedFormat === 'offline' ? 'bg-blue-600 text-white' : 'bg-white'
+                                    className={`format-option border border-blue-200 rounded-md px-2 py-1 text-center flex-1 ${
+                                      isDisabled
+                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : selectedSlot === s.slotId && selectedFormat === 'offline'
+                                          ? 'bg-blue-600 text-white cursor-pointer'
+                                          : 'bg-white cursor-pointer hover:bg-blue-50' 
                                     }`}
                                   >
                                     <div className="flex items-center justify-center space-x-1">
-                                      <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                      </svg>
+                                      {isDisabled ? (
+                                        <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                      ) : (
+                                        <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                      )}
                                       <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>Trực tiếp</span>
                                     </div>
                                   </div>
@@ -1095,18 +1163,29 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     data-format="online"
                                     data-slot={s.slotId}
                                     onClick={(e) => {
+                                      if (isDisabled) return
                                       e.stopPropagation()
                                       setSelectedSlot(s.slotId)
                                       setSelectedFormat('online')
                                     }}
-                                    className={`format-option border border-green-200 rounded-md px-2 py-1 text-center flex-1 cursor-pointer ${
-                                      selectedSlot === s.slotId && selectedFormat === 'online' ? 'bg-green-600 text-white' : 'bg-white'
+                                    className={`format-option border border-green-200 rounded-md px-2 py-1 text-center flex-1 ${
+                                      isDisabled
+                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : selectedSlot === s.slotId && selectedFormat === 'online'
+                                          ? 'bg-green-600 text-white cursor-pointer'
+                                          : 'bg-white cursor-pointer hover:bg-green-50' 
                                     }`}
                                   >
                                     <div className="flex items-center justify-center space-x-1">
-                                      <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18" />
-                                      </svg>
+                                      {isDisabled ? (
+                                        <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                      ) : (
+                                        <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18" />
+                                        </svg>
+                                      )}
                                       <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>Trực tuyến</span>
                                     </div>
                                   </div>
@@ -1127,8 +1206,15 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                               {s.meetingType === 'online' ? 'Link sẽ được gửi vào email' : ''}
                             </div>
                           )}
+                          
+                          {!s.isOpen && (
+                            <div className="text-xs text-red-500 font-medium mt-1">
+                              Không khả dụng
+                            </div>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1141,17 +1227,23 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       Buổi tối
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                      {groupedSlots.evening.map((s) => (
+                      {groupedSlots.evening.map((s) => {
+                        const isDisabled = !s.isOpen || ((s.bookedCount ?? 0) >= s.capacity)
+                        
+                        return (
                         <div
                           key={s.slotId}
                           onClick={() => {
+                            if (isDisabled) return // Block clicking on disabled slots
                             setSelectedSlot(s.slotId)
                             setSelectedFormat(s.meetingType === 'online' ? 'online' : 'offline')
                           }}
-                          className={`relative rounded-lg p-3 cursor-pointer transition-all ${
-                            selectedSlot === s.slotId
-                              ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md'
-                              : 'bg-white border-2 border-gray-200 hover:shadow-md hover:border-blue-300'
+                          className={`relative rounded-lg p-3 transition-all ${
+                            isDisabled
+                              ? 'bg-gray-100 border-2 border-gray-200 opacity-60 cursor-not-allowed'
+                              : selectedSlot === s.slotId
+                                ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md cursor-pointer'
+                                : 'bg-white border-2 border-gray-200 hover:shadow-md hover:border-blue-300 cursor-pointer'
                           }`}
                         >
                           <span className={`absolute top-3 right-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs ${selectedSlot === s.slotId ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
@@ -1171,18 +1263,29 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     data-format="offline"
                                     data-slot={s.slotId}
                                     onClick={(e) => {
+                                      if (isDisabled) return
                                       e.stopPropagation()
                                       setSelectedSlot(s.slotId)
                                       setSelectedFormat('offline')
                                     }}
-                                    className={`format-option border border-blue-200 rounded-md px-2 py-1 text-center flex-1 cursor-pointer ${
-                                      selectedSlot === s.slotId && selectedFormat === 'offline' ? 'bg-blue-600 text-white' : 'bg-white'
+                                    className={`format-option border border-blue-200 rounded-md px-2 py-1 text-center flex-1 ${
+                                      isDisabled
+                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : selectedSlot === s.slotId && selectedFormat === 'offline'
+                                          ? 'bg-blue-600 text-white cursor-pointer'
+                                          : 'bg-white cursor-pointer hover:bg-blue-50' 
                                     }`}
                                   >
                                     <div className="flex items-center justify-center space-x-1">
-                                      <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                      </svg>
+                                      {isDisabled ? (
+                                        <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                      ) : (
+                                        <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                      )}
                                       <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>Trực tiếp</span>
                                     </div>
                                   </div>
@@ -1191,12 +1294,17 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     data-format="online"
                                     data-slot={s.slotId}
                                     onClick={(e) => {
+                                      if (isDisabled) return
                                       e.stopPropagation()
                                       setSelectedSlot(s.slotId)
                                       setSelectedFormat('online')
                                     }}
-                                    className={`format-option border border-green-200 rounded-md px-2 py-1 text-center flex-1 cursor-pointer ${
-                                      selectedSlot === s.slotId && selectedFormat === 'online' ? 'bg-green-600 text-white' : 'bg-white'
+                                    className={`format-option border border-green-200 rounded-md px-2 py-1 text-center flex-1 ${
+                                      isDisabled
+                                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : selectedSlot === s.slotId && selectedFormat === 'online'
+                                          ? 'bg-green-600 text-white cursor-pointer'
+                                          : 'bg-white cursor-pointer hover:bg-green-50' 
                                     }`}
                                   >
                                     <div className="flex items-center justify-center space-x-1">
@@ -1223,8 +1331,15 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                               {s.meetingType === 'online' ? 'Link sẽ được gửi vào email' : ''}
                             </div>
                           )}
+                          
+                          {!s.isOpen && (
+                            <div className="text-xs text-red-500 font-medium mt-1">
+                              Không khả dụng
+                            </div>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1659,8 +1774,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                   />
                 </svg>
                 <div className="text-xs sm:text-sm text-gray-700">
-                  <p className="font-bold text-gray-900 mb-1.5">Thông tin đã được gửi đến email</p>
-                  <p className="text-gray-600">Vui lòng kiểm tra hộp thư để xem chi tiết và link tham gia.</p>
+                  <p className="font-bold text-gray-900 mb-1.5">Thông tin đã được ghi lại</p>
+                  <p className="text-gray-600">Vui lòng truy cập quản lý lịch hẹn để xem chi tiết hoặc hủy lịch.</p>
                 </div>
               </div>
             </div>
@@ -1668,11 +1783,11 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
             <button
               onClick={() => {
                 setShowSuccessModal(false)
-                navigate(dashboardPath)
+                navigate('/appointments')
               }}
               className="w-full px-5 py-3 bg-gradient-to-r from-purple-600 to-purple-800 hover:shadow-xl text-white rounded-xl font-bold transition-all text-sm active:scale-95"
             >
-              Trở lại dashboard
+              Trở lại lịch hẹn
             </button>
           </div>
         </div>
@@ -1686,3 +1801,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     </div>
   )
 }
+
+
+
+

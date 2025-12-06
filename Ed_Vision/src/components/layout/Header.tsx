@@ -341,7 +341,7 @@ export default function Header({
                         <div className="text-xs text-slate-500">{t('common:header.menu.communicate.messages.description')}</div>
                       </div>
                     </a>
-                    <a href="/booking/scheduler" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <a href="/appointments" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="mt-1 p-1.5 rounded-md bg-indigo-50 text-indigo-600">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       </div>

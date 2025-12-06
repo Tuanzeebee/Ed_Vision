@@ -19,8 +19,12 @@ import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
+import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     InstructorAvailabilityModule,
     BookingModule,
@@ -37,7 +41,6 @@ import { ProfileModule } from './profile/profile.module';
     SurveysModule,
     TeacherBeModule,
     StudentBeModule,
-    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
   ],
   controllers: [AppController],

@@ -391,8 +391,6 @@ const StudentSurveyManagement = () => {
     const sendBulkReminder = () => {
         if (selectedIncompleteStudents.length > 0 && bulkReminderMessage.trim()) {
             // TODO: Implement bulk reminder API call
-            console.log("Sending bulk reminder to:", selectedIncompleteStudents.map(s => s.studentName))
-            console.log("Message:", bulkReminderMessage)
             toast.success(`Đã gửi nhắc nhở đến ${selectedIncompleteStudents.length} sinh viên chưa hoàn thành khảo sát!`)
             setShowIncompleteModal(false)
             setSelectedIncompleteStudents([])
@@ -447,8 +445,6 @@ const StudentSurveyManagement = () => {
     const confirmSendReminder = () => {
         if (reminderSurveyId && reminderMessage) {
             // TODO: Send reminder notification to incomplete students
-            console.log("Sending reminder for survey:", reminderSurveyId)
-            console.log("Message:", reminderMessage)
             toast.success("Đã gửi nhắc nhở đến các sinh viên chưa hoàn thành khảo sát!")
             setShowReminderDialog(false)
             setReminderSurveyId(null)
