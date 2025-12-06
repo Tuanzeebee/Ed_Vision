@@ -1,18 +1,28 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import type { AvailableDate, AppointmentRequest } from './types/appointment.types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import TeacherLayout from './components/TeacherLayout';
 import ScheduleManagement from './ScheduleManagement';
-import AppointmentRequests from './AppointmentRequests';
-import ConfirmedAppointments from './ConfirmedAppointments';
+import TeacherAppointmentManagement from './TeacherAppointmentManagement';
 
-type Page = 'schedule' | 'requests' | 'confirmed';
+type Page = 'schedule' | 'management';
 
 export default function TeacherAppointmentDashboard() {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<Page>('schedule');
+  const location = useLocation();
+  const [currentPage, setCurrentPage] = useState<Page>('management'); // default to management
+
+  // Set currentPage based on URL path after component mounts
+  useEffect(() => {
+    const pathname = location.pathname;
+    if (pathname === '/teacher/schedule') {
+      setCurrentPage('schedule');
+    } else {
+      setCurrentPage('management');
+    }
+  }, [location.pathname]);
 
   // Appointment schedule state
   const [availableDates, setAvailableDates] = useLocalStorage<AvailableDate[]>(
@@ -20,7 +30,7 @@ export default function TeacherAppointmentDashboard() {
     []
   );
 
-  // Request state
+  // Request state (no longer used but kept for compatibility)
   const [requests, setRequests] = useState<AppointmentRequest[]>([
     {
       id: 1,
@@ -110,15 +120,15 @@ export default function TeacherAppointmentDashboard() {
   };
 
   const handleNavigation = (path: string) => {
-    // Handle appointment navigation internally (same page, different views)
-    if (path.includes('/appointments') || path === '/teacher/appointments') {
-      setCurrentPage('schedule');
-    } else if (path.includes('/requests')) {
-      setCurrentPage('requests');
-    } else if (path.includes('/confirmed')) {
-      setCurrentPage('confirmed');
+    // Handle appointment navigation
+    if (path === '/teacher/schedule') {
+      // Always navigate to schedule route for schedule functionality
+      navigate('/teacher/schedule');
+    } else if (path === '/teacher/appointments') {
+      // Always navigate to appointments route for management functionality
+      navigate('/teacher/appointments');
     } else {
-      // For other paths (Dashboard, Class Management, etc.), use router navigation
+      // For other paths (Dashboard, Class Management, Calendar Overview, etc.), use router navigation
       navigate(path);
     }
   };
@@ -136,19 +146,8 @@ export default function TeacherAppointmentDashboard() {
           />
         )}
 
-        {currentPage === 'requests' && (
-          <AppointmentRequests
-            requests={requests}
-            setRequests={setRequests}
-            showToast={showToast}
-            setCurrentPage={setCurrentPage}
-          />
-        )}
-
-        {currentPage === 'confirmed' && (
-          <ConfirmedAppointments
-            requests={requests}
-            setRequests={setRequests}
+        {currentPage === 'management' && (
+          <TeacherAppointmentManagement
             showToast={showToast}
           />
         )}

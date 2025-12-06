@@ -23,6 +23,7 @@ import { ProfileModule } from './profile/profile.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     PrismaModule,
     InstructorAvailabilityModule,
@@ -40,7 +41,6 @@ import { ReminderSchedulerService } from './admin_be/notification/reminder-sched
     SurveysModule,
     TeacherBeModule,
     StudentBeModule,
-    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
   ],
   controllers: [AppController],

@@ -10,17 +10,83 @@ export class PermissionService {
   static async loadUserPermissions(): Promise<Record<string, boolean>> {
     try {
       const user = PermissionService.getCurrentUser()
-      if (!user || !user.roleRel?.code) {
+      if (!user || !user.role) {
         console.warn('No user or role found')
         return {}
       }
 
-      const roleCode = user.roleRel.code
-      const response = await apiFetch(`/admin/role-permissions/${roleCode}`)
-      
-      if (response && response.success) {
-        return response.data || {}
+      const roleCode = user.role
+
+      // First check if user already has permissions from login
+      if (user.permissions && Object.keys(user.permissions).length > 0) {
+        return user.permissions
       }
+
+      // For admin/leader, load from server
+      if (roleCode === 'admin' || roleCode === 'leader') {
+        const response = await apiFetch(`/admin/role-permissions/${roleCode}`)
+        
+        if (response && response.success) {
+          return response.data || {}
+        }
+      }
+
+      // For other roles (student, teacher, parent), try to load from server
+      // If the endpoint is not accessible, fall back to defaults
+      try {
+        const response = await apiFetch(`/admin/role-permissions/${roleCode}`)
+        if (response && response.success) {
+          return response.data || {}
+        }
+      } catch (error) {
+        console.warn(`Could not load permissions from server for role ${roleCode}, using defaults`)
+      }
+
+      // For other roles, return default permissions
+      const defaultPermissions: Record<string, string[]> = {
+        'student': [
+          'student_dashboard',
+          'student_profile',
+          'student_learning',
+          'student_appointments',
+          'appointments',
+          'student_survey',
+          'student_course_overview',
+          'student_upload_transcript',
+          'student_adjust_parameters',
+          'student_academic_planning',
+          'student_course_detail',
+          'student_financial_survey',
+          'student_choose_mascot',
+          'student_learning_adventure',
+          'student_chat_student'
+        ],
+        'teacher': [
+          'teacher_dashboard',
+          'teacher_profile',
+          'teacher_schedule',
+          'teacher_appointments',
+          'teacher_students',
+          'teacher_survey'
+        ],
+        'parent': [
+          'parent_dashboard',
+          'parent_profile',
+          'parent_children',
+          'parent_appointments',
+          'appointments',
+          'parent_book_appointment',
+          'booking_scheduler'
+        ]
+      }
+
+      const rolePermissions = defaultPermissions[roleCode] || []
+      const permissions: Record<string, boolean> = {}
+      rolePermissions.forEach(perm => {
+        permissions[perm] = true
+      })
+
+      return permissions
       
       return {}
     } catch (error) {
@@ -47,7 +113,10 @@ export class PermissionService {
         // Save back to localStorage
         localStorage.setItem('user', JSON.stringify(updatedUser))
         
-        console.log('Permissions synced successfully:', permissions)
+        // Dispatch event to notify components
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('permissions:updated', { detail: permissions }))
+        }
       }
     } catch (error) {
       console.error('Failed to sync permissions:', error)

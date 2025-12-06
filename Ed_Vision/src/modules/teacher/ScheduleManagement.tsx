@@ -43,7 +43,6 @@ export default function ScheduleManagement({
   showToast,
 }: ScheduleManagementProps) {
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState('');
   const [showHintBanner, setShowHintBanner] = useState(true);
 
   // Chỉ quản lý tuần hiện tại
@@ -232,7 +231,6 @@ export default function ScheduleManagement({
         d.date === date ? { ...d, isAvailable: true } : d
       );
       setAvailableDates(updatedDates);
-      setSelectedDate('');
       showToast('Đã bật ngày rảnh thành công!', 'success');
     } catch (err) {
       showToast('Không thể bật ngày rảnh. Vui lòng thử lại!', 'error');

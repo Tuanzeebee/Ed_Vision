@@ -559,10 +559,10 @@ export class InstructorAvailabilityRepository {
 
   /**
    * Format Date to time string (HH:mm)
-   * Uses UTC to match how we store time in parseTimeToDate
+   * Uses UTC to match parseTimeToDate method
    */
   formatTimeToString(date: Date): string {
-    // Use UTC hours/minutes since we stored with setUTCHours in parseTimeToDate
+    // Use UTC to match the parseTimeToDate method
     const hours = date.getUTCHours().toString().padStart(2, '0');
     const minutes = date.getUTCMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;

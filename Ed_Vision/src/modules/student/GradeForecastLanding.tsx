@@ -5,6 +5,7 @@ import Header from "../../components/layout/Header"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/hooks/useAuth"
+import { useEffect } from "react"
 
 type Props = {
   // Add props if needed
@@ -16,11 +17,12 @@ export default function GradeForecastLanding({}: Props) {
   const { isAuthenticated, getDashboardPath } = useAuth()
   
   // Auto-redirect authenticated users to their dashboard
-  if (isAuthenticated) {
-    const dashboardPath = getDashboardPath()
-    navigate(dashboardPath, { replace: true })
-    return null
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      const dashboardPath = getDashboardPath()
+      navigate(dashboardPath, { replace: true })
+    }
+  }, [isAuthenticated, getDashboardPath, navigate])
 
   const handleLogin = () => {
     navigate("/auth/login")

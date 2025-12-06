@@ -148,4 +148,19 @@ export class BookingController {
 		const accountId = req.user?.account_id;
 		return this.bookingService.rejectAppointment(accountId, id, dto);
 	}
+
+	/**
+	 * Update appointment status (instructor or admin)
+	 */
+	@Put(':id/status')
+	@UseGuards(DevAuthGuard)
+	@HttpCode(HttpStatus.OK)
+	async updateStatus(
+		@Req() req: any,
+		@Param('id', ParseIntPipe) id: number,
+		@Body() body: { status: string },
+	) {
+		const accountId = req.user?.account_id;
+		return this.bookingService.updateAppointmentStatus(accountId, id, body.status);
+	}
 }
