@@ -233,33 +233,30 @@ export default function ChatStudent({}: Props) {
   // Handle dialog resize
   const startDialogResize = (e: React.MouseEvent, direction: string) => {
     e.preventDefault()
-    setIsResizingDialog(true)
-    setResizeStart({
-      x: e.clientX,
-      y: e.clientY,
-      width: groupDialogSize.width,
-      height: groupDialogSize.height
-    })
+    // capture start values in closure (no need for separate state)
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = groupDialogSize.width
+    const startHeight = groupDialogSize.height
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - e.clientX
-      const deltaY = moveEvent.clientY - e.clientY
+      const deltaX = moveEvent.clientX - startX
+      const deltaY = moveEvent.clientY - startY
 
       setGroupDialogSize(prev => {
         let newWidth = prev.width
         let newHeight = prev.height
 
-        if (direction.includes('e')) newWidth = Math.max(400, prev.width + deltaX)
-        if (direction.includes('w')) newWidth = Math.max(400, prev.width - deltaX)
-        if (direction.includes('s')) newHeight = Math.max(400, prev.height + deltaY)
-        if (direction.includes('n')) newHeight = Math.max(400, prev.height - deltaY)
+        if (direction.includes('e')) newWidth = Math.max(400, startWidth + deltaX)
+        if (direction.includes('w')) newWidth = Math.max(400, startWidth - deltaX)
+        if (direction.includes('s')) newHeight = Math.max(400, startHeight + deltaY)
+        if (direction.includes('n')) newHeight = Math.max(400, startHeight - deltaY)
 
         return { width: newWidth, height: newHeight }
       })
     }
 
     const handleMouseUp = () => {
-      setIsResizingDialog(false)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }

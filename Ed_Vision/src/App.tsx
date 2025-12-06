@@ -134,6 +134,11 @@ function App() {
                                         <Route path="/appointments" element={<ProtectedRoute permission="appointments"><AllAppointments /></ProtectedRoute>} />
                                         <Route path="/parent/student-details" element={<ProtectedRoute permission="parent_student_details"><StudentDetails /></ProtectedRoute>} />
                                         <Route path="/parent/chat" element={<ProtectedRoute permission="parent_chat"><ChatWithTeachers /></ProtectedRoute>} />
+                                        <Route path="/parent/notifications" element={<ProtectedRoute permission="parent_dashboard"><NotificationPage userRole="parent" /></ProtectedRoute>} />
+                                        
+                                        {/* Student notifications - Đường dẫn dạng /student/notifications */}
+                                        <Route path="/student/notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
+                                        
                                         {/* Admin routes - Dashboard (protected by permission) */}
                                         <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />

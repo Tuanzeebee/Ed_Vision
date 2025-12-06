@@ -26,7 +26,7 @@ export default function StudentDetails({}: Props) {
   return (
     <div className="bg-gray-50 min-h-screen w-full">
       {/* Header */}
-      <Header />
+      <Header isParentMode={true} />
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-24">
           <div className="flex items-center justify-between py-4">

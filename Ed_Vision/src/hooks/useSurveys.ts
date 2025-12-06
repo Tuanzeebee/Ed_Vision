@@ -219,6 +219,63 @@ export const useSurveys = () => {
         }
     }, []);
 
+    // Add question to survey
+    const addQuestionToSurvey = useCallback(
+        async (surveyId: string, questionId: number) => {
+            try {
+                setLoading(true);
+                setError(null);
+                await surveyService.addQuestionToSurvey(surveyId, questionId);
+                return true;
+            } catch (err: any) {
+                console.error('Error adding question:', err);
+                setError(err.response?.data?.message || 'Không thể thêm câu hỏi');
+                return false;
+            } finally {
+                setLoading(false);
+            }
+        },
+        []
+    );
+
+    // Remove question from survey
+    const removeQuestionFromSurvey = useCallback(
+        async (surveyId: string, questionId: number) => {
+            try {
+                setLoading(true);
+                setError(null);
+                await surveyService.removeQuestionFromSurvey(surveyId, questionId);
+                return true;
+            } catch (err: any) {
+                console.error('Error removing question:', err);
+                setError(err.response?.data?.message || 'Không thể xóa câu hỏi');
+                return false;
+            } finally {
+                setLoading(false);
+            }
+        },
+        []
+    );
+
+    // Reorder questions
+    const reorderQuestions = useCallback(
+        async (surveyId: string, questionOrder: { questionId: number; order: number }[]) => {
+            try {
+                setLoading(true);
+                setError(null);
+                await surveyService.reorderSurveyQuestions(surveyId, questionOrder);
+                return true;
+            } catch (err: any) {
+                console.error('Error reordering questions:', err);
+                setError(err.response?.data?.message || 'Không thể sắp xếp lại câu hỏi');
+                return false;
+            } finally {
+                setLoading(false);
+            }
+        },
+        []
+    );
+
     return {
         surveys,
         dashboard,
@@ -235,6 +292,9 @@ export const useSurveys = () => {
         getAvailableQuestions,
         sendReminder,
         exportResponses,
+        addQuestionToSurvey,
+        removeQuestionFromSurvey,
+        reorderQuestions,
     };
 };
 

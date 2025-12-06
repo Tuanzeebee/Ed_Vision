@@ -14,9 +14,10 @@ import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 interface NotificationDropdownProps {
   isAdminMode?: boolean;
   isTeacherMode?: boolean;
+  isParentMode?: boolean;
 }
 
-export default function NotificationDropdown({ isAdminMode, isTeacherMode }: NotificationDropdownProps) {
+export default function NotificationDropdown({ isAdminMode, isTeacherMode, isParentMode }: NotificationDropdownProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
@@ -74,6 +75,8 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
       navigate('/admin/my-notifications');
     } else if (isTeacherMode) {
       navigate('/teacher/notifications');
+    } else if (isParentMode) {
+      navigate('/parent/notifications');
     } else {
       navigate('/student/notifications');
     }
@@ -85,6 +88,8 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
       navigate('/admin/my-notifications');
     } else if (isTeacherMode) {
       navigate('/teacher/notifications');
+    } else if (isParentMode) {
+      navigate('/parent/notifications');
     } else {
       navigate('/student/notifications');
     }
@@ -143,7 +148,7 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
       {/* Bell Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none"
+        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
         aria-label="Thông báo"
       >
         <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -178,7 +183,7 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
             <div className="px-6 py-2 bg-gray-50 border-b border-gray-200">
               <button
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -251,7 +256,7 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <button
               onClick={handleViewAll}
-              className="w-full text-center text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+              className="w-full text-center text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors cursor-pointer"
             >
               Xem tất cả thông báo
               <i className="fas fa-arrow-right ml-2"></i>

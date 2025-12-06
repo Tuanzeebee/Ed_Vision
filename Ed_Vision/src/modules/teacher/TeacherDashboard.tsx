@@ -2,8 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/teache
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Button } from "@/components/ui/teacher/teacher_button"
 import TeacherLayout from "./components/TeacherLayout"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { dashboardAPI, type DashboardResponse } from "@/services/teacher/api"
+import { useFilterOptions } from "@/hooks/useFilterOptions"
+import toast, { Toaster } from 'react-hot-toast'
+import { RefreshCw } from "lucide-react"
 
 // Asset imports
 import imgStudent from "@/assets/teacher/Avatar_Student1.png"
@@ -16,9 +20,77 @@ export default function TeacherDashboard() {
     // State for filters and chart view
     const [selectedFaculty, setSelectedFaculty] = useState("all")
     const [selectedCourse, setSelectedCourse] = useState("all")
-    const [selectedYear, setSelectedYear] = useState("2024-2025")
-    const [selectedSemester, setSelectedSemester] = useState("hk1")
+    const [selectedYear, setSelectedYear] = useState("all")
+    const [selectedSemester, setSelectedSemester] = useState("all")
     const [chartView, setChartView] = useState("weekly")
+
+    // Use shared filter options hook
+    const { filterOptions, loading: loadingFilters } = useFilterOptions()
+
+    // Dashboard data state
+    const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null)
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    // Fetch dashboard data on mount and when filters change
+    useEffect(() => {
+        fetchDashboardData()
+    }, [selectedYear, selectedSemester])
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            
+            const filters = {
+                academicYear: selectedYear,
+                semester: selectedSemester === 'hk1' ? 1 : 2,
+            }
+            
+            const data = await dashboardAPI.getStats(filters)
+            setDashboardData(data)
+        } catch (err: any) {
+            console.error('Error fetching dashboard data:', err)
+            setError(err.message || 'Failed to load dashboard data')
+            toast.error('Failed to load dashboard data')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleRefresh = async () => {
+        try {
+            setLoading(true)
+            console.log('🔄 Refreshing dashboard...')
+            
+            // Clear cache
+            dashboardAPI.clearCache()
+            
+            // Refetch data
+            await fetchDashboardData()
+            
+            toast.success('Dashboard refreshed successfully!')
+        } catch (err) {
+            console.error('Error refreshing:', err)
+            toast.error('Failed to refresh dashboard')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Extract stats from dashboardData
+    const stats = dashboardData?.stats || {
+        totalStudents: 0,
+        totalClasses: 0,
+        atRiskPercentage: 0,
+        atRiskCount: 0,
+        gradeDistribution: { low: 0, medium: 0, high: 0 },
+        averageGPA: 0,
+        medianGPA: 0,
+        minGPA: 0,
+    }
+
+    const atRiskStudents = dashboardData?.atRiskStudents || []
 
     // Render different chart based on view type
     const renderChart = () => {
@@ -346,11 +418,33 @@ export default function TeacherDashboard() {
 
     return (
         <TeacherLayout currentPage="dashboard">
+            <Toaster position="top-right" />
+            
             {/* Page Header */}
             <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6 rounded-xl shadow-lg mb-6">
-                <h2 className="text-3xl font-bold mb-2">Tổng quan Dashboard</h2>
-                <p className="text-blue-100">Theo dõi tình hình học tập và quản lý sinh viên</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl font-bold mb-2">Tổng quan Dashboard</h2>
+                        <p className="text-blue-100">Theo dõi tình hình học tập và quản lý sinh viên</p>
+                    </div>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={loading}
+                        className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Refresh dashboard"
+                    >
+                        <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                        <span>Refresh</span>
+                    </button>
+                </div>
             </div>
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                    <p className="font-medium">Error loading dashboard</p>
+                    <p className="text-sm">{error}</p>
+                </div>
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -359,8 +453,14 @@ export default function TeacherDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600 mb-1">Tổng số sinh viên</p>
-                                <p className="text-3xl font-bold text-gray-900">248</p>
-                                <p className="text-sm text-green-600 mt-2">+12 từ kỳ trước</p>
+                                {loading ? (
+                                    <div className="h-9 w-20 bg-gray-200 animate-pulse rounded"></div>
+                                ) : (
+                                    <>
+                                        <p className="text-3xl font-bold text-gray-900">{stats.totalStudents}</p>
+                                        <p className="text-sm text-gray-500 mt-2">Đang học</p>
+                                    </>
+                                )}
                             </div>
                             <div className="bg-blue-100 p-3 rounded-lg">
                                 <i className="fas fa-users w-6 h-6 text-blue-600"></i>
@@ -373,9 +473,15 @@ export default function TeacherDashboard() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600 mb-1">Số lớp đang dạy</p>
-                                <p className="text-3xl font-bold text-gray-900">8</p>
-                                <p className="text-sm text-blue-600 mt-2">3 lớp mới</p>
+                                <p className="text-sm text-gray-600 mb-1">Số lớp phụ trách</p>
+                                {loading ? (
+                                    <div className="h-9 w-20 bg-gray-200 animate-pulse rounded"></div>
+                                ) : (
+                                    <>
+                                        <p className="text-3xl font-bold text-gray-900">{stats.totalClasses}</p>
+                                        <p className="text-sm text-gray-500 mt-2">Đang hoạt động</p>
+                                    </>
+                                )}
                             </div>
                             <div className="bg-green-100 p-3 rounded-lg">
                                 <i className="fas fa-book-open w-6 h-6 text-green-600"></i>
@@ -389,8 +495,14 @@ export default function TeacherDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600 mb-1">% sinh viên At-Risk</p>
-                                <p className="text-3xl font-bold text-red-600">12%</p>
-                                <p className="text-sm text-red-600 mt-2">30 sinh viên</p>
+                                {loading ? (
+                                    <div className="h-9 w-20 bg-gray-200 animate-pulse rounded"></div>
+                                ) : (
+                                    <>
+                                        <p className="text-3xl font-bold text-red-600">{stats.atRiskPercentage.toFixed(1)}%</p>
+                                        <p className="text-sm text-red-600 mt-2">{stats.atRiskCount} sinh viên</p>
+                                    </>
+                                )}
                             </div>
                             <div className="bg-red-100 p-3 rounded-lg">
                                 <i className="fas fa-exclamation-triangle w-6 h-6 text-red-600"></i>
@@ -403,49 +515,65 @@ export default function TeacherDashboard() {
                     <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
-                                <p className="text-sm text-gray-600 mb-3">Phân bố điểm sinh viên</p>
+                                <p className="text-sm text-gray-600 mb-3">Phân bố điểm sinh viên (GPA)</p>
 
-                                {/* Distribution with mini progress bars */}
-                                <div className="space-y-2 mb-3">
-                                    <div>
-                                        <div className="flex items-baseline justify-between mb-1">
-                                            <span className="text-xs text-red-700">Thấp (&lt;5)</span>
-                                            <span className="text-xl font-bold text-red-600">50 <span className="text-xs font-medium">20%</span></span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div className="bg-red-500 h-1.5 rounded-full" style={{ width: '20%' }}></div>
-                                        </div>
+                                {loading ? (
+                                    <div className="space-y-3">
+                                        <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+                                        <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+                                        <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
                                     </div>
+                                ) : (
+                                    <>
+                                        {/* Distribution with mini progress bars */}
+                                        <div className="space-y-2 mb-3">
+                                            <div>
+                                                <div className="flex items-baseline justify-between mb-1">
+                                                    <span className="text-xs text-red-700">Thấp (&lt;2.0)</span>
+                                                    <span className="text-xl font-bold text-red-600">
+                                                        {stats.gradeDistribution.low} <span className="text-xs font-medium">{stats.totalStudents > 0 ? ((stats.gradeDistribution.low / stats.totalStudents) * 100).toFixed(0) : 0}%</span>
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                    <div className="bg-red-500 h-1.5 rounded-full" style={{ width: `${stats.totalStudents > 0 ? (stats.gradeDistribution.low / stats.totalStudents) * 100 : 0}%` }}></div>
+                                                </div>
+                                            </div>
 
-                                    <div>
-                                        <div className="flex items-baseline justify-between mb-1">
-                                            <span className="text-xs text-yellow-700">Trung bình (5-7.9)</span>
-                                            <span className="text-xl font-bold text-yellow-700">74 <span className="text-xs font-medium">30%</span></span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div className="bg-yellow-500 h-1.5 rounded-full" style={{ width: '30%' }}></div>
-                                        </div>
-                                    </div>
+                                            <div>
+                                                <div className="flex items-baseline justify-between mb-1">
+                                                    <span className="text-xs text-yellow-700">Trung bình (2.0-3.19)</span>
+                                                    <span className="text-xl font-bold text-yellow-700">
+                                                        {stats.gradeDistribution.medium} <span className="text-xs font-medium">{stats.totalStudents > 0 ? ((stats.gradeDistribution.medium / stats.totalStudents) * 100).toFixed(0) : 0}%</span>
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                    <div className="bg-yellow-500 h-1.5 rounded-full" style={{ width: `${stats.totalStudents > 0 ? (stats.gradeDistribution.medium / stats.totalStudents) * 100 : 0}%` }}></div>
+                                                </div>
+                                            </div>
 
-                                    <div>
-                                        <div className="flex items-baseline justify-between mb-1">
-                                            <span className="text-xs text-green-700">Cao (≥8)</span>
-                                            <span className="text-xl font-bold text-green-600">124 <span className="text-xs font-medium">50%</span></span>
+                                            <div>
+                                                <div className="flex items-baseline justify-between mb-1">
+                                                    <span className="text-xs text-green-700">Cao (≥3.2)</span>
+                                                    <span className="text-xl font-bold text-green-600">
+                                                        {stats.gradeDistribution.high} <span className="text-xs font-medium">{stats.totalStudents > 0 ? ((stats.gradeDistribution.high / stats.totalStudents) * 100).toFixed(0) : 0}%</span>
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                    <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${stats.totalStudents > 0 ? (stats.gradeDistribution.high / stats.totalStudents) * 100 : 0}%` }}></div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {/* Key stats inline */}
-                                <div className="text-xs text-gray-600 pt-2 border-t">
-                                    <span>Min: <span className="font-bold text-gray-900">3.2</span></span>
-                                    <span className="mx-2">•</span>
-                                    <span>Trung vị: <span className="font-bold text-blue-600">7.5</span></span>
-                                    <span className="mx-2">•</span>
-                                    <span>Giữa: <span className="font-bold text-gray-900">6.6</span></span>
-                                </div>
+                                        {/* Key stats inline */}
+                                        <div className="text-xs text-gray-600 pt-2 border-t">
+                                            <span>Min: <span className="font-bold text-gray-900">{stats.minGPA.toFixed(2)}</span></span>
+                                            <span className="mx-2">•</span>
+                                            <span>Trung vị: <span className="font-bold text-blue-600">{stats.medianGPA.toFixed(2)}</span></span>
+                                            <span className="mx-2">•</span>
+                                            <span>TB: <span className="font-bold text-gray-900">{stats.averageGPA.toFixed(2)}</span></span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             <div className="bg-purple-100 p-3 rounded-lg ml-3">
                                 <i className="fas fa-chart-bar w-6 h-6 text-purple-600"></i>
@@ -472,47 +600,52 @@ export default function TeacherDashboard() {
                                     className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                     value={selectedFaculty}
                                     onChange={(e) => setSelectedFaculty(e.target.value)}
+                                    disabled={loadingFilters}
                                 >
                                     <option value="all">Tất cả khoa</option>
-                                    <option value="cnpm">Khoa Công nghệ phần mềm</option>
-                                    <option value="khmt">Khoa Khoa học máy tính</option>
-                                    <option value="httt">Khoa Hệ thống thông tin</option>
-                                    <option value="mmt">Khoa Mạng máy tính & Truyền thông</option>
-                                    <option value="ktmt">Khoa Kỹ thuật máy tính</option>
+                                    {filterOptions.faculties.map((faculty, idx) => (
+                                        <option key={idx} value={faculty}>{faculty}</option>
+                                    ))}
                                 </select>
 
                                 <select
                                     className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                     value={selectedCourse}
                                     onChange={(e) => setSelectedCourse(e.target.value)}
+                                    disabled={loadingFilters}
                                 >
-                                    <option value="all">Tất cả khóa</option>
-                                    <option value="k28">Khóa 28</option>
-                                    <option value="k29">Khóa 29</option>
-                                    <option value="k30">Khóa 30</option>
-                                    <option value="k31">Khóa 31</option>
+                                    <option value="all">Tất cả lớp</option>
+                                    {filterOptions.classes.map((cls, idx) => (
+                                        <option key={idx} value={cls}>{cls}</option>
+                                    ))}
                                 </select>
 
                                 <select
                                     className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(e.target.value)}
+                                    disabled={loadingFilters}
                                 >
-                                    <option value="2024-2025">Năm học 2024-2025</option>
-                                    <option value="2023-2024">Năm học 2023-2024</option>
-                                    <option value="2022-2023">Năm học 2022-2023</option>
-                                    <option value="2021-2022">Năm học 2021-2022</option>
+                                    <option value="all">Tất cả năm học</option>
+                                    {filterOptions.academicYears.map((year) => (
+                                        <option key={year} value={year}>
+                                            Năm học {year}
+                                        </option>
+                                    ))}
                                 </select>
 
                                 <select
                                     className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                     value={selectedSemester}
                                     onChange={(e) => setSelectedSemester(e.target.value)}
+                                    disabled={loadingFilters}
                                 >
-                                    <option value="hk1">Học kỳ 1</option>
-                                    <option value="hk2">Học kỳ 2</option>
-                                    <option value="hk3">Học kỳ hè</option>
-                                    <option value="all">Cả năm học</option>
+                                    <option value="all">Tất cả học kỳ</option>
+                                    {filterOptions.semesters.map((semester) => (
+                                        <option key={semester} value={semester}>
+                                            {semester === 'HK1' ? 'Học kỳ 1' : semester === 'HK2' ? 'Học kỳ 2' : 'Học kỳ hè'}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
