@@ -51,6 +51,8 @@ export interface SurveyResponse {
 }
 
 export interface SurveyAnalytics {
+    surveyId: string;
+    title: string;
     survey: Survey;
     totalResponses: number;
     responseRate: number;

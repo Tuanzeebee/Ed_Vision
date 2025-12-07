@@ -19,6 +19,10 @@ import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
+import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
+import { StudentChatModule } from './student_be/chat/student-chat.module';
+import { ChatModule } from './mongodb/chat.module';
+
 @Module({
   imports: [
     PrismaModule,
@@ -39,6 +43,9 @@ import { ProfileModule } from './profile/profile.module';
     StudentBeModule,
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    ChatModule,
+    TeacherChatModule,
+    StudentChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

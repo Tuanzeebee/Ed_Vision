@@ -31,24 +31,33 @@ import {
 interface Survey {
     id: string
     title: string
-    type: "beginning" | "midterm" | "final"
-    semester: string
-    academicYear: string
-    createdDate: string
-    dueDate: string
+    type?: "beginning" | "midterm" | "final"
+    semester?: string
+    academicYear?: string
+    createdDate?: string
+    dueDate?: string
     status: "draft" | "active" | "completed" | "expired" | "closed"
-    totalStudents: number
-    completedResponses: number
-    avgCompletion: number
-    faculty: string
-    className: string
+    totalStudents?: number
+    completedResponses?: number
+    avgCompletion?: number
+    faculty?: string
+    className?: string
     description?: string
-    reminders: number
+    reminders?: number
     lastReminderDate?: string
     averageScore?: number
-    riskStudents: number
-    completedStudents: StudentResponse[]
-    incompleteStudents: IncompleteStudent[]
+    riskStudents?: number
+    completedStudents?: StudentResponse[]
+    incompleteStudents?: IncompleteStudent[]
+    // API response fields
+    startDate?: string
+    endDate?: string
+    createdAt?: string
+    updatedAt?: string
+    totalResponses?: number
+    responseRate?: number
+    targetClasses?: string[]
+    questions?: any[]
 }
 
 interface SurveyQuestion {
@@ -125,12 +134,20 @@ const StudentSurveyManagement = () => {
     const [reminderMessage, setReminderMessage] = useState("")
     const [showDetailView, setShowDetailView] = useState(false)
     const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
-    const [showAnalytics, setShowAnalytics] = useState(false)
     const [showIncompleteModal, setShowIncompleteModal] = useState(false)
     const [selectedIncompleteStudents, setSelectedIncompleteStudents] = useState<IncompleteStudent[]>([])
     const [bulkReminderMessage, setBulkReminderMessage] = useState("")
     const [showQuestionBank, setShowQuestionBank] = useState(false)
     const [questionBankCategory, setQuestionBankCategory] = useState<string>("all")
+
+    // Statistics states
+    const [historyStats, setHistoryStats] = useState({
+        totalCompletedSurveys: 0,
+        totalResponses: 0,
+        improvingStudents: 0,
+        needSupportStudents: 0,
+    })
+    const [targetStudentCount, setTargetStudentCount] = useState(0)
 
     // Toast notifications
     const toast = useToast()
@@ -147,10 +164,11 @@ const StudentSurveyManagement = () => {
         deleteSurvey: apiDeleteSurvey,
         exportResponses: apiExportResponses,
         getAvailableQuestions: apiGetAvailableQuestions,
-        // These will be used later for detail views and analytics
-        // getSurveyDetail,
-        // getSurveyAnalytics,
-        // sendReminder,
+        getSurveyDetail,
+        getSurveyAnalytics,
+        getIncompleteStudents,
+        getHistoryStatistics,
+        getTargetStudentCount,
     } = useSurveys()
 
     // State for available questions from database
@@ -216,6 +234,38 @@ const StudentSurveyManagement = () => {
         loadAvailableQuestions()
     }, [])
 
+    // Load history statistics when on history tab
+    useEffect(() => {
+        const loadHistoryStats = async () => {
+            if (activeTab === 'history') {
+                try {
+                    const stats = await getHistoryStatistics()
+                    if (stats) {
+                        setHistoryStats(stats)
+                    }
+                } catch (error) {
+                    console.error('Error loading history statistics:', error)
+                }
+            }
+        }
+        loadHistoryStats()
+    }, [activeTab])
+
+    // Load target student count when filters change or on create survey tab
+    useEffect(() => {
+        const loadStudentCount = async () => {
+            if (activeTab === 'create') {
+                try {
+                    const count = await getTargetStudentCount(targetFaculty, targetClass)
+                    setTargetStudentCount(count)
+                } catch (error) {
+                    console.error('Error loading student count:', error)
+                }
+            }
+        }
+        loadStudentCount()
+    }, [activeTab, targetFaculty, targetClass])
+
     // Helper function to map backend status to frontend status
     const mapStatusToFrontend = (backendStatus: string): "draft" | "active" | "completed" | "expired" => {
         switch (backendStatus) {
@@ -240,8 +290,8 @@ const StudentSurveyManagement = () => {
             type: "beginning" as const,
             semester: "HK1",
             academicYear: "2024-2025",
-            createdDate: s.createdAt || new Date().toISOString().split('T')[0],
-            dueDate: s.endDate || new Date().toISOString().split('T')[0],
+            createdDate: s.createdAt ? s.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            dueDate: s.endDate ? s.endDate.split('T')[0] : new Date().toISOString().split('T')[0],
             status: mapStatusToFrontend(s.status),
             totalStudents: 150,
             completedResponses: s.totalResponses || 0,
@@ -262,8 +312,8 @@ const StudentSurveyManagement = () => {
         type: "final" as const,
         semester: "HK2",
         academicYear: "2023-2024",
-        createdDate: s.createdAt || new Date().toISOString().split('T')[0],
-        dueDate: s.endDate || new Date().toISOString().split('T')[0],
+        createdDate: s.createdAt ? s.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        dueDate: s.endDate ? s.endDate.split('T')[0] : new Date().toISOString().split('T')[0],
         status: mapStatusToFrontend(s.status),
         totalStudents: 145,
         completedResponses: s.totalResponses || 0,
@@ -318,8 +368,8 @@ const StudentSurveyManagement = () => {
             if (searchTerm.trim() !== '') {
                 const searchLower = searchTerm.toLowerCase()
                 const titleMatch = survey.title.toLowerCase().includes(searchLower)
-                const facultyMatch = survey.faculty.toLowerCase().includes(searchLower)
-                const classMatch = survey.className.toLowerCase().includes(searchLower)
+                const facultyMatch = survey.faculty?.toLowerCase().includes(searchLower) || false
+                const classMatch = survey.className?.toLowerCase().includes(searchLower) || false
 
                 if (!titleMatch && !facultyMatch && !classMatch) {
                     return false
@@ -346,45 +396,62 @@ const StudentSurveyManagement = () => {
         }
     }
 
-    const viewSurveyDetails = (survey: Survey) => {
-        setSelectedSurvey(survey)
-        setShowDetailView(true)
-    }
-
-    const viewSurveyAnalytics = (survey: Survey) => {
-        setSelectedSurvey(survey)
-        setShowAnalytics(true)
-    }
-
-    const viewIncompleteStudents = (survey: Survey) => {
-        // Mock incomplete students data
-        const mockIncomplete: IncompleteStudent[] = [
-            {
-                studentId: "SV003",
-                studentName: "Lê Văn C",
-                studentCode: "19IT003",
-                lastAccess: "2024-09-10",
-                remindersSent: 2,
-                email: "levanc@student.edu.vn",
-                phoneNumber: "0123456789"
-            },
-            {
-                studentId: "SV004",
-                studentName: "Phạm Thị D",
-                studentCode: "19IT004",
-                lastAccess: "2024-09-08",
-                remindersSent: 1,
-                email: "phamthid@student.edu.vn",
-                phoneNumber: "0987654321"
+    const viewSurveyDetails = async (survey: Survey) => {
+        try {
+            setSelectedSurvey(survey)
+            setShowDetailView(true)
+            
+            // Fetch full survey details with all questions
+            const fullDetails = await getSurveyDetail(survey.id)
+            
+            // Fetch analytics to get student response information
+            const analytics = await getSurveyAnalytics(survey.id)
+            
+            if (fullDetails) {
+                // Merge API response with local survey data and analytics
+                setSelectedSurvey({
+                    ...survey,
+                    ...fullDetails,
+                    ...(analytics && {
+                        totalResponses: analytics.totalResponses,
+                        responseRate: analytics.responseRate,
+                        completedStudents: analytics.responses?.map((r: any) => ({
+                            studentId: r.student?.id || '',
+                            studentName: r.student?.name || 'Unknown',
+                            studentCode: r.student?.code || '',
+                            completedDate: r.submittedAt || '',
+                            responses: []
+                        })) || []
+                    })
+                } as Survey)
             }
-        ]
-        setSelectedIncompleteStudents(mockIncomplete)
-        setShowIncompleteModal(true)
-        setBulkReminderMessage(
-            `Thông báo quan trọng: Khảo sát "${survey.title}" sẽ hết hạn vào ${survey.dueDate}. ` +
-            `Vui lòng hoàn thành khảo sát để giúp giảng viên nắm bắt tình hình học tập và hỗ trợ bạn tốt hơn. ` +
-            `Truy cập hệ thống học tập để thực hiện khảo sát.`
-        )
+        } catch (error) {
+            console.error('Error loading survey details:', error)
+            toast.error('Không thể tải chi tiết khảo sát')
+        }
+    }
+
+    const viewIncompleteStudents = async (survey: Survey) => {
+        try {
+            // Fetch incomplete students from API
+            const incompleteStudents = await getIncompleteStudents(survey.id)
+            
+            if (!incompleteStudents || incompleteStudents.length === 0) {
+                toast.info('Tất cả sinh viên đã hoàn thành khảo sát')
+                return
+            }
+            
+            setSelectedIncompleteStudents(incompleteStudents)
+            setShowIncompleteModal(true)
+            setBulkReminderMessage(
+                `Thông báo quan trọng: Khảo sát "${survey.title}" sẽ hết hạn vào ${survey.dueDate}. ` +
+                `Vui lòng hoàn thành khảo sát để giúp giảng viên nắm bắt tình hình học tập và hỗ trợ bạn tốt hơn. ` +
+                `Truy cập hệ thống học tập để thực hiện khảo sát.`
+            )
+        } catch (error) {
+            console.error('Error loading incomplete students:', error)
+            toast.error('Không thể tải danh sách sinh viên chưa hoàn thành')
+        }
     }
 
     const sendBulkReminder = () => {
@@ -513,10 +580,10 @@ const StudentSurveyManagement = () => {
         if (survey) {
             // Load survey data into create form
             setSurveyTitle(survey.title)
-            setSurveyType(survey.type)
-            setSurveyDueDate(survey.dueDate)
-            setTargetFaculty(survey.faculty)
-            setTargetClass(survey.className)
+            setSurveyType(survey.type || "beginning")
+            setSurveyDueDate(survey.dueDate || "")
+            setTargetFaculty(survey.faculty || "all")
+            setTargetClass(survey.className || "all")
             setEditingSurveyId(surveyId)
             setActiveTab("create")
             // Survey edit mode - questions loaded from API
@@ -786,7 +853,7 @@ const StudentSurveyManagement = () => {
                                     survey.status === "completed" || survey.status === "closed" ? "Đã hoàn thành" :
                                         survey.status === "draft" ? "Nháp" : "Hết hạn"}
                             </Badge>
-                            <Badge variant="outline">{getTypeText(survey.type)}</Badge>
+                            {survey.type && <Badge variant="outline">{getTypeText(survey.type)}</Badge>}
                         </div>
                         <CardTitle className="text-lg">{survey.title}</CardTitle>
                         <CardDescription className="mt-2">
@@ -802,14 +869,6 @@ const StudentSurveyManagement = () => {
                                 title="Xem chi tiết"
                             >
                                 <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => viewSurveyAnalytics(survey)}
-                                title="Xem phân tích"
-                            >
-                                <BarChart3 className="w-4 h-4" />
                             </Button>
                             <Button
                                 variant="ghost"
@@ -932,9 +991,9 @@ const StudentSurveyManagement = () => {
         const surveysToCount = hasActiveFilters ? filteredActiveSurveys : mockActiveSurveys
 
         const activeSurveysCount = apiDashboard?.activeSurveys || surveysToCount.length
-        const totalResponses = apiDashboard?.totalResponses || surveysToCount.reduce((sum, s) => sum + s.completedResponses, 0)
+        const totalResponses = apiDashboard?.totalResponses || surveysToCount.reduce((sum, s) => sum + (s.completedResponses || 0), 0)
         const avgResponseRate = apiDashboard?.averageResponseRate ||
-            (surveysToCount.length > 0 ? Math.round(surveysToCount.reduce((sum, s) => sum + s.avgCompletion, 0) / surveysToCount.length) : 0)
+            (surveysToCount.length > 0 ? Math.round(surveysToCount.reduce((sum, s) => sum + (s.avgCompletion || 0), 0) / surveysToCount.length) : 0)
 
         return (
             <div>
@@ -1009,7 +1068,7 @@ const StudentSurveyManagement = () => {
             selectedSurveyType !== 'all' || searchTerm.trim() !== ''
 
         const surveysToCount = hasActiveFilters ? filteredCompletedSurveys : mockCompletedSurveys
-        const totalCompletedResponses = surveysToCount.reduce((sum, s) => sum + s.completedResponses, 0)
+        const totalCompletedResponses = surveysToCount.reduce((sum, s) => sum + (s.completedResponses || 0), 0)
 
         return (
             <div>
@@ -1046,7 +1105,7 @@ const StudentSurveyManagement = () => {
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold text-green-600">0</span>
+                                <span className="text-3xl font-bold text-green-600">{historyStats.improvingStudents}</span>
                                 <TrendingUp className="w-8 h-8 text-green-600" />
                             </div>
                             <p className="text-sm text-gray-500 mt-2">Đang tiến bộ</p>
@@ -1059,7 +1118,7 @@ const StudentSurveyManagement = () => {
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold text-red-600">0</span>
+                                <span className="text-3xl font-bold text-red-600">{historyStats.needSupportStudents}</span>
                                 <AlertTriangle className="w-8 h-8 text-red-600" />
                             </div>
                             <p className="text-sm text-gray-500 mt-2">Mức độ cao</p>
@@ -1132,8 +1191,7 @@ const StudentSurveyManagement = () => {
                             <Users className="w-8 h-8 text-green-600" />
                         </div>
                         <p className="text-sm text-gray-500 mt-2">
-                            {targetFaculty === "all" && targetClass === "all" ? "450 sinh viên" :
-                                targetClass === "all" ? "~200 sinh viên" : "~50 sinh viên"}
+                            {targetStudentCount} sinh viên
                         </p>
                     </CardContent>
                 </Card>
@@ -1487,7 +1545,7 @@ const StudentSurveyManagement = () => {
     // Loading state
     if (loading) {
         return (
-            <TeacherLayout>
+            <TeacherLayout currentPage="survey-management">
                 <div className="flex items-center justify-center h-screen">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
@@ -1501,7 +1559,7 @@ const StudentSurveyManagement = () => {
     // Error state
     if (error) {
         return (
-            <TeacherLayout>
+            <TeacherLayout currentPage="survey-management">
                 <div className="flex items-center justify-center h-screen">
                     <div className="text-center">
                         <div className="text-red-600 mb-4">
@@ -1519,7 +1577,7 @@ const StudentSurveyManagement = () => {
     }
 
     return (
-        <TeacherLayout>
+        <TeacherLayout currentPage="survey-management">
             <div className="p-6">
                 <div className="bg-gradient-to-r from-pink-600 to-rose-600 text-white p-6 rounded-xl shadow-lg mb-6">
                     <h1 className="text-3xl font-bold mb-2">Khảo sát sinh viên</h1>
@@ -1570,8 +1628,8 @@ const StudentSurveyManagement = () => {
 
                 {/* Reminder Dialog */}
                 {showReminderDialog && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+                    <div className="fixed inset-0 bg-white bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
                             <div className="flex items-center gap-3 mb-4">
                                 <MessageSquare className="w-6 h-6 text-blue-600" />
                                 <h3 className="text-xl font-bold">Gửi nhắc nhở</h3>
@@ -1610,8 +1668,8 @@ const StudentSurveyManagement = () => {
 
                 {/* Question Bank Modal */}
                 {showQuestionBank && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-xl">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <FileText className="w-6 h-6 text-green-600" />
@@ -1767,8 +1825,8 @@ const StudentSurveyManagement = () => {
 
                 {/* Incomplete Students Modal */}
                 {showIncompleteModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div className="fixed inset-0 bg-white bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-xl">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Users className="w-6 h-6 text-orange-600" />
@@ -1830,8 +1888,8 @@ const StudentSurveyManagement = () => {
 
                 {/* Survey Detail View Modal */}
                 {showDetailView && selectedSurvey && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div className="fixed inset-0 bg-white bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-xl">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Eye className="w-6 h-6 text-blue-600" />
@@ -1848,9 +1906,15 @@ const StudentSurveyManagement = () => {
                                         <h4 className="font-medium mb-2">Thông tin cơ bản</h4>
                                         <div className="space-y-2 text-sm">
                                             <p><strong>Tiêu đề:</strong> {selectedSurvey.title}</p>
-                                            <p><strong>Loại:</strong> {getTypeText(selectedSurvey.type)}</p>
-                                            <p><strong>Khoa:</strong> {selectedSurvey.faculty}</p>
-                                            <p><strong>Lớp:</strong> {selectedSurvey.className}</p>
+                                            {selectedSurvey.description && (
+                                                <p><strong>Mô tả:</strong> {selectedSurvey.description}</p>
+                                            )}
+                                            {selectedSurvey.type && (
+                                                <p><strong>Loại:</strong> {getTypeText(selectedSurvey.type)}</p>
+                                            )}
+                                            {selectedSurvey.targetClasses && selectedSurvey.targetClasses.length > 0 && (
+                                                <p><strong>Lớp mục tiêu:</strong> {selectedSurvey.targetClasses.join(', ')}</p>
+                                            )}
                                             <p><strong>Trạng thái:</strong>
                                                 <Badge className={`ml-2 ${getStatusColor(selectedSurvey.status)}`}>
                                                     {selectedSurvey.status === "active" ? "Đang diễn ra" :
@@ -1861,175 +1925,122 @@ const StudentSurveyManagement = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <h4 className="font-medium mb-2">Thống kê</h4>
+                                        <h4 className="font-medium mb-2">Thống kê & Thời gian</h4>
                                         <div className="space-y-2 text-sm">
-                                            <p><strong>Tổng sinh viên:</strong> {selectedSurvey.totalStudents}</p>
-                                            <p><strong>Đã hoàn thành:</strong> {selectedSurvey.completedResponses}</p>
-                                            <p><strong>Tỷ lệ hoàn thành:</strong> {selectedSurvey.avgCompletion}%</p>
-                                            <p><strong>Ngày tạo:</strong> {selectedSurvey.createdDate}</p>
-                                            <p><strong>Hạn chót:</strong> {selectedSurvey.dueDate}</p>
+                                            {selectedSurvey.totalResponses !== undefined && (
+                                                <p><strong>Tổng phản hồi:</strong> {selectedSurvey.totalResponses}</p>
+                                            )}
+                                            {selectedSurvey.responseRate !== undefined && (
+                                                <p><strong>Tỷ lệ phản hồi:</strong> {selectedSurvey.responseRate.toFixed(1)}%</p>
+                                            )}
+                                            {selectedSurvey.startDate && (
+                                                <p><strong>Ngày bắt đầu:</strong> {new Date(selectedSurvey.startDate).toLocaleDateString('vi-VN')}</p>
+                                            )}
+                                            {selectedSurvey.endDate && (
+                                                <p><strong>Ngày kết thúc:</strong> {new Date(selectedSurvey.endDate).toLocaleDateString('vi-VN')}</p>
+                                            )}
+                                            {selectedSurvey.createdAt && (
+                                                <p><strong>Ngày tạo:</strong> {new Date(selectedSurvey.createdAt).toLocaleDateString('vi-VN')}</p>
+                                            )}
+                                            {selectedSurvey.createdDate && !selectedSurvey.createdAt && (
+                                                <p><strong>Ngày tạo:</strong> {new Date(selectedSurvey.createdDate).toLocaleDateString('vi-VN')}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium mb-3">Danh sách câu hỏi</h4>
+                                    <h4 className="font-medium mb-3">Danh sách câu hỏi ({selectedSurvey.questions?.length || 0} câu)</h4>
                                     <div className="space-y-3">
-                                        {questions.map((question, idx) => (
-                                            <Card key={question.id}>
-                                                <CardContent className="pt-4">
-                                                    <div className="flex items-start gap-3">
-                                                        <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm font-medium">
-                                                            {idx + 1}
-                                                        </span>
-                                                        <div className="flex-1">
-                                                            <p className="font-medium">{question.question}</p>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {question.category === "financial" ? "💰 Tài chính" :
-                                                                        question.category === "mental" ? "🧠 Tâm lý" :
-                                                                            question.category === "academic" ? "📚 Học tập" : "👥 Xã hội"}
-                                                                </Badge>
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {question.type === "scale" ? "Đánh giá" : question.type === "choice" ? "Trắc nghiệm" : "Văn bản"}
-                                                                </Badge>
-                                                                {question.isRequired && (
-                                                                    <Badge variant="outline" className="text-xs text-red-600 border-red-200">
-                                                                        Bắt buộc
+                                        {selectedSurvey.questions && selectedSurvey.questions.length > 0 ? (
+                                            selectedSurvey.questions.map((question: any, idx: number) => (
+                                                <Card key={question.id}>
+                                                    <CardContent className="pt-4">
+                                                        <div className="flex items-start gap-3">
+                                                            <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm font-medium">
+                                                                {idx + 1}
+                                                            </span>
+                                                            <div className="flex-1">
+                                                                <p className="font-medium">{question.question}</p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {question.category === "financial" ? "💰 Tài chính" :
+                                                                            question.category === "mental" ? "🧠 Tâm lý" :
+                                                                                question.category === "academic" ? "📚 Học tập" : "👥 Xã hội"}
                                                                     </Badge>
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {question.type === "scale" ? "Đánh giá" : question.type === "choice" ? "Trắc nghiệm" : "Văn bản"}
+                                                                    </Badge>
+                                                                    {question.required && (
+                                                                        <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                                                                            Bắt buộc
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                {question.options && question.options.length > 0 && (
+                                                                    <div className="mt-2 text-sm text-gray-600">
+                                                                        <p className="font-medium mb-1">Các lựa chọn:</p>
+                                                                        <ul className="list-disc list-inside space-y-1">
+                                                                            {question.options.map((opt: string, i: number) => (
+                                                                                <li key={i}>{opt}</li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+                                                    </CardContent>
+                                                </Card>
+                                            ))
+                                        ) : (
+                                            <p className="text-gray-500 text-center py-4">Không có câu hỏi nào</p>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
-                {/* Survey Analytics Modal */}
-                {showAnalytics && selectedSurvey && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <BarChart3 className="w-6 h-6 text-green-600" />
-                                    <h3 className="text-xl font-bold">Phân tích khảo sát</h3>
-                                </div>
-                                <Button variant="ghost" onClick={() => setShowAnalytics(false)}>
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Response Rate Chart */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Tỷ lệ phản hồi</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="h-64 flex items-center justify-center text-gray-500">
-                                            [Biểu đồ tỷ lệ phản hồi]
+                                {/* Danh sách sinh viên đã hoàn thành */}
+                                {selectedSurvey.completedStudents && selectedSurvey.completedStudents.length > 0 && (
+                                    <div>
+                                        <h4 className="font-medium mb-3">
+                                            Sinh viên đã hoàn thành ({selectedSurvey.completedStudents.length})
+                                        </h4>
+                                        <div className="max-h-[300px] overflow-y-auto space-y-2">
+                                            {selectedSurvey.completedStudents.map((student) => (
+                                                <Card key={student.studentId}>
+                                                    <CardContent className="pt-3 pb-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                                                <div>
+                                                                    <p className="font-medium text-sm">{student.studentName}</p>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        Mã SV: {student.studentCode}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                                                                    Đã hoàn thành
+                                                                </Badge>
+                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                    {student.completedDate ? new Date(student.completedDate).toLocaleString('vi-VN') : ''}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                )}
 
-                                {/* Category Analysis */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Phân tích theo danh mục</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm">💰 Tài chính</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-20 h-2 bg-gray-200 rounded">
-                                                        <div className="w-3/4 h-2 bg-yellow-500 rounded"></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium">3.2/5</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm">🧠 Tâm lý</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-20 h-2 bg-gray-200 rounded">
-                                                        <div className="w-4/5 h-2 bg-green-500 rounded"></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium">4.1/5</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm">📚 Học tập</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-20 h-2 bg-gray-200 rounded">
-                                                        <div className="w-3/5 h-2 bg-blue-500 rounded"></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium">2.8/5</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm">👥 Xã hội</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-20 h-2 bg-gray-200 rounded">
-                                                        <div className="w-4/5 h-2 bg-purple-500 rounded"></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium">3.9/5</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Risk Assessment */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Đánh giá nguy cơ</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between p-3 rounded-lg bg-red-50">
-                                                <span className="text-sm font-medium text-red-700">Nguy cơ cao</span>
-                                                <span className="text-lg font-bold text-red-700">12 sinh viên</span>
-                                            </div>
-                                            <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50">
-                                                <span className="text-sm font-medium text-yellow-700">Cần theo dõi</span>
-                                                <span className="text-lg font-bold text-yellow-700">8 sinh viên</span>
-                                            </div>
-                                            <div className="flex items-center justify-between p-3 rounded-lg bg-green-50">
-                                                <span className="text-sm font-medium text-green-700">Ổn định</span>
-                                                <span className="text-lg font-bold text-green-700">25 sinh viên</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Improvement Suggestions */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Đề xuất cải thiện</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-3 text-sm">
-                                            <div className="flex items-start gap-2">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                                <p>Tăng cường hỗ trợ tài chính cho sinh viên có điểm tài chính thấp</p>
-                                            </div>
-                                            <div className="flex items-start gap-2">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                                <p>Tổ chức các buổi tư vấn tâm lý định kỳ</p>
-                                            </div>
-                                            <div className="flex items-start gap-2">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                                <p>Cải thiện phương pháp giảng dạy để nâng cao hiệu quả học tập</p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                {/* Thông báo nếu chưa có sinh viên nào hoàn thành */}
+                                {(!selectedSurvey.completedStudents || selectedSurvey.completedStudents.length === 0) && (
+                                    <div className="text-center py-6 bg-gray-50 rounded-lg">
+                                        <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                                        <p className="text-gray-600 text-sm">Chưa có sinh viên nào hoàn thành khảo sát</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
