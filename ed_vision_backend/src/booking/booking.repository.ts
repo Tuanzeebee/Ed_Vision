@@ -34,8 +34,62 @@ export class BookingRepository {
     });
   }
 
+  async findCancelledAppointmentForSlotAndStudent(slotId: number, studentId: number) {
+    return this.prisma.appointment.findFirst({
+      where: {
+        slot_id: slotId,
+        student_id: studentId,
+        status: 'canceled'
+      },
+    });
+  }
+
+  async findActiveAppointmentForSlotAndStudent(slotId: number, studentId: number) {
+    return this.prisma.appointment.findFirst({
+      where: {
+        slot_id: slotId,
+        student_id: studentId,
+        status: { in: ['pending', 'confirmed'] }
+      },
+    });
+  }
+
+  async findAnyAppointmentForSlotAndStudent(slotId: number, studentId: number) {
+    return this.prisma.appointment.findFirst({
+      where: {
+        slot_id: slotId,
+        student_id: studentId,
+      },
+      orderBy: { created_at: 'desc' } // Get the most recent one
+    });
+  }
+
   async createAppointment(data: any) {
     return this.prisma.appointment.create({ data });
+  }
+
+  async reactivateCancelledAppointment(appointmentId: number, status: string, meetingType: any, meetingPurpose?: string, bookerAccountId?: number, bookerRole?: string) {
+    const updateData: any = {
+      status,
+      meeting_type: meetingType,
+      meeting_purpose: meetingPurpose ?? null,
+      cancel_reason: null,
+      canceled_at: null,
+      updated_at: new Date(),
+    };
+
+    if (bookerAccountId !== undefined) {
+      updateData.booker_account_id = bookerAccountId;
+    }
+
+    if (bookerRole !== undefined) {
+      updateData.booker_role = bookerRole;
+    }
+
+    return this.prisma.appointment.update({
+      where: { appointment_id: appointmentId },
+      data: updateData,
+    });
   }
 
   async upsertAppointmentContact(data: any) {
@@ -58,16 +112,67 @@ export class BookingRepository {
   }
 
   async getAppointmentsForAccount(accountId: number) {
-    return this.prisma.appointment.findMany({
-      where: { booker_account_id: accountId },
+    // Check what roles this account has
+    const studentRecord = await this.prisma.student.findUnique({
+      where: { account_id: accountId }
+    });
+    const parentRecord = await this.prisma.parent.findUnique({
+      where: { account_id: accountId }
+    });
+
+    // If account has both roles, this is an error - should not happen
+    if (studentRecord && parentRecord) {
+      throw new Error(`Account ${accountId} has both student and parent records - this should not happen`);
+    }
+
+    // Return appointments that this account booked (booker_account_id)
+    const whereCondition = { booker_account_id: accountId };
+
+    const appointments = await this.prisma.appointment.findMany({
+      where: whereCondition,
       include: {
         slot: { include: { date: { include: { week: true } } } },
-        instructor: { include: { account: { select: { account_id: true } } } },
-        student: { include: { account: { select: { account_id: true } } } },
+        instructor: {
+          include: {
+            account: {
+              include: { profile: true }
+            }
+          }
+        },
+        student: {
+          include: {
+            account: {
+              include: { profile: true }
+            },
+            classGroup: {
+              include: {
+                adviserAssignments: {
+                  where: {
+                    OR: [{ ended_date: null }, { ended_date: { gt: new Date() } }],
+                  },
+                  orderBy: [{ ended_date: 'asc' }, { assigned_date: 'desc' }],
+                  take: 1,
+                  include: {
+                    instructor: {
+                      include: {
+                        account: {
+                          include: { profile: true }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         appointmentContact: true,
       },
       orderBy: { created_at: 'desc' },
     });
+
+    // Return appointments directly - instructor field already correctly populated from appointment.instructor_id
+    return appointments;
   }
 
   async getAppointmentById(appointmentId: number) {
@@ -86,7 +191,7 @@ export class BookingRepository {
   async cancelAppointment(appointmentId: number, reason?: string) {
     return this.prisma.appointment.update({
       where: { appointment_id: appointmentId },
-      data: { status: 'canceled', cancel_reason: reason ?? null, canceled_at: new Date() },
+      data: { status: 'cancelled', cancel_reason: reason ?? null, canceled_at: new Date() },
     });
   }
 
@@ -187,6 +292,17 @@ export class BookingRepository {
     });
   }
 
+  async getInstructorById(instructorId: number) {
+    return this.prisma.instructor.findUnique({
+      where: { instructor_id: instructorId },
+      include: {
+        account: {
+          include: { profile: true },
+        },
+      },
+    });
+  }
+
   // Get appointments for instructor (as adviser)
   async getAppointmentsForInstructor(instructorId: number, status?: string[], bookerRole?: string) {
     const where: any = { instructor_id: instructorId };
@@ -267,6 +383,40 @@ export class BookingRepository {
         canceled_at: new Date(),
         updated_at: new Date(),
         cancel_reason: rejectNotes,
+      },
+    });
+  }
+
+  async updateAppointmentStatus(appointmentId: number, status: string) {
+    const updateData: any = {
+      status,
+      updated_at: new Date(),
+    };
+
+    // Set canceled_at if status is canceled
+    if (status === 'canceled') {
+      updateData.canceled_at = new Date();
+    }
+
+    return this.prisma.appointment.update({
+      where: { appointment_id: appointmentId },
+      data: updateData,
+    });
+  }
+
+  async isAdminRole(roleId: number) {
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+    });
+    return role?.code?.toLowerCase().includes('admin') || false;
+  }
+
+  async getAccountById(accountId: number) {
+    return this.prisma.account.findUnique({
+      where: { account_id: accountId },
+      select: {
+        account_id: true,
+        role_id: true,
       },
     });
   }

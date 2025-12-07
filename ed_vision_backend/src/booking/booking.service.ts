@@ -1,6 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { BookingRepository } from './booking.repository';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { ReminderSchedulerService } from '../admin_be/notification/reminder-scheduler.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationGateway } from '../admin_be/notification/notification.gateway';
 
 const mapAdvisorFromAssignment = (assignment: any) => {
 	if (!assignment) return null
@@ -29,7 +32,14 @@ const mapAdvisorFromAssignment = (assignment: any) => {
 
 @Injectable()
 export class BookingService {
-	constructor(private readonly repository: BookingRepository) {}
+	private readonly logger = new Logger(BookingService.name);
+
+	constructor(
+		private readonly repository: BookingRepository,
+		private readonly reminderScheduler: ReminderSchedulerService,
+		private readonly prisma: PrismaService,
+		private readonly notificationGateway: NotificationGateway,
+	) {}
 
 	/**
 	 * Book an appointment for a student (student or parent)
@@ -40,9 +50,42 @@ export class BookingService {
 
 		if (!slot.is_open) throw new BadRequestException('This time slot is not open for booking');
 
+		// Check if slot has already passed (prevent booking past slots)
+		const slotDate = slot.date?.specific_date;
+		const startTime = slot.start_time_local;
+		if (slotDate && startTime) {
+			try {
+				const dateObj = new Date(slotDate);
+				const year = dateObj.getFullYear();
+				const month = dateObj.getMonth();
+				const day = dateObj.getDate();
+
+				const startTimeObj = new Date(startTime);
+				const hours = startTimeObj.getUTCHours();
+				const minutes = startTimeObj.getUTCMinutes();
+
+				const slotStartDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+				const now = new Date();
+
+				if (slotStartDateTime <= now) {
+					throw new BadRequestException('This time slot has already passed and cannot be booked');
+				}
+			} catch (error) {
+				// If parsing fails, allow booking but log warning
+				console.warn(`Failed to parse slot datetime for slot ${dto.slotId}:`, error);
+			}
+		}
+
 		// Determine who is booking: student or parent
 		const studentRecord = await this.repository.getStudentByAccountId(accountId);
 		const parentRecord = await this.repository.getParentByAccountId(accountId);
+
+		// Validate: account cannot be both student and parent
+		if (studentRecord && parentRecord) {
+			throw new ForbiddenException('Account cannot be both student and parent. Please contact administrator.');
+		}
+
+		// console.log(`Booking for accountId ${accountId}: studentRecord=${!!studentRecord}, parentRecord=${!!parentRecord}`);
 
 		let bookerRole = 'student';
 		let studentIdToUse: number | undefined = undefined;
@@ -51,6 +94,7 @@ export class BookingService {
 		if (parentRecord) {
 			// Parent may book on behalf of a studentId provided
 			bookerRole = 'parent';
+			// console.log(`Setting bookerRole to 'parent' for accountId ${accountId}`);
 			if (!dto.studentId) throw new BadRequestException('Parent must specify studentId to book for');
 			// verify link
 			const link = await this.repository.verifyParentStudentLink(parentRecord.parent_id, dto.studentId);
@@ -64,9 +108,61 @@ export class BookingService {
 		};
 	} else if (studentRecord) {
 			bookerRole = 'student';
+			// console.log(`Setting bookerRole to 'student' for accountId ${accountId}`);
 			studentIdToUse = studentRecord.student_id;
 		} else {
 			throw new ForbiddenException('Only students and parents can create bookings');
+		}
+
+		// Check if student already has any appointment for this slot
+		const existingAppointment = await this.repository.findAnyAppointmentForSlotAndStudent(dto.slotId, studentIdToUse);
+		if (existingAppointment) {
+			// If appointment is cancelled, reactivate it
+			if (existingAppointment.status === 'canceled' || existingAppointment.status === 'cancelled') {
+				const status = bookerRole === 'student' ? 'confirmed' : 'pending';
+				const meetingType = dto.meetingType ?? slot.meeting_type ?? 'offline';
+
+				// Update booker info if different from current appointment
+				const needsBookerUpdate = existingAppointment.booker_account_id !== accountId || existingAppointment.booker_role !== bookerRole;
+
+				const updatedAppointment = await this.repository.reactivateCancelledAppointment(
+					existingAppointment.appointment_id,
+					status,
+					meetingType as any,
+					dto.meetingPurpose,
+					needsBookerUpdate ? accountId : undefined,
+					needsBookerUpdate ? bookerRole : undefined
+				);
+
+				// re-fetch to include slot and related info
+				const full = await this.repository.getAppointmentById(updatedAppointment.appointment_id);
+
+				if (bookerRole === 'parent') {
+					const contactPayload = {
+						appointment_id: updatedAppointment.appointment_id,
+						contact_name: dto.contactName?.trim() || parentContactDefaults?.contact_name || null,
+						contact_phone: dto.contactPhone?.trim() || parentContactDefaults?.contact_phone || null,
+						contact_email: dto.contactEmail?.trim() || parentContactDefaults?.contact_email || null,
+						relationship_to_student:
+							dto.relationshipToStudent?.trim() || parentContactDefaults?.relationship_to_student || null,
+					};
+					const contactRecord = await this.repository.upsertAppointmentContact(contactPayload);
+					(full as any).appointmentContact = contactRecord;
+				}
+
+				// If online and slot has no meeting_link, generate a transient link
+				const fullWithSlot = full as any;
+				if ((meetingType === 'online' || (full?.meeting_type === 'online')) && fullWithSlot?.slot && !fullWithSlot.slot.meeting_link) {
+					(full as any).transient_meeting_link = `meet.google.com/${Math.random().toString(36).slice(2, 11)}`;
+				}
+
+				return full;
+			} else if (existingAppointment.status === 'rejected') {
+				throw new BadRequestException('Khung giờ này đã bị giảng viên từ chối. Vui lòng chọn khung giờ khác.');
+			} else if (existingAppointment.status === 'pending' || existingAppointment.status === 'confirmed') {
+				// Student already has an active appointment for this slot
+				throw new ConflictException('Bạn đã có lịch hẹn cho khung giờ này rồi');
+			}
 		}
 
 		// Check capacity
@@ -78,8 +174,8 @@ export class BookingService {
 		// If requested meetingType is provided, accept it; otherwise use slot.meeting_type
 		const meetingType = dto.meetingType ?? slot.meeting_type ?? 'offline';
 
-		// Determine status: auto-accept -> confirmed, else pending
-		const status = slot.auto_accept ? 'confirmed' : 'pending';
+		// Determine status: student -> confirmed, parent -> pending
+		const status = bookerRole === 'student' ? 'confirmed' : 'pending';
 
 		// Determine instructor_id from slot.date.week
 		const instructorId = slot.date?.week?.instructor_id ?? null;
@@ -120,6 +216,144 @@ export class BookingService {
 		if ((meetingType === 'online' || (full?.meeting_type === 'online')) && fullWithSlot?.slot && !fullWithSlot.slot.meeting_link) {
 			// attach a transient field meeting_link on the returned object
 			(full as any).transient_meeting_link = `meet.google.com/${Math.random().toString(36).slice(2, 11)}`;
+		}
+
+		// Tạo reminder nhắc nhở trước cuộc hẹn (10 phút, 5 phút, 1 phút)
+		try {
+			if (fullWithSlot?.slot?.date?.specific_date && fullWithSlot?.slot?.start_time_local) {
+				// specific_date là ngày (YYYY-MM-DD) lưu dạng Date trong DB
+				// start_time_local là giờ local (HH:MM) lưu dạng Time trong DB
+				const specificDate = new Date(fullWithSlot.slot.date.specific_date);
+				const startTime = new Date(fullWithSlot.slot.start_time_local);
+				
+				// Log raw values để debug
+				this.logger.log(`[Reminder] Raw specific_date: ${fullWithSlot.slot.date.specific_date}`);
+				this.logger.log(`[Reminder] Raw start_time_local: ${fullWithSlot.slot.start_time_local}`);
+				this.logger.log(`[Reminder] Parsed specificDate: ${specificDate.toISOString()}`);
+				this.logger.log(`[Reminder] Parsed startTime: ${startTime.toISOString()}`);
+				
+				// ===== FIX TIMEZONE =====
+				// specific_date: DATE type trong DB (lưu ngày không có time)
+				// start_time_local: TIME type trong DB (lưu giờ local VN)
+				// 
+				// VÍ DỤ: Slot 21:15 VN ngày 06/12/2025
+				// - Cần tạo: 2025-12-06T14:15:00Z (UTC)
+				
+				// Lấy ngày từ specific_date
+				const year = specificDate.getUTCFullYear();
+				const month = specificDate.getUTCMonth();
+				const day = specificDate.getUTCDate();
+				
+				// Lấy giờ VN từ start_time_local
+				const hoursVN = startTime.getUTCHours();
+				const minutesVN = startTime.getUTCMinutes();
+				
+				// Tạo datetime string dạng: "2025-12-06T21:15:00+07:00"
+				const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+				const timeStr = `${String(hoursVN).padStart(2, '0')}:${String(minutesVN).padStart(2, '0')}:00`;
+				const datetimeVN = `${dateStr}T${timeStr}+07:00`;
+				
+				// Parse thành UTC
+				const appointmentTimeUTC = new Date(datetimeVN);
+				
+				this.logger.log(`[Reminder] Date: ${dateStr}, Time VN: ${timeStr}`);
+				this.logger.log(`[Reminder] DateTime VN: ${datetimeVN}`);
+				this.logger.log(`[Reminder] appointmentTimeUTC: ${appointmentTimeUTC.toISOString()}`);
+				this.logger.log(`[Reminder] Now (UTC): ${new Date().toISOString()}`);
+
+				// Tạo reminder cho người đặt lịch (student hoặc parent)
+				await this.reminderScheduler.createRemindersForAppointment(
+					appointment.appointment_id,
+					accountId,
+					appointmentTimeUTC,
+				);
+
+				// Nếu có instructor, tạo reminder cho instructor
+				if (instructorId) {
+					const instructorAccount = await this.repository.getInstructorById(instructorId);
+					if (instructorAccount) {
+						await this.reminderScheduler.createRemindersForAppointment(
+							appointment.appointment_id,
+							instructorAccount.account_id,
+							appointmentTimeUTC,
+						);
+					}
+				}
+
+				this.logger.log(`Created reminders for appointment ${appointment.appointment_id}`);
+			}
+		} catch (error) {
+			this.logger.error(`Failed to create reminders for appointment ${appointment.appointment_id}:`, error);
+			// Không throw error, vì appointment đã được tạo thành công
+		}
+
+		// GỬI INSTANT NOTIFICATION cho teacher ngay khi student book lịch
+		try {
+			if (instructorId) {
+				const instructorAccount = await this.repository.getInstructorById(instructorId);
+				if (instructorAccount) {
+					const studentName = fullWithSlot?.student?.account?.profile?.full_name || 'Sinh viên';
+					
+					// Format date
+					const slotDate = fullWithSlot?.slot?.date?.specific_date 
+						? new Date(fullWithSlot.slot.date.specific_date).toLocaleDateString('vi-VN', { 
+							weekday: 'long', 
+							year: 'numeric', 
+							month: 'long', 
+							day: 'numeric' 
+						})
+						: '';
+					
+					// Format time - FIX: start_time_local là TIME type, giờ đã là VN time
+					let slotTime = '';
+					if (fullWithSlot?.slot?.start_time_local) {
+						const timeObj = new Date(fullWithSlot.slot.start_time_local);
+						const hours = timeObj.getUTCHours(); // Giờ VN lưu dạng UTC trong TIME type
+						const minutes = timeObj.getUTCMinutes();
+						slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+					}
+
+					// Tạo notification master
+					const master = await this.prisma.notificationMaster.create({
+						data: {
+							title: '📅 Lịch hẹn mới',
+							body: `Sinh viên ${studentName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
+							type: 'appointment_created',
+							priority: 'Cao',
+							target: 'individual',
+							channel: 'in_app',
+							created_by: accountId, // Student who created
+						},
+					});
+
+					// Tạo notification recipient cho instructor
+					const now = new Date();
+					await this.prisma.notificationRecipient.create({
+						data: {
+							master_id: master.id,
+							account_id: instructorAccount.account_id,
+							is_read: false,
+							delivered_at: now,
+						},
+					});
+
+					// Push real-time qua WebSocket
+					const payload = {
+						masterId: master.id,
+						title: '📅 Lịch hẹn mới',
+						body: `Sinh viên ${studentName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
+						type: 'appointment_created',
+						target: 'individual',
+						attachments: null,
+						createdAt: now.toISOString(),
+					};
+					this.notificationGateway.broadcastNotification(payload, [instructorAccount.account_id]);
+
+					this.logger.log(`Sent instant notification to instructor ${instructorAccount.account_id} for appointment ${appointment.appointment_id}`);
+				}
+			}
+		} catch (error) {
+			this.logger.error(`Failed to send instant notification:`, error);
 		}
 
 		return full;
@@ -212,7 +446,10 @@ export class BookingService {
 		return shaped
 	}
 	async listAppointmentsForAccount(accountId: number) {
-		return this.repository.getAppointmentsForAccount(accountId);
+		// console.log(`[listAppointmentsForAccount] Called with accountId=${accountId}`);
+		const result = await this.repository.getAppointmentsForAccount(accountId);
+		// console.log(`[listAppointmentsForAccount] Found ${result.length} appointments for accountId=${accountId}`);
+		return result;
 	}
 
 	async cancelAppointment(accountId: number, appointmentId: number, reason?: string) {
@@ -228,7 +465,7 @@ export class BookingService {
 			throw new ForbiddenException('You are not allowed to cancel this appointment');
 		}
 
-		if (appt.status === 'canceled') {
+		if (appt.status === 'cancelled') {
 			throw new BadRequestException('Appointment already canceled');
 		}
 
@@ -375,10 +612,48 @@ export class BookingService {
 			throw new ForbiddenException('You can only reject your own appointments');
 		}
 
-		if (appt.status !== 'pending') {
+		// Allow reject for both pending and confirmed appointments
+		if (appt.status !== 'pending' && appt.status !== 'confirmed') {
 			throw new BadRequestException(`Cannot reject appointment with status: ${appt.status}`);
 		}
 
 		return this.repository.rejectAppointment(appointmentId, data);
+	}
+
+	/**
+	 * Update appointment status (instructor, admin, or appointment booker)
+	 */
+	async updateAppointmentStatus(accountId: number, appointmentId: number, status: string) {
+		// Check if user is instructor or admin
+		const instructor = await this.repository.getInstructorByAccountId(accountId);
+		const account = await this.repository.getAccountById(accountId);
+		
+		const isInstructor = !!instructor;
+		const isAdmin = account?.role_id && await this.repository.isAdminRole(account.role_id);
+		
+		// Get the appointment to check ownership
+		const appt = await this.repository.getAppointmentById(appointmentId);
+		if (!appt) throw new NotFoundException('Appointment not found');
+		
+		const isBooker = appt.booker_account_id === accountId;
+		
+		// Allow if user is admin, instructor of the appointment, or the booker
+		const hasPermission = isAdmin || (isInstructor && appt.instructor_id === instructor.instructor_id) || isBooker;
+		
+		if (!hasPermission) {
+			throw new ForbiddenException('You do not have permission to update this appointment status');
+		}
+
+		// Validate status
+		const validStatuses = ['pending', 'confirmed', 'completed', 'canceled'];
+		if (!validStatuses.includes(status)) {
+			throw new BadRequestException(`Invalid status: ${status}`);
+		}
+
+		// Update status
+		await this.repository.updateAppointmentStatus(appointmentId, status);
+		
+		// Return updated appointment
+		return this.repository.getAppointmentById(appointmentId);
 	}
 }

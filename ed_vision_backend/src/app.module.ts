@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -25,6 +26,8 @@ import { ChatModule } from './mongodb/chat.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     InstructorAvailabilityModule,
     BookingModule,
@@ -41,7 +44,6 @@ import { ChatModule } from './mongodb/chat.module';
     SurveysModule,
     TeacherBeModule,
     StudentBeModule,
-    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     ChatModule,
     TeacherChatModule,
@@ -50,4 +52,8 @@ import { ChatModule } from './mongodb/chat.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {
+  constructor(private readonly reminderScheduler: ReminderSchedulerService) {
+    // Inject to ensure instantiation
+  }
+}

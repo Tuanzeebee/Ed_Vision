@@ -28,7 +28,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   );
 
   const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
-    currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+    currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'management'
   );
 
   const handleNavigation = (path: string) => {
@@ -180,7 +180,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={toggleAppointmentMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule' || currentPage === 'management'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
@@ -210,7 +210,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 <span>Tổng quan lịch hẹn</span>
               </button>
               <button
-                onClick={() => handleNavigation('/teacher/appointments')}
+                onClick={() => handleNavigation('/teacher/schedule')}
                 className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
@@ -221,25 +221,14 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               </button>
 
               <button
-                onClick={() => handleNavigation('/teacher/requests')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'requests'
+                onClick={() => handleNavigation('/teacher/appointments')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'management'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
               >
-                <Clock className="w-4 h-4" />
-                <span>Yêu cầu lịch hẹn</span>
-              </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/confirmed')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'confirmed'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span>Lịch hẹn đã xác nhận</span>
+                <ClipboardList className="w-4 h-4" />
+                <span>Quản lý lịch hẹn</span>
               </button>
             </div>
           )}

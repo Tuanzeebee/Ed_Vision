@@ -1,0 +1,54 @@
+# Commit Message
+
+## feat: Thêm hệ thống thông báo tự động và âm thanh cho booking
+
+### Backend Changes:
+- ✅ Thêm `reminder-scheduler.service.ts` - Cron job chạy mỗi phút để gửi reminder
+- ✅ Tạo reminders tự động khi booking (trước 10, 5, 1 phút)
+- ✅ Gửi thông báo cho cả teacher và student
+- ✅ Fix timezone: Giờ VN → UTC đúng (21:15 VN = 14:15 UTC)
+- ✅ Instant notification khi sinh viên đặt lịch
+- ✅ WebSocket real-time push
+- ✅ Debug endpoints cho testing
+- ✅ Seed notification templates
+
+### Frontend Changes:
+- ✅ Tích hợp âm thanh thông báo (MP3 + beep fallback)
+- ✅ WebSocket listener trong `useNotificationSocket`
+- ✅ Auto-play sound khi nhận notification mới
+- ✅ Cập nhật notification store
+- ✅ UI improvements cho notification dropdown
+
+### Files Added:
+- `ed_vision_backend/src/admin_be/notification/reminder-scheduler.service.ts`
+- `ed_vision_backend/prisma/seedNotificationTemplates.js`
+- `Ed_Vision/public/notification-sound.mp3`
+- `.gitignore`
+
+### Files Modified:
+- Backend: booking.service.ts, notification.*.ts, app.module.ts, schema.prisma
+- Frontend: useNotificationSocket.ts, notificationStore.ts, NotificationPage.tsx
+
+### Features:
+1. **Automatic Reminders**: Gửi tự động trước 10, 5, 1 phút
+2. **Sound Notification**: Âm thanh 🔔 khi nhận thông báo
+3. **Real-time Push**: WebSocket instant delivery
+4. **Timezone Fixed**: Thời gian hiển thị đúng VN timezone
+5. **Debug Tools**: Endpoints để test và kiểm tra
+
+### Testing:
+```bash
+# Kiểm tra reminders
+GET /notifications/debug/reminders
+
+# Test cron job
+POST /notifications/debug/run-cron
+
+# Tạo test reminder
+POST /notifications/debug/create-test-reminder
+```
+
+---
+
+**Breaking Changes:** None
+**Migration Required:** Run `npx prisma migrate dev` to apply schema changes

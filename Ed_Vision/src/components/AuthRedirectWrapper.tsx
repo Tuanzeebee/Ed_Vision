@@ -41,7 +41,7 @@ export default function AuthRedirectWrapper({ children }: Props) {
         navigate(dashboardPath, { replace: true })
       }
     }
-  }, [isAuthenticated, isLoading, location.pathname, location.search, location.state, navigate, getDashboardPath])
+  }, [isAuthenticated, isLoading, location.pathname, location.search, location.state, getDashboardPath])
 
   // Show loading while checking auth
   if (isLoading) {

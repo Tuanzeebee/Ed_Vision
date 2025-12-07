@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { hasRoutePermission } from '@/lib/permissionMapper'
+import { PermissionService } from '@/services/permissionService'
 
 type Props = {
   children: React.ReactNode
@@ -11,6 +12,48 @@ type Props = {
 
 export default function ProtectedRoute({ children, allowedRoles = ['admin'], permission }: Props) {
   const location = useLocation()
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadPermissions = async () => {
+      try {
+        const user = PermissionService.getCurrentUser()
+        if (user && (!user.permissions || Object.keys(user.permissions).length === 0)) {
+          await PermissionService.syncPermissions()
+          const updatedUser = PermissionService.getCurrentUser()
+          setPermissions(updatedUser?.permissions || {})
+        } else {
+          setPermissions(user?.permissions || {})
+        }
+      } catch (error) {
+        console.error('Failed to load permissions:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPermissions()
+
+    // Listen for permission updates
+    const handlePermissionsUpdate = (event: CustomEvent) => {
+      setPermissions(event.detail)
+    }
+
+    window.addEventListener('permissions:updated', handlePermissionsUpdate as EventListener)
+
+    return () => {
+      window.removeEventListener('permissions:updated', handlePermissionsUpdate as EventListener)
+    }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
   
   try {
     const raw = localStorage.getItem('user')
@@ -21,16 +64,17 @@ export default function ProtectedRoute({ children, allowedRoles = ['admin'], per
 
     // Step 1: Check specific permission if provided
     if (permission) {
-      const perms = user?.permissions || {}
-      if (perms && typeof perms === 'object' && perms[permission]) {
+      if (permissions && typeof permissions === 'object' && permissions[permission]) {
         return <>{children}</>
+      } else {
+        // Don't redirect immediately, let the fallback role check handle it
+        // return <Navigate to="/auth/login" replace />
       }
     }
 
     // Step 2: Auto-detect permission from current route
     const currentPath = location.pathname
-    const perms = user?.permissions || {}
-    if (perms && typeof perms === 'object' && hasRoutePermission(perms, currentPath)) {
+    if (permissions && typeof permissions === 'object' && hasRoutePermission(permissions, currentPath)) {
       return <>{children}</>
     }
 
@@ -50,8 +94,7 @@ export default function ProtectedRoute({ children, allowedRoles = ['admin'], per
     const allowedPaths = roleDefaultAccess[code as keyof typeof roleDefaultAccess] || []
     const hasRoleAccess = allowedPaths.some(path => currentPath.startsWith(path))
     
-    if (hasRoleAccess && (!perms || Object.keys(perms).length === 0)) {
-      console.warn(`⚠️ Fallback: Using role-based access for ${code} on ${currentPath}. Permission system may not be loaded.`)
+    if (hasRoleAccess) {
       return <>{children}</>
     }
 
