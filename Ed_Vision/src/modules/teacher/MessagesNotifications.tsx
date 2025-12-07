@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Button } from "@/components/ui/teacher/teacher_button"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import TeacherLayout from "./components/TeacherLayout"
 import { useFilterOptions } from "@/hooks/useFilterOptions"
+import { chatService } from "@/services/chatService"
+import { socketService } from "@/services/socketService"
+import type { Conversation, ChatMessage } from "@/services/chatService"
 import {
     MessageCircle,
     Send,
@@ -19,27 +22,19 @@ import {
     FileText,
     TrendingUp,
     ChevronDown,
-    ChevronLeft,
     Users,
     UserCheck,
-    SlidersHorizontal
+    SlidersHorizontal,
+    ArrowLeft
 } from "lucide-react"
 
 // Interfaces
-interface ChatMessage {
-    id: string
-    sender: 'teacher' | 'student'
-    content: string
-    timestamp: string
-    isRead: boolean
-    studentId?: string
-}
-
 interface Student {
     id: string
     name: string
     avatar: string
     className: string
+    studentCode?: string
     lastMessage: string
     lastMessageTime: string
     unreadCount: number
@@ -93,7 +88,7 @@ export default function MessagesNotifications() {
     const [activeGroup, setActiveGroup] = useState<StudentGroup>('atrisk')
 
     // States
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+    const [selectedStudent, setSelectedStudent] = useState<Student | Parent | null>(null)
     const [messageInput, setMessageInput] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [showSuggestions, setShowSuggestions] = useState(false)
@@ -133,143 +128,97 @@ export default function MessagesNotifications() {
         confirmed: false
     })
 
-    // Mock data - Danh sách sinh viên
-    const students: Student[] = [
-        {
-            id: '1',
-            name: 'Nguyễn Văn An',
-            avatar: '/src/assets/teacher/Avatar_Student1.png',
-            className: 'CNTT-K19A',
-            lastMessage: 'Em cảm ơn thầy đã giúp đỡ ạ',
-            lastMessageTime: '10:30',
-            unreadCount: 0,
-            isOnline: true,
-            riskLevel: 'low',
-            totalConversations: 15,
-            lastConversationDate: '2024-10-25'
-        },
-        {
-            id: '2',
-            name: 'Trần Thị Bình',
-            avatar: '/src/assets/teacher/Avatar_Student2.png',
-            className: 'CNTT-K19A',
-            lastMessage: 'Thầy ơi, em có thể hỏi về bài tập không ạ?',
-            lastMessageTime: '09:45',
-            unreadCount: 2,
-            isOnline: true,
-            riskLevel: 'medium',
-            totalConversations: 23,
-            lastConversationDate: '2024-10-25'
-        },
-        {
-            id: '3',
-            name: 'Lê Văn Cường',
-            avatar: '/src/assets/teacher/Avatar_Student3.png',
-            className: 'CNTT-K19B',
-            lastMessage: 'Em xin phép nghỉ học hôm nay do ốm',
-            lastMessageTime: '08:20',
-            unreadCount: 0,
-            isOnline: false,
-            riskLevel: 'high',
-            totalConversations: 8,
-            lastConversationDate: '2024-10-25'
-        },
-        {
-            id: '4',
-            name: 'Phạm Thị Dung',
-            avatar: '/src/assets/teacher/Avatar_Student1.png',
-            className: 'CNTT-K20A',
-            lastMessage: 'Dạ em hiểu rồi ạ, cảm ơn thầy',
-            lastMessageTime: 'Hôm qua',
-            unreadCount: 0,
-            isOnline: false,
-            riskLevel: 'low',
-            totalConversations: 12,
-            lastConversationDate: '2024-10-24'
-        },
-        {
-            id: '5',
-            name: 'Hoàng Văn Em',
-            avatar: '/src/assets/teacher/Avatar_Student2.png',
-            className: 'CNTT-K20A',
-            lastMessage: 'Em cần hỗ trợ về bài tập lớn gấp ạ',
-            lastMessageTime: '2 ngày',
-            unreadCount: 1,
-            isOnline: false,
-            riskLevel: 'high',
-            totalConversations: 6,
-            lastConversationDate: '2024-10-23'
-        }
-    ]
+    // Real data states
+    const [students, setStudents] = useState<Student[]>([])
+    const [_conversations, setConversations] = useState<Conversation[]>([])
+    const [messages, setMessages] = useState<ChatMessage[]>([])
+    const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+    const [_loading, setLoading] = useState(false)
+    const [_loadingStudents, setLoadingStudents] = useState(false)
 
-    // Mock data - Phụ huynh
-    const parents: Parent[] = [
-        {
-            id: 'p1',
-            name: 'Nguyễn Văn Hùng',
-            avatar: '/src/assets/teacher/Avatar_Student3.png',
-            studentName: 'Nguyễn Văn An',
-            className: 'CNTT-K19A',
-            lastMessage: 'Con em học tập có tiến bộ không thầy?',
-            lastMessageTime: '14:30',
-            unreadCount: 1,
-            isOnline: false,
-            totalConversations: 5,
-            lastConversationDate: '2024-10-25'
-        },
-        {
-            id: 'p2',
-            name: 'Trần Thị Mai',
-            avatar: '/src/assets/teacher/Avatar_Student1.png',
-            studentName: 'Trần Thị Bình',
-            className: 'CNTT-K19A',
-            lastMessage: 'Cảm ơn thầy đã quan tâm đến con ạ',
-            lastMessageTime: '11:20',
-            unreadCount: 0,
-            isOnline: true,
-            totalConversations: 8,
-            lastConversationDate: '2024-10-25'
-        },
-        {
-            id: 'p3',
-            name: 'Lê Văn Thành',
-            avatar: '/src/assets/teacher/Avatar_Student2.png',
-            studentName: 'Lê Văn Cường',
-            className: 'CNTT-K19B',
-            lastMessage: 'Con em mấy hôm nay ốm nên xin nghỉ học',
-            lastMessageTime: '08:00',
-            unreadCount: 2,
-            isOnline: false,
-            totalConversations: 3,
-            lastConversationDate: '2024-10-25'
-        },
-        {
-            id: 'p4',
-            name: 'Phạm Thị Lan',
-            avatar: '/src/assets/teacher/Avatar_Student1.png',
-            studentName: 'Phạm Thị Dung',
-            className: 'CNTT-K20A',
-            lastMessage: 'Con em học tập chăm chỉ lắm ạ',
-            lastMessageTime: 'Hôm qua',
-            unreadCount: 0,
-            isOnline: false,
-            totalConversations: 4,
-            lastConversationDate: '2024-10-24'
-        },
-        {
-            id: 'p5',
-            name: 'Hoàng Văn Tuấn',
-            avatar: '/src/assets/teacher/Avatar_Student3.png',
-            studentName: 'Hoàng Văn Em',
-            className: 'CNTT-K20A',
-            lastMessage: 'Thầy có thể tư vấn thêm cho con em không ạ?',
-            lastMessageTime: '2 ngày',
-            unreadCount: 1,
-            isOnline: false,
-            totalConversations: 2,
-            lastConversationDate: '2024-10-23'
+    // Load students từ backend
+    useEffect(() => {
+        loadStudents()
+        loadConversations()
+    }, [])
+
+    const loadStudents = async () => {
+        try {
+            setLoadingStudents(true)
+            const data = await chatService.getTeacherStudents()
+            
+            // Transform data từ backend sang format Student
+            const transformedStudents: Student[] = data.map((student: any) => ({
+                id: student.id,
+                name: student.name,
+                avatar: student.avatar || '/src/assets/teacher/Avatar_Student1.png',
+                className: student.className,
+                studentCode: student.studentCode,
+                lastMessage: '',
+                lastMessageTime: '',
+                unreadCount: 0,
+                isOnline: false,
+                riskLevel: 'low',
+                totalConversations: 0,
+            }))
+            
+            setStudents(transformedStudents)
+        } catch (error) {
+            console.error('Error loading students:', error)
+        } finally {
+            setLoadingStudents(false)
         }
-    ]
+    }
+
+    const loadConversations = async () => {
+        try {
+            setLoading(true)
+            const data = await chatService.getTeacherConversations()
+            setConversations(data)
+            
+            // Update students với conversation info
+            setStudents(prev => prev.map(student => {
+                const conv = data.find((c: Conversation) => 
+                    c.participants.some(p => p.userId === student.id)
+                )
+                if (conv) {
+                    const unreadForUser = typeof conv.unreadCount === 'object' 
+                        ? (conv.unreadCount as any)[student.id] || 0
+                        : conv.unreadCount || 0
+                        
+                    return {
+                        ...student,
+                        lastMessage: conv.lastMessage?.content || '',
+                        lastMessageTime: conv.lastMessage?.timestamp 
+                            ? new Date(conv.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                            : '',
+                        unreadCount: unreadForUser,
+                        totalConversations: 1,
+                    }
+                }
+                return student
+            }))
+        } catch (error) {
+            console.error('Error loading conversations:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const loadMessages = async (conversationId: string) => {
+        try {
+            setLoading(true)
+            const data = await chatService.getConversationMessages(conversationId)
+            setMessages(data.reverse()) // Reverse để hiển thị từ cũ đến mới
+        } catch (error) {
+            console.error('Error loading messages:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Parents mock data (giữ tạm thời)
+    const parents: Parent[] = []
 
     // Auto-select student if studentId is provided in URL
     useEffect(() => {
@@ -287,101 +236,119 @@ export default function MessagesNotifications() {
         }
     }, [studentIdFromUrl])
 
-    // Mock data - Lịch sử cuộc trò chuyện
-    const conversationHistories: ConversationHistory[] = [
-        {
-            id: 'conv1',
-            date: '2024-10-25 10:00',
-            duration: '15 phút',
-            messageCount: 12,
-            topic: 'Tư vấn học tập - Lập trình OOP',
-            summary: 'Sinh viên hỏi về kế thừa và đa hình trong OOP. Đã giải thích chi tiết và gửi tài liệu tham khảo.',
-            tags: ['Học tập', 'Lập trình', 'OOP'],
-            sentiment: 'positive'
-        },
-        {
-            id: 'conv2',
-            date: '2024-10-23 14:30',
-            duration: '20 phút',
-            messageCount: 18,
-            topic: 'Hỗ trợ bài tập lớn',
-            summary: 'Sinh viên gặp khó khăn trong việc thiết kế database. Đã hướng dẫn về normalization và ERD.',
-            tags: ['Bài tập', 'Database', 'Thiết kế'],
-            sentiment: 'positive'
-        },
-        {
-            id: 'conv3',
-            date: '2024-10-20 09:15',
-            duration: '25 phút',
-            messageCount: 22,
-            topic: 'Tư vấn tâm lý - Áp lực học tập',
-            summary: 'Sinh viên chia sẻ về áp lực học tập và kỳ thi sắp tới. Đã động viên và đưa ra lời khuyên về quản lý thời gian.',
-            tags: ['Tâm lý', 'Áp lực', 'Động viên'],
-            sentiment: 'neutral'
-        },
-        {
-            id: 'conv4',
-            date: '2024-10-18 16:45',
-            duration: '10 phút',
-            messageCount: 8,
-            topic: 'Xin phép nghỉ học',
-            summary: 'Sinh viên xin phép nghỉ học do ốm. Đã đồng ý và nhắc nhở bù bài khi khỏe.',
-            tags: ['Hành chính', 'Nghỉ học'],
-            sentiment: 'neutral'
-        },
-        {
-            id: 'conv5',
-            date: '2024-10-15 11:00',
-            duration: '30 phút',
-            messageCount: 25,
-            topic: 'Tư vấn định hướng nghề nghiệp',
-            summary: 'Trao đổi về định hướng nghề nghiệp sau khi tốt nghiệp. Đã tư vấn về các vị trí phù hợp với năng lực.',
-            tags: ['Nghề nghiệp', 'Tương lai', 'Định hướng'],
-            sentiment: 'positive'
+    // Define stable socket callbacks
+    const handleNewMessage = useCallback((message: ChatMessage) => {
+        if (currentConversationId && message.conversationId === currentConversationId) {
+            setMessages(prev => {
+                // Check duplicate
+                if (prev.some(m => m._id === message._id)) {
+                    return prev
+                }
+                return [...prev, message]
+            })
         }
-    ]
+    }, [currentConversationId])
 
-    // Mock data - Tin nhắn chat với sinh viên được chọn
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-        {
-            id: '1',
-            sender: 'student',
-            content: 'Thầy ơi, em có thể hỏi về bài tập tuần này không ạ?',
-            timestamp: '10:20',
-            isRead: true,
-            studentId: '2'
-        },
-        {
-            id: '2',
-            sender: 'teacher',
-            content: 'Chào em! Được chứ, em cứ hỏi đi.',
-            timestamp: '10:22',
-            isRead: true
-        },
-        {
-            id: '3',
-            sender: 'student',
-            content: 'Dạ, em không hiểu phần lập trình hướng đối tượng ạ',
-            timestamp: '10:25',
-            isRead: true,
-            studentId: '2'
-        },
-        {
-            id: '4',
-            sender: 'teacher',
-            content: 'À, phần đó khá quan trọng đấy. Em đang gặp khó khăn ở chỗ nào cụ thể?',
-            timestamp: '10:27',
-            isRead: true
-        },
-        {
-            id: '5',
-            sender: 'student',
-            content: 'Em không hiểu về kế thừa và đa hình lắm ạ',
-            timestamp: '10:28',
-            isRead: true,
-            studentId: '2'
+    const handleConversationUpdated = useCallback((data: any) => {
+        setConversations(prev => prev.map(conv => {
+            if (conv._id === data.conversationId) {
+                // Chỉ tăng unreadCount nếu KHÔNG đang mở conversation này
+                const isCurrentlyViewing = currentConversationId === data.conversationId
+                return {
+                    ...conv,
+                    lastMessage: data.lastMessage,
+                    unreadCount: isCurrentlyViewing ? 0 : (conv.unreadCount || 0) + 1
+                }
+            }
+            return conv
+        }))
+    }, [currentConversationId])
+
+    // Setup Socket.IO for teacher
+    useEffect(() => {
+        if (_conversations.length === 0) return
+
+        // Get teacher userId from first conversation's teacher participant
+        const firstConv = _conversations[0]
+        const teacherParticipant = firstConv?.participants.find(p => p.userType === 'teacher')
+        
+        if (!teacherParticipant) {
+            console.warn('No teacher participant found in conversations')
+            return
         }
-    ])
+
+        const setupSocket = async () => {
+            if (!socketService.isConnected()) {
+                try {
+                    await socketService.connect(teacherParticipant.userId, 'teacher')
+                    console.log('✅ Teacher socket ready')
+                } catch (error) {
+                    console.error('Failed to connect teacher socket:', error)
+                    return
+                }
+            }
+
+            socketService.onNewMessage(handleNewMessage)
+            socketService.onConversationUpdated(handleConversationUpdated)
+        }
+
+        setupSocket()
+
+        return () => {
+            socketService.off('newMessage', handleNewMessage)
+            socketService.off('conversationUpdated', handleConversationUpdated)
+        }
+    }, [_conversations.length, handleNewMessage, handleConversationUpdated])
+
+    // Cleanup socket on unmount
+    useEffect(() => {
+        return () => socketService.disconnect()
+    }, [])
+
+    // Tạo lịch sử cuộc trò chuyện từ messages thực tế
+    const conversationHistories: ConversationHistory[] = React.useMemo(() => {
+        if (!currentConversationId || messages.length === 0) return []
+
+        // Nhóm messages theo ngày
+        const messagesByDate: { [key: string]: ChatMessage[] } = {}
+        messages.forEach(msg => {
+            const date = new Date(msg.createdAt).toLocaleDateString('vi-VN')
+            if (!messagesByDate[date]) {
+                messagesByDate[date] = []
+            }
+            messagesByDate[date].push(msg)
+        })
+
+        // Tạo conversation history cho mỗi ngày
+        return Object.entries(messagesByDate).map(([date, msgs], index) => {
+            const firstMsg = msgs[0]
+            const lastMsg = msgs[msgs.length - 1]
+            const duration = Math.ceil((new Date(lastMsg.createdAt).getTime() - new Date(firstMsg.createdAt).getTime()) / 60000)
+            
+            // Tạo summary từ nội dung messages
+            const summary = msgs.length > 3 
+                ? `Trao đổi ${msgs.length} tin nhắn về: ${msgs[0].content.substring(0, 50)}...`
+                : msgs.map(m => m.content).join('. ')
+
+            // Xác định sentiment đơn giản (có thể cải tiến sau)
+            const sentiment: 'positive' | 'neutral' | 'negative' = msgs.some(m => 
+                m.content.toLowerCase().includes('cảm ơn') || 
+                m.content.toLowerCase().includes('tốt') ||
+                m.content.toLowerCase().includes('hiểu rồi')
+            ) ? 'positive' : 'neutral'
+
+            return {
+                id: `conv-${date}-${index}`,
+                date: new Date(firstMsg.createdAt).toLocaleString('vi-VN'),
+                duration: duration > 0 ? `${duration} phút` : '< 1 phút',
+                messageCount: msgs.length,
+                topic: `Tư vấn ngày ${date}`,
+                summary: summary.substring(0, 150),
+                tags: ['Tư vấn'],
+                sentiment
+            }
+        }).reverse() // Mới nhất lên đầu
+    }, [currentConversationId, messages])
 
     // Câu hỏi gợi ý cho giảng viên
     const suggestedQuestions: SuggestedQuestion[] = [
@@ -436,24 +403,101 @@ export default function MessagesNotifications() {
     ]
 
     // Functions
-    const handleSendMessage = () => {
-        if (!messageInput.trim() || !selectedStudent) return
+    const handleSendMessage = async () => {
+        if (!messageInput.trim() || !currentConversationId) return
 
-        const newMessage: ChatMessage = {
-            id: `msg_${Date.now()}`,
-            sender: 'teacher',
-            content: messageInput,
-            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-            isRead: false
+        // Get teacher userId from conversations - find teacher participant
+        const currentConv = _conversations.find(c => c._id === currentConversationId)
+        if (!currentConv) {
+            alert('Không tìm thấy cuộc trò chuyện')
+            return
         }
 
-        setChatMessages([...chatMessages, newMessage])
-        setMessageInput('')
+        const teacherParticipant = currentConv.participants.find(p => p.userType === 'teacher')
+        if (!teacherParticipant) {
+            alert('Không tìm thấy thông tin giáo viên trong cuộc trò chuyện')
+            return
+        }
+
+        const messageText = messageInput.trim()
+        setMessageInput('') // Clear immediately
+
+        try {
+            // Gửi qua Socket.IO cho real-time
+            await socketService.sendMessage(
+                currentConversationId,
+                teacherParticipant.userId,
+                'teacher',
+                messageText
+            )
+            
+            // Message sẽ được nhận qua socket listener
+            // Update local conversation lastMessage
+            setConversations(prev => prev.map(conv => 
+                conv._id === currentConversationId
+                    ? { 
+                        ...conv, 
+                        lastMessage: {
+                            content: messageText,
+                            senderId: teacherParticipant.userId,
+                            senderName: teacherParticipant.userName,
+                            timestamp: new Date()
+                        }
+                    }
+                    : conv
+            ))
+        } catch (error) {
+            console.error('Error sending message:', error)
+            alert('Có lỗi khi gửi tin nhắn. Vui lòng thử lại!')
+            setMessageInput(messageText) // Restore on error
+        }
     }
 
-    const handleSelectStudent = (student: Student) => {
+    const handleSelectStudent = async (student: Student) => {
+        // Leave previous conversation room
+        if (currentConversationId) {
+            socketService.leaveConversation(currentConversationId)
+        }
+
         setSelectedStudent(student)
-        // TODO: Load tin nhắn của sinh viên này
+        setLoading(true)
+        
+        try {
+            // Tạo hoặc tìm conversation
+            const conversation = await chatService.createTeacherConversation(
+                student.id,
+                student.name,
+                'teacher-student',
+                {
+                    studentInfo: {
+                        studentId: student.id,
+                        studentCode: student.studentCode || '',
+                        studentName: student.name,
+                        className: student.className,
+                        riskLevel: student.riskLevel,
+                    }
+                }
+            )
+            
+            // Lưu conversation ID
+            setCurrentConversationId(conversation._id)
+            
+            // Join conversation room
+            socketService.joinConversation(conversation._id)
+            
+            // Load messages của conversation
+            await loadMessages(conversation._id)
+            
+            // Mark as read
+            await chatService.markAsRead(conversation._id)
+            
+            // Refresh conversations để update unread count
+            await loadConversations()
+        } catch (error) {
+            console.error('Error selecting student:', error)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleUseSuggestion = (question: string) => {
@@ -501,13 +545,13 @@ export default function MessagesNotifications() {
     const normalStudents = students.filter(s => s.riskLevel === 'low' || !s.riskLevel)
 
     // Lọc theo nhóm hiện tại
-    const currentGroupStudents = activeGroup === 'atrisk' 
+    const currentGroupStudents: Student[] = activeGroup === 'atrisk' 
         ? atRiskStudents 
         : activeGroup === 'normal' 
         ? normalStudents 
         : []
 
-    const currentGroupParents = activeGroup === 'parents' ? parents : []
+    const currentGroupParents: Parent[] = activeGroup === 'parents' ? parents : []
 
     const filteredStudents = currentGroupStudents.filter(student => {
         const matchSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -526,17 +570,14 @@ export default function MessagesNotifications() {
         return matchSearch && matchClass
     })
 
-    // Lấy danh sách các lớp unique
-    const classList = ['all', ...Array.from(new Set([...students.map(s => s.className), ...parents.map(p => p.className)]))]
-
     // Lọc lịch sử cuộc trò chuyện theo sinh viên được chọn
     const filteredConversationHistory = selectedStudent
         ? conversationHistories
         : []
 
     // Pagination for chat messages - Chỉ load tin nhắn gần nhất
-    const totalMessages = chatMessages.length
-    const displayedMessages = chatMessages.slice(-currentMessagePage * messagesPerPage) // Lấy từ cuối lên
+    const totalMessages = messages.length
+    const displayedMessages = messages.slice(-currentMessagePage * messagesPerPage) // Lấy từ cuối lên
     const hasMoreMessages = totalMessages > displayedMessages.length
 
     const loadMoreMessages = () => {
@@ -712,13 +753,12 @@ export default function MessagesNotifications() {
                             </div>
                 </div>
 
-                {/* Main Content - 3 Columns Layout - Cho phép scroll tự nhiên */}
+                {/* Main Content - 3 Columns Layout */}
                 <div className="flex-1 grid grid-cols-12 gap-4 pb-6">
-                    {/* Column 1 - Danh sách sinh viên - Hide on mobile when student selected */}
-                    <div className={`col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm ${
-                        selectedStudent ? 'hidden lg:flex' : 'flex'  // Hide on mobile when chat is active, always show on desktop
-                    }`}>
-                        <div className="p-4 border-b space-y-3">
+                    {/* Column 1 - Danh sách sinh viên - Ẩn khi đã chọn */}
+                    {!selectedStudent && (
+                        <div className="col-span-12 lg:col-span-3 flex flex-col bg-white rounded-xl shadow-sm">
+                            <div className="p-4 border-b space-y-3">
                             {/* Search bar */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -795,13 +835,15 @@ export default function MessagesNotifications() {
                         {/* Danh sách sinh viên/phụ huynh - Cho phép scroll tự nhiên */}
                         <div>
                             {/* Hiển thị sinh viên */}
-                            {activeGroup !== 'parents' && filteredStudents.map((student) => (
-                                <div
-                                    key={student.id}
-                                    onClick={() => handleSelectStudent(student)}
-                                    className={`p-4 border-b cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:scale-[1.01] ${selectedStudent?.id === student.id ? 'bg-blue-50 border-l-4 border-l-blue-600 shadow-md' : ''
-                                        }`}
-                                >
+                            {activeGroup !== 'parents' && filteredStudents.map((student) => {
+                                const isSelected = selectedStudent !== null && (selectedStudent as Student | Parent).id === student.id
+                                return (
+                                    <div
+                                        key={student.id}
+                                        onClick={() => handleSelectStudent(student)}
+                                        className={`p-4 border-b cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:scale-[1.01] ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-600 shadow-md' : ''
+                                            }`}
+                                    >
                                     <div className="flex items-start gap-3">
                                         <div className="relative">
                                             <img
@@ -840,16 +882,19 @@ export default function MessagesNotifications() {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                )
+                            })}
                             
                             {/* Hiển thị phụ huynh */}
-                            {activeGroup === 'parents' && filteredParents.map((parent) => (
-                                <div
-                                    key={parent.id}
-                                    onClick={() => setSelectedStudent(parent as any)}
-                                    className={`p-4 border-b cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:shadow-md hover:scale-[1.01] ${selectedStudent?.id === parent.id ? 'bg-purple-50 border-l-4 border-l-purple-600 shadow-md' : ''
-                                        }`}
-                                >
+                            {activeGroup === 'parents' && filteredParents.map((parent) => {
+                                const isSelected = selectedStudent !== null && (selectedStudent as Student | Parent).id === parent.id
+                                return (
+                                    <div
+                                        key={parent.id}
+                                        onClick={() => setSelectedStudent(parent as any)}
+                                        className={`p-4 border-b cursor-pointer transition-all duration-200 hover:bg-purple-50 hover:shadow-md hover:scale-[1.01] ${isSelected ? 'bg-purple-50 border-l-4 border-l-purple-600 shadow-md' : ''
+                                            }`}
+                                    >
                                     <div className="flex items-start gap-3">
                                         <div className="relative">
                                             <img
@@ -886,19 +931,21 @@ export default function MessagesNotifications() {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     </div>
+                    )}
 
-                    {/* Column 2 - Main Chat Area - Tự động thay đổi theo nội dung */}
-                    <div className={`col-span-12 bg-white rounded-xl shadow-sm overflow-hidden ${
+                    {/* Column 2 - Main Chat Area */}
+                    <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${
                         selectedStudent 
                             ? (showHistory 
-                                ? 'lg:col-span-5'  // With history panel
+                                ? 'col-span-9'  // Danh sách ẩn, history hiện (9 + 3 = 12)
                                 : (showSuggestions 
-                                    ? 'lg:col-span-6'  // With suggestions panel
-                                    : 'lg:col-span-9'))  // Full width (no history, no suggestions)
-                            : 'lg:hidden'  // When no student: hidden on all screen sizes
+                                    ? 'col-span-9'  // Danh sách ẩn, suggestions hiện (9 + 3 = 12)
+                                    : 'col-span-12'))  // Danh sách ẩn, full width
+                            : 'hidden'  // Hoàn toàn ẩn khi không có student
                     }`}>
                         {selectedStudent ? (
                             <div className="flex flex-col min-h-[500px] max-h-[800px]">
@@ -906,12 +953,13 @@ export default function MessagesNotifications() {
                                 <div className="p-4 border-b bg-gray-50 flex-shrink-0">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            {/* Back button - visible on mobile */}
+                                            {/* Back Button */}
                                             <button
                                                 onClick={() => setSelectedStudent(null)}
-                                                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                                title="Quay lại danh sách"
                                             >
-                                                <ChevronLeft className="w-5 h-5" />
+                                                <ArrowLeft className="w-5 h-5 text-gray-600" />
                                             </button>
                                             <div className="relative">
                                                 <img
@@ -934,7 +982,7 @@ export default function MessagesNotifications() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {selectedStudent.riskLevel && selectedStudent.riskLevel !== 'low' && (
+                                            {'riskLevel' in selectedStudent && selectedStudent.riskLevel && selectedStudent.riskLevel !== 'low' && (
                                                 <Badge className={getRiskBadge(selectedStudent.riskLevel)}>
                                                     {selectedStudent.riskLevel === 'high' ? '⚠️ Cần chú ý' : '👀 Theo dõi'}
                                                 </Badge>
@@ -942,7 +990,12 @@ export default function MessagesNotifications() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => setShowHistory(!showHistory)}
+                                                onClick={() => {
+                                                    setShowHistory(!showHistory)
+                                                    if (!showHistory) {
+                                                        setShowSuggestions(false) // Đóng suggestions khi mở history
+                                                    }
+                                                }}
                                                 className="flex items-center gap-2"
                                             >
                                                 <Clock className="w-4 h-4" />
@@ -970,33 +1023,41 @@ export default function MessagesNotifications() {
                                     )}
                                     
                                     {/* Hiển thị messages theo pagination */}
-                                    {displayedMessages.map((msg, index) => (
-                                        <div
-                                            key={msg.id}
-                                            className={`flex ${msg.sender === 'teacher' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
-                                            style={{ animationDelay: `${index * 0.05}s` }}
-                                        >
+                                    {displayedMessages.map((msg, index) => {
+                                        const isTeacher = msg.senderType === 'teacher'
+                                        const timestamp = new Date(msg.createdAt).toLocaleTimeString('vi-VN', { 
+                                            hour: '2-digit', 
+                                            minute: '2-digit' 
+                                        })
+                                        
+                                        return (
                                             <div
-                                                className={`max-w-[70%] rounded-2xl px-4 py-2 transition-all duration-200 hover:scale-105 hover:shadow-lg ${msg.sender === 'teacher'
-                                                    ? 'bg-blue-600 text-white rounded-br-none'
-                                                    : 'bg-white text-gray-900 border rounded-bl-none'
-                                                    }`}
+                                                key={msg._id}
+                                                className={`flex ${isTeacher ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+                                                style={{ animationDelay: `${index * 0.05}s` }}
                                             >
-                                                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                                                <div className="flex items-center gap-1 mt-1 justify-end">
-                                                    <span
-                                                        className={`text-xs ${msg.sender === 'teacher' ? 'text-blue-100' : 'text-gray-400'
-                                                            }`}
-                                                    >
-                                                        {msg.timestamp}
-                                                    </span>
-                                                    {msg.sender === 'teacher' && (
-                                                        <CheckCheck className={`w-3 h-3 transition-colors ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
-                                                    )}
+                                                <div
+                                                    className={`max-w-[70%] rounded-2xl px-4 py-2 transition-all duration-200 hover:scale-105 hover:shadow-lg ${isTeacher
+                                                        ? 'bg-blue-600 text-white rounded-br-none'
+                                                        : 'bg-white text-gray-900 border rounded-bl-none'
+                                                        }`}
+                                                >
+                                                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                                    <div className="flex items-center gap-1 mt-1 justify-end">
+                                                        <span
+                                                            className={`text-xs ${isTeacher ? 'text-blue-100' : 'text-gray-400'
+                                                                }`}
+                                                        >
+                                                            {timestamp}
+                                                        </span>
+                                                        {isTeacher && (
+                                                            <CheckCheck className={`w-3 h-3 transition-colors ${msg.isRead ? 'text-blue-200' : 'text-blue-300'}`} />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
 
                                 {/* Input Area - Không co lại */}
@@ -1029,7 +1090,12 @@ export default function MessagesNotifications() {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setShowSuggestions(!showSuggestions)}
+                                            onClick={() => {
+                                                setShowSuggestions(!showSuggestions)
+                                                if (!showSuggestions) {
+                                                    setShowHistory(false) // Đóng history khi mở suggestions
+                                                }
+                                            }}
                                             className="text-blue-600 hover:text-blue-700"
                                         >
                                             <MessageCircle className="w-4 h-4 mr-2" />
@@ -1070,11 +1136,13 @@ export default function MessagesNotifications() {
                                     {selectedStudent && (
                                         <div className="mt-2 flex items-center gap-2 text-sm">
                                             <Badge className="bg-indigo-100 text-indigo-700">
-                                                {selectedStudent.totalConversations} cuộc trò chuyện
+                                                {conversationHistories.length} phiên tư vấn
                                             </Badge>
-                                            <span className="text-gray-500">
-                                                Gần nhất: {new Date(selectedStudent.lastConversationDate || '').toLocaleDateString('vi-VN')}
-                                            </span>
+                                            {conversationHistories.length > 0 && (
+                                                <span className="text-gray-500">
+                                                    Gần nhất: {new Date(conversationHistories[0].date).toLocaleDateString('vi-VN')}
+                                                </span>
+                                            )}
                                         </div>
                                     )}
                                 </CardHeader>
@@ -1186,7 +1254,7 @@ export default function MessagesNotifications() {
 
                     {/* Column 3/4 - Câu hỏi gợi ý - Chỉ hiện khi bấm nút */}
                     {showSuggestions && !showHistory && selectedStudent && (
-                        <div className="col-span-12 lg:col-span-3 bg-white rounded-xl shadow-sm">
+                        <div className="col-span-3 bg-white rounded-xl shadow-sm overflow-hidden">
                             <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <MessageCircle className="w-4 h-4 text-purple-600" />
@@ -1194,7 +1262,7 @@ export default function MessagesNotifications() {
                                 </CardTitle>
                                 <p className="text-xs text-gray-600 mt-1">Mẫu câu hỏi tư vấn</p>
                             </CardHeader>
-                            <CardContent className="p-0">
+                            <CardContent className="p-0 max-h-[800px] overflow-y-auto">
                                 {/* Tự mở rộng theo nội dung */}
                                 <div>
                                     {['Học tập', 'Tâm lý', 'Tài chính', 'Xã hội', 'Chung'].map((category) => (

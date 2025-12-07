@@ -20,7 +20,10 @@ import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
-import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
+import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
+import { StudentChatModule } from './student_be/chat/student-chat.module';
+import { ChatModule } from './mongodb/chat.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -42,6 +45,9 @@ import { ReminderSchedulerService } from './admin_be/notification/reminder-sched
     TeacherBeModule,
     StudentBeModule,
     DatabaseModule,
+    ChatModule,
+    TeacherChatModule,
+    StudentChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
