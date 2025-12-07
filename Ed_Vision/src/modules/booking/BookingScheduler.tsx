@@ -335,107 +335,277 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     return chosenDate.timeSlots.find((s) => s.slotId === selectedSlot) || null
   })()
 
+  // Function to fetch availability data
+  const fetchAvailability = useCallback(async () => {
+    if (!activeInstructorId) return
+    
+    setLoading(true)
+    setError(null)
+    try {
+      // Calculate current week dates (Monday to Sunday)
+      const now = new Date()
+      const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+      const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
+      
+      // Get Monday of current week
+      const day = today.getDay()
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1)
+      const weekStart = new Date(today)
+      weekStart.setDate(diff)
+      weekStart.setHours(0, 0, 0, 0)
+      
+      // Get Sunday of current week
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekStart.getDate() + 6)
+      weekEnd.setHours(23, 59, 59, 999)
+      
+      // Format dates for API
+      const startDate = weekStart.toISOString().split('T')[0]
+      const endDate = weekEnd.toISOString().split('T')[0]
+      
+      console.log('Fetching availability for current week:', startDate, 'to', endDate)
+      
+      const res = await fetch(`/api/instructor-availability/${activeInstructorId}?startDate=${startDate}&endDate=${endDate}&autoCreate=false&_t=${Date.now()}`)
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        // Received HTML (likely index.html) — proxy not configured or backend not running
+        const txt = await res.text()
+        throw new Error(`Expected JSON but received ${contentType}. Response starts with: ${txt.slice(0, 120)}`)
+      }
+      const data = await res.json()
+      // Expect data.availabilities: AvailabilityDateResponse[]
+      const mapped: ApiAvailability[] = (data.availabilities || []).map((d: any) => ({
+        date: d.date,
+        dayOfWeek: d.dayOfWeek,
+        isAvailable: !!d.is_available,
+        timeSlots: (d.timeSlots || []).map((t: any) => ({
+          slotId: t.slotId,
+          startTime: t.startTime,
+          endTime: t.endTime,
+          meetingType: t.meetingType,
+          capacity: t.capacity,
+          isOpen: t.isOpen,
+          autoAccept: t.autoAccept,
+          bookedCount: t.bookedCount,
+          meetingLink: t.meetingLink || t.meeting_link || null,
+          meetingLocation: t.meetingLocation || t.meeting_location || null,
+        })),
+      }))
+
+      setAvailabilities(mapped)
+      // Always show current week (Mon..Sun) regardless of data availability
+      const dates: string[] = []
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart)
+        d.setDate(weekStart.getDate() + i)
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        dates.push(`${y}-${m}-${dd}`)
+      }
+      setWeekDates(dates)
+
+        // default select first day in the week that has any slot OR is marked available AND is today or in the future
+        let selIdx = 0
+        const map = new Map(mapped.map((x: any) => [x.date, x]))
+        
+        // Get today in Vietnam timezone (GMT+7)
+        const currentTime = new Date()
+        const vietnamTimeCurrent = new Date(currentTime.getTime() + (7 * 60 * 60 * 1000) + (currentTime.getTimezoneOffset() * 60 * 1000))
+        const todayCurrent = new Date(vietnamTimeCurrent.getFullYear(), vietnamTimeCurrent.getMonth(), vietnamTimeCurrent.getDate())
+        
+        for (let i = 0; i < dates.length; i++) {
+          const dateObj = new Date(dates[i] + 'T00:00:00Z')
+          const isPast = dateObj < todayCurrent
+          const d = map.get(dates[i])
+          
+          // Only select if not in the past and has availability
+          if (!isPast && d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
+            selIdx = i
+            break
+          }
+        }
+        setSelectedDateIdx(selIdx)
+        
+        // Check if currently selected date is still available, if not, reset to first available
+        const currentSelectedDate = dates[selectedDateIdx]
+        const currentSelectedData = map.get(currentSelectedDate)
+        const currentDateObj = new Date(currentSelectedDate + 'T00:00:00Z')
+        const isCurrentPast = currentDateObj < todayCurrent
+        const isCurrentAvailable = !isCurrentPast && currentSelectedData && ((currentSelectedData.timeSlots && currentSelectedData.timeSlots.length > 0) || currentSelectedData.isAvailable)
+        
+        if (!isCurrentAvailable) {
+          // Reset to first available date
+          setSelectedDateIdx(selIdx)
+          setSelectedSlot(null)
+          setSelectedFormat(null)
+        }
+        
+        const selDate = map.get(dates[selIdx])
+        // Find the first valid slot (open and not at capacity)
+        const firstValidSlot = selDate?.timeSlots?.find((slot: ApiTimeSlot) => 
+          slot.isOpen && ((slot.bookedCount ?? 0) < slot.capacity)
+        )
+        if (firstValidSlot) {
+          setSelectedSlot(firstValidSlot.slotId)
+          setSelectedFormat(firstValidSlot.meetingType === 'online' ? 'online' : 'offline')
+        }
+    } catch (e: any) {
+      if (e?.message) {
+        setError(`Không thể tải lịch sẵn có. Chi tiết: ${e.message}`)
+      } else {
+        setError('Không thể tải lịch sẵn có. Vui lòng thử lại.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [activeInstructorId, selectedDateIdx])
 
   // fetch availability on mount
   useEffect(() => {
-    if (!activeInstructorId) return
-    const fetchAvailability = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-  const res = await fetch(`/api/instructor-availability/${activeInstructorId}`)
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
-        const contentType = res.headers.get('content-type') || ''
-        if (!contentType.includes('application/json')) {
-          // Received HTML (likely index.html) — proxy not configured or backend not running
-          const txt = await res.text()
-          throw new Error(`Expected JSON but received ${contentType}. Response starts with: ${txt.slice(0, 120)}`)
-        }
-        const data = await res.json()
-        // Expect data.availabilities: AvailabilityDateResponse[]
-        const mapped: ApiAvailability[] = (data.availabilities || []).map((d: any) => ({
-          date: d.date,
-          dayOfWeek: d.dayOfWeek,
-          isAvailable: !!d.is_available,
-          timeSlots: (d.timeSlots || []).map((t: any) => ({
-            slotId: t.slotId,
-            startTime: t.startTime,
-            endTime: t.endTime,
-            meetingType: t.meetingType,
-            capacity: t.capacity,
-            isOpen: t.isOpen,
-            autoAccept: t.autoAccept,
-            bookedCount: t.bookedCount,
-            meetingLink: t.meetingLink || t.meeting_link || null,
-            meetingLocation: t.meetingLocation || t.meeting_location || null,
-          })),
-        }))
-
-        setAvailabilities(mapped)
-        // build a full week (Mon..Sun) starting from week start of the first availability
-        if (mapped.length > 0) {
-          // parse as UTC to avoid local timezone shifting the day (force midnight UTC)
-          const firstDate = new Date(mapped[0].date + 'T00:00:00Z')
-          // compute week start (Monday) in UTC
-          const day = firstDate.getUTCDay()
-          const diff = firstDate.getUTCDate() - day + (day === 0 ? -6 : 1)
-          const weekStart = new Date(firstDate)
-          weekStart.setUTCDate(diff)
-          weekStart.setUTCHours(0, 0, 0, 0)
-
-          const dates: string[] = []
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(weekStart)
-            d.setUTCDate(weekStart.getUTCDate() + i)
-            const y = d.getUTCFullYear()
-            const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-            const dd = String(d.getUTCDate()).padStart(2, '0')
-            dates.push(`${y}-${m}-${dd}`)
-          }
-          setWeekDates(dates)
-
-          // default select first day in the week that has any slot OR is marked available AND is today or in the future
-          let selIdx = 0
-          const map = new Map(mapped.map((x: any) => [x.date, x]))
-          
-          // Get today in Vietnam timezone (GMT+7)
-          const now = new Date()
-          const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
-          const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
-          
-          for (let i = 0; i < dates.length; i++) {
-            const dateObj = new Date(dates[i] + 'T00:00:00Z')
-            const isPast = dateObj < today
-            const d = map.get(dates[i])
-            
-            // Only select if not in the past and has availability
-            if (!isPast && d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
-              selIdx = i
-              break
-            }
-          }
-          setSelectedDateIdx(selIdx)
-          const selDate = map.get(dates[selIdx])
-          // Find the first valid slot (open and not at capacity)
-          const firstValidSlot = selDate?.timeSlots?.find((slot: ApiTimeSlot) => 
-            slot.isOpen && ((slot.bookedCount ?? 0) < slot.capacity)
-          )
-          if (firstValidSlot) {
-            setSelectedSlot(firstValidSlot.slotId)
-            setSelectedFormat(firstValidSlot.meetingType === 'online' ? 'online' : 'offline')
-          }
-        }
-      } catch (e: any) {
-        if (e?.message) {
-          setError(`Không thể tải lịch sẵn có. Chi tiết: ${e.message}`)
-        } else {
-          setError('Không thể tải lịch sẵn có. Vui lòng thử lại.')
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchAvailability()
+  }, [activeInstructorId, fetchAvailability])
+
+  // Auto-refresh when date changes (crosses midnight) - optimized to avoid API spam
+  useEffect(() => {
+    const scheduleNextMidnightCheck = () => {
+      const now = new Date()
+      const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+      
+      // Calculate time until next midnight in Vietnam timezone
+      const tomorrow = new Date(vietnamTime)
+      tomorrow.setDate(vietnamTime.getDate() + 1)
+      tomorrow.setHours(0, 0, 0, 0)
+      
+      const timeUntilMidnight = tomorrow.getTime() - vietnamTime.getTime()
+      
+      console.log(`Next midnight check in ${Math.round(timeUntilMidnight / 1000 / 60)} minutes`)
+      
+      return setTimeout(() => {
+        const currentDate = vietnamTime.toDateString()
+        const storedDate = sessionStorage.getItem('currentBookingDate')
+        
+        if (storedDate !== currentDate) {
+          console.log('Date changed at midnight, refreshing booking data')
+          sessionStorage.setItem('currentBookingDate', currentDate)
+          // Trigger re-fetch by updating a dummy state
+          setAvailabilities([])
+          setWeekDates([])
+          
+          // Re-run the fetch effect
+          if (activeInstructorId) {
+            const fetchAvailability = async () => {
+              setLoading(true)
+              setError(null)
+              try {
+                // Calculate current week dates (Monday to Sunday)
+                const now = new Date()
+                const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+                const today = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), vietnamTime.getDate())
+                
+                // Get Monday of current week
+                const day = today.getDay()
+                const diff = today.getDate() - day + (day === 0 ? -6 : 1)
+                const weekStart = new Date(today)
+                weekStart.setDate(diff)
+                weekStart.setHours(0, 0, 0, 0)
+                
+                // Get Sunday of current week
+                const weekEnd = new Date(weekStart)
+                weekEnd.setDate(weekStart.getDate() + 6)
+                weekEnd.setHours(23, 59, 59, 999)
+                
+                // Format dates for API
+                const startDate = weekStart.toISOString().split('T')[0]
+                const endDate = weekEnd.toISOString().split('T')[0]
+                
+                console.log('Midnight refresh: loading availability for current week:', startDate, 'to', endDate)
+                
+                const res = await fetch(`/api/instructor-availability/${activeInstructorId}?startDate=${startDate}&endDate=${endDate}&autoCreate=false&_t=${Date.now()}`)
+                if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
+                const contentType = res.headers.get('content-type') || ''
+                if (!contentType.includes('application/json')) {
+                  const txt = await res.text()
+                  throw new Error(`Expected JSON but received ${contentType}. Response starts with: ${txt.slice(0, 120)}`)
+                }
+                const data = await res.json()
+                const mapped: ApiAvailability[] = (data.availabilities || []).map((d: any) => ({
+                  date: d.date,
+                  dayOfWeek: d.dayOfWeek,
+                  isAvailable: !!d.is_available,
+                  timeSlots: (d.timeSlots || []).map((t: any) => ({
+                    slotId: t.slotId,
+                    startTime: t.startTime,
+                    endTime: t.endTime,
+                    meetingType: t.meetingType,
+                    capacity: t.capacity,
+                    isOpen: t.isOpen,
+                    autoAccept: t.autoAccept,
+                    bookedCount: t.bookedCount,
+                    meetingLink: t.meetingLink || t.meeting_link || null,
+                    meetingLocation: t.meetingLocation || t.meeting_location || null,
+                  })),
+                }))
+
+                setAvailabilities(mapped)
+                // Always show current week (Mon..Sun) regardless of data availability
+                const dates: string[] = []
+                for (let i = 0; i < 7; i++) {
+                  const d = new Date(weekStart)
+                  d.setDate(weekStart.getDate() + i)
+                  const y = d.getFullYear()
+                  const m = String(d.getMonth() + 1).padStart(2, '0')
+                  const dd = String(d.getDate()).padStart(2, '0')
+                  dates.push(`${y}-${m}-${dd}`)
+                }
+                setWeekDates(dates)
+                
+                // Check if currently selected date is still available after refresh
+                const map = new Map(mapped.map((x: any) => [x.date, x]))
+                const currentSelectedDate = dates[selectedDateIdx]
+                if (currentSelectedDate) {
+                  const currentSelectedData = map.get(currentSelectedDate)
+                  const currentDateObj = new Date(currentSelectedDate + 'T00:00:00Z')
+                  const isCurrentPast = currentDateObj < today
+                  const isCurrentAvailable = !isCurrentPast && currentSelectedData && ((currentSelectedData.timeSlots && currentSelectedData.timeSlots.length > 0) || currentSelectedData.isAvailable)
+                  
+                  if (!isCurrentAvailable) {
+                    // Reset selection
+                    setSelectedDateIdx(0)
+                    setSelectedSlot(null)
+                    setSelectedFormat(null)
+                  }
+                }
+              } catch (e: any) {
+                if (e?.message) {
+                  setError(`Không thể tải lịch sẵn có. Chi tiết: ${e.message}`)
+                } else {
+                  setError('Không thể tải lịch sẵn có. Vui lòng thử lại.')
+                }
+              } finally {
+                setLoading(false)
+              }
+            }
+            fetchAvailability()
+          }
+        }
+        
+        // Schedule next check
+        scheduleNextMidnightCheck()
+      }, timeUntilMidnight)
+    }
+    
+    // Initialize current date in sessionStorage
+    const now = new Date()
+    const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000))
+    const currentDate = vietnamTime.toDateString()
+    sessionStorage.setItem('currentBookingDate', currentDate)
+    
+    // Start the scheduling
+    const timeoutId = scheduleNextMidnightCheck()
+    
+    return () => clearTimeout(timeoutId)
   }, [activeInstructorId])
 
   // fetch instructor profile when account id is provided
@@ -756,7 +926,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           <div className="mb-4">
             <button
               onClick={() => navigate('/appointments')}
-              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium"
+              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -831,15 +1001,31 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                 ) : (
                   <>
                 <div className="text-center mb-5">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 mb-3 shadow">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                  <div className="relative mb-3">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 shadow">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setLoading(true);
+                        setError(null);
+                        fetchAvailability();
+                      }}
+                      disabled={loading}
+                      className="absolute top-0 right-0 flex items-center justify-center w-8 h-8 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                      title="Làm mới dữ liệu"
+                    >
+                      <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
                   </div>
                   <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">Chọn thời gian tư vấn</h1>
                   <p className="text-xs sm:text-sm text-gray-600">
@@ -850,29 +1036,31 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                 {/* Weekly Calendar */}
                 <div className="mb-5">
                   <h2 className="text-sm font-bold text-gray-900 mb-2.5 flex items-center">
-                    <svg className="w-4 h-4 mr-1.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    {weekDates.length > 0 ? (() => {
-                      const firstDate = new Date(weekDates[0] + 'T00:00:00Z')
-                      const lastDate = new Date(weekDates[weekDates.length - 1] + 'T00:00:00Z')
-                      const firstDay = firstDate.getUTCDate()
-                      const lastDay = lastDate.getUTCDate()
-                      const firstMonth = firstDate.getUTCMonth() + 1
-                      const lastMonth = lastDate.getUTCMonth() + 1
-                      const year = firstDate.getUTCFullYear()
-                      
-                      if (firstMonth === lastMonth) {
-                        return `Tuần từ ${firstDay} - ${lastDay} Tháng ${firstMonth}, ${year}`
-                      } else {
-                        return `Tuần từ ${firstDay} Tháng ${firstMonth} - ${lastDay} Tháng ${lastMonth}, ${year}`
-                      }
-                    })() : 'Chọn tuần'}
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 mr-1.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {weekDates.length > 0 ? (() => {
+                        const firstDate = new Date(weekDates[0] + 'T00:00:00Z')
+                        const lastDate = new Date(weekDates[weekDates.length - 1] + 'T00:00:00Z')
+                        const firstDay = firstDate.getUTCDate()
+                        const lastDay = lastDate.getUTCDate()
+                        const firstMonth = firstDate.getUTCMonth() + 1
+                        const lastMonth = lastDate.getUTCMonth() + 1
+                        const year = firstDate.getUTCFullYear()
+                        
+                        if (firstMonth === lastMonth) {
+                          return `Tuần từ ${firstDay} - ${lastDay} Tháng ${firstMonth}, ${year}`
+                        } else {
+                          return `Tuần từ ${firstDay} Tháng ${firstMonth} - ${lastDay} Tháng ${lastMonth}, ${year}`
+                        }
+                      })() : 'Chọn tuần'}
+                    </div>
                   </h2>
 
                   {groupedTotal === 0 && (

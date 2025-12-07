@@ -24,7 +24,7 @@ export function useInstructorAvailability(instructorId: number) {
   const lastFetchTimeRef = useRef<number>(0);
   
   // Debounce threshold (minimum time between fetches in ms)
-  const DEBOUNCE_THRESHOLD = 1000; // 1 second
+  const DEBOUNCE_THRESHOLD = 200; // Reduced from 1000ms to 200ms for better responsiveness
 
   /**
    * Convert backend response to frontend AvailableDate format
@@ -121,11 +121,13 @@ export function useInstructorAvailability(instructorId: number) {
   /**
    * Fetch availability data for a specific week
    * Returns exactly what backend provides - no client-side date generation
+   * @param forceRefresh - Force skip cache and fetch fresh data (default: true for consistency)
    */
   const fetchWeeklyAvailability = useCallback(
-    async (weekStartDate: string, weekEndDate: string, autoCreateWeek: boolean = false): Promise<AvailableDate[]> => {
+    async (weekStartDate: string, weekEndDate: string, autoCreateWeek: boolean = false, forceRefresh: boolean = true): Promise<AvailableDate[]> => {
       // autoCreateWeek = false nghĩa là không tự động tạo tuần mới nếu chưa có
-      const backendData = await fetchAvailability(weekStartDate, weekEndDate, false, autoCreateWeek);
+      // forceRefresh = true by default to always get fresh data
+      const backendData = await fetchAvailability(weekStartDate, weekEndDate, forceRefresh, autoCreateWeek);
       return backendData;
     },
     [fetchAvailability]
