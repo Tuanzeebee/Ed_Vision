@@ -80,7 +80,12 @@ export class BookingService {
 		const studentRecord = await this.repository.getStudentByAccountId(accountId);
 		const parentRecord = await this.repository.getParentByAccountId(accountId);
 
-		console.log(`Booking for accountId ${accountId}: studentRecord=${!!studentRecord}, parentRecord=${!!parentRecord}`);
+		// Validate: account cannot be both student and parent
+		if (studentRecord && parentRecord) {
+			throw new ForbiddenException('Account cannot be both student and parent. Please contact administrator.');
+		}
+
+		// console.log(`Booking for accountId ${accountId}: studentRecord=${!!studentRecord}, parentRecord=${!!parentRecord}`);
 
 		let bookerRole = 'student';
 		let studentIdToUse: number | undefined = undefined;
@@ -89,7 +94,7 @@ export class BookingService {
 		if (parentRecord) {
 			// Parent may book on behalf of a studentId provided
 			bookerRole = 'parent';
-			console.log(`Setting bookerRole to 'parent' for accountId ${accountId}`);
+			// console.log(`Setting bookerRole to 'parent' for accountId ${accountId}`);
 			if (!dto.studentId) throw new BadRequestException('Parent must specify studentId to book for');
 			// verify link
 			const link = await this.repository.verifyParentStudentLink(parentRecord.parent_id, dto.studentId);
@@ -103,7 +108,7 @@ export class BookingService {
 		};
 	} else if (studentRecord) {
 			bookerRole = 'student';
-			console.log(`Setting bookerRole to 'student' for accountId ${accountId}`);
+			// console.log(`Setting bookerRole to 'student' for accountId ${accountId}`);
 			studentIdToUse = studentRecord.student_id;
 		} else {
 			throw new ForbiddenException('Only students and parents can create bookings');
@@ -117,11 +122,16 @@ export class BookingService {
 				const status = bookerRole === 'student' ? 'confirmed' : 'pending';
 				const meetingType = dto.meetingType ?? slot.meeting_type ?? 'offline';
 
+				// Update booker info if different from current appointment
+				const needsBookerUpdate = existingAppointment.booker_account_id !== accountId || existingAppointment.booker_role !== bookerRole;
+
 				const updatedAppointment = await this.repository.reactivateCancelledAppointment(
 					existingAppointment.appointment_id,
 					status,
 					meetingType as any,
-					dto.meetingPurpose
+					dto.meetingPurpose,
+					needsBookerUpdate ? accountId : undefined,
+					needsBookerUpdate ? bookerRole : undefined
 				);
 
 				// re-fetch to include slot and related info
@@ -436,7 +446,10 @@ export class BookingService {
 		return shaped
 	}
 	async listAppointmentsForAccount(accountId: number) {
-		return this.repository.getAppointmentsForAccount(accountId);
+		// console.log(`[listAppointmentsForAccount] Called with accountId=${accountId}`);
+		const result = await this.repository.getAppointmentsForAccount(accountId);
+		// console.log(`[listAppointmentsForAccount] Found ${result.length} appointments for accountId=${accountId}`);
+		return result;
 	}
 
 	async cancelAppointment(accountId: number, appointmentId: number, reason?: string) {

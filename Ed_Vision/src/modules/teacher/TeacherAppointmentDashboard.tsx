@@ -12,7 +12,10 @@ type Page = 'schedule' | 'management';
 export default function TeacherAppointmentDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentPage, setCurrentPage] = useState<Page>('management'); // default to management
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    // Initialize based on current URL path
+    return location.pathname === '/teacher/schedule' ? 'schedule' : 'management';
+  });
 
   // Set currentPage based on URL path after component mounts
   useEffect(() => {

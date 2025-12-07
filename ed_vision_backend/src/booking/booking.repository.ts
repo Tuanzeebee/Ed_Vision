@@ -58,7 +58,7 @@ export class BookingRepository {
     return this.prisma.appointment.findFirst({
       where: {
         slot_id: slotId,
-        student_id: studentId
+        student_id: studentId,
       },
       orderBy: { created_at: 'desc' } // Get the most recent one
     });
@@ -68,17 +68,27 @@ export class BookingRepository {
     return this.prisma.appointment.create({ data });
   }
 
-  async reactivateCancelledAppointment(appointmentId: number, status: string, meetingType: any, meetingPurpose?: string) {
+  async reactivateCancelledAppointment(appointmentId: number, status: string, meetingType: any, meetingPurpose?: string, bookerAccountId?: number, bookerRole?: string) {
+    const updateData: any = {
+      status,
+      meeting_type: meetingType,
+      meeting_purpose: meetingPurpose ?? null,
+      cancel_reason: null,
+      canceled_at: null,
+      updated_at: new Date(),
+    };
+
+    if (bookerAccountId !== undefined) {
+      updateData.booker_account_id = bookerAccountId;
+    }
+
+    if (bookerRole !== undefined) {
+      updateData.booker_role = bookerRole;
+    }
+
     return this.prisma.appointment.update({
       where: { appointment_id: appointmentId },
-      data: {
-        status,
-        meeting_type: meetingType,
-        meeting_purpose: meetingPurpose ?? null,
-        cancel_reason: null,
-        canceled_at: null,
-        updated_at: new Date(),
-      },
+      data: updateData,
     });
   }
 
@@ -102,26 +112,21 @@ export class BookingRepository {
   }
 
   async getAppointmentsForAccount(accountId: number) {
-    // First, check if this account is a parent
+    // Check what roles this account has
+    const studentRecord = await this.prisma.student.findUnique({
+      where: { account_id: accountId }
+    });
     const parentRecord = await this.prisma.parent.findUnique({
-      where: { account_id: accountId },
-      include: {
-        parentStudentLinks: {
-          include: { student: true }
-        }
-      }
+      where: { account_id: accountId }
     });
 
-    let whereCondition: any;
-
-    if (parentRecord) {
-      // Parent should see only appointments they booked themselves
-      // (not appointments for their linked students, as that would be confusing)
-      whereCondition = { booker_account_id: accountId };
-    } else {
-      // Student or instructor sees only appointments they booked
-      whereCondition = { booker_account_id: accountId };
+    // If account has both roles, this is an error - should not happen
+    if (studentRecord && parentRecord) {
+      throw new Error(`Account ${accountId} has both student and parent records - this should not happen`);
     }
+
+    // Return appointments that this account booked (booker_account_id)
+    const whereCondition = { booker_account_id: accountId };
 
     const appointments = await this.prisma.appointment.findMany({
       where: whereCondition,

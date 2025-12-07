@@ -604,8 +604,39 @@ export default function AllAppointments({}: Props) {
 
           {appointment.status === 'canceled' || appointment.status === 'cancelled' ? (
             (() => {
-              const aptDate = new Date(appointment.slot?.date?.specific_date || appointment.created_at);
-              const isPast = aptDate < new Date();
+              // Check if the slot time has already passed
+              const slotDate = appointment.slot?.date?.specific_date;
+              const slotStartTime = appointment.slot?.start_time_local;
+              
+              let isPast = false;
+              if (slotDate && slotStartTime) {
+                try {
+                  // Parse date and time to create full datetime
+                  const dateObj = new Date(slotDate);
+                  const year = dateObj.getFullYear();
+                  const month = dateObj.getMonth();
+                  const day = dateObj.getDate();
+                  
+                  // Parse time (HH:MM format)
+                  const timeObj = new Date(slotStartTime);
+                  const hours = timeObj.getUTCHours();
+                  const minutes = timeObj.getUTCMinutes();
+                  
+                  // Create slot start datetime
+                  const slotStartDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+                  const now = new Date();
+                  
+                  isPast = slotStartDateTime <= now;
+                } catch (error) {
+                  // Fallback to date-only check if parsing fails
+                  const aptDate = new Date(appointment.slot?.date?.specific_date || appointment.created_at);
+                  isPast = aptDate < new Date();
+                }
+              } else {
+                // Fallback if slot info is missing
+                const aptDate = new Date(appointment.slot?.date?.specific_date || appointment.created_at);
+                isPast = aptDate < new Date();
+              }
               
               return (
                 <button 
