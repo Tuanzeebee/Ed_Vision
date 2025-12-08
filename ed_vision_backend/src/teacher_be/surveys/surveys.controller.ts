@@ -8,7 +8,10 @@ import {
     Param,
     Query,
     Req,
+    Res,
+    StreamableFile,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { SurveysService } from './surveys.service';
 import {
     CreateSurveyDto,
@@ -123,6 +126,38 @@ export class SurveysController {
     }
 
     /**
+     * GET /teacher/surveys/:id/incomplete-students
+     * Lấy danh sách sinh viên chưa hoàn thành khảo sát
+     */
+    @Get(':id/incomplete-students')
+    async getIncompleteStudents(@Req() req: any, @Param('id') id: string) {
+        const instructorId = req.user?.instructorId || 1;
+        return this.surveysService.getIncompleteStudents(instructorId, id);
+    }
+
+    /**
+     * GET /teacher/surveys/history-statistics
+     * Lấy thống kê cho tab lịch sử khảo sát
+     */
+    @Get('history-statistics')
+    async getHistoryStatistics(@Req() req: any) {
+        const instructorId = req.user?.instructorId || 1;
+        return this.surveysService.getHistoryStatistics(instructorId);
+    }
+
+    /**
+     * GET /teacher/surveys/target-student-count
+     * Đếm số sinh viên theo faculty và class
+     */
+    @Get('target-student-count')
+    async getTargetStudentCount(
+        @Query('facultyId') facultyId?: string,
+        @Query('classId') classId?: string,
+    ) {
+        return this.surveysService.getTargetStudentCount(facultyId, classId);
+    }
+
+    /**
      * POST /teacher/surveys/send-reminder
      * Gửi nhắc nhở làm khảo sát
      */
@@ -134,12 +169,25 @@ export class SurveysController {
 
     /**
      * GET /teacher/surveys/:id/export
-     * Export survey responses
+     * Export survey responses as Excel file
      */
     @Get(':id/export')
-    async exportSurveyResponses(@Req() req: any, @Param('id') id: string) {
+    async exportSurveyResponses(
+        @Req() req: any,
+        @Param('id') id: string,
+        @Res() res: Response,
+    ) {
         const instructorId = req.user?.instructorId || 1;
-        return this.surveysService.exportSurveyResponses(instructorId, id);
+        const excelBuffer = await this.surveysService.exportSurveyResponses(instructorId, id);
+
+        const filename = `Survey_${id}_Responses_${Date.now()}.xlsx`;
+
+        res.set({
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+        });
+
+        res.send(excelBuffer);
     }
 
     /**

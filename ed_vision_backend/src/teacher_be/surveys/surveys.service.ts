@@ -1145,6 +1145,8 @@ export class SurveysService {
         };
 
         return {
+            surveyId: surveyId,
+            title: survey.title,
             survey,
             totalResponses: responses.length,
             responseRate: Math.round(responseRate * 10) / 10,
@@ -1152,6 +1154,119 @@ export class SurveysService {
             questionAnalytics,
             charts,
         };
+    }
+
+    /**
+     * Lấy danh sách sinh viên chưa hoàn thành khảo sát
+     */
+    async getIncompleteStudents(
+        instructorId: number,
+        surveyId: string,
+    ): Promise<any[]> {
+        // Get all students who completed the survey
+        const completedResponses = await this.prisma.surveyResponse.findMany({
+            where: {
+                survey_id: parseInt(surveyId),
+            },
+            select: {
+                account_id: true,
+            },
+        });
+
+        const completedAccountIds = completedResponses
+            .map((r) => r.account_id)
+            .filter((id): id is number => id !== null);
+
+        // Get instructor's students who haven't completed
+        // TODO: Filter by survey target classes if that info is stored
+        const incompleteStudents = await this.prisma.student.findMany({
+            where: {
+                account_id: {
+                    notIn: completedAccountIds,
+                },
+            },
+            include: {
+                account: {
+                    include: {
+                        profile: true,
+                    },
+                },
+                classGroup: true,
+            },
+            take: 100, // Limit results
+        });
+
+        return incompleteStudents.map((student) => ({
+            studentId: student.student_id.toString(),
+            studentName: student.account?.profile?.full_name || 'Unknown',
+            studentCode: student.student_code,
+            className: student.classGroup?.class_code || 'Unknown',
+            email: '', // Email not in profile model
+            phoneNumber: student.account?.profile?.phone_number || '',
+            lastAccess: student.account?.last_login_at || null,
+            remindersSent: 0, // TODO: Track this if needed
+        }));
+    }
+
+    /**
+     * Lấy thống kê cho tab lịch sử khảo sát
+     */
+    async getHistoryStatistics(instructorId: number): Promise<{
+        totalCompletedSurveys: number;
+        totalResponses: number;
+        improvingStudents: number;
+        needSupportStudents: number;
+    }> {
+        // Get completed surveys
+        const completedSurveys = await this.prisma.survey.count({
+            where: {
+                is_active: false, // Assuming false means completed
+            },
+        });
+
+        // Get total responses for completed surveys
+        const totalResponses = await this.prisma.surveyResponse.count({
+            where: {
+                survey: {
+                    is_active: false,
+                },
+            },
+        });
+
+        // TODO: Calculate improving and need support students based on survey scores
+        // This would require analyzing survey responses over time
+        const improvingStudents = 0;
+        const needSupportStudents = 0;
+
+        return {
+            totalCompletedSurveys: completedSurveys,
+            totalResponses,
+            improvingStudents,
+            needSupportStudents,
+        };
+    }
+
+    /**
+     * Đếm số sinh viên theo faculty và class
+     */
+    async getTargetStudentCount(
+        facultyId?: string,
+        classId?: string,
+    ): Promise<number> {
+        const where: any = {};
+
+        if (classId && classId !== 'all') {
+            where.class_id = parseInt(classId);
+        } else if (facultyId && facultyId !== 'all') {
+            // TODO: Add faculty filter when faculty relation exists
+            // For now, return all students
+        }
+
+        const count = await this.prisma.student.count({
+            where,
+        });
+
+        return count;
     }
 
     /**
@@ -1179,41 +1294,108 @@ export class SurveysService {
     }
 
     /**
-     * Export survey responses
+     * Export survey responses to Excel
      */
-    async exportSurveyResponses(instructorId: number, surveyId: string) {
+    async exportSurveyResponses(instructorId: number, surveyId: string): Promise<Buffer> {
         const analytics = await this.getSurveyAnalytics(instructorId, surveyId);
 
+        console.log(`📊 Exporting survey ${surveyId}:`, {
+            totalResponses: analytics.responses.length,
+            totalQuestions: analytics.survey.questions.length,
+            surveyTitle: analytics.survey.title
+        });
+
+        // Check if there are any responses
+        if (!analytics.responses || analytics.responses.length === 0) {
+            console.warn(`⚠️ No responses found for survey ${surveyId}`);
+            
+            // Create Excel with survey info but no responses
+            const XLSX = require('xlsx');
+            const infoData = [{
+                '📋 Thông báo': 'Chưa có sinh viên nào hoàn thành khảo sát này',
+                'Tiêu đề khảo sát': analytics.survey.title,
+                'Số câu hỏi': analytics.survey.questions.length,
+                'Trạng thái': analytics.survey.status,
+                'Ngày tạo': analytics.survey.createdAt
+            }];
+
+            // Add questions list to second sheet
+            const questionsData = analytics.survey.questions.map((q, idx) => ({
+                'STT': idx + 1,
+                'Câu hỏi': q.question,
+                'Loại': q.type,
+                'Bắt buộc': q.required ? 'Có' : 'Không',
+                'Có lựa chọn': q.options && q.options.length > 0 ? `${q.options.length} lựa chọn` : 'Không'
+            }));
+
+            const workbook = XLSX.utils.book_new();
+            const wsInfo = XLSX.utils.json_to_sheet(infoData);
+            const wsQuestions = XLSX.utils.json_to_sheet(questionsData);
+            
+            XLSX.utils.book_append_sheet(workbook, wsInfo, 'Thông tin');
+            XLSX.utils.book_append_sheet(workbook, wsQuestions, 'Danh sách câu hỏi');
+            
+            return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        }
+
+        console.log(`✅ Found ${analytics.responses.length} responses, creating Excel...`);
+
         // Format data for Excel export
-        const exportData = analytics.responses.map((response) => {
+        const exportData = analytics.responses.map((response, responseIdx) => {
             const row: any = {
+                'STT': responseIdx + 1,
                 'Mã sinh viên': response.student?.code || 'Ẩn danh',
                 'Tên sinh viên': response.student?.name || 'Ẩn danh',
-                Lớp: response.student?.class || 'Ẩn danh',
-                'Thời gian trả lời': response.submittedAt,
+                'Lớp': response.student?.class || 'N/A',
+                'Thời gian trả lời': response.submittedAt ? new Date(response.submittedAt).toLocaleString('vi-VN') : 'N/A',
             };
 
-            // Add each answer
-            response.answers.forEach((answer, index) => {
-                const question = analytics.survey.questions.find(
-                    (q) => q.id === answer.questionId,
-                );
-                if (question) {
-                    row[`Câu ${index + 1}: ${question.question}`] = Array.isArray(
-                        answer.answer,
-                    )
-                        ? answer.answer.join(', ')
-                        : answer.answer;
-                }
+            // Add each answer based on question order
+            analytics.survey.questions.forEach((question, qIdx) => {
+                const answer = response.answers.find(a => a.questionId === question.id);
+                const answerValue = answer 
+                    ? (Array.isArray(answer.answer) ? answer.answer.join(', ') : answer.answer)
+                    : '(Chưa trả lời)';
+                
+                row[`Câu ${qIdx + 1}: ${question.question.substring(0, 50)}${question.question.length > 50 ? '...' : ''}`] = answerValue;
             });
 
             return row;
         });
 
-        return {
-            filename: `Survey_${analytics.survey.title}_${Date.now()}.xlsx`,
-            data: exportData,
-        };
+        console.log(`📝 Created ${exportData.length} rows of data`);
+
+        // Create Excel workbook with responses
+        const XLSX = require('xlsx');
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        
+        // Auto-size columns
+        const maxWidth = 50;
+        const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+            wch: Math.min(Math.max(key.length, 10), maxWidth)
+        }));
+        worksheet['!cols'] = colWidths;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Kết quả khảo sát');
+
+        // Add summary sheet
+        const summaryData = [{
+            'Tiêu đề khảo sát': analytics.survey.title,
+            'Tổng số phản hồi': analytics.responses.length,
+            'Tỷ lệ phản hồi': `${analytics.responseRate}%`,
+            'Số câu hỏi': analytics.survey.questions.length,
+            'Trạng thái': analytics.survey.status,
+            'Ngày xuất': new Date().toLocaleString('vi-VN')
+        }];
+        const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(workbook, wsSummary, 'Tổng quan');
+
+        // Generate buffer
+        const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        console.log(`✅ Excel file generated successfully (${excelBuffer.length} bytes)`);
+        
+        return excelBuffer;
     }
 
     /**

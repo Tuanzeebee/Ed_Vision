@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarPlus,
@@ -30,6 +30,7 @@ import {
   getDayName,
   getDatesInWeek,
 } from '../../lib/weekUtils';
+import type { WeekInfo } from '../../lib/weekUtils';
 
 interface ScheduleManagementProps {
   availableDates: AvailableDate[];
@@ -45,8 +46,28 @@ export default function ScheduleManagement({
   const navigate = useNavigate();
   const [showHintBanner, setShowHintBanner] = useState(true);
 
-  // Chỉ quản lý tuần hiện tại
-  const currentWeek = getCurrentWeek();
+  // Chỉ quản lý tuần hiện tại - tự động cập nhật khi ngày thay đổi
+  const [currentWeek, setCurrentWeek] = useState<WeekInfo | null>(null);
+
+  // Initialize current week once
+  useEffect(() => {
+    if (!currentWeek) {
+      setCurrentWeek(getCurrentWeek());
+    }
+  }, []); // Empty dependency array - only run once
+
+  // Update current week periodically and on mount
+  useEffect(() => {
+    const updateWeek = () => setCurrentWeek(getCurrentWeek());
+    
+    // Update immediately
+    updateWeek();
+    
+    // Update every hour to catch day/week changes
+    const interval = setInterval(updateWeek, 60 * 60 * 1000); // 1 hour
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Get instructor profile from logged-in account
   const { instructorId, loading: profileLoading, error: profileError } = useInstructorProfile();
@@ -92,16 +113,16 @@ export default function ScheduleManagement({
 
   // Chỉ load dữ liệu tuần hiện tại
   const loadCurrentWeekData = useCallback(async () => {
-    if (!instructorId) return;
+    if (!instructorId || !currentWeek) return;
     
-    const week = getCurrentWeek();
-    const suppressToast = sessionStorage.getItem('suppressInitialToast') === 'true';
+    const week = currentWeek;
     
     try {
       const startDate = formatDateForAPI(week.startDate);
       const endDate = formatDateForAPI(week.endDate);
-      // Chỉ load những ngày có sẵn, không tự động tạo tuần mới
-      const data = await fetchWeeklyAvailability(startDate, endDate, false);
+      // Chỉ load những ngày có sẵn, có thể tự động tạo tuần mới nếu cần
+      // forceRefresh = true to always get fresh data from server
+      const data = await fetchWeeklyAvailability(startDate, endDate, true, true);
       
       // Nếu không có dữ liệu (tuần chưa được tạo), tạo template tuần rỗng
       if (!data || data.length === 0) {
@@ -112,14 +133,15 @@ export default function ScheduleManagement({
           timeSlots: [],
         }));
         setAvailableDates(emptyWeekData);
-        if (!suppressToast) {
+        // Only show toast for empty weeks, not on every load
+        const weekKey = `toastShown_${week.displayText}`;
+        if (!sessionStorage.getItem(weekKey)) {
           showToast(`Khởi tạo tuần hiện tại ${week.displayText}`, 'info');
+          sessionStorage.setItem(weekKey, 'true');
         }
       } else {
         setAvailableDates(data);
-        if (!suppressToast) {
-          showToast(`Đã tải lịch tuần hiện tại`, 'success');
-        }
+        // Don't show success toast on every load to avoid spam
       }
     } catch (err) {
       // Nếu API lỗi, tạo template tuần rỗng để UI vẫn hiển thị được
@@ -130,13 +152,23 @@ export default function ScheduleManagement({
         timeSlots: [],
       }));
       setAvailableDates(emptyWeekData);
-      if (!suppressToast) {
+      // Only show error toast once per week
+      const errorKey = `errorShown_${week.displayText}`;
+      if (!sessionStorage.getItem(errorKey)) {
         showToast('Không thể tải dữ liệu. Hiển thị tuần trống.', 'warning');
+        sessionStorage.setItem(errorKey, 'true');
       }
     }
-  }, [instructorId, fetchWeeklyAvailability, setAvailableDates, showToast]);
+  }, [instructorId, currentWeek, fetchWeeklyAvailability, setAvailableDates, showToast]);
 
-
+  // Reload data when week changes
+  useEffect(() => {
+    if (instructorId && currentWeek) {
+      // Clear loaded status for the new week
+      loadedWeeksRef.current.delete(currentWeek.displayText);
+      loadCurrentWeekData();
+    }
+  }, [currentWeek?.displayText, instructorId]); // Use displayText to avoid object comparison, remove loadCurrentWeekData
 
   // Show profile error if any
   useEffect(() => {
@@ -152,45 +184,40 @@ export default function ScheduleManagement({
     }
   }, [startTime, duration]);
 
-  // Load availability data cho tuần hiện tại
+  // Track loaded weeks to prevent infinite loading
+  const loadedWeeksRef = useRef<Set<string>>(new Set());
+
+  // Load data when instructor becomes available
   useEffect(() => {
-    // Don't load if instructor profile is still loading or not available
-    if (profileLoading || !instructorId) {
+    // Don't load if profile is still loading or instructor not available or currentWeek not set
+    if (profileLoading || !instructorId || !currentWeek) {
+      return;
+    }
+
+    const weekDisplayText = currentWeek.displayText;
+
+    // Check if we've already loaded this week
+    if (loadedWeeksRef.current.has(weekDisplayText)) {
+      console.log('Data already loaded for week:', weekDisplayText);
       return;
     }
 
     const loadInitialData = async () => {
-      // Check if this is truly the first load (session-based tracking)
-      const hasLoadedThisSession = sessionStorage.getItem('scheduleDataLoaded');
-
-      // Load current week data if never loaded this session
-      if (!hasLoadedThisSession && availableDates.length === 0) {
-        try {
-          // Chỉ load tuần hiện tại
-          await loadCurrentWeekData();
-
-          // Mark as loaded for this session
-          sessionStorage.setItem('scheduleDataLoaded', 'true');
-        } catch (err) {
-          // Still mark as loaded to prevent retry loops
-          sessionStorage.setItem('scheduleDataLoaded', 'true');
-        }
+      console.log('Loading data for week:', weekDisplayText);
+      try {
+        await loadCurrentWeekData();
+        // Mark as loaded
+        loadedWeeksRef.current.add(weekDisplayText);
+        console.log('Data loaded successfully for week:', weekDisplayText);
+      } catch (err) {
+        console.error('Error loading data for week:', weekDisplayText, err);
+        // Still mark as loaded to prevent infinite retries
+        loadedWeeksRef.current.add(weekDisplayText);
       }
     };
-    loadInitialData();
-  }, [instructorId, profileLoading, loadCurrentWeekData]); // Reload when instructorId becomes available
 
-  // Suppress toast notifications during initial load to avoid flickering
-  useEffect(() => {
-    const isInitialLoad = !sessionStorage.getItem('scheduleDataLoaded') || availableDates.length === 0;
-    if (isInitialLoad && !profileLoading && instructorId && isAdviser) {
-      // Initial load in progress - suppress toast by temporarily setting a flag
-      sessionStorage.setItem('suppressInitialToast', 'true');
-      return () => {
-        sessionStorage.removeItem('suppressInitialToast');
-      };
-    }
-  }, [profileLoading, instructorId, isAdviser, availableDates.length]);
+    loadInitialData();
+  }, [instructorId, profileLoading, currentWeek]); // Remove loadCurrentWeekData from dependencies to prevent infinite loop
 
   // Show API errors via toast
   useEffect(() => {
@@ -226,11 +253,9 @@ export default function ScheduleManagement({
       // Enable date in backend
       await addAvailabilityDate(date, []);
       
-      // Update local state - set isAvailable = true for existing date
-      const updatedDates = availableDates.map((d) =>
-        d.date === date ? { ...d, isAvailable: true } : d
-      );
-      setAvailableDates(updatedDates);
+      // Refresh data from server to ensure consistency
+      await loadCurrentWeekData();
+      
       showToast('Đã bật ngày rảnh thành công!', 'success');
     } catch (err) {
       showToast('Không thể bật ngày rảnh. Vui lòng thử lại!', 'error');
@@ -239,6 +264,15 @@ export default function ScheduleManagement({
 
   const handleRemoveDate = async (index: number, skipConfirm: boolean = false) => {
     const dateToDisable = availableDates[index];
+    
+    // Check if date is already disabled
+    if (!dateToDisable.isAvailable) {
+      showToast('Ngày này đã được tắt rồi!', 'warning');
+      // Refresh data to ensure UI is in sync
+      await loadCurrentWeekData();
+      return;
+    }
+    
     const hasTimeSlots = (dateToDisable?.timeSlots?.length || 0) > 0;
 
     // Check if the date is in the past
@@ -262,13 +296,8 @@ export default function ScheduleManagement({
       // Disable date in backend (sets is_available = false and removes time slots)
       await deleteAvailabilityDate(dateToDisable.date);
       
-      // Update local state - set isAvailable = false and clear time slots
-      const updatedDates = availableDates.map((d) =>
-        d.date === dateToDisable.date 
-          ? { ...d, isAvailable: false, timeSlots: [] } 
-          : d
-      );
-      setAvailableDates(updatedDates);
+      // Refresh data from server to ensure consistency
+      await loadCurrentWeekData();
 
       // Show appropriate message
       if (hasTimeSlots) {
@@ -277,6 +306,9 @@ export default function ScheduleManagement({
         showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)}!`, 'success');
       }
     } catch (err) {
+      console.error('Error removing date:', err);
+      // Refresh data to ensure UI shows correct state
+      await loadCurrentWeekData();
       showToast('Không thể tắt ngày. Vui lòng thử lại!', 'error');
     }
   };
@@ -301,18 +333,21 @@ export default function ScheduleManagement({
 
     try {
       const dateToDisable = dateToDelete.date;
+      
+      // Double-check if date is still enabled (in case of race conditions)
+      if (!dateToDisable.isAvailable) {
+        showToast('Ngày này đã được tắt rồi!', 'warning');
+        await loadCurrentWeekData();
+        return;
+      }
+      
       const hasTimeSlots = (dateToDisable?.timeSlots?.length || 0) > 0;
 
       // Disable date in backend (sets is_available = false and removes time slots)
       await deleteAvailabilityDate(dateToDisable.date);
       
-      // Update local state - set isAvailable = false and clear time slots (không xóa khỏi array)
-      const updatedDates = availableDates.map((d) =>
-        d.date === dateToDisable.date 
-          ? { ...d, isAvailable: false, timeSlots: [] } 
-          : d
-      );
-      setAvailableDates(updatedDates);
+      // Refresh data from server to ensure consistency
+      await loadCurrentWeekData();
 
       // Show appropriate message
       if (hasTimeSlots) {
@@ -321,6 +356,9 @@ export default function ScheduleManagement({
         showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)}!`, 'success');
       }
     } catch (err) {
+      console.error('Error confirming delete date:', err);
+      // Refresh data to ensure UI shows correct state
+      await loadCurrentWeekData();
       showToast('Không thể tắt ngày. Vui lòng thử lại!', 'error');
     } finally {
       setDateToDelete(null);
@@ -395,16 +433,9 @@ export default function ScheduleManagement({
         capacity: parseInt(capacity) || 10,
       });
 
-      // Update local state
-      const newDates = [...availableDates];
-      newDates[dateIndex].timeSlots.push({
-        start: startTime,
-        end: endTime,
-        meetingType: meetingType,
-        capacity: parseInt(capacity) || 10,
-      });
-      newDates[dateIndex].timeSlots.sort((a, b) => a.start.localeCompare(b.start));
-      setAvailableDates(newDates);
+      // Refresh data from server to ensure consistency
+      await loadCurrentWeekData();
+      
       setTimeModalOpen(false);
       showToast(`Đã thêm khung giờ ${startTime} - ${endTime} thành công!`, 'success');
     } catch (err) {
@@ -428,9 +459,9 @@ export default function ScheduleManagement({
           await instructorAvailabilityApi.deleteTimeSlot(instructorId, removedSlot.slotId);
         }
 
-        // Update local state
-        newDates[dateIndex].timeSlots.splice(slotIndex, 1);
-        setAvailableDates(newDates);
+        // Refresh data from server to ensure consistency
+        await loadCurrentWeekData();
+        
         showToast(`Đã xóa khung giờ ${removedSlot.start} - ${removedSlot.end}!`, 'warning');
       } catch (err) {
         showToast('Không thể xóa khung giờ. Vui lòng thử lại!', 'error');
@@ -554,7 +585,7 @@ export default function ScheduleManagement({
                   <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2.5 border border-white/20 hover:bg-white/20 transition-colors">
                     <div>
                       <div className="text-xs text-white/80">Tuần hiện tại</div>
-                      <div className="text-sm font-semibold text-white">{currentWeek.displayText}</div>
+                      <div className="text-sm font-semibold text-white">{currentWeek?.displayText || 'Loading...'}</div>
                     </div>
                   </div>
               
@@ -638,7 +669,7 @@ export default function ScheduleManagement({
           {/* Quick Date Selection - Week View */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-700 mb-3">
-              Chọn nhanh ngày trong tuần hiện tại ({currentWeek.displayText})
+              Chọn nhanh ngày trong tuần hiện tại ({currentWeek?.displayText || ''})
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
               {availableDates.map((dateEntry, index) => {
