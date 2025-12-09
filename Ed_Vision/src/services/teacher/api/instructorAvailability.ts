@@ -73,6 +73,10 @@ class InstructorAvailabilityApi {
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       params.autoCreate = autoCreate ? 'true' : 'false';
+      // Add timestamp to bypass browser cache when skipCache is true
+      if (skipCache) {
+        params._t = Date.now().toString();
+      }
 
       const url = buildUrl(`${this.baseUrl}/${instructorId}`, params);
       

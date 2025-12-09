@@ -99,6 +99,15 @@ export class PredictionController {
   }
 
   /**
+   * Get available academic years and semesters from GradeStructure
+   * GET /api/teacher/prediction/academic-terms?courseCode=IT001
+   */
+  @Get('academic-terms')
+  async getAvailableAcademicTerms(@Query('courseCode') courseCode?: string) {
+    return await this.predictionService.getAvailableAcademicTerms(courseCode);
+  }
+
+  /**
    * Update behavior data for a single student
    * PUT /api/teacher/prediction/behavior/student
    */
@@ -114,6 +123,15 @@ export class PredictionController {
   @Put('behavior/bulk')
   async bulkUpdateBehavior(@Body() bulkUpdateDto: BulkUpdateBehaviorDto) {
     return await this.predictionService.bulkUpdateBehavior(bulkUpdateDto);
+  }
+
+  /**
+   * Send survey notification to students
+   * POST /api/teacher/prediction/survey-notification/:uploadId
+   */
+  @Post('survey-notification/:uploadId')
+  async sendSurveyNotification(@Param('uploadId') uploadId: string) {
+    return await this.predictionService.sendSurveyNotification(uploadId);
   }
 
   /**
@@ -267,6 +285,26 @@ export class PredictionController {
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to get explanations: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Lấy grade structure và tính điểm cần thiết để pass
+   * GET /api/teacher/prediction/:uploadId/pass-threshold
+   */
+  @Get(':uploadId/pass-threshold')
+  async getPassThreshold(@Param('uploadId') uploadId: string) {
+    try {
+      const result = await this.predictionService.calculatePassThreshold(uploadId);
+      return {
+        success: true,
+        message: 'Pass threshold calculated successfully',
+        data: result,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to calculate pass threshold: ${error.message}`,
       );
     }
   }

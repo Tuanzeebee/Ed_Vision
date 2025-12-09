@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
-import AllAppointments from "@/modules/parent/Parent_View_All_Appointments";
+import AllAppointments from "@/modules/booking/AllAppointments";
 import StudentDetails from "./modules/parent/Parent_StudentDetails";
 import AccountManagement from "./modules/admin/AccountManagement";
 import AddAccount from "./modules/admin/AddAccount";
@@ -73,11 +73,23 @@ import "./modules/student/styles/learningSpace.css";
 import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
 import StudentSurvey from "./modules/survey/StudentSurvey";
+import SettingGradeTable from "./modules/teacher/SettingGradeTable";
 
 function App() {
         // Initialize permissions on app startup
         useEffect(() => {
                 initializePermissions()
+
+                // Sync permissions when user logs in
+                const handleAuthLogin = () => {
+                        initializePermissions()
+                }
+
+                window.addEventListener('auth:login', handleAuthLogin)
+
+                return () => {
+                        window.removeEventListener('auth:login', handleAuthLogin)
+                }
         }, [])
 
         return (
@@ -95,6 +107,7 @@ function App() {
                                         {/* Auth routes (used by updated components) */}
                                         <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
                                         <Route path="/auth/register" element={<AuthRedirectWrapper><AuthStudentRegister /></AuthRedirectWrapper>} />
+                         
                                         <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
                                         <Route path="/auth/forgot-password" element={<AuthRedirectWrapper><AuthForgotPassword /></AuthRedirectWrapper>} />
                                         <Route path="/auth/reset-password" element={<AuthRedirectWrapper><AuthResetPassword /></AuthRedirectWrapper>} />
@@ -119,9 +132,14 @@ function App() {
                                         <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
                                         <Route path="/parent/book-appointment/step/:stepNumber" element={<ProtectedRoute permission="parent_book_appointment"><BookAppointmentStepWrapper /></ProtectedRoute>} />
                                         <Route path="/parent/book-appointment" element={<ProtectedRoute permission="parent_book_appointment"><Navigate to="/parent/book-appointment/step/1" replace /></ProtectedRoute>} />
-                                        <Route path="/parent/appointments" element={<ProtectedRoute permission="parent_appointments"><AllAppointments /></ProtectedRoute>} />
+                                        <Route path="/appointments" element={<ProtectedRoute permission="appointments"><AllAppointments /></ProtectedRoute>} />
                                         <Route path="/parent/student-details" element={<ProtectedRoute permission="parent_student_details"><StudentDetails /></ProtectedRoute>} />
                                         <Route path="/parent/chat" element={<ProtectedRoute permission="parent_chat"><ChatWithTeachers /></ProtectedRoute>} />
+                                        <Route path="/parent/notifications" element={<ProtectedRoute permission="parent_dashboard"><NotificationPage userRole="parent" /></ProtectedRoute>} />
+                                        
+                                        {/* Student notifications - Đường dẫn dạng /student/notifications */}
+                                        <Route path="/student/notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
+                                        
                                         {/* Admin routes - Dashboard (protected by permission) */}
                                         <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
@@ -165,18 +183,18 @@ function App() {
                                         <Route path="/teacher/teacher_dashboard" element={<ProtectedRoute permission="teacher_dashboard"><TeacherDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/class-management" element={<ProtectedRoute permission="teacher_class_management"><ClassManagement /></ProtectedRoute>} />
                                         <Route path="/teacher/grade-management" element={<ProtectedRoute permission="teacher_grade_management"><GradeManagement /></ProtectedRoute>} />
-                                        <Route path="/teacher/prediction-view" element={<ProtectedRoute permission="teacher_prediction_view"><PredictionView /></ProtectedRoute>} />
-                                        <Route path="/teacher/prediction-view-v2" element={<PredictionViewV2 />} />
+                                        <Route path="/teacher/setting-grade-table" element={<ProtectedRoute permission="teacher_grade_setting"><SettingGradeTable /></ProtectedRoute>} />
+                                        <Route path="/teacher/prediction-view" element={<ProtectedRoute permission="teacher_prediction_view"><PredictionViewV2 /></ProtectedRoute>} />
                                         <Route path="/teacher/progress-tracking" element={<ProtectedRoute permission="teacher_progress_tracking"><ProgressTracking /></ProtectedRoute>} />
                                         <Route path="/teacher/reports-alerts" element={<ProtectedRoute permission="teacher_reports_alerts"><TeacherReport /></ProtectedRoute>} />
                                         <Route path="/teacher/messages" element={<ProtectedRoute permission="teacher_messages"><MessagesNotifications /></ProtectedRoute>} />
                                         <Route path="/teacher/appointments" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
-                                        <Route path="/teacher/requests" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
-                                        <Route path="/teacher/confirmed" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
+                                        <Route path="/teacher/schedule" element={<ProtectedRoute permission="teacher_appointments"><TeacherAppointmentDashboard /></ProtectedRoute>} />
+                                        <Route path="/teacher/confirmed" element={<ProtectedRoute permission="teacher_appointments"><Navigate to="/teacher/appointments" replace /></ProtectedRoute>} />
                                         <Route path="/teacher/settings" element={<ProtectedRoute permission="teacher_settings"><TeacherDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/meeting-detail" element={<ProtectedRoute permission="teacher_meeting_demo"><MeetingDetailView /></ProtectedRoute>} />
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
-                                        <Route path="/teacher/calendar-overview" element={<CalendarOverview />} />
+                                        <Route path="/teacher/calendar-overview" element={<ProtectedRoute permission="teacher_appointments"><CalendarOverview /></ProtectedRoute>} />
                                         <Route path="/teacher/notifications" element={<ProtectedRoute permission="teacher_notification"><NotificationPage userRole="teacher" /></ProtectedRoute>} />
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         

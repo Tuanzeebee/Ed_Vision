@@ -79,7 +79,7 @@ export default function BookAppointmentStep2({ onBack, onContinue, onClose }: Pr
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col">
       {/* Header */}
-      <Header />
+      <Header isParentMode={true} />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}

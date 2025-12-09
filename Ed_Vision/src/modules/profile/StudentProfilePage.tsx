@@ -69,7 +69,6 @@ export default function StudentProfilePage({}: Props) {
 
       const data = await res.json().catch(() => ({}));
       
-      console.log('API Response:', data);
       setStudent(data ?? null);
       setParentLinks(data?.parentLinks ?? []);
     } catch (err: any) {
@@ -210,7 +209,6 @@ export default function StudentProfilePage({}: Props) {
 
   // Map API data to component props expected by UserProfile and children
   const profile = (student as any)?.profile || {};
-  console.log('Profile avatar URL:', profile.avatarUrl);
   
   // Convert relative avatar URL to full URL if needed
   const getFullAvatarUrl = (url: string | null | undefined): string => {

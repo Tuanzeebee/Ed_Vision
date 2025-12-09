@@ -68,7 +68,7 @@ export default function BookAppointmentStep4({
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header Section */}
-      <Header />
+      <Header isParentMode={true} />
       <AppointmentHeader onClose={onClose} />
 
       {/* Progress Stepper */}

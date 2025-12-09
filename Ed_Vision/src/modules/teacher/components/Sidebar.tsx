@@ -24,11 +24,11 @@ interface SidebarProps {
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [isGradeMenuOpen, setIsGradeMenuOpen] = useState(
-    currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'prediction-view-v2'
+    currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'prediction-view-v2' || currentPage === 'setting-grade-table'
   );
 
   const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
-    currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+    currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'management'
   );
 
   const handleNavigation = (path: string) => {
@@ -52,7 +52,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       <nav className="flex-1 p-4 space-y-1">
         <button
           onClick={() => handleNavigation('/teacher/dashboard')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'dashboard'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'dashboard'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -63,7 +63,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
         <button
           onClick={() => handleNavigation('/teacher/class-management')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'class-management'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'class-management'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -76,7 +76,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={toggleGradeMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management' || currentPage === 'prediction-view'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'setting-grade-table'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
@@ -97,7 +97,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <div className="ml-4 space-y-1">
               <button
                 onClick={() => handleNavigation('/teacher/grade-management')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management'
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'grade-management'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
@@ -105,10 +105,19 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 <ClipboardList className="w-4 h-4" />
                 <span>Bảng điểm</span>
               </button>
-
+              <button
+                onClick={() => handleNavigation('/teacher/setting-grade-table')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'setting-grade-table'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Thiết lập bảng điểm</span>
+              </button>
               <button
                 onClick={() => handleNavigation('/teacher/prediction-view')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'prediction-view'
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'prediction-view'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
@@ -116,24 +125,13 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 <Brain className="w-4 h-4" />
                 <span>Xem dự đoán</span>
               </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/prediction-view-v2')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'prediction-view-v2'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <Brain className="w-4 h-4" />
-                <span>Dự đoán v2</span>
-              </button>
             </div>
           )}
         </div>
 
         <button
           onClick={() => handleNavigation('/teacher/progress-tracking')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'progress-tracking'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'progress-tracking'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -145,7 +143,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         {/* Survey Management */}
         <button
           onClick={() => handleNavigation('/teacher/survey-management')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'survey-management'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'survey-management'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -156,7 +154,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
         <button
           onClick={() => handleNavigation('/teacher/reports-alerts')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'reports-alerts'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'reports-alerts'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -167,7 +165,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
         <button
           onClick={() => handleNavigation('/teacher/messages')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'messages'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'messages'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -180,7 +178,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={toggleAppointmentMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'schedule' || currentPage === 'management'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
@@ -201,7 +199,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <div className="ml-4 space-y-1">
                             <button
                               onClick={() => handleNavigation('/teacher/calendar-overview')}
-                              className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'calendar-overview'
+                              className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'calendar-overview'
                                 ? 'bg-blue-100 text-blue-700'
                                 : 'text-gray-600 hover:bg-gray-50'
                                 }`}
@@ -210,8 +208,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 <span>Tổng quan lịch hẹn</span>
               </button>
               <button
-                onClick={() => handleNavigation('/teacher/appointments')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule'
+                onClick={() => handleNavigation('/teacher/schedule')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'schedule'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
@@ -221,25 +219,14 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               </button>
 
               <button
-                onClick={() => handleNavigation('/teacher/requests')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'requests'
+                onClick={() => handleNavigation('/teacher/appointments')}
+                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'management'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
               >
-                <Clock className="w-4 h-4" />
-                <span>Yêu cầu lịch hẹn</span>
-              </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/confirmed')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'confirmed'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span>Lịch hẹn đã xác nhận</span>
+                <ClipboardList className="w-4 h-4" />
+                <span>Quản lý lịch hẹn</span>
               </button>
             </div>
           )}
@@ -247,7 +234,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
         <button
           onClick={() => handleNavigation('/teacher/settings')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'settings'
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 ${currentPage === 'settings'
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-700 hover:bg-gray-100'
             }`}

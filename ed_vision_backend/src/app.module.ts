@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -19,8 +20,15 @@ import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
+import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
+import { StudentChatModule } from './student_be/chat/student-chat.module';
+import { ChatModule } from './mongodb/chat.module';
+import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
+
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     InstructorAvailabilityModule,
     BookingModule,
@@ -37,10 +45,16 @@ import { ProfileModule } from './profile/profile.module';
     SurveysModule,
     TeacherBeModule,
     StudentBeModule,
-    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    ChatModule,
+    TeacherChatModule,
+    StudentChatModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ReminderSchedulerService],
 })
-export class AppModule { }
+export class AppModule {
+  constructor(private readonly reminderScheduler: ReminderSchedulerService) {
+    // Inject to ensure instantiation
+  }
+}

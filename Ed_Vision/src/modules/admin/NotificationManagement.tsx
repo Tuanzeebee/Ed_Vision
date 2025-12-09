@@ -90,125 +90,72 @@ interface NotificationHistory {
   readCount?: number; // Số người đã đọc
 }
 
-// ✅ NotificationChart với props động theo viewMode
+// ✅ NotificationChart với data từ API
 const NotificationChart = memo(function NotificationChart({ viewMode }: { viewMode: 'day' | 'month' | 'year' | 'all' }) {
-  const getChartData = useMemo(() => {
-    switch (viewMode) {
-      case 'day': {
-        const labels = ['0h-4h', '4h-8h', '8h-12h', '12h-16h', '16h-20h', '20h-24h'];
-        return {
-          labels,
-          datasets: [
-            { 
-              label: 'Thông báo đã gửi', 
-              data: [2, 3, 5, 8, 4, 1], 
-              backgroundColor: 'rgba(59, 130, 246, 0.8)', 
-              borderColor: 'rgba(59, 130, 246, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Đã đọc', 
-              data: [1, 2, 4, 6, 3, 1], 
-              backgroundColor: 'rgba(34, 197, 94, 0.8)', 
-              borderColor: 'rgba(34, 197, 94, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Chưa đọc', 
-              data: [1, 1, 1, 2, 1, 0], 
-              backgroundColor: 'rgba(239, 68, 68, 0.8)', 
-              borderColor: 'rgba(239, 68, 68, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            }
-          ],
-          maxY: 10,
-          xAxisTitle: 'Khung giờ'
-        };
+  const [chartData, setChartData] = useState<{
+    labels: string[];
+    datasets: { sent: number[]; read: number[]; unread: number[] };
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get('/notifications/chart', {
+          params: { viewMode }
+        });
+        setChartData(response.data);
+      } catch (error) {
+        console.error('Error fetching chart data:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      case 'month': {
-        const labels = ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4'];
-        return {
-          labels,
-          datasets: [
-            { 
-              label: 'Thông báo đã gửi', 
-              data: [48, 52, 45, 55], 
-              backgroundColor: 'rgba(59, 130, 246, 0.8)', 
-              borderColor: 'rgba(59, 130, 246, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Đã đọc', 
-              data: [36, 39, 34, 42], 
-              backgroundColor: 'rgba(34, 197, 94, 0.8)', 
-              borderColor: 'rgba(34, 197, 94, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Chưa đọc', 
-              data: [12, 13, 11, 13], 
-              backgroundColor: 'rgba(239, 68, 68, 0.8)', 
-              borderColor: 'rgba(239, 68, 68, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            }
-          ],
-          maxY: 100,
-          xAxisTitle: 'Tuần'
-        };
-      }
-      
-      case 'year':
-      case 'all': {
-        const labels = ['Tháng 1', 'Tháng 3', 'Tháng 6', 'Tháng 9', 'Tháng 12'];
-        return {
-          labels,
-          datasets: [
-            { 
-              label: 'Thông báo đã gửi', 
-              data: [180, 220, 250, 280, 245], 
-              backgroundColor: 'rgba(59, 130, 246, 0.8)', 
-              borderColor: 'rgba(59, 130, 246, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Đã đọc', 
-              data: [135, 165, 188, 210, 180], 
-              backgroundColor: 'rgba(34, 197, 94, 0.8)', 
-              borderColor: 'rgba(34, 197, 94, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            { 
-              label: 'Chưa đọc', 
-              data: [45, 55, 62, 70, 65], 
-              backgroundColor: 'rgba(239, 68, 68, 0.8)', 
-              borderColor: 'rgba(239, 68, 68, 1)', 
-              borderWidth: 1,
-              borderRadius: 4
-            }
-          ],
-          maxY: 500,
-          xAxisTitle: 'Tháng'
-        };
-      }
-      
-      default:
-        return {
-          labels: [],
-          datasets: [],
-          maxY: 100,
-          xAxisTitle: 'Thời gian'
-        };
-    }
+    };
+    fetchChartData();
   }, [viewMode]);
+
+  if (loading || !chartData) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
+  const getXAxisTitle = () => {
+    switch (viewMode) {
+      case 'day': return 'Khung giờ';
+      case 'month': return 'Tuần';
+      case 'year': return 'Tháng';
+      case 'all': return 'Học kỳ';
+      default: return 'Thời gian';
+    }
+  };
+
+  const data = {
+    labels: chartData.labels,
+    datasets: [
+      {
+        label: 'Thông báo đã gửi',
+        data: chartData.datasets.sent,
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderRadius: 4
+      },
+      {
+        label: 'Đã đọc',
+        data: chartData.datasets.read,
+        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+        borderRadius: 4
+      },
+      {
+        label: 'Chưa đọc',
+        data: chartData.datasets.unread,
+        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+        borderRadius: 4
+      }
+    ]
+  };
 
   const chartOptions = {
     responsive: true,
@@ -233,10 +180,6 @@ const NotificationChart = memo(function NotificationChart({ viewMode }: { viewMo
     scales: {
       y: {
         beginAtZero: true,
-        max: getChartData.maxY,
-        ticks: {
-          stepSize: getChartData.maxY / 10
-        },
         grid: {
           color: 'rgba(0, 0, 0, 0.1)'
         },
@@ -251,13 +194,13 @@ const NotificationChart = memo(function NotificationChart({ viewMode }: { viewMo
         },
         title: {
           display: true,
-          text: getChartData.xAxisTitle
+          text: getXAxisTitle()
         }
       }
     }
   };
 
-  return <Bar data={getChartData} options={chartOptions} />;
+  return <Bar data={data} options={chartOptions} />;
 });
 
 export default function NotificationManagement() {
@@ -317,140 +260,28 @@ export default function NotificationManagement() {
   // Selected notifications for bulk send
   const [selectedNotifications, setSelectedNotifications] = useState<number[]>([]);
   
-  // Notification history state - Load from localStorage on mount
-  const [notificationHistory, setNotificationHistory] = useState<NotificationHistory[]>(() => {
-    const saved = localStorage.getItem('notificationHistory');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading notification history from localStorage:', e);
-      }
-    }
-    return [];
-  });
+  // Notification history state - Fetch from API
+  const [notificationHistory, setNotificationHistory] = useState<NotificationHistory[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
   
-  // Draft notifications state - Load from localStorage on mount
-  const [draftNotifications, setDraftNotifications] = useState<Notification[]>(() => {
-    const saved = localStorage.getItem('draftNotifications');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading notifications from localStorage:', e);
-      }
-    }
-    return [
-      {
-        id: 1,
-        title: 'Lịch thi giữa kỳ và cuối kỳ học kỳ I năm 2024-2025',
-        content: 'Thông báo chi tiết lịch thi giữa kỳ từ ngày 15/12/2024 đến 20/12/2024 và lịch thi cuối kỳ từ ngày 10/01/2025 đến 20/01/2025. Sinh viên vui lòng kiểm tra phòng thi và giờ thi trên hệ thống.',
-        type: 'Lịch Thi',
-        target: 'Sinh viên',
-        priority: 'Cao',
-        createdDate: '15/12/2024'
-      },
-      {
-        id: 2,
-        title: 'Cập nhật hệ thống quản lý điểm danh',
-        content: 'Hệ thống quản lý điểm danh đã được nâng cấp với tính năng nhận diện khuôn mặt và định vị GPS. Giảng viên và sinh viên vui lòng cập nhật ứng dụng di động lên phiên bản mới nhất.',
-        type: 'Cập Nhật Hệ Thống',
-        target: 'Tất cả',
-        priority: 'Trung bình',
-        createdDate: '14/12/2024'
-      },
-      {
-        id: 3,
-        title: 'Hội thảo khoa học quốc tế về AI trong giáo dục',
-        content: 'Trường tổ chức hội thảo khoa học quốc tế về ứng dụng trí tuệ nhân tạo trong giáo dục vào ngày 20/12/2024. Chương trình có diễn giả từ MIT, Stanford và các trường đại học hàng đầu. Giảng viên quan tâm vui lòng đăng ký tham dự.',
-        type: 'Sự Kiện Tổ Chức',
-        target: 'Giảng viên',
-        priority: 'Thấp',
-        createdDate: '13/12/2024'
-      },
-      {
-        id: 4,
-        title: 'Cảnh báo điểm danh không đạt yêu cầu',
-        content: 'Sinh viên có tỷ lệ điểm danh dưới 80% sẽ không được thi cuối kỳ. Vui lòng kiểm tra và hoàn thiện điểm danh trước ngày 20/12/2024.',
-        type: 'Cảnh Báo Học Tập',
-        target: 'Sinh viên',
-        priority: 'Cao',
-        createdDate: '12/12/2024'
-      },
-      {
-        id: 5,
-        title: 'Vinh danh sinh viên xuất sắc học kỳ I',
-        content: 'Chúc mừng 50 sinh viên đạt thành tích xuất sắc trong học kỳ I năm học 2024-2025. Danh sách chi tiết sẽ được công bố tại lễ tổng kết.',
-        type: 'Vinh Danh Cá Nhân',
-        target: 'Sinh viên',
-        priority: 'Thấp',
-        createdDate: '11/12/2024'
-      },
-      {
-        id: 6,
-        title: 'Thông tin về học bổng học kỳ II',
-        content: 'Mở đơn đăng ký học bổng học kỳ II năm học 2024-2025. Hạn cuối nhận hồ sơ: 31/12/2024.',
-        type: 'Thông Tin Chung',
-        target: 'Sinh viên',
-        priority: 'Trung bình',
-        createdDate: '10/12/2024'
-      },
-      {
-        id: 7,
-        title: 'Cập nhật lịch nghỉ Tết Nguyên Đán 2025',
-        content: 'Trường thông báo lịch nghỉ Tết Nguyên Đán 2025 từ ngày 25/01 đến 05/02/2025. Sinh viên và giảng viên lưu ý sắp xếp công việc.',
-        type: 'Cập Nhật Hệ Thống',
-        target: 'Tất cả',
-        priority: 'Cao',
-        createdDate: '09/12/2024'
-      },
-      {
-        id: 8,
-        title: 'Lịch bảo vệ đồ án tốt nghiệp',
-        content: 'Lịch bảo vệ đồ án tốt nghiệp khóa 2020 sẽ diễn ra từ ngày 15/01 đến 25/01/2025. Sinh viên vui lòng chuẩn bị tài liệu.',
-        type: 'Lịch Thi',
-        target: 'Sinh viên',
-        priority: 'Cao',
-        createdDate: '08/12/2024'
-      },
-      {
-        id: 9,
-        title: 'Hội thảo tuyển dụng việc làm',
-        content: 'Ngày hội việc làm 2025 với sự tham gia của 50+ doanh nghiệp lớn. Thời gian: 20/01/2025.',
-        type: 'Sự Kiện Tổ Chức',
-        target: 'Sinh viên',
-        priority: 'Trung bình',
-        createdDate: '07/12/2024'
-      },
-      {
-        id: 10,
-        title: 'Cảnh báo nộp học phí chậm',
-        content: 'Sinh viên chưa hoàn thành học phí học kỳ I vui lòng nộp trước 15/12/2024 để tránh bị khóa tài khoản.',
-        type: 'Cảnh Báo Học Tập',
-        target: 'Sinh viên',
-        priority: 'Cao',
-        createdDate: '06/12/2024'
-      },
-      {
-        id: 11,
-        title: 'Vinh danh giảng viên xuất sắc năm 2024',
-        content: 'Chúc mừng 20 giảng viên được vinh danh giảng viên xuất sắc năm 2024 với nhiều thành tích trong công tác giảng dạy và nghiên cứu.',
-        type: 'Vinh Danh Cá Nhân',
-        target: 'Giảng viên',
-        priority: 'Thấp',
-        createdDate: '05/12/2024'
-      },
-      {
-        id: 12,
-        title: 'Thông tin về đăng ký môn học kỳ II',
-        content: 'Thời gian đăng ký môn học học kỳ II: từ 20/12/2024 đến 31/12/2024. Sinh viên vui lòng đăng ký đúng thời hạn.',
-        type: 'Thông Tin Chung',
-        target: 'Sinh viên',
-        priority: 'Cao',
-        createdDate: '04/12/2024'
-      }
-    ];
+  // Draft notifications state - Fetch from API
+  const [draftNotifications, setDraftNotifications] = useState<Notification[]>([]);
+  const [draftsTotal, setDraftsTotal] = useState(0);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  
+  // Statistics state - Fetch from API
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    read: 0,
+    unread: 0,
+    readPercent: 0,
+    unreadPercent: 0,
+    totalDiff: 0,
+    readDiff: 0,
+    unreadDiff: 0
   });
+  const [statsLoading, setStatsLoading] = useState(false);
   
   const [newNotification, setNewNotification] = useState({
     title: '',
@@ -461,61 +292,110 @@ export default function NotificationManagement() {
     files: null as FileList | null
   });
 
-  // Filtered notifications based on filters
-  const filteredNotifications = useMemo(() => {
-    const filtered = draftNotifications.filter((notification: Notification) => {
-      const matchType = typeFilter === 'Tất cả loại' || notification.type === typeFilter;
-      const matchTarget = targetFilterList === 'Tất cả đối tượng' || notification.target === targetFilterList;
-      const matchPriority = priorityFilterList === 'Tất cả mức độ' || notification.priority === priorityFilterList;
-      return matchType && matchTarget && matchPriority;
-    });
-    // Reset to page 1 when filters change
-    setCurrentPage(1);
-    return filtered;
-  }, [draftNotifications, typeFilter, targetFilterList, priorityFilterList]);
+  // Fetch drafts from API
+  const fetchDrafts = async () => {
+    try {
+      setDraftsLoading(true);
+      const response = await apiClient.get('/notifications/drafts', {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          type: typeFilter !== 'Tất cả loại' ? typeFilter : undefined,
+          target: targetFilterList !== 'Tất cả đối tượng' ? targetFilterList : undefined,
+          priority: priorityFilterList !== 'Tất cả mức độ' ? priorityFilterList : undefined,
+        }
+      });
+      
+      const drafts = response.data.drafts.map((d: any) => ({
+        id: d.draft_id,
+        title: d.title,
+        content: d.content,
+        type: d.type,
+        target: d.target,
+        priority: d.priority,
+        createdDate: new Date(d.created_at).toLocaleDateString('vi-VN'),
+        attachments: d.attachments
+      }));
+      
+      setDraftNotifications(drafts);
+      setDraftsTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching drafts:', error);
+    } finally {
+      setDraftsLoading(false);
+    }
+  };
 
-  // Paginated notifications
-  const paginatedNotifications = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredNotifications.slice(startIndex, endIndex);
-  }, [filteredNotifications, currentPage]);
+  // Fetch history from API
+  const fetchHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      
+      const response = await apiClient.get('/notifications/history', {
+        params: {
+          page: historyPage,
+          limit: itemsPerPage,
+          action: historyActionFilter !== 'Tất cả hành động' ? historyActionFilter : undefined,
+          type: historyTypeFilter !== 'Tất cả loại' ? historyTypeFilter : undefined,
+          target: historyTargetFilter !== 'Tất cả đối tượng' ? historyTargetFilter : undefined,
+        }
+      });
+      
+      const history = response.data.history.map((h: any) => ({
+        id: h.history_id,
+        action: h.action as 'sent' | 'deleted',
+        title: h.title,
+        content: h.content,
+        type: h.type,
+        target: h.target,
+        priority: h.priority,
+        actionDate: new Date(h.action_date).toLocaleString('vi-VN'),
+        createdDate: new Date(h.created_date).toLocaleDateString('vi-VN'),
+        attachments: h.attachments,
+        totalRecipients: h.total_recipients,
+        readCount: h.read_count
+      }));
+      
+      setNotificationHistory(history);
+      setHistoryTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
-  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
-  
-  // Filtered history based on filters
-  const filteredHistory = useMemo(() => {
-    const filtered = notificationHistory.filter((history: NotificationHistory) => {
-      const matchAction = historyActionFilter === 'Tất cả hành động' || 
-        (historyActionFilter === 'Đã gửi' && history.action === 'sent') ||
-        (historyActionFilter === 'Đã xóa' && history.action === 'deleted');
-      const matchType = historyTypeFilter === 'Tất cả loại' || history.type === historyTypeFilter;
-      const matchTarget = historyTargetFilter === 'Tất cả đối tượng' || history.target === historyTargetFilter;
-      return matchAction && matchType && matchTarget;
-    });
-    // Reset to page 1 when filters change
-    setHistoryPage(1);
-    return filtered;
-  }, [notificationHistory, historyActionFilter, historyTypeFilter, historyTargetFilter]);
+  // Fetch statistics from API
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await apiClient.get('/notifications/stats', {
+        params: { viewMode }
+      });
+      setStatistics(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
-  // Paginated history
-  const paginatedHistory = useMemo(() => {
-    const startIndex = (historyPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredHistory.slice(startIndex, endIndex);
-  }, [filteredHistory, historyPage]);
-
-  const historyTotalPages = Math.ceil(filteredHistory.length / itemsPerPage);
-
-  // Save to localStorage whenever draftNotifications changes
+  // Fetch data on mount and when filters change
   useEffect(() => {
-    localStorage.setItem('draftNotifications', JSON.stringify(draftNotifications));
-  }, [draftNotifications]);
+    fetchDrafts();
+  }, [currentPage, typeFilter, targetFilterList, priorityFilterList]);
 
-  // Save to localStorage whenever notificationHistory changes
   useEffect(() => {
-    localStorage.setItem('notificationHistory', JSON.stringify(notificationHistory));
-  }, [notificationHistory]);
+    fetchHistory();
+  }, [historyPage, historyActionFilter, historyTypeFilter, historyTargetFilter]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [viewMode]);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(draftsTotal / itemsPerPage);
+  const historyTotalPages = Math.ceil(historyTotal / itemsPerPage);
 
   // Helper: Map viewMode sang text so sánh
   const getComparisonText = () => {
@@ -527,34 +407,6 @@ export default function NotificationManagement() {
       default: return 'hôm qua';
     }
   };
-
-  // ✅ Real-time statistics based on viewMode
-  const statistics = useMemo(() => {
-    // Filter sent notifications only
-    const sentNotifications = notificationHistory.filter(h => h.action === 'sent');
-    
-    // Calculate totals from actual data
-    const total = sentNotifications.length;
-    const read = sentNotifications.reduce((sum, n) => sum + (n.readCount || 0), 0);
-    const totalRecipients = sentNotifications.reduce((sum, n) => sum + (n.totalRecipients || 0), 0);
-    const unread = totalRecipients - read;
-    
-    // Calculate differences (simulate comparison)
-    const totalDiff = Math.floor(total * 0.15); // 15% increase
-    const readDiff = Math.floor(read * 0.12); // 12% increase  
-    const unreadDiff = Math.floor(unread * 0.08); // 8% increase
-    
-    return {
-      total: total || 0,
-      read: read || 0,
-      unread: unread || 0,
-      readPercent: totalRecipients > 0 ? Math.round((read / totalRecipients) * 100) : 0,
-      unreadPercent: totalRecipients > 0 ? Math.round((unread / totalRecipients) * 100) : 0,
-      totalDiff,
-      readDiff,
-      unreadDiff
-    };
-  }, [notificationHistory]);
 
   const getPriorityBadgeClasses = (priority: string) => {
     switch (priority) {
@@ -697,7 +549,7 @@ export default function NotificationManagement() {
     }
   };
 
-  const handleCreateNotification = () => {
+  const handleCreateNotification = async () => {
     if (!newNotification.title || !newNotification.content) {
       setConfirmDialog({
         isOpen: true,
@@ -716,57 +568,79 @@ export default function NotificationManagement() {
       isOpen: true,
       title: 'Xác nhận tạo thông báo',
       message: `Bạn có chắc chắn muốn tạo thông báo "${newNotification.title}"?`,
-      onConfirm: () => {
-        // Process attachments if any
-        const attachments = newNotification.files 
-          ? Array.from(newNotification.files).map(file => ({
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              url: URL.createObjectURL(file) // Create temporary URL for preview
-            }))
-          : undefined;
-        
-        // Create the notification
-        const newDraft: Notification = {
-          id: Date.now(),
-          title: newNotification.title,
-          content: newNotification.content,
-          type: newNotification.notificationType,
-          target: newNotification.target,
-          priority: newNotification.priority,
-          createdDate: new Date().toLocaleDateString('vi-VN'),
-          attachments: attachments
-        };
-        
-        setDraftNotifications((prev: Notification[]) => [newDraft, ...prev]);
-        
-        // Close confirm dialog
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        
-        // Reset form
-        setNewNotification({
-          title: '',
-          content: '',
-          priority: 'Trung bình',
-          notificationType: 'Cập Nhật Hệ Thống',
-          target: 'Tất cả',
-          files: null
-        });
-        
-        // Show success message after a short delay
-        setTimeout(() => {
+      onConfirm: async () => {
+        try {
+          let attachments: Array<{ name: string; size: number; type: string; url: string }> | undefined;
+          
+          // Upload files to server if any
+          if (newNotification.files && newNotification.files.length > 0) {
+            const formData = new FormData();
+            Array.from(newNotification.files).forEach(file => {
+              formData.append('files', file);
+            });
+            
+            const uploadResponse = await apiClient.post('/notifications/upload-attachments', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+            
+            if (uploadResponse.data.success) {
+              attachments = uploadResponse.data.attachments;
+            }
+          }
+          
+          // Create the draft notification via API
+          await apiClient.post('/notifications/drafts', {
+            title: newNotification.title,
+            content: newNotification.content,
+            type: newNotification.notificationType,
+            target: newNotification.target,
+            priority: newNotification.priority,
+            attachments: attachments
+          });
+          
+          // Refresh drafts list
+          await fetchDrafts();
+          
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          
+          // Reset form
+          setNewNotification({
+            title: '',
+            content: '',
+            priority: 'Trung bình',
+            notificationType: 'Cập Nhật Hệ Thống',
+            target: 'Tất cả',
+            files: null
+          });
+          
+          // Show success message after a short delay
+          setTimeout(() => {
+            setConfirmDialog({
+              isOpen: true,
+              title: 'Tạo thành công',
+              message: 'Thông báo đã được tạo thành công!',
+              confirmText: 'Đóng',
+              onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              type: 'success',
+              hideCancel: true
+            });
+          }, 100);
+        } catch (error) {
+          console.error('Error creating notification:', error);
           setConfirmDialog({
             isOpen: true,
-            title: 'Tạo thành công',
-            message: 'Thông báo đã được tạo thành công!',
+            title: 'Lỗi',
+            message: 'Có lỗi xảy ra khi tạo thông báo. Vui lòng thử lại!',
             confirmText: 'Đóng',
             onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            type: 'success',
+            type: 'danger',
             hideCancel: true
           });
-        }, 100);
+        }
       },
       onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
       type: 'warning'
@@ -791,62 +665,21 @@ export default function NotificationManagement() {
       isOpen: true,
       title: 'Xác nhận gửi thông báo',
       message: `Bạn có chắc chắn muốn gửi ${selectedNotifications.length} thông báo đã chọn?`,
-      onConfirm: () => {
+      onConfirm: async () => {
         // Đóng dialog ngay
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         
-        const notifications = draftNotifications.filter((n: Notification) => selectedNotifications.includes(n.id));
-        
-        // Gửi từng thông báo qua API (song song)
-        const sendPromises = notifications.map(n => 
-          apiClient.post('/notifications/send', {
-            title: n.title,
-            body: n.content,
-            type: n.type,
-            target: n.target,
-          }).then(response => ({
-            notification: n,
-            count: response.data.count || 0,
-            success: true
-          })).catch(error => {
-            console.error('Error sending notification:', error);
-            return { notification: n, count: 0, success: false };
-          })
-        );
-        
-        Promise.all(sendPromises).then(results => {
-          let totalSent = 0;
-          const historyEntries: NotificationHistory[] = [];
-          
-          results.forEach(result => {
-            if (result.success) {
-              totalSent += result.count;
-              historyEntries.push({
-                id: Date.now() + Math.random(),
-                action: 'sent' as const,
-                title: result.notification.title,
-                content: result.notification.content,
-                type: result.notification.type,
-                target: result.notification.target,
-                priority: result.notification.priority,
-                actionDate: new Date().toLocaleString('vi-VN'),
-                createdDate: result.notification.createdDate,
-                attachments: result.notification.attachments,
-                totalRecipients: result.count,
-                readCount: 0
-              });
-            }
+        try {
+          // Gửi nhiều drafts qua API
+          const response = await apiClient.post('/notifications/drafts/send-many', {
+            ids: selectedNotifications
           });
-          
-          if (historyEntries.length > 0) {
-            setNotificationHistory((prev: NotificationHistory[]) => [...historyEntries, ...prev]);
-          }
-          
-          // Xóa khỏi danh sách draft
-          setDraftNotifications((prev: Notification[]) => prev.filter((n: Notification) => !selectedNotifications.includes(n.id)));
           
           // Clear selection
           setSelectedNotifications([]);
+          
+          // Refresh data
+          await Promise.all([fetchDrafts(), fetchHistory(), fetchStats()]);
           
           // Dispatch event để cập nhật dropdown
           window.dispatchEvent(new CustomEvent('notificationChange'));
@@ -855,14 +688,25 @@ export default function NotificationManagement() {
           setConfirmDialog({
             isOpen: true,
             title: 'Gửi thành công',
-            message: `Đã gửi ${historyEntries.length} thông báo đến ${totalSent} người nhận!`,
+            message: `Đã gửi ${response.data.successCount} thông báo đến ${response.data.totalRecipients} người nhận!`,
             confirmText: 'Đóng',
             onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
             onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
             type: 'success',
             hideCancel: true
           });
-        });
+        } catch (error) {
+          console.error('Error sending notifications:', error);
+          setConfirmDialog({
+            isOpen: true,
+            title: 'Lỗi',
+            message: 'Có lỗi xảy ra khi gửi thông báo. Vui lòng thử lại!',
+            confirmText: 'Đóng',
+            onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+            type: 'danger',
+            hideCancel: true
+          });
+        }
       },
       onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
       type: 'warning'
@@ -883,54 +727,52 @@ export default function NotificationManagement() {
       return;
     }
 
-    const notifications = draftNotifications.filter((n: Notification) => selectedNotifications.includes(n.id));
-    
     setConfirmDialog({
       isOpen: true,
       title: 'Xác nhận xóa thông báo',
       message: `Bạn có chắc chắn muốn xóa ${selectedNotifications.length} thông báo đã chọn?\n\nHành động này không thể hoàn tác.`,
       confirmText: 'Xóa thông báo',
-      onConfirm: () => {
-        // Add to history (deleted items don't have recipient counts)
-        const historyEntries = notifications.map((n: Notification) => ({
-          id: Date.now() + Math.random(),
-          action: 'deleted' as const,
-          title: n.title,
-          content: n.content,
-          type: n.type,
-          target: n.target,
-          priority: n.priority,
-          actionDate: new Date().toLocaleString('vi-VN'),
-          createdDate: n.createdDate,
-          attachments: n.attachments,
-          totalRecipients: 0,
-          readCount: 0
-        }));
-        
-        setNotificationHistory((prev: NotificationHistory[]) => [...historyEntries, ...prev]);
-        
-        // Remove from drafts
-        setDraftNotifications((prev: Notification[]) => prev.filter((n: Notification) => !selectedNotifications.includes(n.id)));
-        
-        // Clear selection
-        setSelectedNotifications([]);
-        
-        // Close confirm dialog
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        
-        // Show success message after a short delay
-        setTimeout(() => {
+      onConfirm: async () => {
+        try {
+          // Xóa nhiều drafts qua API
+          await apiClient.post('/notifications/drafts/delete-many', {
+            ids: selectedNotifications
+          });
+          
+          // Clear selection
+          setSelectedNotifications([]);
+          
+          // Refresh data
+          await Promise.all([fetchDrafts(), fetchHistory()]);
+          
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          
+          // Show success message after a short delay
+          setTimeout(() => {
+            setConfirmDialog({
+              isOpen: true,
+              title: 'Đã xóa thành công',
+              message: `Đã xóa ${selectedNotifications.length} thông báo thành công!`,
+              confirmText: 'Đóng',
+              onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              type: 'success',
+              hideCancel: true
+            });
+          }, 100);
+        } catch (error) {
+          console.error('Error deleting notifications:', error);
           setConfirmDialog({
             isOpen: true,
-            title: 'Đã xóa thành công',
-            message: `Đã xóa ${notifications.length} thông báo thành công!`,
+            title: 'Lỗi',
+            message: 'Có lỗi xảy ra khi xóa thông báo. Vui lòng thử lại!',
             confirmText: 'Đóng',
             onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            type: 'success',
+            type: 'danger',
             hideCancel: true
           });
-        }, 100);
+        }
       },
       onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
       type: 'danger'
@@ -956,7 +798,7 @@ export default function NotificationManagement() {
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingNotification) return;
     
     if (!newNotification.title || !newNotification.content) {
@@ -977,59 +819,80 @@ export default function NotificationManagement() {
       isOpen: true,
       title: 'Xác nhận lưu chỉnh sửa',
       message: `Bạn có chắc chắn muốn lưu các thay đổi cho thông báo "${newNotification.title}"?`,
-      onConfirm: () => {
-        // Process attachments if any
-        const attachments = newNotification.files 
-          ? Array.from(newNotification.files).map(file => ({
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              url: URL.createObjectURL(file)
-            }))
-          : undefined;
-        
-        // Save the changes
-        setDraftNotifications((prev: Notification[]) => prev.map((n: Notification) =>
-          n.id === editingNotification
-            ? {
-                ...n,
-                title: newNotification.title,
-                content: newNotification.content,
-                type: newNotification.notificationType,
-                target: newNotification.target,
-                priority: newNotification.priority,
-                attachments: attachments
-              }
-            : n
-        ));
-        
-        // Close confirm dialog
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        
-        // Reset form and editing state
-        setNewNotification({
-          title: '',
-          content: '',
-          priority: 'Trung bình',
-          notificationType: 'Cập Nhật Hệ Thống',
-          target: 'Tất cả',
-          files: null
-        });
-        setEditingNotification(null);
-        
-        // Show success message after a short delay
-        setTimeout(() => {
+      onConfirm: async () => {
+        try {
+          let attachments: Array<{ name: string; size: number; type: string; url: string }> | undefined;
+          
+          // Upload files to server if any
+          if (newNotification.files && newNotification.files.length > 0) {
+            const formData = new FormData();
+            Array.from(newNotification.files).forEach(file => {
+              formData.append('files', file);
+            });
+            
+            const uploadResponse = await apiClient.post('/notifications/upload-attachments', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+            
+            if (uploadResponse.data.success) {
+              attachments = uploadResponse.data.attachments;
+            }
+          }
+          
+          // Update draft via API
+          await apiClient.put(`/notifications/drafts/${editingNotification}`, {
+            title: newNotification.title,
+            content: newNotification.content,
+            type: newNotification.notificationType,
+            target: newNotification.target,
+            priority: newNotification.priority,
+            attachments: attachments
+          });
+          
+          // Refresh drafts list
+          await fetchDrafts();
+          
+          // Close confirm dialog
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          
+          // Reset form and editing state
+          setNewNotification({
+            title: '',
+            content: '',
+            priority: 'Trung bình',
+            notificationType: 'Cập Nhật Hệ Thống',
+            target: 'Tất cả',
+            files: null
+          });
+          setEditingNotification(null);
+          
+          // Show success message after a short delay
+          setTimeout(() => {
+            setConfirmDialog({
+              isOpen: true,
+              title: 'Lưu thành công',
+              message: 'Đã lưu chỉnh sửa thông báo thành công!',
+              confirmText: 'Đóng',
+              onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              type: 'success',
+              hideCancel: true
+            });
+          }, 100);
+        } catch (error) {
+          console.error('Error updating draft:', error);
           setConfirmDialog({
             isOpen: true,
-            title: 'Lưu thành công',
-            message: 'Đã lưu chỉnh sửa thông báo thành công!',
+            title: 'Lỗi',
+            message: 'Có lỗi xảy ra khi lưu thông báo. Vui lòng thử lại!',
             confirmText: 'Đóng',
             onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            type: 'success',
+            type: 'danger',
             hideCancel: true
           });
-        }, 100);
+        }
       },
       onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
       type: 'warning'
@@ -1056,45 +919,45 @@ export default function NotificationManagement() {
       isOpen: true,
       title: 'Xác nhận xóa',
       message: `Bạn có chắc chắn muốn xóa thông báo "${notification.title}"?`,
-      onConfirm: () => {
-        // Add to history (deleted draft has no recipients)
-        setNotificationHistory((prev: NotificationHistory[]) => [{
-          id: Date.now(),
-          action: 'deleted',
-          title: notification.title,
-          content: notification.content,
-          type: notification.type,
-          target: notification.target,
-          priority: notification.priority,
-          actionDate: new Date().toLocaleString('vi-VN'),
-          createdDate: notification.createdDate,
-          attachments: notification.attachments,
-          totalRecipients: 0,
-          readCount: 0
-        }, ...prev]);
-        
-        // Remove from drafts
-        setDraftNotifications((prev: Notification[]) => prev.filter((n: Notification) => n.id !== id));
-        
-        // Remove from selection if selected
-        setSelectedNotifications(prev => prev.filter(nId => nId !== id));
-        
-        // Close the confirm dialog first
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        
-        // Then show success message after a short delay
-        setTimeout(() => {
+      onConfirm: async () => {
+        try {
+          // Delete via API
+          await apiClient.delete(`/notifications/drafts/${id}`);
+          
+          // Refresh data
+          await Promise.all([fetchDrafts(), fetchHistory()]);
+          
+          // Remove from selection if selected
+          setSelectedNotifications(prev => prev.filter(nId => nId !== id));
+          
+          // Close the confirm dialog first
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          
+          // Then show success message after a short delay
+          setTimeout(() => {
+            setConfirmDialog({
+              isOpen: true,
+              title: 'Đã xóa thành công',
+              message: 'Thông báo đã được xóa khỏi hệ thống!',
+              confirmText: 'Đóng',
+              onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
+              type: 'success',
+              hideCancel: true
+            });
+          }, 100);
+        } catch (error) {
+          console.error('Error deleting draft:', error);
           setConfirmDialog({
             isOpen: true,
-            title: 'Đã xóa thành công',
-            message: 'Thông báo đã được xóa khỏi hệ thống!',
+            title: 'Lỗi',
+            message: 'Có lỗi xảy ra khi xóa thông báo. Vui lòng thử lại!',
             confirmText: 'Đóng',
             onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
-            type: 'success',
+            type: 'danger',
             hideCancel: true
           });
-        }, 100);
+        }
       },
       onCancel: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })),
       type: 'danger'
@@ -1156,7 +1019,7 @@ export default function NotificationManagement() {
               <button
                 onClick={() => setActiveTab('overview')}
                 className={`
-                  flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer
                   ${activeTab === 'overview'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1170,7 +1033,7 @@ export default function NotificationManagement() {
               <button
                 onClick={() => setActiveTab('history')}
                 className={`
-                  flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer
                   ${activeTab === 'history'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1470,10 +1333,10 @@ export default function NotificationManagement() {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                     <input
                       type="checkbox"
-                      checked={paginatedNotifications.length > 0 && selectedNotifications.length === filteredNotifications.length}
+                      checked={draftNotifications.length > 0 && selectedNotifications.length === draftNotifications.length}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedNotifications(filteredNotifications.map((n: Notification) => n.id));
+                          setSelectedNotifications(draftNotifications.map((n: Notification) => n.id));
                         } else {
                           setSelectedNotifications([]);
                         }
@@ -1490,7 +1353,16 @@ export default function NotificationManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedNotifications.length === 0 ? (
+                {draftsLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center text-gray-400">
+                        <span className="text-4xl mb-2">⏳</span>
+                        <p className="text-sm">Đang tải dữ liệu...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : draftNotifications.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center text-gray-400">
@@ -1500,7 +1372,7 @@ export default function NotificationManagement() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedNotifications.map((notification: Notification) => (
+                  draftNotifications.map((notification: Notification) => (
                     <tr key={notification.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-center">
                         <input
@@ -1570,12 +1442,12 @@ export default function NotificationManagement() {
               {totalPages > 1 ? (
                 <span>
                   Hiển thị <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> đến{' '}
-                  <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredNotifications.length)}</span> trong tổng số{' '}
-                  <span className="font-medium">{filteredNotifications.length}</span> thông báo
+                  <span className="font-medium">{Math.min(currentPage * itemsPerPage, draftsTotal)}</span> trong tổng số{' '}
+                  <span className="font-medium">{draftsTotal}</span> thông báo
                 </span>
               ) : (
                 <span>
-                  Tổng số: <span className="font-medium">{filteredNotifications.length}</span> thông báo
+                  Tổng số: <span className="font-medium">{draftsTotal}</span> thông báo
                 </span>
               )}
             </div>
@@ -1743,7 +1615,14 @@ export default function NotificationManagement() {
             <h3 className="text-lg font-semibold text-gray-800">Lịch sử thông báo</h3>
           </div>
           
-          {filteredHistory.length === 0 ? (
+          {historyLoading ? (
+            <div className="p-12 text-center">
+              <div className="flex flex-col items-center justify-center text-gray-400">
+                <span className="text-6xl mb-4">⏳</span>
+                <p className="text-lg font-medium">Đang tải dữ liệu...</p>
+              </div>
+            </div>
+          ) : notificationHistory.length === 0 ? (
             <div className="p-12 text-center">
               <div className="flex flex-col items-center justify-center text-gray-400">
                 <span className="text-6xl mb-4">📜</span>
@@ -1767,7 +1646,7 @@ export default function NotificationManagement() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedHistory.map((history) => {
+                    {notificationHistory.map((history: NotificationHistory) => {
                       const readPercentage = history.totalRecipients && history.totalRecipients > 0
                         ? Math.round((history.readCount! / history.totalRecipients) * 100)
                         : 0;
@@ -1863,7 +1742,7 @@ export default function NotificationManagement() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <p className="text-sm text-gray-700">
-                      Hiển thị <span className="font-medium">{((historyPage - 1) * itemsPerPage) + 1}</span> đến <span className="font-medium">{Math.min(historyPage * itemsPerPage, filteredHistory.length)}</span> trong tổng số <span className="font-medium">{filteredHistory.length}</span> kết quả
+                      Hiển thị <span className="font-medium">{((historyPage - 1) * itemsPerPage) + 1}</span> đến <span className="font-medium">{Math.min(historyPage * itemsPerPage, historyTotal)}</span> trong tổng số <span className="font-medium">{historyTotal}</span> kết quả
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
