@@ -19,10 +19,10 @@ export default function PomodoroPanel({
   onClose,
   onStartTimer,
   onStopTimer,
-  initialX = (window.innerWidth - 800) / 2,
-  initialY = (window.innerHeight - 600 - 80) / 2,
-  initialWidth = 800,
-  initialHeight = 600,
+  initialX = (window.innerWidth - 520) / 2,
+  initialY = window.innerHeight - 420 - 120,
+  initialWidth = 520,
+  initialHeight = 420,
 }: Props) {
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
   const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 360, 420);
