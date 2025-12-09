@@ -104,7 +104,7 @@ const mapQuestionFromApi = (apiQuestion: SurveyDetailDto['questions'][0]): Quest
         sliderConfig: {
           min: apiQuestion.minValue ?? 0,
           max: apiQuestion.maxValue ?? 10,
-          defaultValue: Math.round((apiQuestion.minValue ?? 0 + apiQuestion.maxValue ?? 10) / 2),
+          defaultValue: Math.round(((apiQuestion.minValue ?? 0) + (apiQuestion.maxValue ?? 10)) / 2),
           unit: 'Điểm',
           gradientType: 'stress',
           leftLabel: String(apiQuestion.minValue ?? 0),
