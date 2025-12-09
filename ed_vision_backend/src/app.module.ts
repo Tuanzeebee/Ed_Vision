@@ -23,6 +23,7 @@ import { ProfileModule } from './profile/profile.module';
 import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
 import { StudentChatModule } from './student_be/chat/student-chat.module';
 import { ChatModule } from './mongodb/chat.module';
+import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 
 @Module({
   imports: [
@@ -50,7 +51,7 @@ import { ChatModule } from './mongodb/chat.module';
     StudentChatModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ReminderSchedulerService],
 })
 export class AppModule {
   constructor(private readonly reminderScheduler: ReminderSchedulerService) {
