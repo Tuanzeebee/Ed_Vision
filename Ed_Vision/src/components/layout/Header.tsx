@@ -38,13 +38,13 @@ export default function Header({
   // Local UI state for the profile menu and avatar
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
-  
+
   // Initialize avatar and name from user object immediately (no flash)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
     if (!isAuthenticated) return null
     return user?.avatarUrl || user?.avatar_url || user?.avatar || null
   })
-  
+
   const [displayName, setDisplayName] = useState<string | null>(() => {
     if (!isAuthenticated) return null
     return user?.fullName || user?.full_name || user?.name || null
@@ -62,7 +62,7 @@ export default function Header({
       // Check if user object already has full data (skip if force refetch)
       const existingAvatar = user?.avatarUrl || user?.avatar_url || user?.avatar
       const existingName = user?.fullName || user?.full_name || user?.name
-      
+
       if (!forceRefetch && existingAvatar && existingName) {
         setAvatarUrl(existingAvatar)
         setDisplayName(existingName)
@@ -83,15 +83,15 @@ export default function Header({
           const profileData = await response.json()
           const avatar = profileData?.profile?.avatarUrl || profileData?.avatarUrl || null
           const fullName = profileData?.profile?.fullName || profileData?.profile?.full_name || profileData?.fullName || null
-          
+
           if (avatar) {
             setAvatarUrl(avatar)
           }
-          
+
           if (fullName) {
             setDisplayName(fullName)
           }
-          
+
           // Update user object in localStorage
           const userStr = localStorage.getItem('user')
           if (userStr) {
@@ -246,6 +246,15 @@ export default function Header({
                         <div className="text-xs text-slate-500">{t('common:header.menu.learn.courseDetail.description')}</div>
                       </div>
                     </a>
+                    <a href="/student/learning-space" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-indigo-50 text-indigo-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.learn.learningSpace.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.learn.learningSpace.description')}</div>
+                      </div>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -325,7 +334,7 @@ export default function Header({
                 </button>
                 <div className="absolute top-full right-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="p-2 space-y-1">
-                    <a href="/student/chat" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <a href="/student/chat-student" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="mt-1 p-1.5 rounded-md bg-blue-50 text-blue-600">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                       </div>
@@ -334,7 +343,7 @@ export default function Header({
                         <div className="text-xs text-slate-500">{t('common:header.menu.communicate.chatWithTeachers.description')}</div>
                       </div>
                     </a>
-                    <a href="/student/messages" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <a href="/student/chat-student" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="mt-1 p-1.5 rounded-md bg-pink-50 text-pink-600">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       </div>
@@ -398,8 +407,8 @@ export default function Header({
 
             {/* Notification Dropdown - For All Authenticated Users */}
             {isAuthenticated && (
-              <NotificationDropdown 
-                isAdminMode={isAdminMode} 
+              <NotificationDropdown
+                isAdminMode={isAdminMode}
                 isTeacherMode={isTeacherMode}
                 isParentMode={isParentMode}
               />
@@ -437,7 +446,7 @@ export default function Header({
                   className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
                   aria-expanded={menuOpen}
                 >
-                  <img 
+                  <img
                     src={avatarUrl || user?.avatarUrl || user?.avatar_url || user?.avatar || STUDENT_ASSETS.defaultAvatar}
                     alt="User Avatar"
                     className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"
@@ -483,7 +492,7 @@ export default function Header({
                           View Profile
                         </button>
                       )}
-                      
+
                       {/* Settings */}
                       <button
                         onClick={() => {
@@ -504,9 +513,9 @@ export default function Header({
                         </svg>
                         Settings
                       </button>
-                      
+
                       <div className="h-px bg-slate-100 my-1"></div>
-                      
+
                       {/* Logout */}
                       <button
                         onClick={async () => {
