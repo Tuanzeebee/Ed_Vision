@@ -406,50 +406,28 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
       }
       setWeekDates(dates)
 
-        // default select first day in the week that has any slot OR is marked available AND is today or in the future
-        let selIdx = 0
-        const map = new Map(mapped.map((x: any) => [x.date, x]))
-        
-        // Get today in Vietnam timezone (GMT+7)
-        const currentTime = new Date()
-        const vietnamTimeCurrent = new Date(currentTime.getTime() + (7 * 60 * 60 * 1000) + (currentTime.getTimezoneOffset() * 60 * 1000))
-        const todayCurrent = new Date(vietnamTimeCurrent.getFullYear(), vietnamTimeCurrent.getMonth(), vietnamTimeCurrent.getDate())
-        
-        for (let i = 0; i < dates.length; i++) {
-          const dateObj = new Date(dates[i] + 'T00:00:00Z')
-          const isPast = dateObj < todayCurrent
-          const d = map.get(dates[i])
+        // Only auto-select first available date on initial load (when selectedDateIdx is 0 and no dates were loaded before)
+        if (weekDates.length === 0) {
+          let selIdx = 0
+          const map = new Map(mapped.map((x: any) => [x.date, x]))
           
-          // Only select if not in the past and has availability
-          if (!isPast && d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
-            selIdx = i
-            break
+          // Get today in Vietnam timezone (GMT+7)
+          const currentTime = new Date()
+          const vietnamTimeCurrent = new Date(currentTime.getTime() + (7 * 60 * 60 * 1000) + (currentTime.getTimezoneOffset() * 60 * 1000))
+          const todayCurrent = new Date(vietnamTimeCurrent.getFullYear(), vietnamTimeCurrent.getMonth(), vietnamTimeCurrent.getDate())
+          
+          for (let i = 0; i < dates.length; i++) {
+            const dateObj = new Date(dates[i] + 'T00:00:00Z')
+            const isPast = dateObj < todayCurrent
+            const d = map.get(dates[i])
+            
+            // Only select if not in the past and has availability
+            if (!isPast && d && ((d.timeSlots && d.timeSlots.length > 0) || d.isAvailable)) {
+              selIdx = i
+              break
+            }
           }
-        }
-        setSelectedDateIdx(selIdx)
-        
-        // Check if currently selected date is still available, if not, reset to first available
-        const currentSelectedDate = dates[selectedDateIdx]
-        const currentSelectedData = map.get(currentSelectedDate)
-        const currentDateObj = new Date(currentSelectedDate + 'T00:00:00Z')
-        const isCurrentPast = currentDateObj < todayCurrent
-        const isCurrentAvailable = !isCurrentPast && currentSelectedData && ((currentSelectedData.timeSlots && currentSelectedData.timeSlots.length > 0) || currentSelectedData.isAvailable)
-        
-        if (!isCurrentAvailable) {
-          // Reset to first available date
           setSelectedDateIdx(selIdx)
-          setSelectedSlot(null)
-          setSelectedFormat(null)
-        }
-        
-        const selDate = map.get(dates[selIdx])
-        // Find the first valid slot (open and not at capacity)
-        const firstValidSlot = selDate?.timeSlots?.find((slot: ApiTimeSlot) => 
-          slot.isOpen && ((slot.bookedCount ?? 0) < slot.capacity)
-        )
-        if (firstValidSlot) {
-          setSelectedSlot(firstValidSlot.slotId)
-          setSelectedFormat(firstValidSlot.meetingType === 'online' ? 'online' : 'offline')
         }
     } catch (e: any) {
       if (e?.message) {
@@ -460,7 +438,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     } finally {
       setLoading(false)
     }
-  }, [activeInstructorId, selectedDateIdx])
+  }, [activeInstructorId])
 
   // fetch availability on mount
   useEffect(() => {
@@ -876,6 +854,29 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     !hasBookedSelectedSlot &&
     !isBooking
 
+  // Auto-select first available slot when date changes and no slot is selected
+  useEffect(() => {
+    // Only run if we don't have a selected slot
+    if (selectedSlot !== null) return
+    if (!weekDates || weekDates.length === 0) return
+    
+    const map = new Map(availabilities.map((x: any) => [x.date, x]))
+    const dateStr = weekDates[selectedDateIdx]
+    const date = map.get(dateStr)
+    
+    if (date && date.timeSlots && date.timeSlots.length > 0) {
+      // Find the first valid slot (open and not at capacity)
+      const firstValidSlot = date.timeSlots.find((slot: ApiTimeSlot) => 
+        slot.isOpen && ((slot.bookedCount ?? 0) < slot.capacity)
+      )
+      
+      if (firstValidSlot) {
+        setSelectedSlot(firstValidSlot.slotId)
+        setSelectedFormat(firstValidSlot.meetingType === 'online' ? 'online' : 'offline')
+      }
+    }
+  }, [selectedDateIdx, weekDates, availabilities, selectedSlot])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     let path = '/student/instructions'
@@ -1091,7 +1092,14 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                         <div
                                           key={dateStr}
                                           role="button"
-                                          onClick={() => available && setSelectedDateIdx(idx)}
+                                          onClick={() => {
+                                            if (available) {
+                                              setSelectedDateIdx(idx)
+                                              // Reset slot selection when changing date
+                                              setSelectedSlot(null)
+                                              setSelectedFormat('online')
+                                            }
+                                          }}
                                           className={`rounded-lg p-2 text-center transition-all cursor-pointer ${
                                             !available || isPast
                                               ? 'bg-gray-100 border border-gray-200 opacity-50 cursor-not-allowed'

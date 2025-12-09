@@ -72,11 +72,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")  # nơi chứa weights_used.csv (backup)
 OUTPUT_DIR = os.path.join(BASE_DIR, "output_final_v2")  # nơi chứa model_artifacts_gb_rf_add_feature.joblib
 
-ARTIFACTS_PATH = os.path.join(OUTPUT_DIR, "model_artifacts_gb_rf_add_feature.joblib")
+ARTIFACTS_PATH = os.path.join(OUTPUT_DIR, "model_artifacts_gb_rf_add_feature1.joblib")
 WEIGHTS_FILE = os.path.join(DATA_DIR, "weights_used.csv")  # Giữ lại làm fallback
-BEHAVIOR_FILE = os.path.join(DATA_DIR, "clean_student_data_v1.csv")  # hiện tại KHÔNG dùng, để dành tương lai
+BEHAVIOR_FILE = os.path.join(DATA_DIR, "clean_student_data_v2.csv")  # hiện tại KHÔNG dùng, để dành tương lai
 
-COURSE_METRICS_PATH = os.path.join(OUTPUT_DIR, "course_metrics_gradient_boosting_update.csv")
+COURSE_METRICS_PATH = os.path.join(OUTPUT_DIR, "course_metrics_gradient_boosting.csv")
 
 # MongoDB Configuration
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/ed_vision")
@@ -97,41 +97,60 @@ TARGET_COL = "final"
 # FEATURE_SCORE_COLS giống Jupyter notebook
 FEATURE_SCORE_COLS = [
     "attend",
+
+    # quiz variants
     "quiz",
+    "quiz1",
     "quiz2",
+
     "midterm",
+
+    # homework variants
     "homework",
     "homework1",
     "homework2",
+
     "group_project",
     "individual_project",
     "practice",
     "regular",
     "speech_and_discussion",
-    "project"
+    "project",
 ]
 
 CANONICAL_FEATURES = FEATURE_SCORE_COLS + [TARGET_COL]
 
 COLUMN_ALIASES: Dict[str, List[str]] = {
-    "no": ["no", "No"],
-    "student_id": ["student id", "student_id", "id"],
-    "course_code": ["course_code", "course code", "course"],
+    "no": ["no", "No", "stt", "index"],
+
+    "student_id": ["student id", "student_id", "id", "studentcode", "student_code"],
+    "course_code": ["course_code", "course code", "course", "subject", "subject_code"],
 
     "attend": ["attend", "attendance"],
+
+    # quiz
     "quiz": ["quiz"],
-    "quiz2": ["quiz2"],
+    "quiz1": ["quiz1", "quiz_1"],
+    "quiz2": ["quiz2", "quiz_2"],
+
+    # homework
     "homework": ["homework", "hw", "assignment"],
-    "homework1": ["homework1", "hw1"],
-    "homework2": ["homework2", "hw2"],
+    "homework1": ["homework1", "hw1", "assignment1", "homework_1"],
+    "homework2": ["homework2", "hw2", "assignment2", "homework_2"],
+
     "midterm": ["midterm", "mid term"],
+
     "group_project": ["group project", "group_project"],
     "individual_project": ["individual project", "individual_project"],
+
     "practice": ["practice", "lab", "exercise"],
     "regular": ["regular", "participation", "classwork"],
-    "speech_and_discussion": ["speech and discussion", "speech_and_discussion"],
+
+    "speech_and_discussion": ["speech and discussion", "speech_and_discussion", "discussion"],
+
     "project": ["project"],
-    "final": ["final", "final_exam"]
+
+    "final": ["final", "final_exam", "final exam", "endterm", "end_term"]
 }
 
 # Behavior features (giống notebook / artifacts) – hiện tại KHÔNG auto gán, chỉ dùng nếu có trong input
