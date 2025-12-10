@@ -56,7 +56,7 @@ export default function MusicWidget({
 
   return (
     <div
-      className="fixed z-30 transition-all duration-400 select-none"
+      className="fixed z-30 select-none"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     >
       <div
