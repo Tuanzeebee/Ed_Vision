@@ -22,8 +22,9 @@ import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
 import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
 import { StudentChatModule } from './student_be/chat/student-chat.module';
+import { ParentChatModule } from './parent_be/chat/parent-chat.module';
 import { ChatModule } from './mongodb/chat.module';
-
+import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -48,6 +49,7 @@ import { ChatModule } from './mongodb/chat.module';
     ChatModule,
     TeacherChatModule,
     StudentChatModule,
+    ParentChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

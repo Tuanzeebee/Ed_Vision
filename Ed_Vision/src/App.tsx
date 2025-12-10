@@ -59,7 +59,7 @@ import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import ProtectedRoute from '@/components/ProtectedRoute'
 import RequireInputSurvey from '@/components/RequireInputSurvey'
 import { Outlet } from 'react-router-dom'
-import ParentDashboard from "./modules/parent/ParentDashboardNew";
+import ParentDashboard from "./modules/parent/ParentDashboard";
 import { StudentSurveyManagement } from "./modules/teacher";
 import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
 import ChatStudent from "./modules/student/ChatStudent";

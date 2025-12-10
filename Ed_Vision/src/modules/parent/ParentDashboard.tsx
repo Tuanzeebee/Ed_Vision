@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import johnSmithAvatar from '../../assets/parent/avatar.png';
@@ -143,30 +143,10 @@ export default function ParentDashboard({
       time: '1 hour ago',
       isNew: false
     },
-  ],
-  teachers = [
-    {
-      name: 'Dr. Brown',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face',
-      role: 'Mathematics Teacher'
-    },
-    {
-      name: 'Ms. Johnson',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face',
-      role: 'Science Teacher'
-    },
-    {
-      name: 'Mr. Wilson',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face',
-      role: 'Class Teacher'
-    }
   ]
 }: Props) {
   const { t } = useTranslation(['parent', 'common']);
   const navigate = useNavigate();
-  const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-  const notificationRef = useRef<HTMLDivElement>(null);
 
   // Create default alerts with translations
   const defaultAlerts: Alert[] = alerts.length === 0 ? [
@@ -205,135 +185,11 @@ export default function ParentDashboard({
     }
   ] : alerts;
 
-  // Close notification dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setNotificationDropdownOpen(false);
-      }
-    };
-
-    if (notificationDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [notificationDropdownOpen]);
-
-  const notifications: Notification[] = [
-    {
-      id: '1',
-      type: 'accepted',
-      title: t('parent:parentDashboard.notificationTypes.meetingConfirmed'),
-      description: t('parent:parentDashboard.notificationTypes.accepted', { name: 'Dr. Brown' }),
-      date: 'Sep 15, 2024',
-      time: '10:00 AM',
-      status: t('parent:parentDashboard.notificationTypes.statusAccepted'),
-      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.minutesAgo', { count: 2 })
-    },
-    {
-      id: '2',
-      type: 'declined',
-      title: t('parent:parentDashboard.notificationTypes.meetingDeclined'),
-      description: t('parent:parentDashboard.notificationTypes.declined', { name: 'Ms. Johnson' }),
-      date: 'Sep 20, 2024',
-      time: '3:00 PM',
-      status: t('parent:parentDashboard.notificationTypes.statusDeclined'),
-      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.hourAgo', { count: 1 }),
-      actionText: t('parent:parentDashboard.notificationTypes.requestNewTime')
-    },
-    {
-      id: '3',
-      type: 'rescheduled',
-      title: t('parent:parentDashboard.notificationTypes.meetingRescheduled'),
-      description: t('parent:parentDashboard.notificationTypes.rescheduled', { name: 'Mr. Wilson' }),
-      date: 'Sep 25, 2024',
-      time: '2:30 PM',
-      status: t('parent:parentDashboard.notificationTypes.statusRescheduled'),
-      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.hoursAgo', { count: 3 })
-    },
-    {
-      id: '4',
-      type: 'pending',
-      title: t('parent:parentDashboard.notificationTypes.meetingPending'),
-      description: t('parent:parentDashboard.notificationTypes.pending', { name: 'Dr. Smith' }),
-      date: 'Sep 28, 2024',
-      time: '11:00 AM',
-      status: t('parent:parentDashboard.notificationTypes.statusPending'),
-      timeAgo: t('parent:parentDashboard.notificationTypes.timeAgo.yesterday')
-    }
-  ];
-
   const openChatPage = () => {
     navigate('/parent/chat');
   };
 
-  const toggleChatWidget = () => {
-    setChatWidgetOpen(!chatWidgetOpen);
-  };
-
-  const toggleNotifications = () => {
-    setNotificationDropdownOpen(!notificationDropdownOpen);
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'accepted':
-        return (
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-        );
-      case 'declined':
-        return (
-          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </div>
-        );
-      case 'rescheduled':
-        return (
-          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        );
-      case 'pending':
-        return (
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getStatusBadgeClass = (type: string) => {
-    switch (type) {
-      case 'accepted':
-        return 'bg-green-100 text-green-800';
-      case 'declined':
-        return 'bg-red-100 text-red-800';
-      case 'rescheduled':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'pending':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const newMessagesCount = messages.filter(m => m.isNew).length;
-  const notificationCount = notifications.length;
 
   // Calendar data for September 2024
   const calendarDays = [
@@ -399,88 +255,6 @@ export default function ParentDashboard({
                 <h1 className="text-lg md:text-xl font-semibold text-gray-900">{t('parent:dashboard.title')}</h1>
                 <p className="text-sm text-gray-500">{t('parent:parentDashboard.welcomeBack')}, Sarah Thompson</p>
               </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Appointment Notifications */}
-              <div className="relative" ref={notificationRef}>
-                <button 
-                  className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  onClick={toggleNotifications}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-5 5v-5z"></path>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7H4l5-5v5z"></path>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a4 4 0 004 4h0a4 4 0 004-4V7"></path>
-                  </svg>
-                  {/* Notification Badge */}
-                  {notificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {notificationCount}
-                    </span>
-                  )}
-                </button>
-                
-                {/* Notification Dropdown */}
-                {notificationDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-in slide-in-from-top-5 duration-200">
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="font-semibold text-gray-900">{t('parent:notifications.appointmentNotifications')}</h3>
-                      <p className="text-sm text-gray-500">{t('parent:notifications.recentUpdates')}</p>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.map((notification) => (
-                        <div key={notification.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-start space-x-3">
-                            <div className="flex-shrink-0">
-                              {getNotificationIcon(notification.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                              <p className="text-sm text-gray-600">{notification.description}</p>
-                              <div className="mt-1 flex items-center space-x-2">
-                                <span className="text-xs text-gray-500">{notification.date} at {notification.time}</span>
-                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(notification.type)}`}>
-                                  {notification.status}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-400 mt-1">{notification.timeAgo}</p>
-                              {notification.actionText && (
-                                <button className="text-xs text-blue-600 hover:text-blue-700 mt-1">
-                                  {notification.actionText}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-4 border-t border-gray-200">
-                      <button 
-                        className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-                        onClick={() => navigate('/parent/appointments')}
-                      >
-                        {t('parent:notifications.viewAllNotifications')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Chat Icon in Header */}
-              <button 
-                className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                onClick={openChatPage}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                </svg>
-                {/* Notification Badge */}
-                {newMessagesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce">
-                    {newMessagesCount}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -741,68 +515,6 @@ export default function ParentDashboard({
           </div>
         </div>
       </div>
-
-      {/* Floating Chat Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button 
-          className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-all duration-300"
-          onClick={toggleChatWidget}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-          </svg>
-          {/* Notification Badge */}
-          {newMessagesCount > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-bounce">
-              {newMessagesCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Chat Widget */}
-      {chatWidgetOpen && (
-        <div className="fixed bottom-24 right-6 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-40">
-          <div className="bg-blue-600 text-white p-4 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{t('parent:parentDashboard.quickChat')}</h3>
-              <button onClick={toggleChatWidget} className="text-white hover:text-gray-200">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div className="p-4 h-64 overflow-y-auto">
-            <div className="space-y-3">
-              <div className="text-sm text-gray-600">{t('parent:parentDashboard.chooseTeacher')}</div>
-              {teachers.map((teacher) => (
-                <button 
-                  key={teacher.name}
-                  className="w-full text-left p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
-                  onClick={() => openChatPage()}
-                >
-                  <div className="flex items-center space-x-3">
-                    <img src={teacher.avatar} alt={teacher.name} className="w-8 h-8 rounded-full object-cover" />
-                    <div>
-                      <div className="font-medium text-gray-900">{teacher.name}</div>
-                      <div className="text-xs text-gray-500">{teacher.role}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="p-4 border-t border-gray-200">
-            <button 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-              onClick={openChatPage}
-            >
-              {t('parent:parentDashboard.viewAllChats')}
-            </button>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>
