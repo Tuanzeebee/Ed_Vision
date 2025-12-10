@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5173/api';
+const API_URL = 'http://localhost:5173/api'; // ✅ Go through Vite proxy
 
 export interface ChatMessage {
     _id: string;
@@ -65,9 +65,57 @@ class ChatServiceClass {
         return response.data;
     }
 
+    async getTeacherParents(): Promise<any[]> {
+        const response = await axios.get(`${API_URL}/teacher/chat/parents`, this.getAuthHeader());
+        return response.data;
+    }
+
     async getTeacherConversations(): Promise<Conversation[]> {
         const response = await axios.get(`${API_URL}/teacher/chat/conversations`, this.getAuthHeader());
         return response.data;
+    }
+
+    // Get teacher's classes for filtering
+    getTeacherClasses = async () => {
+        const response = await axios.get(`${API_URL}/teacher/chat/classes`, this.getAuthHeader())
+        return response.data
+    }
+
+    // Send bulk message
+    sendBulkMessage = async (data: {
+        recipientType: 'students' | 'parents' | 'both'
+        classIds?: number[]
+        riskLevels?: string[]
+        message: string
+        title?: string
+    }) => {
+        const response = await axios.post(`${API_URL}/teacher/chat/bulk-message`, data, this.getAuthHeader())
+        return response.data
+    }
+
+    // Send quick message with template
+    sendQuickMessage = async (data: {
+        recipientIds: string[]
+        recipientType: 'student' | 'parent'
+        template: 'reminder' | 'encouragement' | 'concern' | 'custom'
+        customMessage?: string
+        subject?: string
+    }) => {
+        const response = await axios.post(`${API_URL}/teacher/chat/quick-message`, data, this.getAuthHeader())
+        return response.data
+    }
+
+    // Send urgent alert
+    sendUrgentAlert = async (data: {
+        studentIds: string[]
+        alertType: 'academic' | 'attendance' | 'behavior' | 'other'
+        severity: 'high' | 'medium'
+        message: string
+        requireConfirmation: boolean
+        notifyParents: boolean
+    }) => {
+        const response = await axios.post(`${API_URL}/teacher/chat/urgent-alert`, data, this.getAuthHeader())
+        return response.data
     }
 
     async createTeacherConversation(
@@ -198,6 +246,59 @@ class ChatServiceClass {
 
     async deleteStudentMessage(messageId: string): Promise<void> {
         await axios.delete(`${API_URL}/student/chat/messages/${messageId}`, this.getAuthHeader());
+    }
+
+    // Parent APIs
+    async getParentConversations(): Promise<Conversation[]> {
+        const response = await axios.get(`${API_URL}/parent/chat/conversations`, this.getAuthHeader());
+        return response.data;
+    }
+
+    async getParentTeachers(): Promise<any[]> {
+        const response = await axios.get(`${API_URL}/parent/chat/teachers`, this.getAuthHeader());
+        return response.data;
+    }
+
+    async createParentConversation(teacherId: string): Promise<Conversation> {
+        const response = await axios.post(
+            `${API_URL}/parent/chat/conversation`,
+            { teacherId },
+            this.getAuthHeader()
+        );
+        return response.data;
+    }
+
+    async sendParentMessage(conversationId: string, content: string): Promise<ChatMessage> {
+        const response = await axios.post(
+            `${API_URL}/parent/chat/send`,
+            { conversationId, content },
+            this.getAuthHeader()
+        );
+        return response.data;
+    }
+
+    async markParentAsRead(conversationId: string): Promise<void> {
+        await axios.put(
+            `${API_URL}/parent/chat/mark-read`,
+            { conversationId },
+            this.getAuthHeader()
+        );
+    }
+
+    async getParentUnreadCount(): Promise<number> {
+        const response = await axios.get(`${API_URL}/parent/chat/unread-count`, this.getAuthHeader());
+        return response.data.count;
+    }
+
+    async getParentConversationMessages(conversationId: string, limit = 50, skip = 0): Promise<ChatMessage[]> {
+        const response = await axios.get(
+            `${API_URL}/parent/chat/messages/${conversationId}`,
+            {
+                params: { limit, skip },
+                ...this.getAuthHeader(),
+            }
+        );
+        return response.data;
     }
 }
 
