@@ -83,6 +83,14 @@ export interface UploadListResponse {
   }>;
 }
 
+export interface AcademicTermsResponse {
+  success: boolean;
+  data?: {
+    academicYears: string[];
+    semesters: number[];
+  };
+}
+
 class PredictionService {
   private axiosInstance;
 
@@ -117,11 +125,17 @@ class PredictionService {
    */
   async uploadGrades(
     file: File, 
-    courseCode: string
+    courseCode: string,
+    classCode: string,
+    academicYear: string,
+    semester: string
   ): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('course_code', courseCode);
+    formData.append('class_code', classCode);
+    formData.append('academic_year', academicYear);
+    formData.append('semester', semester);
     // teacher_id được backend tự động lấy từ account_id trong token
 
     const response = await this.axiosInstance.post<UploadResponse>(
@@ -261,6 +275,74 @@ class PredictionService {
       },
       CACHE_TTL.SHAP
     );
+  }
+
+  /**
+   * Lấy danh sách academic years và semesters từ GradeStructure
+   * Optionally filter by courseCode
+   */
+  async getAvailableAcademicTerms(courseCode?: string): Promise<AcademicTermsResponse> {
+    const params = courseCode ? { courseCode } : {};
+    const response = await this.axiosInstance.get<AcademicTermsResponse>(
+      '/academic-terms',
+      { params }
+    );
+    return response.data;
+  }
+
+  /**
+   * Gửi thông báo khảo sát đến sinh viên
+   */
+  async sendSurveyNotification(uploadId: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      total_students: number;
+      students_with_accounts: number;
+      students_without_accounts: number;
+      notification_id: number;
+    };
+  }> {
+    const response = await this.axiosInstance.post(
+      `/survey-notification/${uploadId}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Lấy thông tin grade structure và tính điểm cần thiết để pass
+   */
+  async getPassThreshold(uploadId: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      gradeStructure: {
+        courseCode: string;
+        courseName: string;
+        columns: Array<{
+          name: string;
+          key: string;
+          maxScore: number;
+          weight: number;
+        }>;
+        totalWeight: number;
+      };
+      students: Array<{
+        student_id: string;
+        currentScore: number;
+        currentWeightUsed: number;
+        finalWeightNeeded: number;
+        finalScoreNeeded: number;
+        finalColumnKey: string;
+        isPassing: boolean;
+        canPass: boolean;
+      }>;
+    };
+  }> {
+    const response = await this.axiosInstance.get(
+      `/${uploadId}/pass-threshold`
+    );
+    return response.data;
   }
 }
 

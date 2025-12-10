@@ -121,6 +121,24 @@ class CacheService {
     // Clear any other instructor-related cache
     this.clearByPrefix(`instructor:${instructorId}`);
   }
+
+  /**
+   * Invalidate all cache entries for a specific upload
+   */
+  invalidateUpload(uploadId: string): void {
+    // Clear students data
+    this.delete(`students:${uploadId}`);
+    // Clear prediction results
+    this.delete(`prediction:${uploadId}`);
+    // Clear SHAP explanations
+    this.delete(`shap:${uploadId}`);
+    // Clear pass threshold data
+    this.delete(`pass_threshold:${uploadId}`);
+    // Clear any other upload-related cache
+    this.clearByPrefix(`upload:${uploadId}`);
+    // Clear upload list to reflect changes
+    this.delete('upload:list');
+  }
 }
 
 export const cacheService = new CacheService();

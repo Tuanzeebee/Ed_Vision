@@ -8,6 +8,7 @@ import {
   fetchNotifications
 } from '@/stores/notificationStore';
 import type { SystemNotification } from '@/stores/notificationStore';
+import { useTranslation } from 'react-i18next';
 
 interface NotificationPageProps {
   userRole?: 'student' | 'teacher' | 'admin' | 'parent';
@@ -26,6 +27,7 @@ const getAttachmentUrl = (url: string) => {
 
 export default function NotificationPage({ userRole = 'student' }: NotificationPageProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [typeFilter, setTypeFilter] = useState('Tất cả');
   const [priorityFilter, setPriorityFilter] = useState('Tất cả');
@@ -119,9 +121,11 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                 </svg>
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Thông báo</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{t('notifications.title')}</h1>
                 <p className="text-sm text-gray-600">
-                  {unreadCount > 0 ? `Bạn có ${unreadCount} thông báo chưa đọc` : 'Tất cả thông báo đã được đọc'}
+                  {unreadCount > 0 
+                    ? t('notifications.page.unreadSubtitle', { count: unreadCount })
+                    : t('notifications.page.allReadSubtitle')}
                 </p>
               </div>
             </div>
@@ -133,7 +137,7 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Đánh dấu tất cả đã đọc
+                {t('notifications.markAllAsRead')}
               </button>
             )}
           </div>
@@ -152,32 +156,32 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
-                  <option value="Tất cả">Tất cả loại</option>
-                  <option value="Lịch Thi">Lịch Thi</option>
-                  <option value="Cập Nhật Hệ Thống">Cập Nhật Hệ Thống</option>
-                  <option value="Cảnh Báo Học Tập">Cảnh Báo Học Tập</option>
-                  <option value="Sự Kiện Tổ Chức">Sự Kiện Tổ Chức</option>
-                  <option value="Vinh Danh Cá Nhân">Vinh Danh Cá Nhân</option>
-                  <option value="Thông Tin Chung">Thông Tin Chung</option>
+                  <option value="Tất cả">{t('notifications.filters.allTypes')}</option>
+                  <option value="Lịch Thi">{t('notifications.types.examSchedule')}</option>
+                  <option value="Cập Nhật Hệ Thống">{t('notifications.types.systemUpdate')}</option>
+                  <option value="Cảnh Báo Học Tập">{t('notifications.types.academicWarning')}</option>
+                  <option value="Sự Kiện Tổ Chức">{t('notifications.types.organizationEvent')}</option>
+                  <option value="Vinh Danh Cá Nhân">{t('notifications.types.personalRecognition')}</option>
+                  <option value="Thông Tin Chung">{t('notifications.types.generalInfo')}</option>
                 </select>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
-                  <option value="Tất cả">Tất cả mức độ</option>
-                  <option value="Cao">Cao</option>
-                  <option value="Trung bình">Trung bình</option>
-                  <option value="Thấp">Thấp</option>
+                  <option value="Tất cả">{t('notifications.filters.allPriorities')}</option>
+                  <option value="Cao">{t('notifications.priorities.high')}</option>
+                  <option value="Trung bình">{t('notifications.priorities.medium')}</option>
+                  <option value="Thấp">{t('notifications.priorities.low')}</option>
                 </select>
                 <select
                   value={readFilter}
                   onChange={(e) => setReadFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
-                  <option value="Tất cả">Tất cả trạng thái</option>
-                  <option value="Chưa đọc">Chưa đọc</option>
-                  <option value="Đã đọc">Đã đọc</option>
+                  <option value="Tất cả">{t('notifications.filters.allStatuses')}</option>
+                  <option value="Chưa đọc">{t('notifications.filters.unread')}</option>
+                  <option value="Đã đọc">{t('notifications.filters.read')}</option>
                 </select>
               </div>
             </div>
@@ -191,8 +195,8 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
                   </div>
-                  <p className="text-gray-600 font-medium">Không có thông báo nào</p>
-                  <p className="text-gray-400 text-sm mt-1">Các thông báo mới sẽ xuất hiện ở đây</p>
+                  <p className="text-gray-600 font-medium">{t('notifications.empty.noneTitle')}</p>
+                  <p className="text-gray-400 text-sm mt-1">{t('notifications.empty.noneSubtitle')}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
@@ -272,7 +276,7 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                   
                   {selectedNotification.attachments && selectedNotification.attachments.length > 0 && (
                     <div className="border-t mt-4 pt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">File đính kèm</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">{t('notifications.detail.attachments')}</h4>
                       <div className="space-y-2">
                         {selectedNotification.attachments.map((file, idx) => (
                           <a
@@ -292,14 +296,14 @@ export default function NotificationPage({ userRole = 'student' }: NotificationP
                   
                   <div className="border-t mt-4 pt-4">
                     <p className="text-xs text-gray-400">
-                      Ngày gửi: {selectedNotification.createdDate}
+                      {t('notifications.detail.sentDate')}: {selectedNotification.createdDate}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="p-12 text-center">
                   <span className="text-5xl">👆</span>
-                  <p className="text-gray-500 mt-4">Chọn một thông báo để xem chi tiết</p>
+                  <p className="text-gray-500 mt-4">{t('notifications.detail.selectPrompt')}</p>
                 </div>
               )}
             </div>

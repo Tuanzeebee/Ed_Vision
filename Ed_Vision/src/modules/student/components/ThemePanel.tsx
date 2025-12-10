@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
+import { LIVE_THEMES, getFeaturedLiveTheme, type LiveTheme } from '@/data/liveThemes';
 
-type ThemeCategory = 'all' | 'custom' | 'exclusive' | 'chill' | 'focus' | 'anime' | 'animal' | 'kpop';
+type ThemeCategory = 'all' | 'Custom' | 'Exclusive' | 'Chill' | 'Focus' | 'Anime' | 'Pets' | 'Kpop';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onChangeBackground: (url: string) => void;
   onUploadBackground: (file: File) => void;
+  onSelectLiveTheme?: (theme: LiveTheme) => void;
+  videoMuted?: boolean;
+  onToggleVideoMute?: () => void;
+  videoVolume?: number;
+  onVolumeChange?: (volume: number) => void;
   initialX?: number;
   initialY?: number;
   initialWidth?: number;
@@ -20,6 +26,11 @@ export default function ThemePanel({
   onClose,
   onChangeBackground,
   onUploadBackground,
+  onSelectLiveTheme,
+  videoMuted = true,
+  onToggleVideoMute,
+  videoVolume = 70,
+  onVolumeChange,
   initialX = (window.innerWidth - 800) / 2,
   initialY = (window.innerHeight - 600 - 80) / 2,
   initialWidth = 800,
@@ -29,6 +40,16 @@ export default function ThemePanel({
   const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 700, 500);
   const [activeTab, setActiveTab] = useState<'static' | 'live'>('static');
   const [activeCategory, setActiveCategory] = useState<ThemeCategory>('all');
+  const [liveThemes, setLiveThemes] = useState<LiveTheme[]>(LIVE_THEMES);
+  const [featuredTheme, setFeaturedTheme] = useState<LiveTheme | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
+
+  useEffect(() => {
+    // Load live themes data
+    setLiveThemes(LIVE_THEMES);
+    setFeaturedTheme(getFeaturedLiveTheme());
+  }, []);
 
   if (!visible) return null;
 
@@ -40,14 +61,73 @@ export default function ThemePanel({
   };
 
   const categories = [
-    { id: 'custom' as ThemeCategory, icon: '🖼️', label: 'Custom' },
-    { id: 'exclusive' as ThemeCategory, icon: '🎭', label: 'Exclusive' },
-    { id: 'chill' as ThemeCategory, icon: '🌺', label: 'Chill' },
-    { id: 'focus' as ThemeCategory, icon: '📖', label: 'Focus' },
-    { id: 'anime' as ThemeCategory, icon: '⚔️', label: 'Anime' },
-    { id: 'animal' as ThemeCategory, icon: '🐾', label: 'Pets' },
-    { id: 'kpop' as ThemeCategory, icon: '👥', label: 'Kpop' },
+    { id: 'Custom' as ThemeCategory, icon: '🖼️', label: 'Custom' },
+    { id: 'Exclusive' as ThemeCategory, icon: '🎭', label: 'Exclusive' },
+    { id: 'Chill' as ThemeCategory, icon: '🌺', label: 'Chill' },
+    { id: 'Focus' as ThemeCategory, icon: '📖', label: 'Focus' },
+    { id: 'Anime' as ThemeCategory, icon: '⚔️', label: 'Anime' },
+    { id: 'Pets' as ThemeCategory, icon: '🐾', label: 'Pets' },
+    { id: 'Kpop' as ThemeCategory, icon: '👥', label: 'Kpop' },
   ];
+
+  const handleLiveThemeClick = (theme: LiveTheme) => {
+    if (onSelectLiveTheme) {
+      onSelectLiveTheme(theme);
+    }
+  };
+
+  // Extract YouTube video ID from various URL formats
+  const extractYoutubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/,
+      /youtube\.com\/v\/([^&\n?#]+)/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    return null;
+  };
+
+  const handleYoutubeUrlSubmit = () => {
+    setUrlError('');
+    
+    if (!youtubeUrl.trim()) {
+      setUrlError('Please enter a YouTube URL');
+      return;
+    }
+
+    const videoId = extractYoutubeVideoId(youtubeUrl);
+    
+    if (!videoId) {
+      setUrlError('Invalid YouTube URL. Please use format: https://youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID');
+      return;
+    }
+
+    // Create custom live theme
+    const customTheme: LiveTheme = {
+      id: `custom-${Date.now()}`,
+      title: 'Custom YouTube Video',
+      category: 'Custom',
+      youtubeVideoId: videoId,
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+      attribution: 'Custom',
+    };
+
+    if (onSelectLiveTheme) {
+      onSelectLiveTheme(customTheme);
+      setYoutubeUrl('');
+      setUrlError('');
+    }
+  };
+
+  const filteredLiveThemes = activeCategory === 'all' 
+    ? liveThemes 
+    : liveThemes.filter(theme => theme.category === activeCategory);
 
   const summerSpecialThemes = [
     { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=1080&fit=crop', name: 'Beach Sunset', author: 'Summer' },
@@ -56,20 +136,7 @@ export default function ThemePanel({
     { url: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1920&h=1080&fit=crop', name: 'Summer Vibes', author: 'Summer' },
   ];
 
-  const liveThemes = [
-    { url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1920&h=1080&fit=crop', name: 'Rainy Lofi Japan', author: 'Fall in Chill', featured: true },
-    { url: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&h=1080&fit=crop', name: 'Minimal Space', author: 'Lofi Study' },
-    { url: 'https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?w=1920&h=1080&fit=crop', name: 'Cozy Cat Cafe', author: 'Chill Vibes' },
-    { url: 'https://images.unsplash.com/photo-1513366884929-f0b3d46eee4b?w=1920&h=1080&fit=crop', name: 'Low Poly City', author: 'Study beats' },
-    { url: 'https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?w=1920&h=1080&fit=crop', name: 'Peaceful Garden', author: 'Nature Sounds' },
-    { url: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1920&h=1080&fit=crop', name: 'Forest Waterfall', author: 'Ambient' },
-    { url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop', name: 'Mountain View', author: 'Relax Music' },
-    { url: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=1920&h=1080&fit=crop', name: 'Sunset Sky', author: 'Chill Beats' },
-    { url: 'https://images.unsplash.com/photo-1499346030926-9a72daac6c63?w=1920&h=1080&fit=crop', name: 'Cozy Fireplace', author: 'Winter Vibes' },
-    { url: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&h=1080&fit=crop', name: 'City Night', author: 'Urban Beats' },
-    { url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1920&h=1080&fit=crop', name: 'Aurora Borealis', author: 'Cosmic Sounds' },
-    { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=1080&fit=crop', name: 'Study with me', author: 'Focus Music' },
-  ];
+
 
   const allThemes = [
     { url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop', name: 'Forest Path', author: 'Nature' },
@@ -216,28 +283,27 @@ export default function ThemePanel({
           ) : (
             <>
               {/* Live Themes - Featured */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-white font-bold text-lg">Featuring</h3>
-                    <span className="text-xl">✨</span>
+              {featuredTheme && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-white font-bold text-lg">Featuring</h3>
+                      <span className="text-xl">✨</span>
+                    </div>
+                    <button className="text-white/60 hover:text-white text-sm flex items-center gap-1">
+                      <i className="fas fa-share"></i>
+                    </button>
                   </div>
-                  <button className="text-white/60 hover:text-white text-sm flex items-center gap-1">
-                    <i className="fas fa-share"></i>
-                  </button>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {liveThemes.filter(t => t.featured).map((theme, index) => (
+                  <div className="grid grid-cols-4 gap-3">
                     <div
-                      key={index}
-                      onClick={() => onChangeBackground(theme.url)}
+                      onClick={() => handleLiveThemeClick(featuredTheme)}
                       className="group cursor-pointer relative rounded-xl overflow-hidden aspect-video bg-cover bg-center hover:ring-4 ring-purple-400 transition transform hover:scale-105"
-                      style={{ backgroundImage: `url('${theme.url.replace('w=1920&h=1080', 'w=400&h=300')}')` }}
+                      style={{ backgroundImage: `url('${featuredTheme.thumbnailUrl}')` }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
                         <div className="absolute bottom-2 left-2 right-2">
-                          <div className="text-white text-xs font-semibold truncate">{theme.name}</div>
-                          <div className="text-white/70 text-[10px]">by {theme.author}</div>
+                          <div className="text-white text-xs font-semibold truncate">{featuredTheme.title}</div>
+                          <div className="text-white/70 text-[10px]">by {featuredTheme.attribution || 'Unknown'}</div>
                         </div>
                         <div className="absolute top-2 left-2 bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <span>✨</span> Featuring
@@ -249,9 +315,9 @@ export default function ThemePanel({
                         </div>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* All Live Themes */}
               <div className="mb-6">
@@ -262,17 +328,22 @@ export default function ThemePanel({
                   </button>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
-                  {liveThemes.map((theme, index) => (
+                  {filteredLiveThemes.map((theme) => (
                     <div
-                      key={index}
-                      onClick={() => onChangeBackground(theme.url)}
+                      key={theme.id}
+                      onClick={() => handleLiveThemeClick(theme)}
                       className="group cursor-pointer relative rounded-xl overflow-hidden aspect-video bg-cover bg-center hover:ring-4 ring-white/50 transition transform hover:scale-105"
-                      style={{ backgroundImage: `url('${theme.url.replace('w=1920&h=1080', 'w=400&h=300')}')` }}
+                      style={{ backgroundImage: `url('${theme.thumbnailUrl}')` }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
                         <div className="absolute bottom-2 left-2 right-2">
-                          <div className="text-white text-xs font-semibold truncate">{theme.name}</div>
-                          <div className="text-white/70 text-[10px]">by {theme.author}</div>
+                          <div className="text-white text-xs font-semibold truncate">{theme.title}</div>
+                          <div className="text-white/70 text-[10px]">by {theme.attribution || 'Unknown'}</div>
+                        </div>
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-black/50 text-white text-[9px] font-medium px-1.5 py-0.5 rounded">
+                            {theme.category}
+                          </span>
                         </div>
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
@@ -287,19 +358,110 @@ export default function ThemePanel({
             </>
           )}
 
-          {/* Upload Custom */}
-          <div className="border-t border-white/20 pt-6">
-            <label className="block text-white font-semibold mb-3 flex items-center gap-2">
-              <i className="fas fa-upload"></i>
-              Upload Custom Background
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="block w-full text-sm text-white file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-white/20 file:text-white hover:file:bg-white/30 file:cursor-pointer transition"
-            />
-          </div>
+          {/* Video Audio Control - Only show in Live tab */}
+          {activeTab === 'live' && (
+            <div className="border-t border-white/20 pt-4 mb-4">
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-3">
+                {/* Mute Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <i className={`fas ${videoMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-xl ${videoMuted ? 'text-white/60' : 'text-green-400'}`}></i>
+                    <div>
+                      <h4 className="text-white font-semibold text-xs">Video Audio</h4>
+                      <p className="text-white/50 text-[10px]">
+                        {videoMuted ? 'Muted' : `Playing at ${videoVolume}%`}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={onToggleVideoMute}
+                    className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
+                      videoMuted ? 'bg-gray-600' : 'bg-green-500'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 ${
+                        videoMuted ? 'left-0.5' : 'left-6'
+                      }`}
+                    ></div>
+                  </button>
+                </div>
+                
+                {/* Volume Slider */}
+                {!videoMuted && (
+                  <div className="flex items-center gap-3">
+                    <i className="fas fa-volume-down text-white/60 text-xs"></i>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={videoVolume}
+                      onChange={(e) => onVolumeChange?.(Number(e.target.value))}
+                      className="flex-1 h-1 bg-white/20 rounded-full appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, #22c55e 0%, #22c55e ${videoVolume}%, rgba(255,255,255,0.2) ${videoVolume}%, rgba(255,255,255,0.2) 100%)`
+                      }}
+                    />
+                    <i className="fas fa-volume-up text-white/60 text-xs"></i>
+                    <span className="text-white/60 text-xs font-mono w-9 text-right">{videoVolume}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Custom YouTube URL - Only show in Live tab */}
+          {activeTab === 'live' && (
+            <div className="border-t border-white/20 pt-4 mb-4">
+              <label className="block text-white text-xs font-semibold mb-2 flex items-center gap-1.5">
+                <i className="fab fa-youtube text-red-500 text-sm"></i>
+                Add Custom YouTube Video
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleYoutubeUrlSubmit()}
+                  placeholder="Paste YouTube URL..."
+                  className="flex-1 px-3 py-2 rounded-xl bg-black/30 border border-white/20 text-white text-xs placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-transparent transition"
+                />
+                <button
+                  onClick={handleYoutubeUrlSubmit}
+                  className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-lg"
+                >
+                  <i className="fas fa-plus text-[10px]"></i>
+                  Add
+                </button>
+              </div>
+              {urlError && (
+                <p className="text-red-400 text-[10px] mt-1.5 flex items-center gap-1">
+                  <i className="fas fa-exclamation-circle"></i>
+                  {urlError}
+                </p>
+              )}
+              <p className="text-white/50 text-[10px] mt-1.5 flex items-center gap-1">
+                <i className="fas fa-info-circle"></i>
+                Supports: youtube.com/watch?v=..., youtu.be/...
+              </p>
+            </div>
+          )}
+
+          {/* Upload Custom - Only show in Static tab */}
+          {activeTab === 'static' && (
+            <div className="border-t border-white/20 pt-6">
+              <label className="block text-white font-semibold mb-3 flex items-center gap-2">
+                <i className="fas fa-upload"></i>
+                Upload Custom Background
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-white file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-white/20 file:text-white hover:file:bg-white/30 file:cursor-pointer transition"
+              />
+            </div>
+          )}
         </div>
 
         <div

@@ -73,6 +73,7 @@ import "./modules/student/styles/learningSpace.css";
 import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
 import StudentSurvey from "./modules/survey/StudentSurvey";
+import SettingGradeTable from "./modules/teacher/SettingGradeTable";
 
 function App() {
         // Initialize permissions on app startup
@@ -182,8 +183,8 @@ function App() {
                                         <Route path="/teacher/teacher_dashboard" element={<ProtectedRoute permission="teacher_dashboard"><TeacherDashboard /></ProtectedRoute>} />
                                         <Route path="/teacher/class-management" element={<ProtectedRoute permission="teacher_class_management"><ClassManagement /></ProtectedRoute>} />
                                         <Route path="/teacher/grade-management" element={<ProtectedRoute permission="teacher_grade_management"><GradeManagement /></ProtectedRoute>} />
-                                        <Route path="/teacher/prediction-view" element={<ProtectedRoute permission="teacher_prediction_view"><PredictionView /></ProtectedRoute>} />
-                                        <Route path="/teacher/prediction-view-v2" element={<PredictionViewV2 />} />
+                                        <Route path="/teacher/setting-grade-table" element={<ProtectedRoute permission="teacher_grade_setting"><SettingGradeTable /></ProtectedRoute>} />
+                                        <Route path="/teacher/prediction-view" element={<ProtectedRoute permission="teacher_prediction_view"><PredictionViewV2 /></ProtectedRoute>} />
                                         <Route path="/teacher/progress-tracking" element={<ProtectedRoute permission="teacher_progress_tracking"><ProgressTracking /></ProtectedRoute>} />
                                         <Route path="/teacher/reports-alerts" element={<ProtectedRoute permission="teacher_reports_alerts"><TeacherReport /></ProtectedRoute>} />
                                         <Route path="/teacher/messages" element={<ProtectedRoute permission="teacher_messages"><MessagesNotifications /></ProtectedRoute>} />

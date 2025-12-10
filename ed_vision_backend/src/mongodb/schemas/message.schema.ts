@@ -137,7 +137,7 @@ export const ConversationSchema = new Schema<Conversation>(
         },
         participants: [
             {
-                userId: { type: String, required: true, index: true },
+                userId: { type: String, required: true },
                 userType: { type: String, enum: ['teacher', 'student', 'parent'], required: true },
                 userName: { type: String, required: true },
                 userAvatar: { type: String },
