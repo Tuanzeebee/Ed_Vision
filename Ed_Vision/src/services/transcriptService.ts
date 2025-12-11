@@ -1,5 +1,6 @@
 import axios from 'axios';
 import cacheService from '@/services/cacheService'
+import { TokenManager } from '@/lib/tokenManager'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 const CACHE_TTL = {
@@ -200,6 +201,7 @@ export const uploadTranscriptFile = async (file: File): Promise<TranscriptUpload
     {
       headers: {
         'Content-Type': 'multipart/form-data',
+        ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
       },
     }
   );
@@ -213,7 +215,12 @@ export const uploadTranscriptFile = async (file: File): Promise<TranscriptUpload
 export const uploadTranscriptJSON = async (records: any[]): Promise<TranscriptUploadResponse> => {
   const response = await axios.post<TranscriptUploadResponse>(
     `${API_BASE_URL}/student/transcript/upload`,
-    { records }
+    { records },
+    {
+      headers: {
+        ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+      },
+    }
   );
 
   return response.data;
@@ -228,7 +235,12 @@ export const getStudentTranscript = async (studentId: number): Promise<StudentTr
     key,
     async () => {
       const response = await axios.get<StudentTranscriptResponse>(
-        `${API_BASE_URL}/student/transcript/${studentId}`
+        `${API_BASE_URL}/student/transcript/${studentId}`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data
     },
@@ -291,7 +303,12 @@ export const getStudentGPA = async (idOrAccountId: number): Promise<GPACalculati
     key,
     async () => {
       const response = await axios.get<GPAResponse>(
-        `${API_BASE_URL}/student/transcript/${idOrAccountId}/gpa`
+        `${API_BASE_URL}/student/transcript/${idOrAccountId}/gpa`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data.data
     },
@@ -310,7 +327,12 @@ export const getProjectedGPA = async (idOrAccountId: number): Promise<GPACalcula
     key,
     async () => {
       const response = await axios.get<GPAResponse>(
-        `${API_BASE_URL}/student/transcript/${idOrAccountId}/gpa-projected`
+        `${API_BASE_URL}/student/transcript/${idOrAccountId}/gpa-projected`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data.data
     },
@@ -328,7 +350,12 @@ export const getStudentSurveyFactors = async (idOrAccountId: number): Promise<Su
     key,
     async () => {
       const response = await axios.get<SurveyFactorsResponse>(
-        `${API_BASE_URL}/student/transcript/${idOrAccountId}/survey-factors`
+        `${API_BASE_URL}/student/transcript/${idOrAccountId}/survey-factors`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data
     },
@@ -348,7 +375,12 @@ export const getPredictedGPA = async (idOrAccountId: number): Promise<PredictedG
     key,
     async () => {
       const response = await axios.get<PredictedGPAResponse>(
-        `${API_BASE_URL}/student/transcript/${idOrAccountId}/predicted-gpa`
+        `${API_BASE_URL}/student/transcript/${idOrAccountId}/predicted-gpa`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data.data
     },
@@ -366,7 +398,12 @@ export const getPhysicalEducationGPA = async (idOrAccountId: number): Promise<Ph
     key,
     async () => {
       const response = await axios.get<PhysicalEducationGPAResponse>(
-        `${API_BASE_URL}/student/transcript/${idOrAccountId}/physical-education-gpa`
+        `${API_BASE_URL}/student/transcript/${idOrAccountId}/physical-education-gpa`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data.data
     },
@@ -388,7 +425,12 @@ export const getSemesterPlan = async (idOrAccountId: number): Promise<SemesterPl
     key,
     async () => {
       const response = await axios.get<SemesterPlanResponse>(
-        `${API_BASE_URL}/student/transcript/${idOrAccountId}/semester-plan`
+        `${API_BASE_URL}/student/transcript/${idOrAccountId}/semester-plan`,
+        {
+          headers: {
+            ...(TokenManager.getToken() ? { Authorization: `Bearer ${TokenManager.getToken()}` } : {}),
+          },
+        }
       )
       return response.data.data
     },

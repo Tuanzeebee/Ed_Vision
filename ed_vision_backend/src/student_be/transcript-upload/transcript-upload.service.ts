@@ -2,8 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadTranscriptDto, TranscriptRecordDto } from './dto/upload-transcript.dto';
 import { TranscriptUploadResponse, StudentTranscriptResponse } from './models/transcript-upload-response.type';
-import { TranscriptPredictionService } from './transcript-prediction.service';
-import { StudentCacheService } from './student-cache.service';
+import { TranscriptPredictionService, StudentCacheService } from './logic';
 
 @Injectable()
 export class TranscriptUploadService {
@@ -84,29 +83,40 @@ export class TranscriptUploadService {
           });
         }
 
-        // Find or create course
+        // Find existing course only (do NOT auto-create)
         // NOTE: Schema uses unique constraint on [course_code, study_format]
-        // One course_code can have multiple study_format (LEC, LAB, DEM, etc.)
-        const studyFormat = record.study_format || 'offline';
-        
+        // Try find by composite (course_code + study_format), then fallback to course_code only
+        const studyFormatRaw = record.study_format || 'offline';
+        const studyFormat = String(studyFormatRaw).trim();
+
         let course = await this.prisma.course.findUnique({
-          where: { 
+          where: {
             course_code_study_format: {
               course_code: record.course_code,
               study_format: studyFormat,
-            }
+            },
           },
         });
 
         if (!course) {
-          course = await this.prisma.course.create({
-            data: {
+          course = await this.prisma.course.findFirst({
+            where: { 
               course_code: record.course_code,
-              course_name: record.course_name,
               credits_unit: record.credits_unit,
-              study_format: studyFormat,
             },
           });
+        }
+
+        if (!course) {
+          course = await this.prisma.course.findFirst({
+            where: { course_code: record.course_code },
+          });
+        }
+
+        if (!course) {
+          throw new BadRequestException(
+            `Course not found for code '${record.course_code}'${studyFormat ? ` with format '${studyFormat}'` : ''}. Please ensure the course exists in the catalog.`
+          );
         }
 
         // Create or update student course record
@@ -238,11 +248,13 @@ export class TranscriptUploadService {
       status: record.status || 'planned',
     }));
 
-    // Calculate credits
     const totalCredits = records.reduce((sum, r) => sum + r.credits_unit, 0);
-    const completedCredits = records
-      .filter(r => r.status === 'completed' && r.raw_score !== undefined)
-      .reduce((sum, r) => sum + r.credits_unit, 0);
+    const normalizeCode = (code: string | undefined) => (code || '').replace(/\s|[-_]/g, '').toUpperCase();
+    const completedCredits = student.courseRecords
+      .filter(r => r.status === 'completed')
+      .filter(r => r.course?.study_format !== 'DEM')
+      .filter(r => normalizeCode(r.course?.course_code) !== 'ES100')
+      .reduce((sum, r) => sum + (r.course?.credits_unit || 0), 0);
 
     // Calculate GPA - CHỈ TÍNH CÁC MÔN CÓ ĐIỂM (converted_numeric_score NOT NULL)
     const completedRecordsWithScore = student.courseRecords.filter(
