@@ -54,6 +54,95 @@ export class TeacherChatController {
     }
 
     /**
+     * Lấy danh sách parents của teacher (parents của students)
+     */
+    @Get('parents')
+    async getParents(@Request() req) {
+        // Get instructor from account_id
+        const instructor = await this.chatService.getInstructorByAccountId(req.user.account_id);
+        if (!instructor) {
+            throw new Error('Instructor not found');
+        }
+        return this.chatService.getTeacherParents(instructor.instructor_id);
+    }
+
+    /**
+     * Lấy danh sách lớp của teacher để filter
+     */
+    @Get('classes')
+    async getClasses(@Request() req) {
+        const instructor = await this.chatService.getInstructorByAccountId(req.user.account_id);
+        if (!instructor) {
+            throw new Error('Instructor not found');
+        }
+        return this.chatService.getTeacherClasses(instructor.instructor_id);
+    }
+
+    /**
+     * Gửi tin nhắn hàng loạt đến nhiều sinh viên/phụ huynh
+     */
+    @Post('bulk-message')
+    async sendBulkMessage(@Request() req, @Body() body: {
+        recipientType: 'students' | 'parents' | 'both';
+        classIds?: number[];
+        riskLevels?: string[];
+        message: string;
+        title?: string;
+    }) {
+        const instructor = await this.chatService.getInstructorByAccountId(req.user.account_id);
+        if (!instructor) {
+            throw new Error('Instructor not found');
+        }
+        return this.chatService.sendBulkMessage({
+            instructorId: instructor.instructor_id,
+            ...body,
+        });
+    }
+
+    /**
+     * Gửi tin nhắn nhanh với template
+     */
+    @Post('quick-message')
+    async sendQuickMessage(@Request() req, @Body() body: {
+        recipientIds: string[];
+        recipientType: 'student' | 'parent';
+        template: 'reminder' | 'encouragement' | 'concern' | 'custom';
+        customMessage?: string;
+        subject?: string;
+    }) {
+        const instructor = await this.chatService.getInstructorByAccountId(req.user.account_id);
+        if (!instructor) {
+            throw new Error('Instructor not found');
+        }
+        return this.chatService.sendQuickMessage({
+            instructorId: instructor.instructor_id,
+            ...body,
+        });
+    }
+
+    /**
+     * Gửi cảnh báo khẩn cấp
+     */
+    @Post('urgent-alert')
+    async sendUrgentAlert(@Request() req, @Body() body: {
+        studentIds: string[];
+        alertType: 'academic' | 'attendance' | 'behavior' | 'other';
+        severity: 'high' | 'medium';
+        message: string;
+        requireConfirmation: boolean;
+        notifyParents: boolean;
+    }) {
+        const instructor = await this.chatService.getInstructorByAccountId(req.user.account_id);
+        if (!instructor) {
+            throw new Error('Instructor not found');
+        }
+        return this.chatService.sendUrgentAlert({
+            instructorId: instructor.instructor_id,
+            ...body,
+        });
+    }
+
+    /**
      * Tạo hoặc tìm cuộc hội thoại với student/parent
      */
     @Post('conversations')

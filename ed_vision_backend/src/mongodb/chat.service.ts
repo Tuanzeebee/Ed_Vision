@@ -34,6 +34,16 @@ export class ChatService {
     }
 
     /**
+     * Map account_id → parent_id
+     */
+    async getParentByAccountId(accountId: number) {
+        return this.prisma.parent.findUnique({
+            where: { account_id: accountId },
+            select: { parent_id: true },
+        });
+    }
+
+    /**
      * Lấy thông tin student từ PostgreSQL và tạo conversation metadata
      */
     private async getStudentMetadata(studentId: number) {
@@ -60,6 +70,57 @@ export class ChatService {
                 studentName: student.account?.profile?.full_name || 'Unknown',
                 className: student.classGroup?.class_code || 'Unknown',
                 riskLevel: undefined, // Có thể thêm logic tính risk level
+            },
+        };
+    }
+
+    /**
+     * Lấy thông tin parent từ PostgreSQL và tạo conversation metadata
+     */
+    private async getParentMetadata(parentId: number) {
+        const parent = await this.prisma.parent.findUnique({
+            where: { parent_id: parentId },
+            include: {
+                account: {
+                    include: {
+                        profile: true,
+                    },
+                },
+                parentStudentLinks: {
+                    include: {
+                        student: {
+                            include: {
+                                account: {
+                                    include: {
+                                        profile: true,
+                                    },
+                                },
+                                classGroup: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!parent) {
+            throw new NotFoundException('Parent not found');
+        }
+
+        // Lấy danh sách students của parent
+        const students = parent.parentStudentLinks.map(link => ({
+            studentId: link.student.student_id.toString(),
+            studentCode: link.student.student_code,
+            studentName: link.student.account?.profile?.full_name || 'Unknown',
+            className: link.student.classGroup?.class_code || 'Unknown',
+        }));
+
+        return {
+            parentInfo: {
+                parentId: parent.parent_id.toString(),
+                parentName: parent.account?.profile?.full_name || 'Unknown',
+                relationshipType: parent.relationship_type || 'Unknown',
+                students,
             },
         };
     }
@@ -128,6 +189,526 @@ export class ChatService {
     }
 
     /**
+     * Lấy danh sách parents của teacher (parents của students mình advise)
+     */
+    async getTeacherParents(instructorId: number) {
+        // Get students của teacher
+        const students = await this.prisma.student.findMany({
+            where: {
+                classGroup: {
+                    adviserAssignments: {
+                        some: {
+                            instructor_id: instructorId,
+                            ended_date: null,
+                        },
+                    },
+                },
+            },
+            include: {
+                parentStudentLinks: {
+                    include: {
+                        parent: {
+                            include: {
+                                account: {
+                                    include: {
+                                        profile: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                account: {
+                    include: {
+                        profile: true,
+                    },
+                },
+                classGroup: true,
+            },
+        });
+
+        // Collect unique parents
+        const parentsMap = new Map();
+        
+        for (const student of students) {
+            if (student.parentStudentLinks) {
+                for (const link of student.parentStudentLinks) {
+                    if (link.parent) {
+                        const parentId = link.parent.parent_id.toString();
+                        if (!parentsMap.has(parentId)) {
+                            parentsMap.set(parentId, {
+                                id: parentId,
+                                name: link.parent.account?.profile?.full_name || 'Unknown',
+                                avatar: link.parent.account?.profile?.avatar_url || undefined,
+                                relationshipType: link.parent.relationship_type,
+                                students: [],
+                            });
+                        }
+                        // Add student info to parent
+                        parentsMap.get(parentId).students.push({
+                            studentId: student.student_id.toString(),
+                            studentName: student.account?.profile?.full_name || 'Unknown',
+                            studentCode: student.student_code,
+                            className: student.classGroup?.class_code || 'Unknown',
+                        });
+                    }
+                }
+            }
+        }
+
+        return Array.from(parentsMap.values());
+    }
+
+    /**
+     * Get list of classes for a teacher from PostgreSQL
+     */
+    async getTeacherClasses(instructorId: number) {
+        // Get all students this teacher advises via their classes
+        const assignments = await this.prisma.adviserAssignment.findMany({
+            where: {
+                instructor_id: instructorId,
+                ended_date: null, // Only active assignments
+            },
+            include: {
+                classGroup: true,
+            },
+        });
+
+        // Extract unique classes and count students
+        const classMap = new Map();
+        for (const assignment of assignments) {
+            const classGroup = assignment.classGroup;
+            if (classGroup && !classMap.has(classGroup.class_id)) {
+                // Count students in this class
+                const studentCount = await this.prisma.student.count({
+                    where: {
+                        class_id: classGroup.class_id,
+                        status: 'active',
+                    },
+                });
+
+                classMap.set(classGroup.class_id, {
+                    id: classGroup.class_id,
+                    code: classGroup.class_code,
+                    name: classGroup.class_code, // Using code as name since class_name might not exist
+                    studentCount,
+                });
+            }
+        }
+
+        return Array.from(classMap.values());
+    }
+
+    /**
+     * Send bulk message to multiple students/parents
+     */
+    async sendBulkMessage(params: {
+        instructorId: number;
+        recipientType: 'students' | 'parents' | 'both';
+        classIds?: number[];
+        riskLevels?: string[];
+        message: string;
+        title?: string;
+    }) {
+        const { instructorId, recipientType, classIds, message, title } = params;
+
+        // Get teacher info
+        const instructor = await this.prisma.instructor.findUnique({
+            where: { instructor_id: instructorId },
+            include: {
+                account: {
+                    include: { profile: true },
+                },
+            },
+        });
+
+        if (!instructor || !instructor.account.profile) {
+            throw new NotFoundException('Instructor not found');
+        }
+
+        const teacherId = instructorId.toString();
+        const teacherName = instructor.account.profile.full_name;
+
+        // Get students based on filters (via AdviserAssignment)
+        const whereClause: any = {
+            instructor_id: instructorId,
+            ended_date: null,
+        };
+
+        if (classIds && classIds.length > 0) {
+            whereClause.class_id = { in: classIds };
+        }
+
+        const assignments = await this.prisma.adviserAssignment.findMany({
+            where: whereClause,
+            include: {
+                classGroup: {
+                    include: {
+                        students: {
+                            where: {
+                                status: 'active',
+                            },
+                            include: {
+                                account: {
+                                    include: { profile: true },
+                                },
+                                classGroup: true,
+                                parentStudentLinks: {
+                                    include: {
+                                        parent: {
+                                            include: {
+                                                account: {
+                                                    include: { profile: true },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Flatten students from all classes
+        const students = assignments.flatMap((a) => a.classGroup.students);
+
+        const results = {
+            sentToStudents: 0,
+            sentToParents: 0,
+            failed: 0,
+            conversations: [] as any[],
+        };
+
+        // Send to students
+        if (recipientType === 'students' || recipientType === 'both') {
+            for (const student of students) {
+                try {
+                    if (!student.account.profile) continue;
+
+                    const studentId = student.student_id.toString();
+
+                    // Create or get conversation
+                    const conversation = await this.findOrCreateConversation(
+                        teacherId,
+                        studentId,
+                        'teacher-student',
+                    );
+
+                    // Send message
+                    const fullMessage = title ? `**${title}**\n\n${message}` : message;
+                    await this.sendMessage(
+                        (conversation as any)._id.toString(),
+                        teacherId,
+                        'teacher',
+                        fullMessage,
+                    );
+
+                    results.sentToStudents++;
+                    results.conversations.push({
+                        conversationId: (conversation as any)._id.toString(),
+                        recipientName: student.account.profile.full_name,
+                        recipientType: 'student',
+                    });
+                } catch (error) {
+                    console.error(`Failed to send to student ${student.student_id}:`, error);
+                    results.failed++;
+                }
+            }
+        }
+
+        // Send to parents
+        if (recipientType === 'parents' || recipientType === 'both') {
+            const parentMap = new Map();
+            students.forEach((student) => {
+                student.parentStudentLinks.forEach((link) => {
+                    const parent = link.parent;
+                    if (parent && !parentMap.has(parent.parent_id)) {
+                        parentMap.set(parent.parent_id, {
+                            parent,
+                            student,
+                        });
+                    }
+                });
+            });
+
+            for (const [parentId, data] of parentMap.entries()) {
+                try {
+                    const { parent } = data;
+                    if (!parent.account.profile) continue;
+
+                    const parentIdStr = parentId.toString();
+
+                    // Create or get conversation
+                    const conversation = await this.findOrCreateConversation(
+                        teacherId,
+                        parentIdStr,
+                        'teacher-parent',
+                    );
+
+                    // Send message
+                    const fullMessage = title ? `**${title}**\n\n${message}` : message;
+                    await this.sendMessage(
+                        (conversation as any)._id.toString(),
+                        teacherId,
+                        'teacher',
+                        fullMessage,
+                    );
+
+                    results.sentToParents++;
+                    results.conversations.push({
+                        conversationId: (conversation as any)._id.toString(),
+                        recipientName: parent.account.profile.full_name,
+                        recipientType: 'parent',
+                    });
+                } catch (error) {
+                    console.error(`Failed to send to parent ${parentId}:`, error);
+                    results.failed++;
+                }
+            }
+        }
+
+        return {
+            success: true,
+            message: `Sent ${results.sentToStudents} to students, ${results.sentToParents} to parents`,
+            ...results,
+        };
+    }
+
+    /**
+     * Send quick message with template
+     */
+    async sendQuickMessage(params: {
+        instructorId: number;
+        recipientIds: string[];
+        recipientType: 'student' | 'parent';
+        template: 'reminder' | 'encouragement' | 'concern' | 'custom';
+        customMessage?: string;
+        subject?: string;
+    }) {
+        const templates = {
+            reminder: 'Nhắc nhở: Bạn cần hoàn thành bài tập và tham gia đầy đủ các buổi học.',
+            encouragement: 'Cố lên! Thầy/Cô tin tưởng vào khả năng của em. Hãy tiếp tục nỗ lực!',
+            concern: 'Thầy/Cô nhận thấy em đang gặp khó khăn. Hãy liên hệ để được hỗ trợ.',
+        };
+
+        const messageContent = params.template === 'custom'
+            ? params.customMessage || ''
+            : templates[params.template];
+
+        const instructor = await this.prisma.instructor.findUnique({
+            where: { instructor_id: params.instructorId },
+            include: {
+                account: {
+                    include: { profile: true },
+                },
+            },
+        });
+
+        if (!instructor || !instructor.account.profile) {
+            throw new NotFoundException('Instructor not found');
+        }
+
+        const teacherId = params.instructorId.toString();
+
+        const results = {
+            sent: 0,
+            failed: 0,
+            conversations: [] as any[],
+        };
+
+        for (const recipientId of params.recipientIds) {
+            try {
+                const conversationType = params.recipientType === 'student' 
+                    ? 'teacher-student' as const
+                    : 'teacher-parent' as const;
+
+                // Create or get conversation
+                const conversation = await this.findOrCreateConversation(
+                    teacherId,
+                    recipientId,
+                    conversationType,
+                );
+
+                // Get recipient name from conversation
+                const recipient = conversation.participants.find(p => p.userId === recipientId);
+                const recipientName = recipient?.userName || 'Unknown';
+
+                // Send message
+                const fullMessage = params.subject 
+                    ? `**${params.subject}**\n\n${messageContent}` 
+                    : messageContent;
+
+                await this.sendMessage(
+                    (conversation as any)._id.toString(),
+                    teacherId,
+                    'teacher',
+                    fullMessage,
+                );
+
+                results.sent++;
+                results.conversations.push({
+                    conversationId: (conversation as any)._id.toString(),
+                    recipientName,
+                    recipientType: params.recipientType,
+                });
+            } catch (error) {
+                console.error(`Failed to send to ${recipientId}:`, error);
+                results.failed++;
+            }
+        }
+
+        return {
+            success: true,
+            message: `Sent ${results.sent} messages`,
+            ...results,
+        };
+    }
+
+    /**
+     * Send urgent alert
+     */
+    async sendUrgentAlert(params: {
+        instructorId: number;
+        studentIds: string[];
+        alertType: 'academic' | 'attendance' | 'behavior' | 'other';
+        severity: 'high' | 'medium';
+        message: string;
+        requireConfirmation: boolean;
+        notifyParents: boolean;
+    }) {
+        const instructor = await this.prisma.instructor.findUnique({
+            where: { instructor_id: params.instructorId },
+            include: {
+                account: {
+                    include: { profile: true },
+                },
+            },
+        });
+
+        if (!instructor || !instructor.account.profile) {
+            throw new NotFoundException('Instructor not found');
+        }
+
+        const teacherId = params.instructorId.toString();
+
+        const alertTypeLabels = {
+            academic: '🎓 Cảnh báo học tập',
+            attendance: '📅 Cảnh báo điểm danh',
+            behavior: '⚠️ Cảnh báo hành vi',
+            other: '❗ Cảnh báo',
+        };
+
+        const severityPrefix = params.severity === 'high' ? '🚨 KHẨN CẤP - ' : '⚠️ ';
+
+        const results = {
+            sentToStudents: 0,
+            sentToParents: 0,
+            failed: 0,
+            conversations: [] as any[],
+        };
+
+        for (const studentId of params.studentIds) {
+            try {
+                const student = await this.prisma.student.findUnique({
+                    where: { student_id: parseInt(studentId) },
+                    include: {
+                        account: {
+                            include: { profile: true },
+                        },
+                        classGroup: true,
+                        parentStudentLinks: {
+                            include: {
+                                parent: {
+                                    include: {
+                                        account: {
+                                            include: { profile: true },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+
+                if (!student || !student.account.profile) {
+                    console.error(`Student ${studentId} not found`);
+                    results.failed++;
+                    continue;
+                }
+
+                // Send to student
+                const studentConversation = await this.findOrCreateConversation(
+                    teacherId,
+                    studentId,
+                    'teacher-student',
+                );
+
+                const studentMessage = `${severityPrefix}${alertTypeLabels[params.alertType]}\n\n${params.message}${params.requireConfirmation ? '\n\n⚠️ Vui lòng xác nhận đã đọc tin nhắn này.' : ''}`;
+
+                await this.sendMessage(
+                    (studentConversation as any)._id.toString(),
+                    teacherId,
+                    'teacher',
+                    studentMessage,
+                );
+
+                results.sentToStudents++;
+                results.conversations.push({
+                    conversationId: (studentConversation as any)._id.toString(),
+                    recipientName: student.account.profile.full_name,
+                    recipientType: 'student',
+                });
+
+                // Send to parents if requested
+                if (params.notifyParents && student.parentStudentLinks) {
+                    for (const link of student.parentStudentLinks) {
+                        try {
+                            const parent = link.parent;
+                            if (!parent || !parent.account.profile) continue;
+
+                            const parentConversation = await this.findOrCreateConversation(
+                                teacherId,
+                                parent.parent_id.toString(),
+                                'teacher-parent',
+                            );
+
+                            const parentMessage = `${severityPrefix}${alertTypeLabels[params.alertType]} - Con của quý phụ huynh: ${student.account.profile.full_name}\n\n${params.message}`;
+
+                            await this.sendMessage(
+                                (parentConversation as any)._id.toString(),
+                                teacherId,
+                                'teacher',
+                                parentMessage,
+                            );
+
+                            results.sentToParents++;
+                            results.conversations.push({
+                                conversationId: (parentConversation as any)._id.toString(),
+                                recipientName: parent.account.profile.full_name,
+                                recipientType: 'parent',
+                            });
+                        } catch (error) {
+                            console.error(`Failed to send to parent ${link.parent?.parent_id}:`, error);
+                            results.failed++;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Failed to send urgent alert to student ${studentId}:`, error);
+                results.failed++;
+            }
+        }
+
+        return {
+            success: true,
+            message: `Sent ${results.sentToStudents} alerts to students, ${results.sentToParents} to parents`,
+            ...results,
+        };
+    }
+
+    /**
      * Lấy danh sách advisors (teachers) của student từ PostgreSQL
      */
     async getStudentAdvisors(studentId: number) {
@@ -171,19 +752,104 @@ export class ChatService {
     }
 
     /**
-     * Tìm hoặc tạo cuộc hội thoại giữa teacher và student
+     * Lấy danh sách teachers của parent (teachers của students con)
+     */
+    async getParentTeachers(parentId: number) {
+        // Lấy students của parent qua ParentStudentLink
+        const parentLinks = await this.prisma.parentStudentLink.findMany({
+            where: {
+                parent_id: parentId,
+            },
+            include: {
+                student: {
+                    include: {
+                        classGroup: {
+                            include: {
+                                adviserAssignments: {
+                                    where: {
+                                        ended_date: null,
+                                    },
+                                    include: {
+                                        instructor: {
+                                            include: {
+                                                account: {
+                                                    include: {
+                                                        profile: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        account: {
+                            include: {
+                                profile: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Tập hợp tất cả teachers (unique)
+        const teachersMap = new Map();
+        
+        for (const link of parentLinks) {
+            if (link.student?.classGroup?.adviserAssignments) {
+                for (const assignment of link.student.classGroup.adviserAssignments) {
+                    const teacherId = assignment.instructor.instructor_id.toString();
+                    if (!teachersMap.has(teacherId)) {
+                        teachersMap.set(teacherId, {
+                            id: teacherId,
+                            name: assignment.instructor.account?.profile?.full_name || 'Unknown',
+                            avatar: assignment.instructor.account?.profile?.avatar_url || undefined,
+                            students: [],
+                        });
+                    }
+                    // Thêm student vào danh sách của teacher
+                    teachersMap.get(teacherId).students.push({
+                        studentId: link.student.student_id.toString(),
+                        studentName: link.student.account?.profile?.full_name || 'Unknown',
+                        studentCode: link.student.student_code,
+                        className: link.student.classGroup?.class_code || 'Unknown',
+                    });
+                }
+            }
+        }
+
+        return Array.from(teachersMap.values());
+    }
+
+    /**
+     * Tìm hoặc tạo cuộc hội thoại giữa teacher và student/parent
      */
     async findOrCreateConversation(
         teacherId: string,
-        studentId: string,
+        participantId: string, // studentId or parentId
         conversationType: 'teacher-student' | 'teacher-parent',
     ): Promise<Conversation> {
         // Lấy thông tin từ PostgreSQL
         const teacherIdNum = parseInt(teacherId);
-        const studentIdNum = parseInt(studentId);
+        const participantIdNum = parseInt(participantId);
 
         const teacherInfo = await this.getTeacherInfo(teacherIdNum);
-        const metadata = await this.getStudentMetadata(studentIdNum);
+        
+        // Lấy metadata dựa trên loại conversation
+        let metadata;
+        let participantUserType: 'student' | 'parent';
+        let participantName: string;
+        
+        if (conversationType === 'teacher-student') {
+            metadata = await this.getStudentMetadata(participantIdNum);
+            participantUserType = 'student';
+            participantName = metadata.studentInfo.studentName;
+        } else {
+            metadata = await this.getParentMetadata(participantIdNum);
+            participantUserType = 'parent';
+            participantName = metadata.parentInfo.parentName;
+        }
 
         // Tìm cuộc hội thoại đã tồn tại trong MongoDB
         let conversation = await this.conversationModel.findOne({
@@ -191,7 +857,7 @@ export class ChatService {
             participants: {
                 $all: [
                     { $elemMatch: { userId: teacherId, isActive: true } },
-                    { $elemMatch: { userId: studentId, isActive: true } }
+                    { $elemMatch: { userId: participantId, isActive: true } }
                 ]
             }
         });
@@ -211,9 +877,9 @@ export class ChatService {
                         isActive: true,
                     },
                     {
-                        userId: studentId,
-                        userType: conversationType === 'teacher-student' ? 'student' : 'parent',
-                        userName: metadata.studentInfo.studentName,
+                        userId: participantId,
+                        userType: participantUserType,
+                        userName: participantName,
                         role: 'member',
                         joinedAt: new Date(),
                         isActive: true,
@@ -463,3 +1129,4 @@ export class ChatService {
         );
     }
 }
+
