@@ -1,10 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TranscriptUploadController } from './transcript-upload.controller';
 import { TranscriptUploadService } from './transcript-upload.service';
-import { TranscriptPredictionService } from './transcript-prediction.service';
-import { GPACalculatorService } from './gpa-calculator.service';
-import { SemesterPlanningService } from './semester-planning.service';
-import { StudentCacheService } from './student-cache.service';
+import { TranscriptPredictionService, GPACalculatorService, SemesterPlanningService, StudentCacheService } from './logic';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 

@@ -13,7 +13,7 @@ import {
   GraduationCapIcon,
   GPAIcon,
   CreditsIcon,
-  AIScoreIcon,
+  BrainIcon,
   TrendUpIcon,
   CalendarIcon
 } from "@/assets/student/icons";
@@ -94,7 +94,7 @@ export default function AcademicPlanningDashboard() {
   }, [isAuthenticated, user, navigate, t])
 
   // Sample data based on the Figma design - Updated with real data
-  const TOTAL_CREDITS_FOR_GRADUATION = 144; // Fixed graduation requirement for Software Engineering
+  const TOTAL_CREDITS_FOR_GRADUATION = 145;
   
   // Current GPA & Credits (completed only) - dùng currentGpaData
   const currentProgress = useMemo(() => ({
@@ -689,7 +689,7 @@ export default function AcademicPlanningDashboard() {
             />
 
             <StatCard
-              icon={<AIScoreIcon />}
+              icon={<BrainIcon />}
               value={aiScore.value}
               subtitle={t('planning.predictedGPA')}
               additional={aiScore.description}

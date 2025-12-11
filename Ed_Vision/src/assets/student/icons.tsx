@@ -49,3 +49,13 @@ export const CalendarIcon = () => (
     <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/>
   </svg>
 );
+
+// Brain Icon
+export const BrainIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 3a3 3 0 0 0-3 3v1a3 3 0 0 0-2 5v1a3 3 0 0 0 3 3h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M16 3a3 3 0 0 1 3 3v1a3 3 0 0 1 2 5v1a3 3 0 0 1-3 3h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M10 7c1 0 2 .5 2 1.5S11 10 10 10s-2-.5-2-1.5S9 7 10 7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 7c1 0 2 .5 2 1.5S15 10 14 10s-2-.5-2-1.5S13 7 14 7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
