@@ -513,6 +513,11 @@ export default function LearningSpace({ className = '' }: Props) {
           <LearningModulePanel
             visible={learningModuleVisible}
             onClose={() => setLearningModuleVisible(false)}
+            onCompleteModule={() => {
+              // Close module panel and open map panel to show animation
+              setLearningModuleVisible(false);
+              setLearningMapVisible(true);
+            }}
           />
         </Suspense>
       )}

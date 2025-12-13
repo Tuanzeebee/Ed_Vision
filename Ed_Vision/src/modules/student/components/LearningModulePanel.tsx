@@ -31,6 +31,7 @@ type Section = {
 type Props = {
   visible: boolean;
   onClose: () => void;
+  onCompleteModule?: () => void; // Callback when module is completed
 };
 
 type Note = {
@@ -50,7 +51,7 @@ type QuizQuestion = {
   explanation?: string;
 };
 
-export default function LearningModulePanel({ visible, onClose }: Props) {
+export default function LearningModulePanel({ visible, onClose, onCompleteModule }: Props) {
   const [activeTab, setActiveTab] = useState<'content' | 'transcript' | 'notes'>('content');
   const [commentText, setCommentText] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -235,6 +236,16 @@ export default function LearningModulePanel({ visible, onClose }: Props) {
   const handleNextLesson = () => {
     if (currentStep < totalSteps) {
       const newStep = currentStep + 1;
+      
+      // Check if completing a module (assuming last lesson in a module triggers completion)
+      // In real scenario, this would check if it's the last lesson of the module
+      const isModuleComplete = currentStep === totalSteps - 1; // Simplified logic
+      
+      if (isModuleComplete) {
+        // Trigger car animation on Learning Map Panel when it opens next time
+        localStorage.setItem('triggerModuleUnlock', 'true');
+      }
+      
       setCurrentStep(newStep);
       const lesson = lessons[newStep - 1];
       setCurrentLessonType(lesson.isQuiz ? 'quiz' : lesson.isDownloadable ? 'document' : 'video');
@@ -687,8 +698,14 @@ export default function LearningModulePanel({ visible, onClose }: Props) {
                       <h3 className="text-2xl font-bold text-white mb-2">Hoàn thành bài kiểm tra!</h3>
                       <p className="text-white/60">Điểm của bạn</p>
                       <div className="text-5xl font-bold text-white my-4">{calculateScore()}%</div>
-                      <div className={`inline-block px-4 py-2 rounded-full ${calculateScore() >= 80 ? 'bg-green-500/20 text-green-300' : 'bg-orange-500/20 text-orange-300'}`}>
-                        {calculateScore() >= 80 ? '🎉 Đạt yêu cầu!' : '📚 Cần cố gắng thêm'}
+                      <div className={`inline-block px-4 py-2 rounded-full ${
+                        calculateScore() >= 80 ? 'bg-green-500/20 text-green-300' : 
+                        calculateScore() >= 60 ? 'bg-blue-500/20 text-blue-300' : 
+                        'bg-orange-500/20 text-orange-300'
+                      }`}>
+                        {calculateScore() >= 80 ? '🎉 Xuất sắc!' : 
+                         calculateScore() >= 60 ? '✅ Đạt yêu cầu - Có thể Complete!' : 
+                         '📚 Cần đạt tối thiểu 60% để Complete'}
                       </div>
                     </div>
 
@@ -754,13 +771,33 @@ export default function LearningModulePanel({ visible, onClose }: Props) {
                         <i className="fas fa-redo"></i>
                         Làm lại
                       </button>
-                      <button
-                        onClick={handleNextLesson}
-                        className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all font-semibold flex items-center justify-center gap-2"
-                      >
-                        <span>Tiếp tục</span>
-                        <i className="fas fa-arrow-right"></i>
-                      </button>
+                      {calculateScore() >= 60 ? (
+                        <button
+                          onClick={() => {
+                            // Set flag to trigger animation
+                            localStorage.setItem('triggerModuleUnlock', 'true');
+                            // Call complete callback if provided
+                            if (onCompleteModule) {
+                              onCompleteModule();
+                            }
+                            // Close this panel to return to Learning Map
+                            onClose();
+                          }}
+                          className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl transition-all font-semibold flex items-center justify-center gap-2 shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-105"
+                        >
+                          <i className="fas fa-check-circle"></i>
+                          <span>Complete Module</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleNextLesson}
+                          disabled
+                          className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-xl transition-all font-semibold flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
+                        >
+                          <span>Cần đạt 60% để tiếp tục</span>
+                          <i className="fas fa-lock"></i>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
