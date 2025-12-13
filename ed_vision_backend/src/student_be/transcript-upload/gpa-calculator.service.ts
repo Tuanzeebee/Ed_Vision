@@ -175,21 +175,16 @@ export class GPACalculatorService {
     // Calculate GPA (CHỈ TÍNH TRÊN CÁC MÔN CÓ ĐIỂM)
     const currentGPA = totalCredits > 0 ? weightedSum / totalCredits : 0;
 
-    // Get all completed courses (including those without converted scores) để tính tổng tín chỉ đã hoàn thành
-    // EXCLUDE: DEM courses, Pass/Fail courses (converted_score = 'P' or 'F'), and courses without numeric scores
+    // Get all completed courses (with numeric scores) để tính tổng tín chỉ đã hoàn thành
+    // EXCLUDE: DEM courses và môn ES 100 (không tính vào tín chỉ tốt nghiệp)
     const allCompletedRecords = await this.prisma.studentCourseRecord.findMany({
       where: {
         student_id: studentId,
-        status: 'completed', // ✅ Tất cả môn đã hoàn thành
+        status: 'completed',
         course: {
-          study_format: { not: 'DEM' }, // Exclude DEM courses
+          study_format: { not: 'DEM' },
+          course_code: { not: 'ES 100' },
         },
-        converted_numeric_score: { not: null, gte: 1.7 },
-        // ✅ Exclude courses with Pass/Fail grades (P, F, P/F)
-        NOT: [
-          { converted_score: { contains: 'P' } },
-          { converted_score: { contains: 'F' } },
-        ],
       },
       include: {
         course: {
@@ -202,7 +197,7 @@ export class GPACalculatorService {
     });
 
     this.logger.log(
-      `All completed courses (excluding DEM and Pass/Fail): ${allCompletedRecords.length} courses`
+      `All completed courses (excluding DEM and ES 100): ${allCompletedRecords.length} courses`
     );
     
     // Log chi tiết các môn completed
@@ -259,6 +254,48 @@ export class GPACalculatorService {
       `Failed=${failedCourses}`
     );
 
+    const auditCompleted = await this.prisma.studentCourseRecord.findMany({
+      where: { student_id: studentId, status: 'completed' },
+      include: {
+        course: {
+          select: {
+            course_code: true,
+            course_name: true,
+            credits_unit: true,
+            study_format: true,
+          },
+        },
+      },
+    });
+
+    const excludedDetails = auditCompleted
+      .filter(r => {
+        const code = (r.course?.course_code || '').replace(/\s|-/g, '').toUpperCase();
+        return (
+          r.course?.study_format === 'DEM' ||
+          code === 'ES100'
+        );
+      })
+      .map(r => {
+        const reasons: string[] = [];
+        const codeNorm = (r.course?.course_code || '').replace(/\s|-/g, '').toUpperCase();
+        if (r.course?.study_format === 'DEM') reasons.push('DEM');
+        if (codeNorm === 'ES100') reasons.push('ES100');
+        return {
+          course_code: r.course?.course_code || 'N/A',
+          credits: r.course?.credits_unit || 0,
+          study_format: r.course?.study_format || 'N/A',
+          reasons: reasons.join(', '),
+        };
+      });
+
+    if (excludedDetails.length > 0) {
+      this.logger.warn(`Credits exclusion list for student ${studentId}: ${excludedDetails.length} courses`);
+      excludedDetails.forEach(d => {
+        this.logger.warn(`Excluded: code=${d.course_code}, credits=${d.credits}, format=${d.study_format}, reasons=${d.reasons}`);
+      });
+    }
+
     // Tính GPA change so với 2 học kỳ trước (để có cumulative GPA trend)
     let previousSemesterGPA: number | undefined;
     let gpaChange: number | undefined;
@@ -313,23 +350,15 @@ export class GPACalculatorService {
       select: { major: true },
     });
     
-    // Get ALL completed courses (with actual scores >= 1.7 on 4.0 scale, equivalent to >= 5.0 on 10.0 scale)
-    // EXCLUDE: DEM courses, Pass/Fail courses, and courses with score < 1.7 (< 5.0/10, not passing)
     const completedCourses = await this.prisma.studentCourseRecord.findMany({
       where: {
         student_id: studentId,
         status: 'completed',
-        converted_numeric_score: { 
-          not: null,
-          gte: 1.7, // ✅ Only count courses with score >= 1.7 (passing grade, equivalent to >= 5.0/10)
-        },
+        converted_numeric_score: { not: null },
         course: {
           study_format: { not: 'DEM' },
+          course_code: { not: 'ES 100' },
         },
-        NOT: [
-          { converted_score: { contains: 'P' } },
-          { converted_score: { contains: 'F' } },
-        ],
       },
       include: {
         course: {
@@ -342,28 +371,14 @@ export class GPACalculatorService {
       },
     });
 
-    // Get ALL planned courses (regardless of predictions)
-    // CHỈ FILTER P/F nếu converted_score không null
     const plannedCourses = await this.prisma.studentCourseRecord.findMany({
       where: {
         student_id: studentId,
         status: 'planned',
         course: {
           study_format: { not: 'DEM' },
+          course_code: { not: 'ES 100' },
         },
-        AND: [
-          {
-            OR: [
-              { converted_score: null }, // Cho phép null
-              { 
-                AND: [
-                  { converted_score: { not: { contains: 'P' } } },
-                  { converted_score: { not: { contains: 'F' } } },
-                ]
-              }
-            ]
-          }
-        ],
       },
       include: {
         course: {
@@ -397,28 +412,10 @@ export class GPACalculatorService {
       0
     );
     
-    // ✅ Only count planned courses with predicted_gpa >= 1.7 (passing grade, equivalent to >= 5.0/10)
-    const plannedCredits = plannedCourses.reduce((sum, r) => {
-      const credits = r.course?.credits_unit || 0;
-      const prediction = r.course?.predictionResults?.[0];
-      if (prediction && prediction.predicted_gpa) {
-        const predictedGpa10 = Number(prediction.predicted_gpa);
-        if (predictedGpa10 >= 4) {
-          return sum + credits;
-        }
-      }
-      return sum;
-    }, 0);
+    const plannedCredits = plannedCourses.reduce((sum, r) => sum + (r.course?.credits_unit || 0), 0);
 
     const totalCredits = completedCredits + plannedCredits;
-    const totalCourses = completedCourses.length + plannedCourses.filter(r => {
-      const prediction = r.course?.predictionResults?.[0];
-      if (prediction && prediction.predicted_gpa) {
-        const predictedGpa10 = Number(prediction.predicted_gpa);
-        return predictedGpa10 >= 4;
-      }
-      return false;
-    }).length;
+    const totalCourses = completedCourses.length + plannedCourses.length;
 
     this.logger.log(
       `Credits: Completed=${completedCredits}, Planned=${plannedCredits}, Total=${totalCredits}`
@@ -868,7 +865,8 @@ export class GPACalculatorService {
         student_id: studentId,
         status: 'completed',
         course: {
-          study_format: 'DEM', // Chỉ lấy môn DEM
+          study_format: 'DEM',
+          course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
         },
       },
       include: {
@@ -878,10 +876,18 @@ export class GPACalculatorService {
             course_name: true,
           },
         },
+        academicTerm: {
+          select: {
+            term_id: true,
+            academic_year: true,
+            semester_number: true,
+          },
+        },
       },
-      orderBy: {
-        course_id: 'asc',
-      },
+      orderBy: [
+        { academicTerm: { academic_year: 'asc' } },
+        { academicTerm: { semester_number: 'asc' } },
+      ],
     });
 
     this.logger.log(`Found ${demCourses.length} DEM courses for student ${studentId}`);
@@ -902,82 +908,73 @@ export class GPACalculatorService {
       };
     }
 
-    // Tính điểm cho từng môn DEM
-    const coursesWithScores = demCourses.map((record) => {
-      // Ưu tiên converted_numeric_score, nếu không có thì dùng raw_score
-      let score10 = 0;
-      if (record.converted_numeric_score && Number(record.converted_numeric_score) > 0) {
-        score10 = Number(record.converted_numeric_score);
-      } else if (record.raw_score && Number(record.raw_score) > 0) {
-        score10 = Number(record.raw_score);
-      }
-      
-      const score4 = this.convertGPA10To4(score10);
-
+    // Lấy 3 môn DEM gần nhất có raw_score để tính
+    const demRawRecords = demCourses.filter(r => r.raw_score !== null && Number(r.raw_score) > 0)
+    const consideredRecords = demRawRecords.slice(-REQUIRED_DEM_COURSES) // lấy 3 môn mới nhất theo học kỳ
+    const demWithRaw = consideredRecords.map((record) => {
+      const raw10 = Number(record.raw_score);
+      const score4 = (raw10 / 10) * 4; // Chuyển tuyến tính sang thang 4
       this.logger.log(
-        `DEM Course: ${record.course?.course_code} - ` +
-        `raw_score=${record.raw_score}, converted_numeric_score=${record.converted_numeric_score}, ` +
-        `final_score10=${score10}, score4=${score4}`
+        `DEM Course: ${record.course?.course_code} - raw_score=${record.raw_score}, score4_linear=${score4.toFixed(2)}`
       );
-
       return {
         course_code: record.course?.course_code || 'N/A',
         course_name: record.course?.course_name || 'N/A',
-        score: score10,
-        score4: score4,
+        score: raw10,
+        score4,
       };
     });
 
-    // Lọc ra những môn có điểm (loại bỏ môn có điểm = 0)
-    const coursesWithValidScores = coursesWithScores.filter(course => course.score > 0);
-
-    if (coursesWithValidScores.length === 0) {
-      this.logger.warn(`Student ${studentId} has ${demCourses.length} DEM courses but none have scores yet`);
+    if (demRawRecords.length === 0) {
+      this.logger.warn(`Student ${studentId} has ${demCourses.length} DEM courses but none have raw scores yet`);
       return {
         averageGPA4: 0,
         averageGPA10: 0,
         isPassing: false,
-        totalCourses: demCourses.length,
+        totalCourses: 0,
         requiredCourses: REQUIRED_DEM_COURSES,
-        courses: coursesWithScores, // Trả về tất cả courses kể cả không có điểm
+        courses: [],
         isEligible: false,
-        note: `${demCourses.length} Physical Education courses enrolled but no scores available yet. Required: ${REQUIRED_DEM_COURSES} courses`,
+        note: `${demCourses.length} Physical Education courses enrolled but no raw scores available yet. Required: ${REQUIRED_DEM_COURSES} courses`,
       };
     }
 
-    // Tính điểm trung bình thang 4 (chỉ tính môn có điểm)
-    const totalScore4 = coursesWithValidScores.reduce((sum, course) => sum + course.score4, 0);
-    const averageGPA4 = coursesWithValidScores.length > 0 ? totalScore4 / coursesWithValidScores.length : 0;
+    // Chỉ tính 3 môn DEM theo yêu cầu (nếu có hơn 3 thì lấy 3 môn đầu theo thứ tự)
+    const consideredCourses = demWithRaw;
 
-    // Chuyển điểm từ thang 4 sang thang 10
-    const averageGPA10 = averageGPA4 * 2.5;
+    // Tính trung bình thang 10 chia cho 3 (yêu cầu: /3)
+    const sum10 = consideredCourses.reduce((sum, c) => sum + c.score, 0);
+    const averageGPA10 = sum10 / REQUIRED_DEM_COURSES;
+
+    // Trung bình thang 4 (tuyến tính)
+    const averageGPA4 = averageGPA10 / 2.5;
 
     // Kiểm tra Pass/Fail: >= 5.0 thang 10 = Pass, < 5.0 = Fail
     const isPassing = averageGPA10 >= 5.0;
 
     // Kiểm tra điều kiện đủ 3 môn DEM (có điểm)
-    const isEligible = coursesWithValidScores.length >= REQUIRED_DEM_COURSES;
+    const isEligible = demWithRaw.length >= REQUIRED_DEM_COURSES;
 
     // Tạo note về số môn đã tính
     const note = isEligible
-      ? `Calculated from ${coursesWithValidScores.length} Physical Education courses (Eligible for graduation)`
-      : `Calculated from ${coursesWithValidScores.length}/${REQUIRED_DEM_COURSES} required courses (${REQUIRED_DEM_COURSES - coursesWithValidScores.length} more needed)`;
+      ? `Calculated from ${consideredCourses.length} Physical Education courses (Eligible for graduation)`
+      : `Calculated from ${consideredCourses.length}/${REQUIRED_DEM_COURSES} required courses (${REQUIRED_DEM_COURSES - consideredCourses.length} more needed)`;
 
     this.logger.log(
       `Physical Education GPA for student ${studentId}: ` +
-      `Average GPA (4-scale)=${averageGPA4.toFixed(2)}, (10-scale)=${averageGPA10.toFixed(1)}, ` +
+      `Average GPA (4-scale linear)=${averageGPA4.toFixed(2)}, (10-scale raw)=${averageGPA10.toFixed(2)}, ` +
       `Pass status=${isPassing ? 'PASS' : 'FAIL'}, ` +
-      `Total DEM courses=${coursesWithValidScores.length}/${REQUIRED_DEM_COURSES} (${demCourses.length} enrolled), ` +
+      `Considered DEM courses=${consideredCourses.length}/${REQUIRED_DEM_COURSES} (${demCourses.length} enrolled), ` +
       `Eligible for graduation=${isEligible}`
     );
 
     return {
       averageGPA4: Number(averageGPA4.toFixed(2)),
-      averageGPA10: Number(averageGPA10.toFixed(1)),
+      averageGPA10: Number(averageGPA10.toFixed(2)),
       isPassing: isPassing,
-      totalCourses: coursesWithValidScores.length, // Số môn có điểm
+      totalCourses: consideredCourses.length, // Số môn được tính
       requiredCourses: REQUIRED_DEM_COURSES,
-      courses: coursesWithValidScores, // Chỉ trả về môn có điểm
+      courses: consideredCourses, // Trả về 3 môn đã tính
       isEligible: isEligible,
       note: note,
     };

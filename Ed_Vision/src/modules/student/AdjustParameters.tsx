@@ -38,7 +38,7 @@ export default function AdjustParameters({}: Props) {
   const { user, isAuthenticated } = useAuth()
   const { t } = useTranslation('student')
 
-  const TOTAL_CREDITS_FOR_GRADUATION = 144
+  const TOTAL_CREDITS_FOR_GRADUATION = 145
   const gpaValue = gpaData?.currentGPA ?? 0
   const gpaSticky = useMemo(() => {
     const trend = gpaData?.gpaChange !== undefined ? ` (xu hướng ${gpaData.gpaChange >= 0 ? '+' : ''}${gpaData.gpaChange.toFixed(2)} so với kỳ trước)` : ''
@@ -82,7 +82,16 @@ export default function AdjustParameters({}: Props) {
         const p2 = getStudentSurveyFactors(accountId)
         const [r1, r2] = await Promise.allSettled([p1, p2])
         if (!active) return
-        if (r1.status === 'fulfilled') setGpaData(r1.value as GPACalculationResult)
+        if (r1.status === 'fulfilled') {
+          const g = r1.value as GPACalculationResult
+          setGpaData(g)
+          const uploaded = (g.totalCourses > 0) || (g.totalCredits > 0) || (g.completedCredits > 0)
+          setHasUploadedTranscript(uploaded)
+          if (!uploaded) {
+            toast.error(t('adjust.toastTranscriptRequired'), { duration: 4000, id: 'transcript-required' })
+            setTimeout(() => { navigate('/student/upload-transcript') }, 3000)
+          }
+        }
         if (r2.status === 'fulfilled') {
           const response = r2.value as SurveyFactorsResponse
           if (response.success && response.data) setSurveyData(response.data)
@@ -93,74 +102,16 @@ export default function AdjustParameters({}: Props) {
         if (!active) return
         setIsLoadingGPA(false)
         setIsLoadingSurvey(false)
+        setIsCheckingTranscript(false)
       }
     }
-    if (hasUploadedTranscript && isAuthenticated) run()
+    if (isAuthenticated) run()
     return () => { active = false }
-  }, [hasUploadedTranscript, isAuthenticated, user])
+  }, [isAuthenticated, user, navigate, t])
 
-  // Fetch Survey Factors data
-  useEffect(() => {
-    const fetchSurveyData = async () => {
-      try {
-        setIsLoadingSurvey(true)
-        
-        if (!isAuthenticated || !user) {
-          return
-        }
+  
 
-        const accountId = user.account_id || user.id
-        if (!accountId) {
-          return
-        }
-
-        console.log('📡 Fetching Survey Factors for account ID:', accountId)
-        const response = await getStudentSurveyFactors(accountId)
-        
-        if (response.success && response.data) {
-          console.log('✅ Survey data received:', response.data)
-          setSurveyData(response.data)
-        } else {
-          console.log('ℹ️ No survey data available:', response.message)
-        }
-      } catch (error: any) {
-        console.error('❌ Error fetching survey data:', error)
-      } finally {
-        setIsLoadingSurvey(false)
-      }
-    }
-
-    if (hasUploadedTranscript && isAuthenticated) {
-      fetchSurveyData()
-    }
-  }, [hasUploadedTranscript, isAuthenticated, user])
-
-  // Check if user has uploaded transcript
-  useEffect(() => {
-    const checkTranscriptStatus = () => {
-      // Check localStorage for upload success flag
-      const uploadSuccess = localStorage.getItem('transcript_uploaded')
-      
-      if (uploadSuccess === 'true') {
-        setHasUploadedTranscript(true)
-      } else {
-        setHasUploadedTranscript(false)
-        // Show warning and redirect after 3 seconds
-        toast.error(t('adjust.toastTranscriptRequired'), { 
-          duration: 4000,
-          id: 'transcript-required' // Unique ID to prevent duplicates
-        })
-        
-        setTimeout(() => {
-          navigate('/student/upload-transcript')
-        }, 3000)
-      }
-      
-      setIsCheckingTranscript(false)
-    }
-
-    checkTranscriptStatus()
-  }, [navigate])
+  
 
   // Show loading while checking
   if (isCheckingTranscript) {
@@ -419,7 +370,7 @@ export default function AdjustParameters({}: Props) {
                               {gpaData?.completedCredits || 0}
                             </span>
                             <span className="text-lg text-purple-700 font-medium">
-                              / 144
+                              / 145
                             </span>
                           </div>
                           <div className="space-y-2">
@@ -428,14 +379,14 @@ export default function AdjustParameters({}: Props) {
                                 className="bg-purple-500 h-2 rounded-full" 
                                 style={{ 
                                   width: `${gpaData 
-                                    ? ((gpaData.completedCredits / 144) * 100).toFixed(1) 
+                                    ? ((gpaData.completedCredits / 145) * 100).toFixed(1) 
                                     : 0}%` 
                                 }}
                               ></div>
                             </div>
                             <p className="text-sm text-purple-700 font-medium">
                               {gpaData 
-                                ? t('adjust.percentComplete', { percent: ((gpaData.completedCredits / 144) * 100).toFixed(1) })
+                                ? t('adjust.percentComplete', { percent: ((gpaData.completedCredits / 145) * 100).toFixed(1) })
                                 : t('adjust.percentComplete', { percent: '0' })
                               }
                             </p>

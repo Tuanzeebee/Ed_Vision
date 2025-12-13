@@ -106,21 +106,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.logger.log(`📤 Broadcasting to room: conversation:${data.conversationId}`);
 
             // Also send to each participant's personal room (for notification badge)
+            // CRITICAL: Send to ALL participants (including sender) for conversation list updates
             const conversation = await this.chatService.getConversationById(data.conversationId);
             conversation.participants.forEach(participant => {
-                if (participant.userId !== data.senderId) {
-                    this.server
-                        .to(`user:${participant.userId}`)
-                        .emit('conversationUpdated', {
-                            conversationId: data.conversationId,
-                            lastMessage: {
-                                content: data.content,
-                                senderId: data.senderId,
-                                timestamp: message.createdAt,
-                            },
-                        });
-                    this.logger.log(`🔔 Notified user: ${participant.userId}`);
-                }
+                this.server
+                    .to(`user:${participant.userId}`)
+                    .emit('conversationUpdated', {
+                        conversationId: data.conversationId,
+                        lastMessage: {
+                            content: data.content,
+                            senderId: data.senderId,
+                            senderName: message.senderName,
+                            timestamp: message.createdAt,
+                        },
+                    });
+                this.logger.log(`🔔 Notified user: ${participant.userId} (sender: ${participant.userId === data.senderId ? 'YES' : 'NO'})`);
             });
 
             return { success: true, message };

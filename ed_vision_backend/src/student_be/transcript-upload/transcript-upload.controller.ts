@@ -11,18 +11,19 @@ import {
   UploadedFile,
   BadRequestException,
   Logger,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TranscriptUploadService } from './transcript-upload.service';
-import { TranscriptPredictionService } from './transcript-prediction.service';
-import { GPACalculatorService } from './gpa-calculator.service';
-import { SemesterPlanningService } from './semester-planning.service';
+import { TranscriptPredictionService, GPACalculatorService, SemesterPlanningService } from './logic';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadTranscriptDto } from './dto/upload-transcript.dto';
 import { TranscriptUploadResponse, StudentTranscriptResponse } from './models/transcript-upload-response.type';
 import { PredictionsResponse } from './dto/get-predictions.dto';
 import * as XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
+import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 
 @Controller('student/transcript')
 export class TranscriptUploadController {
@@ -41,10 +42,32 @@ export class TranscriptUploadController {
    * Upload transcript từ JSON data
    */
   @Post('upload')
+  @UseGuards(DevAuthGuard)
   async uploadTranscript(
     @Body() uploadDto: UploadTranscriptDto,
+    @Req() req: any,
   ): Promise<TranscriptUploadResponse> {
-    return this.transcriptUploadService.uploadTranscript(uploadDto);
+    const accountId = req.user?.account_id;
+    if (!accountId) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const student = await this.prisma.student.findUnique({
+      where: { account_id: accountId },
+      select: { student_id: true, student_code: true },
+    });
+
+    if (!student) {
+      throw new BadRequestException('Student not found for current account');
+    }
+
+    const normalizedRecords = (uploadDto.records || []).map((r) => ({
+      ...r,
+      student_code: student.student_code,
+    }));
+
+    const dto: UploadTranscriptDto = { records: normalizedRecords };
+    return this.transcriptUploadService.uploadTranscript(dto);
   }
 
   /**
@@ -53,8 +76,10 @@ export class TranscriptUploadController {
    */
   @Post('upload-file')
   @UseInterceptors(FileInterceptor('file'))
+  @UseGuards(DevAuthGuard)
   async uploadTranscriptFile(
     @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
   ): Promise<TranscriptUploadResponse> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -77,7 +102,26 @@ export class TranscriptUploadController {
         throw new BadRequestException('File is empty or contains no valid data');
       }
 
-      const uploadDto: UploadTranscriptDto = { records };
+      const accountId = req.user?.account_id;
+      if (!accountId) {
+        throw new BadRequestException('User not authenticated');
+      }
+
+      const student = await this.prisma.student.findUnique({
+        where: { account_id: accountId },
+        select: { student_id: true, student_code: true },
+      });
+
+      if (!student) {
+        throw new BadRequestException('Student not found for current account');
+      }
+
+      const normalizedRecords = records.map((r: any) => ({
+        ...r,
+        student_code: student.student_code,
+      }));
+
+      const uploadDto: UploadTranscriptDto = { records: normalizedRecords };
       return this.transcriptUploadService.uploadTranscript(uploadDto);
     } catch (error) {
       if (error instanceof BadRequestException) {
