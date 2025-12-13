@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
 
@@ -56,6 +56,13 @@ export default function LearningMapPanel({
   const [isDraggingMap, setIsDraggingMap] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [scrollStart, setScrollStart] = useState({ left: 0, top: 0 });
+
+  // Car animation state
+  const [carPosition, setCarPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isCarMoving, setIsCarMoving] = useState(false);
+  const [animatingToModule, setAnimatingToModule] = useState<number | null>(null);
+  const [justUnlockedModule, setJustUnlockedModule] = useState<number | null>(null);
+  const carAnimationRef = useRef<number | null>(null);
 
   const handleMapMouseDown = (e: React.MouseEvent) => {
     if (!mapContainerRef.current) return;
@@ -363,6 +370,92 @@ export default function LearningMapPanel({
     }
   };
 
+  // Animate car movement along the path
+  const animateCarToNextModule = (fromModuleId: number, toModuleId: number) => {
+    const fromModule = modules.find(m => m.id === fromModuleId);
+    const toModule = modules.find(m => m.id === toModuleId);
+    
+    if (!fromModule || !toModule) return;
+
+    setIsCarMoving(true);
+    setAnimatingToModule(toModuleId);
+    
+    const startPos = fromModule.position;
+    const endPos = toModule.position;
+    const duration = 2000; // 2 seconds
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth movement
+      const easeProgress = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const currentX = startPos.x + (endPos.x - startPos.x) * easeProgress;
+      const currentY = startPos.y + (endPos.y - startPos.y) * easeProgress;
+
+      setCarPosition({ x: currentX, y: currentY });
+
+      if (progress < 1) {
+        carAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Animation complete - unlock next module
+        setIsCarMoving(false);
+        setAnimatingToModule(null);
+        setJustUnlockedModule(toModuleId);
+        
+        // Clear unlock highlight after 1.5 seconds
+        setTimeout(() => {
+          setJustUnlockedModule(null);
+        }, 1500);
+      }
+    };
+
+    carAnimationRef.current = requestAnimationFrame(animate);
+  };
+
+  // Initialize car position at current module
+  useEffect(() => {
+    if (!carPosition && currentCourse) {
+      const currentModule = modules.find(m => m.status === 'current');
+      if (currentModule) {
+        setCarPosition(currentModule.position);
+      }
+    }
+  }, [carPosition, modules, currentCourse]);
+
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (carAnimationRef.current) {
+        cancelAnimationFrame(carAnimationRef.current);
+      }
+    };
+  }, []);
+
+  // Trigger animation when a module is completed
+  useEffect(() => {
+    if (!visible) return;
+    
+    // Check if user just completed a module (this would be triggered from parent)
+    const currentModule = modules.find(m => m.status === 'current');
+    const nextModule = modules.find(m => m.status === 'available');
+    
+    if (currentModule && nextModule && !isCarMoving) {
+      // Check if we should trigger animation (e.g., from localStorage flag)
+      const shouldAnimate = localStorage.getItem('triggerModuleUnlock');
+      if (shouldAnimate === 'true') {
+        localStorage.removeItem('triggerModuleUnlock');
+        setTimeout(() => {
+          animateCarToNextModule(currentModule.id, nextModule.id);
+        }, 300);
+      }
+    }
+  }, [visible, modules, isCarMoving]);
+
   return (
     <div
       className="fixed z-10"
@@ -440,7 +533,7 @@ export default function LearningMapPanel({
           ref={mapContainerRef}
           className="flex-1 relative overflow-auto scrollbar-hidden"
           style={{
-            background: 'linear-gradient(180deg, #87CEEB 0%, #98D8E8 30%, #90EE90 70%, #7CB342 100%)',
+            background: 'linear-gradient(135deg, #FFF5F7 0%, #FFF9E6 25%, #F0F4FF 50%, #F5F0FF 75%, #FFF5F7 100%)',
             cursor: isDraggingMap ? 'grabbing' : 'grab'
           }}
           onMouseDown={handleMapMouseDown}
@@ -459,105 +552,138 @@ export default function LearningMapPanel({
             }
           `}</style>
           
-          {/* 3D Isometric Landscape Elements */}
-          <div className="absolute inset-0 pointer-events-none">
-            {/* Grass texture pattern */}
-            <div className="absolute inset-0 opacity-10" style={{
-              backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(76, 175, 80, 0.3) 10px, rgba(76, 175, 80, 0.3) 20px)`,
-            }}></div>
-            
-            {/* Trees scattered around */}
-            <div className="absolute" style={{ left: '15%', top: '20%', fontSize: '32px' }}>🌲</div>
-            <div className="absolute" style={{ left: '25%', top: '35%', fontSize: '28px' }}>🌳</div>
-            <div className="absolute" style={{ left: '12%', top: '60%', fontSize: '30px' }}>🌲</div>
-            <div className="absolute" style={{ right: '18%', top: '25%', fontSize: '34px' }}>🌲</div>
-            <div className="absolute" style={{ right: '22%', top: '50%', fontSize: '29px' }}>🌳</div>
-            <div className="absolute" style={{ right: '15%', top: '70%', fontSize: '31px' }}>🌲</div>
-            <div className="absolute" style={{ left: '35%', top: '15%', fontSize: '26px' }}>🌲</div>
-            <div className="absolute" style={{ right: '35%', top: '80%', fontSize: '28px' }}>🌳</div>
-            
-            {/* Buildings as milestones */}
-            <div className="absolute" style={{ left: '20%', top: '30%', fontSize: '48px', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.3))' }}>🏢</div>
-            <div className="absolute" style={{ right: '25%', top: '40%', fontSize: '52px', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.3))' }}>🏛️</div>
-            <div className="absolute" style={{ left: '50%', top: '70%', fontSize: '50px', filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.3))' }}>🏰</div>
-            
-            {/* River/Water elements */}
-            <div className="absolute" style={{ left: '30%', top: '55%', fontSize: '24px' }}>💧</div>
-            <div className="absolute" style={{ right: '40%', top: '60%', fontSize: '20px' }}>💧</div>
-          </div>
-          
           {/* Scrollable content wrapper */}
           <div className="relative" style={{ minWidth: '1200px', minHeight: '800px' }}>
             {/* SVG for road paths */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25))' }}>
               <defs>
-                {/* Road gradient */}
-                <linearGradient id="roadCompleted" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#424242" />
-                  <stop offset="50%" stopColor="#616161" />
-                  <stop offset="100%" stopColor="#424242" />
+                {/* Gradient for road */}
+                <linearGradient id="roadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.8" />
                 </linearGradient>
-                <linearGradient id="roadLocked" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#9E9E9E" />
-                  <stop offset="100%" stopColor="#BDBDBD" />
+                {/* Animated gradient for active road */}
+                <linearGradient id="activeRoadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#60a5fa" stopOpacity="1">
+                    <animate attributeName="stopColor" values="#60a5fa;#3b82f6;#60a5fa" dur="1.5s" repeatCount="indefinite" />
+                  </stop>
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="1">
+                    <animate attributeName="stopColor" values="#3b82f6;#2563eb;#3b82f6" dur="1.5s" repeatCount="indefinite" />
+                  </stop>
                 </linearGradient>
               </defs>
               {pathData.map((path, index) => {
-                const completed = index < currentCourse.completedModules;
+                const dx = path.to.x - path.from.x;
+                const dy = path.to.y - path.from.y;
+                
+                // Create curved path for more natural roads
+                const midX = (path.from.x + path.to.x) / 2;
+                const midY = (path.from.y + path.to.y) / 2;
+                
+                // Control point offset for curve
+                const offsetX = -dy * 0.15;
+                const offsetY = dx * 0.15;
+                
+                const pathD = `M ${path.from.x} ${path.from.y} Q ${midX + offsetX} ${midY + offsetY} ${path.to.x} ${path.to.y}`;
+                
+                // Check if this is the active animating path
+                const fromModule = modules[index];
+                const toModule = modules[index + 1];
+                const isActivePath = isCarMoving && 
+                  fromModule && toModule && 
+                  animatingToModule === toModule.id;
+                
                 return (
                   <g key={index}>
+                    {/* Road background (wider) */}
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke={isActivePath ? "#3b82f6" : "#8b5cf6"}
+                      strokeWidth="12"
+                      strokeOpacity={isActivePath ? "0.5" : "0.3"}
+                      strokeLinecap="round"
+                    />
+                    
                     {/* Main road */}
-                    <line
-                      x1={path.from.x}
-                      y1={path.from.y}
-                      x2={path.to.x}
-                      y2={path.to.y}
-                      stroke={completed ? 'url(#roadCompleted)' : 'url(#roadLocked)'}
-                      strokeWidth="28"
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke={isActivePath ? "url(#activeRoadGradient)" : "url(#roadGradient)"}
+                      strokeWidth="8"
                       strokeLinecap="round"
-                      opacity="0.9"
+                      strokeLinejoin="round"
                     />
-                    {/* Road edge lines */}
-                    <line
-                      x1={path.from.x}
-                      y1={path.from.y}
-                      x2={path.to.x}
-                      y2={path.to.y}
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
+                    
+                    {/* Road centerline (dashed) */}
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeOpacity={isActivePath ? "0.8" : "0.5"}
+                      strokeDasharray="8 8"
                       strokeLinecap="round"
-                      opacity="0.4"
-                      style={{ transform: 'translate(0, -12px)' }}
-                    />
-                    <line
-                      x1={path.from.x}
-                      y1={path.from.y}
-                      x2={path.to.x}
-                      y2={path.to.y}
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      opacity="0.4"
-                      style={{ transform: 'translate(0, 12px)' }}
-                    />
-                    {/* Center dashed line (road marking) */}
-                    {completed && (
-                      <line
-                        x1={path.from.x}
-                        y1={path.from.y}
-                        x2={path.to.x}
-                        y2={path.to.y}
-                        stroke="#FFD700"
-                        strokeWidth="3"
+                    >
+                      {isActivePath && <animate attributeName="strokeDashoffset" from="0" to="-16" dur="0.5s" repeatCount="indefinite" />}
+                    </path>
+                    
+                    {/* Glowing effect for active path */}
+                    {isActivePath && (
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke="#60a5fa"
+                        strokeWidth="16"
+                        strokeOpacity="0.3"
                         strokeLinecap="round"
-                        strokeDasharray="12,8"
-                        opacity="0.8"
+                        filter="blur(8px)"
                       />
                     )}
                   </g>
                 );
               })}
             </svg>
+
+            {/* Animated Car */}
+            {carPosition && (
+              <div
+                className="absolute pointer-events-none z-20 transition-transform"
+                style={{
+                  left: `${carPosition.x}px`,
+                  top: `${carPosition.y}px`,
+                  transform: 'translate(-50%, -50%)',
+                  transition: isCarMoving ? 'none' : 'all 0.3s ease'
+                }}
+              >
+                <div className="relative">
+                  {/* Car body with shadow */}
+                  <div className="relative animate-bounce-subtle">
+                    <img 
+                      src="https://i.imgur.com/9JlRGr7.png"
+                      alt="Car"
+                      className="w-16 h-16 drop-shadow-2xl"
+                      style={{
+                        filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4))'
+                      }}
+                    />
+                    {isCarMoving && (
+                      <div className="absolute inset-0 animate-pulse">
+                        <div className="w-full h-full bg-blue-400 rounded-full blur-xl opacity-50"></div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Speed lines when moving */}
+                  {isCarMoving && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full space-y-1">
+                      <div className="h-0.5 w-8 bg-blue-400 opacity-70 animate-speed-line"></div>
+                      <div className="h-0.5 w-6 bg-blue-300 opacity-50 animate-speed-line" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="h-0.5 w-4 bg-blue-200 opacity-30 animate-speed-line" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Module Nodes */}
             <div className="relative w-full h-full">
@@ -572,6 +698,20 @@ export default function LearningMapPanel({
                 onClick={() => handleModuleNodeClick(module)}
                 onMouseDown={(e) => e.stopPropagation()}
               >
+                {/* Unlock animation effect */}
+                {justUnlockedModule === module.id && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                    <div className="absolute w-32 h-32 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
+                    <div className="absolute w-24 h-24 bg-blue-400 rounded-full animate-pulse opacity-50"></div>
+                    <div className="absolute text-6xl animate-bounce">🔓</div>
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full">
+                      <div className="bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 text-white px-4 py-2 rounded-full font-bold text-sm shadow-xl animate-bounce whitespace-nowrap">
+                        Unlocked!
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Node Circle - Road Stop/Marker Style */}
                 <div
                   className={`relative w-24 h-24 rounded-full bg-gradient-to-br ${getNodeColor(module.status)} 
@@ -685,11 +825,25 @@ export default function LearningMapPanel({
                   0%, 100% { transform: translateY(0px); }
                   50% { transform: translateY(-15px); }
                 }
+                @keyframes bounce-subtle {
+                  0%, 100% { transform: translateY(0px); }
+                  50% { transform: translateY(-4px); }
+                }
+                @keyframes speed-line {
+                  0% { transform: translateX(0) scaleX(1); opacity: 0.7; }
+                  100% { transform: translateX(-20px) scaleX(0.5); opacity: 0; }
+                }
                 .animate-float {
                   animation: float 6s ease-in-out infinite;
                 }
                 .animate-float-delayed {
                   animation: float-delayed 8s ease-in-out infinite;
+                }
+                .animate-bounce-subtle {
+                  animation: bounce-subtle 0.5s ease-in-out infinite;
+                }
+                .animate-speed-line {
+                  animation: speed-line 0.6s ease-out infinite;
                 }
               `}</style>
             </div>

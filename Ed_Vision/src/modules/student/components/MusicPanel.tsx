@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Track } from '../types/learningSpace';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
 import AnimatedList from './AnimatedList';
+import * as spotifyService from '../services/spotifyService';
 
 type Props = {
   visible: boolean;
@@ -31,10 +32,14 @@ export default function MusicPanel({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(84); // 1:24
-  const [duration, _setDuration] = useState(228); // 3:48
+  const [duration, setDuration] = useState(228); // 3:48
   const [showSongDetail, setShowSongDetail] = useState(false);
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [volume, setVolume] = useState(0.7); // 70% volume
+  const [spotifyTracks, setSpotifyTracks] = useState<any[]>([]);
+  const [spotifyPlaylists, setSpotifyPlaylists] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null);
 
   // Lyrics data with timestamps
   const lyrics = [
@@ -72,6 +77,64 @@ export default function MusicPanel({
     
     return { current, next };
   };
+
+  // Load Spotify data
+  useEffect(() => {
+    if (!visible) return;
+
+    async function loadSpotifyData() {
+      setLoading(true);
+      try {
+        const [tracks, playlists] = await Promise.all([
+          spotifyService.getTopTracks(50),
+          spotifyService.getFeaturedPlaylists(10)
+        ]);
+        setSpotifyTracks(tracks);
+        setSpotifyPlaylists(playlists);
+      } catch (error) {
+        console.error('Error loading Spotify data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSpotifyData();
+  }, [visible]);
+
+  // Audio player control
+  useEffect(() => {
+    if (selectedSong?.preview_url && isPlaying) {
+      if (audioPlayer) {
+        audioPlayer.pause();
+      }
+      const audio = new Audio(selectedSong.preview_url);
+      audio.volume = volume;
+      audio.play();
+      setAudioPlayer(audio);
+
+      audio.addEventListener('timeupdate', () => {
+        setCurrentTime(Math.floor(audio.currentTime));
+      });
+
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+      });
+
+      return () => {
+        audio.pause();
+        audio.remove();
+      };
+    } else if (audioPlayer && !isPlaying) {
+      audioPlayer.pause();
+    }
+  }, [selectedSong, isPlaying]);
+
+  // Update audio volume
+  useEffect(() => {
+    if (audioPlayer) {
+      audioPlayer.volume = volume;
+    }
+  }, [volume, audioPlayer]);
 
   if (!visible) return null;
 
@@ -119,18 +182,26 @@ export default function MusicPanel({
     { id: '5', title: 'View all', artist: '', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&h=300&fit=crop', plays: '' },
   ];
 
-  const topBillboard = [
-    { rank: 1, title: 'Despacito', artist: 'Luis Fonsi', album: 'Despacito', duration: '3:31', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop' },
-    { rank: 2, title: 'Shape of You', artist: 'Ed Sheeran', album: 'Divide', duration: '3:31', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop' },
-    { rank: 3, title: 'See You Again', artist: 'Wiz Khalifa', album: 'Most Wanted, Vol. 2', duration: '3:31', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop' },
-    { rank: 4, title: 'Uptown Funk', artist: 'Mark Ronson', album: 'Uptown Funk', duration: '3:31', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop' },
-    { rank: 5, title: 'Sugar', artist: 'Maroon 5', album: 'Get Rich or Die Tryin\'', duration: '3:31', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop' },
-    { rank: 6, title: 'Thinking Out Loud', artist: 'Ed Sheeran', album: 'X', duration: '4:41', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop' },
-    { rank: 7, title: 'All of Me', artist: 'John Legend', album: 'Love in the Future', duration: '4:29', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop' },
-    { rank: 8, title: 'Someone Like You', artist: 'Adele', album: '21', duration: '4:45', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop' },
-    { rank: 9, title: 'Perfect', artist: 'Ed Sheeran', album: 'Divide', duration: '4:23', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop' },
-    { rank: 10, title: 'Hello', artist: 'Adele', album: '25', duration: '4:55', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop' },
-  ];
+  // Use Spotify tracks or fallback to mock data
+  const topBillboard = spotifyTracks.length > 0 
+    ? spotifyTracks.slice(0, 10).map((track, index) => ({
+        rank: index + 1,
+        title: track.name,
+        artist: spotifyService.getTrackArtists(track),
+        album: track.album.name,
+        duration: spotifyService.formatDuration(track.duration_ms),
+        image: spotifyService.getAlbumImage(track),
+        preview_url: track.preview_url,
+        spotify_url: track.external_urls.spotify,
+        uri: track.uri
+      }))
+    : [
+      { rank: 1, title: 'Despacito', artist: 'Luis Fonsi', album: 'Despacito', duration: '3:31', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop', preview_url: null, spotify_url: null, uri: null },
+      { rank: 2, title: 'Shape of You', artist: 'Ed Sheeran', album: 'Divide', duration: '3:31', image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop', preview_url: null, spotify_url: null, uri: null },
+      { rank: 3, title: 'See You Again', artist: 'Wiz Khalifa', album: 'Most Wanted, Vol. 2', duration: '3:31', image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&h=100&fit=crop', preview_url: null, spotify_url: null, uri: null },
+      { rank: 4, title: 'Uptown Funk', artist: 'Mark Ronson', album: 'Uptown Funk', duration: '3:31', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop', preview_url: null, spotify_url: null, uri: null },
+      { rank: 5, title: 'Sugar', artist: 'Maroon 5', album: 'Get Rich or Die Tryin\'', duration: '3:31', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop', preview_url: null, spotify_url: null, uri: null },
+    ];
 
   const featuredPodcasts = [
     { id: '1', title: 'The Daily', host: 'The New York Times', image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=300&fit=crop', episodes: '1,234 episodes' },
@@ -272,7 +343,7 @@ export default function MusicPanel({
               {!sidebarCollapsed && <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded">NEW</span>}
             </button>
 
-            {!sidebarCollapsed && <div className="text-white/50 text-xs font-semibold px-3 pt-4 mb-2">Library: 3</div>}
+            {!sidebarCollapsed && <div className="text-white/50 text-xs font-semibold px-3 pt-4 mb-2">Library: 1</div>}
             <button 
               onClick={() => setCurrentView('playlist')}
               className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg transition ${
@@ -282,18 +353,6 @@ export default function MusicPanel({
             >
               <i className="fas fa-compact-disc"></i>
               {!sidebarCollapsed && <span>Albums</span>}
-            </button>
-            <button 
-              onClick={() => setCurrentView('playlist')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition`}
-              title="Song"
-            >
-              <i className="fas fa-music"></i>
-              {!sidebarCollapsed && <span>Song</span>}
-            </button>
-            <button className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition`} title="Artists">
-              <i className="fas fa-user-music"></i>
-              {!sidebarCollapsed && <span>Artists</span>}
             </button>
           </div>
         </div>
@@ -359,7 +418,11 @@ export default function MusicPanel({
                 {/* Top 100 Billboard */}
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-semibold text-sm">TOP 100 BILLBOARD</h3>
+                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                      <i className="fab fa-spotify text-green-400"></i>
+                      SPOTIFY TOP 50 GLOBAL
+                    </h3>
+                    {loading && <span className="text-white/50 text-xs">Loading...</span>}
                   </div>
                   <div className="space-y-3">
                       {topBillboard.map((song) => (
@@ -367,6 +430,10 @@ export default function MusicPanel({
                           key={song.rank} 
                           onClick={() => {
                             setSelectedSong(song);
+                            setCurrentTime(0);
+                            if (song.preview_url) {
+                              setDuration(30); // Spotify previews are 30 seconds
+                            }
                             setShowSongDetail(true);
                           }}
                           className="flex items-center gap-4 hover:bg-white/5 p-3 rounded-lg cursor-pointer transition group"
@@ -392,6 +459,17 @@ export default function MusicPanel({
                           </div>
                           <div className="text-white/60 text-xs">{song.album}</div>
                           <div className="flex items-center gap-4">
+                            {song.spotify_url && (
+                              <a 
+                                href={song.spotify_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="opacity-0 group-hover:opacity-100 transition"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <i className="fab fa-spotify text-green-400 hover:text-green-300"></i>
+                              </a>
+                            )}
                             <button className="opacity-0 group-hover:opacity-100 transition">
                               <i className="fas fa-heart text-white/40 hover:text-red-400"></i>
                             </button>
