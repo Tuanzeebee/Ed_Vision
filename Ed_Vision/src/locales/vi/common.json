@@ -107,6 +107,10 @@
         "courseDetail": {
           "title": "Chi tiết Khóa học",
           "description": "Thông tin chi tiết môn học"
+        },
+        "learningSpace": {
+          "title": "Không gian Học tập",
+          "description": "Tài nguyên và tài liệu học tập"
         }
       },
       "predict": {
@@ -198,6 +202,46 @@
       }
     },
     "copyright": "© {{year}} GradeForecast. Bản quyền thuộc về chúng tôi."
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "newCount": "{{count}} mới",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "noNotifications": "Không có thông báo mới",
+    "viewAllNotifications": "Xem tất cả thông báo",
+    "filters": {
+      "allTypes": "Tất cả loại",
+      "allPriorities": "Tất cả mức độ",
+      "allStatuses": "Tất cả trạng thái",
+      "unread": "Chưa đọc",
+      "read": "Đã đọc"
+    },
+    "types": {
+      "examSchedule": "Lịch Thi",
+      "systemUpdate": "Cập Nhật Hệ Thống",
+      "academicWarning": "Cảnh Báo Học Tập",
+      "organizationEvent": "Sự Kiện Tổ Chức",
+      "personalRecognition": "Vinh Danh Cá Nhân",
+      "generalInfo": "Thông Tin Chung"
+    },
+    "priorities": {
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "page": {
+      "unreadSubtitle": "Bạn có {{count}} thông báo chưa đọc",
+      "allReadSubtitle": "Tất cả thông báo đã được đọc"
+    },
+    "empty": {
+      "noneTitle": "Không có thông báo nào",
+      "noneSubtitle": "Các thông báo mới sẽ xuất hiện ở đây"
+    },
+    "detail": {
+      "attachments": "File đính kèm",
+      "sentDate": "Ngày gửi",
+      "selectPrompt": "Chọn một thông báo để xem chi tiết"
+    }
   },
   "error": {
     "user": {

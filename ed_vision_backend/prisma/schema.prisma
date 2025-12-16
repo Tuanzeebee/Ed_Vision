@@ -186,7 +186,7 @@ model AcademicTerm {
 
 model Course {
   course_id            Int                   @id @default(autoincrement())
-  course_code          String                @unique @db.VarChar(20)
+  course_code          String                @db.VarChar(20)
   course_name          String                @db.VarChar(255)
   credits_unit         Int?                  @db.SmallInt
   study_format         String?               @default("offline") @db.VarChar(20)
@@ -197,6 +197,7 @@ model Course {
   studentCourseRecords StudentCourseRecord[]
   predictionResults    PredictionResult[]
 
+  @@unique([course_code, study_format])
   @@map("Course")
 }
 

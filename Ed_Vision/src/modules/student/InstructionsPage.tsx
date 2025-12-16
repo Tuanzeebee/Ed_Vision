@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from 'react-i18next'
 import Header from "../../components/layout/Header"
+import { useTranslation } from 'react-i18next'
+import { useMemo } from 'react'
 import Footer from "../../components/layout/Footer"
 
 // Import image assets
@@ -35,13 +37,14 @@ interface StepData {
 export default function InstructionsPage({}: Props) {
   const navigate = useNavigate()
   const { t } = useTranslation('student')
+  const { t } = useTranslation('student')
 
-  const steps: StepData[] = [
+  const steps: StepData[] = useMemo(() => ([
     {
       id: "step1",
       number: "1",
-      title: t('instructions.step1Title'),
-      description: t('instructions.step1Description'),
+      title: t('instructions.step1.title'),
+      description: t('instructions.step1.description'),
       image: imgUploadTranscript,
       bgColor: "bg-blue-500",
       stepColor: "text-blue-600"
@@ -49,8 +52,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step2", 
       number: "2",
-      title: t('instructions.step2Title'),
-      description: t('instructions.step2Description'),
+      title: t('instructions.step2.title'),
+      description: t('instructions.step2.description'),
       image: imgVerifyInformation,
       bgColor: "bg-green-500",
       stepColor: "text-green-600"
@@ -58,8 +61,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step3",
       number: "3", 
-      title: t('instructions.step3Title'),
-      description: t('instructions.step3Description'),
+      title: t('instructions.step3.title'),
+      description: t('instructions.step3.description'),
       image: imgSetGoals,
       bgColor: "bg-purple-500",
       stepColor: "text-purple-600"
@@ -67,8 +70,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step4",
       number: "4",
-      title: t('instructions.step4Title'),
-      description: t('instructions.step4Description'),
+      title: t('instructions.step4.title'), 
+      description: t('instructions.step4.description'),
       image: imgConfigureSchedule,
       bgColor: "bg-orange-500",
       stepColor: "text-orange-600"
@@ -76,8 +79,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step5",
       number: "5",
-      title: t('instructions.step5Title'),
-      description: t('instructions.step5Description'),
+      title: t('instructions.step5.title'),
+      description: t('instructions.step5.description'),
       image: imgReviewRequirements,
       bgColor: "bg-red-500", 
       stepColor: "text-red-600"
@@ -85,8 +88,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step6",
       number: "6",
-      title: t('instructions.step6Title'),
-      description: t('instructions.step6Description'),
+      title: t('instructions.step6.title'),
+      description: t('instructions.step6.description'),
       image: imgGeneratePlan,
       bgColor: "bg-teal-500",
       stepColor: "text-teal-600"
@@ -94,13 +97,13 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step7",
       number: "7",
-      title: t('instructions.step7Title'),
-      description: t('instructions.step7Description'),
+      title: t('instructions.step7.title'),
+      description: t('instructions.step7.description'),
       image: imgTrackProgress,
       bgColor: "bg-indigo-500",
       stepColor: "text-indigo-600"
     }
-  ]
+  ]), [t])
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -116,7 +119,7 @@ export default function InstructionsPage({}: Props) {
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconInstructions} alt="" className="w-5 h-5" />
-                    <span className="text-blue-600 font-medium">{t('instructions.tabInstructions')}</span>
+                    <span className="text-blue-600 font-medium">{t('instructions.tab{t('instructions')}.title')}</span>
                   </div>
                 </div>
                 <button
@@ -128,7 +131,7 @@ export default function InstructionsPage({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconUpload} alt="" className="w-5 h-5" />
-                    <span className="text-gray-500 font-medium">{t('instructions.tabUpload')}</span>
+                    <span className="text-gray-500 font-medium">{t('upload.title')}</span>
                   </div>
                 </button>
                 <button
@@ -140,7 +143,7 @@ export default function InstructionsPage({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3 relative">
                     <img src={iconAdjust} alt="" className="w-5 h-5" />
-                    <span className="text-gray-400 font-medium">{t('instructions.tabAdjust')}</span>
+                    <span className="text-gray-400 font-medium">{t('adjust.tab')}</span>
                     <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full absolute right-8">
                       {t('instructions.uploadRequired')}
                     </span>
@@ -153,11 +156,12 @@ export default function InstructionsPage({}: Props) {
             <div className="p-8 space-y-8">
               {/* Header Section */}
               <div className="text-center space-y-3">
+                <h1 className="text-2xl font-bold text-gray-900">{t('instructions.title')}</h1>
                 <h1 className="text-2xl font-bold text-gray-900">
                   {t('instructions.pageTitle')}
                 </h1>
                 <p className="text-base text-gray-600">
-                  {t('instructions.pageDescription')}
+                  {t('instructions.subtitle')}
                 </p>
               </div>
 
@@ -174,6 +178,7 @@ export default function InstructionsPage({}: Props) {
                             src={step.image} 
                             alt={step.title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         </div>
                         
@@ -207,6 +212,7 @@ export default function InstructionsPage({}: Props) {
                             src={step.image} 
                             alt={step.title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         </div>
                         
@@ -240,6 +246,7 @@ export default function InstructionsPage({}: Props) {
                             src={steps[6].image} 
                             alt={steps[6].title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         </div>
                         
@@ -273,10 +280,10 @@ export default function InstructionsPage({}: Props) {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg h-auto inline-flex items-center gap-3"
                 >
                   <img src={iconStart} alt="" className="w-5 h-5" />
-                  <span className="text-lg font-bold">{t('instructions.startButton')}</span>
+                  <span className="text-lg font-bold">{t('instructions.startUpload')}</span>
                 </Button>
                 <p className="text-sm text-gray-500">
-                  {t('instructions.startDescription')}
+                  {t('instructions.readyToBegin')}
                 </p>
               </div>
             </div>

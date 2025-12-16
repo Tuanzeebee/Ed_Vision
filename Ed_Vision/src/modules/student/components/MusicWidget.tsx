@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Track } from '../types/learningSpace';
+import type { MusicTrack } from '../types/musicTypes';
 import { useDraggable } from '../hooks/useDraggable';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  currentTrack?: Track;
+  currentTrack?: Track | MusicTrack;
   initialX?: number;
   initialY?: number;
 };
@@ -19,16 +20,80 @@ export default function MusicWidget({
 }: Props) {
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
   const [expanded, setExpanded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null);
 
-  if (!visible) return null;
-
-  const track = currentTrack || {
+  // Normalize track format (support both Track and MusicTrack)
+  const normalizedTrack = currentTrack ? {
+    id: currentTrack.id,
+    title: currentTrack.title,
+    artist: currentTrack.artist,
+    duration: currentTrack.duration,
+    albumArt: ('imageUrl' in currentTrack && typeof currentTrack.imageUrl === 'string' ? currentTrack.imageUrl : 
+               ('albumArt' in currentTrack && typeof currentTrack.albumArt === 'string' ? currentTrack.albumArt : 
+               'https://via.placeholder.com/100')),
+    source: ('source' in currentTrack ? currentTrack.source : 'local') as 'local' | 'spotify',
+    spotifyUrl: ('spotifyUrl' in currentTrack && typeof currentTrack.spotifyUrl === 'string' ? currentTrack.spotifyUrl : undefined),
+  } : {
     id: '1',
     title: 'Late night lofi',
     artist: 'ICARUS – Tony Ann',
     duration: '3:08',
     albumArt: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop',
+    source: 'local' as const,
   };
+
+  // Audio player control
+  useEffect(() => {
+    const preview_url = normalizedTrack.spotifyUrl || (currentTrack && 'preview_url' in currentTrack ? (currentTrack as any).preview_url : null);
+    
+    if (preview_url && isPlaying) {
+      if (audioPlayer) {
+        audioPlayer.pause();
+      }
+      const audio = new Audio(preview_url);
+      audio.volume = 0.7;
+      audio.play().catch(err => {
+        console.error('Error playing audio:', err);
+        setIsPlaying(false);
+      });
+      setAudioPlayer(audio);
+
+      audio.addEventListener('loadedmetadata', () => {
+        setDuration(Math.floor(audio.duration));
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        setCurrentTime(Math.floor(audio.currentTime));
+      });
+
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+      });
+
+      return () => {
+        audio.pause();
+        audio.remove();
+      };
+    } else if (audioPlayer && !isPlaying) {
+      audioPlayer.pause();
+    }
+  }, [currentTrack, isPlaying]);
+
+  if (!visible) return null;
+
+  const track = normalizedTrack;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const upNextTracks = [
     {
@@ -56,7 +121,7 @@ export default function MusicWidget({
 
   return (
     <div
-      className="fixed z-30 transition-all duration-400 select-none"
+      className="fixed z-30 select-none"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     >
       <div
@@ -77,15 +142,29 @@ export default function MusicWidget({
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-500 to-pink-500">
               <img
-                src={track.albumArt}
+                src={track.albumArt || 'https://via.placeholder.com/100'}
                 alt="Album Cover"
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white font-semibold text-sm truncate">{track.title}</div>
+              <div className="text-white font-semibold text-sm truncate flex items-center gap-2">
+                {track.title}
+                {track.source === 'spotify' && (
+                  <i className="fab fa-spotify text-green-400 text-xs"></i>
+                )}
+              </div>
               <div className="text-white/60 text-xs truncate">{track.artist}</div>
             </div>
+            {track.source === 'spotify' && track.spotifyUrl && (
+              <button
+                onClick={() => window.open(track.spotifyUrl, '_blank')}
+                className="text-green-400 hover:text-green-300 transition flex-shrink-0 mr-2"
+                title="Open in Spotify"
+              >
+                <i className="fab fa-spotify text-sm"></i>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-white/60 hover:text-white transition flex-shrink-0"
@@ -100,8 +179,11 @@ export default function MusicWidget({
             <button className="text-white/70 hover:text-white transition">
               <i className="fas fa-backward text-sm"></i>
             </button>
-            <button className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition">
-              <i className="fas fa-play text-xs"></i>
+            <button 
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition"
+            >
+              <i className={`fas fa-${isPlaying ? 'pause' : 'play'} text-xs ${!isPlaying ? 'ml-0.5' : ''}`}></i>
             </button>
             <button className="text-white/70 hover:text-white transition">
               <i className="fas fa-forward text-sm"></i>
@@ -114,11 +196,11 @@ export default function MusicWidget({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-white/50 text-xs">1:24</span>
-            <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full bg-white/60 rounded-full" style={{ width: '45%' }}></div>
+            <span className="text-white/50 text-xs">{formatTime(currentTime)}</span>
+            <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer">
+              <div className="h-full bg-white/60 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
             </div>
-            <span className="text-white/50 text-xs">{track.duration}</span>
+            <span className="text-white/50 text-xs">{duration > 0 ? formatTime(duration) : track.duration}</span>
           </div>
 
           <div

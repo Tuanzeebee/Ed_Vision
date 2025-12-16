@@ -96,12 +96,48 @@ class CacheService {
   }
 
   /**
-   * Invalidate cache theo pattern (upload_id thay đổi)
+   * Generate cache key for availability data
+   */
+  getAvailabilityKey(instructorId: number, startDate?: string, endDate?: string): string {
+    const dateRange = startDate && endDate ? `${startDate}_${endDate}` : 'all';
+    return `availability:${instructorId}:${dateRange}`;
+  }
+
+  /**
+   * Generate cache key for statistics
+   */
+  getStatisticsKey(instructorId: number): string {
+    return `statistics:${instructorId}`;
+  }
+
+  /**
+   * Invalidate all cache entries for a specific instructor
+   */
+  invalidateInstructorCache(instructorId: number): void {
+    // Clear availability data - match the pattern used in getAvailabilityKey
+    this.clearByPrefix(`availability:${instructorId}`);
+    // Clear statistics
+    this.clearByPrefix(`statistics:${instructorId}`);
+    // Clear any other instructor-related cache
+    this.clearByPrefix(`instructor:${instructorId}`);
+  }
+
+  /**
+   * Invalidate all cache entries for a specific upload
    */
   invalidateUpload(uploadId: string): void {
+    // Clear students data
     this.delete(`students:${uploadId}`);
+    // Clear prediction results
+    this.delete(`prediction:${uploadId}`);
+    // Clear SHAP explanations
     this.delete(`shap:${uploadId}`);
-    this.clearByPrefix(`prediction:${uploadId}`);
+    // Clear pass threshold data
+    this.delete(`pass_threshold:${uploadId}`);
+    // Clear any other upload-related cache
+    this.clearByPrefix(`upload:${uploadId}`);
+    // Clear upload list to reflect changes
+    this.delete('upload:list');
   }
 }
 

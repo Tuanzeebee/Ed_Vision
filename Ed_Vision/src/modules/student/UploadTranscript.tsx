@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import { useTranslation } from 'react-i18next'
 import toast, { Toaster } from "react-hot-toast"
 import Header from "../../components/layout/Header"
+import { useTranslation } from 'react-i18next'
 import Footer from "../../components/layout/Footer"
 import { 
   uploadTranscriptFile, 
@@ -12,6 +13,7 @@ import {
   isValidFileSize,
   formatFileSize 
 } from "@/services/transcriptService"
+import cacheService from "@/services/cacheService"
 
 // Import image assets
 import iconInstructions from "@/assets/student/iconInstructions.svg"
@@ -38,52 +40,59 @@ export default function UploadTranscript({}: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const { t } = useTranslation('student')
 
   // Handle file selection
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     // Validate file type
     if (!isValidFileType(file)) {
-      toast.error('Invalid file format. Please upload a CSV or Excel file.')
+      toast.error(t('upload.toastInvalidFileType'), {
+        id: 'invalid-file-type'
+      })
       return
     }
 
     // Validate file size
     if (!isValidFileSize(file)) {
-      toast.error('File size exceeds 10MB limit. Please upload a smaller file.')
+      toast.error(t('upload.toastFileSizeExceeded'), {
+        id: 'file-size-exceeded'
+      })
       return
     }
 
     setSelectedFile(file)
-    toast.success(`File selected: ${file.name}`)
-  }
+    toast.success(t('upload.toastFileSelected', { name: file.name }), {
+      id: 'file-selected'
+    })
+  }, [t])
 
   // Handle file input change
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       handleFileSelect(file)
     }
-  }
+  }, [handleFileSelect])
 
   // Handle drag events
-  const handleDragEnter = (e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(true)
-  }
+  }, [])
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
-  }
+  }, [])
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-  }
+  }, [])
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
@@ -92,102 +101,130 @@ export default function UploadTranscript({}: Props) {
     if (file) {
       handleFileSelect(file)
     }
-  }
+  }, [handleFileSelect])
 
   // Upload file to backend
-  const handleUpload = async () => {
+  const handleUpload = useCallback(async () => {
     if (!selectedFile) {
-      toast.error('Please select a file first.')
+      toast.error(t('upload.toastPleaseSelectFile'), {
+        id: 'no-file-selected'
+      })
+      return
+    }
+
+    // Prevent multiple clicks
+    if (isUploading) {
+      console.log('Upload already in progress, ignoring click')
       return
     }
 
     setIsUploading(true)
-    const loadingToast = toast.loading('Uploading transcript...')
+    console.log('Starting upload for file:', selectedFile.name)
 
     try {
-      const response = await uploadTranscriptFile(selectedFile)
-
-      console.log('Upload response:', response)
-      toast.dismiss(loadingToast)
+      // Use toast.promise to avoid duplicate toasts
+      const response = await toast.promise(
+        uploadTranscriptFile(selectedFile),
+        {
+          loading: t('upload.toastUploading'),
+          success: (data) => {
+            console.log('Upload response:', data)
+            return t('upload.toastProcessing')
+          },
+          error: (err) => {
+            console.error('Upload error:', err)
+            if (err.response?.data?.message) {
+              return t('upload.toastUploadFailedMessage', { message: err.response.data.message })
+            } else if (err.message) {
+              return t('upload.toastUploadFailedMessage', { message: err.message })
+            }
+            return t('upload.toastUploadFailedGeneric')
+          },
+        }
+      )
 
       // Consider upload successful if at least one record was uploaded
       const hasSuccessfulRecords = response.data.successfulRecords > 0
 
       if (hasSuccessfulRecords) {
-        console.log('Success! Clearing file...')
+        console.log('Success! Processing results...')
         
         // Set flag in localStorage to allow access to Adjust Parameters page
         localStorage.setItem('transcript_uploaded', 'true')
+
+        cacheService.clearByPrefix('gpa:')
+        cacheService.clearByPrefix('semesterPlan:')
+        cacheService.clearByPrefix('survey:')
+        cacheService.clearByPrefix('transcript:')
         
         // Clear selected file IMMEDIATELY to prevent spam upload
         setSelectedFile(null)
         console.log('File state cleared')
+        
         // Reset file input value to allow selecting file again
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
           console.log('File input reset')
         }
 
-        // Show success message
+        // Show success message based on results
         if (response.data.failedRecords === 0) {
           toast.success(
-            `Successfully uploaded all ${response.data.successfulRecords} records!`,
-            { duration: 5000 }
+            t('upload.toastAllRecordsUploaded', { count: response.data.successfulRecords }),
+            { duration: 5000, id: 'upload-success' }
           )
         } else {
           toast.success(
-            `Successfully uploaded ${response.data.successfulRecords} records`,
-            { duration: 5000 }
+            t('upload.toastPartialSuccess', { count: response.data.successfulRecords }),
+            { duration: 5000, id: 'upload-partial-success' }
           )
           
-          // Show error warning after a short delay to ensure success toast is visible
           setTimeout(() => {
             toast.error(
-              `${response.data.failedRecords} records failed to upload`,
-              { duration: 6000 }
+              t('upload.toastPartialError', { count: response.data.failedRecords }),
+              { duration: 6000, id: 'upload-partial-error' }
             )
           }, 500)
         }
-        console.log('Toast displayed')
+        console.log('Success toasts displayed')
 
         // Navigate to next step after successful upload
         setTimeout(() => {
+          console.log('Navigating to adjust parameters...')
           navigate('/student/adjust-parameters')
         }, 2000)
       } else {
         console.log('Upload completely failed:', response)
-        toast.error(response.message || 'Upload failed. All records have errors.')
+        toast.error(
+          response.message || t('upload.toastUploadCompletelyFailed'),
+          { id: 'upload-complete-fail' }
+        )
       }
     } catch (error: any) {
-      toast.dismiss(loadingToast)
-      console.error('Upload error:', error)
-      
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message)
-      } else if (error.message) {
-        toast.error(`Upload failed: ${error.message}`)
-      } else {
-        toast.error('Upload failed. Please check your connection and try again.')
-      }
+      // Error toast already handled by toast.promise
+      console.error('Caught error in handleUpload:', error)
     } finally {
       setIsUploading(false)
+      console.log('Upload process completed, isUploading set to false')
     }
-  }
+  }, [selectedFile, isUploading, t, navigate])
 
   // Handle cancel file selection
-  const handleCancelFile = () => {
+  const handleCancelFile = useCallback(() => {
     setSelectedFile(null)
     // Reset file input value to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-    toast.success('File selection cancelled')
-  }
+    toast.success(t('upload.toastFileCancelled'), {
+      id: 'file-cancelled'
+    })
+  }, [t])
 
   // Open file dialog
-  const handleBrowseClick = () => {
+  const handleBrowseClick = useCallback(() => {
     fileInputRef.current?.click()
-  }
+  }, [])
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -269,13 +306,13 @@ export default function UploadTranscript({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconInstructions} alt="" className="w-5 h-5" />
-                    <span className="text-gray-500 font-medium">{t('instructions.tabInstructions')}</span>
+                    <span className="text-gray-500 font-medium">{t('instructions.tab{t('instructions.title')}')}</span>
                   </div>
                 </button>
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconUpload} alt="" className="w-5 h-5" />
-                    <span className="text-blue-600 font-medium">{t('instructions.tabUpload')}</span>
+                    <span className="text-blue-600 font-medium">{t('upload.title')}</span>
                   </div>
                 </div>
                 <button
@@ -301,12 +338,13 @@ export default function UploadTranscript({}: Props) {
                   {t('upload.pageTitle')}
                 </h1>
                 <p className="text-base text-gray-600">
-                  {t('upload.pageDescription')}
+                  {t('upload.subtitle')}
                 </p>
                 
                 {/* Security Badge */}
                 <div className="inline-flex items-center gap-2 bg-blue-100 px-3 py-1 rounded-full">
                   <img src={iconSecurity} alt="" className="w-4 h-4" />
+                  <span className="text-blue-800 text-sm font-medium">{t('upload.securityBadge')}</span>
                   <span className="text-blue-800 text-sm font-medium">
                     {t('upload.securityBadge')}
                   </span>
@@ -330,7 +368,7 @@ export default function UploadTranscript({}: Props) {
                 <div className="text-center space-y-4">
                   {/* Cloud Upload Icon */}
                   <div className="flex justify-center">
-                    <img src={iconCloudUpload} alt="" className="w-16 h-16" />
+                    <img src={iconCloudUpload} alt="" className="w-16 h-16" loading="lazy" />
                   </div>
 
                   {/* Upload Text */}
@@ -346,11 +384,12 @@ export default function UploadTranscript({}: Props) {
                       </>
                     ) : (
                       <>
+                        <h3 className="text-xl font-bold text-gray-900">{t('upload.dropHere')}</h3>
                         <h3 className="text-xl font-bold text-gray-900">
                           {t('upload.dropZoneTitle')}
                         </h3>
                         <p className="text-base text-gray-600">
-                          {t('upload.dropZoneDescription')}
+                          {t('upload.orClickToBrowse')}
                         </p>
                       </>
                     )}
@@ -384,6 +423,7 @@ export default function UploadTranscript({}: Props) {
                       >
                         <span className="text-base font-bold">
                           {t('upload.cancel')}
+                          {t('upload.cancel')}
                         </span>
                       </Button>
                     </div>
@@ -392,6 +432,8 @@ export default function UploadTranscript({}: Props) {
                       onClick={handleBrowseClick}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg h-auto"
                     >
+                      <img src={iconUploadButton} alt="" className="w-5 h-5 mr-2" loading="lazy" />
+                      <span className="text-base font-bold">{t('upload.uploadYourTranscript')}</span>
                       <img src={iconUploadButton} alt="" className="w-5 h-5 mr-2" />
                       <span className="text-base font-bold">
                         {t('upload.uploadButton')}
@@ -400,6 +442,7 @@ export default function UploadTranscript({}: Props) {
                   )}
 
                   {/* File Size Limit */}
+                  <p className="text-xs text-gray-500">{t('upload.maxFileSize')}</p>
                   <p className="text-xs text-gray-500">
                     {t('upload.maxFileSize')}
                   </p>
@@ -408,6 +451,7 @@ export default function UploadTranscript({}: Props) {
 
               {/* Supported File Formats */}
               <div className="space-y-3">
+                <h2 className="text-base font-bold text-gray-900 text-center">{t('upload.supportedFormats')}</h2>
                 <h2 className="text-base font-bold text-gray-900 text-center">
                   {t('upload.supportedFormats')}
                 </h2>
@@ -418,19 +462,24 @@ export default function UploadTranscript({}: Props) {
                     <CardContent className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="bg-blue-100 p-2 rounded-lg">
-                          <img src={iconCSV} alt="" className="w-4 h-4" />
+                          <img src={iconCSV} alt="" className="w-4 h-4" loading="lazy" />
                         </div>
                         <div>
+                          <h3 className="font-bold text-gray-900 text-sm">{t('upload.csvFiles')}</h3>
+                          <p className="text-xs text-gray-600">{t('upload.csvFormatLabel')}</p>
                           <h3 className="font-bold text-gray-900 text-sm">{t('upload.csvFiles')}</h3>
                           <p className="text-xs text-gray-600">{t('upload.csvFormat')}</p>
                         </div>
                       </div>
                       
+                      <p className="text-xs text-gray-600 leading-4">{t('upload.csvDescription')}</p>
                       <p className="text-xs text-gray-600 leading-4">
                         {t('upload.csvDescription')}
                       </p>
                       
                       <div className="flex items-center gap-2">
+                        <img src={iconCheckBlue} alt="" className="w-3 h-3" loading="lazy" />
+                        <span className="text-xs text-blue-600 font-medium">{t('upload.recommendedFormat')}</span>
                         <img src={iconCheckBlue} alt="" className="w-3 h-3" />
                         <span className="text-xs text-blue-600 font-medium">
                           {t('upload.csvRecommended')}
@@ -444,14 +493,15 @@ export default function UploadTranscript({}: Props) {
                     <CardContent className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="bg-green-100 p-2 rounded-lg">
-                          <img src={iconExcel} alt="" className="w-4 h-4" />
+                          <img src={iconExcel} alt="" className="w-4 h-4" loading="lazy" />
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900 text-sm">{t('upload.excelFiles')}</h3>
-                          <p className="text-xs text-gray-600">{t('upload.excelFormat')}</p>
+                          <p className="text-xs text-gray-600">{t('upload.excelFormatLabel')}</p>
                         </div>
                       </div>
                       
+                      <p className="text-xs text-gray-600 leading-4">{t('upload.excelDescription')}</p>
                       <p className="text-xs text-gray-600 leading-4">
                         {t('upload.excelDescription')}
                       </p>
@@ -461,6 +511,8 @@ export default function UploadTranscript({}: Props) {
                         <span className="text-xs text-green-600 font-medium">
                           {t('upload.excelSupported')}
                         </span>
+                        <img src={iconCheckGreen} alt="" className="w-3 h-3" loading="lazy" />
+                        <span className="text-xs text-green-600 font-medium">{t('upload.fullySupported')}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -471,8 +523,9 @@ export default function UploadTranscript({}: Props) {
               <Card className="bg-amber-50 border border-amber-200">
                 <CardContent className="p-4">
                   <div className="flex gap-2">
-                    <img src={iconWarning} alt="" className="w-4 h-4 mt-0.5" />
+                    <img src={iconWarning} alt="" className="w-4 h-4 mt-0.5" loading="lazy" />
                     <div className="space-y-2">
+                      <h3 className="font-bold text-amber-800 text-sm">{t('upload.requiredInfo')}</h3>
                       <h3 className="font-bold text-amber-800 text-sm">
                         {t('upload.requiredInfo')}
                       </h3>
@@ -483,9 +536,11 @@ export default function UploadTranscript({}: Props) {
                           <span className="text-xs text-amber-700">
                             {t('upload.courseCodes')}
                           </span>
+                          <span className="text-xs text-amber-700">{t('upload.courseCodes')}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <img src={iconCheckAmber} alt="" className="w-3 h-3" />
+                          <span className="text-xs text-amber-700">{t('upload.creditHours')}</span>
                           <span className="text-xs text-amber-700">
                             {t('upload.creditHours')}
                           </span>
@@ -495,12 +550,14 @@ export default function UploadTranscript({}: Props) {
                           <span className="text-xs text-amber-700">
                             {t('upload.grades')}
                           </span>
+                          <span className="text-xs text-amber-700">{t('upload.gradesGPA')}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <img src={iconCheckAmber} alt="" className="w-3 h-3" />
                           <span className="text-xs text-amber-700">
                             {t('upload.semesterInfo')}
                           </span>
+                          <span className="text-xs text-amber-700">{t('upload.semesterInfo')}</span>
                         </div>
                       </div>
                     </div>

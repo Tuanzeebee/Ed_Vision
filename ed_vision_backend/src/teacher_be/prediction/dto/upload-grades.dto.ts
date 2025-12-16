@@ -6,12 +6,16 @@ export class UploadGradesDto {
   course_code: string;
 
   @IsString()
-  @IsOptional()
-  semester?: string;
+  @IsNotEmpty()
+  class_code: string; // Mã lớp (VD: AIS, DTE-01)
 
-  @IsNumber()
-  @IsOptional()
-  year?: number;
+  @IsString()
+  @IsNotEmpty()
+  semester: string; // Học kỳ (bắt buộc)
+
+  @IsString()
+  @IsNotEmpty()
+  academic_year: string; // Năm học (VD: "2024-2025") (bắt buộc)
 }
 
 export class UploadGradesResponseDto {

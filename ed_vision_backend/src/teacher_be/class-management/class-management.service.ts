@@ -299,11 +299,16 @@ export class ClassManagementService {
                     });
 
                     if (!account) {
-                        const defaultPassword = await bcrypt.hash('Student@123', 10);
+                        // Tạo password từ tên trước email + "123"
+                        // Ví dụ: nguyenvana@gmail.com -> nguyenvana123
+                        const emailUsername = studentData.email.split('@')[0];
+                        const defaultPassword = `${emailUsername}123`;
+                        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+                        
                         account = await this.prisma.account.create({
                             data: {
                                 email: studentData.email,
-                                password_hash: defaultPassword,
+                                password_hash: hashedPassword,
                                 status: 'active',
                                 role_id: studentRole.id,
                                 profile: {

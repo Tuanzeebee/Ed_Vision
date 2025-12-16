@@ -1,29 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect, lazy, Suspense, useCallback, useMemo, useTransition } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { SoundType, Track, JournalEntry } from './types/learningSpace';
+import type { LiveTheme } from '@/data/liveThemes';
+import { getLiveThemeById } from '@/data/liveThemes';
+import { loadThemeState, saveThemeState } from '@/lib/themeStorage';
+import { useLearningSpacePreloader, usePanelPrefetcher } from '@/hooks/useLearningSpacePreloader';
 import ClockDisplay from './components/ClockDisplay';
 import DockMenu from './components/DockMenu';
 import SnowEffect from './components/SnowEffect';
 import RainEffect from './components/RainEffect';
-import MusicWidget from './components/MusicWidget';
-import PomodoroPanel from './components/PomodoroPanel';
-import PomodoroOverlay from './components/PomodoroOverlay';
-import ExplosionEffect from './components/ExplosionEffect';
-import ConfettiEffect from './components/ConfettiEffect';
-import AmbiencePanel from './components/AmbiencePanel';
-import ThemePanel from './components/ThemePanel';
-import MusicPanel from './components/MusicPanel';
-import JournalPanel from './components/JournalPanel';
-import RoomPanel from './components/RoomPanel';
-import SettingsPanel from './components/SettingsPanel';
-import LearningMapPanel from './components/LearningMapPanel';
-import VideoCallRoom from './components/VideoCallRoom';
-import LearningModulePanel from './components/LearningModulePanel';
+
+// Lazy load heavy components
+const MusicWidget = lazy(() => import('./components/MusicWidget'));
+const PomodoroPanel = lazy(() => import('./components/PomodoroPanel'));
+const PomodoroOverlay = lazy(() => import('./components/PomodoroOverlay'));
+const ExplosionEffect = lazy(() => import('./components/ExplosionEffect'));
+const ConfettiEffect = lazy(() => import('./components/ConfettiEffect'));
+const AmbiencePanel = lazy(() => import('./components/AmbiencePanel'));
+const ThemePanel = lazy(() => import('./components/ThemePanel'));
+const MusicPanel = lazy(() => import('./components/MusicPanel'));
+const JournalPanel = lazy(() => import('./components/JournalPanel'));
+const RoomPanel = lazy(() => import('./components/RoomPanel'));
+const SettingsPanel = lazy(() => import('./components/SettingsPanel'));
+const LearningMapPanel = lazy(() => import('./components/LearningMapPanel'));
+const VideoCallRoom = lazy(() => import('./components/VideoCallRoom'));
+const LearningModulePanel = lazy(() => import('./components/LearningModulePanel'));
+const YouTubeBackground = lazy(() => import('./components/YouTubeBackground'));
 
 type Props = {
   className?: string;
 };
 
 export default function LearningSpace({ className = '' }: Props) {
+  const navigate = useNavigate();
+  const [isPending, startTransition] = useTransition();
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
   // Weather effects
   const [showSnow, setShowSnow] = useState(true);
   const [showRain, setShowRain] = useState(false);
@@ -45,6 +57,8 @@ export default function LearningSpace({ className = '' }: Props) {
   const [videoCallVisible, setVideoCallVisible] = useState(false);
   const [currentRoomTitle, setCurrentRoomTitle] = useState('');
   const [learningModuleVisible, setLearningModuleVisible] = useState(false);
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
   // Music widget
   const [musicWidgetVisible, setMusicWidgetVisible] = useState(true);
@@ -54,18 +68,95 @@ export default function LearningSpace({ className = '' }: Props) {
   const [selectedSound, setSelectedSound] = useState<SoundType | null>('rain');
   const [soundVolume, setSoundVolume] = useState(70);
 
-  // Background
-  const [backgroundImage, setBackgroundImage] = useState(
-    'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&h=1080&fit=crop'
-  );
+  // Background & Live Theme - Initialize with cached values immediately
+  const [backgroundImage, setBackgroundImage] = useState(() => {
+    const cached = loadThemeState();
+    return cached.backgroundImage || 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&h=1080&fit=crop';
+  });
+  const [activeLiveTheme, setActiveLiveTheme] = useState<LiveTheme | null>(null);
+  const [liveEnabled, setLiveEnabled] = useState(() => loadThemeState().liveEnabled);
+  const [videoMuted, setVideoMuted] = useState(() => loadThemeState().videoMuted ?? true);
+  const [videoVolume, setVideoVolume] = useState(() => loadThemeState().videoVolume ?? 70);
 
-  // Journal entries
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  // Load theme state asynchronously to avoid blocking render
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadThemeAsync = async () => {
+      try {
+        // Simulate async loading with requestIdleCallback for better performance
+        await new Promise<void>((resolve) => {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => resolve());
+          } else {
+            setTimeout(() => resolve(), 0);
+          }
+        });
 
-  // Tracks
+        if (!isMounted) return;
+
+        const savedState = loadThemeState();
+        
+        // Load active live theme if saved
+        if (savedState.activeLiveThemeId && savedState.liveEnabled) {
+          const theme = getLiveThemeById(savedState.activeLiveThemeId);
+          if (theme && isMounted) {
+            setActiveLiveTheme(theme);
+          }
+        }
+        
+        setIsInitialLoading(false);
+      } catch (error) {
+        console.error('Error loading theme state:', error);
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadThemeAsync();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Debounced save to localStorage using useTransition for non-blocking updates
+  useEffect(() => {
+    if (isInitialLoading) return;
+
+    const saveTimeout = setTimeout(() => {
+      startTransition(() => {
+        saveThemeState({
+          activeLiveThemeId: activeLiveTheme?.id || null,
+          liveEnabled,
+          backgroundImage,
+          videoMuted,
+          videoVolume,
+        });
+      });
+    }, 300); // Debounce 300ms
+
+    return () => clearTimeout(saveTimeout);
+  }, [activeLiveTheme, liveEnabled, backgroundImage, videoMuted, videoVolume, isInitialLoading]);
+
+  // Journal entries - lazy load from localStorage
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('ed-vision-journal-entries');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Tracks - empty by default, can be populated later
   const [tracks] = useState<Track[]>([]);
 
-  const closeAllPanels = () => {
+  // Preload critical resources
+  useLearningSpacePreloader();
+  usePanelPrefetcher();
+
+  // Memoized callbacks for better performance
+  const closeAllPanels = useCallback(() => {
     setAmbienceVisible(false);
     setThemeVisible(false);
     setMusicPanelVisible(false);
@@ -74,9 +165,9 @@ export default function LearningSpace({ className = '' }: Props) {
     setLearningMapVisible(false);
     setLearningModuleVisible(false);
     // Don't close pomodoro panel here
-  };
+  }, []);
 
-  const openPanel = (panel: string) => {
+  const openPanel = useCallback((panel: string) => {
     // Close other panels but keep pomo if overlay is running
     if (panel === 'pomo') {
       // Just open pomo, don't close it
@@ -121,9 +212,11 @@ export default function LearningSpace({ className = '' }: Props) {
           break;
       }
     }
-  };
+  }, [closeAllPanels]);
 
-  const dockItems = [
+  // Memoize dock items to prevent unnecessary re-renders
+  const dockItems = useMemo(() => [
+    { id: 'home', icon: 'fas fa-home', label: 'Home', onClick: () => navigate('/student/instructions') },
     { id: 'theme', icon: 'fas fa-image', label: 'Theme', onClick: () => openPanel('theme') },
     { id: 'ambience', icon: 'fas fa-cloud-rain', label: 'Ambience', onClick: () => openPanel('ambience') },
     { id: 'room', icon: 'fas fa-video', label: 'Room', onClick: () => openPanel('room') },
@@ -132,13 +225,21 @@ export default function LearningSpace({ className = '' }: Props) {
     { id: 'map', icon: 'fas fa-map', label: 'Learning Map', onClick: () => openPanel('map') },
     { id: 'learn', icon: 'fas fa-tv', label: 'Learn', onClick: () => openPanel('learn') },
     { id: 'settings', icon: 'fas fa-cog', label: 'Settings', onClick: () => openPanel('settings') },
-  ];
+  ], [navigate, openPanel]);
 
-  const handleChangeBackground = (url: string) => {
+  const handleChangeBackground = useCallback((url: string) => {
     setBackgroundImage(url);
-  };
+    setLiveEnabled(false);
+    setActiveLiveTheme(null);
+  }, []);
 
-  const handleUploadBackground = (file: File) => {
+  const handleSelectLiveTheme = useCallback((theme: LiveTheme) => {
+    setActiveLiveTheme(theme);
+    setLiveEnabled(true);
+    setThemeVisible(false);
+  }, []);
+
+  const handleUploadBackground = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
@@ -146,28 +247,38 @@ export default function LearningSpace({ className = '' }: Props) {
       }
     };
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const handleSelectTrack = (track: Track) => {
+  const handleSelectTrack = useCallback((track: Track) => {
     setCurrentTrack(track);
     setMusicWidgetVisible(true);
     setMusicPanelVisible(false);
-  };
+  }, []);
 
-  const handleSaveJournalEntry = (entry: Omit<JournalEntry, 'id'>) => {
+  const handleSaveJournalEntry = useCallback((entry: Omit<JournalEntry, 'id'>) => {
     const newEntry: JournalEntry = {
       ...entry,
       id: Date.now().toString(),
     };
-    setJournalEntries([newEntry, ...journalEntries]);
-  };
+    const updatedEntries = [newEntry, ...journalEntries];
+    setJournalEntries(updatedEntries);
+    
+    // Save to localStorage asynchronously
+    requestIdleCallback(() => {
+      try {
+        localStorage.setItem('ed-vision-journal-entries', JSON.stringify(updatedEntries));
+      } catch (error) {
+        console.error('Error saving journal entries:', error);
+      }
+    });
+  }, [journalEntries]);
 
-  const handleResetAnimations = () => {
+  const handleResetAnimations = useCallback(() => {
     setShowRain(false);
     setShowSnow(true);
-  };
+  }, []);
 
-  const handlePomoStart = (isRunning: boolean, title: string, timeLeft: number) => {
+  const handlePomoStart = useCallback((isRunning: boolean, title: string, timeLeft: number) => {
     setPomoTimeLeft(timeLeft);
     if (isRunning) {
       setPomoFocusTitle(title);
@@ -176,161 +287,251 @@ export default function LearningSpace({ className = '' }: Props) {
     } else {
       setPomoOverlayVisible(false);
     }
-  };
+  }, []);
+
+  const handleModuleClick = useCallback((moduleId: number, courseId: string) => {
+    setSelectedModuleId(moduleId);
+    setSelectedCourseId(courseId);
+    setLearningMapVisible(false);
+    setLearningModuleVisible(true);
+  }, []);
+
+  // Memoize background style for performance
+  const backgroundStyle = useMemo(() => ({
+    backgroundImage: liveEnabled && activeLiveTheme ? 'none' : `url('${backgroundImage}')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  }), [liveEnabled, activeLiveTheme, backgroundImage]);
 
   return (
     <div
       className={`min-h-screen overflow-hidden relative ${className}`}
-      style={{
-        backgroundImage: `url('${backgroundImage}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
+      style={backgroundStyle}
     >
-      {/* Weather Effects */}
+      {/* YouTube Live Background - Lazy loaded */}
+      {liveEnabled && activeLiveTheme && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/20 animate-pulse" />}>
+          <YouTubeBackground
+            videoId={activeLiveTheme.youtubeVideoId}
+            start={activeLiveTheme.start}
+            muted={videoMuted}
+            volume={videoVolume}
+            end={activeLiveTheme.end}
+          />
+        </Suspense>
+      )}
+
+      {/* Weather Effects - Lightweight, no Suspense needed */}
       <SnowEffect show={showSnow} />
       <RainEffect show={showRain} />
 
       {/* Pomodoro Overlay */}
-      <PomodoroOverlay
-        visible={pomoOverlayVisible}
-        focusTitle={pomoFocusTitle}
-        timeLeft={pomoTimeLeft}
-        onClose={() => setPomoOverlayVisible(false)}
-        onOpenPanel={() => setPomoVisible(true)}
-        onPause={() => {
-          // Handle pause/resume
-          setPomoVisible(true);
-        }}
-        onStop={() => {
-          // Stop the timer in panel
-          if ((window as any).__pomoStopHandler) {
-            (window as any).__pomoStopHandler();
-          }
-          setPomoOverlayVisible(false);
-          setShowExplosion(true);
-        }}
-      />
+      {pomoOverlayVisible && (
+        <Suspense fallback={null}>
+          <PomodoroOverlay
+            visible={pomoOverlayVisible}
+            focusTitle={pomoFocusTitle}
+            timeLeft={pomoTimeLeft}
+            onClose={() => setPomoOverlayVisible(false)}
+            onOpenPanel={() => setPomoVisible(true)}
+            onPause={() => {
+              // Handle pause/resume
+              setPomoVisible(true);
+            }}
+            onStop={() => {
+              // Stop the timer in panel
+              if ((window as any).__pomoStopHandler) {
+                (window as any).__pomoStopHandler();
+              }
+              setPomoOverlayVisible(false);
+              setShowExplosion(true);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Explosion Effect */}
-      <ExplosionEffect
-        visible={showExplosion}
-        onComplete={() => {
-          setShowExplosion(false);
-          setShowConfetti(true);
-        }}
-      />
+      {showExplosion && (
+        <Suspense fallback={null}>
+          <ExplosionEffect
+            visible={showExplosion}
+            onComplete={() => {
+              setShowExplosion(false);
+              setShowConfetti(true);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Confetti Effect */}
-      <ConfettiEffect
-        visible={showConfetti}
-        onComplete={() => {
-          setShowConfetti(false);
-          setPomoVisible(true);
-        }}
-      />
+      {showConfetti && (
+        <Suspense fallback={null}>
+          <ConfettiEffect
+            visible={showConfetti}
+            onComplete={() => {
+              setShowConfetti(false);
+              setPomoVisible(true);
+            }}
+          />
+        </Suspense>
+      )}
 
-      {/* Clock Display */}
+      {/* Clock Display - Lightweight, always visible */}
       <ClockDisplay />
 
-      {/* Dock Menu */}
+      {/* Dock Menu - Lightweight, always visible */}
       <DockMenu items={dockItems} />
 
       {/* Music Widget - Hidden when MusicPanel is open */}
-      <MusicWidget
-        visible={musicWidgetVisible && !musicPanelVisible}
-        onClose={() => setMusicWidgetVisible(false)}
-        currentTrack={currentTrack}
-      />
+      {musicWidgetVisible && !musicPanelVisible && (
+        <Suspense fallback={null}>
+          <MusicWidget
+            visible={musicWidgetVisible && !musicPanelVisible}
+            onClose={() => setMusicWidgetVisible(false)}
+            currentTrack={currentTrack}
+          />
+        </Suspense>
+      )}
 
       {/* Pomodoro Panel */}
-      <PomodoroPanel
-        visible={pomoVisible}
-        onClose={() => setPomoVisible(false)}
-        onStartTimer={handlePomoStart}
-        onStopTimer={() => {
-          setPomoOverlayVisible(false);
-          setPomoVisible(true);
-        }}
-      />
+      {pomoVisible && (
+        <Suspense fallback={null}>
+          <PomodoroPanel
+            visible={pomoVisible}
+            onClose={() => setPomoVisible(false)}
+            onStartTimer={handlePomoStart}
+            onStopTimer={() => {
+              setPomoOverlayVisible(false);
+              setPomoVisible(true);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Ambience Panel */}
-      <AmbiencePanel
-        visible={ambienceVisible}
-        onClose={() => setAmbienceVisible(false)}
-        selectedSound={selectedSound}
-        onSelectSound={setSelectedSound}
-        soundVolume={soundVolume}
-        onVolumeChange={setSoundVolume}
-        showRain={showRain}
-        showSnow={showSnow}
-        onToggleRain={() => setShowRain(!showRain)}
-        onToggleSnow={() => setShowSnow(!showSnow)}
-        onResetAnimations={handleResetAnimations}
-      />
+      {ambienceVisible && (
+        <Suspense fallback={null}>
+          <AmbiencePanel
+            visible={ambienceVisible}
+            onClose={() => setAmbienceVisible(false)}
+            selectedSound={selectedSound}
+            onSelectSound={setSelectedSound}
+            soundVolume={soundVolume}
+            onVolumeChange={setSoundVolume}
+            showRain={showRain}
+            showSnow={showSnow}
+            onToggleRain={() => setShowRain(!showRain)}
+            onToggleSnow={() => setShowSnow(!showSnow)}
+            onResetAnimations={handleResetAnimations}
+          />
+        </Suspense>
+      )}
 
       {/* Theme Panel */}
-      <ThemePanel
-        visible={themeVisible}
-        onClose={() => setThemeVisible(false)}
-        onChangeBackground={handleChangeBackground}
-        onUploadBackground={handleUploadBackground}
-      />
+      {themeVisible && (
+        <Suspense fallback={null}>
+          <ThemePanel
+            visible={themeVisible}
+            onClose={() => setThemeVisible(false)}
+            onChangeBackground={handleChangeBackground}
+            onUploadBackground={handleUploadBackground}
+            onSelectLiveTheme={handleSelectLiveTheme}
+            videoMuted={videoMuted}
+            onToggleVideoMute={() => setVideoMuted(!videoMuted)}
+            videoVolume={videoVolume}
+            onVolumeChange={setVideoVolume}
+          />
+        </Suspense>
+      )}
 
       {/* Room Panel */}
-      <RoomPanel
-        visible={roomVisible}
-        onClose={() => setRoomVisible(false)}
-        onSelectRoom={(url) => {
-          setBackgroundImage(url);
-          setRoomVisible(false);
-        }}
-        onJoinCall={(roomTitle) => {
-          setCurrentRoomTitle(roomTitle);
-          setVideoCallVisible(true);
-        }}
-      />
+      {roomVisible && (
+        <Suspense fallback={null}>
+          <RoomPanel
+            visible={roomVisible}
+            onClose={() => setRoomVisible(false)}
+            onSelectRoom={(url) => {
+              setBackgroundImage(url);
+              setRoomVisible(false);
+            }}
+            onJoinCall={(roomTitle) => {
+              setCurrentRoomTitle(roomTitle);
+              setVideoCallVisible(true);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Music Panel */}
-      <MusicPanel
-        visible={musicPanelVisible}
-        onClose={() => setMusicPanelVisible(false)}
-        tracks={tracks}
-        onSelectTrack={handleSelectTrack}
-      />
+      {musicPanelVisible && (
+        <Suspense fallback={null}>
+          <MusicPanel
+            visible={musicPanelVisible}
+            onClose={() => setMusicPanelVisible(false)}
+            tracks={tracks}
+            onSelectTrack={handleSelectTrack}
+          />
+        </Suspense>
+      )}
 
       {/* Journal Panel */}
-      <JournalPanel
-        visible={journalVisible}
-        onClose={() => setJournalVisible(false)}
-        onSaveEntry={handleSaveJournalEntry}
-        recentEntries={journalEntries}
-      />
+      {journalVisible && (
+        <Suspense fallback={null}>
+          <JournalPanel
+            visible={journalVisible}
+            onClose={() => setJournalVisible(false)}
+            onSaveEntry={handleSaveJournalEntry}
+            recentEntries={journalEntries}
+          />
+        </Suspense>
+      )}
 
       {/* Settings Panel */}
-      <SettingsPanel
-        visible={settingsVisible}
-        onClose={() => setSettingsVisible(false)}
-      />
+      {settingsVisible && (
+        <Suspense fallback={null}>
+          <SettingsPanel
+            visible={settingsVisible}
+            onClose={() => setSettingsVisible(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Learning Map Panel */}
-      <LearningMapPanel
-        visible={learningMapVisible}
-        onClose={() => setLearningMapVisible(false)}
-      />
+      {learningMapVisible && (
+        <Suspense fallback={null}>
+          <LearningMapPanel
+            visible={learningMapVisible}
+            onClose={() => setLearningMapVisible(false)}
+            onModuleClick={handleModuleClick}
+          />
+        </Suspense>
+      )}
 
       {/* Learning Module Panel */}
-      <LearningModulePanel
-        visible={learningModuleVisible}
-        onClose={() => setLearningModuleVisible(false)}
-      />
+      {learningModuleVisible && (
+        <Suspense fallback={null}>
+          <LearningModulePanel
+            visible={learningModuleVisible}
+            onClose={() => setLearningModuleVisible(false)}
+            onCompleteModule={() => {
+              // Close module panel and open map panel to show animation
+              setLearningModuleVisible(false);
+              setLearningMapVisible(true);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Video Call Room */}
-      <VideoCallRoom
-        visible={videoCallVisible}
-        onClose={() => setVideoCallVisible(false)}
-        roomTitle={currentRoomTitle}
-      />
+      {videoCallVisible && (
+        <Suspense fallback={null}>
+          <VideoCallRoom
+            visible={videoCallVisible}
+            onClose={() => setVideoCallVisible(false)}
+            roomTitle={currentRoomTitle}
+          />
+        </Suspense>
+      )}
 
       {/* Font Awesome CDN - Required for icons */}
       <link

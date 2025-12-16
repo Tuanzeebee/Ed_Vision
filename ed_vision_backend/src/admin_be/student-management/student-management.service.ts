@@ -265,8 +265,15 @@ export class StudentManagementService {
   }
 
   async create(createStudentDto: CreateStudentDto): Promise<StudentResponse> {
-    const { password, fullName, studentCode, ...studentData } =
-      createStudentDto;
+    const { fullName, studentCode, ...studentData } = createStudentDto;
+
+    // Tự động tạo password từ email nếu không được cung cấp
+    // Ví dụ: nguyenvana@gmail.com -> nguyenvana123
+    let password = createStudentDto.password;
+    if (!password) {
+      const emailUsername = createStudentDto.email.split('@')[0];
+      password = `${emailUsername}123`;
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 

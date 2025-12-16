@@ -173,6 +173,44 @@ export const useSurveys = () => {
         }
     }, []);
 
+    // Get incomplete students
+    const getIncompleteStudents = useCallback(async (id: string) => {
+        try {
+            setLoading(true);
+            setError(null);
+            const students = await surveyService.getIncompleteStudents(id);
+            return students;
+        } catch (err: any) {
+            console.error('Error fetching incomplete students:', err);
+            setError(err.response?.data?.message || 'Không thể tải danh sách sinh viên chưa hoàn thành');
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Get history statistics
+    const getHistoryStatistics = useCallback(async () => {
+        try {
+            const stats = await surveyService.getHistoryStatistics();
+            return stats;
+        } catch (err: any) {
+            console.error('Error fetching history statistics:', err);
+            return null;
+        }
+    }, []);
+
+    // Get target student count
+    const getTargetStudentCount = useCallback(async (facultyId?: string, classId?: string) => {
+        try {
+            const count = await surveyService.getTargetStudentCount(facultyId, classId);
+            return count;
+        } catch (err: any) {
+            console.error('Error fetching target student count:', err);
+            return 0;
+        }
+    }, []);
+
     // Send reminder
     const sendReminder = useCallback(
         async (surveyId: string, message: string, studentIds?: string[]) => {
@@ -290,6 +328,9 @@ export const useSurveys = () => {
         getSurveyDetail,
         getSurveyAnalytics,
         getAvailableQuestions,
+        getIncompleteStudents,
+        getHistoryStatistics,
+        getTargetStudentCount,
         sendReminder,
         exportResponses,
         addQuestionToSurvey,

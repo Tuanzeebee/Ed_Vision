@@ -15,8 +15,15 @@ import numpy as np
 import pandas as pd
 import joblib
 
+# MongoDB
+from pymongo import MongoClient
+from dotenv import load_dotenv
+
 # XAI
 import shap  # pip install shap
+
+# Load environment variables
+load_dotenv()
 
 # =============================
 # 0. Simple in-memory cache for SHAP results
@@ -57,19 +64,24 @@ class SimpleCache:
 SHAP_CACHE = SimpleCache()
 
 # =============================
-# 1. Config đường dẫn
+# 1. Config đường dẫn và MongoDB
 # =============================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DATA_DIR = os.path.join(BASE_DIR, "data")  # nơi chứa weights_used.csv
+DATA_DIR = os.path.join(BASE_DIR, "data")  # nơi chứa weights_used.csv (backup)
 OUTPUT_DIR = os.path.join(BASE_DIR, "output_final_v2")  # nơi chứa model_artifacts_gb_rf_add_feature.joblib
 
-ARTIFACTS_PATH = os.path.join(OUTPUT_DIR, "model_artifacts_gb_rf_add_feature.joblib")
-WEIGHTS_FILE = os.path.join(DATA_DIR, "weights_used.csv")
-BEHAVIOR_FILE = os.path.join(DATA_DIR, "clean_student_data_v1.csv")  # hiện tại KHÔNG dùng, để dành tương lai
+ARTIFACTS_PATH = os.path.join(OUTPUT_DIR, "model_artifacts_gb_rf_add_feature1.joblib")
+WEIGHTS_FILE = os.path.join(DATA_DIR, "weights_used.csv")  # Giữ lại làm fallback
+BEHAVIOR_FILE = os.path.join(DATA_DIR, "clean_student_data_v2.csv")  # hiện tại KHÔNG dùng, để dành tương lai
 
-COURSE_METRICS_PATH = os.path.join(OUTPUT_DIR, "course_metrics_gradient_boosting_update.csv")
+COURSE_METRICS_PATH = os.path.join(OUTPUT_DIR, "course_metrics_gradient_boosting.csv")
+
+# MongoDB Configuration
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/ed_vision")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "ed_vision")
+MONGODB_COLLECTION = "gradestructures"  # Collection name trong MongoDB
 
 # Ngưỡng fallback giống notebook
 HIGH_R2 = 0.60   # tin model
@@ -85,41 +97,60 @@ TARGET_COL = "final"
 # FEATURE_SCORE_COLS giống Jupyter notebook
 FEATURE_SCORE_COLS = [
     "attend",
+
+    # quiz variants
     "quiz",
+    "quiz1",
     "quiz2",
+
     "midterm",
+
+    # homework variants
     "homework",
     "homework1",
     "homework2",
+
     "group_project",
     "individual_project",
     "practice",
     "regular",
     "speech_and_discussion",
-    "project"
+    "project",
 ]
 
 CANONICAL_FEATURES = FEATURE_SCORE_COLS + [TARGET_COL]
 
 COLUMN_ALIASES: Dict[str, List[str]] = {
-    "no": ["no", "No"],
-    "student_id": ["student id", "student_id", "id"],
-    "course_code": ["course_code", "course code", "course"],
+    "no": ["no", "No", "stt", "index"],
+
+    "student_id": ["student id", "student_id", "id", "studentcode", "student_code"],
+    "course_code": ["course_code", "course code", "course", "subject", "subject_code"],
 
     "attend": ["attend", "attendance"],
+
+    # quiz
     "quiz": ["quiz"],
-    "quiz2": ["quiz2"],
+    "quiz1": ["quiz1", "quiz_1"],
+    "quiz2": ["quiz2", "quiz_2"],
+
+    # homework
     "homework": ["homework", "hw", "assignment"],
-    "homework1": ["homework1", "hw1"],
-    "homework2": ["homework2", "hw2"],
+    "homework1": ["homework1", "hw1", "assignment1", "homework_1"],
+    "homework2": ["homework2", "hw2", "assignment2", "homework_2"],
+
     "midterm": ["midterm", "mid term"],
+
     "group_project": ["group project", "group_project"],
     "individual_project": ["individual project", "individual_project"],
+
     "practice": ["practice", "lab", "exercise"],
     "regular": ["regular", "participation", "classwork"],
-    "speech_and_discussion": ["speech and discussion", "speech_and_discussion"],
+
+    "speech_and_discussion": ["speech and discussion", "speech_and_discussion", "discussion"],
+
     "project": ["project"],
-    "final": ["final", "final_exam"]
+
+    "final": ["final", "final_exam", "final exam", "endterm", "end_term"]
 }
 
 # Behavior features (giống notebook / artifacts) – hiện tại KHÔNG auto gán, chỉ dùng nếu có trong input
@@ -158,10 +189,83 @@ def find_canonical_for_raw(raw_col: str) -> Optional[str]:
 
 
 # =============================
-# 4. Load weights_used.csv
+# 4. Load weights từ MongoDB (hoặc fallback CSV)
 # =============================
 
+def load_weights_from_mongodb(mongo_client: MongoClient) -> Dict[str, Dict[str, float]]:
+    """
+    Load weights từ MongoDB collection 'gradestructures'.
+    
+    Format MongoDB:
+    {
+      "courseCode": "DTE-IS 102",
+      "columns": [
+        {"key": "attend", "weight": 10},    # weight là % (10%)
+        {"key": "final", "weight": 55},     # weight là % (55%)
+        ...
+      ],
+      "isActive": true
+    }
+    
+    Chuyển đổi thành format:
+    {
+      "DTE-IS 102": {
+        "attend": 0.10,   # chuyển về thập phân
+        "final": 0.55,
+        ...
+      }
+    }
+    """
+    try:
+        db = mongo_client[MONGODB_DB_NAME]
+        collection = db[MONGODB_COLLECTION]
+        
+        # Chỉ lấy grade structures đang active
+        cursor = collection.find({"isActive": True})
+        
+        weights_by_course: Dict[str, Dict[str, float]] = {}
+        
+        for doc in cursor:
+            course_code = doc.get("courseCode", "").strip()
+            if not course_code:
+                continue
+            
+            columns = doc.get("columns", [])
+            if not columns:
+                continue
+            
+            # Initialize course weights nếu chưa có
+            if course_code not in weights_by_course:
+                weights_by_course[course_code] = {}
+            
+            # Extract weights từ columns
+            for col in columns:
+                key = col.get("key", "").strip()
+                weight_percent = col.get("weight", 0)  # weight là % (0-100)
+                
+                if key:
+                    # Chuyển từ % sang thập phân (55% -> 0.55)
+                    weight_decimal = weight_percent / 100.0
+                    
+                    # Map key về canonical name nếu cần
+                    canonical_key = find_canonical_for_raw(key) or key
+                    
+                    # Cộng dồn nếu trùng key (giống logic CSV)
+                    weights_by_course[course_code][canonical_key] = \
+                        weights_by_course[course_code].get(canonical_key, 0.0) + weight_decimal
+        
+        print(f"[INFO] Đã load weights từ MongoDB cho {len(weights_by_course)} courses.")
+        return weights_by_course
+        
+    except Exception as e:
+        print(f"[ERROR] Lỗi khi load weights từ MongoDB: {e}")
+        return {}
+
+
 def load_weights(weights_file: str) -> Dict[str, Dict[str, float]]:
+    """
+    Load weights từ CSV file (fallback nếu MongoDB fail).
+    """
     if not os.path.exists(weights_file):
         print("[WARN] Không tìm thấy weights_used.csv, sẽ không dùng baseline theo weights.")
         return {}
@@ -184,7 +288,7 @@ def load_weights(weights_file: str) -> Dict[str, Dict[str, float]]:
             weights_by_course[course] = {}
         weights_by_course[course][comp] = weights_by_course[course].get(comp, 0.0) + weight
 
-    print(f"[INFO] Đã load weights cho {len(weights_by_course)} course.")
+    print(f"[INFO] Đã load weights từ CSV cho {len(weights_by_course)} courses.")
     return weights_by_course
 
 
@@ -529,11 +633,12 @@ ARTIFACTS: dict = {}
 WEIGHTS_BY_COURSE: Dict[str, Dict[str, float]] = {}
 SHAP_EXPLAINER = None  # TreeExplainer cho gb_model
 COURSE_PROFILE_SCALED: Optional[pd.DataFrame] = None
+MONGO_CLIENT: Optional[MongoClient] = None  # MongoDB client
 
 
 @app.on_event("startup")
 def load_resources():
-    global ARTIFACTS, WEIGHTS_BY_COURSE, SHAP_EXPLAINER, COURSE_PROFILE_SCALED, COURSE_R2_GB
+    global ARTIFACTS, WEIGHTS_BY_COURSE, SHAP_EXPLAINER, COURSE_PROFILE_SCALED, COURSE_R2_GB, MONGO_CLIENT
 
     if not os.path.exists(ARTIFACTS_PATH):
         raise RuntimeError(f"Không tìm thấy artifacts: {ARTIFACTS_PATH}")
@@ -541,8 +646,26 @@ def load_resources():
     ARTIFACTS = joblib.load(ARTIFACTS_PATH)
     print("[INFO] Đã load model artifacts:", ARTIFACTS.keys())
 
-    # weights
-    WEIGHTS_BY_COURSE = load_weights(WEIGHTS_FILE)
+    # Kết nối MongoDB
+    try:
+        MONGO_CLIENT = MongoClient(MONGODB_URI)
+        # Test connection
+        MONGO_CLIENT.server_info()
+        print(f"[INFO] Đã kết nối MongoDB: {MONGODB_URI}")
+        
+        # Load weights từ MongoDB
+        WEIGHTS_BY_COURSE = load_weights_from_mongodb(MONGO_CLIENT)
+        
+        # Fallback to CSV nếu MongoDB không có data
+        if not WEIGHTS_BY_COURSE:
+            print("[WARN] MongoDB không có weights, fallback sang CSV...")
+            WEIGHTS_BY_COURSE = load_weights(WEIGHTS_FILE)
+            
+    except Exception as e:
+        print(f"[ERROR] Không thể kết nối MongoDB: {e}")
+        print("[WARN] Fallback sang CSV...")
+        MONGO_CLIENT = None
+        WEIGHTS_BY_COURSE = load_weights(WEIGHTS_FILE)
 
     # Behavior: KHÔNG auto build từ clean_student_data_v1.csv nữa
     COURSE_PROFILE_SCALED = None
@@ -573,6 +696,15 @@ def load_resources():
     except Exception as e:
         SHAP_EXPLAINER = None
         print(f"[WARN] Không khởi tạo được SHAP explainer: {e}")
+
+
+@app.on_event("shutdown")
+def shutdown_resources():
+    """Đóng MongoDB connection khi server shutdown"""
+    global MONGO_CLIENT
+    if MONGO_CLIENT:
+        MONGO_CLIENT.close()
+        print("[INFO] Đã đóng MongoDB connection.")
 
 
 # =============================

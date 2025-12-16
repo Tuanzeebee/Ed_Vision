@@ -41,6 +41,7 @@ export default function ClassManagement() {
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [uploadFile, setUploadFile] = useState<File | null>(null)
     const [uploadClassCode, setUploadClassCode] = useState('')
+    const [availableClasses, setAvailableClasses] = useState<any[]>([])
 
     // State for API data
     const [classData, setClassData] = useState<any[]>([])
@@ -65,6 +66,13 @@ export default function ClassManagement() {
             fetchStudents(selectedClass)
         }
     }, [selectedClass])
+
+    // Fetch available classes when upload modal opens
+    useEffect(() => {
+        if (showUploadModal && availableClasses.length === 0) {
+            fetchAvailableClasses()
+        }
+    }, [showUploadModal])
 
     const fetchClasses = async () => {
         try {
@@ -96,6 +104,16 @@ export default function ClassManagement() {
             console.error('Error fetching students:', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchAvailableClasses = async () => {
+        try {
+            const data = await classManagementAPI.getClasses()
+            setAvailableClasses(data)
+        } catch (error) {
+            console.error('Error fetching available classes:', error)
+            toast.error('Failed to load class list')
         }
     }
 
@@ -877,19 +895,32 @@ export default function ClassManagement() {
                         </div>
                         
                         <div className="p-6 space-y-4">
-                            {/* Class Code Input */}
+                            {/* Class Selection Dropdown */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Class Code <span className="text-red-500">*</span>
+                                    Select Class <span className="text-red-500">*</span>
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={uploadClassCode} 
-                                    onChange={(e) => setUploadClassCode(e.target.value.toUpperCase())} 
-                                    placeholder="e.g. CMU-TPM7" 
-                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
-                                    required 
-                                />
+                                <div className="relative">
+                                    <select
+                                        value={uploadClassCode}
+                                        onChange={(e) => setUploadClassCode(e.target.value)}
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition-colors appearance-none bg-white"
+                                        required
+                                    >
+                                        <option value="">-- Select a class --</option>
+                                        {availableClasses.map((cls) => (
+                                            <option key={cls.id} value={cls.class_code}>
+                                                {cls.class_code} - {cls.major} ({cls.students} students)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                                </div>
+                                {uploadClassCode && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Selected: <span className="font-semibold text-green-600">{uploadClassCode}</span>
+                                    </p>
+                                )}
                             </div>
 
                             {/* File Upload Dropzone */}

@@ -21,6 +21,10 @@ import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
+import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
+import { StudentChatModule } from './student_be/chat/student-chat.module';
+import { ParentChatModule } from './parent_be/chat/parent-chat.module';
+import { ChatModule } from './mongodb/chat.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
@@ -58,9 +62,13 @@ import * as path from 'path';
     TeacherBeModule,
     StudentBeModule,
     DatabaseModule,
+    ChatModule,
+    TeacherChatModule,
+    StudentChatModule,
+    ParentChatModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ReminderSchedulerService],
 })
 export class AppModule {
   constructor(private readonly reminderScheduler: ReminderSchedulerService) {
