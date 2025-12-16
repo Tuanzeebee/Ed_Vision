@@ -19,10 +19,6 @@ export default function TeacherAppointmentDashboard() {
   };
   
   const [currentPage, setCurrentPage] = useState<Page>(getInitialPage);
-  const [currentPage, setCurrentPage] = useState<Page>(() => {
-    // Initialize based on current URL path
-    return location.pathname === '/teacher/schedule' ? 'schedule' : 'management';
-  });
 
   // Update currentPage when URL changes (only if different)
   useEffect(() => {

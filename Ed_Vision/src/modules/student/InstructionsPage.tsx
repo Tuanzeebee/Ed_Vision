@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from 'react-i18next'
 import Header from "../../components/layout/Header"
-import { useTranslation } from 'react-i18next'
 import { useMemo } from 'react'
 import Footer from "../../components/layout/Footer"
 
@@ -36,7 +35,6 @@ interface StepData {
 
 export default function InstructionsPage({}: Props) {
   const navigate = useNavigate()
-  const { t } = useTranslation('student')
   const { t } = useTranslation('student')
 
   const steps: StepData[] = useMemo(() => ([
@@ -119,7 +117,7 @@ export default function InstructionsPage({}: Props) {
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconInstructions} alt="" className="w-5 h-5" />
-                    <span className="text-blue-600 font-medium">{t('instructions.tab{t('instructions')}.title')}</span>
+                    <span className="text-blue-600 font-medium">{t('instructions.title')}</span>
                   </div>
                 </div>
                 <button
@@ -144,7 +142,7 @@ export default function InstructionsPage({}: Props) {
                   <div className="flex items-center justify-center h-14 gap-3 relative">
                     <img src={iconAdjust} alt="" className="w-5 h-5" />
                     <span className="text-gray-400 font-medium">{t('adjust.tab')}</span>
-                    <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full absolute right-8">
+                    <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full absolute right-4 top-2.5">
                       {t('instructions.uploadRequired')}
                     </span>
                   </div>
@@ -156,7 +154,6 @@ export default function InstructionsPage({}: Props) {
             <div className="p-8 space-y-8">
               {/* Header Section */}
               <div className="text-center space-y-3">
-                <h1 className="text-2xl font-bold text-gray-900">{t('instructions.title')}</h1>
                 <h1 className="text-2xl font-bold text-gray-900">
                   {t('instructions.pageTitle')}
                 </h1>

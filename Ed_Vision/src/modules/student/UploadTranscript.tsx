@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
 import { useState, useRef, useCallback } from "react"
-import { useTranslation } from 'react-i18next'
 import toast, { Toaster } from "react-hot-toast"
 import Header from "../../components/layout/Header"
 import { useTranslation } from 'react-i18next'
@@ -35,7 +34,6 @@ type Props = {
 
 export default function UploadTranscript({}: Props) {
   const navigate = useNavigate()
-  const { t } = useTranslation('student')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -306,7 +304,7 @@ export default function UploadTranscript({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconInstructions} alt="" className="w-5 h-5" />
-                    <span className="text-gray-500 font-medium">{t('instructions.tab{t('instructions.title')}')}</span>
+                    <span className="text-gray-500 font-medium">{t('instructions.title')}</span>
                   </div>
                 </button>
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
@@ -321,8 +319,8 @@ export default function UploadTranscript({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3 relative">
                     <img src={iconAdjust} alt="" className="w-5 h-5" />
-                    <span className="text-gray-400 font-medium">{t('instructions.tabAdjust')}</span>
-                    <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full absolute -right-2 top-2">
+                    <span className="text-gray-400 font-medium">{t('adjust.tab')}</span>
+                    <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full absolute right-4 top-2.5">
                       {t('instructions.uploadRequired')}
                     </span>
                   </div>
@@ -345,9 +343,6 @@ export default function UploadTranscript({}: Props) {
                 <div className="inline-flex items-center gap-2 bg-blue-100 px-3 py-1 rounded-full">
                   <img src={iconSecurity} alt="" className="w-4 h-4" />
                   <span className="text-blue-800 text-sm font-medium">{t('upload.securityBadge')}</span>
-                  <span className="text-blue-800 text-sm font-medium">
-                    {t('upload.securityBadge')}
-                  </span>
                 </div>
               </div>
 
@@ -384,7 +379,6 @@ export default function UploadTranscript({}: Props) {
                       </>
                     ) : (
                       <>
-                        <h3 className="text-xl font-bold text-gray-900">{t('upload.dropHere')}</h3>
                         <h3 className="text-xl font-bold text-gray-900">
                           {t('upload.dropZoneTitle')}
                         </h3>
@@ -423,7 +417,6 @@ export default function UploadTranscript({}: Props) {
                       >
                         <span className="text-base font-bold">
                           {t('upload.cancel')}
-                          {t('upload.cancel')}
                         </span>
                       </Button>
                     </div>
@@ -433,16 +426,11 @@ export default function UploadTranscript({}: Props) {
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg h-auto"
                     >
                       <img src={iconUploadButton} alt="" className="w-5 h-5 mr-2" loading="lazy" />
-                      <span className="text-base font-bold">{t('upload.uploadYourTranscript')}</span>
-                      <img src={iconUploadButton} alt="" className="w-5 h-5 mr-2" />
-                      <span className="text-base font-bold">
-                        {t('upload.uploadButton')}
-                      </span>
+                      <span className="text-base font-bold">{t('upload.browseFiles')}</span>
                     </Button>
                   )}
 
                   {/* File Size Limit */}
-                  <p className="text-xs text-gray-500">{t('upload.maxFileSize')}</p>
                   <p className="text-xs text-gray-500">
                     {t('upload.maxFileSize')}
                   </p>
@@ -451,7 +439,6 @@ export default function UploadTranscript({}: Props) {
 
               {/* Supported File Formats */}
               <div className="space-y-3">
-                <h2 className="text-base font-bold text-gray-900 text-center">{t('upload.supportedFormats')}</h2>
                 <h2 className="text-base font-bold text-gray-900 text-center">
                   {t('upload.supportedFormats')}
                 </h2>
@@ -466,24 +453,17 @@ export default function UploadTranscript({}: Props) {
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900 text-sm">{t('upload.csvFiles')}</h3>
-                          <p className="text-xs text-gray-600">{t('upload.csvFormatLabel')}</p>
-                          <h3 className="font-bold text-gray-900 text-sm">{t('upload.csvFiles')}</h3>
                           <p className="text-xs text-gray-600">{t('upload.csvFormat')}</p>
                         </div>
                       </div>
                       
-                      <p className="text-xs text-gray-600 leading-4">{t('upload.csvDescription')}</p>
                       <p className="text-xs text-gray-600 leading-4">
                         {t('upload.csvDescription')}
                       </p>
                       
                       <div className="flex items-center gap-2">
                         <img src={iconCheckBlue} alt="" className="w-3 h-3" loading="lazy" />
-                        <span className="text-xs text-blue-600 font-medium">{t('upload.recommendedFormat')}</span>
-                        <img src={iconCheckBlue} alt="" className="w-3 h-3" />
-                        <span className="text-xs text-blue-600 font-medium">
-                          {t('upload.csvRecommended')}
-                        </span>
+                        <span className="text-xs text-blue-600 font-medium">{t('upload.csvRecommended')}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -501,18 +481,13 @@ export default function UploadTranscript({}: Props) {
                         </div>
                       </div>
                       
-                      <p className="text-xs text-gray-600 leading-4">{t('upload.excelDescription')}</p>
                       <p className="text-xs text-gray-600 leading-4">
                         {t('upload.excelDescription')}
                       </p>
                       
                       <div className="flex items-center gap-2">
-                        <img src={iconCheckGreen} alt="" className="w-3 h-3" />
-                        <span className="text-xs text-green-600 font-medium">
-                          {t('upload.excelSupported')}
-                        </span>
                         <img src={iconCheckGreen} alt="" className="w-3 h-3" loading="lazy" />
-                        <span className="text-xs text-green-600 font-medium">{t('upload.fullySupported')}</span>
+                        <span className="text-xs text-green-600 font-medium">{t('upload.excelSupported')}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -525,7 +500,6 @@ export default function UploadTranscript({}: Props) {
                   <div className="flex gap-2">
                     <img src={iconWarning} alt="" className="w-4 h-4 mt-0.5" loading="lazy" />
                     <div className="space-y-2">
-                      <h3 className="font-bold text-amber-800 text-sm">{t('upload.requiredInfo')}</h3>
                       <h3 className="font-bold text-amber-800 text-sm">
                         {t('upload.requiredInfo')}
                       </h3>
@@ -536,11 +510,9 @@ export default function UploadTranscript({}: Props) {
                           <span className="text-xs text-amber-700">
                             {t('upload.courseCodes')}
                           </span>
-                          <span className="text-xs text-amber-700">{t('upload.courseCodes')}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <img src={iconCheckAmber} alt="" className="w-3 h-3" />
-                          <span className="text-xs text-amber-700">{t('upload.creditHours')}</span>
                           <span className="text-xs text-amber-700">
                             {t('upload.creditHours')}
                           </span>
@@ -550,14 +522,12 @@ export default function UploadTranscript({}: Props) {
                           <span className="text-xs text-amber-700">
                             {t('upload.grades')}
                           </span>
-                          <span className="text-xs text-amber-700">{t('upload.gradesGPA')}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <img src={iconCheckAmber} alt="" className="w-3 h-3" />
                           <span className="text-xs text-amber-700">
                             {t('upload.semesterInfo')}
                           </span>
-                          <span className="text-xs text-amber-700">{t('upload.semesterInfo')}</span>
                         </div>
                       </div>
                     </div>
