@@ -12,7 +12,7 @@ type Props = {
 }
 
 export default function GradeForecastLanding({}: Props) {
-  const { t } = useTranslation(['common'])
+  const { t } = useTranslation('student')
   const navigate = useNavigate()
   const { isAuthenticated, getDashboardPath } = useAuth()
   
@@ -51,24 +51,24 @@ export default function GradeForecastLanding({}: Props) {
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
-                <span className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">AI-Powered</span><br/>
-                Grade Forecasting
+                <span className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">{t('landing.heroTitle')}</span><br/>
+                {t('landing.heroSubtitle')}
               </h1>
               <p className="text-base md:text-lg text-gray-600 mb-6 max-w-2xl">
-                Dự đoán điểm số chính xác, phân tích hiệu suất học tập và tối ưu hóa chiến lược học tập với công nghệ AI tiên tiến.
+                {t('landing.heroDescription')}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                 <Button 
                   onClick={handleStartPredicting}
                   className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-6 rounded-xl text-base font-semibold hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
                 >
-                  {t('student:landing.startPredicting')}
+                  {t('landing.startPredicting')}
                 </Button>
                 <Button 
                   variant="outline" 
                   className="border-2 border-gray-300 text-gray-700 px-6 py-6 rounded-xl text-base font-semibold hover:border-purple-500 hover:text-purple-500 transition-all duration-200"
                 >
-                  {t('student:landing.watchDemo')}
+                  {t('landing.watchDemo')}
                 </Button>
               </div>
             </div>
@@ -108,8 +108,8 @@ export default function GradeForecastLanding({}: Props) {
       <section className="py-12 md:py-16 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Tính năng nổi bật</h2>
-            <p className="text-base text-gray-600 max-w-2xl mx-auto">Khám phá những công cụ mạnh mẽ giúp bạn dự đoán và cải thiện kết quả học tập</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{t('landing.featuresTitle')}</h2>
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">{t('landing.featuresSubtitle')}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {/* Feature 1 */}
@@ -120,8 +120,8 @@ export default function GradeForecastLanding({}: Props) {
                     <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">Accurate Predictions</h3>
-                <p className="text-gray-600 text-sm">Dự đoán điểm số chính xác với độ tin cậy cao dựa trên thuật toán AI tiên tiến và dữ liệu học tập cá nhân.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">{t('landing.feature1Title')}</h3>
+                <p className="text-gray-600 text-sm">{t('landing.feature1Description')}</p>
               </CardContent>
             </Card>
             
@@ -133,8 +133,8 @@ export default function GradeForecastLanding({}: Props) {
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">Performance Analytics</h3>
-                <p className="text-gray-600 text-sm">Phân tích chi tiết hiệu suất học tập qua biểu đồ trực quan, giúp bạn hiểu rõ điểm mạnh và điểm cần cải thiện.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">{t('landing.feature2Title')}</h3>
+                <p className="text-gray-600 text-sm">{t('landing.feature2Description')}</p>
               </CardContent>
             </Card>
             
@@ -146,8 +146,8 @@ export default function GradeForecastLanding({}: Props) {
                     <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">Study Optimization</h3>
-                <p className="text-gray-600 text-sm">Nhận gợi ý tối ưu hóa việc học tập được cá nhân hóa để đạt được mục tiêu điểm số mong muốn một cách hiệu quả.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">{t('landing.feature3Title')}</h3>
+                <p className="text-gray-600 text-sm">{t('landing.feature3Description')}</p>
               </CardContent>
             </Card>
           </div>
@@ -158,8 +158,8 @@ export default function GradeForecastLanding({}: Props) {
       <section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Cách thức hoạt động</h2>
-            <p className="text-base text-gray-600 max-w-2xl mx-auto">Chỉ với 4 bước đơn giản, bạn có thể bắt đầu dự đoán và cải thiện kết quả học tập</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{t('landing.howItWorksTitle')}</h2>
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">{t('landing.howItWorksSubtitle')}</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Step 1 */}
@@ -175,8 +175,8 @@ export default function GradeForecastLanding({}: Props) {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Input Your Data</h3>
-              <p className="text-gray-600 text-sm">Nhập điểm số hiện tại và thói quen học tập của bạn</p>
+              <h3 className="text-base font-bold text-gray-900 mb-2">{t('landing.step1Title')}</h3>
+              <p className="text-gray-600 text-sm">{t('landing.step1Description')}</p>
             </div>
             
             {/* Step 2 */}
@@ -191,8 +191,8 @@ export default function GradeForecastLanding({}: Props) {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">AI Analysis</h3>
-              <p className="text-gray-600 text-sm">AI phân tích mẫu hành vi học tập và xu hướng điểm số</p>
+              <h3 className="text-base font-bold text-gray-900 mb-2">{t('landing.step2Title')}</h3>
+              <p className="text-gray-600 text-sm">{t('landing.step2Description')}</p>
             </div>
             
             {/* Step 3 */}
@@ -207,8 +207,8 @@ export default function GradeForecastLanding({}: Props) {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Get Predictions</h3>
-              <p className="text-gray-600 text-sm">Nhận dự đoán điểm số chi tiết và độ tin cậy cao</p>
+              <h3 className="text-base font-bold text-gray-900 mb-2">{t('landing.step3Title')}</h3>
+              <p className="text-gray-600 text-sm">{t('landing.step3Description')}</p>
             </div>
             
             {/* Step 4 */}
@@ -223,8 +223,8 @@ export default function GradeForecastLanding({}: Props) {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Optimize Performance</h3>
-              <p className="text-gray-600 text-sm">Cải thiện chiến lược học tập dựa trên gợi ý AI</p>
+              <h3 className="text-base font-bold text-gray-900 mb-2">{t('landing.step4Title')}</h3>
+              <p className="text-gray-600 text-sm">{t('landing.step4Description')}</p>
             </div>
           </div>
         </div>
@@ -234,8 +234,8 @@ export default function GradeForecastLanding({}: Props) {
       <section className="py-12 md:py-16 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">What Students Say</h2>
-            <p className="text-base text-gray-600 max-w-2xl mx-auto">Hàng nghìn sinh viên đã tin tưởng và đạt được kết quả tuyệt vời</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{t('landing.testimonialsTitle')}</h2>
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">{t('landing.testimonialsSubtitle')}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {/* Testimonial 1 */}
@@ -246,8 +246,8 @@ export default function GradeForecastLanding({}: Props) {
                     AN
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Nguyễn Minh An</h4>
-                    <p className="text-xs text-gray-600">Sinh viên Công nghệ thông tin</p>
+                    <h4 className="font-bold text-gray-900 text-sm">{t('landing.student1Name')}</h4>
+                    <p className="text-xs text-gray-600">{t('landing.student1Major')}</p>
                   </div>
                 </div>
                 <div className="flex mb-3">
@@ -257,7 +257,7 @@ export default function GradeForecastLanding({}: Props) {
                     </svg>
                   ))}
                 </div>
-                <p className="text-gray-600 italic text-sm">"GradeForecast đã giúp tôi cải thiện điểm số từ 6.5 lên 8.2 chỉ trong một học kỳ. Các dự đoán rất chính xác và gợi ý học tập cực kỳ hữu ích!"</p>
+                <p className="text-gray-600 italic text-sm">{t('landing.student1Quote')}</p>
               </CardContent>
             </Card>
             
@@ -269,8 +269,8 @@ export default function GradeForecastLanding({}: Props) {
                     LH
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Trần Linh Hương</h4>
-                    <p className="text-xs text-gray-600">Sinh viên Kinh tế</p>
+                    <h4 className="font-bold text-gray-900 text-sm">{t('landing.student2Name')}</h4>
+                    <p className="text-xs text-gray-600">{t('landing.student2Major')}</p>
                   </div>
                 </div>
                 <div className="flex mb-3">
@@ -283,7 +283,7 @@ export default function GradeForecastLanding({}: Props) {
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                   </svg>
                 </div>
-                <p className="text-gray-600 italic text-sm">"Công cụ phân tích hiệu suất rất chi tiết. Tôi có thể thấy rõ những môn nào cần tập trung hơn và lập kế hoạch học tập hiệu quả."</p>
+                <p className="text-gray-600 italic text-sm">{t('landing.student2Quote')}</p>
               </CardContent>
             </Card>
             
@@ -295,8 +295,8 @@ export default function GradeForecastLanding({}: Props) {
                     DK
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Lê Đức Khang</h4>
-                    <p className="text-xs text-gray-600">Sinh viên Y khoa</p>
+                    <h4 className="font-bold text-gray-900 text-sm">{t('landing.student3Name')}</h4>
+                    <p className="text-xs text-gray-600">{t('landing.student3Major')}</p>
                   </div>
                 </div>
                 <div className="flex mb-3">
@@ -306,7 +306,7 @@ export default function GradeForecastLanding({}: Props) {
                     </svg>
                   ))}
                 </div>
-                <p className="text-gray-600 italic text-sm">"Với áp lực học tập cao ở ngành Y, GradeForecast giúp tôi quản lý thời gian và tối ưu hóa việc học một cách khoa học và hiệu quả."</p>
+                <p className="text-gray-600 italic text-sm">{t('landing.student3Quote')}</p>
               </CardContent>
             </Card>
           </div>

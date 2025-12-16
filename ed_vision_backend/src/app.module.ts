@@ -10,6 +10,7 @@ import { AccountManagementModule } from './admin_be/account-management/account-m
 import { StudentManagementModule } from './admin_be/student-management/student-management.module';
 import { InstructorManagementModule } from './admin_be/instructor-management/instructor-management.module';
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
+import { QuestionManagementModule } from './admin_be/question-management/question-management.module';
 import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
 import { NotificationModule } from './admin_be/notification/notification.module';
 import { BookingModule } from './booking/booking.module';
@@ -25,11 +26,24 @@ import { StudentChatModule } from './student_be/chat/student-chat.module';
 import { ParentChatModule } from './parent_be/chat/parent-chat.module';
 import { ChatModule } from './mongodb/chat.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
+import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
+import * as path from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    // i18n Configuration
+    I18nModule.forRoot({
+      fallbackLanguage: 'vi',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [
+        AcceptLanguageResolver,
+      ],
+    }),
     PrismaModule,
     InstructorAvailabilityModule,
     BookingModule,
@@ -40,6 +54,7 @@ import { ReminderSchedulerService } from './admin_be/notification/reminder-sched
     StudentManagementModule,
     InstructorManagementModule,
     SurveyManagementModule,
+    QuestionManagementModule,
     StatisticsOverviewModule,
     NotificationModule,
     ClassManagementModule,

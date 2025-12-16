@@ -1,0 +1,127 @@
+{
+  "error": {
+    "user": {
+      "notFound": "User not found",
+      "alreadyExists": "User already exists",
+      "invalidCredentials": "Invalid credentials",
+      "unauthorized": "Unauthorized access",
+      "forbidden": "Forbidden"
+    },
+    "auth": {
+      "invalidPassword": "Invalid password",
+      "invalidToken": "Invalid token",
+      "tokenExpired": "Token expired",
+      "invalidOtp": "Invalid OTP",
+      "otpExpired": "OTP expired"
+    },
+    "validation": {
+      "required": "This field is required",
+      "invalidEmail": "Invalid email format",
+      "invalidPhone": "Invalid phone number",
+      "minLength": "Minimum length is {{min}} characters",
+      "maxLength": "Maximum length is {{max}} characters"
+    },
+    "server": {
+      "internalError": "Internal server error",
+      "serviceUnavailable": "Service unavailable",
+      "badRequest": "Bad request"
+    },
+    "booking": {
+      "notFound": "Booking not found",
+      "slotUnavailable": "Time slot is unavailable",
+      "alreadyBooked": "Already booked for this slot"
+    },
+    "student": {
+      "notFound": "Student not found",
+      "invalidStatus": "Invalid student status"
+    },
+    "teacher": {
+      "notFound": "Teacher not found",
+      "notAvailable": "Teacher not available"
+    }
+  },
+  "mail": {
+    "welcome": {
+      "title": "Welcome to EdVision",
+      "subject": "Welcome to EdVision Platform"
+    },
+    "reset": {
+      "subject": "Password Reset Request",
+      "title": "Reset Your Password"
+    },
+    "booking": {
+      "confirmed": {
+        "subject": "Booking Confirmed",
+        "title": "Your booking has been confirmed"
+      },
+      "cancelled": {
+        "subject": "Booking Cancelled",
+        "title": "Your booking has been cancelled"
+      }
+    },
+    "otp": {
+      "subject": "Your OTP Code",
+      "title": "Verification Code"
+    }
+  },
+  "notification": {
+    "booking": {
+      "created": "New booking created",
+      "confirmed": "Booking confirmed",
+      "cancelled": "Booking cancelled",
+      "completed": "Booking completed"
+    },
+    "student": {
+      "registered": "New student registered",
+      "updated": "Student information updated"
+    }
+  },
+  "student": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "graduated": "Graduated"
+    },
+    "grade": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "average": "Average",
+      "belowAverage": "Below Average",
+      "poor": "Poor"
+    }
+  },
+  "teacher": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "onLeave": "On Leave"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "rejected": "Rejected"
+    },
+    "type": {
+      "consultation": "Consultation",
+      "appointment": "Appointment",
+      "meeting": "Meeting"
+    }
+  },
+  "role": {
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "student": "Student",
+    "parent": "Parent"
+  },
+  "export": {
+    "student": "Student List",
+    "teacher": "Teacher List",
+    "booking": "Booking List",
+    "report": "Report"
+  }
+}

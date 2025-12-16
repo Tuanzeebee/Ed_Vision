@@ -5,6 +5,7 @@ import { BackButton } from "@/components/ui/student/Student_BackButton"
 import { ToastContainer } from "@/components/ui/Toast"
 import { useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { buildUrl } from '@/services/api/config'
 import { useToast } from '@/lib/useToast'
 
@@ -18,6 +19,7 @@ export default function StudentRegister({
   onEmailRegister
 }: Props) {
   const navigate = useNavigate()
+  const { t } = useTranslation('auth')
   // keep the prop referenced to avoid unused variable lint
   void onEmailRegister
   const [showPassword, setShowPassword] = useState(false)
@@ -52,7 +54,7 @@ export default function StudentRegister({
     
     // Validate password confirmation
     if (password !== confirmPassword) {
-      showError('Mật khẩu xác nhận không khớp')
+      showError(t('register.passwordMismatch'))
       return
     }
     
@@ -60,7 +62,7 @@ export default function StudentRegister({
     if (!linkCode) {
       const domain = '@dtu.edu.vn'
       if (!email?.toLowerCase()?.endsWith(domain)) {
-        showError(`Chỉ cho phép đăng ký với email ${domain}`)
+        showError(t('register.emailDomainError', { domain }))
         return
       }
     }
@@ -78,13 +80,13 @@ export default function StudentRegister({
       .then(async (res) => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
-          throw new Error(err.message || 'Đăng ký thất bại')
+          throw new Error(err.message || t('register.registerFailed'))
         }
         return res.json()
       })
       .then(() => {
         // success -> navigate to OTP page and pass email + linkCode
-        showSuccess('Đăng ký thành công! Kiểm tra email để xác thực.', 2000)
+        showSuccess(t('register.registerSuccess'), 2000)
         setTimeout(() => {
           navigate('/auth/otp-verification', { 
             state: { 
@@ -95,7 +97,7 @@ export default function StudentRegister({
         }, 1500)
       })
       .catch((err) => {
-        console.error('Register error', err)
+        console.error(t('register.registrationError'), err)
         const cleanMessage = (err.message || 'Lỗi đăng ký').replace(/^["'\[\]]+|["'\[\]]+$/g, '').trim()
         showError(cleanMessage)
       })
@@ -116,9 +118,9 @@ export default function StudentRegister({
             <CardContent className="p-6">
               {/* Logo/Brand */}
               <div className="text-center mb-6">
-                <h1 className="text-xl font-bold text-gray-900 tracking-wide mb-1">SCORE PREDICT</h1>
-                <h2 className="text-lg font-semibold text-gray-800 mb-1">Register</h2>
-                <p className="text-gray-600 text-sm">Create your account to start predicting your grades</p>
+                <h1 className="text-xl font-bold text-gray-900 tracking-wide mb-1">{t('register.brandName')}</h1>
+                <h2 className="text-lg font-semibold text-gray-800 mb-1">{t('register.title')}</h2>
+                <p className="text-gray-600 text-sm">{t('register.subtitle')}</p>
               </div>
 
 
@@ -131,7 +133,7 @@ export default function StudentRegister({
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                     <p className="text-sm text-blue-800">
                       <i className="fas fa-info-circle mr-2"></i>
-                      Đang đăng ký tài khoản phụ huynh (Mã liên kết: {linkCode})
+                      {t('register.parentRegistrationInfo', { linkCode })}
                     </p>
                   </div>
                 )}
@@ -144,14 +146,14 @@ export default function StudentRegister({
                 {/* Email Input */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    {t('register.emailLabel')}
                   </label>
                   <Input
                     type="email"
                     id="email"
                     name="email"
                     required
-                    placeholder={linkCode ? "Enter your email" : "Enter your DTU email"}
+                    placeholder={linkCode ? t('register.emailPlaceholder') : t('register.emailPlaceholderDTU')}
                     className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"
                   />
                 </div>
@@ -159,7 +161,7 @@ export default function StudentRegister({
                 {/* Password Input */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
+                    {t('register.passwordLabel')}
                   </label>
                   <div className="relative">
                     <Input
@@ -167,7 +169,7 @@ export default function StudentRegister({
                       id="password"
                       name="password"
                       required
-                      placeholder="Enter your password"
+                      placeholder={t('register.passwordPlaceholder')}
                       className="text-sm text-gray-900 placeholder-gray-400 pr-10"
                     />
                     <button
@@ -192,7 +194,7 @@ export default function StudentRegister({
                 {/* Confirm Password Input */}
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password
+                    {t('register.confirmPasswordLabel')}
                   </label>
                   <div className="relative">
                     <Input
@@ -200,7 +202,7 @@ export default function StudentRegister({
                       id="confirmPassword"
                       name="confirmPassword"
                       required
-                      placeholder="Confirm your password"
+                      placeholder={t('register.confirmPasswordPlaceholder')}
                       className="text-sm text-gray-900 placeholder-gray-400 pr-10"
                     />
                     <button
@@ -229,19 +231,19 @@ export default function StudentRegister({
                   onClick={() => console.debug('StudentRegister.button - clicked')}
                   className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-[1.02] shadow-md text-sm"
                 >
-                  Register
+                  {t('register.registerButton')}
                 </Button>
               </form>
 
               {/* Footer Links */}
               <div className="mt-4 text-center">
                 <p className="text-xs text-gray-600">
-                  Already have an account?{' '}
+                  {t('register.haveAccount')}{' '}
                   <button 
                     onClick={handleLogin}
                     className="text-purple-600 hover:text-purple-700 font-medium cursor-pointer"
                   >
-                    Login
+                    {t('register.login')}
                   </button>
                 </p>
               </div>

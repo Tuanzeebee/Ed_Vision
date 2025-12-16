@@ -5,6 +5,8 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // Import translation files
 import enCommon from './locales/en/common.json';
 import viCommon from './locales/vi/common.json';
+import enAuth from './locales/en/auth.json';
+import viAuth from './locales/vi/auth.json';
 import enParent from './locales/en/parent.json';
 import viParent from './locales/vi/parent.json';
 import enStudent from './locales/en/student.json';
@@ -22,6 +24,7 @@ i18n
     resources: {
       en: {
         common: enCommon,
+        auth: enAuth,
         parent: enParent,
         student: enStudent,
         teacher: enTeacher,
@@ -29,6 +32,7 @@ i18n
       },
       vi: {
         common: viCommon,
+        auth: viAuth,
         parent: viParent,
         student: viStudent,
         teacher: viTeacher,

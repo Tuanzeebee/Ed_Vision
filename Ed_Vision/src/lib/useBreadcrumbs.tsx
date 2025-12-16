@@ -1,11 +1,13 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getBreadcrumbConfig } from './breadcrumbConfig';
 
 // Main hook to generate breadcrumbs
 export function useBreadcrumbs() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   function generateBreadcrumbs(pathname: string): Array<{
     label: string;
@@ -23,7 +25,7 @@ export function useBreadcrumbs() {
       // Fallback breadcrumb
       return [
         { 
-          label: 'Trang chủ', 
+          label: t('admin:breadcrumb.home'), 
           href: '/admin/dashboard',
           icon: <i className="fas fa-home text-blue-600"></i>
         }
@@ -45,7 +47,7 @@ export function useBreadcrumbs() {
         href?: string;
         icon?: React.ReactNode;
       } = {
-        label: config.config.label
+        label: t(config.config.labelKey)
       };
       
       // Add icon if specified

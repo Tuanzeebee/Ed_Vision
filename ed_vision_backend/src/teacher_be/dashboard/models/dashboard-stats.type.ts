@@ -11,6 +11,7 @@ export interface DashboardStats {
     averageGPA: number;
     medianGPA: number;
     minGPA: number;
+    maxGPA: number;
 }
 
 export interface AtRiskStudent {

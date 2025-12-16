@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Check,
   Ban,
@@ -86,19 +87,27 @@ const getAvatarColor = (name: string): string => {
 };
 
 // Helper function to format date in Vietnamese
-const formatDateVN = (dateStr: string): string => {
-  if (!dateStr) return 'Chưa xác định';
+const formatDateVN = (dateStr: string, t: any): string => {
+  if (!dateStr) return t('appointmentManagement.undetermined');
   try {
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return 'Chưa xác định';
-    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    if (isNaN(date.getTime())) return t('appointmentManagement.undetermined');
+    const days = [
+      t('appointmentManagement.sunday'),
+      t('appointmentManagement.monday'),
+      t('appointmentManagement.tuesday'),
+      t('appointmentManagement.wednesday'),
+      t('appointmentManagement.thursday'),
+      t('appointmentManagement.friday'),
+      t('appointmentManagement.saturday')
+    ];
     const dayName = days[date.getDay()];
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
     return `${dayName}, ${day}/${month}/${year}`;
   } catch {
-    return 'Chưa xác định';
+    return t('appointmentManagement.undetermined');
   }
 };
 
@@ -125,17 +134,17 @@ const extractTime = (isoString: string | undefined): string => {
 };
 
 // Helper function to format date/time from slot data
-const formatDateTime = (slot: any, appt: any) => {
-  if (!slot && !appt) return { date: 'Chưa xác định', time: 'Chưa xác định' };
+const formatDateTime = (slot: any, appt: any, t: any) => {
+  if (!slot && !appt) return { date: t('appointmentManagement.undetermined'), time: t('appointmentManagement.undetermined') };
   
   // Try to get specific_date from slot.date
   let dateStr = slot?.date?.specific_date || slot?.specificDate || appt?.createdAt || '';
-  const formattedDate = formatDateVN(dateStr);
+  const formattedDate = formatDateVN(dateStr, t);
   
   // Get time
   const startTime = extractTime(slot?.start_time_local || slot?.startTime);
   const endTime = extractTime(slot?.end_time_local || slot?.endTime);
-  const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : 'Chưa xác định';
+  const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : t('appointmentManagement.undetermined');
   
   return {
     date: formattedDate,
@@ -146,6 +155,7 @@ const formatDateTime = (slot: any, appt: any) => {
 export default function TeacherAppointmentManagement({
   showToast,
 }: TeacherAppointmentManagementProps) {
+  const { t } = useTranslation('teacher');
   // State
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,14 +197,14 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error('Không thể tải danh sách lịch hẹn');
+        throw new Error(t('appointmentManagement.error'));
       }
 
       const data = await response.json();
       
       // Transform API data
       const transformedData: AppointmentData[] = (Array.isArray(data) ? data : []).map((appt: any) => {
-        const { date, time } = formatDateTime(appt.slot, appt);
+        const { date, time } = formatDateTime(appt.slot, appt, t);
         
         const formatRequestedAt = (dateStr: any) => {
           if (!dateStr) return '';
@@ -214,18 +224,18 @@ export default function TeacherAppointmentManagement({
         
         return {
           id: appt.appointmentId || appt.id,
-          parentName: appt.parentName || appt.studentName || 'Không xác định',
+          parentName: appt.parentName || appt.studentName || t('appointmentManagement.unknown'),
           parentAvatar: appt.parentAvatar || '',
           parentEmail: appt.parentEmail || appt.studentEmail || '',
           parentPhone: appt.parentPhone || appt.studentPhone || '',
-          studentName: appt.studentName || 'Không xác định',
-          studentClass: appt.studentClass || 'Không xác định',
+          studentName: appt.studentName || t('appointmentManagement.unknown'),
+          studentClass: appt.studentClass || t('appointmentManagement.unknown'),
           type: appt.meetingType === 'online' ? 'online' : 'offline',
           status: appt.status || 'pending',
           bookerRole: appt.bookerRole || 'parent',
           desiredDate: date,
           desiredTime: time,
-          reason: appt.reason || appt.meetingPurpose || 'Không có lý do',
+          reason: appt.reason || appt.meetingPurpose || t('appointmentManagement.noReason'),
           requestedAt: formatRequestedAt(appt.requestedAt || appt.createdAt),
           platform: appt.platform || (appt.meetingType === 'online' ? 'Google Meet' : undefined),
           location: appt.location || appt.meetingLocation || '',
@@ -237,7 +247,7 @@ export default function TeacherAppointmentManagement({
       setAppointments(transformedData);
     } catch (err: any) {
       console.error('Error fetching appointments:', err);
-      setError(err.message || 'Không thể tải danh sách lịch hẹn');
+      setError(err.message || t('appointmentManagement.error'));
     } finally {
       setLoading(false);
     }
@@ -337,15 +347,15 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error('Không thể chấp nhận lịch hẹn');
+        throw new Error(t('appointmentManagement.acceptError'));
       }
 
-      showToast('Đã chấp nhận lịch hẹn thành công!', 'success');
+      showToast(t('appointmentManagement.acceptSuccess'), 'success');
       setAcceptModalOpen(false);
       setSelectedAppointment(null);
       await fetchAppointments();
     } catch (err: any) {
-      showToast(err.message || 'Không thể chấp nhận lịch hẹn', 'error');
+      showToast(err.message || t('appointmentManagement.acceptError'), 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -353,7 +363,7 @@ export default function TeacherAppointmentManagement({
 
   const confirmReject = async () => {
     if (!selectedAppointment || !rejectReason.trim()) {
-      showToast('Vui lòng nhập lý do từ chối', 'error');
+      showToast(t('appointmentManagement.enterRejectReason'), 'error');
       return;
     }
     setIsProcessing(true);
@@ -369,10 +379,10 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error('Không thể từ chối lịch hẹn');
+        throw new Error(t('appointmentManagement.rejectError'));
       }
 
-      showToast('Đã từ chối lịch hẹn!', 'warning');
+      showToast(t('appointmentManagement.rejectSuccess'), 'warning');
       setRejectModalOpen(false);
       setSelectedAppointment(null);
       setRejectReason('');
@@ -386,7 +396,7 @@ export default function TeacherAppointmentManagement({
 
   const confirmCancel = async () => {
     if (!selectedAppointment || !cancelReason.trim()) {
-      showToast('Vui lòng nhập lý do từ chối', 'error');
+      showToast(t('appointmentManagement.enterRejectReason'), 'error');
       return;
     }
     setIsProcessing(true);
@@ -403,10 +413,10 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error('Không thể từ chối lịch hẹn');
+        throw new Error(t('appointmentManagement.rejectError'));
       }
 
-      showToast('Đã từ chối lịch hẹn!', 'warning');
+      showToast(t('appointmentManagement.rejectSuccess'), 'warning');
       setCancelModalOpen(false);
       setSelectedAppointment(null);
       setCancelReason('');
@@ -422,16 +432,16 @@ export default function TeacherAppointmentManagement({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return { bg: 'bg-emerald-500/10', text: 'text-emerald-600', label: 'Đã xác nhận', icon: CheckCircle };
+        return { bg: 'bg-emerald-500/10', text: 'text-emerald-600', label: t('appointmentManagement.statusConfirmed'), icon: CheckCircle };
       case 'pending':
-        return { bg: 'bg-amber-500/10', text: 'text-amber-600', label: 'Chờ xác nhận', icon: Clock };
+        return { bg: 'bg-amber-500/10', text: 'text-amber-600', label: t('appointmentManagement.statusPending'), icon: Clock };
       case 'completed':
-        return { bg: 'bg-blue-500/10', text: 'text-blue-600', label: 'Hoàn thành', icon: CheckCircle };
+        return { bg: 'bg-blue-500/10', text: 'text-blue-600', label: t('appointmentManagement.statusCompleted'), icon: CheckCircle };
       case 'canceled':
       case 'cancelled':
-        return { bg: 'bg-red-500/10', text: 'text-red-500', label: 'Đã hủy', icon: XCircle };
+        return { bg: 'bg-red-500/10', text: 'text-red-500', label: t('appointmentManagement.statusCanceled'), icon: XCircle };
       case 'rejected':
-        return { bg: 'bg-gray-500/10', text: 'text-gray-500', label: 'Đã từ chối', icon: XCircle };
+        return { bg: 'bg-gray-500/10', text: 'text-gray-500', label: t('appointmentManagement.statusRejected'), icon: XCircle };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-600', label: status, icon: AlertTriangle };
     }
@@ -497,12 +507,12 @@ export default function TeacherAppointmentManagement({
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                   isOnline ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                 }`}>
-                  {isOnline ? 'Online' : 'Trực tiếp'}
+                  {isOnline ? t('appointmentManagement.typeOnline') : t('appointmentManagement.typeOffline')}
                 </span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                   appointment.bookerRole === 'student' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700'
                 }`}>
-                  {appointment.bookerRole === 'student' ? 'Sinh viên' : 'Phụ huynh'}
+                  {appointment.bookerRole === 'student' ? t('appointmentManagement.student') : t('appointmentManagement.parent')}
                 </span>
               </div>
             </div>
@@ -550,7 +560,7 @@ export default function TeacherAppointmentManagement({
                   {appointment.meetingLink}
                 </a>
               ) : (
-                <span className="text-xs text-gray-500">(Chờ thêm link)</span>
+                <span className="text-xs text-gray-500">{t('appointmentManagement.waitingForLink')}</span>
               )}
             </div>
           )}
@@ -562,7 +572,7 @@ export default function TeacherAppointmentManagement({
               {appointment.location ? (
                 <p className="text-xs text-gray-600">{appointment.location}</p>
               ) : (
-                <span className="text-xs text-gray-500">(Chờ thêm địa điểm)</span>
+                <span className="text-xs text-gray-500">{t('appointmentManagement.waitingForLocation')}</span>
               )}
             </div>
           )}
@@ -587,14 +597,14 @@ export default function TeacherAppointmentManagement({
 
           {/* Requested At */}
           <div className="text-xs text-gray-400 pt-1">
-            Yêu cầu lúc: {appointment.requestedAt}
+            {t('appointmentManagement.requestedAt')} {appointment.requestedAt}
           </div>
 
           {/* Cancel Reason */}
           {isCanceled && appointment.cancelReason && (
             <div className="bg-red-50 rounded-lg p-2.5 border border-red-100">
               <p className="text-xs text-red-500">
-                Lý do: {appointment.cancelReason}
+                {t('appointmentManagement.cancelReason')} {appointment.cancelReason}
               </p>
             </div>
           )}
@@ -609,14 +619,14 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
               >
                 <Check className="w-4 h-4" />
-                Chấp nhận
+                {t('appointmentManagement.accept')}
               </button>
               <button 
                 onClick={() => handleReject(appointment)}
                 className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
               >
                 <Ban className="w-4 h-4" />
-                Từ chối
+                {t('appointmentManagement.reject')}
               </button>
             </>
           )}
@@ -631,16 +641,16 @@ export default function TeacherAppointmentManagement({
                   className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 text-sm"
                 >
                   <Video className="w-4 h-4" />
-                  Tham gia
+                  {t('appointmentManagement.join')}
                 </a>
               )}
               <button 
                 onClick={() => handleCancel(appointment)}
                 className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
-                title="Từ chối lịch hẹn"
+                title={t('appointmentManagement.rejectAppointment')}
               >
                 <Ban className="w-4 h-4" />
-                Từ chối lịch hẹn
+                {t('appointmentManagement.rejectAppointment')}
               </button>
             </>
           )}
@@ -648,14 +658,14 @@ export default function TeacherAppointmentManagement({
           {isCompleted && (
             <div className="w-full text-center py-2 text-emerald-600 text-sm font-medium">
               <CheckCircle className="w-4 h-4 inline mr-1" />
-              Đã hoàn thành
+              {t('appointmentManagement.completed')}
             </div>
           )}
 
           {isCanceled && (
             <div className={`w-full text-center py-2 text-sm font-medium ${appointment.status === 'rejected' ? 'text-gray-600' : 'text-red-500'}`}>
               <Ban className="w-4 h-4 inline mr-1" />
-              {appointment.status === 'rejected' ? 'Đã từ chối' : 'Đã hủy'}
+              {appointment.status === 'rejected' ? t('appointmentManagement.statusRejected') : t('appointmentManagement.statusCanceled')}
             </div>
           )}
         </div>
@@ -678,8 +688,8 @@ export default function TeacherAppointmentManagement({
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">📅 Quản Lý Lịch Hẹn</h1>
-            <p className="text-sm text-gray-500 mt-1">Xem và quản lý các yêu cầu gặp mặt từ sinh viên và phụ huynh</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">📅 {t('appointmentManagement.title')}</h1>
+            <p className="text-sm text-gray-500 mt-1">{t('appointmentManagement.subtitle')}</p>
           </div>
           <button
             onClick={fetchAppointments}
@@ -687,7 +697,7 @@ export default function TeacherAppointmentManagement({
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Làm mới
+            {t('appointmentManagement.refresh')}
           </button>
         </div>
       </div>
@@ -696,23 +706,23 @@ export default function TeacherAppointmentManagement({
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-500">Tổng số</div>
+          <div className="text-sm text-gray-500">{t('appointmentManagement.totalAppointments')}</div>
         </div>
         <div className="bg-amber-50 rounded-xl shadow-sm border border-amber-200 p-4">
           <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-          <div className="text-sm text-amber-600">Chờ xử lý</div>
+          <div className="text-sm text-amber-600">{t('appointmentManagement.pendingCount')}</div>
         </div>
         <div className="bg-emerald-50 rounded-xl shadow-sm border border-emerald-200 p-4">
           <div className="text-2xl font-bold text-emerald-600">{stats.confirmed}</div>
-          <div className="text-sm text-emerald-600">Đã xác nhận</div>
+          <div className="text-sm text-emerald-600">{t('appointmentManagement.confirmedCount')}</div>
         </div>
         <div className="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-4">
           <div className="text-2xl font-bold text-blue-600">{stats.completed}</div>
-          <div className="text-sm text-blue-600">Hoàn thành</div>
+          <div className="text-sm text-blue-600">{t('appointmentManagement.completedCount')}</div>
         </div>
         <div className="bg-red-50 rounded-xl shadow-sm border border-red-200 p-4">
           <div className="text-2xl font-bold text-red-500">{stats.canceled}</div>
-          <div className="text-sm text-red-500">Đã hủy</div>
+          <div className="text-sm text-red-500">{t('appointmentManagement.canceledCount')}</div>
         </div>
       </div>
 
@@ -725,7 +735,7 @@ export default function TeacherAppointmentManagement({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Tìm kiếm theo tên, lớp, lý do..." 
+                placeholder={t('appointmentManagement.searchPlaceholder')}
                 className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -740,12 +750,12 @@ export default function TeacherAppointmentManagement({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Chờ xử lý</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="canceled">Đã hủy</option>
-              <option value="rejected">Đã từ chối</option>
+              <option value="all">{t('appointmentManagement.allStatuses')}</option>
+              <option value="pending">{t('appointmentManagement.pendingCount')}</option>
+              <option value="confirmed">{t('appointmentManagement.confirmedCount')}</option>
+              <option value="completed">{t('appointmentManagement.completedCount')}</option>
+              <option value="canceled">{t('appointmentManagement.canceledCount')}</option>
+              <option value="rejected">{t('appointmentManagement.statusRejected')}</option>
             </select>
             
             <select 
@@ -753,9 +763,9 @@ export default function TeacherAppointmentManagement({
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
             >
-              <option value="all">Tất cả loại</option>
-              <option value="online">Online</option>
-              <option value="offline">Trực tiếp</option>
+              <option value="all">{t('appointmentManagement.allTypes')}</option>
+              <option value="online">{t('appointmentManagement.typeOnline')}</option>
+              <option value="offline">{t('appointmentManagement.typeOffline')}</option>
             </select>
 
             <select 
@@ -763,9 +773,9 @@ export default function TeacherAppointmentManagement({
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
             >
-              <option value="all">Tất cả nguồn</option>
-              <option value="student">Sinh viên</option>
-              <option value="parent">Phụ huynh</option>
+              <option value="all">{t('appointmentManagement.allSources')}</option>
+              <option value="student">{t('appointmentManagement.student')}</option>
+              <option value="parent">{t('appointmentManagement.parent')}</option>
             </select>
             
             {/* View Mode Toggle */}
@@ -791,7 +801,7 @@ export default function TeacherAppointmentManagement({
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-500">Đang tải danh sách lịch hẹn...</span>
+          <span className="ml-3 text-gray-500">{t('appointmentManagement.loading')}</span>
         </div>
       )}
 
@@ -802,7 +812,7 @@ export default function TeacherAppointmentManagement({
             onClick={fetchAppointments} 
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
           >
-            Thử lại
+            {t('appointmentManagement.tryAgain')}
           </button>
         </div>
       )}
@@ -814,8 +824,8 @@ export default function TeacherAppointmentManagement({
           </div>
           <div className="text-gray-500 mb-4">
             {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || roleFilter !== 'all'
-              ? 'Không tìm thấy lịch hẹn phù hợp với bộ lọc'
-              : 'Chưa có yêu cầu lịch hẹn nào'}
+              ? t('appointmentManagement.noAppointmentsFilter')
+              : t('appointmentManagement.noAppointments')}
           </div>
         </div>
       )}
@@ -837,14 +847,14 @@ export default function TeacherAppointmentManagement({
                 className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors font-medium shadow-sm"
               >
                 <ChevronDown className="w-4 h-4" />
-                Xem thêm ({filteredAppointments.length - displayCount} còn lại)
+                {t('appointmentManagement.loadMore')} ({filteredAppointments.length - displayCount} {t('appointmentManagement.remaining')})
               </button>
             </div>
           )}
           
           {/* Showing count */}
           <div className="text-center mt-4 text-sm text-gray-500">
-            Đang hiển thị {displayedAppointments.length} / {filteredAppointments.length} lịch hẹn
+            {t('appointmentManagement.showing')} {displayedAppointments.length} {t('appointmentManagement.of')} {filteredAppointments.length} {t('appointmentManagement.appointments')}
           </div>
         </>
       )}
@@ -858,20 +868,20 @@ export default function TeacherAppointmentManagement({
                 <Check className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Xác nhận chấp nhận</h3>
-                <p className="text-sm text-gray-500">Bạn có chắc chắn muốn chấp nhận lịch hẹn này?</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('appointmentManagement.confirmAcceptTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('appointmentManagement.confirmAcceptMessage')}</p>
               </div>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Người đặt:</span> {selectedAppointment.parentName}
+                <span className="font-medium">{t('appointmentManagement.bookedBy')}</span> {selectedAppointment.parentName}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Sinh viên:</span> {selectedAppointment.studentName}
+                <span className="font-medium">{t('appointmentManagement.studentName')}</span> {selectedAppointment.studentName}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Thời gian:</span> {selectedAppointment.desiredDate} - {selectedAppointment.desiredTime}
+                <span className="font-medium">{t('appointmentManagement.time')}</span> {selectedAppointment.desiredDate} - {selectedAppointment.desiredTime}
               </p>
             </div>
 
@@ -881,7 +891,7 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 disabled={isProcessing}
               >
-                Hủy bỏ
+                {t('appointmentManagement.cancel')}
               </button>
               <button
                 onClick={confirmAccept}
@@ -893,7 +903,7 @@ export default function TeacherAppointmentManagement({
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    Chấp nhận
+                    {t('appointmentManagement.confirmAccept')}
                   </>
                 )}
               </button>
@@ -911,19 +921,19 @@ export default function TeacherAppointmentManagement({
                 <Ban className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Từ chối lịch hẹn</h3>
-                <p className="text-sm text-gray-500">Vui lòng nhập lý do từ chối</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('appointmentManagement.confirmRejectTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('appointmentManagement.confirmRejectMessage')}</p>
               </div>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lý do từ chối <span className="text-red-500">*</span>
+                {t('appointmentManagement.rejectReasonLabel')} <span className="text-red-500">{t('appointmentManagement.rejectReasonRequired')}</span>
               </label>
               <textarea
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none bg-white text-gray-900 placeholder-gray-400"
                 rows={3}
-                placeholder="Nhập lý do từ chối..."
+                placeholder={t('appointmentManagement.rejectReasonPlaceholder')}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
               />
@@ -935,7 +945,7 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 disabled={isProcessing}
               >
-                Hủy bỏ
+                {t('appointmentManagement.cancel')}
               </button>
               <button
                 onClick={confirmReject}
@@ -947,7 +957,7 @@ export default function TeacherAppointmentManagement({
                 ) : (
                   <>
                     <Ban className="w-4 h-4" />
-                    Từ chối
+                    {t('appointmentManagement.confirmReject')}
                   </>
                 )}
               </button>
@@ -965,19 +975,19 @@ export default function TeacherAppointmentManagement({
                 <Ban className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Từ chối lịch hẹn</h3>
-                <p className="text-sm text-gray-500">Hành động này sẽ thông báo cho người đặt</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('appointmentManagement.confirmCancelTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('appointmentManagement.confirmCancelMessage')}</p>
               </div>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lý do từ chối <span className="text-red-500">*</span>
+                {t('appointmentManagement.cancelReasonLabel')} <span className="text-red-500">{t('appointmentManagement.rejectReasonRequired')}</span>
               </label>
               <textarea
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none bg-white text-gray-900 placeholder-gray-400"
                 rows={3}
-                placeholder="Nhập lý do từ chối lịch hẹn..."
+                placeholder={t('appointmentManagement.cancelReasonPlaceholder')}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
               />
@@ -989,7 +999,7 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 disabled={isProcessing}
               >
-                Quay lại
+                {t('appointmentManagement.goBack')}
               </button>
               <button
                 onClick={confirmCancel}
@@ -1001,7 +1011,7 @@ export default function TeacherAppointmentManagement({
                 ) : (
                   <>
                     <Ban className="w-4 h-4" />
-                    Xác nhận từ chối
+                    {t('appointmentManagement.confirmCancel')}
                   </>
                 )}
               </button>

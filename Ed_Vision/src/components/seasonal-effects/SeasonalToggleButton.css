@@ -1,0 +1,80 @@
+.seasonal-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px; /* Giảm padding */
+  border: none;
+  border-radius: 20px; /* Giảm border radius */
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: background 0.3s ease, box-shadow 0.3s ease; /* Bỏ transform */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  font-family: inherit;
+  min-width: 60px; /* Giảm width tối thiểu */
+}
+
+.seasonal-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  /* BỎ transform: scale(1.05) */
+}
+
+.seasonal-toggle-btn.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+}
+
+.seasonal-icon {
+  font-size: 1.1rem;
+  transition: opacity 0.3s ease; /* Chỉ transition opacity */
+}
+
+/* Icon animation khi active */
+.seasonal-toggle-btn.active .seasonal-icon {
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+/* Icon không animation khi inactive */
+.seasonal-toggle-btn:not(.active) .seasonal-icon {
+  animation: none;
+  opacity: 0.6;
+}
+
+.seasonal-status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  /* BỎ transition */
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .seasonal-toggle-btn {
+    bottom: 80px;
+    left: 10px;
+    padding: 5px 8px; /* Giảm padding cho mobile */
+  }
+  
+  .seasonal-icon {
+    font-size: 1rem; /* Giảm size cho mobile */
+  }
+  
+  .seasonal-status {
+    display: none;
+  }
+}
