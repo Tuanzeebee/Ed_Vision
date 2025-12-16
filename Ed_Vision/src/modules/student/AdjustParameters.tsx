@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { useTranslation } from "react-i18next"
 import toast, { Toaster } from "react-hot-toast"
 import Header from "../../components/layout/Header"
 import { useTranslation } from 'react-i18next'
@@ -38,6 +37,9 @@ export default function AdjustParameters({}: Props) {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
   const { t } = useTranslation('student')
+  
+  // Extract userId to prevent re-renders when user object reference changes
+  const userId = user?.account_id || user?.id
 
   const TOTAL_CREDITS_FOR_GRADUATION = 145
   const gpaValue = gpaData?.currentGPA ?? 0
@@ -76,11 +78,9 @@ export default function AdjustParameters({}: Props) {
       try {
         setIsLoadingGPA(true)
         setIsLoadingSurvey(true)
-        if (!isAuthenticated || !user) return
-        const accountId = user.account_id || user.id
-        if (!accountId) return
-        const p1 = getStudentGPA(accountId)
-        const p2 = getStudentSurveyFactors(accountId)
+        if (!isAuthenticated || !userId) return
+        const p1 = getStudentGPA(userId)
+        const p2 = getStudentSurveyFactors(userId)
         const [r1, r2] = await Promise.allSettled([p1, p2])
         if (!active) return
         if (r1.status === 'fulfilled') {
@@ -106,9 +106,9 @@ export default function AdjustParameters({}: Props) {
         setIsCheckingTranscript(false)
       }
     }
-    if (isAuthenticated) run()
+    if (isAuthenticated && userId) run()
     return () => { active = false }
-  }, [isAuthenticated, user, navigate, t])
+  }, [isAuthenticated, userId])
 
   
 
@@ -277,7 +277,6 @@ export default function AdjustParameters({}: Props) {
                           <img src={iconUser} alt="" className="w-5 h-5" loading="lazy" />
                         </div>
                         <h3 className="font-semibold text-gray-900">{t('adjust.currentGPA')}</h3>
-                        <h3 className="font-semibold text-gray-900">{t('adjust.currentGPA')}</h3>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1">
                         <img src={iconEdit} alt="" className="w-4 h-4" loading="lazy" />
@@ -320,7 +319,6 @@ export default function AdjustParameters({}: Props) {
                           <img src={iconGraduationCap} alt="" className="w-5 h-5" loading="lazy" />
                         </div>
                         <h3 className="font-semibold text-gray-900">{t('adjust.major')}</h3>
-                        <h3 className="font-semibold text-gray-900">{t('adjust.major')}</h3>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1">
                         <img src={iconEditGreen} alt="" className="w-4 h-4" loading="lazy" />
@@ -357,7 +355,6 @@ export default function AdjustParameters({}: Props) {
                         <div className="bg-purple-500 p-2 rounded-lg">
                           <img src={iconBook} alt="" className="w-5 h-5" loading="lazy" />
                         </div>
-                        <h3 className="font-semibold text-gray-900">{t('adjust.creditsCompleted')}</h3>
                         <h3 className="font-semibold text-gray-900">{t('adjust.creditsCompleted')}</h3>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1">
@@ -411,47 +408,12 @@ export default function AdjustParameters({}: Props) {
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                           <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-yellow-100"></div>
                         </div>
-                        <p className="text-sm text-purple-700 font-medium">72.5% {t('adjust.percentComplete')}</p>
                       </div>
                     </div>
                   )}
                 </Card>
               </div>
 
-              {/* View Toggle */}
-              <div className="bg-gray-50 p-1 rounded-xl flex">
-                <Button 
-                  variant={activeView === 'semester' ? 'default' : 'ghost'} 
-                  className={`flex-1 ${activeView === 'semester' ? 'bg-white shadow-sm text-blue-600 hover:bg-white' : 'text-gray-600'}`}
-                  onClick={() => setActiveView('semester')}
-                >
-                  <img src={iconSemester} alt="" className="w-5 h-5 mr-3" />
-                  {t('adjust.bySemester')}
-                </Button>
-                <Button 
-                  variant={activeView === 'fullProgram' ? 'default' : 'ghost'} 
-                  className={`flex-1 ${activeView === 'fullProgram' ? 'bg-white shadow-sm text-blue-600 hover:bg-white' : 'text-gray-600'}`}
-                  onClick={() => setActiveView('fullProgram')}
-                >
-                  <img src={iconFullProgram} alt="" className="w-5 h-5 mr-3" />
-                  {t('adjust.fullProgram')}
-                </Button>
-              </div>
-
-              {/* Conditional Content Based on Active View */}
-              {activeView === 'semester' ? (
-                // Semester Planning Options
-                <Card className="border border-gray-200 rounded-xl">
-                  <CardContent className="p-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h2 className="text-xl font-semibold text-gray-900">{t('adjust.semesterPlanning')}</h2>
-                        <p className="text-sm text-gray-600 font-medium">{t('adjust.academicPeriods')}</p>
-                      </div>
-                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
-                        <img src={iconCheck} alt="" className="w-4 h-4" />
-                        <span className="text-sm text-green-600 font-medium">{t('adjust.autoLoaded')}</span>
-                      </div>
               {/* Survey Factors Section */}
               <Card className="border border-gray-200 rounded-xl">
                 <CardContent className="p-6 space-y-4">
@@ -544,53 +506,6 @@ export default function AdjustParameters({}: Props) {
                               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                               </svg>
-                            
-                            <p className={`text-sm font-medium ${semester.textColor.replace('900', '700')}`}>
-                              {semester.dates}
-                            </p>
-                            
-                            <div className="space-y-2">
-                              <label className={`text-xs font-medium ${semester.textColor}`}>
-                                {t('adjust.workingHours')}
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <input 
-                                  defaultValue={semester.workingHours}
-                                  className={`flex-1 text-sm px-2 py-1 border rounded-lg ${semester.borderColor.replace('200', '300')}`}
-                                />
-                                <span className={`text-xs font-medium ${semester.textColor.replace('900', '700')}`}>
-                                  hrs/week
-                                </span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                // Full Program View
-                <Card className="border border-gray-200 rounded-xl">
-                  <CardContent className="p-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h2 className="text-xl font-semibold text-gray-900">{t('adjust.fullProgramOverview')}</h2>
-                        <p className="text-sm text-gray-600 font-medium">{t('adjust.programSummary')}</p>
-                      </div>
-                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
-                        <img src={iconCheck} alt="" className="w-4 h-4" />
-                        <span className="text-sm text-green-600 font-medium">FULL</span>
-                      </div>
-                    </div>
-
-                    {/* Full Program Card */}
-                    <Card className="border border-blue-200 rounded-xl">
-                      <CardContent className="p-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-blue-500 p-2 rounded-lg">
-                              <img src={iconFullProgram} alt="" className="w-6 h-6" />
                             </div>
                             <h3 className="font-semibold text-gray-900">{t('adjust.mentalHealth')}</h3>
                           </div>
@@ -627,30 +542,6 @@ export default function AdjustParameters({}: Props) {
                   )}
                 </CardContent>
               </Card>
-                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-200 text-green-800">
-                            Completed
-                          </span>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          <label className="text-sm font-medium text-blue-900">
-                            {t('adjust.workingHours')}
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input 
-                              defaultValue="5"
-                              className="flex-1 text-lg px-3 py-2 border border-blue-300 rounded-lg"
-                            />
-                            <span className="text-sm font-medium text-blue-700">
-                              {t('adjust.hrsWeek')}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Action Button */}
               <div className="flex justify-center">
