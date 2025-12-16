@@ -94,19 +94,24 @@ export class BookingService {
 			// verify link
 			const link = await this.repository.verifyParentStudentLink(parentRecord.parent_id, dto.studentId);
 			if (!link) throw new ForbiddenException('Parent is not linked to the requested student');
-		studentIdToUse = dto.studentId;
-		parentContactDefaults = {
-		contact_name: parentRecord.account.profile?.full_name || 'Parent',
-		contact_phone: parentRecord.account.profile?.phone_number || '',
-		contact_email: parentRecord.account.email,
-		relationship_to_student: parentRecord.relationship_type || dto.relationshipToStudent || null,
-		};
-	} else if (studentRecord) {
+			studentIdToUse = dto.studentId;
+			parentContactDefaults = {
+				contact_name: parentRecord.account.profile?.full_name || 'Parent',
+				contact_phone: parentRecord.account.profile?.phone_number || '',
+				contact_email: parentRecord.account.email,
+				relationship_to_student: parentRecord.relationship_type || dto.relationshipToStudent || null,
+			};
+		} else if (studentRecord) {
 			bookerRole = 'student';
 			console.log(`Setting bookerRole to 'student' for accountId ${accountId}`);
 			studentIdToUse = studentRecord.student_id;
 		} else {
 			throw new ForbiddenException('Only students and parents can create bookings');
+		}
+
+		// Ensure studentIdToUse is defined at this point
+		if (studentIdToUse === undefined) {
+			throw new BadRequestException('Unable to determine student for this booking');
 		}
 
 		// Check if student already has any appointment for this slot

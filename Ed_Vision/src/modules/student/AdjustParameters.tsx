@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import toast, { Toaster } from "react-hot-toast"
 import Header from "../../components/layout/Header"
 import Footer from "../../components/layout/Footer"
@@ -45,6 +46,7 @@ export default function AdjustParameters({}: Props) {
   const [hasUploadedTranscript, setHasUploadedTranscript] = useState<boolean>(false)
   const [isCheckingTranscript, setIsCheckingTranscript] = useState<boolean>(true)
   const navigate = useNavigate()
+  const { t } = useTranslation('student')
 
   // Check if user has uploaded transcript
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function AdjustParameters({}: Props) {
       <div className="bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking transcript status...</p>
+          <p className="text-gray-600">{t('adjust.checkingStatus')}</p>
         </div>
       </div>
     )
@@ -95,12 +97,12 @@ export default function AdjustParameters({}: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Upload Required</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('adjust.uploadRequired')}</h1>
             <p className="text-gray-600">
-              You need to upload your transcript before accessing this page.
+              {t('adjust.needUpload')}
             </p>
             <p className="text-sm text-gray-500">
-              Redirecting to upload page...
+              {t('adjust.redirecting')}
             </p>
           </div>
         </div>
@@ -255,7 +257,7 @@ export default function AdjustParameters({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconInstructions} alt="" className="w-5 h-5" />
-                    <span className="text-gray-500 font-medium">Instructions</span>
+                    <span className="text-gray-500 font-medium">{t('instructions.tabInstructions')}</span>
                   </div>
                 </button>
                 <button
@@ -267,16 +269,16 @@ export default function AdjustParameters({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3 relative">
                     <img src={iconUpload} alt="" className="w-5 h-5" />
-                    <span className="text-gray-500 font-medium">Upload Transcript</span>
-                    <span className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full absolute right-8">
-                      Complete
+                    <span className="text-gray-500 font-medium">{t('instructions.tabUpload')}</span>
+                    <span className="bg-green-100 text-green-600 text-[10px] px-1.5 py-0.5 rounded-full absolute -right-2 top-2">
+                      {t('upload.complete')}
                     </span>
                   </div>
                 </button>
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconAdjust} alt="" className="w-5 h-5" />
-                    <span className="text-blue-600 font-medium">Adjust Parameters</span>
+                    <span className="text-blue-600 font-medium">{t('instructions.tabAdjust')}</span>
                   </div>
                 </div>
               </div>
@@ -287,10 +289,10 @@ export default function AdjustParameters({}: Props) {
               {/* Header Section */}
               <div className="space-y-2">
                 <h1 className="text-3xl font-semibold text-gray-900">
-                  Adjust Your Academic Parameters
+                  {t('adjust.pageTitle')}
                 </h1>
                 <p className="text-lg text-gray-600 font-medium">
-                  Review and modify your academic information to get personalized planning recommendations
+                  {t('adjust.pageDescription')}
                 </p>
               </div>
 
@@ -304,7 +306,7 @@ export default function AdjustParameters({}: Props) {
                         <div className="bg-blue-500 p-2 rounded-lg">
                           <img src={iconUser} alt="" className="w-5 h-5" />
                         </div>
-                        <h3 className="font-semibold text-gray-900">Current GPA</h3>
+                        <h3 className="font-semibold text-gray-900">{t('adjust.currentGPA')}</h3>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1">
                         <img src={iconEdit} alt="" className="w-4 h-4" />
@@ -312,7 +314,7 @@ export default function AdjustParameters({}: Props) {
                     </div>
                     <div className="space-y-1">
                       <div className="text-4xl font-semibold text-blue-600">3.67</div>
-                      <p className="text-sm text-blue-700 font-medium">Out of 4.0 scale</p>
+                      <p className="text-sm text-blue-700 font-medium">{t('adjust.gpaScale')}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -325,7 +327,7 @@ export default function AdjustParameters({}: Props) {
                         <div className="bg-green-500 p-2 rounded-lg">
                           <img src={iconGraduationCap} alt="" className="w-5 h-5" />
                         </div>
-                        <h3 className="font-semibold text-gray-900">Major</h3>
+                        <h3 className="font-semibold text-gray-900">{t('adjust.major')}</h3>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1">
                         <img src={iconEditGreen} alt="" className="w-4 h-4" />
@@ -345,7 +347,7 @@ export default function AdjustParameters({}: Props) {
                         <div className="bg-purple-500 p-2 rounded-lg">
                           <img src={iconBook} alt="" className="w-5 h-5" />
                         </div>
-                        <h3 className="font-semibold text-gray-900">Credits Completed</h3>
+                        <h3 className="font-semibold text-gray-900">{t('adjust.creditsCompleted')}</h3>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1">
                         <img src={iconEditPurple} alt="" className="w-4 h-4" />
@@ -360,7 +362,7 @@ export default function AdjustParameters({}: Props) {
                         <div className="bg-purple-200 rounded-full h-2">
                           <div className="bg-purple-500 h-2 rounded-full" style={{ width: '72.5%' }}></div>
                         </div>
-                        <p className="text-sm text-purple-700 font-medium">72.5% Complete</p>
+                        <p className="text-sm text-purple-700 font-medium">72.5% {t('adjust.percentComplete')}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -375,7 +377,7 @@ export default function AdjustParameters({}: Props) {
                   onClick={() => setActiveView('semester')}
                 >
                   <img src={iconSemester} alt="" className="w-5 h-5 mr-3" />
-                  By Semester
+                  {t('adjust.bySemester')}
                 </Button>
                 <Button 
                   variant={activeView === 'fullProgram' ? 'default' : 'ghost'} 
@@ -383,7 +385,7 @@ export default function AdjustParameters({}: Props) {
                   onClick={() => setActiveView('fullProgram')}
                 >
                   <img src={iconFullProgram} alt="" className="w-5 h-5 mr-3" />
-                  Full Program
+                  {t('adjust.fullProgram')}
                 </Button>
               </div>
 
@@ -394,12 +396,12 @@ export default function AdjustParameters({}: Props) {
                   <CardContent className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <h2 className="text-xl font-semibold text-gray-900">Semester Planning Options</h2>
-                        <p className="text-sm text-gray-600 font-medium">Academic periods loaded from university database</p>
+                        <h2 className="text-xl font-semibold text-gray-900">{t('adjust.semesterPlanning')}</h2>
+                        <p className="text-sm text-gray-600 font-medium">{t('adjust.academicPeriods')}</p>
                       </div>
                       <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
                         <img src={iconCheck} alt="" className="w-4 h-4" />
-                        <span className="text-sm text-green-600 font-medium">Auto-loaded</span>
+                        <span className="text-sm text-green-600 font-medium">{t('adjust.autoLoaded')}</span>
                       </div>
                     </div>
 
@@ -428,7 +430,7 @@ export default function AdjustParameters({}: Props) {
                             
                             <div className="space-y-2">
                               <label className={`text-xs font-medium ${semester.textColor}`}>
-                                Working Hours
+                                {t('adjust.workingHours')}
                               </label>
                               <div className="flex items-center gap-2">
                                 <input 
@@ -452,8 +454,8 @@ export default function AdjustParameters({}: Props) {
                   <CardContent className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <h2 className="text-xl font-semibold text-gray-900">Full Program Overview</h2>
-                        <p className="text-sm text-gray-600 font-medium">Complete academic program summary</p>
+                        <h2 className="text-xl font-semibold text-gray-900">{t('adjust.fullProgramOverview')}</h2>
+                        <p className="text-sm text-gray-600 font-medium">{t('adjust.programSummary')}</p>
                       </div>
                       <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
                         <img src={iconCheck} alt="" className="w-4 h-4" />
@@ -480,7 +482,7 @@ export default function AdjustParameters({}: Props) {
                         
                         <div className="space-y-3">
                           <label className="text-sm font-medium text-blue-900">
-                            Working Hours
+                            {t('adjust.workingHours')}
                           </label>
                           <div className="flex items-center gap-2">
                             <input 
@@ -488,7 +490,7 @@ export default function AdjustParameters({}: Props) {
                               className="flex-1 text-lg px-3 py-2 border border-blue-300 rounded-lg"
                             />
                             <span className="text-sm font-medium text-blue-700">
-                              hrs/week
+                              {t('adjust.hrsWeek')}
                             </span>
                           </div>
                         </div>
@@ -504,7 +506,7 @@ export default function AdjustParameters({}: Props) {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl h-auto"
                 >
                   <img src={iconCheck} alt="" className="w-6 h-6 mr-3" />
-                  <span className="text-lg font-semibold">Confirm Changes</span>
+                  <span className="text-lg font-semibold">{t('adjust.confirmChanges')}</span>
                 </Button>
                 <Button 
                   onClick={() => {
@@ -514,7 +516,7 @@ export default function AdjustParameters({}: Props) {
                   className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-8 py-3 rounded-xl h-auto"
                 >
                   <img src={iconArrowRight} alt="" className="w-6 h-6 mr-3" />
-                  <span className="text-lg font-semibold">Continue to Planning</span>
+                  <span className="text-lg font-semibold">{t('adjust.continuePlanning')}</span>
                 </Button>
               </div>
             </div>

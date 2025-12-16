@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react"
 import { NavLink, useLocation } from "react-router-dom"
+import { useTranslation } from 'react-i18next'
 import { adminMenu } from "../../../lib/adminMenuConfig"
 import { getIconComponent } from "../../../lib/adminIcons"
+import { getMenuLabelKey } from "../../../lib/adminMenuI18n"
 import type { MenuItemConfig, IconKey } from "../../../lib/adminMenuConfig"
 
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
@@ -10,6 +12,7 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
 
 // Parent item component (có children)
 function ParentItem({ item }: { item: MenuItemConfig }) {
+  const { t } = useTranslation(['admin']);
   const location = useLocation()
   // Kiểm tra có child nào active không bằng cách so sánh pathname
   // Thêm logic đặc biệt cho phân quyền và question management
@@ -61,7 +64,7 @@ function ParentItem({ item }: { item: MenuItemConfig }) {
       >
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <IconComponent isActive={hasActiveChild} />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{t(getMenuLabelKey(item.label))}</span>
         </div>
         <ChevronIcon isOpen={isOpen} />
       </button>
@@ -79,6 +82,7 @@ function ParentItem({ item }: { item: MenuItemConfig }) {
 
 // Leaf item component (không có children)
 function LeafItem({ item }: { item: MenuItemConfig }) {
+  const { t } = useTranslation(['admin']);
   const IconComponent = getIconComponent(item.iconKey as IconKey)
   const location = useLocation()
 
@@ -116,7 +120,7 @@ function LeafItem({ item }: { item: MenuItemConfig }) {
       >
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <IconComponent isActive={isActive} />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{t(getMenuLabelKey(item.label))}</span>
         </div>
       </NavLink>
     </div>

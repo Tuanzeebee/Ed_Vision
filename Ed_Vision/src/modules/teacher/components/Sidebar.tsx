@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Home,
   Users,
@@ -23,6 +24,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const { t } = useTranslation('teacher');
   const [isGradeMenuOpen, setIsGradeMenuOpen] = useState(
     currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'prediction-view-v2'
   );
@@ -58,7 +60,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <Home className="w-4 h-4" />
-          <span>Dashboard</span>
+          <span>{t('sidebar.dashboard')}</span>
         </button>
 
         <button
@@ -69,21 +71,21 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <Users className="w-4 h-4" />
-          <span>Quản lý lớp cố vấn</span>
+          <span>{t('sidebar.classManagement')}</span>
         </button>
 
         {/* Grade Management with Dropdown */}
         <div className="space-y-1">
           <button
             onClick={toggleGradeMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management' || currentPage === 'prediction-view'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'prediction-view-v2'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
           >
             <div className="flex items-center space-x-3">
               <ClipboardList className="w-4 h-4" />
-              <span>Quản lý điểm</span>
+              <span>{t('sidebar.gradeManagement')}</span>
             </div>
             {isGradeMenuOpen ? (
               <ChevronDown className="w-3 h-3" />
@@ -103,7 +105,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   }`}
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>Bảng điểm</span>
+                <span>{t('sidebar.gradeTable')}</span>
               </button>
 
               <button
@@ -114,7 +116,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   }`}
               >
                 <Brain className="w-4 h-4" />
-                <span>Xem dự đoán</span>
+                <span>{t('sidebar.viewPredictions')}</span>
               </button>
 
               <button
@@ -125,7 +127,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   }`}
               >
                 <Brain className="w-4 h-4" />
-                <span>Dự đoán v2</span>
+                <span>{t('sidebar.predictionV2')}</span>
               </button>
             </div>
           )}
@@ -139,7 +141,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <BarChart3 className="w-4 h-4" />
-          <span>Theo dõi tiến độ</span>
+          <span>{t('sidebar.progressTracking')}</span>
         </button>
 
         {/* Survey Management */}
@@ -151,7 +153,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <ClipboardCheck className="w-4 h-4" />
-          <span>Khảo sát sinh viên</span>
+          <span>{t('sidebar.surveyManagement')}</span>
         </button>
 
         <button
@@ -162,7 +164,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <AlertTriangle className="w-4 h-4" />
-          <span>Báo cáo & Cảnh báo</span>
+          <span>{t('sidebar.reportsAlerts')}</span>
         </button>
 
         <button
@@ -173,21 +175,21 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <Bell className="w-4 h-4" />
-          <span>Tin nhắn/Thông báo</span>
+          <span>{t('sidebar.messages')}</span>
         </button>
 
         {/* Appointment Management with Dropdown */}
         <div className="space-y-1">
           <button
             onClick={toggleAppointmentMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule' || currentPage === 'management'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'management'
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
           >
             <div className="flex items-center space-x-3">
               <Calendar className="w-4 h-4" />
-              <span>Quản lý lịch hẹn</span>
+              <span>{t('sidebar.appointmentManagement')}</span>
             </div>
             {isAppointmentMenuOpen ? (
               <ChevronDown className="w-3 h-3" />
@@ -200,35 +202,44 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           {isAppointmentMenuOpen && (
             <div className="ml-4 space-y-1">
                             <button
-                              onClick={() => handleNavigation('/teacher/calendar-overview')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNavigation('/teacher/calendar-overview');
+                              }}
                               className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'calendar-overview'
                                 ? 'bg-blue-100 text-blue-700'
                                 : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
                 <Calendar className="w-4 h-4" />
-                <span>Tổng quan lịch hẹn</span>
+                <span>{t('sidebar.calendarOverview')}</span>
               </button>
               <button
-                onClick={() => handleNavigation('/teacher/schedule')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigation('/teacher/schedule');
+                }}
                 className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
               >
                 <CalendarPlus className="w-4 h-4" />
-                <span>Thiết lập lịch rảnh</span>
+                <span>{t('sidebar.scheduleSetup')}</span>
               </button>
 
               <button
-                onClick={() => handleNavigation('/teacher/appointments')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigation('/teacher/appointments');
+                }}
                 className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'management'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50'
                   }`}
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>Quản lý lịch hẹn</span>
+                <span>{t('sidebar.appointmentList')}</span>
               </button>
             </div>
           )}
@@ -242,7 +253,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             }`}
         >
           <Settings className="w-4 h-4" />
-          <span>Cài đặt tài khoản</span>
+          <span>{t('sidebar.accountSettings')}</span>
         </button>
       </nav>
     </aside>

@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import questionService, { type CreateQuestionData } from "@/services/api/questionService";
+import { useToast } from "@/lib/useToast";
 
-type QuestionType = 'single' | 'multiple' | 'text' | 'scale';
-type Category = 'mental' | 'financial' | 'general' | 'academic' | 'social' | 'health';
+type QuestionType = 'single-choice' | 'multiple-choice' | 'text' | 'scale';
+type Category = 'psychology' | 'finance' | 'general' | 'academic' | 'health';
 
 type QuestionFormData = {
   content: string;
@@ -24,6 +26,8 @@ type ExistingQuestion = {
 
 const AddQuestion = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<QuestionFormData>({
     content: '',
     category: '',
@@ -36,16 +40,16 @@ const AddQuestion = () => {
     {
       id: "1",
       content: "Bạn đánh giá sức khỏe tâm lý tổng thể của mình như thế nào?",
-      category: "mental",
-      type: "single",
+      category: "psychology",
+      type: "single-choice",
       optionsCount: 4,
       createdDate: "15/08/2023"
     },
     {
       id: "2",
       content: "Những thách thức tài chính nào bạn hiện đang gặp phải?",
-      category: "financial",
-      type: "multiple",
+      category: "finance",
+      type: "multiple-choice",
       optionsCount: 6,
       createdDate: "12/08/2023"
     },
@@ -53,7 +57,7 @@ const AddQuestion = () => {
       id: "3",
       content: "Bạn hài lòng như thế nào với cơ sở vật chất của trường?",
       category: "general",
-      type: "single",
+      type: "single-choice",
       optionsCount: 5,
       createdDate: "10/08/2023"
     },
@@ -61,15 +65,15 @@ const AddQuestion = () => {
       id: "4",
       content: "Bạn quản lý lịch học của mình như thế nào?",
       category: "academic",
-      type: "multiple",
+      type: "multiple-choice",
       optionsCount: 4,
       createdDate: "08/08/2023"
     },
     {
       id: "5",
       content: "Bạn tham gia các hoạt động xã hội với tần suất như thế nào?",
-      category: "social",
-      type: "single",
+      category: "health",
+      type: "single-choice",
       optionsCount: 5,
       createdDate: "05/08/2023"
     }
@@ -108,26 +112,82 @@ const AddQuestion = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle form submission
+    
+    // Validation
+    if (!formData.content.trim()) {
+      showToast('Vui lòng nhập nội dung câu hỏi', 'error');
+      return;
+    }
+    
+    if (!formData.category) {
+      showToast('Vui lòng chọn danh mục', 'error');
+      return;
+    }
+    
+    if (!formData.answerType) {
+      showToast('Vui lòng chọn loại câu trả lời', 'error');
+      return;
+    }
+
+    // Validate options for choice types
+    if ((formData.answerType === 'single-choice' || formData.answerType === 'multiple-choice') && 
+        formData.options.filter(opt => opt.trim()).length < 2) {
+      showToast('Vui lòng nhập ít nhất 2 tùy chọn', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      const questionData: CreateQuestionData = {
+        question_text: formData.content,
+        category: formData.category,
+        question_type: formData.answerType,
+        is_active: true,
+      };
+
+      // Add options for choice types
+      if (formData.answerType === 'single-choice' || formData.answerType === 'multiple-choice') {
+        questionData.options = formData.options
+          .filter(opt => opt.trim())
+          .map((opt, index) => ({
+            option_text: opt,
+            option_value: index + 1
+          }));
+      }
+
+      // Add max_value for scale type
+      if (formData.answerType === 'scale') {
+        questionData.max_value = 5; // Default 5-point scale
+        questionData.min_value = 1;
+      }
+
+      await questionService.createQuestion(questionData);
+      
+      showToast('Đã thêm câu hỏi thành công', 'success');
+      navigate('/admin/questions');
+    } catch (error: any) {
+      console.error('Failed to create question:', error);
+      showToast(error.response?.data?.message || 'Không thể thêm câu hỏi', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getCategoryBadge = (category: Category) => {
     const badges = {
-      'mental': 'bg-purple-100 text-purple-800',
-      'financial': 'bg-green-100 text-green-800',
+      'psychology': 'bg-purple-100 text-purple-800',
+      'finance': 'bg-green-100 text-green-800',
       'academic': 'bg-blue-100 text-blue-800',
-      'social': 'bg-pink-100 text-pink-800',
       'health': 'bg-red-100 text-red-800',
       'general': 'bg-indigo-100 text-indigo-800'
     };
     const labels = {
-      'mental': 'Tâm lý',
-      'financial': 'Tài chính',
+      'psychology': 'Tâm lý',
+      'finance': 'Tài chính',
       'academic': 'Học tập',
-      'social': 'Xã hội',
       'health': 'Sức khỏe',
       'general': 'Tổng quát'
     };
@@ -140,14 +200,14 @@ const AddQuestion = () => {
 
   const getTypeBadge = (type: QuestionType) => {
     const badges = {
-      'single': 'bg-blue-100 text-blue-800',
-      'multiple': 'bg-orange-100 text-orange-800',
+      'single-choice': 'bg-blue-100 text-blue-800',
+      'multiple-choice': 'bg-orange-100 text-orange-800',
       'scale': 'bg-yellow-100 text-yellow-800',
       'text': 'bg-gray-100 text-gray-800'
     };
     const labels = {
-      'single': 'Một lựa chọn',
-      'multiple': 'Nhiều lựa chọn',
+      'single-choice': 'Một lựa chọn',
+      'multiple-choice': 'Nhiều lựa chọn',
       'scale': 'Thang điểm',
       'text': 'Văn bản'
     };
@@ -158,7 +218,7 @@ const AddQuestion = () => {
     );
   };
 
-  const showOptions = formData.answerType !== 'text' && formData.answerType !== '';
+  const showOptions = (formData.answerType === 'single-choice' || formData.answerType === 'multiple-choice');
 
   return (
     <AdminLayout>
@@ -198,11 +258,10 @@ const AddQuestion = () => {
                     onChange={(e) => handleInputChange('category', e.target.value)}
                   >
                     <option value="" className="text-gray-600">Chọn danh mục</option>
-                    <option value="mental" className="text-gray-600">Tâm lý</option>
-                    <option value="financial" className="text-gray-600">Tài chính</option>
+                    <option value="psychology" className="text-gray-600">Tâm lý</option>
+                    <option value="finance" className="text-gray-600">Tài chính</option>
                     <option value="general" className="text-gray-600">Tổng quát</option>
                     <option value="academic" className="text-gray-600">Học tập</option>
-                    <option value="social" className="text-gray-600">Xã hội</option>
                     <option value="health" className="text-gray-600">Sức khỏe</option>
                   </select>
                 </div>
@@ -216,8 +275,8 @@ const AddQuestion = () => {
                     onChange={(e) => handleInputChange('answerType', e.target.value)}
                   >
                     <option value="" className="text-gray-600">Chọn loại câu trả lời</option>
-                    <option value="single" className="text-gray-600">Một lựa chọn</option>
-                    <option value="multiple" className="text-gray-600">Nhiều lựa chọn</option>
+                    <option value="single-choice" className="text-gray-600">Một lựa chọn</option>
+                    <option value="multiple-choice" className="text-gray-600">Nhiều lựa chọn</option>
                     <option value="text" className="text-gray-600">Văn bản</option>
                     <option value="scale" className="text-gray-600">Thang điểm</option>
                   </select>
@@ -261,11 +320,24 @@ const AddQuestion = () => {
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button 
-                    type="submit" 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md font-medium transition-colors flex items-center cursor-pointer text-xs"
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md font-medium transition-colors flex items-center cursor-pointer text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <i className="fas fa-save mr-2"></i>
-                    Lưu câu hỏi
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save mr-2"></i>
+                        Lưu câu hỏi
+                      </>
+                    )}
                   </button>
                   <button 
                     type="button" 

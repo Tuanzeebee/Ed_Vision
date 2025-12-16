@@ -20,9 +20,33 @@ export class DashboardService {
         filterDto: DashboardFilterDto,
     ): Promise<DashboardResponse> {
         // Lấy danh sách lớp mà giảng viên phụ trách (adviser)
-        const classes = await this.getInstructorClasses(instructorId);
+        let classes = await this.getInstructorClasses(instructorId);
 
         if (!classes || classes.length === 0) {
+            return this.getEmptyDashboard();
+        }
+
+        // Filter classes by faculty if provided
+        if (filterDto.faculty) {
+            classes = classes.filter(c => 
+                c.program?.department?.name === filterDto.faculty
+            );
+        }
+
+        // Filter classes by intake/cohort (e.g., "K28") if provided
+        if (filterDto.course) {
+            // Extract year from "K28" format
+            const cohortMatch = filterDto.course.match(/K(\d+)/);
+            if (cohortMatch) {
+                const cohortYear = parseInt(cohortMatch[1]);
+                classes = classes.filter(c => c.cohort_year === cohortYear);
+            } else {
+                // If not in K format, filter by class_code
+                classes = classes.filter(c => c.class_code === filterDto.course);
+            }
+        }
+
+        if (classes.length === 0) {
             return this.getEmptyDashboard();
         }
 
@@ -69,13 +93,17 @@ export class DashboardService {
     }
 
     /**
-     * Lấy danh sách lớp mà giảng viên phụ trách
+     * Lấy danh sách lớp mà giảng viên làm cố vấn
+     * Pattern giống instructor-management.service.ts (đã work)
      */
     private async getInstructorClasses(instructorId: number) {
         const assignments = await this.prisma.adviserAssignment.findMany({
             where: {
                 instructor_id: instructorId,
-                ended_date: null, // Chỉ lấy những lớp đang phụ trách
+                OR: [
+                    { ended_date: null },
+                    { ended_date: { gte: new Date() } },
+                ],
             },
             include: {
                 classGroup: {
@@ -85,6 +113,7 @@ export class DashboardService {
                                 department: true,
                             },
                         },
+                        students: true,
                     },
                 },
             },
@@ -119,12 +148,17 @@ export class DashboardService {
         // Tính GPA cho từng sinh viên (4-point scale)
         const studentGPAs = students.map((student) => {
             const records = student.courseRecords;
-            if (!records || records.length === 0) return null;
+            if (!records || records.length === 0) {
+                return null;
+            }
 
             const recordsWithScore = records.filter((r: any) => r.raw_score !== null);
-            if (recordsWithScore.length === 0) return null;
+            if (recordsWithScore.length === 0) {
+                return null;
+            }
 
-            return this.calculateGPA(recordsWithScore);
+            const gpa = this.calculateGPA(recordsWithScore);
+            return gpa;
         });
 
         const validGPAs = studentGPAs.filter((gpa) => gpa !== null) as number[];
@@ -144,6 +178,7 @@ export class DashboardService {
                 : 0;
 
         const minGPA = sortedGPAs.length > 0 ? sortedGPAs[0] : 0;
+        const maxGPA = sortedGPAs.length > 0 ? sortedGPAs[sortedGPAs.length - 1] : 0;
 
         // Phân phối điểm (4-point scale)
         const gradeDistribution = {
@@ -172,6 +207,7 @@ export class DashboardService {
             averageGPA: Math.round(averageGPA * 100) / 100,
             medianGPA: Math.round(medianGPA * 100) / 100,
             minGPA: Math.round(minGPA * 100) / 100,
+            maxGPA: Math.round(maxGPA * 100) / 100,
         };
     }
 
@@ -345,10 +381,66 @@ export class DashboardService {
                 averageGPA: 0,
                 medianGPA: 0,
                 minGPA: 0,
+                maxGPA: 0,
             },
             atRiskStudents: [],
             weeklyProgressChart: { labels: [], datasets: [] },
             majorComparisonChart: { labels: [], datasets: [] },
+        };
+    }
+
+    /**
+     * Lấy danh sách filter options cho giảng viên
+     */
+    async getFilterOptions(instructorId: number) {
+        // Lấy danh sách lớp mà giảng viên phụ trách
+        const classes = await this.getInstructorClasses(instructorId);
+
+        // Extract unique values
+        const faculties = Array.from(
+            new Set(
+                classes
+                    .map((c) => c.program?.department?.name)
+                    .filter(Boolean),
+            ),
+        );
+
+        const courses = Array.from(
+            new Set(
+                classes.map((c) => {
+                    const year = c.cohort_year;
+                    if (!year) return null;
+                    const graduationYear = year + 6;
+                    return `K${graduationYear.toString().slice(-2)}`;
+                }).filter(Boolean),
+            ),
+        ).sort();
+
+        // Lấy academic years từ database
+        const academicTerms = await this.prisma.academicTerm.findMany({
+            distinct: ['academic_year'],
+            select: { academic_year: true },
+            orderBy: { academic_year: 'desc' },
+        });
+
+        const academicYears = academicTerms
+            .map((term) => term.academic_year)
+            .filter(Boolean);
+
+        // Semesters
+        const semesters = [1, 2];
+
+        return {
+            faculties: ['Tất cả', ...faculties],
+            courses: ['Tất cả khóa', ...courses],
+            academicYears: academicYears.length > 0 ? academicYears : ['2024-2025', '2023-2024'],
+            semesters,
+            classes: classes.map((c) => ({
+                code: c.class_code,
+                cohortYear: c.cohort_year,
+                program: c.program?.program_name,
+                school: c.program?.department?.name,
+            })),
         };
     }
 }

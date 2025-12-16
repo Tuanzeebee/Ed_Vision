@@ -76,9 +76,6 @@ export class StudentManagementService {
   }
 
   async findAll(filterDto: StudentFilterDto): Promise<StudentListResponse> {
-    console.log('=== Student findAll called ===');
-    console.log('Filter DTO received:', JSON.stringify(filterDto, null, 2));
-    
     const {
       search,
       department,

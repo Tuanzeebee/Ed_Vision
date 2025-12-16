@@ -5,6 +5,7 @@ import { BackButton } from "@/components/ui/student/Student_BackButton"
 import { ToastContainer } from "@/components/ui/Toast"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { buildUrl } from '@/services/api/config'
 import { useToast } from '@/lib/useToast'
 import { TokenManager } from '@/lib/tokenManager'
@@ -20,6 +21,7 @@ export default function StudentLogin({
   onEmailLogin
 }: Props) {
   const navigate = useNavigate()
+  const { t } = useTranslation('auth')
 
   const handleBack = () => {
     navigate("/student/landing")
@@ -74,7 +76,7 @@ export default function StudentLogin({
 
       if (!res.ok) {
         // Prefer server message, fallback to status text
-        const msg = (data && (data.message || data.error || data?.data?.message)) || res.statusText || 'Đăng nhập thất bại'
+        const msg = (data && (data.message || data.error || data?.data?.message)) || res.statusText || t('login.loginFailed')
         const rawMessage = typeof msg === 'string' ? msg : JSON.stringify(msg)
         const errorMessage = cleanErrorMessage(rawMessage)
         showError(errorMessage)
@@ -139,7 +141,7 @@ export default function StudentLogin({
       // If no token returned, but response ok, navigate to landing
       navigate('/student/landing')
     } catch (err: any) {
-      const rawMessage = err?.message || 'Không thể kết nối đến máy chủ'
+      const rawMessage = err?.message || t('login.connectionError')
       const errorMessage = cleanErrorMessage(rawMessage)
       showError(errorMessage)
     } finally {
@@ -162,9 +164,9 @@ export default function StudentLogin({
             <CardContent className="p-6">
               {/* Logo/Brand */}
               <div className="text-center mb-6">
-                <h1 className="text-xl font-bold text-gray-900 tracking-wide mb-1">SCORE PREDICT</h1>
-                <h2 className="text-lg font-semibold text-gray-800 mb-1">Login</h2>
-                <p className="text-gray-600 text-sm">Welcome back! Let's get you back to website</p>
+                <h1 className="text-xl font-bold text-gray-900 tracking-wide mb-1">{t('login.brandName')}</h1>
+                <h2 className="text-lg font-semibold text-gray-800 mb-1">{t('login.title')}</h2>
+                <p className="text-gray-600 text-sm">{t('login.subtitle')}</p>
               </div>
 
               {/* Google Login Button */}
@@ -179,7 +181,7 @@ export default function StudentLogin({
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span className="text-gray-700 font-medium text-sm">Continue with Google</span>
+                <span className="text-gray-700 font-medium text-sm">{t('login.continueWithGoogle')}</span>
               </Button>
 
               {/* Divider */}
@@ -188,7 +190,7 @@ export default function StudentLogin({
                   <div className="w-full border-t border-gray-300"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-white text-gray-500">Or sign in with email</span>
+                  <span className="px-3 bg-white text-gray-500">{t('login.orSignInWith')}</span>
                 </div>
               </div>
 
@@ -197,14 +199,14 @@ export default function StudentLogin({
                 {/* Email Input */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    {t('login.emailLabel')}
                   </label>
                   <Input
                     type="email"
                     id="email"
                     name="email"
                     required
-                    placeholder="Enter your email"
+                    placeholder={t('login.emailPlaceholder')}
                     className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"
                   />
                 </div>
@@ -212,7 +214,7 @@ export default function StudentLogin({
                 {/* Password Input */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
+                    {t('login.passwordLabel')}
                   </label>
                   <div className="relative">
                     <Input
@@ -220,7 +222,7 @@ export default function StudentLogin({
                       id="password"
                       name="password"
                       required
-                      placeholder="Enter your password"
+                      placeholder={t('login.passwordPlaceholder')}
                       className="text-sm text-gray-900 placeholder-gray-400 pr-10"
                     />
                     <button
@@ -250,28 +252,28 @@ export default function StudentLogin({
                   disabled={loading}
                   className={"w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-[1.02] shadow-md text-sm " + (loading ? 'opacity-60 cursor-not-allowed' : '')}
                 >
-                  {loading ? 'Signing in...' : 'Login'}
+                  {loading ? t('login.loginButtonLoading') : t('login.loginButton')}
                 </Button>
               </form>
 
               {/* Footer Links */}
               <div className="mt-4 text-center space-y-1">
                 <p className="text-xs text-gray-600">
-                  Don't have an account?{' '}
+                  {t('login.noAccount')}{' '}
                   <button 
                     onClick={handleRegister}
                     className="text-purple-600 hover:text-purple-700 font-medium cursor-pointer"
                   >
-                    Register
+                    {t('login.register')}
                   </button>
                 </p>
                 <p className="text-xs text-gray-600">
-                  Forgot your password?{' '}
+                  {t('login.forgotPassword')}{' '}
                   <button 
                     onClick={handleResetPassword}
                     className="text-purple-600 hover:text-purple-700 font-medium cursor-pointer"
                   >
-                    Reset password
+                    {t('login.resetPassword')}
                   </button>
                 </p>
               </div>

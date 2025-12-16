@@ -12,17 +12,22 @@ type Page = 'schedule' | 'management';
 export default function TeacherAppointmentDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentPage, setCurrentPage] = useState<Page>('management'); // default to management
+  
+  // Initialize currentPage based on URL path immediately
+  const getInitialPage = (): Page => {
+    return location.pathname === '/teacher/schedule' ? 'schedule' : 'management';
+  };
+  
+  const [currentPage, setCurrentPage] = useState<Page>(getInitialPage);
 
-  // Set currentPage based on URL path after component mounts
+  // Update currentPage when URL changes (only if different)
   useEffect(() => {
     const pathname = location.pathname;
-    if (pathname === '/teacher/schedule') {
-      setCurrentPage('schedule');
-    } else {
-      setCurrentPage('management');
+    const newPage = pathname === '/teacher/schedule' ? 'schedule' : 'management';
+    if (newPage !== currentPage) {
+      setCurrentPage(newPage);
     }
-  }, [location.pathname]);
+  }, [location.pathname, currentPage]);
 
   // Appointment schedule state
   const [availableDates, setAvailableDates] = useLocalStorage<AvailableDate[]>(
@@ -120,17 +125,8 @@ export default function TeacherAppointmentDashboard() {
   };
 
   const handleNavigation = (path: string) => {
-    // Handle appointment navigation
-    if (path === '/teacher/schedule') {
-      // Always navigate to schedule route for schedule functionality
-      navigate('/teacher/schedule');
-    } else if (path === '/teacher/appointments') {
-      // Always navigate to appointments route for management functionality
-      navigate('/teacher/appointments');
-    } else {
-      // For other paths (Dashboard, Class Management, Calendar Overview, etc.), use router navigation
-      navigate(path);
-    }
+    // For all paths, just navigate without special handling
+    navigate(path);
   };
 
   return (
