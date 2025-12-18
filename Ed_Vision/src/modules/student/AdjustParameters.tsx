@@ -41,7 +41,7 @@ export default function AdjustParameters({}: Props) {
   // Extract userId to prevent re-renders when user object reference changes
   const userId = user?.account_id || user?.id
 
-  const TOTAL_CREDITS_FOR_GRADUATION = 145
+  const TOTAL_CREDITS_FOR_GRADUATION = 144
   const gpaValue = gpaData?.currentGPA ?? 0
   const gpaSticky = useMemo(() => {
     const trend = gpaData?.gpaChange !== undefined ? ` (xu hướng ${gpaData.gpaChange >= 0 ? '+' : ''}${gpaData.gpaChange.toFixed(2)} so với kỳ trước)` : ''
@@ -491,8 +491,8 @@ export default function AdjustParameters({}: Props) {
                           </div>
                           <div className="text-3xl font-bold text-green-600">
                             {surveyData.financial_support_score ?? 'N/A'}
-                            {surveyData.financial_support_score && (
-                              <span className="text-sm font-medium text-green-700 ml-2">{t('adjust.outOf100')}</span>
+                            {surveyData.financial_support_score !== null && surveyData.financial_support_score !== undefined && (
+                              <span className="text-sm font-medium text-green-700 ml-2">/3</span>
                             )}
                           </div>
                         </CardContent>
@@ -511,8 +511,8 @@ export default function AdjustParameters({}: Props) {
                           </div>
                           <div className="text-3xl font-bold text-pink-600">
                             {surveyData.mental_health_score ?? 'N/A'}
-                            {surveyData.mental_health_score && (
-                              <span className="text-sm font-medium text-pink-700 ml-2">{t('adjust.outOf100')}</span>
+                            {surveyData.mental_health_score !== null && surveyData.mental_health_score !== undefined && (
+                              <span className="text-sm font-medium text-pink-700 ml-2">/3</span>
                             )}
                           </div>
                         </CardContent>

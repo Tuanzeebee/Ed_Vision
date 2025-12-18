@@ -94,7 +94,7 @@ export default function AcademicPlanningDashboard() {
   }, [isAuthenticated, user, navigate, t])
 
   // Sample data based on the Figma design - Updated with real data
-  const TOTAL_CREDITS_FOR_GRADUATION = 145;
+  const TOTAL_CREDITS_FOR_GRADUATION = 144;
   
   // Current GPA & Credits (completed only) - dùng currentGpaData
   const currentProgress = useMemo(() => ({
