@@ -470,7 +470,7 @@ export default function AdjustParameters({}: Props) {
                           </div>
                           <div className="text-3xl font-bold text-purple-600">
                             {surveyData.work_time_hours ?? 'N/A'}
-                            {surveyData.work_time_hours && (
+                            {(surveyData.work_time_hours !== null && surveyData.work_time_hours !== undefined) && (
                               <span className="text-sm font-medium text-purple-700 ml-2">{t('adjust.hoursPerWeek')}</span>
                             )}
                           </div>
@@ -490,10 +490,22 @@ export default function AdjustParameters({}: Props) {
                             <h3 className="font-semibold text-gray-900">{t('adjust.financialSupport')}</h3>
                           </div>
                           <div className="text-3xl font-bold text-green-600">
-                            {surveyData.financial_support_score ?? 'N/A'}
-                            {surveyData.financial_support_score !== null && surveyData.financial_support_score !== undefined && (
-                              <span className="text-sm font-medium text-green-700 ml-2">/3</span>
-                            )}
+                            {(() => {
+                              const s = surveyData.financial_support_score;
+                              if (s === null || s === undefined) return 'N/A';
+                              const rounded = Math.round(s);
+                              let text = '';
+                              if (rounded === 0) text = 'Thấp';
+                              else if (rounded === 1) text = 'Trung bình';
+                              else if (rounded === 2) text = 'Cao';
+                              else if (rounded >= 3) text = 'Rất cao';
+                              
+                              return (
+                                <span>
+                                  {s} <span className="text-lg text-green-700 font-medium">/ {text}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                         </CardContent>
                       </Card>
@@ -510,10 +522,22 @@ export default function AdjustParameters({}: Props) {
                             <h3 className="font-semibold text-gray-900">{t('adjust.mentalHealth')}</h3>
                           </div>
                           <div className="text-3xl font-bold text-pink-600">
-                            {surveyData.mental_health_score ?? 'N/A'}
-                            {surveyData.mental_health_score !== null && surveyData.mental_health_score !== undefined && (
-                              <span className="text-sm font-medium text-pink-700 ml-2">/3</span>
-                            )}
+                            {(() => {
+                              const s = surveyData.mental_health_score;
+                              if (s === null || s === undefined) return 'N/A';
+                              const rounded = Math.round(s);
+                              let text = '';
+                              if (rounded === 0) text = 'Thấp';
+                              else if (rounded === 1) text = 'Trung bình';
+                              else if (rounded === 2) text = 'Cao';
+                              else if (rounded >= 3) text = 'Rất cao';
+                              
+                              return (
+                                <span>
+                                  {s} <span className="text-lg text-pink-700 font-medium">/ {text}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                         </CardContent>
                       </Card>

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GeminiService } from '../../common/services/gemini.service';
 import {
   SubmitSurveyDto,
   SurveyListItemDto,
@@ -10,7 +11,12 @@ import {
 
 @Injectable()
 export class StudentSurveyService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(StudentSurveyService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private geminiService: GeminiService,
+  ) {}
 
   /**
    * Map question_type từ DB sang frontend type
@@ -225,13 +231,26 @@ export class StudentSurveyService {
   async submitSurvey(accountId: number, submitDto: SubmitSurveyDto): Promise<{ success: boolean; message: string }> {
     const { surveyId, answers } = submitDto;
 
+    // Lấy thông tin student
+    const student = await this.prisma.student.findUnique({
+      where: { account_id: accountId },
+    });
+
+    if (!student) {
+      throw new ForbiddenException('Tài khoản không phải là sinh viên');
+    }
+
     // Lấy survey và questions
     const survey = await this.prisma.survey.findUnique({
       where: { survey_id: surveyId },
       include: {
         surveyQuestions: {
           include: {
-            question: true,
+            question: {
+              include: {
+                surveyOptions: true,
+              },
+            },
           },
         },
       },
@@ -277,7 +296,7 @@ export class StudentSurveyService {
     );
 
     if (missingRequired.length > 0) {
-      console.log('Missing required questions:', missingRequired, 'Answered:', [...answeredQuestionIdsSet], 'Required:', requiredQuestionIds);
+      this.logger.warn(`Missing required questions: ${missingRequired}`);
       throw new BadRequestException(
         `Bạn cần trả lời tất cả ${requiredQuestionIds.length} câu hỏi bắt buộc. Còn thiếu ${missingRequired.length} câu.`
       );
@@ -310,6 +329,87 @@ export class StudentSurveyService {
         data: answerData,
       });
     });
+
+    // --- Process Factors & AI Analysis ---
+    try {
+      let workTimeHours: number | null = null;
+      let studyTimeHours: number | null = null;
+      const qaList: string[] = [];
+
+      for (const ans of answers) {
+        const link = survey.surveyQuestions.find(sq => sq.question.question_id === ans.questionId);
+        if (!link) continue;
+
+        const q = link.question;
+        const code = q.code;
+
+        // Determine answer value/text
+        let answerVal: number | null = null;
+        let answerText = '';
+
+        if (ans.optionId !== undefined && ans.optionId !== null) {
+          const opt = q.surveyOptions.find(o => o.option_id === ans.optionId);
+          if (opt) {
+            answerVal = opt.option_value ?? null;
+            answerText = opt.option_text ?? '';
+          }
+        } else {
+          answerText = ans.freeText ?? '';
+          // Try to parse number if needed
+          const parsed = parseFloat(answerText);
+          if (!isNaN(parsed)) {
+            answerVal = parsed;
+          }
+        }
+
+        // Case A: work / study
+        if (code === 'work') {
+          workTimeHours = answerVal;
+        } else if (code === 'study') {
+          studyTimeHours = answerVal;
+        } else {
+          // Case B: For AI
+          // Only include if there is meaningful text
+          if (answerText.trim()) {
+            qaList.push(`Question: ${q.question_text}\nAnswer: ${answerText}`);
+          }
+        }
+      }
+
+      // Call Gemini if there are questions to analyze
+      let financialScore = 0;
+      let mentalScore = 0;
+
+      if (qaList.length > 0) {
+        const aiResult = await this.geminiService.analyzeSurvey(qaList.join('\n\n'));
+        financialScore = aiResult.financial_support_score;
+        mentalScore = aiResult.mental_health_score;
+      }
+
+      // Save to StudentSurveyFactors
+      await this.prisma.studentSurveyFactors.upsert({
+        where: { student_id: student.student_id },
+        update: {
+          work_time_hours: workTimeHours,
+          study_time_hours: studyTimeHours,
+          financial_support_score: financialScore,
+          mental_health_score: mentalScore,
+        },
+        create: {
+          student_id: student.student_id,
+          work_time_hours: workTimeHours,
+          study_time_hours: studyTimeHours,
+          financial_support_score: financialScore,
+          mental_health_score: mentalScore,
+        },
+      });
+
+      this.logger.log(`Updated survey factors for student ${student.student_id}`);
+
+    } catch (error) {
+      this.logger.error(`Error processing survey factors for student ${student.student_id}`, error);
+      // We do NOT throw here, so the user still gets a success response for the survey submission
+    }
 
     return {
       success: true,
