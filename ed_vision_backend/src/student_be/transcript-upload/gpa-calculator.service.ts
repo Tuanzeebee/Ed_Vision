@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { StudentCacheService } from './student-cache.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -43,7 +43,6 @@ export interface PhysicalEducationGPAResult {
 
 @Injectable()
 export class GPACalculatorService {
-  private readonly logger = new Logger(GPACalculatorService.name);
 
   constructor(private readonly prisma: PrismaService, private readonly cache: StudentCacheService) {}
 
@@ -81,7 +80,6 @@ export class GPACalculatorService {
   async calculateCurrentGPA(studentId: number): Promise<GPACalculationResult> {
     const key = `student:${studentId}:gpa:current`
     return this.cache.wrap(key, 3 * 60 * 1000, async () => {
-    this.logger.log(`Calculating GPA for student ${studentId}`);
     
     // Get all completed courses with scores (CHỈ LẤY MÔN CÓ ĐIỂM)
     const completedRecords = await this.prisma.studentCourseRecord.findMany({
@@ -105,8 +103,6 @@ export class GPACalculatorService {
       },
     });
 
-    this.logger.log(`Found ${completedRecords.length} completed courses with scores for student ${studentId}`);
-
     if (completedRecords.length === 0) {
       // Log để debug: kiểm tra xem có records nào không
       const allRecords = await this.prisma.studentCourseRecord.count({
@@ -124,13 +120,6 @@ export class GPACalculatorService {
           status: 'completed',
         },
       });
-      
-      this.logger.warn(
-        `No completed courses with scores found for student ${studentId}. ` +
-        `Total records: ${allRecords}, ` +
-        `With scores: ${withScores}, ` +
-        `Completed status: ${completedCount}`
-      );
       
       return {
         currentGPA: 0,
@@ -153,9 +142,6 @@ export class GPACalculatorService {
 
       // Skip if missing data
       if (credits === 0) {
-        this.logger.warn(
-          `Skipping course ${record.course?.course_code} - missing credits_unit`
-        );
         continue;
       }
 
@@ -166,10 +152,6 @@ export class GPACalculatorService {
       if (score < 1.0) {
         failedCourses++;
       }
-
-      this.logger.debug(
-        `Course: ${record.course?.course_code}, Score: ${score}, Credits: ${credits}, Running Total: ${weightedSum}/${totalCredits}`
-      );
     }
 
     // Calculate GPA (CHỈ TÍNH TRÊN CÁC MÔN CÓ ĐIỂM)
@@ -183,7 +165,7 @@ export class GPACalculatorService {
         status: 'completed',
         course: {
           study_format: { not: 'DEM' },
-          course_code: { not: 'ES 100' },
+          course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
         },
       },
       include: {
@@ -196,25 +178,10 @@ export class GPACalculatorService {
       },
     });
 
-    this.logger.log(
-      `All completed courses (excluding DEM and ES 100): ${allCompletedRecords.length} courses`
-    );
-    
-    // Log chi tiết các môn completed
-    allCompletedRecords.forEach(record => {
-      this.logger.debug(
-        `Completed course: ${record.course?.course_code}, Credits: ${record.course?.credits_unit}`
-      );
-    });
-
     // Tổng tín chỉ đã hoàn thành (kể cả chưa có điểm chuyển đổi)
     const totalCompletedCredits = allCompletedRecords.reduce(
       (sum, r) => sum + (r.course?.credits_unit || 0),
       0
-    );
-
-    this.logger.log(
-      `Total Completed Credits (all completed courses): ${totalCompletedCredits}`
     );
 
     // Get all courses (including planned) để tính tổng số môn
@@ -246,14 +213,6 @@ export class GPACalculatorService {
       0
     );
 
-    this.logger.log(
-      `GPA Calculation for student ${studentId}: GPA=${currentGPA.toFixed(2)}, ` +
-      `Credits for GPA calculation=${totalCredits}, ` +
-      `Total Completed Credits=${totalCompletedCredits}/${totalCreditsAll}, ` +
-      `Courses=${completedRecords.length}/${totalCoursesCount}, ` +
-      `Failed=${failedCourses}`
-    );
-
     const auditCompleted = await this.prisma.studentCourseRecord.findMany({
       where: { student_id: studentId, status: 'completed' },
       include: {
@@ -267,6 +226,12 @@ export class GPACalculatorService {
         },
       },
     });
+
+    // ✅ Log tổng tín chỉ TRƯỚC KHI loại bỏ DEM và ES 100
+    const totalCreditsBeforeExclusion = auditCompleted.reduce(
+      (sum, r) => sum + (r.course?.credits_unit || 0),
+      0
+    );
 
     const excludedDetails = auditCompleted
       .filter(r => {
@@ -289,13 +254,6 @@ export class GPACalculatorService {
         };
       });
 
-    if (excludedDetails.length > 0) {
-      this.logger.warn(`Credits exclusion list for student ${studentId}: ${excludedDetails.length} courses`);
-      excludedDetails.forEach(d => {
-        this.logger.warn(`Excluded: code=${d.course_code}, credits=${d.credits}, format=${d.study_format}, reasons=${d.reasons}`);
-      });
-    }
-
     // Tính GPA change so với 2 học kỳ trước (để có cumulative GPA trend)
     let previousSemesterGPA: number | undefined;
     let gpaChange: number | undefined;
@@ -308,14 +266,9 @@ export class GPACalculatorService {
         const previousSemester = breakdown[breakdown.length - 2];
         previousSemesterGPA = previousSemester.cumulative_gpa;
         gpaChange = currentGPA - previousSemesterGPA;
-        
-        this.logger.log(
-          `GPA Trend: Previous cumulative GPA=${previousSemesterGPA.toFixed(2)}, ` +
-          `Change=${gpaChange >= 0 ? '+' : ''}${gpaChange.toFixed(2)}`
-        );
       }
     } catch (error) {
-      this.logger.warn(`Could not calculate GPA change: ${error.message}`);
+      // Silently handle error
     }
 
     return {
@@ -342,7 +295,6 @@ export class GPACalculatorService {
   async calculateProjectedGPA(studentId: number): Promise<GPACalculationResult> {
     const key = `student:${studentId}:gpa:projected`
     return this.cache.wrap(key, 3 * 60 * 1000, async () => {
-    this.logger.log(`Calculating PROJECTED GPA (completed + planned) for student ${studentId}`);
     
     // Get student info (including major)
     const student = await this.prisma.student.findUnique({
@@ -357,7 +309,7 @@ export class GPACalculatorService {
         converted_numeric_score: { not: null },
         course: {
           study_format: { not: 'DEM' },
-          course_code: { not: 'ES 100' },
+          course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
         },
       },
       include: {
@@ -377,7 +329,7 @@ export class GPACalculatorService {
         status: 'planned',
         course: {
           study_format: { not: 'DEM' },
-          course_code: { not: 'ES 100' },
+          course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
         },
       },
       include: {
@@ -401,10 +353,6 @@ export class GPACalculatorService {
       },
     });
 
-    this.logger.log(
-      `Found ${completedCourses.length} completed courses and ${plannedCourses.length} planned courses`
-    );
-
     // Calculate total credits (completed + planned)
     // ✅ Only count completed courses with score >= 1.7 and planned courses with predicted_gpa >= 1.7 (>= 5.0/10)
     const completedCredits = completedCourses.reduce(
@@ -416,10 +364,6 @@ export class GPACalculatorService {
 
     const totalCredits = completedCredits + plannedCredits;
     const totalCourses = completedCourses.length + plannedCourses.length;
-
-    this.logger.log(
-      `Credits: Completed=${completedCredits}, Planned=${plannedCredits}, Total=${totalCredits}`
-    );
 
     // Calculate weighted GPA (completed + planned with predictions)
     let weightedSum = 0;
@@ -438,10 +382,6 @@ export class GPACalculatorService {
       if (score < 1.0) {
         failedCourses++;
       }
-
-      this.logger.debug(
-        `Completed: ${record.course?.course_code}, Score: ${score.toFixed(2)}, Credits: ${credits}`
-      );
     }
 
     // Add planned courses with predictions to GPA calculation
@@ -457,29 +397,15 @@ export class GPACalculatorService {
           const predictedGpa4 = this.convertGPA10To4(predictedGpa10);
           weightedSum += predictedGpa4 * credits;
           creditsWithScores += credits;
-
-          this.logger.debug(
-            `Planned: ${record.course?.course_code}, Predicted GPA (10): ${predictedGpa10.toFixed(2)}, Credits: ${credits} ✓ Passing (>= 4.0/10)`
-          );
         } else {
-          this.logger.debug(
-            `Planned: ${record.course?.course_code}, Predicted GPA (10): ${predictedGpa10.toFixed(2)} ✗ Below passing grade (< 4.0/10), not counted`
-          );
+          // Below passing grade, not counted
         }
       } else {
-        this.logger.debug(
-          `Planned: ${record.course?.course_code} - No prediction, skipped from GPA calculation`
-        );
+        // No prediction, skipped
       }
     }
 
     const projectedGPA = creditsWithScores > 0 ? weightedSum / creditsWithScores : 0;
-
-    this.logger.log(
-      `Projected GPA for student ${studentId}: GPA=${projectedGPA.toFixed(2)}, ` +
-      `Total Credits=${totalCredits} (Completed: ${completedCredits}, Planned: ${plannedCredits}), ` +
-      `Total Courses=${totalCourses}`
-    );
 
     return {
       currentGPA: Number(projectedGPA.toFixed(2)),
@@ -687,7 +613,6 @@ export class GPACalculatorService {
   async calculatePredictedGPA(studentId: number): Promise<PredictedGPAResult> {
     const key = `student:${studentId}:gpa:predicted`
     return this.cache.wrap(key, 3 * 60 * 1000, async () => {
-    this.logger.log(`Calculating PREDICTED GPA for student ${studentId}`);
 
     // 1. Lấy các môn đã hoàn thành (completed) - dùng điểm thật
     const completedRecords = await this.prisma.studentCourseRecord.findMany({
@@ -732,10 +657,6 @@ export class GPACalculatorService {
       },
     });
 
-    this.logger.log(
-      `Found ${completedRecords.length} completed courses and ${plannedRecords.length} planned courses`
-    );
-
     // 3. Tính điểm weighted sum cho các môn đã hoàn thành
     let completedWeightedSum = 0;
     let completedCredits = 0;
@@ -747,10 +668,6 @@ export class GPACalculatorService {
       if (credits > 0) {
         completedWeightedSum += score * credits;
         completedCredits += credits;
-
-        this.logger.debug(
-          `Completed: ${record.course?.course_code}, Score: ${score}, Credits: ${credits}`
-        );
       }
     }
 
@@ -781,8 +698,6 @@ export class GPACalculatorService {
       }
     }
 
-    this.logger.log(`Found ${predictions.length} predictions for planned courses`);
-
     // 5. Tính điểm weighted sum cho các môn planned (có prediction)
     let plannedWeightedSum = 0;
     let plannedCredits = 0;
@@ -804,18 +719,8 @@ export class GPACalculatorService {
         plannedWeightedSum += predictedGpa4 * credits;
         plannedCredits += credits;
         plannedCoursesWithPrediction++;
-
-        this.logger.debug(
-          `Planned: ${record.course?.course_code}, ` +
-          `Predicted GPA (10): ${predictedGpa10}, ` +
-          `Predicted GPA (4): ${predictedGpa4.toFixed(2)}, ` +
-          `Credits: ${credits}, ` +
-          `Model: ${prediction.model_type}`
-        );
       } else {
-        this.logger.warn(
-          `No prediction found for planned course: ${record.course?.course_code} (ID: ${courseId})`
-        );
+        // No prediction
       }
     }
 
@@ -823,15 +728,6 @@ export class GPACalculatorService {
     const totalWeightedSum = completedWeightedSum + plannedWeightedSum;
     const totalCredits = completedCredits + plannedCredits;
     const predictedGPA = totalCredits > 0 ? totalWeightedSum / totalCredits : 0;
-
-    this.logger.log(
-      `PREDICTED GPA Calculation for student ${studentId}: ` +
-      `Predicted GPA=${predictedGPA.toFixed(2)}, ` +
-      `Total Credits=${totalCredits} (Completed: ${completedCredits}, Planned: ${plannedCredits}), ` +
-      `Courses=${completedRecords.length + plannedRecords.length} ` +
-      `(Completed: ${completedRecords.length}, Planned: ${plannedRecords.length}, ` +
-      `With Prediction: ${plannedCoursesWithPrediction})`
-    );
 
     return {
       predictedGPA: Number(predictedGPA.toFixed(2)),
@@ -857,7 +753,6 @@ export class GPACalculatorService {
   async calculatePhysicalEducationGPA(studentId: number): Promise<PhysicalEducationGPAResult> {
     const key = `student:${studentId}:gpa:dem`
     return this.cache.wrap(key, 5 * 60 * 1000, async () => {
-    this.logger.log(`Calculating Physical Education GPA for student ${studentId}`);
 
     // Lấy tất cả các môn DEM đã hoàn thành
     const demCourses = await this.prisma.studentCourseRecord.findMany({
@@ -890,8 +785,6 @@ export class GPACalculatorService {
       ],
     });
 
-    this.logger.log(`Found ${demCourses.length} DEM courses for student ${studentId}`);
-
     const REQUIRED_DEM_COURSES = 3; // Số môn DEM yêu cầu để tốt nghiệp
 
     // Nếu không có môn DEM nào
@@ -914,9 +807,6 @@ export class GPACalculatorService {
     const demWithRaw = consideredRecords.map((record) => {
       const raw10 = Number(record.raw_score);
       const score4 = (raw10 / 10) * 4; // Chuyển tuyến tính sang thang 4
-      this.logger.log(
-        `DEM Course: ${record.course?.course_code} - raw_score=${record.raw_score}, score4_linear=${score4.toFixed(2)}`
-      );
       return {
         course_code: record.course?.course_code || 'N/A',
         course_name: record.course?.course_name || 'N/A',
@@ -926,7 +816,6 @@ export class GPACalculatorService {
     });
 
     if (demRawRecords.length === 0) {
-      this.logger.warn(`Student ${studentId} has ${demCourses.length} DEM courses but none have raw scores yet`);
       return {
         averageGPA4: 0,
         averageGPA10: 0,
@@ -959,14 +848,6 @@ export class GPACalculatorService {
     const note = isEligible
       ? `Calculated from ${consideredCourses.length} Physical Education courses (Eligible for graduation)`
       : `Calculated from ${consideredCourses.length}/${REQUIRED_DEM_COURSES} required courses (${REQUIRED_DEM_COURSES - consideredCourses.length} more needed)`;
-
-    this.logger.log(
-      `Physical Education GPA for student ${studentId}: ` +
-      `Average GPA (4-scale linear)=${averageGPA4.toFixed(2)}, (10-scale raw)=${averageGPA10.toFixed(2)}, ` +
-      `Pass status=${isPassing ? 'PASS' : 'FAIL'}, ` +
-      `Considered DEM courses=${consideredCourses.length}/${REQUIRED_DEM_COURSES} (${demCourses.length} enrolled), ` +
-      `Eligible for graduation=${isEligible}`
-    );
 
     return {
       averageGPA4: Number(averageGPA4.toFixed(2)),
