@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/student/Student_card"
+import { BackButton } from "@/components/ui/student/Student_BackButton"
 import Footer from "../../components/layout/Footer"
 import Header from "../../components/layout/Header"
 
@@ -75,7 +77,12 @@ export default function StudentCourseOverview({
   courseName = "CMU-IS 401 SAIS",
   courseCode = "Information System Applications"
 }: Props) {
+  const navigate = useNavigate()
   const [openModules, setOpenModules] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   const toggleModule = (moduleId: string) => {
     const newOpenModules = new Set(openModules)
@@ -94,6 +101,15 @@ export default function StudentCourseOverview({
 
       {/* Main Content */}
       <main className="w-full px-8 py-8">
+        <div className="mb-6">
+          <BackButton 
+            label="Quay lại kế hoạch học tập" 
+            variant="outline"
+            onBack={() => navigate('/student/academic-planning')} 
+            className="hover:border-purple-200 hover:text-purple-700"
+          />
+        </div>
+
         {/* Course Overview Card */}
         <Card className="rounded-2xl shadow-lg p-6 md:p-8 mb-8">
           <CardContent className="p-0">
@@ -292,7 +308,10 @@ export default function StudentCourseOverview({
                   </div>
                   <p className="text-sm text-gray-600 mb-6">Dựa trên phân tích AI và lịch sử học tập</p>
                   
-                  <button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105 cursor-pointer">
+                  <button 
+                    onClick={() => navigate('/student/course-detail')}
+                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105 cursor-pointer"
+                  >
                     Bắt đầu học
                   </button>
                 </div>
