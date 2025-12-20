@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ClipboardList,
   ArrowRight,
@@ -87,23 +88,24 @@ interface AppState {
 
 const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'indigo', 'red', 'yellow'];
 
-// Predefined grade columns with their corresponding keys
-const predefinedColumns = [
-  { label: 'Điểm Chuyên Cần', key: 'attend' },
-  { label: 'Điểm Kiểm Tra Thường Kỳ', key: 'regular' },
-  { label: 'Điểm Thực Hành & Thực Tế', key: 'practice' },
-  { label: 'Điểm Quiz', key: 'quiz' },
-  { label: 'Điểm Kiểm Tra Cuối Kỳ', key: 'final' },
-  { label: 'Điểm Kiểm Tra Giữa Kỳ', key: 'midterm' },
-  { label: 'Điểm Bài Tập Về Nhà', key: 'homework' },
-  { label: 'Điểm Phát Biểu & Thảo Luận', key: 'speech_and_discussion' },
-  { label: 'Điểm Đồ Án Nhóm', key: 'group_project' },
-  { label: 'Điểm Đồ Án Cá Nhân', key: 'individual_project' },
-  { label: 'Điểm Tiểu Luận', key: 'essay' },
-];
-
 export default function SettingGradeTable() {
+  const { t } = useTranslation('teacher');
   const { toasts, hideToast, success, error, warning, info } = useToast();
+  
+  // Predefined grade columns with their corresponding keys
+  const predefinedColumns = [
+    { label: t('settingGradeTable.attendance'), key: 'attend' },
+    { label: t('settingGradeTable.regular'), key: 'regular' },
+    { label: t('settingGradeTable.practice'), key: 'practice' },
+    { label: t('settingGradeTable.quiz'), key: 'quiz' },
+    { label: t('settingGradeTable.final'), key: 'final' },
+    { label: t('settingGradeTable.midterm'), key: 'midterm' },
+    { label: t('settingGradeTable.homework'), key: 'homework' },
+    { label: t('settingGradeTable.speechDiscussion'), key: 'speech_and_discussion' },
+    { label: t('settingGradeTable.groupProject'), key: 'group_project' },
+    { label: t('settingGradeTable.individualProject'), key: 'individual_project' },
+    { label: t('settingGradeTable.essay'), key: 'essay' },
+  ];
   
   const [currentStep, setCurrentStep] = useState(1);
   const [appState, setAppState] = useState<AppState>({
@@ -221,13 +223,13 @@ export default function SettingGradeTable() {
     }
 
     if (!name || name === '') {
-      warning('Vui lòng nhập tên cột điểm!');
+      warning(t('settingGradeTable.enterColumnName'));
       return;
     }
 
     // Validation: Trọng số của 1 cột không được vượt quá 65%
     if (newColumn.weight > 65) {
-      error('Trọng số của một cột điểm không được vượt quá 65%!');
+      error(t('settingGradeTable.weightExceeded'));
       return;
     }
 
@@ -236,7 +238,11 @@ export default function SettingGradeTable() {
     const newTotal = currentTotal + newColumn.weight;
     
     if (newTotal > 100) {
-      const message = `Không thể thêm cột điểm này!\nTổng trọng số hiện tại: ${currentTotal}%\nTrọng số muốn thêm: ${newColumn.weight}%\nTổng sẽ là: ${newTotal}% (vượt quá 100%)`;
+      const message = t('settingGradeTable.totalWeightExceeded', { 
+        current: currentTotal, 
+        adding: newColumn.weight, 
+        total: newTotal 
+      }) + t('settingGradeTable.continueAnyway');
       
       // Show confirmation panel
       setConfirmPanel({
@@ -275,7 +281,7 @@ export default function SettingGradeTable() {
       weight: 10,
     });
 
-    success('Đã thêm cột điểm thành công!');
+    success(t('settingGradeTable.columnAddedSuccess'));
   };
 
   const editColumn = (id: number) => {
@@ -294,7 +300,7 @@ export default function SettingGradeTable() {
   const saveEdit = () => {
     // Validation: Trọng số của 1 cột không được vượt quá 65%
     if (editPanel.weight > 65) {
-      error('Trọng số của một cột điểm không được vượt quá 65%!');
+      error(t('settingGradeTable.weightExceeded'));
       return;
     }
 
@@ -310,7 +316,11 @@ export default function SettingGradeTable() {
     const newTotal = otherColumnsTotal + editPanel.weight;
     
     if (newTotal > 100) {
-      const message = `Không thể cập nhật trọng số này!\nTổng trọng số các cột khác: ${otherColumnsTotal}%\nTrọng số mới: ${editPanel.weight}%\nTổng sẽ là: ${newTotal}% (vượt quá 100%)`;
+      const message = t('settingGradeTable.totalWeightExceeded', { 
+        current: otherColumnsTotal, 
+        adding: editPanel.weight, 
+        total: newTotal 
+      }) + t('settingGradeTable.continueAnyway');
       
       setConfirmPanel({
         open: true,
@@ -347,7 +357,7 @@ export default function SettingGradeTable() {
 
     setAppState({ ...appState, columns: updatedColumns });
     setEditPanel({ open: false, columnId: null, name: '', maxScore: 10, weight: 10 });
-    success('Đã cập nhật cột điểm thành công!');
+    success(t('settingGradeTable.columnUpdatedSuccess'));
   };
 
   const deleteColumn = (id: number) => {
@@ -367,12 +377,12 @@ export default function SettingGradeTable() {
       columns: appState.columns.filter(c => c.id !== deletePanel.columnId),
     });
     setDeletePanel({ open: false, columnId: null, columnName: '' });
-    success('Đã xóa cột điểm thành công!');
+    success(t('settingGradeTable.columnDeletedSuccess'));
   };
 
   const finishSetup = () => {
     if (appState.columns.length === 0) {
-      warning('Vui lòng thêm ít nhất một cột điểm!');
+      warning(t('settingGradeTable.addAtLeastOneColumn'));
       return;
     }
 
@@ -380,7 +390,7 @@ export default function SettingGradeTable() {
     if (totalWeight !== 100) {
       setConfirmPanel({
         open: true,
-        message: `Tổng trọng số hiện tại là ${totalWeight}%.\n\nBạn có muốn tiếp tục không?`,
+        message: t('settingGradeTable.totalWeightWarning', { total: totalWeight }) + t('settingGradeTable.continueAnyway'),
         onConfirm: () => {
           saveGradeStructure();
           setConfirmPanel({ open: false, message: '', onConfirm: () => {} });
@@ -397,7 +407,7 @@ export default function SettingGradeTable() {
       // Lấy thông tin môn học từ danh sách courses
       const selectedCourse = courses.find(c => c.code === appState.subject);
       if (!selectedCourse) {
-        error('Không tìm thấy thông tin môn học!');
+        error(t('settingGradeTable.courseNotFound'));
         return;
       }
 
@@ -424,13 +434,13 @@ export default function SettingGradeTable() {
       const response = await gradeStructureService.createGradeStructure(payload);
       
       if (response.success) {
-        success('Thiết lập bảng điểm thành công!');
+        success(t('settingGradeTable.setupSuccess'));
         setCurrentStep(3);
       } else {
-        error('Không thể lưu cấu trúc bảng điểm!');
+        error(t('settingGradeTable.cannotSaveStructure'));
       }
     } catch (err: any) {
-      error(err.message || 'Có lỗi xảy ra khi lưu cấu trúc bảng điểm!');
+      error(err.message || t('settingGradeTable.savingError'));
       console.error('Error saving grade structure:', err);
     }
   };
@@ -472,12 +482,12 @@ export default function SettingGradeTable() {
       {currentStep <= 2 && (
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-xl shadow-lg mb-6">
           <h2 className="text-3xl font-bold mb-2">
-            {currentStep === 1 ? 'Thiết Lập Bảng Điểm' : 'Cấu Trúc Điểm'}
+            {currentStep === 1 ? t('settingGradeTable.title') : t('settingGradeTable.structureSubtitle').replace('Thêm và quản lý các cột điểm cho môn học', 'Cấu Trúc Điểm')}
           </h2>
           <p className="text-indigo-100">
             {currentStep === 1
-              ? 'Chọn thông tin môn học và thiết kế cấu trúc điểm'
-              : 'Thêm và quản lý các cột điểm cho môn học'}
+              ? t('settingGradeTable.subtitle')
+              : t('settingGradeTable.structureSubtitle')}
           </p>
         </div>
       )}
@@ -508,7 +518,7 @@ export default function SettingGradeTable() {
                       : 'text-gray-400'
                   }`}
                 >
-                  Chọn môn học
+                  {t('settingGradeTable.step1')}
                 </p>
               </div>
 
@@ -534,7 +544,7 @@ export default function SettingGradeTable() {
                     currentStep === 2 ? 'text-blue-600' : 'text-gray-400'
                   }`}
                 >
-                  Thiết lập cột điểm
+                  {t('settingGradeTable.step2')}
                 </p>
               </div>
             </div>
@@ -551,8 +561,8 @@ export default function SettingGradeTable() {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <BookOpen className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Chọn thông tin môn học</h3>
-                <p className="text-gray-500">Vui lòng chọn năm học, kỳ học và môn học để bắt đầu</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('settingGradeTable.step1')}</h3>
+                <p className="text-gray-500">{t('settingGradeTable.subtitle')}</p>
               </div>
 
               <div className="space-y-5">
@@ -560,7 +570,7 @@ export default function SettingGradeTable() {
                 {loading && (
                   <div className="text-center py-8">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p className="mt-2 text-gray-500">Đang tải dữ liệu...</p>
+                    <p className="mt-2 text-gray-500">{t('settingGradeTable.loading')}</p>
                   </div>
                 )}
 
@@ -568,8 +578,8 @@ export default function SettingGradeTable() {
                   <>
                     {/* Năm giảng dạy */}
                     <CustomSelect
-                      label="Năm giảng dạy"
-                      placeholder="Chọn năm giảng dạy"
+                      label={t('settingGradeTable.academicYear')}
+                      placeholder={t('settingGradeTable.academicYearPlaceholder')}
                       icon={<Calendar className="w-4 h-4 text-blue-600" />}
                       required
                       value={appState.year}
@@ -584,14 +594,14 @@ export default function SettingGradeTable() {
                     <div className="space-y-3">
                       <Label className="text-sm font-semibold text-gray-700 flex items-center">
                         <CalendarClock className="w-4 h-4 mr-2 text-blue-600" />
-                        Kỳ học
-                        <span className="text-red-500 ml-1">*</span>
+                        {t('settingGradeTable.semester')}
+                        <span className="text-red-500 ml-1">{t('settingGradeTable.semesterRequired')}</span>
                       </Label>
                       <div className="grid grid-cols-3 gap-4">
                         {[
-                          { value: 'Kỳ 1', icon: Sun, semesterNum: 1 },
-                          { value: 'Kỳ 2', icon: CloudSnow, semesterNum: 2 },
-                          { value: 'Kỳ Hè', icon: SunMedium, semesterNum: 3 }
+                          { value: 'Kỳ 1', icon: Sun, semesterNum: 1, labelKey: 'semester1' },
+                          { value: 'Kỳ 2', icon: CloudSnow, semesterNum: 2, labelKey: 'semester2' },
+                          { value: 'Kỳ Hè', icon: SunMedium, semesterNum: 3, labelKey: 'summerSemester' }
                         ].map((sem) => {
                           const IconComponent = sem.icon;
                           const isAvailable = !appState.year || availableSemesters.includes(sem.semesterNum);
@@ -628,7 +638,7 @@ export default function SettingGradeTable() {
                                     ? 'text-gray-700'
                                     : 'text-gray-400'
                                 }`}>
-                                  {sem.value}
+                                  {t(`settingGradeTable.${sem.labelKey}`)}
                                 </span>
                               </div>
                             </button>
@@ -637,15 +647,15 @@ export default function SettingGradeTable() {
                       </div>
                       {appState.year && availableSemesters.length === 0 && (
                         <p className="text-sm text-amber-600 mt-2">
-                          ⚠️ Năm học này chưa có học kỳ nào được kích hoạt
+                          {t('settingGradeTable.noSemestersAvailable')}
                         </p>
                       )}
                     </div>
 
                     {/* Môn học */}
                     <CustomSelect
-                      label="Môn học"
-                      placeholder="Chọn môn học"
+                      label={t('settingGradeTable.subject')}
+                      placeholder={t('settingGradeTable.subjectPlaceholder')}
                       icon={<BookOpen className="w-4 h-4 text-blue-600" />}
                       required
                       value={appState.subject}
@@ -666,11 +676,11 @@ export default function SettingGradeTable() {
                         <Check className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold text-blue-900 mb-2">Thông tin đã chọn:</p>
+                        <p className="font-semibold text-blue-900 mb-2">{t('settingGradeTable.selectedInfo')}</p>
                         <div className="space-y-1 text-sm text-blue-800">
-                          <p><strong>Năm học:</strong> <span>{appState.year}</span></p>
-                          <p><strong>Kỳ học:</strong> <span>{appState.semester}</span></p>
-                          <p><strong>Môn học:</strong> <span>{appState.subject}</span></p>
+                          <p><strong>{t('settingGradeTable.academicYearLabel')}</strong> <span>{appState.year}</span></p>
+                          <p><strong>{t('settingGradeTable.semesterLabel')}</strong> <span>{appState.semester}</span></p>
+                          <p><strong>{t('settingGradeTable.subjectLabel')}</strong> <span>{appState.subject}</span></p>
                         </div>
                       </div>
                     </div>
@@ -687,7 +697,7 @@ export default function SettingGradeTable() {
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    <span>Tiếp tục</span>
+                    <span>{t('settingGradeTable.continue')}</span>
                     <ArrowRight className="w-5 h-5" />
                   </Button>
                 </div>
@@ -703,7 +713,7 @@ export default function SettingGradeTable() {
           <CardContent className="p-0 space-y-5">
             <div className="flex items-center justify-between">
               <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                Quay lại
+                {t('settingGradeTable.back')}
               </Button>
             </div>
 
@@ -711,33 +721,33 @@ export default function SettingGradeTable() {
               <CardContent className="p-4">
                 <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
                   <BookOpen className="w-5 h-5 mr-2" />
-                  Thông tin môn học
+                  {t('settingGradeTable.courseInfo')}
                 </h4>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Năm học</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('settingGradeTable.yearLabel')}</p>
                     <p className="font-bold text-gray-900">{appState.year}</p>
                   </div>
                   <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Học kỳ</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('settingGradeTable.semesterInfo')}</p>
                     <p className="font-bold text-gray-900">{appState.semester}</p>
                   </div>
                   <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Môn học</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('settingGradeTable.subjectInfo')}</p>
                     <p className="font-bold text-gray-900">{appState.subject}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mt-4">
                   <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Số cột điểm</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('settingGradeTable.gradeColumnCount')}</p>
                     <p className="text-2xl font-bold text-blue-600">{appState.columns.length}</p>
                   </div>
                   <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Tổng trọng số</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('settingGradeTable.totalWeight')}</p>
                     <p className="text-2xl font-bold text-green-600">{totalWeight}%</p>
                   </div>
                   <div className="bg-white rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Còn lại</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('settingGradeTable.remaining')}</p>
                     <p
                       className={`text-2xl font-bold ${
                         remainingWeight === 0
@@ -757,14 +767,14 @@ export default function SettingGradeTable() {
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <ClipboardList className="w-5 h-5 mr-2 text-blue-600" />
-                Danh sách cột điểm
+                {t('settingGradeTable.gradeColumnList')}
               </h4>
 
               <div className="space-y-3">
                 {appState.columns.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <Inbox className="w-12 h-12 mx-auto mb-2" />
-                    <p>Chưa có cột điểm nào. Hãy thêm cột điểm đầu tiên!</p>
+                    <p>{t('settingGradeTable.noColumnsYet')}</p>
                   </div>
                 ) : (
                   appState.columns.map((col, index) => {
@@ -782,10 +792,10 @@ export default function SettingGradeTable() {
                             <h5 className={`font-bold text-lg ${colorClasses.text}`}>{col.name}</h5>
                             <div className="flex items-center space-x-4 mt-1">
                               <span className="text-sm text-gray-600">
-                                <span className="font-semibold">Điểm tối đa:</span> {col.maxScore}
+                                <span className="font-semibold">{t('settingGradeTable.maxScoreLabel')}:</span> {col.maxScore}
                               </span>
                               <span className="text-sm text-gray-600">
-                                <span className="font-semibold">Trọng số:</span> {col.weight}%
+                                <span className="font-semibold">{t('settingGradeTable.weightLabel')}:</span> {col.weight}%
                               </span>
                             </div>
                           </div>
@@ -819,18 +829,18 @@ export default function SettingGradeTable() {
               <CardContent className="p-6">
                 <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Plus className="w-5 h-5 mr-2 text-blue-600" />
-                  Thêm cột điểm mới
+                  {t('settingGradeTable.addNewColumn')}
                 </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700 mb-2">Tên cột điểm</Label>
+                    <Label className="text-sm font-semibold text-gray-700 mb-2">{t('settingGradeTable.columnName')}</Label>
                     <Select
                       value={newColumn.select}
                       onValueChange={(value: string) => setNewColumn({ ...newColumn, select: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Chọn hoặc nhập tên" />
+                        <SelectValue placeholder={t('settingGradeTable.selectOrEnter')} />
                       </SelectTrigger>
                       <SelectContent>
                         {predefinedColumns.map((col) => (
@@ -838,13 +848,13 @@ export default function SettingGradeTable() {
                             {col.label}
                           </SelectItem>
                         ))}
-                        <SelectItem value="custom">Giảng Viên Có Thể Tự nhập...</SelectItem>
+                        <SelectItem value="custom">{t('settingGradeTable.customColumn')}</SelectItem>
                       </SelectContent>
                     </Select>
                     {newColumn.select === 'custom' && (
                       <Input
                         className="mt-2"
-                        placeholder="Nhập tên cột điểm"
+                        placeholder={t('settingGradeTable.enterColumnName')}
                         value={newColumn.custom}
                         onChange={(e) => setNewColumn({ ...newColumn, custom: e.target.value })}
                       />
@@ -852,7 +862,7 @@ export default function SettingGradeTable() {
                   </div>
 
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700 mb-2">Điểm tối đa</Label>
+                    <Label className="text-sm font-semibold text-gray-700 mb-2">{t('settingGradeTable.maxScore')}</Label>
                     <Input
                       type="number"
                       min="1"
@@ -864,11 +874,11 @@ export default function SettingGradeTable() {
                       }}
                       className="font-bold text-lg"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Tối đa 10 điểm</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('settingGradeTable.maxScoreLimit')}</p>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-semibold text-gray-700 mb-2">Trọng số (%)</Label>
+                    <Label className="text-sm font-semibold text-gray-700 mb-2">{t('settingGradeTable.weight')}</Label>
                     <Input
                       type="number"
                       min="0"
@@ -880,14 +890,14 @@ export default function SettingGradeTable() {
                       }}
                       className="font-bold text-lg"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Tối đa 65%</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('settingGradeTable.weightLimit')}</p>
                   </div>
                 </div>
 
                 <div className="flex justify-end">
                   <Button onClick={addColumn} className="font-semibold">
                     <Plus className="w-5 h-5 mr-2" />
-                    Thêm cột điểm
+                    {t('settingGradeTable.addColumn')}
                   </Button>
                 </div>
               </CardContent>
@@ -896,7 +906,7 @@ export default function SettingGradeTable() {
             <div className="flex justify-end items-center pt-6 mt-6 border-t border-gray-200">
               <Button onClick={finishSetup} className="bg-green-600 hover:bg-green-700 px-8 py-3 font-semibold">
                 <Check className="w-5 h-5 mr-2" />
-                Hoàn tất thiết lập
+                {t('settingGradeTable.finishSetup')}
               </Button>
             </div>
           </CardContent>
@@ -909,7 +919,7 @@ export default function SettingGradeTable() {
           <div className="text-center">
             <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-6 py-3 rounded-full font-semibold shadow-lg">
               <Check className="w-5 h-5" />
-              <span>Thiết lập thành công!</span>
+              <span>{t('settingGradeTable.setupSuccessTitle')}</span>
             </div>
           </div>
 
@@ -927,27 +937,27 @@ export default function SettingGradeTable() {
                 </div>
 
                 <div>
-                  <h2 className="text-4xl font-bold mb-3">Sử dụng AI Dự đoán kết quả?</h2>
+                  <h2 className="text-4xl font-bold mb-3">{t('settingGradeTable.aiPredictionPrompt')}</h2>
                   <p className="text-xl text-indigo-100">
-                    Hệ thống AI sẽ phân tích dữ liệu và dự đoán kết quả học tập của sinh viên
+                    {t('settingGradeTable.aiPredictionDesc')}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto">
                   <div className="bg-white/10 backdrop-blur rounded-xl p-6">
                     <Target className="w-8 h-8 mx-auto mb-3" />
-                    <h4 className="font-bold mb-2">Độ chính xác cao</h4>
-                    <p className="text-sm text-indigo-100">Dự đoán chính xác đến 95%</p>
+                    <h4 className="font-bold mb-2">{t('settingGradeTable.highAccuracy')}</h4>
+                    <p className="text-sm text-indigo-100">{t('settingGradeTable.accuracyDesc')}</p>
                   </div>
                   <div className="bg-white/10 backdrop-blur rounded-xl p-6">
                     <TrendingUp className="w-8 h-8 mx-auto mb-3" />
-                    <h4 className="font-bold mb-2">Phân tích xu hướng</h4>
-                    <p className="text-sm text-indigo-100">Nhận diện học sinh cần hỗ trợ</p>
+                    <h4 className="font-bold mb-2">{t('settingGradeTable.trendAnalysis')}</h4>
+                    <p className="text-sm text-indigo-100">{t('settingGradeTable.trendAnalysisDesc')}</p>
                   </div>
                   <div className="bg-white/10 backdrop-blur rounded-xl p-6">
                     <Sparkles className="w-8 h-8 mx-auto mb-3" />
-                    <h4 className="font-bold mb-2">Tối ưu thời gian</h4>
-                    <p className="text-sm text-indigo-100">Tiết kiệm thời gian đánh giá</p>
+                    <h4 className="font-bold mb-2">{t('settingGradeTable.timeSaving')}</h4>
+                    <p className="text-sm text-indigo-100">{t('settingGradeTable.timeSavingDesc')}</p>
                   </div>
                 </div>
 
@@ -958,7 +968,7 @@ export default function SettingGradeTable() {
                     className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg font-bold shadow-xl"
                   >
                     <Sparkles className="w-6 h-6 mr-2" />
-                    Sử dụng AI Dự đoán
+                    {t('settingGradeTable.useAIPrediction')}
                   </Button>
                   <Button
                     onClick={skipPrediction}
@@ -966,7 +976,7 @@ export default function SettingGradeTable() {
                     variant="outline"
                     className="bg-white/10 text-white hover:bg-white/20 border-white/30 px-8 py-6 text-lg font-semibold backdrop-blur"
                   >
-                    Bỏ qua
+                    {t('settingGradeTable.skip')}
                   </Button>
                 </div>
               </div>
@@ -977,7 +987,7 @@ export default function SettingGradeTable() {
             <Card>
               <CardContent className="p-5 text-center">
                 <BookOpen className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <p className="text-sm text-gray-600 mb-1">Môn học</p>
+                <p className="text-sm text-gray-600 mb-1">{t('settingGradeTable.courseLabel')}</p>
                 <p className="font-bold text-gray-900">{appState.subject}</p>
               </CardContent>
             </Card>
@@ -985,15 +995,15 @@ export default function SettingGradeTable() {
             <Card>
               <CardContent className="p-5 text-center">
                 <ClipboardList className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <p className="text-sm text-gray-600 mb-1">Số cột điểm</p>
-                <p className="font-bold text-gray-900">{appState.columns.length} cột</p>
+                <p className="text-sm text-gray-600 mb-1">{t('settingGradeTable.gradeColumnCount')}</p>
+                <p className="font-bold text-gray-900">{appState.columns.length} {t('settingGradeTable.gradeColumns')}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="p-5 text-center">
                 <Target className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                <p className="text-sm text-gray-600 mb-1">Tổng trọng số</p>
+                <p className="text-sm text-gray-600 mb-1">{t('settingGradeTable.totalWeightLabel')}</p>
                 <p className="font-bold text-gray-900">{totalWeight}%</p>
               </CardContent>
             </Card>
@@ -1013,7 +1023,7 @@ export default function SettingGradeTable() {
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
                   <Edit2 className="w-5 h-5 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Chỉnh sửa cột điểm</h3>
+                <h3 className="text-xl font-bold text-gray-900">{t('settingGradeTable.editColumnTitle')}</h3>
               </div>
               <button
                 onClick={() => setEditPanel({ open: false, columnId: null, name: '', maxScore: 10, weight: 10 })}
@@ -1025,18 +1035,18 @@ export default function SettingGradeTable() {
 
             <div className="p-6 space-y-4">
               <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2">Tên cột điểm</Label>
+                <Label className="text-sm font-semibold text-gray-700 mb-2">{t('settingGradeTable.columnNameLabel')}</Label>
                 <Input
                   value={editPanel.name}
                   onChange={(e) => setEditPanel({ ...editPanel, name: e.target.value })}
                   className="font-medium"
-                  placeholder="Nhập tên cột điểm"
+                  placeholder={t('settingGradeTable.columnNamePlaceholder')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700 mb-2">Điểm tối đa</Label>
+                  <Label className="text-sm font-semibold text-gray-700 mb-2">{t('settingGradeTable.maxScoreLabel')}</Label>
                   <Input
                     type="number"
                     min="1"
@@ -1048,10 +1058,10 @@ export default function SettingGradeTable() {
                     }}
                     className="font-bold text-lg"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Tối đa 10 điểm</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('settingGradeTable.maxScoreHelper')}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700 mb-2">Trọng số (%)</Label>
+                  <Label className="text-sm font-semibold text-gray-700 mb-2">{t('settingGradeTable.weightLabel')}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -1063,7 +1073,7 @@ export default function SettingGradeTable() {
                     }}
                     className="font-bold text-lg"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Tối đa 65%</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('settingGradeTable.weightHelper')}</p>
                 </div>
               </div>
             </div>
@@ -1074,11 +1084,11 @@ export default function SettingGradeTable() {
                 className="flex-1"
                 onClick={() => setEditPanel({ open: false, columnId: null, name: '', maxScore: 10, weight: 10 })}
               >
-                Hủy
+                {t('settingGradeTable.cancel')}
               </Button>
               <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={saveEdit}>
                 <Check className="w-4 h-4 mr-2" />
-                Lưu thay đổi
+                {t('settingGradeTable.saveChanges')}
               </Button>
             </div>
           </div>
@@ -1093,11 +1103,11 @@ export default function SettingGradeTable() {
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Xác nhận xóa</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('settingGradeTable.confirmDelete')}</h3>
               <p className="text-gray-600 mb-2">
-                Bạn có chắc chắn muốn xóa cột điểm <strong className="text-red-600">{deletePanel.columnName}</strong>?
+                {t('settingGradeTable.deleteMessage', { columnName: deletePanel.columnName })}
               </p>
-              <p className="text-sm text-red-600 font-medium">⚠️ Hành động này không thể hoàn tác!</p>
+              <p className="text-sm text-red-600 font-medium">⚠️ {t('settingGradeTable.deleteWarning')}</p>
             </div>
 
             <div className="flex space-x-3 p-6 border-t border-gray-200 bg-gray-50">
@@ -1106,11 +1116,11 @@ export default function SettingGradeTable() {
                 className="flex-1"
                 onClick={() => setDeletePanel({ open: false, columnId: null, columnName: '' })}
               >
-                Hủy
+                {t('settingGradeTable.cancel')}
               </Button>
               <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Xóa
+                {t('settingGradeTable.delete')}
               </Button>
             </div>
           </div>
@@ -1125,7 +1135,7 @@ export default function SettingGradeTable() {
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-8 h-8 text-amber-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Xác nhận</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('settingGradeTable.confirm')}</h3>
               <p className="text-gray-600 whitespace-pre-line">{confirmPanel.message}</p>
             </div>
 
@@ -1135,11 +1145,11 @@ export default function SettingGradeTable() {
                 className="flex-1"
                 onClick={() => setConfirmPanel({ open: false, message: '', onConfirm: () => {} })}
               >
-                Hủy
+                {t('settingGradeTable.cancel')}
               </Button>
               <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={confirmPanel.onConfirm}>
                 <Check className="w-4 h-4 mr-2" />
-                Tiếp tục
+                {t('settingGradeTable.continue')}
               </Button>
             </div>
           </div>

@@ -606,7 +606,7 @@ export default function WordEditorModal({
                             fontWeight: "bold"
                           }}
                         >
-                          Tên lớp/Nhóm
+                          Tên Sinh viên/Phụ huynh
                         </th>
                         <th
                           style={{
@@ -616,7 +616,7 @@ export default function WordEditorModal({
                             fontWeight: "bold"
                           }}
                         >
-                          Số lượng SV
+                          Số lượng Sinh viên/Phụ huynh
                         </th>
                         <th
                           style={{

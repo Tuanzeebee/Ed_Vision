@@ -37,8 +37,11 @@ export default function AdjustParameters({}: Props) {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
   const { t } = useTranslation('student')
+  
+  // Extract userId to prevent re-renders when user object reference changes
+  const userId = user?.account_id || user?.id
 
-  const TOTAL_CREDITS_FOR_GRADUATION = 145
+  const TOTAL_CREDITS_FOR_GRADUATION = 144
   const gpaValue = gpaData?.currentGPA ?? 0
   const gpaSticky = useMemo(() => {
     const trend = gpaData?.gpaChange !== undefined ? ` (xu hướng ${gpaData.gpaChange >= 0 ? '+' : ''}${gpaData.gpaChange.toFixed(2)} so với kỳ trước)` : ''
@@ -75,11 +78,9 @@ export default function AdjustParameters({}: Props) {
       try {
         setIsLoadingGPA(true)
         setIsLoadingSurvey(true)
-        if (!isAuthenticated || !user) return
-        const accountId = user.account_id || user.id
-        if (!accountId) return
-        const p1 = getStudentGPA(accountId)
-        const p2 = getStudentSurveyFactors(accountId)
+        if (!isAuthenticated || !userId) return
+        const p1 = getStudentGPA(userId)
+        const p2 = getStudentSurveyFactors(userId)
         const [r1, r2] = await Promise.allSettled([p1, p2])
         if (!active) return
         if (r1.status === 'fulfilled') {
@@ -105,9 +106,9 @@ export default function AdjustParameters({}: Props) {
         setIsCheckingTranscript(false)
       }
     }
-    if (isAuthenticated) run()
+    if (isAuthenticated && userId) run()
     return () => { active = false }
-  }, [isAuthenticated, user, navigate, t])
+  }, [isAuthenticated, userId])
 
   
 
@@ -119,7 +120,7 @@ export default function AdjustParameters({}: Props) {
       <div className="bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking transcript status...</p>
+          <p className="text-gray-600">{t('adjust.checkingStatus')}</p>
         </div>
       </div>
     )
@@ -257,7 +258,9 @@ export default function AdjustParameters({}: Props) {
             <div className="p-8 space-y-8">
               {/* Header Section */}
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold text-gray-900">{t('adjust.headerTitle')}</h1>
+                <h1 className="text-3xl font-semibold text-gray-900">
+                  {t('adjust.pageTitle')}
+                </h1>
                 <p className="text-lg text-gray-600 font-medium">
                   {t('adjust.headerSubtitle')}
                 </p>
@@ -467,7 +470,7 @@ export default function AdjustParameters({}: Props) {
                           </div>
                           <div className="text-3xl font-bold text-purple-600">
                             {surveyData.work_time_hours ?? 'N/A'}
-                            {surveyData.work_time_hours && (
+                            {(surveyData.work_time_hours !== null && surveyData.work_time_hours !== undefined) && (
                               <span className="text-sm font-medium text-purple-700 ml-2">{t('adjust.hoursPerWeek')}</span>
                             )}
                           </div>
@@ -487,10 +490,22 @@ export default function AdjustParameters({}: Props) {
                             <h3 className="font-semibold text-gray-900">{t('adjust.financialSupport')}</h3>
                           </div>
                           <div className="text-3xl font-bold text-green-600">
-                            {surveyData.financial_support_score ?? 'N/A'}
-                            {surveyData.financial_support_score && (
-                              <span className="text-sm font-medium text-green-700 ml-2">{t('adjust.outOf100')}</span>
-                            )}
+                            {(() => {
+                              const s = surveyData.financial_support_score;
+                              if (s === null || s === undefined) return 'N/A';
+                              const rounded = Math.round(s);
+                              let text = '';
+                              if (rounded === 0) text = 'Thấp';
+                              else if (rounded === 1) text = 'Trung bình';
+                              else if (rounded === 2) text = 'Cao';
+                              else if (rounded >= 3) text = 'Rất cao';
+                              
+                              return (
+                                <span>
+                                  {s} <span className="text-lg text-green-700 font-medium">/ {text}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                         </CardContent>
                       </Card>
@@ -507,10 +522,22 @@ export default function AdjustParameters({}: Props) {
                             <h3 className="font-semibold text-gray-900">{t('adjust.mentalHealth')}</h3>
                           </div>
                           <div className="text-3xl font-bold text-pink-600">
-                            {surveyData.mental_health_score ?? 'N/A'}
-                            {surveyData.mental_health_score && (
-                              <span className="text-sm font-medium text-pink-700 ml-2">{t('adjust.outOf100')}</span>
-                            )}
+                            {(() => {
+                              const s = surveyData.mental_health_score;
+                              if (s === null || s === undefined) return 'N/A';
+                              const rounded = Math.round(s);
+                              let text = '';
+                              if (rounded === 0) text = 'Thấp';
+                              else if (rounded === 1) text = 'Trung bình';
+                              else if (rounded === 2) text = 'Cao';
+                              else if (rounded >= 3) text = 'Rất cao';
+                              
+                              return (
+                                <span>
+                                  {s} <span className="text-lg text-pink-700 font-medium">/ {text}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                         </CardContent>
                       </Card>

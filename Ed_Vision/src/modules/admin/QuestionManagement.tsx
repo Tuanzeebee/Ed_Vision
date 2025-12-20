@@ -3,16 +3,9 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/ui/admin/AdminLayout";
 import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
-
-type Question = {
-  id: string;
-  questionId: string;
-  content: string;
-  category: 'psychology' | 'finance' | 'general' | 'academic' | 'health';
-  type: 'single-choice' | 'multiple-choice' | 'text' | 'scale';
-  optionsCount: number | string;
-  createdDate: string;
-};
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import questionService, { type Question, type QuestionFilterParams } from "@/services/api/questionService";
+import { useToast } from "@/lib/useToast";
 
 type QuestionFilter = {
   search: string;
@@ -22,17 +15,68 @@ type QuestionFilter = {
 
 const QuestionManagement = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  
   const [filters, setFilters] = useState<QuestionFilter>({
     search: '',
     category: 'all',
     type: 'all'
   });
 
-  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
+  const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const questionsPerPage = 10;
 
-  // Mock data is now inside useEffect
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info';
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'warning'
+  });
+
+  // Fetch questions from API
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        setIsLoading(true);
+        
+        const params: QuestionFilterParams = {
+          page: currentPage,
+          limit: questionsPerPage,
+        };
+
+        if (filters.search) params.search = filters.search;
+        if (filters.category !== 'all') params.category = filters.category;
+        if (filters.type !== 'all') params.type = filters.type;
+
+        const response = await questionService.getQuestions(params);
+        
+        setQuestions(response.data);
+        setTotal(response.meta.total);
+        setTotalPages(response.meta.totalPages);
+      } catch (error) {
+        console.error('Failed to fetch questions:', error);
+        showToast('Không thể tải danh sách câu hỏi', 'error');
+        setQuestions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [filters, currentPage, showToast]);
 
   const handleFilterChange = (filterKey: keyof QuestionFilter, value: string) => {
     setFilters(prev => ({
@@ -47,9 +91,10 @@ const QuestionManagement = () => {
       category: 'all',
       type: 'all'
     });
+    setCurrentPage(1);
   };
 
-  const handleSelectQuestion = (questionId: string) => {
+  const handleSelectQuestion = (questionId: number) => {
     setSelectedQuestions(prev => 
       prev.includes(questionId) 
         ? prev.filter(id => id !== questionId)
@@ -59,91 +104,96 @@ const QuestionManagement = () => {
 
   const handleSelectAll = () => {
     setSelectedQuestions(
-      selectedQuestions.length === filteredQuestions.length 
+      selectedQuestions.length === questions.length 
         ? [] 
-        : filteredQuestions.map(q => q.id)
+        : questions.map(q => q.questionId)
     );
   };
 
-  // Filter logic with loading state
-  useEffect(() => {
-    setIsLoading(true);
-    
-    const filterTimeout = setTimeout(() => {
-      // Move questions data inside useEffect to avoid dependency issues
-      const questionsData: Question[] = [
-        {
-          id: "1",
-          questionId: "Q001",
-          content: "Bạn đánh giá sức khỏe tâm lý tổng thể của mình như thế nào?",
-          category: "psychology",
-          type: "single-choice",
-          optionsCount: 4,
-          createdDate: "2024-01-15"
-        },
-        {
-          id: "2", 
-          questionId: "Q002",
-          content: "Những thách thức tài chính nào bạn hiện đang gặp phải?",
-          category: "finance",
-          type: "multiple-choice",
-          optionsCount: 6,
-          createdDate: "2024-01-14"
-        },
-        {
-          id: "3",
-          questionId: "Q003", 
-          content: "Bạn có hài lòng với chất lượng giảng dạy của giảng viên không?",
-          category: "academic",
-          type: "scale",
-          optionsCount: "5 điểm",
-          createdDate: "2024-01-13"
-        },
-        {
-          id: "4",
-          questionId: "Q004",
-          content: "Mô tả tình trạng sức khỏe thể chất hiện tại của bạn",
-          category: "health",
-          type: "text",
-          optionsCount: "Tự do",
-          createdDate: "2024-01-12"
-        },
-        {
-          id: "5",
-          questionId: "Q005",
-          content: "Bạn thường sử dụng những phương tiện giao thông nào để đến trường?",
-          category: "general",
-          type: "multiple-choice",
-          optionsCount: 5,
-          createdDate: "2024-01-11"
-        },
-        {
-          id: "6",
-          questionId: "Q006",
-          content: "Đánh giá mức độ hài lòng với cơ sở vật chất của trường",
-          category: "general",
-          type: "single-choice", 
-          optionsCount: 5,
-          createdDate: "2024-01-10"
+  const handleDeleteSelected = async () => {
+    if (selectedQuestions.length === 0) return;
+
+    setConfirmDialog({
+      open: true,
+      title: 'Xác nhận xóa nhiều câu hỏi',
+      message: `Bạn có chắc chắn muốn xóa ${selectedQuestions.length} câu hỏi đã chọn? Hành động này không thể hoàn tác.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        
+        try {
+          setIsLoading(true);
+          const result = await questionService.deleteQuestions(selectedQuestions);
+          showToast(`Đã xóa ${result.deletedCount} câu hỏi thành công`, 'success');
+          setSelectedQuestions([]);
+          
+          // Reload questions
+          const params: QuestionFilterParams = {
+            page: currentPage,
+            limit: questionsPerPage,
+          };
+          if (filters.search) params.search = filters.search;
+          if (filters.category !== 'all') params.category = filters.category;
+          if (filters.type !== 'all') params.type = filters.type;
+
+          const response = await questionService.getQuestions(params);
+          setQuestions(response.data);
+          setTotal(response.meta.total);
+          setTotalPages(response.meta.totalPages);
+        } catch (error) {
+          console.error('Failed to delete questions:', error);
+          showToast('Không thể xóa câu hỏi', 'error');
+        } finally {
+          setIsLoading(false);
         }
-      ];
-      
-      const filtered = questionsData.filter(question => {
-        const matchesSearch = filters.search === '' || 
-          question.content.toLowerCase().includes(filters.search.toLowerCase()) ||
-          question.questionId.toLowerCase().includes(filters.search.toLowerCase());
+      }
+    });
+  };
+
+  const handleEdit = (questionId: number) => {
+    navigate(`/admin/questions/edit/${questionId}`);
+  };
+
+  const handleDelete = async (questionId: number) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn xóa câu hỏi này? Hành động này không thể hoàn tác.',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
         
-        const matchesCategory = filters.category === 'all' || question.category === filters.category;
-        const matchesType = filters.type === 'all' || question.type === filters.type;
-        
-        return matchesSearch && matchesCategory && matchesType;
-      });
-      
-      setFilteredQuestions(filtered);
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(filterTimeout);
+        try {
+          setIsLoading(true);
+          await questionService.deleteQuestion(questionId);
+          showToast('Đã xóa câu hỏi thành công', 'success');
+          
+          // Reload questions
+          const params: QuestionFilterParams = {
+            page: currentPage,
+            limit: questionsPerPage,
+          };
+          if (filters.search) params.search = filters.search;
+          if (filters.category !== 'all') params.category = filters.category;
+          if (filters.type !== 'all') params.type = filters.type;
+
+          const response = await questionService.getQuestions(params);
+          setQuestions(response.data);
+          setTotal(response.meta.total);
+          setTotalPages(response.meta.totalPages);
+        } catch (error) {
+          console.error('Failed to delete question:', error);
+          showToast('Không thể xóa câu hỏi', 'error');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
   }, [filters.search, filters.category, filters.type]);
 
   const getCategoryBadge = (category: string) => {
@@ -267,9 +317,10 @@ const QuestionManagement = () => {
                 <button 
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-md font-medium transition-colors flex items-center cursor-pointer text-xs"
                   disabled={selectedQuestions.length === 0}
+                  onClick={handleDeleteSelected}
                 >
                   <i className="fas fa-trash mr-2"></i>
-                  Xóa đã chọn
+                  Xóa đã chọn ({selectedQuestions.length})
                 </button>
               </div>
             </div>
@@ -294,7 +345,7 @@ const QuestionManagement = () => {
                       <input 
                         type="checkbox" 
                         className="rounded border-gray-300 text-white focus:ring-gray-500 accent-white"
-                        checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
+                        checked={selectedQuestions.length === questions.length && questions.length > 0}
                         onChange={handleSelectAll}
                       />
                     </th>
@@ -308,9 +359,9 @@ const QuestionManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {!isLoading && filteredQuestions.length === 0 ? (
+                  {!isLoading && questions.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center">
+                      <td colSpan={8} className="px-6 py-8 text-center">
                         <div className="text-gray-500">
                           <span className="text-2xl mb-2 block">🔍</span>
                           <p className="text-sm">Không tìm thấy câu hỏi phù hợp với bộ lọc</p>
@@ -318,14 +369,14 @@ const QuestionManagement = () => {
                       </td>
                     </tr>
                   ) : !isLoading ? (
-                    filteredQuestions.map((question) => (
-                    <tr key={question.id} className="hover:bg-gray-50">
+                    questions.map((question) => (
+                    <tr key={question.questionId} className="hover:bg-gray-50">
                       <td className="border border-gray-200 px-4 py-3">
                         <input 
                           type="checkbox" 
                           className="rounded border-gray-300 text-white focus:ring-gray-500 accent-white"
-                          checked={selectedQuestions.includes(question.id)}
-                          onChange={() => handleSelectQuestion(question.id)}
+                          checked={selectedQuestions.includes(question.questionId)}
+                          onChange={() => handleSelectQuestion(question.questionId)}
                         />
                       </td>
                       <td className="border border-gray-200 px-4 py-3">
@@ -334,7 +385,7 @@ const QuestionManagement = () => {
                         </div>
                       </td>
                       <td className="border border-gray-200 px-4 py-3 text-center">
-                        <span className="font-mono text-sm text-gray-600">{question.questionId}</span>
+                        <span className="font-mono text-sm text-gray-600">{question.questionCode}</span>
                       </td>
                       <td className="border border-gray-200 px-4 py-3 text-center">
                         {getCategoryBadge(question.category)}
@@ -352,13 +403,18 @@ const QuestionManagement = () => {
                       </td>
                       <td className="border border-gray-200 px-4 py-3 text-center">
                         <div className="flex items-center justify-center space-x-2">
-                          <button className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="Chỉnh sửa">
+                          <button 
+                            onClick={() => handleEdit(question.questionId)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" 
+                            title="Chỉnh sửa"
+                          >
                             <i className="fas fa-edit"></i>
                           </button>
-                          <button className="text-green-600 hover:text-green-800 transition-colors cursor-pointer" title="Sao chép">
-                            <i className="fas fa-copy"></i>
-                          </button>
-                          <button className="text-red-600 hover:text-red-800 transition-colors cursor-pointer" title="Xóa">
+                          <button 
+                            onClick={() => handleDelete(question.questionId)}
+                            className="text-red-600 hover:text-red-800 transition-colors cursor-pointer" 
+                            title="Xóa"
+                          >
                             <i className="fas fa-trash"></i>
                           </button>
                         </div>
@@ -373,18 +429,60 @@ const QuestionManagement = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
               <div className="text-sm text-gray-600">
-                Hiện <span className="font-medium">1</span> đến <span className="font-medium">{filteredQuestions.length}</span> trong tổng số <span className="font-medium">{filteredQuestions.length}</span> kết quả
+                Hiện <span className="font-medium">{(currentPage - 1) * questionsPerPage + 1}</span> đến <span className="font-medium">{Math.min(currentPage * questionsPerPage, total)}</span> trong tổng số <span className="font-medium">{total}</span> kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer" disabled>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed disabled:opacity-50' : 'text-gray-500 hover:bg-gray-50 cursor-pointer'}`}
+                >
                   <i className="fas fa-chevron-left mr-1"></i>
                   Trước
                 </button>
-                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">4</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+
+                {/* Page numbers */}
+                {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button 
+                      key={i}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer ${currentPage === pageNum ? 'text-white bg-blue-600 border border-blue-600' : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <>
+                    <span className="px-2 text-gray-500">...</span>
+                    <button 
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === totalPages || totalPages === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+                >
                   Sau
                   <i className="fas fa-chevron-right ml-1"></i>
                 </button>
@@ -393,6 +491,18 @@ const QuestionManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText="Xác nhận"
+        cancelText="Hủy"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+      />
     </AdminLayout>
   );
 };

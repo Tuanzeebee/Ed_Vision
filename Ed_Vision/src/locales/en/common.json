@@ -78,7 +78,11 @@
       "predict": "Predict",
       "plan": "Plan",
       "communicate": "Communicate",
-      "survey": "Survey"
+      "survey": "Survey",
+      "dashboard": "Dashboard",
+      "bookAppointment": "Book Appointment",
+      "studentDetails": "Student Details",
+      "chat": "Chat"
     },
     "features": {
       "gradeForecasting": {
@@ -242,5 +246,87 @@
       "sentDate": "Sent on",
       "selectPrompt": "Select a notification to view details"
     }
+  },
+  "error": {
+    "user": {
+      "notFound": "User not found",
+      "alreadyExists": "User already exists",
+      "invalidCredentials": "Invalid credentials",
+      "unauthorized": "Unauthorized access",
+      "forbidden": "Forbidden"
+    },
+    "auth": {
+      "invalidPassword": "Invalid password",
+      "invalidToken": "Invalid token",
+      "tokenExpired": "Token expired",
+      "invalidOtp": "Invalid OTP",
+      "otpExpired": "OTP expired"
+    },
+    "validation": {
+      "required": "This field is required",
+      "invalidEmail": "Invalid email format",
+      "invalidPhone": "Invalid phone number"
+    },
+    "server": {
+      "internalError": "Internal server error",
+      "serviceUnavailable": "Service unavailable",
+      "badRequest": "Bad request"
+    },
+    "booking": {
+      "notFound": "Booking not found",
+      "slotUnavailable": "Time slot is unavailable",
+      "alreadyBooked": "Already booked for this slot"
+    },
+    "student": {
+      "notFound": "Student not found",
+      "invalidStatus": "Invalid student status"
+    },
+    "teacher": {
+      "notFound": "Teacher not found",
+      "notAvailable": "Teacher not available"
+    }
+  },
+  "student": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "graduated": "Graduated"
+    },
+    "grade": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "average": "Average",
+      "belowAverage": "Below Average",
+      "poor": "Poor"
+    }
+  },
+  "teacher": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "onLeave": "On Leave"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "canceled": "Canceled",
+      "rejected": "Rejected"
+    },
+    "type": {
+      "consultation": "Consultation",
+      "appointment": "Appointment",
+      "meeting": "Meeting"
+    }
+  },
+  "role": {
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "student": "Student",
+    "parent": "Parent"
   }
 }

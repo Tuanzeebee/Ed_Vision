@@ -246,12 +246,12 @@ The Ed_Vision Team`,
     try {
       // Add timeout to prevent hanging - 10 seconds max
       const sendPromise = transporter.sendMail(mailOptions);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email send timeout')), 10000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Email send timeout')), 10000),
       );
-      
-      const result = await Promise.race([sendPromise, timeoutPromise]) as any;
-      
+
+      const result = (await Promise.race([sendPromise, timeoutPromise])) as any;
+
       // log send result for debugging (do not log OTP code in production logs)
       console.log('OTP email sent', {
         to: email,
@@ -263,7 +263,7 @@ The Ed_Vision Team`,
       // Don't remove OTP on failure - user can still use it if email arrives late
       // Just log the error
       console.error('Failed to send OTP email (OTP still valid)', err);
-      
+
       // Return success anyway - OTP is in database and user can use it
       // This prevents blocking user flow due to slow email delivery
       return { ok: true, emailDeliveryDelayed: true };
@@ -271,7 +271,7 @@ The Ed_Vision Team`,
   }
 
   async verifyOtp(email: string, code: string, linkCode?: string) {
-    const account = await this.prisma.account.findUnique({ 
+    const account = await this.prisma.account.findUnique({
       where: { email },
       include: { roleRel: true },
     });
@@ -306,7 +306,8 @@ The Ed_Vision Team`,
     if (!existingProfile) {
       // Extract name from email (before @)
       const emailName = email.split('@')[0];
-      const defaultName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+      const defaultName =
+        emailName.charAt(0).toUpperCase() + emailName.slice(1);
 
       await this.prisma.profile.create({
         data: {
@@ -350,7 +351,9 @@ The Ed_Vision Team`,
       // Validate linkCode and get the pending link
       const parentStudentLink = await this.prisma.parentStudentLink.findUnique({
         where: { link_code: linkCode },
-        include: { student: { include: { account: { include: { profile: true } } } } },
+        include: {
+          student: { include: { account: { include: { profile: true } } } },
+        },
       });
 
       if (!parentStudentLink) {
@@ -383,7 +386,9 @@ The Ed_Vision Team`,
         });
       }
 
-      console.log(`Parent ${parent.parent_id} linked to student ${parentStudentLink.student_id}`);
+      console.log(
+        `Parent ${parent.parent_id} linked to student ${parentStudentLink.student_id}`,
+      );
     }
 
     return { ok: true };

@@ -57,7 +57,8 @@ export class NotificationController {
       storage: diskStorage({
         destination: './uploads/notifications',
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
           cb(null, `${uniqueSuffix}${ext}`);
         },
@@ -72,7 +73,7 @@ export class NotificationController {
       return { success: false, attachments: [] };
     }
 
-    const attachments = files.map(file => ({
+    const attachments = files.map((file) => ({
       name: file.originalname,
       size: file.size,
       type: file.mimetype,
@@ -174,7 +175,7 @@ export class NotificationController {
   @UseGuards(DevAuthGuard)
   async getStats(@Query('viewMode') viewMode?: string) {
     return this.notificationService.getDetailedStats(
-      (viewMode as 'day' | 'month' | 'year' | 'all') || 'day'
+      (viewMode as 'day' | 'month' | 'year' | 'all') || 'day',
     );
   }
 
@@ -186,7 +187,7 @@ export class NotificationController {
   @UseGuards(DevAuthGuard)
   async getChartData(@Query('viewMode') viewMode?: string) {
     return this.notificationService.getChartData(
-      (viewMode as 'day' | 'month' | 'year' | 'all') || 'day'
+      (viewMode as 'day' | 'month' | 'year' | 'all') || 'day',
     );
   }
 
@@ -349,7 +350,11 @@ export class NotificationController {
     if (!accountId) {
       return { success: false };
     }
-    const success = await this.notificationService.markAsRead(id, accountId, source);
+    const success = await this.notificationService.markAsRead(
+      id,
+      accountId,
+      source,
+    );
     return { success };
   }
 
@@ -368,7 +373,10 @@ export class NotificationController {
     if (!accountId) {
       return { success: false };
     }
-    const success = await this.notificationService.markAsReadByMasterId(masterId, accountId);
+    const success = await this.notificationService.markAsReadByMasterId(
+      masterId,
+      accountId,
+    );
     return { success };
   }
 
@@ -441,8 +449,13 @@ export class NotificationController {
    * POST /notifications/debug/create-test-reminder
    */
   @Post('debug/create-test-reminder')
-  async createTestReminder(@Body() body: { accountId: number; minutesFromNow: number }) {
-    return this.reminderScheduler.createTestReminder(body.accountId, body.minutesFromNow);
+  async createTestReminder(
+    @Body() body: { accountId: number; minutesFromNow: number },
+  ) {
+    return this.reminderScheduler.createTestReminder(
+      body.accountId,
+      body.minutesFromNow,
+    );
   }
 
   /**
@@ -450,7 +463,12 @@ export class NotificationController {
    * GET /notifications/debug/recent/:accountId
    */
   @Get('debug/recent/:accountId')
-  async getRecentNotifications(@Param('accountId', ParseIntPipe) accountId: number) {
-    return this.notificationService.getMyNotifications(accountId, { page: 1, limit: 5 });
+  async getRecentNotifications(
+    @Param('accountId', ParseIntPipe) accountId: number,
+  ) {
+    return this.notificationService.getMyNotifications(accountId, {
+      page: 1,
+      limit: 5,
+    });
   }
 }

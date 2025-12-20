@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/teacher/teacher_card';
 import { Button } from '@/components/ui/teacher/teacher_button';
 import { Badge } from '@/components/ui/teacher/teacher_badge';
@@ -87,6 +88,7 @@ interface UploadMetadata {
 type Props = {};
 
 export default function PredictionViewV2({}: Props) {
+  const { t } = useTranslation('teacher');
   const [, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -937,33 +939,30 @@ export default function PredictionViewV2({}: Props) {
           },
         }}
       />
-      <div className="flex-1 p-6 bg-gray-50">
-        <div className="space-y-6">
-        {/* Header Banner */}
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold mb-2">Workflow Dự đoán Điểm</h3>
-                <p className="text-blue-100">Upload → Khảo sát → Dự đoán → Phân tích SHAP</p>
-              </div>
-              <div className="flex items-center space-x-4">
-                {/* History Toggle Button */}
-                <button
-                  onClick={toggleHistory}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                  title="Lịch sử upload"
-                >
-                  <History className="w-5 h-5" />
-                </button>
-                <div className="hidden md:block">
-                  <TrendingUp className="w-16 h-16 opacity-20" />
-                </div>
-              </div>
+      
+      {/* Page Header */}
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">{t('prediction.title')}</h2>
+            <p className="text-blue-100">{t('prediction.subtitle')}</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleHistory}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              title={t('prediction.historyButton')}
+            >
+              <History className="w-5 h-5" />
+            </button>
+            <div className="hidden md:block">
+              <TrendingUp className="w-16 h-16 opacity-20" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
 
+      <div className="space-y-6">
         {/* Upload History Modal - Floating Toast Style */}
         {showHistory && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4">
@@ -972,7 +971,7 @@ export default function PredictionViewV2({}: Props) {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <History className="w-6 h-6 text-blue-500" />
-                    Lịch sử upload file
+                    {t('prediction.historyTitle')}
                   </h3>
                   <button
                     onClick={() => setShowHistory(false)}
@@ -985,13 +984,13 @@ export default function PredictionViewV2({}: Props) {
                 {loadingHistory ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    <span className="ml-3 text-gray-600 text-lg">Đang tải lịch sử...</span>
+                    <span className="ml-3 text-gray-600 text-lg">{t('prediction.loadingHistory')}</span>
                   </div>
                 ) : uploadHistory.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <FileText className="w-16 h-16 mx-auto mb-3 opacity-50" />
-                    <p className="text-lg">Chưa có lịch sử upload</p>
-                    <p className="text-sm mt-2">Upload file đầu tiên để bắt đầu</p>
+                    <p className="text-lg">{t('prediction.noHistory')}</p>
+                    <p className="text-sm mt-2">{t('prediction.noHistoryDesc')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
@@ -1093,8 +1092,8 @@ export default function PredictionViewV2({}: Props) {
                 <Upload className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Bước 1: Upload dữ liệu điểm học phần</h3>
-                <p className="text-sm text-gray-500">Chấp nhận file CSV hoặc Excel (.csv, .xlsx)</p>
+                <h3 className="text-xl font-bold text-gray-900">{t('prediction.step1Title')}</h3>
+                <p className="text-sm text-gray-500">{t('prediction.step1Subtitle')}</p>
               </div>
             </div>
 
@@ -1116,15 +1115,15 @@ export default function PredictionViewV2({}: Props) {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CloudUpload className="w-8 h-8 text-blue-600" />
                 </div>
-                <p className="text-lg font-semibold text-gray-900 mb-2">Kéo thả file vào đây hoặc nhấn để chọn</p>
-                <p className="text-sm text-gray-500">Hỗ trợ: CSV, XLSX (tối đa 10MB)</p>
+                <p className="text-lg font-semibold text-gray-900 mb-2">{t('prediction.dragDropFile')}</p>
+                <p className="text-sm text-gray-500">{t('prediction.supportedFormats')}</p>
               </label>
             </div>
 
             {uploading && (
               <div className="mt-6 flex items-center justify-center space-x-3 text-blue-600">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="font-medium">Đang xử lý file và lưu vào database...</span>
+                <span className="font-medium">{t('prediction.uploading')}</span>
               </div>
             )}
 
@@ -1132,14 +1131,14 @@ export default function PredictionViewV2({}: Props) {
               <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
                 <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1 text-sm text-gray-700">
-                  <p className="font-medium mb-1">Quy trình xử lý:</p>
-                  <p>Hệ thống sẽ xử lý file, chuẩn hóa dữ liệu, và lưu vào database.</p>
+                  <p className="font-medium mb-1">{t('prediction.processNote')}</p>
+                  <p>{t('prediction.processNoteDesc')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3 p-4 bg-amber-50 rounded-lg">
                 <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1 text-sm text-gray-700">
-                  <p>Sau khi upload thành công, bốn trường behavior sẽ được khởi tạo giá trị trung bình cho từng sinh viên.</p>
+                  <p>{t('prediction.behaviorInitNote')}</p>
                 </div>
               </div>
             </div>
@@ -1149,9 +1148,9 @@ export default function PredictionViewV2({}: Props) {
                 <div className="flex items-center space-x-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="font-semibold text-green-900">Upload thành công!</p>
+                    <p className="font-semibold text-green-900">{t('prediction.uploadSuccessTitle')}</p>
                     <p className="text-sm text-green-700">
-                      Đã xử lý và lưu {recordCount} bản ghi vào database. Các trường behavior đang ở trạng thái NULL.
+                      {t('prediction.uploadSuccessDesc', { count: recordCount })}
                     </p>
                   </div>
                 </div>
@@ -1162,7 +1161,7 @@ export default function PredictionViewV2({}: Props) {
               <div className="mt-6 flex items-center space-x-3 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="font-semibold text-red-900">Lỗi</p>
+                  <p className="font-semibold text-red-900">{t('prediction.errorTitle')}</p>
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               </div>
@@ -1180,8 +1179,8 @@ export default function PredictionViewV2({}: Props) {
                     <Users className="w-6 h-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Bước 2: Danh sách sinh viên và trạng thái behavior</h3>
-                    <p className="text-sm text-gray-500">Hiển thị dữ liệu đã upload và trạng thái khảo sát</p>
+                    <h3 className="text-xl font-bold text-gray-900">{t('prediction.step2Title')}</h3>
+                    <p className="text-sm text-gray-500">{t('prediction.step2Subtitle')}</p>
                   </div>
                 </div>
                 <button 
@@ -1539,7 +1538,7 @@ export default function PredictionViewV2({}: Props) {
                         const pages = [];
                         const maxVisible = 5;
                         let startPage = Math.max(1, predictionCurrentPage - Math.floor(maxVisible / 2));
-                        let endPage = Math.min(totalPredictionPages, startPage + maxVisible - 1);
+                        const endPage = Math.min(totalPredictionPages, startPage + maxVisible - 1);
                         
                         if (endPage - startPage < maxVisible - 1) {
                           startPage = Math.max(1, endPage - maxVisible + 1);
@@ -2807,14 +2806,13 @@ export default function PredictionViewV2({}: Props) {
                   onClick={() => setShowShapModal(false)}
                   variant="outline"
                 >
-                  Đóng
+                  {t('common.close')}
                 </Button>
               </div>
             </div>
           </div>
         </div>
       )}
-      </div>
     </TeacherLayout>
   );
 }

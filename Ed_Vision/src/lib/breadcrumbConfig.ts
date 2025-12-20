@@ -1,123 +1,123 @@
-// Breadcrumb configuration mapping routes to labels and parent routes
+// Breadcrumb configuration mapping routes to translation keys and parent routes
 export const breadcrumbConfig: Record<string, {
-  label: string;
+  labelKey: string; // Translation key instead of hardcoded label
   icon?: string;
   parent?: string;
 }> = {
   '/admin/dashboard': {
-    label: 'Trang chủ',
+    labelKey: 'admin:breadcrumb.home',
     icon: 'fas fa-home text-blue-600'
   },
   '/admin/overview': {
-    label: 'Trang chủ', 
+    labelKey: 'admin:breadcrumb.home', 
     icon: 'fas fa-home text-blue-600'
   },
   '/admin/teachers': {
-    label: 'Quản lý Giảng viên/Cố Vấn',
+    labelKey: 'admin:breadcrumb.teachers',
     parent: '/admin/dashboard'
   },
   '/admin/students': {
-    label: 'Quản lý Sinh viên',
+    labelKey: 'admin:breadcrumb.students',
     parent: '/admin/dashboard'
   },
   '/admin/classes': {
-    label: 'Quản lý Khảo sát',
+    labelKey: 'admin:breadcrumb.surveys',
     parent: '/admin/dashboard'
   },
   '/admin/questions': {
-    label: 'Quản lý Câu hỏi Khảo sát',
+    labelKey: 'admin:breadcrumb.questions',
     parent: '/admin/dashboard'
   },
   '/admin/questions/add': {
-    label: 'Thêm câu hỏi',
+    labelKey: 'admin:breadcrumb.addQuestion',
     parent: '/admin/questions'
   },
   // Teacher detail pages
   '/admin/teachers/:teacherId': {
-    label: 'Thông tin cá nhân',
+    labelKey: 'admin:breadcrumb.personalInfo',
     parent: '/admin/teachers'
   },
   '/admin/teachers/:teacherId/subjects': {
-    label: 'Môn học giảng dạy',
+    labelKey: 'admin:breadcrumb.subjects',
     parent: '/admin/teachers'
   },
   '/admin/teachers/:teacherId/ratings': {
-    label: 'Đánh giá giảng dạy',
+    labelKey: 'admin:breadcrumb.ratings',
     parent: '/admin/teachers'
   },
   '/admin/teachers/:teacherId/performance': {
-    label: 'Hiệu suất giảng viên',
+    labelKey: 'admin:breadcrumb.performance',
     parent: '/admin/teachers'
   },
   '/admin/teachers/:teacherId/schedule': {
-    label: 'Lịch tư vấn',
+    labelKey: 'admin:breadcrumb.schedule',
     parent: '/admin/teachers'
   },
   '/admin/teachers/:teacherId/support-history': {
-    label: 'Lịch sử hỗ trợ',
+    labelKey: 'admin:breadcrumb.supportHistory',
     parent: '/admin/teachers'
   },
   // Student pages
   '/admin/students/list': {
-    label: 'Danh sách sinh viên',
+    labelKey: 'admin:breadcrumb.studentList',
     parent: '/admin/students'
   },
   '/admin/students/:studentId': {
-    label: 'Chi tiết sinh viên',
+    labelKey: 'admin:breadcrumb.studentDetail',
     parent: '/admin/students/list'
   },
   // Account management
   '/admin/users': {
-    label: 'Quản lý Tài khoản & Vai trò',
+    labelKey: 'admin:breadcrumb.accountsRoles',
     parent: '/admin/dashboard'
   },
   '/admin/accounts': {
-    label: 'Quản lý Tài khoản & Vai trò',
+    labelKey: 'admin:breadcrumb.accountsRoles',
     parent: '/admin/dashboard'
   },
   '/admin/account-management': {
-    label: 'Quản lý Tài khoản & Vai trò',
+    labelKey: 'admin:breadcrumb.accountsRoles',
     parent: '/admin/dashboard'
   },
   '/admin/accounts/add': {
-    label: 'Thêm mới tài khoản',
+    labelKey: 'admin:breadcrumb.addAccount',
     parent: '/admin/users'
   },
   '/admin/accounts/:id': {
-    label: 'Chi tiết tài khoản',
+    labelKey: 'admin:breadcrumb.accountDetail',
     parent: '/admin/accounts'
   },
   // Reports and analytics
   '/admin/reports/learning': {
-    label: 'Thống kê Tổng quát',
+    labelKey: 'admin:breadcrumb.generalStats',
     parent: '/admin/dashboard'
   },
   '/admin/analytics/performance': {
-    label: 'Báo cáo Lãnh đạo',
+    labelKey: 'admin:breadcrumb.leadershipReports',
     parent: '/admin/dashboard'
   },
   '/admin/leadership-reports': {
-    label: 'Báo cáo Lãnh đạo',
+    labelKey: 'admin:breadcrumb.leadershipReports',
     parent: '/admin/dashboard'
   },
   '/admin/ai-insights': {
-    label: 'Kết quả Học máy',
+    labelKey: 'admin:breadcrumb.mlResults',
     parent: '/admin/dashboard'
   },
   '/admin/permissions': {
-    label: 'Phân quyền',
+    labelKey: 'admin:breadcrumb.permissions',
     parent: '/admin/dashboard'
   },
   '/admin/notifications': {
-    label: 'Quản lý Thông báo & Phản hồi',
+    labelKey: 'admin:breadcrumb.notifications',
     parent: '/admin/dashboard'
   },
   '/admin/content-approval': {
-    label: 'Phê duyệt Nội dung',
+    labelKey: 'admin:breadcrumb.contentApproval',
     parent: '/admin/dashboard'
   },
   '/admin/role-permissions': {
-    label: 'Phân quyền',
+    labelKey: 'admin:breadcrumb.permissions',
     parent: '/admin/dashboard'
   }
 };

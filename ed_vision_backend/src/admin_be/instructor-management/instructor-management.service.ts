@@ -16,17 +16,12 @@ export class InstructorManagementService {
     // Get total instructor count
     const totalCount = await this.prisma.instructor.count();
 
-    // Get online instructor count - only count accounts that:
-    // 1. Are linked to an instructor (via account_id in Instructor table)
-    // 2. Have role = 'instructor' in Role table (via role_id)
-    // 3. Are currently logged in (last_login_at > last_logout_at or last_logout_at is null)
+    // Get online instructor count - count instructors whose account is logged in
     const onlineResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
       SELECT COUNT(*) as count
       FROM "Instructor" i
       INNER JOIN "Account" a ON i.account_id = a.account_id
-      INNER JOIN "Role" r ON a.role_id = r.id
-      WHERE r.code = 'instructor'
-        AND a.last_login_at IS NOT NULL
+      WHERE a.last_login_at IS NOT NULL
         AND (a.last_logout_at IS NULL OR a.last_login_at > a.last_logout_at)
     `;
 
@@ -481,7 +476,13 @@ export class InstructorManagementService {
     const meetingTypes = ['online', 'offline', 'both'];
 
     // Common appointment statuses
-    const statuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'];
+    const statuses = [
+      'pending',
+      'confirmed',
+      'completed',
+      'cancelled',
+      'no_show',
+    ];
 
     return {
       meetingPurposes,
@@ -564,7 +565,9 @@ export class InstructorManagementService {
         name:
           apt.booker_role?.toLowerCase() === 'student'
             ? apt.student?.account?.profile?.full_name || 'Unknown'
-            : apt.appointmentContact?.contact_name || apt.booker?.profile?.full_name || 'Unknown',
+            : apt.appointmentContact?.contact_name ||
+              apt.booker?.profile?.full_name ||
+              'Unknown',
         bookerRole: apt.booker_role,
         meetingPurpose: apt.meeting_purpose,
         format: apt.meeting_type,
@@ -646,7 +649,9 @@ export class InstructorManagementService {
         name:
           apt.booker_role?.toLowerCase() === 'student'
             ? apt.student?.account?.profile?.full_name || 'Unknown'
-            : apt.appointmentContact?.contact_name || apt.booker?.profile?.full_name || 'Unknown',
+            : apt.appointmentContact?.contact_name ||
+              apt.booker?.profile?.full_name ||
+              'Unknown',
         bookerRole: apt.booker_role,
         relationship: apt.booker_role === 'student' ? 'Sinh viên' : 'Phụ huynh',
         meetingPurpose: apt.meeting_purpose,
@@ -716,7 +721,10 @@ export class InstructorManagementService {
       const aptYear = apt.created_at.getFullYear();
 
       for (let i = 0; i < months.length; i++) {
-        if (months[i].getMonth() === aptMonth && months[i].getFullYear() === aptYear) {
+        if (
+          months[i].getMonth() === aptMonth &&
+          months[i].getFullYear() === aptYear
+        ) {
           if (apt.booker_role === 'parent') {
             parentData[i]++;
           } else if (apt.booker_role === 'student') {

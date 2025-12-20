@@ -27,12 +27,12 @@ export class AcademicDataService {
 
       // Nhóm theo năm học và lấy các học kỳ có sẵn
       const yearMap = new Map<string, Set<number>>();
-      
-      terms.forEach(term => {
+
+      terms.forEach((term) => {
         if (!yearMap.has(term.academic_year)) {
           yearMap.set(term.academic_year, new Set());
         }
-        
+
         // semester_number: 1 = Kỳ 1, 2 = Kỳ 2, 3 = Kỳ Hè
         if (term.is_summer) {
           yearMap.get(term.academic_year)?.add(3);
@@ -81,7 +81,7 @@ export class AcademicDataService {
 
       return {
         success: true,
-        data: courses.map(course => ({
+        data: courses.map((course) => ({
           id: course.course_id,
           code: course.course_code,
           name: course.course_name,

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react"
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import TeacherLayout from "./components/TeacherLayout"
@@ -55,6 +56,7 @@ interface PassThresholdData {
 }
 
 export default function GradeManagement() {
+    const { t } = useTranslation('teacher')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [selectedDepartment, setSelectedDepartment] = useState("")
@@ -189,10 +191,10 @@ export default function GradeManagement() {
                     console.error('Failed to load pass threshold data:', error)
                 }
 
-                showNotification('success', `Đã tải ${mappedStudents.length} sinh viên thành công`)
+                showNotification('success', t('gradeManagement.studentsLoaded', { count: mappedStudents.length }))
             }
         } catch (error: any) {
-            showNotification('error', 'Không thể tải dữ liệu lớp học')
+            showNotification('error', t('gradeManagement.cannotLoadData'))
         } finally {
             setLoadingData(false)
         }
@@ -533,15 +535,15 @@ export default function GradeManagement() {
 
             {/* Page Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-xl shadow-lg mb-6">
-                <h2 className="text-3xl font-bold mb-2">Quản Lý Điểm</h2>
-                <p className="text-indigo-100">Xem và quản lý dữ liệu điểm từ các lớp học đã dự đoán</p>
+                <h2 className="text-3xl font-bold mb-2">{t('gradeManagement.title')}</h2>
+                <p className="text-indigo-100">{t('gradeManagement.subtitle')}</p>
             </div>
 
             {/* Filter Section - Prediction Data */}
             <Card className="mb-6 border border-gray-100 rounded-xl">
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">Bộ lọc dữ liệu</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{t('gradeManagement.filterTitle')}</h3>
                         <button
                             onClick={() => {
                                 setSelectedCourseCode('')
@@ -551,18 +553,18 @@ export default function GradeManagement() {
                                 setSelectedUploadId('')
                                 setStudents([])
                                 setMongoDataLoaded(false)
-                                showNotification('info', 'Đã xóa tất cả bộ lọc')
+                                showNotification('info', t('gradeManagement.clearFilterNotification'))
                             }}
                             className="flex items-center space-x-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
                         >
                             <X className="w-4 h-4" />
-                            <span>Xóa bộ lọc</span>
+                            <span>{t('gradeManagement.clearFilter')}</span>
                         </button>
                     </div>
 
                     <div className="grid grid-cols-4 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-700 font-medium">Môn học</label>
+                            <label className="text-sm text-gray-700 font-medium">{t('gradeManagement.subjectLabel')}</label>
                             <select
                                 value={selectedCourseCode}
                                 onChange={(e) => {
@@ -574,13 +576,13 @@ export default function GradeManagement() {
                                 }}
                                 className="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-blue-500"
                             >
-                                <option value="">Tất cả môn học</option>
+                                <option value="">{t('gradeManagement.allSubjects')}</option>
                                 {Object.keys(filteredGroupedByCourse).map((courseCode) => {
                                     const courseUploads = filteredGroupedByCourse[courseCode]
                                     const totalClasses = courseUploads.length
                                     return (
                                         <option key={courseCode} value={courseCode}>
-                                            {courseCode} ({totalClasses} lớp)
+                                            {courseCode} ({totalClasses} {t('gradeManagement.classesLabel')})
                                         </option>
                                     )
                                 })}
@@ -588,7 +590,7 @@ export default function GradeManagement() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-700 font-medium">Mã lớp</label>
+                            <label className="text-sm text-gray-700 font-medium">{t('gradeManagement.classCodeLabel')}</label>
                             <select
                                 value={selectedClassCode}
                                 onChange={(e) => {
@@ -608,39 +610,39 @@ export default function GradeManagement() {
                                 disabled={!selectedCourseCode}
                                 className="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <option value="">Chọn mã lớp</option>
+                                <option value="">{t('gradeManagement.selectClassCode')}</option>
                                 {classCodesForSelectedCourse.map((upload: any) => (
                                     <option key={upload._id} value={upload.class_code}>
-                                        {upload.class_code} ({upload.total_students} SV)
+                                        {upload.class_code} ({upload.total_students} {t('gradeManagement.studentShortLabel')})
                                     </option>
                                 ))}
                             </select>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-700 font-medium">Học kỳ</label>
+                            <label className="text-sm text-gray-700 font-medium">{t('gradeManagement.semesterLabel')}</label>
                             <select
                                 value={selectedCourse}
                                 onChange={(e) => setSelectedCourse(e.target.value)}
                                 className="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-blue-500"
                             >
-                                <option value="">Tất cả học kỳ</option>
+                                <option value="">{t('gradeManagement.allSemesters')}</option>
                                 {availableSemesters.map((sem) => (
                                     <option key={sem} value={sem}>
-                                        Học kỳ {sem}
+                                        {t('gradeManagement.semesterFormat', { number: sem })}
                                     </option>
                                 ))}
                             </select>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-700 font-medium">Năm học</label>
+                            <label className="text-sm text-gray-700 font-medium">{t('gradeManagement.academicYearLabel')}</label>
                             <select
                                 value={selectedSubject}
                                 onChange={(e) => setSelectedSubject(e.target.value)}
                                 className="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-blue-500"
                             >
-                                <option value="">Tất cả năm học</option>
+                                <option value="">{t('gradeManagement.allAcademicYears')}</option>
                                 {availableAcademicYears.map((year) => (
                                     <option key={year} value={year}>
                                         {year}
@@ -657,15 +659,15 @@ export default function GradeManagement() {
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">Lịch sử lớp học đã dự đoán</h3>
-                            <p className="text-sm text-gray-600">Chọn một lớp học để xem danh sách sinh viên và kết quả dự đoán</p>
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">{t('gradeManagement.historyTitle')}</h3>
+                            <p className="text-sm text-gray-600">{t('gradeManagement.historySubtitle')}</p>
                         </div>
                         <button
                             onClick={loadUploadHistory}
                             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                         >
                             <RefreshCcw className="w-4 h-4" />
-                            <span>Làm mới</span>
+                            <span>{t('gradeManagement.refresh')}</span>
                         </button>
                     </div>
 
@@ -675,10 +677,12 @@ export default function GradeManagement() {
                             {/* Step 1: Course Selection */}
                             <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                                    Bước 1: Chọn Môn học
+                                    {t('gradeManagement.step1Title')}
                                     {(selectedCourse || selectedSubject) && (
                                         <span className="ml-2 text-xs text-blue-600">
-                                            (Đang lọc: {selectedSubject && `${selectedSubject}`}{selectedSubject && selectedCourse && ' - '}{selectedCourse && `Học kỳ ${selectedCourse}`})
+                                            {t('gradeManagement.filteringBy', { 
+                                                filters: `${selectedSubject || ''}${selectedSubject && selectedCourse ? ' - ' : ''}${selectedCourse ? t('gradeManagement.semesterFormat', { number: selectedCourse }) : ''}`
+                                            })}
                                         </span>
                                     )}
                                 </h4>
@@ -702,7 +706,7 @@ export default function GradeManagement() {
                                                     <div className="flex-1">
                                                         <h5 className="font-bold text-base text-gray-900">{courseCode}</h5>
                                                         <p className="text-xs text-gray-500 mt-0.5">
-                                                            {totalClasses} lớp • {totalStudents} SV
+                                                            {totalClasses} {t('gradeManagement.classesLabel')} • {totalStudents} {t('gradeManagement.studentShortLabel')}
                                                         </p>
                                                     </div>
                                                     {selectedCourseCode === courseCode && (
@@ -711,11 +715,11 @@ export default function GradeManagement() {
                                                 </div>
                                                 <div className="flex items-center justify-between text-sm mt-2">
                                                     <Badge className="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5">
-                                                        Môn học
+                                                        {t('gradeManagement.subjectBadge')}
                                                     </Badge>
                                                     {courseUploads.some(u => u.students_with_prediction > 0) && (
                                                         <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5">
-                                                            Có dự đoán
+                                                            {t('gradeManagement.hasPredictionBadge')}
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -728,9 +732,9 @@ export default function GradeManagement() {
                             {/* No results message */}
                             {Object.keys(filteredGroupedByCourse).length === 0 && (
                                 <div className="text-center py-8 px-4 bg-amber-50 border border-amber-200 rounded-lg">
-                                    <p className="text-amber-800 font-medium mb-2">Không tìm thấy dữ liệu phù hợp</p>
+                                    <p className="text-amber-800 font-medium mb-2">{t('gradeManagement.noDataFound')}</p>
                                     <p className="text-sm text-amber-600">
-                                        Thử thay đổi bộ lọc hoặc click "Xóa bộ lọc" để xem tất cả
+                                        {t('gradeManagement.noDataSuggestion')}
                                     </p>
                                 </div>
                             )}
@@ -739,7 +743,7 @@ export default function GradeManagement() {
                             {selectedCourseCode && classCodesForSelectedCourse.length > 0 && (
                                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
                                     <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                                        Bước 2: Chọn Mã Lớp của <span className="text-blue-600">{selectedCourseCode}</span>
+                                        {t('gradeManagement.step2Title', { courseCode: selectedCourseCode })}
                                     </h4>
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                                         {classCodesForSelectedCourse.map((upload: any) => (

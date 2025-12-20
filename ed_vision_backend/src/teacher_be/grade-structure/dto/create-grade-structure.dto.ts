@@ -1,4 +1,13 @@
-import { IsString, IsNumber, IsArray, ValidateNested, Min, Max, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsArray,
+  ValidateNested,
+  Min,
+  Max,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GradeColumnDto {

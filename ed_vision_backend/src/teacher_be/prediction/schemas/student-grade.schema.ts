@@ -58,9 +58,14 @@ export const StudentGradeSchema = new Schema<StudentGrade>(
   {
     timestamps: true,
     collection: 'student_grades',
-  }
+  },
 );
 
 // Index để tìm kiếm nhanh
-StudentGradeSchema.index({ teacher_id: 1, course_code: 1, class_code: 1, upload_date: -1 });
+StudentGradeSchema.index({
+  teacher_id: 1,
+  course_code: 1,
+  class_code: 1,
+  upload_date: -1,
+});
 StudentGradeSchema.index({ 'students.student_id': 1 });

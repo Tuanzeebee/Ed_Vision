@@ -94,7 +94,7 @@ export default function AcademicPlanningDashboard() {
   }, [isAuthenticated, user, navigate, t])
 
   // Sample data based on the Figma design - Updated with real data
-  const TOTAL_CREDITS_FOR_GRADUATION = 145;
+  const TOTAL_CREDITS_FOR_GRADUATION = 144;
   
   // Current GPA & Credits (completed only) - dùng currentGpaData
   const currentProgress = useMemo(() => ({
@@ -407,7 +407,7 @@ export default function AcademicPlanningDashboard() {
     const buttonColor = isCurrentSemester ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700";
     
     const handleLearnClick = () => {
-      navigate(`/student/course-detail`);
+      navigate(`/student/course-overview`);
     };
     
     const getTypeLabel = (type: string) => {

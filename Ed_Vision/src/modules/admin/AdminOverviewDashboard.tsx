@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import { useTranslation } from 'react-i18next'
 import AdminLayout from "../../components/ui/admin/AdminLayout"
 import LoadingSpinner from "../../components/ui/admin/LoadingSpinner"
 import TimeFilter from "../../components/ui/admin/TimeFilter"
@@ -54,6 +55,7 @@ const ArrowUpIcon = () => <i className="fas fa-arrow-up"></i>;
 const ArrowDownIcon = () => <i className="fas fa-arrow-down"></i>;
 
 export default function AdminOverviewDashboard() {
+  const { t } = useTranslation(['admin', 'common']);
   const { showToast } = useToast();
 
   // Quản lý chế độ xem của admin: overview hoặc learning
@@ -302,7 +304,7 @@ export default function AdminOverviewDashboard() {
   const accessTimeData = useMemo(() => {
     if (!accessTimeStats) {
       return {
-        labels: ['Sáng (4:30-13h)', 'Chiều (13-18h)', 'Tối (18-4:30h)'],
+        labels: [t('admin:dashboard.morning'), t('admin:dashboard.afternoon'), t('admin:dashboard.evening')],
         datasets: [
           {
             data: [0, 0, 0],
@@ -321,7 +323,7 @@ export default function AdminOverviewDashboard() {
       };
     }
     return {
-      labels: ['Sáng (4:30-13h)', 'Chiều (13-18h)', 'Tối (18-4:30h)'],
+      labels: [t('admin:dashboard.morning'), t('admin:dashboard.afternoon'), t('admin:dashboard.evening')],
       datasets: [
         {
           data: [
@@ -343,7 +345,7 @@ export default function AdminOverviewDashboard() {
         },
       ],
     };
-  }, [accessTimeStats]);
+  }, [accessTimeStats, t]);
 
   // Thống kê active tùy theo tab
   const activeStats = adminViewMode === 'overview' ? overviewStats : learningStats;
@@ -388,18 +390,22 @@ export default function AdminOverviewDashboard() {
     };
   }, [learningStats]);
 
-  // Dữ liệu phân phối điểm GPA (0-4)
+  // Dữ liệu phân phối điểm theo trường - mỗi trường 1 cột tại vị trí GPA trung bình
   const scoreDistributionData = useMemo(() => {
-    const defaultLabels = ['0', '0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0'];
     if (!learningStats || !learningStats.scoreDistribution) {
       return {
-        labels: defaultLabels,
-        datasets: [],
-        schoolAverages: {} as Record<string, number>,
+        labels: [],
+        datasets: [{
+          label: 'Số sinh viên',
+          data: [],
+          backgroundColor: [],
+          borderColor: [],
+          borderWidth: 2,
+          borderRadius: 6,
+        }],
       };
     }
-    // Luôn sử dụng labels chuẩn GPA 0-4 với bước nhảy 0.5
-    const labels = defaultLabels; // ['0', '0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0']
+    
     const colors = [
       'rgba(59, 130, 246, 0.8)',
       'rgba(245, 158, 11, 0.8)',
@@ -411,83 +417,55 @@ export default function AdminOverviewDashboard() {
       'rgba(168, 85, 247, 0.8)',
       'rgba(236, 72, 153, 0.8)',
     ];
-    // Lưu GPA trung bình cho mỗi trường
-    const schoolAverages: Record<string, number> = {};
-    learningStats.scoreDistribution.schools.forEach((s) => {
-      schoolAverages[s.schoolName] = s.averageGpa ?? 0;
+    
+    // Tạo data points: mỗi trường = 1 điểm với x=GPA trung bình, y=tổng số sinh viên
+    const dataPoints = learningStats.scoreDistribution.schools.map((school, idx) => {
+      const totalStudents = school.scores.reduce((sum, count) => sum + count, 0);
+      return {
+        x: school.averageGpa ?? 0, // Vị trí trên trục X
+        y: totalStudents, // Chiều cao cột
+        label: school.schoolName,
+        backgroundColor: colors[idx % colors.length],
+        borderColor: colors[idx % colors.length].replace('0.8', '1'),
+      };
     });
-    const datasets = learningStats.scoreDistribution.schools.map((s, idx) => ({
-      label: s.schoolName,
-      data: s.scores,
-      backgroundColor: colors[idx % colors.length],
-      borderColor: colors[idx % colors.length].replace('0.8', '1'),
-      borderWidth: 1,
-      borderRadius: 4,
-    }));
+    
     return {
-      labels,
-      datasets,
-      schoolAverages,
+      labels: dataPoints.map(d => d.label),
+      datasets: [{
+        label: 'Số sinh viên',
+        data: dataPoints.map(d => ({ x: d.x, y: d.y })),
+        backgroundColor: dataPoints.map(d => d.backgroundColor),
+        borderColor: dataPoints.map(d => d.borderColor),
+        borderWidth: 2,
+        borderRadius: 6,
+        barThickness: 40, // Độ rộng cột cố định
+      }],
     };
   }, [learningStats]);
 
-  // Cấu hình biểu đồ doughnut
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        callbacks: {
-          label: function (context: { label: string; parsed: number }) {
-            return context.label + ': ' + context.parsed + '%';
-          },
-        },
-      },
-    },
-    cutout: '60%',
-  };
-
-  // Cấu hình biểu đồ bar cho phân phối điểm
+  // Cấu hình biểu đồ bar
   const barOptions = useMemo(() => {
-    let maxValue = 0;
-    scoreDistributionData.datasets.forEach((dataset) => {
-      const datasetMax = Math.max(...dataset.data);
-      if (datasetMax > maxValue) maxValue = datasetMax;
-    });
-    const suggestedMax = Math.ceil(maxValue * 1.1);
-    let stepSize = 50;
-
-    if (suggestedMax > 1000) stepSize = 200;
-    else if (suggestedMax > 500) stepSize = 100;
-    else if (suggestedMax > 200) stepSize = 50;
-    else if (suggestedMax > 100) stepSize = 25;
-    else stepSize = 10;
-
     return {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          display: selectedSchool === "Tất cả các trường",
-          position: 'top' as const,
-          labels: {
-            boxWidth: 12,
-            padding: 10,
-            font: { size: 11 },
-          },
+          display: false, // Ẩn legend vì mỗi trường có màu riêng
         },
         tooltip: {
           callbacks: {
-            label: function (context: { dataset: { label?: string }; parsed: { y: number | null } }) {
-              const schoolName = context.dataset.label || 'Trường';
-              const studentCount = context.parsed.y ?? 0;
-              const averageGpa = scoreDistributionData.schoolAverages?.[schoolName] ?? 0;
+            title: function (context: any) {
+              // Lấy tên trường từ labels
+              const index = context[0].dataIndex;
+              return scoreDistributionData.labels[index];
+            },
+            label: function (context: any) {
+              const gpa = context.parsed.x.toFixed(2);
+              const students = Math.round(context.parsed.y);
               return [
-                `${schoolName}: ${studentCount} sinh viên`,
-                `GPA trung bình: ${averageGpa.toFixed(2)}`
+                `GPA trung bình: ${gpa}`,
+                `Tổng sinh viên: ${students.toLocaleString()}`
               ];
             },
           },
@@ -496,28 +474,61 @@ export default function AdminOverviewDashboard() {
       scales: {
         y: {
           beginAtZero: true,
-          suggestedMax: suggestedMax,
           ticks: {
-            stepSize: stepSize,
+            stepSize: 1,
+            callback: function(value: any) {
+              return Math.round(value); // Chỉ hiển thị số nguyên
+            }
           },
           grid: { color: '#F3F4F6' },
           title: {
             display: true,
             text: 'Số lượng sinh viên',
-            font: { size: 12 },
+            font: { size: 12, weight: 'bold' as const },
           },
         },
         x: {
-          grid: { display: false },
+          type: 'linear' as const,
+          min: 0,
+          max: 4,
+          ticks: {
+            stepSize: 0.5,
+            callback: function(value: any) {
+              return value.toFixed(1);
+            }
+          },
+          grid: { display: true, color: '#F3F4F6' },
           title: {
             display: true,
-            text: 'GPA (0-4)',
-            font: { size: 12 },
+            text: 'Thang điểm GPA (0-4)',
+            font: { size: 12, weight: 'bold' as const },
           },
         },
       },
     };
-  }, [scoreDistributionData, selectedSchool]);
+  }, [scoreDistributionData]);
+
+  // Cấu hình biểu đồ doughnut
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        labels: { boxWidth: 12, font: { size: 11 }, padding: 10 },
+      },
+      tooltip: {
+        callbacks: {
+          label: function (context: any) {
+            const label = context.label || '';
+            const value = context.parsed ?? 0;
+            return `${label}: ${value}%`;
+          },
+        },
+      },
+    },
+    cutout: '60%',
+  };
 
   // Danh sách sinh viên tiêu biểu - tính lọc và giữ nguyên danh sách đầy đủ từ backend
   const topList = learningStats?.topStudents ?? [];
@@ -552,7 +563,7 @@ export default function AdminOverviewDashboard() {
                       : 'bg-white text-gray-700 border-gray-300'
                   }`}
                 >
-                  Thống kê hệ thống
+                  {t('admin:dashboard.systemStats')}
                 </button>
                 <button
                   onClick={() => setAdminViewMode('learning')}
@@ -562,11 +573,11 @@ export default function AdminOverviewDashboard() {
                       : 'bg-white text-gray-700 border-gray-300'
                   }`}
                 >
-                  Dữ liệu học tập
+                  {t('admin:dashboard.learningData')}
                 </button>
               </div>
             </div>
-            <p className="text-gray-600">Tổng quan hệ thống quản lý học tập và hiệu suất sinh viên</p>
+            <p className="text-gray-600">{t('admin:dashboard.description')}</p>
           </div>
           <div>
             {adminViewMode === 'overview' && (
@@ -586,7 +597,7 @@ export default function AdminOverviewDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
           {/* Trường */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Trường</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('admin:filters.school')}</label>
             <select
               value={selectedSchool}
               onChange={(e) => setSelectedSchool(e.target.value)}
@@ -599,7 +610,7 @@ export default function AdminOverviewDashboard() {
           </div>
           {/* Khóa */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Khóa</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('admin:filters.course')}</label>
             <select
               value={courseYear}
               onChange={(e) => setCourseYear(e.target.value)}
@@ -612,13 +623,13 @@ export default function AdminOverviewDashboard() {
           </div>
           {/* Ngành */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Ngành</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('admin:filters.major')}</label>
             <select
               value={selectedMajor}
               onChange={(e) => setSelectedMajor(e.target.value)}
               className="w-full px-2 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
             >
-              <option>Tất cả</option>
+              <option>{t('admin:filters.allMajors')}</option>
               {availableMajors.map((majorName) => (
                 <option key={majorName} value={majorName}>{majorName}</option>
               ))}
@@ -626,13 +637,13 @@ export default function AdminOverviewDashboard() {
           </div>
           {/* Lớp */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Lớp</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('admin:filters.class')}</label>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
               className="w-full px-2 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
             >
-              <option>Tất cả</option>
+              <option>{t('admin:filters.allClasses')}</option>
               {availableClasses.map((classCode) => (
                 <option key={classCode} value={classCode}>{classCode}</option>
               ))}
@@ -640,7 +651,7 @@ export default function AdminOverviewDashboard() {
           </div>
           {/* Kỳ */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Kỳ</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('admin:filters.semester')}</label>
             <select
               value={selectedSemester}
               onChange={(e) => setSelectedSemester(e.target.value)}
@@ -655,16 +666,16 @@ export default function AdminOverviewDashboard() {
                 ))
               ) : (
                 <>
-                  <option>Kỳ 1</option>
-                  <option>Kỳ 2</option>
-                  <option>Kỳ Hè</option>
+                  <option>{t('admin:filters.semester1')}</option>
+                  <option>{t('admin:filters.semester2')}</option>
+                  <option>{t('admin:filters.semester3')}</option>
                 </>
               )}
             </select>
           </div>
           {/* Năm học */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Năm học</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('admin:filters.academicYear')}</label>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
@@ -688,17 +699,17 @@ export default function AdminOverviewDashboard() {
           <div className="flex items-end">
             <button
               onClick={() => {
-                setSelectedSchool("Tất cả các trường");
-                setCourseYear("Tất cả khóa");
-                setSelectedMajor("Tất cả");
-                setSelectedClass("Tất cả");
+                setSelectedSchool(t('admin:filters.allSchools'));
+                setCourseYear(t('admin:filters.allCourses'));
+                setSelectedMajor(t('admin:filters.allMajors'));
+                setSelectedClass(t('admin:filters.allClasses'));
                 // Reset về giá trị từ API nếu có, nếu không thì dùng default
-                setSelectedSemester(filterOptions?.semesters?.[0] ?? "Kỳ 1");
+                setSelectedSemester(filterOptions?.semesters?.[0] ?? t('admin:filters.semester1'));
                 setSelectedYear(filterOptions?.academicYears?.[0] ?? getCurrentAcademicYear());
               }}
               className="w-full px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium text-xs"
             >
-              <i className="fas fa-undo mr-1"></i> Reset
+              <i className="fas fa-undo mr-1"></i> {t('admin:dashboard.reset')}
             </button>
           </div>
         </div>
@@ -707,7 +718,7 @@ export default function AdminOverviewDashboard() {
       {/* Các Card KPI */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 relative" style={{ minHeight: isLoading ? '120px' : 'auto' }}>
         {isLoading && (
-          <LoadingSpinner text="Đang tải dữ liệu thống kê..." size="md" position="center" />
+          <LoadingSpinner text={t('admin:dashboard.loadingStats')} size="md" position="center" />
         )}
         {!isLoading && (
           <>
@@ -715,7 +726,7 @@ export default function AdminOverviewDashboard() {
             <SimpleCard className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-blue-700 mb-1">Tổng số Sinh viên</p>
+                  <p className="text-xs font-medium text-blue-700 mb-1">{t('admin:dashboard.totalStudents')}</p>
                   <p className="text-2xl font-bold text-blue-900">
                     {activeStats?.current?.students ? activeStats.current.students.toLocaleString() : '0'}
                   </p>
@@ -733,7 +744,7 @@ export default function AdminOverviewDashboard() {
                       {activeStats?.comparison?.students?.trend === 'down' && <ArrowDownIcon />}
                       <span className="ml-1">
                         {activeStats?.comparison?.students?.trend === 'up' ? '+' : activeStats?.comparison?.students?.trend === 'down' ? '' : ''}
-                        {activeStats?.comparison?.students?.value} ({activeStats?.comparison?.students?.percentage}%) so với {comparisonLabel}
+                        {activeStats?.comparison?.students?.value} ({activeStats?.comparison?.students?.percentage}%) {t('admin:dashboard.comparedTo')} {comparisonLabel}
                       </span>
                     </p>
                   )}
@@ -748,7 +759,7 @@ export default function AdminOverviewDashboard() {
             <SimpleCard className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-green-700 mb-1">Số lượng Giảng viên</p>
+                  <p className="text-xs font-medium text-green-700 mb-1">{t('admin:dashboard.totalTeachers')}</p>
                   <p className="text-2xl font-bold text-green-900">{activeStats?.current?.instructors ?? '0'}</p>
                   {((activeStats?.comparison as any)?.instructors) && (
                     <p
@@ -764,7 +775,7 @@ export default function AdminOverviewDashboard() {
                       {((activeStats?.comparison as any)?.instructors)?.trend === 'down' && <ArrowDownIcon />}
                       <span className="ml-1">
                         {((activeStats?.comparison as any)?.instructors)?.trend === 'up' ? '+' : ((activeStats?.comparison as any)?.instructors)?.trend === 'down' ? '' : ''}
-                        {((activeStats?.comparison as any)?.instructors)?.value} ({((activeStats?.comparison as any)?.instructors)?.percentage}%) so với {comparisonLabel}
+                        {((activeStats?.comparison as any)?.instructors)?.value} ({((activeStats?.comparison as any)?.instructors)?.percentage}%) {t('admin:dashboard.comparedTo')} {comparisonLabel}
                       </span>
                     </p>
                   )}
@@ -778,7 +789,7 @@ export default function AdminOverviewDashboard() {
             {/* Cảnh báo Sinh viên - 2 phần: Nguy cơ (2.0-2.5) và Buộc thôi học (<2.0) */}
             <SimpleCard className="bg-gradient-to-br from-red-50 to-orange-100 border-red-200 p-4">
               <div className="mb-2">
-                <p className="text-xs font-medium text-red-700 mb-1">Cảnh báo Sinh viên</p>
+                <p className="text-xs font-medium text-red-700 mb-1">{t('admin:dashboard.studentWarnings')}</p>
               </div>
               {/* Hai cột: Nguy cơ bên trái, Buộc thôi học bên phải */}
               <div className="grid grid-cols-2 gap-3">
@@ -786,7 +797,7 @@ export default function AdminOverviewDashboard() {
                 <div className="bg-white/50 rounded-lg p-2">
                   <div className="flex items-center mb-1">
                     <i className="fas fa-exclamation-circle text-orange-600 text-xs mr-1"></i>
-                    <span className="text-[10px] font-medium text-gray-600">Nguy cơ</span>
+                    <span className="text-[10px] font-medium text-gray-600">{t('admin:dashboard.warning')}</span>
                   </div>
                   <p className="text-xl font-bold text-orange-900">
                     {(activeStats as any)?.current?.warning ?? 0}
@@ -797,7 +808,7 @@ export default function AdminOverviewDashboard() {
                 <div className="bg-white/50 rounded-lg p-2">
                   <div className="flex items-center mb-1">
                     <i className="fas fa-exclamation-triangle text-red-600 text-xs mr-1"></i>
-                    <span className="text-[10px] font-medium text-gray-600">At-Risk</span>
+                    <span className="text-[10px] font-medium text-gray-600">{t('admin:dashboard.atRisk')}</span>
                   </div>
                   <p className="text-xl font-bold text-red-900">
                     {activeStats?.current?.atRisk ?? 0}
@@ -808,7 +819,7 @@ export default function AdminOverviewDashboard() {
               {/* Tổng cảnh báo */}
               <div className="mt-2 pt-2 border-t border-red-200">
                 <p className="text-xs text-red-700 font-medium text-center">
-                  Tổng cảnh báo: {' '}
+                  {t('admin:dashboard.totalWarnings')}: {' '}
                   <span className="text-sm font-bold text-red-900">
                     {((activeStats as any)?.current?.warning ?? 0) + (activeStats?.current?.atRisk ?? 0)}
                   </span>
@@ -819,7 +830,7 @@ export default function AdminOverviewDashboard() {
             {/* Hiệu suất trung bình */}
             <SimpleCard className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 p-4">
               <div className="mb-2">
-                <p className="text-xs font-medium text-purple-700 mb-1">Hiệu suất Trung bình</p>
+                <p className="text-xs font-medium text-purple-700 mb-1">{t('admin:dashboard.averagePerformance')}</p>
               </div>
               {/* Hai cột: Sinh viên bên trái, Giảng viên bên phải */}
               <div className="grid grid-cols-2 gap-3">
@@ -827,7 +838,7 @@ export default function AdminOverviewDashboard() {
                 <div className="bg-white/50 rounded-lg p-2">
                   <div className="flex items-center mb-1">
                     <i className="fas fa-user-graduate text-purple-600 text-xs mr-1"></i>
-                    <span className="text-[10px] font-medium text-gray-600">Sinh viên</span>
+                    <span className="text-[10px] font-medium text-gray-600">{t('admin:dashboard.students')}</span>
                   </div>
                   <p className="text-xl font-bold text-purple-900">
                     {activeStats?.current?.performance?.student
@@ -840,7 +851,7 @@ export default function AdminOverviewDashboard() {
                 <div className="bg-white/50 rounded-lg p-2">
                   <div className="flex items-center mb-1">
                     <i className="fas fa-chalkboard-teacher text-purple-600 text-xs mr-1"></i>
-                    <span className="text-[10px] font-medium text-gray-600">Giảng viên</span>
+                    <span className="text-[10px] font-medium text-gray-600">{t('admin:dashboard.teachers')}</span>
                   </div>
                   <p className="text-xl font-bold text-purple-900">
                     {activeStats?.current?.performance?.instructor
@@ -853,7 +864,7 @@ export default function AdminOverviewDashboard() {
               {/* Trung bình chung */}
               <div className="mt-2 pt-2 border-t border-purple-200">
                 <p className="text-xs text-purple-700 font-medium text-center">
-                  Trung bình chung: {' '}
+                  {t('admin:dashboard.averageOverall')}: {' '}
                   <span className="text-sm font-bold">
                     {activeStats?.current?.performance
                       ? (
@@ -875,68 +886,31 @@ export default function AdminOverviewDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Thống kê thời gian truy cập - chỉ chịu ảnh hưởng bởi TimeFilter */}
         <SimpleCard className="p-4">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Thống kê thời gian truy cập</h3>
+          <h3 className="text-base font-semibold text-gray-900 mb-3">{t('admin:dashboard.accessTimeStats')}</h3>
           <div
             className="h-48 w-full relative"
             style={{ minHeight: isLoading && adminViewMode === 'overview' ? '200px' : 'auto' }}
           >
             {isLoading && adminViewMode === 'overview' ? (
-              <LoadingSpinner text="Đang tải biểu đồ..." size="md" position="center" />
+              <LoadingSpinner text={t('admin:dashboard.loadingChart')} size="md" position="center" />
             ) : (
               <Doughnut data={accessTimeData} options={doughnutOptions} />
             )}
-          </div>
-          <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs">
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-yellow-400 rounded-full mr-1.5"></div>
-              <span className="font-medium text-gray-700">
-                Sáng ({accessTimeData.datasets[0].data[0]}%)
-              </span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-blue-500 rounded-full mr-1.5"></div>
-              <span className="font-medium text-gray-700">
-                Chiều ({accessTimeData.datasets[0].data[1]}%)
-              </span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-purple-500 rounded-full mr-1.5"></div>
-              <span className="font-medium text-gray-700">
-                Tối ({accessTimeData.datasets[0].data[2]}%)
-              </span>
-            </div>
           </div>
         </SimpleCard>
 
         {/* Thống kê phân trăm GPA - chịu ảnh hưởng bởi filter học tập */}
         <SimpleCard className="p-4">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Thống kê phân trăm GPA</h3>
+          <h3 className="text-base font-semibold text-gray-900 mb-3">{t('admin:dashboard.gpaDistribution')}</h3>
           <div
             className="h-48 w-full relative"
             style={{ minHeight: isLoadingLearning ? '200px' : 'auto' }}
           >
             {isLoadingLearning ? (
-              <LoadingSpinner text="Đang tải biểu đồ..." size="md" position="center" />
+              <LoadingSpinner text={t('admin:dashboard.loadingChart')} size="md" position="center" />
             ) : (
               <Doughnut data={gpaData} options={doughnutOptions} />
             )}
-          </div>
-          <div className="flex justify-center space-x-6 mt-4 text-sm">
-            {(gpaData.labels as string[]).map((label, i) => {
-              const color = (gpaData.datasets[0] as any).backgroundColor?.[i] ?? '#999';
-              const value = (gpaData.datasets[0] as any).data?.[i] ?? 0;
-              return (
-                <div key={label} className="flex items-center">
-                  <div
-                    className="w-4 h-4 rounded-full mr-2"
-                    style={{ backgroundColor: color }}
-                  ></div>
-                  <span className="font-medium text-gray-700">
-                    {label} ({value}%)
-                  </span>
-                </div>
-              );
-            })}
           </div>
         </SimpleCard>
       </div>
@@ -944,24 +918,24 @@ export default function AdminOverviewDashboard() {
       {/* Danh sách sinh viên tiêu biểu - chịu ảnh hưởng bởi filter học tập */}
       <SimpleCard className="p-4 mb-6">
         <h3 className="text-base font-semibold text-gray-900 mb-4">
-          Danh sách Sinh viên tiêu biểu{' '}
+          {t('admin:dashboard.topStudents')}{' '}
           <span className="text-sm font-normal text-gray-600 ml-2">
             {totalTopCount > 0 ? (
-              selectedSchool === "Tất cả các trường"
-                ? `(Top ${totalTopCount} toàn trường)`
-                : selectedClass !== "Tất cả"
-                ? `(Top ${totalTopCount} - ${selectedClass})`
-                : selectedMajor !== "Tất cả"
-                ? `(Top ${totalTopCount} - ${selectedMajor})`
-                : courseYear !== "Tất cả khóa"
-                ? `(Top ${totalTopCount} - ${courseYear})`
-                : `(Top ${totalTopCount} - ${selectedSchool})`
+              selectedSchool === t('admin:filters.allSchools')
+                ? `(${t('admin:dashboard.topAll')} ${totalTopCount} ${t('admin:dashboard.allSchools')})`
+                : selectedClass !== t('admin:filters.allClasses')
+                ? `(${t('admin:dashboard.topAll')} ${totalTopCount} - ${selectedClass})`
+                : selectedMajor !== t('admin:filters.allMajors')
+                ? `(${t('admin:dashboard.topAll')} ${totalTopCount} - ${selectedMajor})`
+                : courseYear !== t('admin:filters.allCourses')
+                ? `(${t('admin:dashboard.topAll')} ${totalTopCount} - ${courseYear})`
+                : `(${t('admin:dashboard.topAll')} ${totalTopCount} - ${selectedSchool})`
             ) : ''}
           </span>
         </h3>
         {isLoadingLearning ? (
           <div className="h-32 relative">
-            <LoadingSpinner text="Đang tải danh sách..." size="md" position="center" />
+            <LoadingSpinner text={t('admin:dashboard.loadingList')} size="md" position="center" />
           </div>
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1022,18 +996,18 @@ export default function AdminOverviewDashboard() {
         )}
       </SimpleCard>
 
-      {/* Biểu đồ phân phối điểm GPA - chịu ảnh hưởng bởi filter học tập */}
+      {/* Biểu đồ phân phối điểm các trường - chịu ảnh hưởng bởi filter học tập */}
       <SimpleCard className="p-4">
-        <h3 className="text-base font-semibold text-gray-900 mb-4">
-          Biểu đồ phân phối điểm GPA (0-4)
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {t('admin:dashboard.scoreDistribution')}
           <span className="text-sm font-normal text-gray-600 ml-2">
-            {selectedSchool === "Tất cả các trường"
-              ? `(So sánh ${scoreDistributionData.datasets.length} trường)`
-              : selectedClass !== "Tất cả"
+            {selectedSchool === t('admin:filters.allSchools')
+              ? `(${t('admin:dashboard.comparing')} ${scoreDistributionData.datasets.length} ${t('admin:dashboard.schools')})`
+              : selectedClass !== t('admin:filters.allClasses')
               ? `(${selectedClass})`
-              : selectedMajor !== "Tất cả"
+              : selectedMajor !== t('admin:filters.allMajors')
               ? `(${selectedMajor})`
-              : courseYear !== "Tất cả khóa"
+              : courseYear !== t('admin:filters.allCourses')
               ? `(${courseYear})`
               : `(${selectedSchool})`}
           </span>
@@ -1041,7 +1015,7 @@ export default function AdminOverviewDashboard() {
         {/* Biểu đồ phân phối điểm (Chart.js Bar) */}
         <div className="h-64 relative" style={{ minHeight: isLoadingLearning ? '200px' : 'auto' }}>
           {isLoadingLearning ? (
-            <LoadingSpinner text="Đang tải biểu đồ phân phối..." size="md" position="center" />
+            <LoadingSpinner text={t('admin:dashboard.loadingGPA')} size="md" position="center" />
           ) : (
             <Bar data={scoreDistributionData} options={barOptions} />
           )}

@@ -6,8 +6,8 @@ import { messageProviders } from './message.providers';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [DatabaseModule, PrismaModule],
-    providers: [ChatService, ChatGateway, ...messageProviders],
-    exports: [ChatService],
+  imports: [DatabaseModule, PrismaModule],
+  providers: [ChatService, ChatGateway, ...messageProviders],
+  exports: [ChatService],
 })
-export class ChatModule { }
+export class ChatModule {}

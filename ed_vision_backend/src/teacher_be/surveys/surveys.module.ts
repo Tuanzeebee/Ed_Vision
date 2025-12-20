@@ -4,9 +4,9 @@ import { SurveysService } from './surveys.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [SurveysController],
-    providers: [SurveysService],
-    exports: [SurveysService],
+  imports: [PrismaModule],
+  controllers: [SurveysController],
+  providers: [SurveysService],
+  exports: [SurveysService],
 })
-export class SurveysModule { }
+export class SurveysModule {}

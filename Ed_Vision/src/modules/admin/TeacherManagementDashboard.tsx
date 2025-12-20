@@ -32,6 +32,7 @@ export default function TeacherManagementDashboard() {
 
   // State for instructors from API
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [allInstructors, setAllInstructors] = useState<Instructor[]>([]); // Store all instructors for KPI calculations
   const [totalInstructors, setTotalInstructors] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -119,6 +120,7 @@ export default function TeacherManagementDashboard() {
         const endIndex = startIndex + teachersPerPage;
         const paginatedData = filteredData.slice(startIndex, endIndex);
 
+        setAllInstructors(response.data); // Store all instructors for KPI cards
         setInstructors(paginatedData);
         setTotalInstructors(totalFiltered);
         setTotalPages(calculatedTotalPages);
@@ -199,46 +201,93 @@ export default function TeacherManagementDashboard() {
         </div>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Online Teachers */}
-          <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-green-800 mb-2">Giảng viên đang trực tuyến</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+          {/* Total Teachers */}
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs md:text-sm font-medium text-blue-700 mb-1 truncate">Tổng giảng viên</p>
                   {isLoadingStats ? (
                     <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-700"></div>
-                      <span className="text-sm text-green-600">Đang tải...</span>
+                      <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-blue-600"></div>
                     </div>
                   ) : (
                     <>
-                      <p className="text-4xl font-bold text-green-700 mb-1">{onlineStats.onlineCount}</p>
-                      <p className="text-xs text-green-600">trên tổng {onlineStats.totalCount.toLocaleString()}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-blue-600">
+                        {onlineStats.totalCount.toLocaleString()}
+                      </p>
+                      <p className="text-xs md:text-sm text-blue-600 mt-1 truncate">giảng viên trong hệ thống</p>
                     </>
                   )}
                 </div>
-                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                  <i className="fas fa-user-check text-green-600 text-2xl"></i>
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-chalkboard-teacher text-blue-600 text-lg md:text-xl"></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Online Teachers */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs md:text-sm font-medium text-green-700 mb-1 truncate">Đang trực tuyến</p>
+                  {isLoadingStats ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-2xl md:text-3xl font-bold text-green-600">{onlineStats.onlineCount}</p>
+                      <p className="text-xs md:text-sm text-green-600 mt-1 truncate">
+                        {onlineStats.totalCount > 0 
+                          ? `${((onlineStats.onlineCount / onlineStats.totalCount) * 100).toFixed(1)}% đang hoạt động`
+                          : 'chưa có dữ liệu'}
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-circle text-green-600 text-lg md:text-xl animate-pulse"></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* High Quality Teachers */}
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs md:text-sm font-medium text-purple-700 mb-1 truncate">Chất lượng cao</p>
+                  <p className="text-2xl md:text-3xl font-bold text-purple-600">
+                    {allInstructors.filter(i => getQualityRating(i.advisingClassCount || 0).stars === 5).length}
+                  </p>
+                  <p className="text-xs md:text-sm text-purple-600 mt-1 truncate">giảng viên xuất sắc (5⭐)</p>
+                </div>
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-star text-purple-600 text-lg md:text-xl"></i>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Teachers Need Support */}
-          <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-orange-800 mb-2">Giảng viên cần hỗ trợ</p>
-                  <p className="text-4xl font-bold text-orange-700 mb-1">12</p>
-                  <p className="text-xs text-red-600 flex items-center">
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs md:text-sm font-medium text-orange-700 mb-1 truncate">Cần hỗ trợ</p>
+                  <p className="text-2xl md:text-3xl font-bold text-orange-600">12</p>
+                  <p className="text-xs md:text-sm text-orange-600 mt-1 truncate">
                     <i className="fas fa-arrow-up text-xs mr-1"></i>
-                    +3 giảng viên so với tháng trước
+                    +3 so với tháng trước
                   </p>
                 </div>
-                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
-                  <i className="fas fa-exclamation-triangle text-orange-600 text-2xl"></i>
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-exclamation-triangle text-orange-600 text-lg md:text-xl"></i>
                 </div>
               </div>
             </CardContent>

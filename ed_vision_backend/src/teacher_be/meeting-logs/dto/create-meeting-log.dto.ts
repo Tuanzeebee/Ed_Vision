@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsNumber, IsString, IsArray, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsArray,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateMeetingLogDto {
   @IsNotEmpty()

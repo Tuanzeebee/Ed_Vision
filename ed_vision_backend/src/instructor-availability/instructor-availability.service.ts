@@ -38,7 +38,7 @@ export class InstructorAvailabilityService {
    */
   async getAdviserClasses(instructorId: number) {
     const assignments = await this.repository.getAdviserClasses(instructorId);
-    
+
     return assignments.map((assignment) => ({
       assignmentId: assignment.adviser_assign_id,
       classId: assignment.classGroup.class_id,
@@ -57,9 +57,13 @@ export class InstructorAvailabilityService {
   /**
    * Check if instructor is an adviser
    */
-  async checkIsAdviser(instructorId: number): Promise<{ isAdviser: boolean; classCount: number }> {
+  async checkIsAdviser(
+    instructorId: number,
+  ): Promise<{ isAdviser: boolean; classCount: number }> {
     const isAdviser = await this.repository.isInstructorAdviser(instructorId);
-    const classes = isAdviser ? await this.repository.getAdviserClasses(instructorId) : [];
+    const classes = isAdviser
+      ? await this.repository.getAdviserClasses(instructorId)
+      : [];
     return {
       isAdviser,
       classCount: classes.length,
@@ -161,7 +165,7 @@ export class InstructorAvailabilityService {
         const dateStr = dateRecord.specific_date.toISOString().split('T')[0];
         const date = new Date(dateRecord.specific_date);
         const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
-        
+
         // Ensure date entry exists
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, {
@@ -187,7 +191,9 @@ export class InstructorAvailabilityService {
 
           const timeSlot: TimeSlotResponse = {
             slotId: slot.slot_id,
-            startTime: this.repository.formatTimeToString(slot.start_time_local),
+            startTime: this.repository.formatTimeToString(
+              slot.start_time_local,
+            ),
             endTime: this.repository.formatTimeToString(slot.end_time_local),
             meetingType: slot.meeting_type,
             capacity: slot.capacity,
@@ -206,7 +212,10 @@ export class InstructorAvailabilityService {
 
           // Update statistics
           statistics.totalTimeSlots++;
-          const hours = this.calculateHours(timeSlot.startTime, timeSlot.endTime);
+          const hours = this.calculateHours(
+            timeSlot.startTime,
+            timeSlot.endTime,
+          );
           statistics.totalHours += hours;
           statistics.totalCapacity += slot.capacity;
           statistics.bookedSlots += timeSlot.bookedCount || 0;
@@ -236,7 +245,7 @@ export class InstructorAvailabilityService {
 
   /**
    * Add a new availability date with optional time slots
-   * This method enables an existing date (sets is_available = true) 
+   * This method enables an existing date (sets is_available = true)
    * rather than creating a new date, since all dates are pre-created when the week is created
    */
   async addAvailabilityDate(
@@ -253,19 +262,35 @@ export class InstructorAvailabilityService {
     const week = await this.repository.findOrCreateWeek(instructorId, date);
 
     // Check if the date already exists and is available
-    const existingDate = await this.repository.findAvailabilityDate(week.week_id, date);
-    
+    const existingDate = await this.repository.findAvailabilityDate(
+      week.week_id,
+      date,
+    );
+
     // If date is already available and we're trying to add time slots, reject
-    if (existingDate && existingDate.is_available && dto.timeSlots && dto.timeSlots.length > 0) {
-      throw new ConflictException(`Date ${dto.date} is already available. Use addTimeSlot endpoint to add time slots.`);
+    if (
+      existingDate &&
+      existingDate.is_available &&
+      dto.timeSlots &&
+      dto.timeSlots.length > 0
+    ) {
+      throw new ConflictException(
+        `Date ${dto.date} is already available. Use addTimeSlot endpoint to add time slots.`,
+      );
     }
-    
+
     // If date is already available and we're just trying to enable it (no time slots), allow it (idempotent)
-    if (existingDate && existingDate.is_available && (!dto.timeSlots || dto.timeSlots.length === 0)) {
+    if (
+      existingDate &&
+      existingDate.is_available &&
+      (!dto.timeSlots || dto.timeSlots.length === 0)
+    ) {
       // Return existing date info - get slots for this specific date
       const allWeekSlots = await this.repository.getSlotsForWeek(week.week_id);
-      const existingTimeSlots = allWeekSlots.filter((slot: any) => slot.date_id === existingDate.date_id);
-      
+      const existingTimeSlots = allWeekSlots.filter(
+        (slot: any) => slot.date_id === existingDate.date_id,
+      );
+
       return {
         date: dto.date,
         dayOfWeek,
@@ -273,8 +298,8 @@ export class InstructorAvailabilityService {
         isAvailable: true,
         timeSlots: existingTimeSlots.map((slot: any) => ({
           slotId: slot.slot_id,
-          startTime: this.repository.formatTimeToString(slot.start_time_local!),
-          endTime: this.repository.formatTimeToString(slot.end_time_local!),
+          startTime: this.repository.formatTimeToString(slot.start_time_local),
+          endTime: this.repository.formatTimeToString(slot.end_time_local),
           meetingType: slot.meeting_type!,
           capacity: slot.capacity,
           isOpen: slot.is_open,
@@ -340,7 +365,11 @@ export class InstructorAvailabilityService {
     const week = await this.repository.findOrCreateWeek(instructorId, date);
 
     // Create or update the availability date record and get the date_id
-    const dateRecord = await this.repository.upsertAvailabilityDate(week.week_id, date, true);
+    const dateRecord = await this.repository.upsertAvailabilityDate(
+      week.week_id,
+      date,
+      true,
+    );
 
     // Check for overlapping slots using date_id
     const hasOverlap = await this.repository.checkTimeSlotOverlap(
@@ -518,9 +547,7 @@ export class InstructorAvailabilityService {
     }
 
     if (!dateRecord.is_available) {
-      throw new BadRequestException(
-        `Date ${dateStr} is already disabled`,
-      );
+      throw new BadRequestException(`Date ${dateStr} is already disabled`);
     }
 
     // Delete all time slots for this date first
@@ -560,7 +587,12 @@ export class InstructorAvailabilityService {
    */
   async getStatistics(instructorId: number): Promise<AvailabilityStatistics> {
     // Để lấy thống kê, chúng ta cần tự động tạo tuần
-    const { statistics } = await this.getAvailability(instructorId, undefined, undefined, true);
+    const { statistics } = await this.getAvailability(
+      instructorId,
+      undefined,
+      undefined,
+      true,
+    );
     return statistics;
   }
 

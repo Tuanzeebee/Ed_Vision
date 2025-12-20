@@ -1,5 +1,6 @@
 import { buildUrl } from './config'
 import { TokenManager } from '@/lib/tokenManager'
+import i18n from '@/i18n'
 
 export async function apiFetch(path: string, opts: RequestInit = {}) {
   // Use TokenManager to get token and update activity
@@ -7,6 +8,9 @@ export async function apiFetch(path: string, opts: RequestInit = {}) {
   const headers: Record<string, string> = { ...(opts.headers as Record<string, string> || {}) }
   if (!headers['Content-Type']) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
+  
+  // Add Accept-Language header for i18n support
+  headers['Accept-Language'] = i18n.language || 'vi'
 
   try {
     const res = await fetch(buildUrl(path), { ...opts, headers })

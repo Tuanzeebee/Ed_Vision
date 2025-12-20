@@ -50,8 +50,8 @@ export class RolePermissionsService {
         where: { key: permissionKey },
       });
       if (!perm) {
-        console.warn(`Permission not found: ${permissionKey}`)
-        continue
+        console.warn(`Permission not found: ${permissionKey}`);
+        continue;
       }
       createRows.push({
         roleId: role.id,
@@ -64,34 +64,34 @@ export class RolePermissionsService {
       await prisma.rolePermission.createMany({ data: createRows });
     }
 
-    return { success: true }
+    return { success: true };
   }
 
   // get all roles
   async getAllRoles() {
-    const prisma = (this.prisma as any)
+    const prisma = this.prisma as any;
     const roles = await prisma.role.findMany({
       include: {
         _count: {
-          select: { 
+          select: {
             accounts: true,
             rolePermissions: {
-              where: { enabled: true }
-            }
-          }
-        }
+              where: { enabled: true },
+            },
+          },
+        },
       },
-      orderBy: { name: 'asc' }
-    })
-    
+      orderBy: { name: 'asc' },
+    });
+
     return roles.map((role: any) => ({
       id: role.code,
       name: role.name,
       role_name: role.name,
       permission_count: role._count.rolePermissions,
       account_count: role._count.accounts,
-      is_active: true
-    }))
+      is_active: true,
+    }));
   }
 
   // list all permission definitions

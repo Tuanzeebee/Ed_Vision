@@ -4,9 +4,9 @@ import { GradeManagementService } from './grade-management.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [GradeManagementController],
-    providers: [GradeManagementService],
-    exports: [GradeManagementService],
+  imports: [PrismaModule],
+  controllers: [GradeManagementController],
+  providers: [GradeManagementService],
+  exports: [GradeManagementService],
 })
-export class GradeManagementModule { }
+export class GradeManagementModule {}
