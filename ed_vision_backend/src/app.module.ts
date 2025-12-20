@@ -28,6 +28,7 @@ import { ChatModule } from './mongodb/chat.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
+import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import * as path from 'path';
     TeacherChatModule,
     StudentChatModule,
     AttendanceModule,
+    YouTubeMusicModule,
   ],
   controllers: [AppController],
   providers: [AppService, ReminderSchedulerService],
