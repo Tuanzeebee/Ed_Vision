@@ -25,6 +25,7 @@ import { StudentChatModule } from './student_be/chat/student-chat.module';
 import { ParentChatModule } from './parent_be/chat/parent-chat.module';
 import { ChatModule } from './mongodb/chat.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
+import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ReminderSchedulerService } from './admin_be/notification/reminder-sched
     TeacherChatModule,
     StudentChatModule,
     ParentChatModule,
+    YouTubeMusicModule,
   ],
   controllers: [AppController],
   providers: [AppService, ReminderSchedulerService],
