@@ -19,7 +19,7 @@ export class BookingCronService {
     try {
       // Lấy thời gian hiện tại theo múi giờ Việt Nam (UTC+7)
       const now = new Date();
-      
+
       // Tìm tất cả appointments cần cập nhật
       // Điều kiện: status là 'pending' hoặc 'confirmed' VÀ thời gian kết thúc đã qua
       const appointmentsToUpdate = await this.prisma.appointment.findMany({
@@ -57,7 +57,15 @@ export class BookingCronService {
           const minutes = endTimeObj.getUTCMinutes();
 
           // Tạo datetime kết thúc của cuộc hẹn (theo múi giờ local)
-          const appointmentEndDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+          const appointmentEndDateTime = new Date(
+            year,
+            month,
+            day,
+            hours,
+            minutes,
+            0,
+            0,
+          );
 
           // So sánh với thời gian hiện tại
           if (appointmentEndDateTime < now) {
@@ -72,7 +80,9 @@ export class BookingCronService {
             updatedCount++;
           }
         } catch (parseError) {
-          this.logger.warn(`Failed to parse datetime for appointment ${appointment.appointment_id}: ${parseError}`);
+          this.logger.warn(
+            `Failed to parse datetime for appointment ${appointment.appointment_id}: ${parseError}`,
+          );
         }
       }
 
@@ -127,7 +137,15 @@ export class BookingCronService {
           const minutes = startTimeObj.getUTCMinutes();
 
           // Tạo datetime bắt đầu của slot
-          const slotStartDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+          const slotStartDateTime = new Date(
+            year,
+            month,
+            day,
+            hours,
+            minutes,
+            0,
+            0,
+          );
 
           // Nếu slot đã bắt đầu hoặc đã qua, disable nó
           if (slotStartDateTime <= now) {
@@ -140,7 +158,9 @@ export class BookingCronService {
             disabledCount++;
           }
         } catch (parseError) {
-          this.logger.warn(`Failed to parse datetime for slot ${slot.slot_id}: ${parseError}`);
+          this.logger.warn(
+            `Failed to parse datetime for slot ${slot.slot_id}: ${parseError}`,
+          );
         }
       }
 
@@ -181,7 +201,9 @@ export class BookingCronService {
         _count: true,
       });
 
-      this.logger.log(`Yesterday's appointment stats: ${JSON.stringify(stats)}`);
+      this.logger.log(
+        `Yesterday's appointment stats: ${JSON.stringify(stats)}`,
+      );
     } catch (error) {
       this.logger.error('Error in daily cleanup cron job:', error);
     }

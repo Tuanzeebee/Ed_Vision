@@ -10,6 +10,7 @@ import ClockDisplay from './components/ClockDisplay';
 import DockMenu from './components/DockMenu';
 import SnowEffect from './components/SnowEffect';
 import RainEffect from './components/RainEffect';
+import { MusicPlayerProvider } from './music/MusicPlayerContext';
 
 // Lazy load heavy components
 const MusicWidget = lazy(() => import('./components/MusicWidget'));
@@ -425,6 +426,7 @@ export default function LearningSpace({ className = '' }: Props) {
   }), [liveEnabled, activeLiveTheme, backgroundImage]);
 
   return (
+    <MusicPlayerProvider>
     <div
       className={`min-h-screen overflow-hidden relative ${className}`}
       style={backgroundStyle}
@@ -570,7 +572,6 @@ export default function LearningSpace({ className = '' }: Props) {
           <MusicWidget
             visible={musicWidgetVisible && !musicPanelVisible}
             onClose={() => setMusicWidgetVisible(false)}
-            currentTrack={currentTrack}
           />
         </Suspense>
       )}
@@ -644,12 +645,19 @@ export default function LearningSpace({ className = '' }: Props) {
 
       {/* Music Panel */}
       {musicPanelVisible && (
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="fixed inset-0 z-40 flex items-center justify-center">
+            <div className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-white/20 border-t-purple-500 rounded-full animate-spin"></div>
+                <span className="text-white/80 text-sm">Loading Music Panel...</span>
+              </div>
+            </div>
+          </div>
+        }>
           <MusicPanel
             visible={musicPanelVisible}
             onClose={() => setMusicPanelVisible(false)}
-            tracks={tracks}
-            onSelectTrack={handleSelectTrack}
           />
         </Suspense>
       )}
@@ -719,5 +727,6 @@ export default function LearningSpace({ className = '' }: Props) {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       />
     </div>
+    </MusicPlayerProvider>
   );
 }

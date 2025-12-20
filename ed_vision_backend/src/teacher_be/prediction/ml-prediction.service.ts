@@ -76,7 +76,8 @@ export class MLPredictionService {
 
   constructor() {
     // URL của Python FastAPI service
-    this.pythonApiUrl = process.env.PYTHON_ML_API_URL || 'http://localhost:8000';
+    this.pythonApiUrl =
+      process.env.PYTHON_ML_API_URL || 'http://localhost:8000';
   }
 
   /**
@@ -105,7 +106,10 @@ export class MLPredictionService {
 
       return response.data;
     } catch (error) {
-      console.error('Error calling Python ML API /predict_json:', error.message);
+      console.error(
+        'Error calling Python ML API /predict_json:',
+        error.message,
+      );
       throw new InternalServerErrorException(
         `Failed to get predictions from ML service: ${error.message}`,
       );
@@ -140,7 +144,10 @@ export class MLPredictionService {
 
       return response.data;
     } catch (error) {
-      console.error('Error calling Python ML API /explain_json:', error.message);
+      console.error(
+        'Error calling Python ML API /explain_json:',
+        error.message,
+      );
       throw new InternalServerErrorException(
         `Failed to get explanations from ML service: ${error.message}`,
       );

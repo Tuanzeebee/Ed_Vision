@@ -16,10 +16,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TranscriptUploadService } from './transcript-upload.service';
-import { TranscriptPredictionService, GPACalculatorService, SemesterPlanningService } from './logic';
+import {
+  TranscriptPredictionService,
+  GPACalculatorService,
+  SemesterPlanningService,
+} from './logic';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadTranscriptDto } from './dto/upload-transcript.dto';
-import { TranscriptUploadResponse, StudentTranscriptResponse } from './models/transcript-upload-response.type';
+import {
+  TranscriptUploadResponse,
+  StudentTranscriptResponse,
+} from './models/transcript-upload-response.type';
 import { PredictionsResponse } from './dto/get-predictions.dto';
 import * as XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
@@ -28,7 +35,7 @@ import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 @Controller('student/transcript')
 export class TranscriptUploadController {
   private readonly logger = new Logger(TranscriptUploadController.name);
-  
+
   constructor(
     private readonly transcriptUploadService: TranscriptUploadService,
     private readonly predictionService: TranscriptPredictionService,
@@ -95,11 +102,15 @@ export class TranscriptUploadController {
       } else if (filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
         records = this.parseExcel(file.buffer);
       } else {
-        throw new BadRequestException('Unsupported file format. Please upload CSV or Excel file');
+        throw new BadRequestException(
+          'Unsupported file format. Please upload CSV or Excel file',
+        );
       }
 
       if (!records || records.length === 0) {
-        throw new BadRequestException('File is empty or contains no valid data');
+        throw new BadRequestException(
+          'File is empty or contains no valid data',
+        );
       }
 
       const accountId = req.user?.account_id;
@@ -127,11 +138,11 @@ export class TranscriptUploadController {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      
+
       // Handle parsing errors
       const errorMessage = error.message || 'Failed to parse file';
       throw new BadRequestException(
-        `File parsing failed: ${errorMessage}. Please check your file format and try again.`
+        `File parsing failed: ${errorMessage}. Please check your file format and try again.`,
       );
     }
   }
@@ -190,16 +201,18 @@ export class TranscriptUploadController {
    * Hỗ trợ cả student_id và account_id - JOIN trực tiếp qua Account
    */
   @Get(':idOrAccountId/gpa')
-  async getStudentGPA(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getStudentGPA(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`[GPA Endpoint] Received ID: ${idOrAccountId}`);
-    
+
     // JOIN trực tiếp: Account -> Student
     // Thử tìm theo account_id trước (vì frontend thường gửi account_id)
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
-      select: { 
-        student_id: true, 
-        major: true, 
+      select: {
+        student_id: true,
+        major: true,
         account_id: true,
         student_code: true,
         cohort_year: true,
@@ -208,12 +221,14 @@ export class TranscriptUploadController {
 
     // Nếu không tìm thấy, thử tìm theo student_id
     if (!student) {
-      this.logger.log(`[GPA Endpoint] Not found by account_id, trying student_id...`);
+      this.logger.log(
+        `[GPA Endpoint] Not found by account_id, trying student_id...`,
+      );
       student = await this.prisma.student.findUnique({
         where: { student_id: idOrAccountId },
-        select: { 
-          student_id: true, 
-          major: true, 
+        select: {
+          student_id: true,
+          major: true,
           account_id: true,
           student_code: true,
           cohort_year: true,
@@ -222,17 +237,23 @@ export class TranscriptUploadController {
     }
 
     if (!student) {
-      this.logger.error(`[GPA Endpoint] Student not found for ID: ${idOrAccountId}`);
+      this.logger.error(
+        `[GPA Endpoint] Student not found for ID: ${idOrAccountId}`,
+      );
       return {
         success: false,
         message: `Student not found for ID: ${idOrAccountId}`,
       };
     }
 
-    this.logger.log(`[GPA Endpoint] Found student: student_id=${student.student_id}, account_id=${student.account_id}, code=${student.student_code}`);
-    
+    this.logger.log(
+      `[GPA Endpoint] Found student: student_id=${student.student_id}, account_id=${student.account_id}, code=${student.student_code}`,
+    );
+
     // Tính GPA chỉ với các môn có điểm (converted_numeric_score NOT NULL)
-    const gpaData = await this.gpaCalculatorService.calculateCurrentGPA(student.student_id);
+    const gpaData = await this.gpaCalculatorService.calculateCurrentGPA(
+      student.student_id,
+    );
 
     return {
       success: true,
@@ -252,15 +273,17 @@ export class TranscriptUploadController {
    * Hỗ trợ cả student_id và account_id
    */
   @Get(':idOrAccountId/gpa-projected')
-  async getStudentProjectedGPA(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getStudentProjectedGPA(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`[Projected GPA Endpoint] Received ID: ${idOrAccountId}`);
-    
+
     // JOIN trực tiếp: Account -> Student
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
-      select: { 
-        student_id: true, 
-        major: true, 
+      select: {
+        student_id: true,
+        major: true,
         account_id: true,
         student_code: true,
         cohort_year: true,
@@ -269,12 +292,14 @@ export class TranscriptUploadController {
 
     // Nếu không tìm thấy, thử tìm theo student_id
     if (!student) {
-      this.logger.log(`[Projected GPA Endpoint] Not found by account_id, trying student_id...`);
+      this.logger.log(
+        `[Projected GPA Endpoint] Not found by account_id, trying student_id...`,
+      );
       student = await this.prisma.student.findUnique({
         where: { student_id: idOrAccountId },
-        select: { 
-          student_id: true, 
-          major: true, 
+        select: {
+          student_id: true,
+          major: true,
           account_id: true,
           student_code: true,
           cohort_year: true,
@@ -283,17 +308,22 @@ export class TranscriptUploadController {
     }
 
     if (!student) {
-      this.logger.error(`[Projected GPA Endpoint] Student not found for ID: ${idOrAccountId}`);
+      this.logger.error(
+        `[Projected GPA Endpoint] Student not found for ID: ${idOrAccountId}`,
+      );
       return {
         success: false,
         message: `Student not found for ID: ${idOrAccountId}`,
       };
     }
 
-    this.logger.log(`[Projected GPA Endpoint] Found student: student_id=${student.student_id}`);
-    
+    this.logger.log(
+      `[Projected GPA Endpoint] Found student: student_id=${student.student_id}`,
+    );
+
     // Tính PROJECTED GPA (completed + planned courses)
-    const projectedGpaData = await this.gpaCalculatorService.calculateProjectedGPA(student.student_id);
+    const projectedGpaData =
+      await this.gpaCalculatorService.calculateProjectedGPA(student.student_id);
 
     return {
       success: true,
@@ -312,7 +342,8 @@ export class TranscriptUploadController {
    */
   @Get(':studentId/gpa/breakdown')
   async getGPABreakdown(@Param('studentId', ParseIntPipe) studentId: number) {
-    const breakdown = await this.gpaCalculatorService.getGPABreakdownBySemester(studentId);
+    const breakdown =
+      await this.gpaCalculatorService.getGPABreakdownBySemester(studentId);
 
     return {
       success: true,
@@ -332,7 +363,10 @@ export class TranscriptUploadController {
     @Param('studentId', ParseIntPipe) studentId: number,
     @Param('termId', ParseIntPipe) termId: number,
   ) {
-    const gpa = await this.gpaCalculatorService.calculateSemesterGPA(studentId, termId);
+    const gpa = await this.gpaCalculatorService.calculateSemesterGPA(
+      studentId,
+      termId,
+    );
 
     return {
       success: true,
@@ -348,19 +382,21 @@ export class TranscriptUploadController {
    * GET /student/transcript/:idOrAccountId/predicted-gpa
    * Tính GPA DỰ ĐOÁN cho sinh viên
    * Bao gồm: điểm thật (completed) + điểm dự đoán (planned từ PredictionResult)
-   * 
+   *
    * @param idOrAccountId - student_id hoặc account_id
    * @returns Predicted GPA calculation result
    */
   @Get(':idOrAccountId/predicted-gpa')
-  async getPredictedGPA(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getPredictedGPA(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`Getting PREDICTED GPA for ID: ${idOrAccountId}`);
 
     // Ưu tiên tìm theo account_id trước (thường dùng hơn)
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
-      select: { 
-        student_id: true, 
+      select: {
+        student_id: true,
         student_code: true,
         cohort_year: true,
         major: true,
@@ -369,11 +405,13 @@ export class TranscriptUploadController {
 
     // Nếu không tìm thấy theo account_id, thử theo student_id
     if (!student) {
-      this.logger.log(`Not found by account_id, trying student_id: ${idOrAccountId}`);
+      this.logger.log(
+        `Not found by account_id, trying student_id: ${idOrAccountId}`,
+      );
       student = await this.prisma.student.findUnique({
         where: { student_id: idOrAccountId },
-        select: { 
-          student_id: true, 
+        select: {
+          student_id: true,
           student_code: true,
           cohort_year: true,
           major: true,
@@ -383,16 +421,17 @@ export class TranscriptUploadController {
 
     if (!student) {
       throw new BadRequestException(
-        `Student not found with ID or account_id: ${idOrAccountId}`
+        `Student not found with ID or account_id: ${idOrAccountId}`,
       );
     }
 
-    this.logger.log(`Found student: ${student.student_code} (ID: ${student.student_id})`);
+    this.logger.log(
+      `Found student: ${student.student_code} (ID: ${student.student_id})`,
+    );
 
     // Tính GPA dự đoán
-    const predictedGpaData = await this.gpaCalculatorService.calculatePredictedGPA(
-      student.student_id
-    );
+    const predictedGpaData =
+      await this.gpaCalculatorService.calculatePredictedGPA(student.student_id);
 
     return {
       success: true,
@@ -412,14 +451,16 @@ export class TranscriptUploadController {
    * Hỗ trợ cả student_id và account_id
    */
   @Get(':idOrAccountId/physical-education-gpa')
-  async getPhysicalEducationGPA(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getPhysicalEducationGPA(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`Getting Physical Education GPA for ID: ${idOrAccountId}`);
 
     // Ưu tiên tìm theo account_id trước
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
-      select: { 
-        student_id: true, 
+      select: {
+        student_id: true,
         student_code: true,
         cohort_year: true,
         major: true,
@@ -428,11 +469,13 @@ export class TranscriptUploadController {
 
     // Nếu không tìm thấy theo account_id, thử theo student_id
     if (!student) {
-      this.logger.log(`Not found by account_id, trying student_id: ${idOrAccountId}`);
+      this.logger.log(
+        `Not found by account_id, trying student_id: ${idOrAccountId}`,
+      );
       student = await this.prisma.student.findUnique({
         where: { student_id: idOrAccountId },
-        select: { 
-          student_id: true, 
+        select: {
+          student_id: true,
           student_code: true,
           cohort_year: true,
           major: true,
@@ -442,16 +485,19 @@ export class TranscriptUploadController {
 
     if (!student) {
       throw new BadRequestException(
-        `Student not found with ID or account_id: ${idOrAccountId}`
+        `Student not found with ID or account_id: ${idOrAccountId}`,
       );
     }
 
-    this.logger.log(`Found student: ${student.student_code} (ID: ${student.student_id})`);
+    this.logger.log(
+      `Found student: ${student.student_code} (ID: ${student.student_id})`,
+    );
 
     // Tính điểm DEM
-    const demGpaData = await this.gpaCalculatorService.calculatePhysicalEducationGPA(
-      student.student_id
-    );
+    const demGpaData =
+      await this.gpaCalculatorService.calculatePhysicalEducationGPA(
+        student.student_id,
+      );
 
     return {
       success: true,
@@ -471,9 +517,11 @@ export class TranscriptUploadController {
    * Hỗ trợ cả student_id và account_id
    */
   @Get(':idOrAccountId/survey-factors')
-  async getStudentSurveyFactors(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getStudentSurveyFactors(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`[Survey Factors Endpoint] Received ID: ${idOrAccountId}`);
-    
+
     // JOIN trực tiếp: Account -> Student
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
@@ -488,7 +536,9 @@ export class TranscriptUploadController {
     }
 
     if (!student) {
-      this.logger.error(`[Survey Factors Endpoint] Student not found for ID: ${idOrAccountId}`);
+      this.logger.error(
+        `[Survey Factors Endpoint] Student not found for ID: ${idOrAccountId}`,
+      );
       return {
         success: false,
         message: `Student not found for ID: ${idOrAccountId}`,
@@ -511,7 +561,9 @@ export class TranscriptUploadController {
     });
 
     if (!surveyFactors) {
-      this.logger.log(`[Survey Factors Endpoint] No survey data found for student ${student.student_id}`);
+      this.logger.log(
+        `[Survey Factors Endpoint] No survey data found for student ${student.student_id}`,
+      );
       return {
         success: true,
         message: 'No survey data found. Please complete the survey.',
@@ -519,7 +571,9 @@ export class TranscriptUploadController {
       };
     }
 
-    this.logger.log(`[Survey Factors Endpoint] Survey factors found for student ${student.student_id}`);
+    this.logger.log(
+      `[Survey Factors Endpoint] Survey factors found for student ${student.student_id}`,
+    );
     return {
       success: true,
       data: surveyFactors,
@@ -532,12 +586,12 @@ export class TranscriptUploadController {
   private parseCSV(buffer: Buffer): any[] {
     // Remove BOM if present and normalize content
     let content = buffer.toString('utf-8');
-    
+
     // Remove UTF-8 BOM
-    if (content.charCodeAt(0) === 0xFEFF) {
+    if (content.charCodeAt(0) === 0xfeff) {
       content = content.slice(1);
     }
-    
+
     // Remove any leading/trailing whitespace
     content = content.trim();
 
@@ -545,9 +599,9 @@ export class TranscriptUploadController {
       columns: true,
       skip_empty_lines: true,
       trim: true,
-      relax_quotes: true,        // Allow quotes to appear in unquoted fields
-      relax_column_count: true,  // Allow inconsistent column count
-      bom: true,                 // Handle BOM
+      relax_quotes: true, // Allow quotes to appear in unquoted fields
+      relax_column_count: true, // Allow inconsistent column count
+      bom: true, // Handle BOM
     });
 
     return records.map((record: any) => ({
@@ -559,9 +613,11 @@ export class TranscriptUploadController {
       study_format: record.study_format || 'offline',
       credits_unit: parseInt(record.credits_unit) || 0,
       raw_score: record.raw_score ? parseFloat(record.raw_score) : undefined,
-      converted_score: record.converted_score ? String(record.converted_score).substring(0, 5) : undefined, // Limit to 5 chars
-      converted_numeric_score: record.converted_numeric_score 
-        ? parseFloat(record.converted_numeric_score) 
+      converted_score: record.converted_score
+        ? String(record.converted_score).substring(0, 5)
+        : undefined, // Limit to 5 chars
+      converted_numeric_score: record.converted_numeric_score
+        ? parseFloat(record.converted_numeric_score)
         : undefined,
     }));
   }
@@ -584,9 +640,11 @@ export class TranscriptUploadController {
       study_format: record.study_format || 'offline',
       credits_unit: parseInt(record.credits_unit) || 0,
       raw_score: record.raw_score ? parseFloat(record.raw_score) : undefined,
-      converted_score: record.converted_score ? String(record.converted_score).substring(0, 5) : undefined, // Limit to 5 chars
-      converted_numeric_score: record.converted_numeric_score 
-        ? parseFloat(record.converted_numeric_score) 
+      converted_score: record.converted_score
+        ? String(record.converted_score).substring(0, 5)
+        : undefined, // Limit to 5 chars
+      converted_numeric_score: record.converted_numeric_score
+        ? parseFloat(record.converted_numeric_score)
         : undefined,
     }));
   }
@@ -597,21 +655,21 @@ export class TranscriptUploadController {
    */
   private parseSemesterNumber(value: any): number {
     if (!value) return 1; // Default to semester 1
-    
+
     // Convert to string and normalize
     const strValue = String(value).trim().toLowerCase();
-    
+
     // Check for "Hè" (summer) - case insensitive
     if (strValue === 'hè' || strValue === 'he' || strValue === 'summer') {
       return 3;
     }
-    
+
     // Try to parse as number
     const numValue = parseInt(value);
     if (!isNaN(numValue) && numValue >= 1 && numValue <= 3) {
       return numValue;
     }
-    
+
     // Default to semester 1 if invalid
     return 1;
   }
@@ -620,30 +678,34 @@ export class TranscriptUploadController {
    * GET /student/transcript/:idOrAccountId/semester-plan
    * Lấy Recommended Semester Plan cho sinh viên
    * Bao gồm: môn học dự đoán, thông tin học kỳ, thời gian học tập, tổng tín chỉ
-   * 
+   *
    * @param idOrAccountId - student_id hoặc account_id
    * @returns Semester plan với danh sách môn học được nhóm theo học kỳ
    */
   @Get(':idOrAccountId/semester-plan')
-  async getSemesterPlan(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getSemesterPlan(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`Getting semester plan for ID: ${idOrAccountId}`);
 
     // Ưu tiên tìm theo account_id trước
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
-      select: { 
-        student_id: true, 
+      select: {
+        student_id: true,
         student_code: true,
       },
     });
 
     // Nếu không tìm thấy theo account_id, thử theo student_id
     if (!student) {
-      this.logger.log(`Not found by account_id, trying student_id: ${idOrAccountId}`);
+      this.logger.log(
+        `Not found by account_id, trying student_id: ${idOrAccountId}`,
+      );
       student = await this.prisma.student.findUnique({
         where: { student_id: idOrAccountId },
-        select: { 
-          student_id: true, 
+        select: {
+          student_id: true,
           student_code: true,
         },
       });
@@ -651,16 +713,19 @@ export class TranscriptUploadController {
 
     if (!student) {
       throw new BadRequestException(
-        `Student not found with ID or account_id: ${idOrAccountId}`
+        `Student not found with ID or account_id: ${idOrAccountId}`,
       );
     }
 
-    this.logger.log(`Found student: ${student.student_code} (ID: ${student.student_id})`);
+    this.logger.log(
+      `Found student: ${student.student_code} (ID: ${student.student_id})`,
+    );
 
     // Lấy semester plan đã được group theo học kỳ
-    const semesterPlan = await this.semesterPlanningService.getSemesterPlanGrouped(
-      student.student_id
-    );
+    const semesterPlan =
+      await this.semesterPlanningService.getSemesterPlanGrouped(
+        student.student_id,
+      );
 
     return {
       success: true,
@@ -671,19 +736,21 @@ export class TranscriptUploadController {
   /**
    * GET /student/transcript/:idOrAccountId/semester-plan/raw
    * Lấy raw semester plan (không group theo học kỳ)
-   * 
+   *
    * @param idOrAccountId - student_id hoặc account_id
    * @returns Raw semester plan với danh sách tất cả môn học dự đoán
    */
   @Get(':idOrAccountId/semester-plan/raw')
-  async getSemesterPlanRaw(@Param('idOrAccountId', ParseIntPipe) idOrAccountId: number) {
+  async getSemesterPlanRaw(
+    @Param('idOrAccountId', ParseIntPipe) idOrAccountId: number,
+  ) {
     this.logger.log(`Getting raw semester plan for ID: ${idOrAccountId}`);
 
     // Ưu tiên tìm theo account_id trước
     let student = await this.prisma.student.findUnique({
       where: { account_id: idOrAccountId },
-      select: { 
-        student_id: true, 
+      select: {
+        student_id: true,
         student_code: true,
       },
     });
@@ -692,8 +759,8 @@ export class TranscriptUploadController {
     if (!student) {
       student = await this.prisma.student.findUnique({
         where: { student_id: idOrAccountId },
-        select: { 
-          student_id: true, 
+        select: {
+          student_id: true,
           student_code: true,
         },
       });
@@ -701,14 +768,15 @@ export class TranscriptUploadController {
 
     if (!student) {
       throw new BadRequestException(
-        `Student not found with ID or account_id: ${idOrAccountId}`
+        `Student not found with ID or account_id: ${idOrAccountId}`,
       );
     }
 
     // Lấy semester plan raw (không group)
-    const semesterPlan = await this.semesterPlanningService.getRecommendedSemesterPlan(
-      student.student_id
-    );
+    const semesterPlan =
+      await this.semesterPlanningService.getRecommendedSemesterPlan(
+        student.student_id,
+      );
 
     return {
       success: true,

@@ -15,7 +15,7 @@ import {
 export class StatisticsOverviewController {
   constructor(
     private readonly statisticsOverviewService: StatisticsOverviewService,
-  ) { }
+  ) {}
 
   /**
    * GET /admin/dashboard/stats

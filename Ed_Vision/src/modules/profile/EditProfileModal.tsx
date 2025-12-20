@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TokenManager } from '@/lib/tokenManager';
 import { buildUrl } from '@/services/api/config';
+import { useTranslation } from 'react-i18next';
 
 type ProfileData = {
   fullName?: string;
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export default function EditProfileModal({ isOpen, onClose, currentProfile, onSuccess }: Props) {
+  const { t } = useTranslation('profile');
   const [formData, setFormData] = useState<ProfileData>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
     try {
       const token = TokenManager.getToken();
       if (!token) {
-        throw new Error('Vui lòng đăng nhập');
+        throw new Error(t('common.loginRequired'));
       }
 
       const payload = {
@@ -70,14 +72,14 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
       });
 
       if (!res.ok) {
-        throw new Error(`Không thể cập nhật hồ sơ (status: ${res.status})`);
+        throw new Error(t('common.updateError', { status: res.status }));
       }
 
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error('EditProfileModal error:', err);
-      setError(err?.message || 'Lỗi khi lưu thông tin');
+      setError(err?.message || t('common.saveError'));
     } finally {
       setSaving(false);
     }
@@ -90,7 +92,7 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Chỉnh sửa thông tin cá nhân</h2>
+            <h2 className="text-2xl font-bold">{t('personalInfo.modalTitle')}</h2>
             <button
               onClick={onClose}
               className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
@@ -111,7 +113,7 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Họ và tên <span className="text-red-500">*</span>
+              {t('personalInfo.fullName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -119,24 +121,24 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
               value={formData.fullName || ''}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white !text-gray-900"
-              placeholder="Nhập họ và tên"
+              placeholder={t('personalInfo.fullNamePlaceholder', { defaultValue: 'Enter full name' })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Số điện thoại</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('personalInfo.phone')}</label>
             <input
               type="tel"
               value={formData.phoneNumber || ''}
               onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white !text-gray-900"
-              placeholder="Nhập số điện thoại"
+              placeholder={t('personalInfo.phonePlaceholder', { defaultValue: 'Enter phone number' })}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700  mb-2">Ngày sinh</label>
+              <label className="block text-sm font-semibold text-gray-700  mb-2">{t('personalInfo.dateOfBirth')}</label>
               <input
                 type="date"
                 value={formData.dateOfBirth || ''}
@@ -147,39 +149,39 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700  mb-2">Giới tính</label>
+              <label className="block text-sm font-semibold text-gray-700  mb-2">{t('personalInfo.gender')}</label>
               <select
                 value={formData.gender || ''}
                 onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300  rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white  text-gray-900 !text-gray-900"
               >
-                <option value="">-- Chọn --</option>
-                <option value="Nam">Nam</option>
-                <option value="Nữ">Nữ</option>
-                <option value="Khác">Khác</option>
+                <option value="">{t('personalInfo.selectGender', { defaultValue: '-- Select --' })}</option>
+                <option value="Nam">{t('personalInfo.male')}</option>
+                <option value="Nữ">{t('personalInfo.female')}</option>
+                <option value="Khác">{t('personalInfo.other')}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700  mb-2">Quốc tịch</label>
+            <label className="block text-sm font-semibold text-gray-700  mb-2">{t('personalInfo.nationality')}</label>
             <input
               type="text"
               value={formData.nationality || ''}
               onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300  rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white  text-gray-900 !text-gray-900"
-              placeholder="Nhập quốc tịch"
+              placeholder={t('personalInfo.nationalityPlaceholder', { defaultValue: 'Enter nationality' })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700  mb-2">Địa chỉ</label>
+            <label className="block text-sm font-semibold text-gray-700  mb-2">{t('personalInfo.address')}</label>
             <textarea
               rows={3}
               value={formData.address || ''}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300  rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white  text-gray-900 !text-gray-900"
-              placeholder="Nhập địa chỉ"
+              placeholder={t('personalInfo.addressPlaceholder', { defaultValue: 'Enter address' })}
             />
           </div>
 
@@ -190,14 +192,14 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
               disabled={saving}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
             >
-              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </form>

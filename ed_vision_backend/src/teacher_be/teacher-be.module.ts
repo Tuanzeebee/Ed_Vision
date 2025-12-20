@@ -45,4 +45,4 @@ import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
         GpaMetricsModule,
     ],
 })
-export class TeacherBeModule { }
+export class TeacherBeModule {}

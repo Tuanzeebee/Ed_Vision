@@ -131,12 +131,12 @@ export class InstructorAvailabilityRepository {
       is_available: boolean;
       note?: string | null;
     }[] = [];
-    
+
     // Create 7 days starting from Monday (weekStartDate)
     for (let i = 0; i < 7; i++) {
       const specificDate = new Date(weekStartDate);
       specificDate.setDate(weekStartDate.getDate() + i);
-      
+
       datesToCreate.push({
         week_id: weekId,
         specific_date: specificDate,
@@ -257,12 +257,15 @@ export class InstructorAvailabilityRepository {
       where: { week_id: weekId },
       select: { date_id: true },
     });
-    const dateIds = dates.map(d => d.date_id);
-    
+    const dateIds = dates.map((d) => d.date_id);
+
     return this.prisma.instructorDailySlot.findMany({
       where: { date_id: { in: dateIds } },
       include: { date: true },
-      orderBy: [{ date: { specific_date: 'asc' } }, { start_time_local: 'asc' }],
+      orderBy: [
+        { date: { specific_date: 'asc' } },
+        { start_time_local: 'asc' },
+      ],
     });
   }
 
@@ -346,7 +349,7 @@ export class InstructorAvailabilityRepository {
     // We need to find weeks where the week period intersects with our requested range
     const weekStartBound = new Date(startDate);
     weekStartBound.setDate(weekStartBound.getDate() - 7); // Look 1 week earlier
-    
+
     const weekEndBound = new Date(endDate);
     weekEndBound.setDate(weekEndBound.getDate() + 7); // Look 1 week later
 
@@ -388,12 +391,15 @@ export class InstructorAvailabilityRepository {
     });
 
     // Now filter dates in the service layer to get exact range
-    const filteredWeeks = weeks.map(week => ({
-      ...week,
-      instructorAvailabilityDates: week.instructorAvailabilityDates.filter(date => 
-        date.specific_date >= startDate && date.specific_date <= endDate
-      )
-    })).filter(week => week.instructorAvailabilityDates.length > 0);
+    const filteredWeeks = weeks
+      .map((week) => ({
+        ...week,
+        instructorAvailabilityDates: week.instructorAvailabilityDates.filter(
+          (date) =>
+            date.specific_date >= startDate && date.specific_date <= endDate,
+        ),
+      }))
+      .filter((week) => week.instructorAvailabilityDates.length > 0);
 
     return filteredWeeks;
   }

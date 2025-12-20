@@ -3,7 +3,7 @@ import { StudentChatController } from './student-chat.controller';
 import { ChatModule } from '../../mongodb/chat.module';
 
 @Module({
-    imports: [ChatModule],
-    controllers: [StudentChatController],
+  imports: [ChatModule],
+  controllers: [StudentChatController],
 })
-export class StudentChatModule { }
+export class StudentChatModule {}

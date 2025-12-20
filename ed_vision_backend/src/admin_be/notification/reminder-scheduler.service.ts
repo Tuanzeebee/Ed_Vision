@@ -18,6 +18,7 @@ interface ReminderWithDetails {
     meeting_purpose: string | null;
     meeting_type: string;
     status: string;
+    booker_role: string | null;
     slot: {
       slot_id: number;
       start_time_local: Date | null;
@@ -44,6 +45,12 @@ interface ReminderWithDetails {
         } | null;
       };
     } | null;
+    appointmentContact: {
+      contact_name: string | null;
+      contact_phone: string | null;
+      contact_email: string | null;
+      relationship_to_student: string | null;
+    } | null;
   } | null;
   account: {
     account_id: number;
@@ -64,8 +71,12 @@ export class ReminderSchedulerService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    this.logger.log('[ReminderScheduler] ✅ Service initialized - @Cron job registered');
-    this.logger.log('[ReminderScheduler] Cron will run every minute to check reminders');
+    this.logger.log(
+      '[ReminderScheduler] ✅ Service initialized - @Cron job registered',
+    );
+    this.logger.log(
+      '[ReminderScheduler] Cron will run every minute to check reminders',
+    );
   }
 
   /**
@@ -78,11 +89,13 @@ export class ReminderSchedulerService implements OnModuleInit {
     const windowStart = new Date(now.getTime() - 2 * 60 * 1000);
 
     this.logger.log(`[CronJob] Running at ${now.toISOString()}`);
-    this.logger.log(`[CronJob] Window: ${windowStart.toISOString()} - ${now.toISOString()}`);
+    this.logger.log(
+      `[CronJob] Window: ${windowStart.toISOString()} - ${now.toISOString()}`,
+    );
 
     try {
       // 1. Lấy các reminder đến giờ gửi mà chưa gửi và chưa bị hủy
-      const dueReminders = await this.prisma.reminderSchedule.findMany({
+      const dueReminders = (await this.prisma.reminderSchedule.findMany({
         where: {
           sent_at: null,
           canceled: false,
@@ -117,6 +130,7 @@ export class ReminderSchedulerService implements OnModuleInit {
                   },
                 },
               },
+              appointmentContact: true,
             },
           },
           account: {
@@ -125,7 +139,7 @@ export class ReminderSchedulerService implements OnModuleInit {
             },
           },
         },
-      }) as unknown as ReminderWithDetails[];
+      })) as unknown as ReminderWithDetails[];
 
       if (!dueReminders.length) {
         this.logger.debug('[CronJob] No due reminders found');
@@ -135,8 +149,10 @@ export class ReminderSchedulerService implements OnModuleInit {
       this.logger.log(`[CronJob] Found ${dueReminders.length} due reminders`);
 
       for (const reminder of dueReminders) {
-        this.logger.log(`[CronJob] Processing reminder ${reminder.reminder_id}, remind_at: ${reminder.remind_at.toISOString()}`);
-        
+        this.logger.log(
+          `[CronJob] Processing reminder ${reminder.reminder_id}, remind_at: ${reminder.remind_at.toISOString()}`,
+        );
+
         try {
           await this.processReminder(reminder);
         } catch (error) {
@@ -180,7 +196,7 @@ export class ReminderSchedulerService implements OnModuleInit {
         priority: 'Cao',
         target: 'individual',
         channel: reminder.channel || 'in_app',
-        created_by: 1, // System account
+        creator: { connect: { account_id: 1 } }, // System account for automated reminders
       },
     });
 
@@ -210,7 +226,9 @@ export class ReminderSchedulerService implements OnModuleInit {
       attachments: null,
       createdAt: new Date().toISOString(),
     };
-    this.notificationGateway.broadcastNotification(payload, [reminder.account_id]);
+    this.notificationGateway.broadcastNotification(payload, [
+      reminder.account_id,
+    ]);
 
     this.logger.log(
       `Sent reminder ${reminder.reminder_id} to account ${reminder.account_id}`,
@@ -239,10 +257,25 @@ export class ReminderSchedulerService implements OnModuleInit {
     const meetingPurpose =
       reminder.appointment?.meeting_purpose || 'Cuộc hẹn tư vấn';
 
+    // Nếu là parent đặt lịch, lấy tên parent từ appointmentContact
+    const bookerRole = reminder.appointment?.booker_role;
+    const bookerName =
+      bookerRole === 'parent'
+        ? reminder.appointment?.appointmentContact?.contact_name || 'Phụ huynh'
+        : studentName;
+
     // Detect xem recipient là teacher hay student để hiển thị đúng tên người kia
-    const isTeacher = reminder.account_id === reminder.appointment?.instructor?.account?.account_id;
-    const otherPartyName = isTeacher ? studentName : instructorName;
-    const otherPartyRole = isTeacher ? 'sinh viên' : 'cố vấn';
+    const isTeacher =
+      reminder.account_id ===
+      reminder.appointment?.instructor?.account?.account_id;
+    // Nếu teacher nhận reminder, hiển thị tên người đặt (parent hoặc student)
+    // Nếu student/parent nhận reminder, hiển thị tên teacher
+    const otherPartyName = isTeacher ? bookerName : instructorName;
+    const otherPartyRole = isTeacher
+      ? bookerRole === 'parent'
+        ? 'phụ huynh'
+        : 'sinh viên'
+      : 'cố vấn';
 
     // Format thời gian
     let timeStr = '';
@@ -428,9 +461,13 @@ export class ReminderSchedulerService implements OnModuleInit {
       appointment_id: r.appointment_id,
       account_id: r.account_id,
       remind_at: r.remind_at.toISOString(),
-      remind_at_local: r.remind_at.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      remind_at_local: r.remind_at.toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+      }),
       is_past: r.remind_at <= now,
-      minutes_until: Math.round((r.remind_at.getTime() - now.getTime()) / 60000),
+      minutes_until: Math.round(
+        (r.remind_at.getTime() - now.getTime()) / 60000,
+      ),
     }));
   }
 
@@ -445,7 +482,9 @@ export class ReminderSchedulerService implements OnModuleInit {
           include: {
             slot: { include: { date: true } },
             student: { include: { account: { include: { profile: true } } } },
-            instructor: { include: { account: { include: { profile: true } } } },
+            instructor: {
+              include: { account: { include: { profile: true } } },
+            },
           },
         },
         account: { include: { profile: true } },
@@ -511,9 +550,10 @@ export class ReminderSchedulerService implements OnModuleInit {
       success: true,
       reminder_id: reminder.reminder_id,
       remind_at: remindAt.toISOString(),
-      remind_at_vn: new Date(remindAt.getTime() + 7 * 60 * 60 * 1000).toISOString(),
+      remind_at_vn: new Date(
+        remindAt.getTime() + 7 * 60 * 60 * 1000,
+      ).toISOString(),
       message: `Test reminder created. Will trigger in ${minutesFromNow} minutes.`,
     };
   }
 }
-

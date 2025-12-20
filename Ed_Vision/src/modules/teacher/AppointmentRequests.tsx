@@ -29,13 +29,13 @@ const formatDateTime = (slot: any, t: any) => {
   if (!slot) return { date: 'Unknown', time: 'Unknown' };
   
   const dayNames = [
-    t('appointments.sunday', 'Chủ Nhật'),
-    t('appointments.monday', 'Thứ 2'),
-    t('appointments.tuesday', 'Thứ 3'),
-    t('appointments.wednesday', 'Thứ 4'),
-    t('appointments.thursday', 'Thứ 5'),
-    t('appointments.friday', 'Thứ 6'),
-    t('appointments.saturday', 'Thứ 7')
+    t('appointments.requests.sunday', 'Chủ Nhật'),
+    t('appointments.requests.monday', 'Thứ 2'),
+    t('appointments.requests.tuesday', 'Thứ 3'),
+    t('appointments.requests.wednesday', 'Thứ 4'),
+    t('appointments.requests.thursday', 'Thứ 5'),
+    t('appointments.requests.friday', 'Thứ 6'),
+    t('appointments.requests.saturday', 'Thứ 7')
   ];
   const dayName = slot.dayOfWeek !== undefined && slot.dayOfWeek !== null 
     ? dayNames[slot.dayOfWeek] 
@@ -161,7 +161,7 @@ export default function AppointmentRequests({
       propSetRequests(transformedRequests);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      showToast(t('appointments.noRequests'), 'error');
+      showToast(t('appointments.requests.noRequests'), 'error');
     } finally {
       setLoading(false);
     }
@@ -217,7 +217,7 @@ export default function AppointmentRequests({
           )
         );
         
-        showToast(t('appointments.acceptSuccess'), 'success');
+        showToast(t('appointments.requests.acceptSuccess'), 'success');
         setAcceptModalOpen(false);
         setAcceptingRequestId(null);
 
@@ -229,7 +229,7 @@ export default function AppointmentRequests({
         }, 1000);
       } catch (error: any) {
         console.error('Error accepting appointment:', error);
-        showToast(error.message || t('appointments.acceptError'), 'error');
+        showToast(error.message || t('appointments.requests.acceptError'), 'error');
       } finally {
         setIsAccepting(false);
       }
@@ -247,12 +247,12 @@ export default function AppointmentRequests({
 
   const handleConfirmReject = async () => {
     if (!rejectReason) {
-      showToast(t('appointments.selectReason'), 'error');
+      showToast(t('appointments.requests.selectReason'), 'error');
       return;
     }
 
     if (rejectReason === 'custom' && !customReason.trim()) {
-      showToast(t('appointments.enterReason'), 'error');
+      showToast(t('appointments.requests.enterReason'), 'error');
       return;
     }
 
@@ -260,11 +260,11 @@ export default function AppointmentRequests({
       setIsRejecting(true);
       try {
         const reasonMessages: Record<string, string> = {
-          schedule_conflict: t('appointments.scheduleConflict'),
-          personal_leave: t('appointments.personalLeave'),
-          meeting_conflict: t('appointments.meetingConflict'),
-          health_issue: t('appointments.healthIssue'),
-          reschedule: t('appointments.reschedule'),
+          schedule_conflict: t('appointments.requests.scheduleConflict'),
+          personal_leave: t('appointments.requests.personalLeave'),
+          meeting_conflict: t('appointments.requests.meetingConflict'),
+          health_issue: t('appointments.requests.healthIssue'),
+          reschedule: t('appointments.requests.reschedule'),
           custom: customReason,
         };
 
@@ -282,7 +282,7 @@ export default function AppointmentRequests({
             suggestedDate: suggestDate || undefined,
             suggestedTime: suggestTime || undefined,
             notes: rejectReason === 'reschedule' && suggestDate && suggestTime 
-              ? t('appointments.suggestedTimeNote', 'Đề xuất thời gian: {{date}} lúc {{time}}', { date: suggestDate, time: suggestTime })
+              ? t('appointments.requests.suggestedTimeNote', 'Đề xuất thời gian: {{date}} lúc {{time}}', { date: suggestDate, time: suggestTime })
               : undefined,
           }),
         });
@@ -299,14 +299,14 @@ export default function AppointmentRequests({
           )
         );
 
-        showToast(`${t('appointments.rejectSuccess')} ${reasonText}`, 'warning');
+        showToast(`${t('appointments.requests.rejectSuccess')} ${reasonText}`, 'warning');
         handleCloseRejectModal();
 
         // Refresh data
         await fetchAppointments();
       } catch (error: any) {
         console.error('Error rejecting appointment:', error);
-        showToast(error.message || t('appointments.rejectError'), 'error');
+        showToast(error.message || t('appointments.requests.rejectError'), 'error');
       } finally {
         setIsRejecting(false);
       }
@@ -334,23 +334,23 @@ export default function AppointmentRequests({
     <>
       <div className="p-4 md:p-6 lg:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">⏰ {t('appointments.title')}</h1>
-          <p className="text-gray-600">{t('appointments.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">⏰ {t('appointments.requests.title')}</h1>
+          <p className="text-gray-600">{t('appointments.requests.subtitle')}</p>
         </div>
 
         {/* Filter Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-wrap gap-2">
             {[
-              { id: 'all', label: `${t('appointments.all')} (${requests.length})` },
-              { id: 'pending', label: `${t('appointments.pending')} (${pendingCount})` },
+              { id: 'all', label: `${t('appointments.requests.all')} (${requests.length})` },
+              { id: 'pending', label: `${t('appointments.requests.pending')} (${pendingCount})` },
               {
                 id: 'online',
-                label: `${t('appointments.online')} (${requests.filter((r) => r.type === 'online').length})`,
+                label: `${t('appointments.requests.online')} (${requests.filter((r) => r.type === 'online').length})`,
               },
               {
                 id: 'offline',
-                label: `${t('appointments.offline')} (${requests.filter((r) => r.type === 'offline').length})`,
+                label: `${t('appointments.requests.offline')} (${requests.filter((r) => r.type === 'offline').length})`,
               },
             ].map((filter) => (
               <button
@@ -374,12 +374,12 @@ export default function AppointmentRequests({
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
               <div className="flex flex-col items-center justify-center gap-3">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p className="text-gray-600">{t('appointments.loadingRequests')}</p>
+                <p className="text-gray-600">{t('appointments.requests.loadingRequests')}</p>
               </div>
             </div>
           ) : paginatedRequests.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <p className="text-gray-600">{t('appointments.noRequestsFound')}</p>
+              <p className="text-gray-600">{t('appointments.requests.noRequestsFound')}</p>
             </div>
           ) : (
             paginatedRequests.map((request) => {
@@ -406,7 +406,7 @@ export default function AppointmentRequests({
                               request.type === 'online' ? 'bg-blue-500' : 'bg-orange-500'
                             }`}
                           >
-                            {request.type === 'online' ? t('appointments.online') : t('appointments.offline')}
+                            {request.type === 'online' ? t('appointments.requests.online') : t('appointments.requests.offline')}
                           </span>
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium text-white ${
@@ -418,10 +418,10 @@ export default function AppointmentRequests({
                             }`}
                           >
                             {request.status === 'pending'
-                              ? t('appointments.pending')
+                              ? t('appointments.requests.pending')
                               : request.status === 'accepted'
-                              ? t('appointments.accepted')
-                              : t('appointments.rejected')}
+                              ? t('appointments.requests.accepted')
+                              : t('appointments.requests.rejected')}
                           </span>
                         </div>
                       </div>
@@ -433,14 +433,14 @@ export default function AppointmentRequests({
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
                         >
                           <X className="inline w-4 h-4 mr-1" />
-                          {t('appointments.reject')}
+                          {t('appointments.requests.reject')}
                         </button>
                         <button
                           onClick={() => handleRequestAction(request.id, 'accept')}
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
                         >
                           <Check className="inline w-4 h-4 mr-1" />
-                          {t('appointments.accept')}
+                          {t('appointments.requests.accept')}
                         </button>
                       </div>
                     )}
@@ -451,12 +451,12 @@ export default function AppointmentRequests({
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                     <h4 className="font-bold text-blue-900 text-lg">
                       <GraduationCap className="inline w-5 h-5 mr-2" />
-                      {t('appointments.parentOf')}: {request.studentName} ({request.studentClass})
+                      {t('appointments.requests.parentOf')}: {request.studentName} ({request.studentClass})
                     </h4>
                   </div>
 
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
-                    <h4 className="font-bold text-purple-900 mb-1">{t('appointments.desiredTime', 'Thời gian mong muốn')}</h4>
+                    <h4 className="font-bold text-purple-900 mb-1">{t('appointments.requests.desiredTime', 'Thời gian mong muốn')}</h4>
                     <p className="text-xl font-bold text-purple-800">
                       {request.desiredDate} - {request.desiredTime}
                     </p>
@@ -464,16 +464,16 @@ export default function AppointmentRequests({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <h5 className="font-medium text-gray-700 mb-1">{t('appointments.meetingReason', 'Lý do gặp mặt')}</h5>
+                      <h5 className="font-medium text-gray-700 mb-1">{t('appointments.requests.meetingReason', 'Lý do gặp mặt')}</h5>
                       <p className="text-gray-800 text-sm">{request.reason}</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <h5 className="font-medium text-gray-700 mb-1">{t('appointments.requestTime', 'Thời gian yêu cầu')}</h5>
+                      <h5 className="font-medium text-gray-700 mb-1">{t('appointments.requests.requestTime', 'Thời gian yêu cầu')}</h5>
                       <p className="text-gray-800 text-sm">{request.requestedAt}</p>
                     </div>
                     {request.platform && (
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <h5 className="font-medium text-gray-700 mb-1">{t('appointments.platform')}</h5>
+                        <h5 className="font-medium text-gray-700 mb-1">{t('appointments.requests.platform')}</h5>
                         <p className="text-gray-800 text-sm font-medium">{request.platform}</p>
                       </div>
                     )}
@@ -489,11 +489,11 @@ export default function AppointmentRequests({
         {totalRequestsPages > 1 && (
           <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="text-sm text-gray-700">
-              {t('appointments.showing', 'Hiển thị')} <span className="font-medium">{startRequestsIndex + 1}</span> {t('appointments.to', 'đến')}{' '}
+              {t('appointments.requests.showing', 'Hiển thị')} <span className="font-medium">{startRequestsIndex + 1}</span> {t('appointments.requests.to', 'đến')}{' '}
               <span className="font-medium">
                 {Math.min(endRequestsIndex, filteredRequests.length)}
               </span>{' '}
-              {t('appointments.outOf', 'trong tổng số')} <span className="font-medium">{filteredRequests.length}</span> {t('appointments.requests', 'yêu cầu')}
+              {t('appointments.requests.outOf', 'trong tổng số')} <span className="font-medium">{filteredRequests.length}</span> {t('appointments.requests.requests', 'yêu cầu')}
             </div>
             <div className="flex gap-2">
               <Button
@@ -502,7 +502,7 @@ export default function AppointmentRequests({
                 onClick={() => setRequestsPage((prev) => Math.max(1, prev - 1))}
                 disabled={requestsPage === 1}
               >
-                {t('appointments.previous')}
+                {t('appointments.requests.previous')}
               </Button>
               <div className="flex gap-1">
                 {Array.from({ length: totalRequestsPages }, (_, i) => i + 1).map((page) => (
@@ -523,7 +523,7 @@ export default function AppointmentRequests({
                 onClick={() => setRequestsPage((prev) => Math.min(totalRequestsPages, prev + 1))}
                 disabled={requestsPage === totalRequestsPages}
               >
-                {t('appointments.next')}
+                {t('appointments.requests.next')}
               </Button>
             </div>
           </div>
@@ -540,8 +540,8 @@ export default function AppointmentRequests({
                   <CheckCircle className="text-green-600 text-2xl" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">{t('appointments.confirmAccept', 'Xác nhận chấp nhận lịch hẹn')}</h3>
-                  <p className="text-sm text-gray-600">{t('appointments.sureToAccept', 'Bạn có chắc chắn muốn chấp nhận lịch hẹn này?')}</p>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('appointments.requests.confirmAccept', 'Xác nhận chấp nhận lịch hẹn')}</h3>
+                  <p className="text-sm text-gray-600">{t('appointments.requests.sureToAccept', 'Bạn có chắc chắn muốn chấp nhận lịch hẹn này?')}</p>
                 </div>
               </div>
 
@@ -562,14 +562,14 @@ export default function AppointmentRequests({
                         <div>
                           <h4 className="font-bold text-gray-900">{request.parentName}</h4>
                           <p className="text-sm text-gray-600">
-                            {t('appointments.parentOf')} {request.studentName}
+                            {t('appointments.requests.parentOf')} {request.studentName}
                           </p>
                         </div>
                       </div>
                       <div className="border-t border-blue-200 pt-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <p className="text-xs text-gray-600 mb-1">{t('appointments.time', 'Thời gian')}</p>
+                            <p className="text-xs text-gray-600 mb-1">{t('appointments.requests.time', 'Thời gian')}</p>
                             <p className="font-medium text-gray-900">
                               {request.desiredDate}
                               <br />
@@ -577,14 +577,14 @@ export default function AppointmentRequests({
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-600 mb-1">{t('appointments.format', 'Hình thức')}</p>
+                            <p className="text-xs text-gray-600 mb-1">{t('appointments.requests.format', 'Hình thức')}</p>
                             <p className="font-medium text-gray-900">
-                              {request.type === 'online' ? t('appointments.online') : t('appointments.offline')}
+                              {request.type === 'online' ? t('appointments.requests.online') : t('appointments.requests.offline')}
                             </p>
                           </div>
                         </div>
                         <div className="mt-3">
-                          <p className="text-xs text-gray-600 mb-1">{t('appointments.reason')}</p>
+                          <p className="text-xs text-gray-600 mb-1">{t('appointments.requests.reason')}</p>
                           <p className="text-sm text-gray-800">{request.reason}</p>
                         </div>
                       </div>
@@ -597,9 +597,9 @@ export default function AppointmentRequests({
                 <div className="flex gap-2">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-yellow-800 font-medium">{t('appointments.note', 'Lưu ý')}</p>
+                    <p className="text-sm text-yellow-800 font-medium">{t('appointments.requests.note', 'Lưu ý')}</p>
                     <p className="text-sm text-yellow-700 mt-1">
-                      {t('appointments.acceptWarning', 'Sau khi chấp nhận, phụ huynh sẽ nhận được thông báo xác nhận. Vui lòng đảm bảo bạn có thể tham gia đúng thời gian đã hẹn.')}
+                      {t('appointments.requests.acceptWarning', 'Sau khi chấp nhận, phụ huynh sẽ nhận được thông báo xác nhận. Vui lòng đảm bảo bạn có thể tham gia đúng thời gian đã hẹn.')}
                     </p>
                   </div>
                 </div>
@@ -614,7 +614,7 @@ export default function AppointmentRequests({
                   disabled={isAccepting}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {t('appointments.cancel')}
+                  {t('appointments.requests.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmAccept}
@@ -624,12 +624,12 @@ export default function AppointmentRequests({
                   {isAccepting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      {t('appointments.processing', 'Đang xử lý...')}
+                      {t('appointments.requests.processing', 'Đang xử lý...')}
                     </>
                   ) : (
                     <>
                       <Check className="w-4 h-4" />
-                      {t('appointments.confirmAcceptButton', 'Xác nhận chấp nhận')}
+                      {t('appointments.requests.confirmAcceptButton', 'Xác nhận chấp nhận')}
                     </>
                   )}
                 </button>
@@ -649,14 +649,14 @@ export default function AppointmentRequests({
                   <X className="text-red-600 w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{t('appointments.rejectAppointment', 'Từ chối lịch hẹn')}</h3>
-                  <p className="text-xs text-gray-600">{t('appointments.selectRejectReason')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('appointments.requests.rejectAppointment', 'Từ chối lịch hẹn')}</h3>
+                  <p className="text-xs text-gray-600">{t('appointments.requests.selectRejectReason')}</p>
                 </div>
               </div>
 
               {/* Lý do có sẵn */}
               <div className="mb-3">
-                <label className="block text-xs font-medium text-gray-700 mb-2">{t('appointments.rejectReasonLabel', 'Lý do từ chối:')}:</label>
+                <label className="block text-xs font-medium text-gray-700 mb-2">{t('appointments.requests.rejectReasonLabel', 'Lý do từ chối:')}:</label>
                 <div className="space-y-1.5">
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
@@ -668,8 +668,8 @@ export default function AppointmentRequests({
                       className="mr-2 mt-0.5"
                     />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{t('appointments.scheduleConflictTitle')}</div>
-                      <div className="text-xs text-gray-600">{t('appointments.scheduleConflictDesc')}</div>
+                      <div className="text-sm font-medium text-gray-900">{t('appointments.requests.scheduleConflictTitle')}</div>
+                      <div className="text-xs text-gray-600">{t('appointments.requests.scheduleConflictDesc')}</div>
                     </div>
                   </label>
 
@@ -683,8 +683,8 @@ export default function AppointmentRequests({
                       className="mr-2 mt-0.5"
                     />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{t('appointments.personalLeaveTitle')}</div>
-                      <div className="text-xs text-gray-600">{t('appointments.personalLeaveDesc')}</div>
+                      <div className="text-sm font-medium text-gray-900">{t('appointments.requests.personalLeaveTitle')}</div>
+                      <div className="text-xs text-gray-600">{t('appointments.requests.personalLeaveDesc')}</div>
                     </div>
                   </label>
 
@@ -698,8 +698,8 @@ export default function AppointmentRequests({
                       className="mr-2 mt-0.5"
                     />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{t('appointments.meetingConflictTitle')}</div>
-                      <div className="text-xs text-gray-600">{t('appointments.meetingConflictDesc')}</div>
+                      <div className="text-sm font-medium text-gray-900">{t('appointments.requests.meetingConflictTitle')}</div>
+                      <div className="text-xs text-gray-600">{t('appointments.requests.meetingConflictDesc')}</div>
                     </div>
                   </label>
 
@@ -713,8 +713,8 @@ export default function AppointmentRequests({
                       className="mr-2 mt-0.5"
                     />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{t('appointments.healthIssueTitle')}</div>
-                      <div className="text-xs text-gray-600">{t('appointments.healthIssueDesc')}</div>
+                      <div className="text-sm font-medium text-gray-900">{t('appointments.requests.healthIssueTitle')}</div>
+                      <div className="text-xs text-gray-600">{t('appointments.requests.healthIssueDesc')}</div>
                     </div>
                   </label>
 
@@ -728,8 +728,8 @@ export default function AppointmentRequests({
                       className="mr-2 mt-0.5"
                     />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{t('appointments.rescheduleTitle')}</div>
-                      <div className="text-xs text-gray-600">{t('appointments.rescheduleDesc')}</div>
+                      <div className="text-sm font-medium text-gray-900">{t('appointments.requests.rescheduleTitle')}</div>
+                      <div className="text-xs text-gray-600">{t('appointments.requests.rescheduleDesc')}</div>
                     </div>
                   </label>
 
@@ -743,8 +743,8 @@ export default function AppointmentRequests({
                       className="mr-2 mt-0.5"
                     />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{t('appointments.customReasonTitle')}</div>
-                      <div className="text-xs text-gray-600">{t('appointments.customReasonDesc')}</div>
+                      <div className="text-sm font-medium text-gray-900">{t('appointments.requests.customReasonTitle')}</div>
+                      <div className="text-xs text-gray-600">{t('appointments.requests.customReasonDesc')}</div>
                     </div>
                   </label>
                 </div>
@@ -759,7 +759,7 @@ export default function AppointmentRequests({
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
                     className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    placeholder={t('appointments.enterCustomReason')}
+                    placeholder={t('appointments.requests.enterCustomReason')}
                   />
                 </div>
               )}
@@ -768,7 +768,7 @@ export default function AppointmentRequests({
               {rejectReason === 'reschedule' && (
                 <div className="mb-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                    {t('appointments.suggestNewTime')}:
+                    {t('appointments.requests.suggestNewTime')}:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
@@ -793,7 +793,7 @@ export default function AppointmentRequests({
                   disabled={isRejecting}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {t('appointments.cancel')}
+                  {t('appointments.requests.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmReject}
@@ -803,12 +803,12 @@ export default function AppointmentRequests({
                   {isRejecting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      {t('appointments.processing', 'Đang xử lý...')}
+                      {t('appointments.requests.processing', 'Đang xử lý...')}
                     </>
                   ) : (
                     <>
                       <Check className="w-4 h-4" />
-                      {t('appointments.sendReject', 'Gửi từ chối')}
+                      {t('appointments.requests.sendReject', 'Gửi từ chối')}
                     </>
                   )}
                 </button>

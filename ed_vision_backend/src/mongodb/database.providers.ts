@@ -5,7 +5,8 @@ export const databaseProviders = [
   {
     provide: 'DATABASE_CONNECTION',
     useFactory: async () => {
-      const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/ed_vision';
+      const uri =
+        process.env.MONGO_URI || 'mongodb://localhost:27017/ed_vision';
 
       return mongoose.connect(uri, {
         auth: {

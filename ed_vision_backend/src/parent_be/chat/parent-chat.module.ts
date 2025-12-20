@@ -3,7 +3,7 @@ import { ParentChatController } from './parent-chat.controller';
 import { ChatModule } from '../../mongodb/chat.module';
 
 @Module({
-    imports: [ChatModule],
-    controllers: [ParentChatController],
+  imports: [ChatModule],
+  controllers: [ParentChatController],
 })
-export class ParentChatModule { }
+export class ParentChatModule {}

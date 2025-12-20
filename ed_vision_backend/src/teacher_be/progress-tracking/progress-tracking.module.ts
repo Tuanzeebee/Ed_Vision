@@ -4,9 +4,9 @@ import { ProgressTrackingService } from './progress-tracking.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [ProgressTrackingController],
-    providers: [ProgressTrackingService],
-    exports: [ProgressTrackingService],
+  imports: [PrismaModule],
+  controllers: [ProgressTrackingController],
+  providers: [ProgressTrackingService],
+  exports: [ProgressTrackingService],
 })
-export class ProgressTrackingModule { }
+export class ProgressTrackingModule {}
