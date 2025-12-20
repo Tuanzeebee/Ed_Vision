@@ -24,6 +24,7 @@ const CACHE_KEYS = {
     statistics: (instructorId: number = 1) => `class_mgmt:stats:${instructorId}`,
     students: (classCode: string) => `class_mgmt:students:${classCode}`,
     programs: () => 'class_mgmt:programs',
+    gpaMetrics: (classCode: string) => `class_mgmt:gpa_metrics:${classCode}`,
 };
 
 const CACHE_TTL = {
@@ -136,6 +137,21 @@ export const classManagementAPI = {
             async () => {
                 console.log(`🌐 Fetching students for class ${classCode} from API`);
                 const response = await api.get(`/teacher/class-management/classes/${classCode}/students`);
+                return response.data;
+            },
+            CACHE_TTL.STUDENTS
+        );
+    },
+
+    /**
+     * Get GPA metrics (current & predicted) for a class
+     */
+    getGpaMetricsByClass: async (classCode: string) => {
+        const cacheKey = CACHE_KEYS.gpaMetrics(classCode);
+        return cacheService.getOrFetch(
+            cacheKey,
+            async () => {
+                const response = await api.get(`/teacher/gpa-metrics/class/${classCode}`);
                 return response.data;
             },
             CACHE_TTL.STUDENTS

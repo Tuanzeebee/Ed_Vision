@@ -11,35 +11,38 @@ import { PredictionModule } from './prediction/prediction.module';
 import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
 import { AcademicDataModule } from './academic-data/academic-data.module';
 import { GradeStructureModule } from './grade-structure/grade-structure.module';
+import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
 
 @Module({
-  imports: [
-    DashboardModule,
-    ClassManagementModule,
-    GradeManagementModule,
-    ProgressTrackingModule,
-    ReportsModule,
-    MessagesModule,
-    AppointmentsModule,
-    SurveysModule,
-    PredictionModule,
-    MeetingLogsModule,
-    AcademicDataModule,
-    GradeStructureModule,
-  ],
-  exports: [
-    DashboardModule,
-    ClassManagementModule,
-    GradeManagementModule,
-    ProgressTrackingModule,
-    ReportsModule,
-    MessagesModule,
-    AppointmentsModule,
-    SurveysModule,
-    PredictionModule,
-    MeetingLogsModule,
-    AcademicDataModule,
-    GradeStructureModule,
-  ],
+    imports: [
+        DashboardModule,
+        ClassManagementModule,
+        GradeManagementModule,
+        ProgressTrackingModule,
+        ReportsModule,
+        MessagesModule,
+        AppointmentsModule,
+        SurveysModule,
+        PredictionModule,
+        MeetingLogsModule,
+        AcademicDataModule,
+        GradeStructureModule,
+        GpaMetricsModule,
+    ],
+    exports: [
+        DashboardModule,
+        ClassManagementModule,
+        GradeManagementModule,
+        ProgressTrackingModule,
+        ReportsModule,
+        MessagesModule,
+        AppointmentsModule,
+        SurveysModule,
+        PredictionModule,
+        MeetingLogsModule,
+        AcademicDataModule,
+        GradeStructureModule,
+        GpaMetricsModule,
+    ],
 })
 export class TeacherBeModule {}

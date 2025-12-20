@@ -100,8 +100,33 @@ export default function ClassManagement() {
     const fetchStudents = async (classCode: string) => {
         try {
             setLoading(true)
-            const data = await classManagementAPI.getStudentsByClass(classCode)
-            setStudentsData(data)
+            const [students, gpaMetrics] = await Promise.all([
+                classManagementAPI.getStudentsByClass(classCode),
+                classManagementAPI.getGpaMetricsByClass(classCode)
+            ])
+            const metricMap = new Map<string, { currentGPA: number; predictedGPA: number }>()
+            if (gpaMetrics?.metrics && Array.isArray(gpaMetrics.metrics)) {
+                for (const m of gpaMetrics.metrics) {
+                    metricMap.set(String(m.student_code), {
+                        currentGPA: Number(m.currentGPA ?? 0),
+                        predictedGPA: Number(m.predictedGPA ?? 0),
+                    })
+                }
+            }
+            const merged = students.map((s: any) => {
+                const m = metricMap.get(String(s.masv))
+                if (m) {
+                    const cur = Number(m.currentGPA ?? 0)
+                    const pred = Number(m.predictedGPA ?? 0)
+                    return {
+                        ...s,
+                        gpa: cur > 0 ? Number(cur.toFixed(2)) : null,
+                        predictedGpa: pred > 0 ? Number(pred.toFixed(2)) : null,
+                    }
+                }
+                return s
+            })
+            setStudentsData(merged)
         } catch (error) {
             console.error('Error fetching students:', error)
             toast.error(t('classManagement.loadStudentsError'))

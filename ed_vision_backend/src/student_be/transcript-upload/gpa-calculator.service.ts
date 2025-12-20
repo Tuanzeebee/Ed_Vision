@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { StudentCacheService } from './student-cache.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -43,7 +43,6 @@ export interface PhysicalEducationGPAResult {
 
 @Injectable()
 export class GPACalculatorService {
-  private readonly logger = new Logger(GPACalculatorService.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -189,7 +188,7 @@ export class GPACalculatorService {
             status: 'completed',
             course: {
               study_format: { not: 'DEM' },
-              course_code: { not: 'ES 100' },
+              course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
             },
           },
           include: {
@@ -273,6 +272,12 @@ export class GPACalculatorService {
           },
         },
       });
+
+      // ✅ Log tổng tín chỉ TRƯỚC KHI loại bỏ DEM và ES 100
+       const totalCreditsBeforeExclusion = auditCompleted.reduce(
+      (sum, r) => sum + (r.course?.credits_unit || 0),
+      0
+    );
 
       const excludedDetails = auditCompleted
         .filter((r) => {
@@ -374,7 +379,7 @@ export class GPACalculatorService {
           converted_numeric_score: { not: null },
           course: {
             study_format: { not: 'DEM' },
-            course_code: { not: 'ES 100' },
+            course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
           },
         },
         include: {
@@ -394,7 +399,7 @@ export class GPACalculatorService {
           status: 'planned',
           course: {
             study_format: { not: 'DEM' },
-            course_code: { not: 'ES 100' },
+            course_code: { notIn: ['ES 100', 'ES100', 'ES-100', 'ES_100'] },
           },
         },
         include: {
