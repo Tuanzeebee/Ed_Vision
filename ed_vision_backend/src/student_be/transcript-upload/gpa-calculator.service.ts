@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { StudentCacheService } from './student-cache.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -43,6 +43,7 @@ export interface PhysicalEducationGPAResult {
 
 @Injectable()
 export class GPACalculatorService {
+  private readonly logger = new Logger(GPACalculatorService.name);
 
   constructor(
     private readonly prisma: PrismaService,
