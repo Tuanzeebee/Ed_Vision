@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { buildUrl } from "@/services/api/config";
 import { TokenManager } from "@/lib/tokenManager";
+import { useTranslation } from 'react-i18next';
 
 type WorkData = {
   employeeCode?: string | null;
@@ -23,6 +24,7 @@ export default function EditTeacherWorkModal({
   currentWork,
   onSuccess,
 }: Props) {
+  const { t } = useTranslation('profile');
   const [formData, setFormData] = useState<WorkData>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export default function EditTeacherWorkModal({
     try {
       const token = TokenManager.getToken();
       if (!token) {
-        throw new Error("Vui lòng đăng nhập");
+        throw new Error(t('common.loginRequired'));
       }
 
       const payload = {
@@ -99,7 +101,7 @@ export default function EditTeacherWorkModal({
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         console.error('Error response:', errorData);
-        throw new Error(errorData.message || `Không thể cập nhật thông tin công tác (status: ${res.status})`);
+        throw new Error(errorData.message || t('teacherWork.updateError', { status: res.status }));
       }
 
       const result = await res.json();
@@ -109,7 +111,7 @@ export default function EditTeacherWorkModal({
       onClose();
     } catch (err: any) {
       console.error('Error updating work info:', err);
-      setError(err?.message || "Lỗi khi lưu thông tin");
+      setError(err?.message || t('common.saveError'));
     } finally {
       setSaving(false);
     }
@@ -122,7 +124,7 @@ export default function EditTeacherWorkModal({
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Chỉnh sửa thông tin công tác</h2>
+            <h2 className="text-2xl font-bold">{t('teacherWork.modalTitle')}</h2>
             <button
               onClick={onClose}
               className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
@@ -143,56 +145,56 @@ export default function EditTeacherWorkModal({
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Mã giảng viên
+              {t('teacherWork.instructorCode')}
             </label>
             <input
               type="text"
               value={formData.employeeCode || ''}
               onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white !text-gray-900"
-              placeholder="Nhập mã giảng viên"
+              placeholder={t('teacherWork.instructorCodePlaceholder', { defaultValue: 'Enter instructor code' })}
               maxLength={50}
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Học hàm/Học vị
+              {t('teacherWork.academicTitle', { defaultValue: 'Academic Title' })}
             </label>
             <input
               type="text"
               value={formData.academicTitle || ''}
               onChange={(e) => setFormData({ ...formData, academicTitle: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white !text-gray-900"
-              placeholder="Ví dụ: Thạc sĩ, Tiến sĩ, PGS.TS..."
+              placeholder={t('teacherWork.academicTitlePlaceholder', { defaultValue: 'E.g., Master, PhD, Associate Professor' })}
               maxLength={100}
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Chức vụ
+              {t('teacherWork.position')}
             </label>
             <input
               type="text"
               value={formData.position || ''}
               onChange={(e) => setFormData({ ...formData, position: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white !text-gray-900"
-              placeholder="Ví dụ: Giảng viên, Trưởng khoa..."
+              placeholder={t('teacherWork.positionPlaceholder', { defaultValue: 'E.g., Lecturer, Department Head' })}
               maxLength={100}
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Khoa
+              {t('teacherWork.department')}
             </label>
             <select
               value={formData.departmentId || ''}
               onChange={(e) => setFormData({ ...formData, departmentId: e.target.value ? parseInt(e.target.value) : null })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white !text-gray-900"
             >
-              <option value="">-- Chọn khoa --</option>
+              <option value="">{t('teacherWork.selectDepartment', { defaultValue: '-- Select department --' })}</option>
               {departments.map((dept) => (
                 <option key={dept.department_id} value={dept.department_id}>
                   {dept.name} ({dept.code})
@@ -203,7 +205,7 @@ export default function EditTeacherWorkModal({
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Ngày bắt đầu công tác
+              {t('teacherWork.hireDate', { defaultValue: 'Hire Date' })}
             </label>
             <input
               type="date"
@@ -221,14 +223,14 @@ export default function EditTeacherWorkModal({
               disabled={saving}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
             >
-              {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </form>

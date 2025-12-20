@@ -78,7 +78,11 @@
       "predict": "Dự đoán",
       "plan": "Lập kế hoạch",
       "communicate": "Giao tiếp",
-      "survey": "Khảo sát"
+      "survey": "Khảo sát",
+      "dashboard": "Trang chủ",
+      "bookAppointment": "Đặt lịch hẹn",
+      "studentDetails": "Chi tiết học sinh",
+      "chat": "Trò chuyện"
     },
     "features": {
       "gradeForecasting": {

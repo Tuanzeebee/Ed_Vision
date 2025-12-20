@@ -39,7 +39,9 @@ export class AuthService {
     if (!linkCode) {
       const domain = '@dtu.edu.vn';
       if (!email.toLowerCase().endsWith(domain)) {
-        throw new BadRequestException(`Chỉ cho phép đăng ký với email ${domain}`);
+        throw new BadRequestException(
+          `Chỉ cho phép đăng ký với email ${domain}`,
+        );
       }
     }
 
@@ -58,13 +60,13 @@ export class AuthService {
           const lastCreated = new Date(recentOtp.created_at).getTime();
           const now = Date.now();
           const elapsedSec = Math.floor((now - lastCreated) / 1000);
-          
+
           // If OTP was sent less than 30 seconds ago, just return success without sending
           if (elapsedSec < 30) {
-            return { 
-              message: 'Mã OTP đã được gửi. Vui lòng kiểm tra email', 
+            return {
+              message: 'Mã OTP đã được gửi. Vui lòng kiểm tra email',
               email,
-              recentlySent: true 
+              recentlySent: true,
             };
           }
         }
@@ -229,8 +231,9 @@ export class AuthService {
    */
   async forgotPassword(email: string) {
     // Generic success message for security (don't reveal if email exists)
-    const genericMessage = 'Nếu email tồn tại trong hệ thống, mã xác thực sẽ được gửi đến email của bạn';
-    
+    const genericMessage =
+      'Nếu email tồn tại trong hệ thống, mã xác thực sẽ được gửi đến email của bạn';
+
     // Check if account exists
     const account = await this.prisma.account.findUnique({ where: { email } });
     if (!account) {
@@ -287,7 +290,12 @@ export class AuthService {
   /**
    * Reset password using OTP code
    */
-  async resetPassword(email: string, code: string, newPassword: string, confirmPassword: string) {
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) {
     // Validate passwords match
     if (newPassword !== confirmPassword) {
       throw new BadRequestException('Mật khẩu xác nhận không khớp');
@@ -336,9 +344,9 @@ export class AuthService {
       data: { password_hash: passwordHash },
     });
 
-    return { 
+    return {
       message: 'Mật khẩu đã được đặt lại thành công',
-      success: true 
+      success: true,
     };
   }
 }

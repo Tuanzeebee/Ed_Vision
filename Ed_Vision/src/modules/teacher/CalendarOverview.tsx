@@ -99,7 +99,7 @@ export default function CalendarOverview({}: Props) {
       return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
     
-    return `${t('calendarOverview.weekLabel')} ${formatDate(start)} - ${formatDate(end)}`;
+    return `${t('appointments.calendarOverview.weekLabel')} ${formatDate(start)} - ${formatDate(end)}`;
   };
 
   const weekDays = (): WeekDay[] => {
@@ -113,7 +113,7 @@ export default function CalendarOverview({}: Props) {
       date.setDate(date.getDate() + i);
       
       const dayKeys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const dayName = t(`calendarOverview.${dayKeys[date.getDay()]}`);
+      const dayName = t(`appointments.calendarOverview.${dayKeys[date.getDay()]}`);
       const dateStr = `${date.getDate()}/${date.getMonth() + 1}`;
       const dateISO = toLocalISO(date);
       
@@ -155,12 +155,12 @@ export default function CalendarOverview({}: Props) {
     if (slotInfo && slotInfo.totalBookings > 0) {
       const dateObj = new Date(date);
       const dayKeys = ["sundayFull", "mondayFull", "tuesdayFull", "wednesdayFull", "thursdayFull", "fridayFull", "saturdayFull"];
-      const dayName = t(`calendarOverview.${dayKeys[dateObj.getDay()]}`);
+      const dayName = t(`appointments.calendarOverview.${dayKeys[dateObj.getDay()]}`);
       setSelectedSlotInfo(`${dayName}, ${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()} - ${time}`);
       setSelectedSlotBookings(slotInfo.bookings);
       setSlotDetailsModal(true);
     } else {
-      displayToast(t('calendarOverview.noAppointments'), "error");
+      displayToast(t('appointments.calendarOverview.noAppointments'), "error");
     }
   };
 
@@ -193,7 +193,7 @@ export default function CalendarOverview({}: Props) {
         })
         if (times.length) setTimeSlots(times)
       } catch (e) {
-        displayToast(t('calendarOverview.errorLoadingData'), 'error')
+        displayToast(t('appointments.calendarOverview.errorLoadingData'), 'error')
       }
     }
     fetchWeek()
@@ -204,8 +204,8 @@ export default function CalendarOverview({}: Props) {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 {t('calendarOverview.title')}</h1>
-          <p className="text-gray-600">{t('calendarOverview.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 {t('appointments.calendarOverview.title')}</h1>
+          <p className="text-gray-600">{t('appointments.calendarOverview.subtitle')}</p>
         </div>
 
         {/* Week Label */}
@@ -222,7 +222,7 @@ export default function CalendarOverview({}: Props) {
           <div className="bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg shadow-sm p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90 mb-1">{t('calendarOverview.totalBookings')}</p>
+                <p className="text-sm opacity-90 mb-1">{t('appointments.calendarOverview.totalBookings')}</p>
                 <p className="text-3xl font-bold">{totalBookings}</p>
               </div>
               <div className="bg-white bg-opacity-20 p-3 rounded-lg">
@@ -234,7 +234,7 @@ export default function CalendarOverview({}: Props) {
           <div className="bg-gradient-to-br from-green-400 to-green-500 rounded-lg shadow-sm p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90 mb-1">{t('calendarOverview.totalStudents')}</p>
+                <p className="text-sm opacity-90 mb-1">{t('appointments.calendarOverview.totalStudents')}</p>
                 <p className="text-3xl font-bold">{totalStudents}</p>
               </div>
               <div className="bg-white bg-opacity-20 p-3 rounded-lg">
@@ -246,7 +246,7 @@ export default function CalendarOverview({}: Props) {
           <div className="bg-gradient-to-br from-purple-400 to-purple-500 rounded-lg shadow-sm p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90 mb-1">{t('calendarOverview.totalParents')}</p>
+                <p className="text-sm opacity-90 mb-1">{t('appointments.calendarOverview.totalParents')}</p>
                 <p className="text-3xl font-bold">{totalParents}</p>
               </div>
               <div className="bg-white bg-opacity-20 p-3 rounded-lg">
@@ -263,14 +263,14 @@ export default function CalendarOverview({}: Props) {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">{t('calendarOverview.timeLabel', 'Thời gian')}</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">{t('appointments.calendarOverview.timeLabel', 'Thời gian')}</th>
                     {weekDays().map((day) => (
                       <th key={day.date} className="px-4 py-3 text-center text-sm font-semibold text-gray-700 min-w-[140px]">
                         <div>{day.dayName}</div>
                         <div className="text-xs font-normal text-gray-500">{day.dateStr}</div>
                         {day.isToday && (
                           <div className="inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 bg-blue-600 text-white">
-                            {t('calendarOverview.today', 'Hôm nay')}
+                            {t('appointments.calendarOverview.today', 'Hôm nay')}
                           </div>
                         )}
                       </th>
@@ -292,14 +292,14 @@ export default function CalendarOverview({}: Props) {
                               >
                                 <div className="flex items-center justify-center gap-1 text-blue-700 text-xs font-semibold mb-2">
                                   <CalendarCheck className="w-3 h-3" />
-                                  <span>{t('calendarOverview.availableSlot', 'Ngày rảnh')}</span>
+                                  <span>{t('appointments.calendarOverview.availableSlot', 'Ngày rảnh')}</span>
                                 </div>
 
                                 <div className="space-y-1">
                                   <div className="flex items-center justify-center gap-1.5 text-gray-700">
                                     <Users className="w-4 h-4 text-blue-600" />
                                     <span className="text-lg font-bold">{slotInfo.totalBookings}</span>
-                                    <span className="text-xs text-gray-600">{t('calendarOverview.people', 'người')}</span>
+                                    <span className="text-xs text-gray-600">{t('appointments.calendarOverview.people', 'người')}</span>
                                   </div>
 
                                   <div className="flex items-center justify-center gap-3 text-xs">
@@ -320,7 +320,7 @@ export default function CalendarOverview({}: Props) {
                             ) : (
                               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-400">
                                 <X className="w-5 h-5 mx-auto mb-1" />
-                                <div className="text-xs">{t('calendarOverview.noSlot')}</div>
+                                <div className="text-xs">{t('appointments.calendarOverview.noSlot')}</div>
                               </div>
                             )}
                           </td>
@@ -337,19 +337,19 @@ export default function CalendarOverview({}: Props) {
         {/* Legend */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('calendarOverview.legendTitle')}</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('appointments.calendarOverview.legendTitle')}</h3>
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-gray-700">{t('calendarOverview.legendBookings')}</span>
+                <span className="text-sm text-gray-700">{t('appointments.calendarOverview.legendBookings')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-700">{t('calendarOverview.legendStudents')}</span>
+                <span className="text-sm text-gray-700">{t('appointments.calendarOverview.legendStudents')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-purple-600" />
-                <span className="text-sm text-gray-700">{t('calendarOverview.legendParents')}</span>
+                <span className="text-sm text-gray-700">{t('appointments.calendarOverview.legendParents')}</span>
               </div>
             </div>
           </CardContent>
@@ -365,7 +365,7 @@ export default function CalendarOverview({}: Props) {
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <CalendarCheck className="w-5 h-5 text-blue-600" />
-                  {t('calendarOverview.slotDetails')}
+                  {t('appointments.calendarOverview.slotDetails')}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">{selectedSlotInfo}</p>
               </div>
@@ -386,30 +386,30 @@ export default function CalendarOverview({}: Props) {
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center border border-blue-200">
                       <Users className="w-7 h-7 text-blue-600 mb-2 mx-auto" />
                       <p className="text-2xl font-bold text-blue-700">{selectedSlotBookings.length}</p>
-                      <p className="text-xs text-gray-600 font-medium">{t('calendarOverview.total', 'Tổng số')}</p>
+                      <p className="text-xs text-gray-600 font-medium">{t('appointments.calendarOverview.total', 'Tổng số')}</p>
                     </div>
                     <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center border border-green-200">
                       <GraduationCap className="w-7 h-7 text-green-600 mb-2 mx-auto" />
                       <p className="text-2xl font-bold text-green-700">
                         {selectedSlotBookings.filter(b => b.bookerType === 'student').length}
                       </p>
-                      <p className="text-xs text-gray-600 font-medium">{t('calendarOverview.totalStudents')}</p>
+                      <p className="text-xs text-gray-600 font-medium">{t('appointments.calendarOverview.totalStudents')}</p>
                     </div>
                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center border border-purple-200">
                       <UserCheck className="w-7 h-7 text-purple-600 mb-2 mx-auto" />
                       <p className="text-2xl font-bold text-purple-700">
                         {selectedSlotBookings.filter(b => b.bookerType === 'parent').length}
                       </p>
-                      <p className="text-xs text-gray-600 font-medium">{t('calendarOverview.totalParents')}</p>
+                      <p className="text-xs text-gray-600 font-medium">{t('appointments.calendarOverview.totalParents')}</p>
                     </div>
                   </div>
 
                   {/* Bookings List */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-sm font-semibold text-gray-900">{t('calendarOverview.bookingList', 'Danh sách đặt lịch')}</h4>
+                      <h4 className="text-sm font-semibold text-gray-900">{t('appointments.calendarOverview.bookingList', 'Danh sách đặt lịch')}</h4>
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        {selectedSlotBookings.length} {t('calendarOverview.people', 'người')}
+                        {selectedSlotBookings.length} {t('appointments.calendarOverview.people', 'người')}
                       </span>
                     </div>
                     
@@ -430,8 +430,8 @@ export default function CalendarOverview({}: Props) {
                           <p className="font-semibold text-gray-900 truncate">{booking.name}</p>
                           <p className="text-xs text-gray-600 truncate">
                             {booking.bookerType === 'student'
-                              ? `${t('calendarOverview.student')} - ${booking.class}`
-                              : `${t('calendarOverview.parentOf', 'Phụ huynh của')} ${booking.studentName}`}
+                              ? `${t('appointments.calendarOverview.student')} - ${booking.class}`
+                              : `${t('appointments.calendarOverview.parentOf', 'Phụ huynh của')} ${booking.studentName}`}
                           </p>
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -457,7 +457,7 @@ export default function CalendarOverview({}: Props) {
                                 : 'bg-orange-500 text-white'
                             } text-xs font-medium`}
                           >
-                            {booking.type === 'online' ? t('calendarOverview.online') : t('calendarOverview.offline')}
+                            {booking.type === 'online' ? t('appointments.calendarOverview.online') : t('appointments.calendarOverview.offline')}
                           </Badge>
                         </div>
                       </div>
@@ -473,7 +473,7 @@ export default function CalendarOverview({}: Props) {
                 onClick={() => setSlotDetailsModal(false)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {t('calendarOverview.close')}
+                {t('appointments.calendarOverview.close')}
               </Button>
             </div>
           </div>

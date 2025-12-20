@@ -88,18 +88,18 @@ const getAvatarColor = (name: string): string => {
 
 // Helper function to format date in Vietnamese
 const formatDateVN = (dateStr: string, t: any): string => {
-  if (!dateStr) return t('appointmentManagement.undetermined');
+  if (!dateStr) return t('appointments.management.undetermined');
   try {
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return t('appointmentManagement.undetermined');
+    if (isNaN(date.getTime())) return t('appointments.management.undetermined');
     const days = [
-      t('appointmentManagement.sunday'),
-      t('appointmentManagement.monday'),
-      t('appointmentManagement.tuesday'),
-      t('appointmentManagement.wednesday'),
-      t('appointmentManagement.thursday'),
-      t('appointmentManagement.friday'),
-      t('appointmentManagement.saturday')
+      t('appointments.management.sunday'),
+      t('appointments.management.monday'),
+      t('appointments.management.tuesday'),
+      t('appointments.management.wednesday'),
+      t('appointments.management.thursday'),
+      t('appointments.management.friday'),
+      t('appointments.management.saturday')
     ];
     const dayName = days[date.getDay()];
     const day = date.getDate().toString().padStart(2, '0');
@@ -107,7 +107,7 @@ const formatDateVN = (dateStr: string, t: any): string => {
     const year = date.getFullYear();
     return `${dayName}, ${day}/${month}/${year}`;
   } catch {
-    return t('appointmentManagement.undetermined');
+    return t('appointments.management.undetermined');
   }
 };
 
@@ -135,16 +135,16 @@ const extractTime = (isoString: string | undefined): string => {
 
 // Helper function to format date/time from slot data
 const formatDateTime = (slot: any, appt: any, t: any) => {
-  if (!slot && !appt) return { date: t('appointmentManagement.undetermined'), time: t('appointmentManagement.undetermined') };
+  if (!slot && !appt) return { date: t('appointments.management.undetermined'), time: t('appointments.management.undetermined') };
   
   // Try to get specific_date from slot.date
-  let dateStr = slot?.date?.specific_date || slot?.specificDate || appt?.createdAt || '';
+  const dateStr = slot?.date?.specific_date || slot?.specificDate || appt?.createdAt || '';
   const formattedDate = formatDateVN(dateStr, t);
   
   // Get time
   const startTime = extractTime(slot?.start_time_local || slot?.startTime);
   const endTime = extractTime(slot?.end_time_local || slot?.endTime);
-  const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : t('appointmentManagement.undetermined');
+  const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : t('appointments.management.undetermined');
   
   return {
     date: formattedDate,
@@ -197,7 +197,7 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error(t('appointmentManagement.error'));
+        throw new Error(t('appointments.management.error'));
       }
 
       const data = await response.json();
@@ -224,18 +224,18 @@ export default function TeacherAppointmentManagement({
         
         return {
           id: appt.appointmentId || appt.id,
-          parentName: appt.parentName || appt.studentName || t('appointmentManagement.unknown'),
+          parentName: appt.parentName || appt.studentName || t('appointments.management.unknown'),
           parentAvatar: appt.parentAvatar || '',
           parentEmail: appt.parentEmail || appt.studentEmail || '',
           parentPhone: appt.parentPhone || appt.studentPhone || '',
-          studentName: appt.studentName || t('appointmentManagement.unknown'),
-          studentClass: appt.studentClass || t('appointmentManagement.unknown'),
+          studentName: appt.studentName || t('appointments.management.unknown'),
+          studentClass: appt.studentClass || t('appointments.management.unknown'),
           type: appt.meetingType === 'online' ? 'online' : 'offline',
           status: appt.status || 'pending',
           bookerRole: appt.bookerRole || 'parent',
           desiredDate: date,
           desiredTime: time,
-          reason: appt.reason || appt.meetingPurpose || t('appointmentManagement.noReason'),
+          reason: appt.reason || appt.meetingPurpose || t('appointments.management.noReason'),
           requestedAt: formatRequestedAt(appt.requestedAt || appt.createdAt),
           platform: appt.platform || (appt.meetingType === 'online' ? 'Google Meet' : undefined),
           location: appt.location || appt.meetingLocation || '',
@@ -247,7 +247,7 @@ export default function TeacherAppointmentManagement({
       setAppointments(transformedData);
     } catch (err: any) {
       console.error('Error fetching appointments:', err);
-      setError(err.message || t('appointmentManagement.error'));
+      setError(err.message || t('appointments.management.error'));
     } finally {
       setLoading(false);
     }
@@ -347,15 +347,15 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error(t('appointmentManagement.acceptError'));
+        throw new Error(t('appointments.management.acceptError'));
       }
 
-      showToast(t('appointmentManagement.acceptSuccess'), 'success');
+      showToast(t('appointments.management.acceptSuccess'), 'success');
       setAcceptModalOpen(false);
       setSelectedAppointment(null);
       await fetchAppointments();
     } catch (err: any) {
-      showToast(err.message || t('appointmentManagement.acceptError'), 'error');
+      showToast(err.message || t('appointments.management.acceptError'), 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -363,7 +363,7 @@ export default function TeacherAppointmentManagement({
 
   const confirmReject = async () => {
     if (!selectedAppointment || !rejectReason.trim()) {
-      showToast(t('appointmentManagement.enterRejectReason'), 'error');
+      showToast(t('appointments.management.enterRejectReason'), 'error');
       return;
     }
     setIsProcessing(true);
@@ -379,10 +379,10 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error(t('appointmentManagement.rejectError'));
+        throw new Error(t('appointments.management.rejectError'));
       }
 
-      showToast(t('appointmentManagement.rejectSuccess'), 'warning');
+      showToast(t('appointments.management.rejectSuccess'), 'warning');
       setRejectModalOpen(false);
       setSelectedAppointment(null);
       setRejectReason('');
@@ -396,7 +396,7 @@ export default function TeacherAppointmentManagement({
 
   const confirmCancel = async () => {
     if (!selectedAppointment || !cancelReason.trim()) {
-      showToast(t('appointmentManagement.enterRejectReason'), 'error');
+      showToast(t('appointments.management.enterRejectReason'), 'error');
       return;
     }
     setIsProcessing(true);
@@ -413,10 +413,10 @@ export default function TeacherAppointmentManagement({
       });
 
       if (!response.ok) {
-        throw new Error(t('appointmentManagement.rejectError'));
+        throw new Error(t('appointments.management.rejectError'));
       }
 
-      showToast(t('appointmentManagement.rejectSuccess'), 'warning');
+      showToast(t('appointments.management.rejectSuccess'), 'warning');
       setCancelModalOpen(false);
       setSelectedAppointment(null);
       setCancelReason('');
@@ -432,16 +432,16 @@ export default function TeacherAppointmentManagement({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return { bg: 'bg-emerald-500/10', text: 'text-emerald-600', label: t('appointmentManagement.statusConfirmed'), icon: CheckCircle };
+        return { bg: 'bg-emerald-500/10', text: 'text-emerald-600', label: t('appointments.management.statusConfirmed'), icon: CheckCircle };
       case 'pending':
-        return { bg: 'bg-amber-500/10', text: 'text-amber-600', label: t('appointmentManagement.statusPending'), icon: Clock };
+        return { bg: 'bg-amber-500/10', text: 'text-amber-600', label: t('appointments.management.statusPending'), icon: Clock };
       case 'completed':
-        return { bg: 'bg-blue-500/10', text: 'text-blue-600', label: t('appointmentManagement.statusCompleted'), icon: CheckCircle };
+        return { bg: 'bg-blue-500/10', text: 'text-blue-600', label: t('appointments.management.statusCompleted'), icon: CheckCircle };
       case 'canceled':
       case 'cancelled':
-        return { bg: 'bg-red-500/10', text: 'text-red-500', label: t('appointmentManagement.statusCanceled'), icon: XCircle };
+        return { bg: 'bg-red-500/10', text: 'text-red-500', label: t('appointments.management.statusCanceled'), icon: XCircle };
       case 'rejected':
-        return { bg: 'bg-gray-500/10', text: 'text-gray-500', label: t('appointmentManagement.statusRejected'), icon: XCircle };
+        return { bg: 'bg-gray-500/10', text: 'text-gray-500', label: t('appointments.management.statusRejected'), icon: XCircle };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-600', label: status, icon: AlertTriangle };
     }
@@ -507,12 +507,12 @@ export default function TeacherAppointmentManagement({
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                   isOnline ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                 }`}>
-                  {isOnline ? t('appointmentManagement.typeOnline') : t('appointmentManagement.typeOffline')}
+                  {isOnline ? t('appointments.management.typeOnline') : t('appointments.management.typeOffline')}
                 </span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                   appointment.bookerRole === 'student' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700'
                 }`}>
-                  {appointment.bookerRole === 'student' ? t('appointmentManagement.student') : t('appointmentManagement.parent')}
+                  {appointment.bookerRole === 'student' ? t('appointments.management.student') : t('appointments.management.parent')}
                 </span>
               </div>
             </div>
@@ -560,7 +560,7 @@ export default function TeacherAppointmentManagement({
                   {appointment.meetingLink}
                 </a>
               ) : (
-                <span className="text-xs text-gray-500">{t('appointmentManagement.waitingForLink')}</span>
+                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLink')}</span>
               )}
             </div>
           )}
@@ -572,7 +572,7 @@ export default function TeacherAppointmentManagement({
               {appointment.location ? (
                 <p className="text-xs text-gray-600">{appointment.location}</p>
               ) : (
-                <span className="text-xs text-gray-500">{t('appointmentManagement.waitingForLocation')}</span>
+                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLocation')}</span>
               )}
             </div>
           )}
@@ -597,14 +597,14 @@ export default function TeacherAppointmentManagement({
 
           {/* Requested At */}
           <div className="text-xs text-gray-400 pt-1">
-            {t('appointmentManagement.requestedAt')} {appointment.requestedAt}
+            {t('appointments.management.requestedAt')} {appointment.requestedAt}
           </div>
 
           {/* Cancel Reason */}
           {isCanceled && appointment.cancelReason && (
             <div className="bg-red-50 rounded-lg p-2.5 border border-red-100">
               <p className="text-xs text-red-500">
-                {t('appointmentManagement.cancelReason')} {appointment.cancelReason}
+                {t('appointments.management.cancelReason')} {appointment.cancelReason}
               </p>
             </div>
           )}
@@ -619,14 +619,14 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
               >
                 <Check className="w-4 h-4" />
-                {t('appointmentManagement.accept')}
+                {t('appointments.management.accept')}
               </button>
               <button 
                 onClick={() => handleReject(appointment)}
                 className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
               >
                 <Ban className="w-4 h-4" />
-                {t('appointmentManagement.reject')}
+                {t('appointments.management.reject')}
               </button>
             </>
           )}
@@ -641,16 +641,16 @@ export default function TeacherAppointmentManagement({
                   className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 text-sm"
                 >
                   <Video className="w-4 h-4" />
-                  {t('appointmentManagement.join')}
+                  {t('appointments.management.join')}
                 </a>
               )}
               <button 
                 onClick={() => handleCancel(appointment)}
                 className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
-                title={t('appointmentManagement.rejectAppointment')}
+                title={t('appointments.management.rejectAppointment')}
               >
                 <Ban className="w-4 h-4" />
-                {t('appointmentManagement.rejectAppointment')}
+                {t('appointments.management.rejectAppointment')}
               </button>
             </>
           )}
@@ -658,14 +658,14 @@ export default function TeacherAppointmentManagement({
           {isCompleted && (
             <div className="w-full text-center py-2 text-emerald-600 text-sm font-medium">
               <CheckCircle className="w-4 h-4 inline mr-1" />
-              {t('appointmentManagement.completed')}
+              {t('appointments.management.completed')}
             </div>
           )}
 
           {isCanceled && (
             <div className={`w-full text-center py-2 text-sm font-medium ${appointment.status === 'rejected' ? 'text-gray-600' : 'text-red-500'}`}>
               <Ban className="w-4 h-4 inline mr-1" />
-              {appointment.status === 'rejected' ? t('appointmentManagement.statusRejected') : t('appointmentManagement.statusCanceled')}
+              {appointment.status === 'rejected' ? t('appointments.management.statusRejected') : t('appointments.management.statusCanceled')}
             </div>
           )}
         </div>
@@ -683,13 +683,13 @@ export default function TeacherAppointmentManagement({
   }), [appointments]);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">📅 {t('appointmentManagement.title')}</h1>
-            <p className="text-sm text-gray-500 mt-1">{t('appointmentManagement.subtitle')}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 {t('appointments.management.title')}</h1>
+            <p className="text-gray-600">{t('appointments.management.subtitle')}</p>
           </div>
           <button
             onClick={fetchAppointments}
@@ -697,7 +697,7 @@ export default function TeacherAppointmentManagement({
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {t('appointmentManagement.refresh')}
+            {t('appointments.management.refresh')}
           </button>
         </div>
       </div>
@@ -706,23 +706,23 @@ export default function TeacherAppointmentManagement({
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-500">{t('appointmentManagement.totalAppointments')}</div>
+          <div className="text-sm text-gray-500">{t('appointments.management.totalAppointments')}</div>
         </div>
         <div className="bg-amber-50 rounded-xl shadow-sm border border-amber-200 p-4">
           <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-          <div className="text-sm text-amber-600">{t('appointmentManagement.pendingCount')}</div>
+          <div className="text-sm text-amber-600">{t('appointments.management.pendingCount')}</div>
         </div>
         <div className="bg-emerald-50 rounded-xl shadow-sm border border-emerald-200 p-4">
           <div className="text-2xl font-bold text-emerald-600">{stats.confirmed}</div>
-          <div className="text-sm text-emerald-600">{t('appointmentManagement.confirmedCount')}</div>
+          <div className="text-sm text-emerald-600">{t('appointments.management.confirmedCount')}</div>
         </div>
         <div className="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-4">
           <div className="text-2xl font-bold text-blue-600">{stats.completed}</div>
-          <div className="text-sm text-blue-600">{t('appointmentManagement.completedCount')}</div>
+          <div className="text-sm text-blue-600">{t('appointments.management.completedCount')}</div>
         </div>
         <div className="bg-red-50 rounded-xl shadow-sm border border-red-200 p-4">
           <div className="text-2xl font-bold text-red-500">{stats.canceled}</div>
-          <div className="text-sm text-red-500">{t('appointmentManagement.canceledCount')}</div>
+          <div className="text-sm text-red-500">{t('appointments.management.canceledCount')}</div>
         </div>
       </div>
 
@@ -735,7 +735,7 @@ export default function TeacherAppointmentManagement({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input 
                 type="text" 
-                placeholder={t('appointmentManagement.searchPlaceholder')}
+                placeholder={t('appointments.management.searchPlaceholder')}
                 className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -750,12 +750,12 @@ export default function TeacherAppointmentManagement({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             >
-              <option value="all">{t('appointmentManagement.allStatuses')}</option>
-              <option value="pending">{t('appointmentManagement.pendingCount')}</option>
-              <option value="confirmed">{t('appointmentManagement.confirmedCount')}</option>
-              <option value="completed">{t('appointmentManagement.completedCount')}</option>
-              <option value="canceled">{t('appointmentManagement.canceledCount')}</option>
-              <option value="rejected">{t('appointmentManagement.statusRejected')}</option>
+              <option value="all">{t('appointments.management.allStatuses')}</option>
+              <option value="pending">{t('appointments.management.pendingCount')}</option>
+              <option value="confirmed">{t('appointments.management.confirmedCount')}</option>
+              <option value="completed">{t('appointments.management.completedCount')}</option>
+              <option value="canceled">{t('appointments.management.canceledCount')}</option>
+              <option value="rejected">{t('appointments.management.statusRejected')}</option>
             </select>
             
             <select 
@@ -763,9 +763,9 @@ export default function TeacherAppointmentManagement({
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
             >
-              <option value="all">{t('appointmentManagement.allTypes')}</option>
-              <option value="online">{t('appointmentManagement.typeOnline')}</option>
-              <option value="offline">{t('appointmentManagement.typeOffline')}</option>
+              <option value="all">{t('appointments.management.allTypes')}</option>
+              <option value="online">{t('appointments.management.typeOnline')}</option>
+              <option value="offline">{t('appointments.management.typeOffline')}</option>
             </select>
 
             <select 
@@ -773,9 +773,9 @@ export default function TeacherAppointmentManagement({
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
             >
-              <option value="all">{t('appointmentManagement.allSources')}</option>
-              <option value="student">{t('appointmentManagement.student')}</option>
-              <option value="parent">{t('appointmentManagement.parent')}</option>
+              <option value="all">{t('appointments.management.allSources')}</option>
+              <option value="student">{t('appointments.management.student')}</option>
+              <option value="parent">{t('appointments.management.parent')}</option>
             </select>
             
             {/* View Mode Toggle */}
@@ -801,7 +801,7 @@ export default function TeacherAppointmentManagement({
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-500">{t('appointmentManagement.loading')}</span>
+          <span className="ml-3 text-gray-500">{t('appointments.management.loading')}</span>
         </div>
       )}
 
@@ -812,7 +812,7 @@ export default function TeacherAppointmentManagement({
             onClick={fetchAppointments} 
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
           >
-            {t('appointmentManagement.tryAgain')}
+            {t('appointments.management.tryAgain')}
           </button>
         </div>
       )}
@@ -824,8 +824,8 @@ export default function TeacherAppointmentManagement({
           </div>
           <div className="text-gray-500 mb-4">
             {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || roleFilter !== 'all'
-              ? t('appointmentManagement.noAppointmentsFilter')
-              : t('appointmentManagement.noAppointments')}
+              ? t('appointments.management.noAppointmentsFilter')
+              : t('appointments.management.noAppointments')}
           </div>
         </div>
       )}
@@ -847,14 +847,14 @@ export default function TeacherAppointmentManagement({
                 className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors font-medium shadow-sm"
               >
                 <ChevronDown className="w-4 h-4" />
-                {t('appointmentManagement.loadMore')} ({filteredAppointments.length - displayCount} {t('appointmentManagement.remaining')})
+                {t('appointments.management.loadMore')} ({filteredAppointments.length - displayCount} {t('appointments.management.remaining')})
               </button>
             </div>
           )}
           
           {/* Showing count */}
           <div className="text-center mt-4 text-sm text-gray-500">
-            {t('appointmentManagement.showing')} {displayedAppointments.length} {t('appointmentManagement.of')} {filteredAppointments.length} {t('appointmentManagement.appointments')}
+            {t('appointments.management.showing')} {displayedAppointments.length} {t('appointments.management.of')} {filteredAppointments.length} {t('appointments.management.appointments')}
           </div>
         </>
       )}
@@ -868,20 +868,20 @@ export default function TeacherAppointmentManagement({
                 <Check className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{t('appointmentManagement.confirmAcceptTitle')}</h3>
-                <p className="text-sm text-gray-500">{t('appointmentManagement.confirmAcceptMessage')}</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('appointments.management.confirmAcceptTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('appointments.management.confirmAcceptMessage')}</p>
               </div>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">{t('appointmentManagement.bookedBy')}</span> {selectedAppointment.parentName}
+                <span className="font-medium">{t('appointments.management.bookedBy')}</span> {selectedAppointment.parentName}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">{t('appointmentManagement.studentName')}</span> {selectedAppointment.studentName}
+                <span className="font-medium">{t('appointments.management.studentName')}</span> {selectedAppointment.studentName}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">{t('appointmentManagement.time')}</span> {selectedAppointment.desiredDate} - {selectedAppointment.desiredTime}
+                <span className="font-medium">{t('appointments.management.time')}</span> {selectedAppointment.desiredDate} - {selectedAppointment.desiredTime}
               </p>
             </div>
 
@@ -891,7 +891,7 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 disabled={isProcessing}
               >
-                {t('appointmentManagement.cancel')}
+                {t('appointments.management.cancel')}
               </button>
               <button
                 onClick={confirmAccept}
@@ -903,7 +903,7 @@ export default function TeacherAppointmentManagement({
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    {t('appointmentManagement.confirmAccept')}
+                    {t('appointments.management.confirmAccept')}
                   </>
                 )}
               </button>
@@ -921,19 +921,19 @@ export default function TeacherAppointmentManagement({
                 <Ban className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{t('appointmentManagement.confirmRejectTitle')}</h3>
-                <p className="text-sm text-gray-500">{t('appointmentManagement.confirmRejectMessage')}</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('appointments.management.confirmRejectTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('appointments.management.confirmRejectMessage')}</p>
               </div>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('appointmentManagement.rejectReasonLabel')} <span className="text-red-500">{t('appointmentManagement.rejectReasonRequired')}</span>
+                {t('appointments.management.rejectReasonLabel')} <span className="text-red-500">{t('appointments.management.rejectReasonRequired')}</span>
               </label>
               <textarea
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none bg-white text-gray-900 placeholder-gray-400"
                 rows={3}
-                placeholder={t('appointmentManagement.rejectReasonPlaceholder')}
+                placeholder={t('appointments.management.rejectReasonPlaceholder')}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
               />
@@ -945,7 +945,7 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 disabled={isProcessing}
               >
-                {t('appointmentManagement.cancel')}
+                {t('appointments.management.cancel')}
               </button>
               <button
                 onClick={confirmReject}
@@ -957,7 +957,7 @@ export default function TeacherAppointmentManagement({
                 ) : (
                   <>
                     <Ban className="w-4 h-4" />
-                    {t('appointmentManagement.confirmReject')}
+                    {t('appointments.management.confirmReject')}
                   </>
                 )}
               </button>
@@ -975,19 +975,19 @@ export default function TeacherAppointmentManagement({
                 <Ban className="w-6 h-6 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{t('appointmentManagement.confirmCancelTitle')}</h3>
-                <p className="text-sm text-gray-500">{t('appointmentManagement.confirmCancelMessage')}</p>
+                <h3 className="text-lg font-semibold text-gray-900">{t('appointments.management.confirmCancelTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('appointments.management.confirmCancelMessage')}</p>
               </div>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('appointmentManagement.cancelReasonLabel')} <span className="text-red-500">{t('appointmentManagement.rejectReasonRequired')}</span>
+                {t('appointments.management.cancelReasonLabel')} <span className="text-red-500">{t('appointments.management.rejectReasonRequired')}</span>
               </label>
               <textarea
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none bg-white text-gray-900 placeholder-gray-400"
                 rows={3}
-                placeholder={t('appointmentManagement.cancelReasonPlaceholder')}
+                placeholder={t('appointments.management.cancelReasonPlaceholder')}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
               />
@@ -999,7 +999,7 @@ export default function TeacherAppointmentManagement({
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 disabled={isProcessing}
               >
-                {t('appointmentManagement.goBack')}
+                {t('appointments.management.goBack')}
               </button>
               <button
                 onClick={confirmCancel}
@@ -1011,7 +1011,7 @@ export default function TeacherAppointmentManagement({
                 ) : (
                   <>
                     <Ban className="w-4 h-4" />
-                    {t('appointmentManagement.confirmCancel')}
+                    {t('appointments.management.confirmCancel')}
                   </>
                 )}
               </button>

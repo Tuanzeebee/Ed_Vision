@@ -21,41 +21,49 @@ export class AccountManagementService {
 
     // Get all programs (majors) with their department
     const programs = await this.prisma.program.findMany({
-      select: { 
+      select: {
         program_name: true,
         department: {
-          select: { name: true }
-        }
+          select: { name: true },
+        },
       },
       orderBy: { program_name: 'asc' },
     });
 
     // Get all roles except admin
     const roles = await this.prisma.role.findMany({
-      where: { 
-        code: { not: 'admin' }
+      where: {
+        code: { not: 'admin' },
       },
       select: { code: true, name: true },
       orderBy: { name: 'asc' },
     });
 
     return {
-      schools: departments.map(d => d.name),
-      majors: programs.map(p => ({
+      schools: departments.map((d) => d.name),
+      majors: programs.map((p) => ({
         name: p.program_name,
-        school: p.department.name
+        school: p.department.name,
       })),
-      roles: roles.map(r => ({ code: r.code, name: r.name })),
+      roles: roles.map((r) => ({ code: r.code, name: r.name })),
       statuses: [
         { code: 'active', name: 'Hoạt động' },
         { code: 'inactive', name: 'Vắng mặt' },
-        { code: 'blocked', name: 'Đã khóa' }
-      ]
+        { code: 'blocked', name: 'Đã khóa' },
+      ],
     };
   }
 
   async findAll(filterDto: AccountFilterDto): Promise<AccountListResponse> {
-    const { search, role, status, school, major, page = 1, limit = 10 } = filterDto;
+    const {
+      search,
+      role,
+      status,
+      school,
+      major,
+      page = 1,
+      limit = 10,
+    } = filterDto;
 
     // Check for conflicting filters: school/major with non-student role
     // If filtering by school or major AND role is explicitly set to non-student, return empty result
@@ -92,7 +100,7 @@ export class AccountManagementService {
 
     // Start with empty AND array to build conditions
     const andConditions: Array<any> = [];
-    
+
     // Always exclude admin role
     andConditions.push({
       roleRel: {
@@ -133,7 +141,7 @@ export class AccountManagementService {
     // Filter by major (program) - only for students
     if (major) {
       // Note: effectiveRole is already set to 'student' above
-      
+
       if (school) {
         // Both school and major filters - exact match for program_name
         andConditions.push({
@@ -511,7 +519,7 @@ export class AccountManagementService {
   ): Promise<AccountResponse> {
     const account = await this.prisma.account.findUnique({
       where: { account_id: id },
-      include: { 
+      include: {
         profile: true,
         instructor: true,
       },
@@ -527,30 +535,32 @@ export class AccountManagementService {
     if (account.profile) {
       // Build update data object only with fields that are provided
       const profileUpdateData: any = {};
-      
+
       if (updateAccountDto.fullName !== undefined) {
         profileUpdateData.full_name = updateAccountDto.fullName;
         if (updateAccountDto.fullName !== account.profile.full_name) {
           hasChanges = true;
         }
       }
-      
+
       if (updateAccountDto.dateOfBirth !== undefined) {
-        profileUpdateData.date_of_birth = new Date(updateAccountDto.dateOfBirth);
+        profileUpdateData.date_of_birth = new Date(
+          updateAccountDto.dateOfBirth,
+        );
         const newDate = new Date(updateAccountDto.dateOfBirth).toDateString();
         const oldDate = account.profile.date_of_birth?.toDateString();
         if (newDate !== oldDate) {
           hasChanges = true;
         }
       }
-      
+
       if (updateAccountDto.gender !== undefined) {
         profileUpdateData.gender = updateAccountDto.gender;
         if (updateAccountDto.gender !== account.profile.gender) {
           hasChanges = true;
         }
       }
-      
+
       if (updateAccountDto.address !== undefined) {
         profileUpdateData.address = updateAccountDto.address;
         if (updateAccountDto.address !== account.profile.address) {
@@ -570,31 +580,37 @@ export class AccountManagementService {
     // Update instructor if exists and instructor-specific fields are provided
     if (account.instructor) {
       const instructorUpdateData: any = {};
-      
+
       if (updateAccountDto.employeeCode !== undefined) {
         instructorUpdateData.employee_code = updateAccountDto.employeeCode;
-        if (updateAccountDto.employeeCode !== account.instructor.employee_code) {
+        if (
+          updateAccountDto.employeeCode !== account.instructor.employee_code
+        ) {
           hasChanges = true;
         }
       }
-      
+
       if (updateAccountDto.academicTitle !== undefined) {
         instructorUpdateData.academic_title = updateAccountDto.academicTitle;
-        if (updateAccountDto.academicTitle !== account.instructor.academic_title) {
+        if (
+          updateAccountDto.academicTitle !== account.instructor.academic_title
+        ) {
           hasChanges = true;
         }
       }
-      
+
       if (updateAccountDto.position !== undefined) {
         instructorUpdateData.position = updateAccountDto.position;
         if (updateAccountDto.position !== account.instructor.position) {
           hasChanges = true;
         }
       }
-      
+
       if (updateAccountDto.departmentId !== undefined) {
         instructorUpdateData.department_id = updateAccountDto.departmentId;
-        if (updateAccountDto.departmentId !== account.instructor.department_id) {
+        if (
+          updateAccountDto.departmentId !== account.instructor.department_id
+        ) {
           hasChanges = true;
         }
       }

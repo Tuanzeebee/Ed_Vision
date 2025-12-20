@@ -21,9 +21,7 @@ export class MeetingLogsController {
    * Lấy thông tin instructor theo account_id
    */
   @Get('instructor/:accountId')
-  async getInstructorInfo(
-    @Param('accountId', ParseIntPipe) accountId: number,
-  ) {
+  async getInstructorInfo(@Param('accountId', ParseIntPipe) accountId: number) {
     return this.meetingLogsService.getInstructorInfo(accountId);
   }
 

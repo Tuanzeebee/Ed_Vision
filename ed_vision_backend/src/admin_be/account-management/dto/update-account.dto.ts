@@ -1,4 +1,10 @@
-import { IsOptional, IsEnum, IsString, IsDateString, IsNumber } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsString,
+  IsDateString,
+  IsNumber,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateAccountDto {

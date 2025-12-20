@@ -1,6 +1,6 @@
 /**
  * i18n Helper Service for Backend
- * 
+ *
  * Provides utility functions for translation in backend services
  */
 
@@ -34,7 +34,10 @@ export function translate(
  * Create standard error response with translation key
  * Frontend will translate this key
  */
-export function createErrorResponse(errorKey: string, statusCode: number = 400) {
+export function createErrorResponse(
+  errorKey: string,
+  statusCode: number = 400,
+) {
   return {
     statusCode,
     errorKey, // Frontend will use this to translate

@@ -1,4 +1,11 @@
-import { IsNumber, IsString, IsArray, IsOptional, ValidateNested, IsEnum } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsArray,
+  IsOptional,
+  ValidateNested,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 // DTO cho câu trả lời của một câu hỏi

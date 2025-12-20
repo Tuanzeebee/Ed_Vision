@@ -1,6 +1,6 @@
 import { STUDENT_ASSETS } from "@/assets/student"
 import { Button } from "../ui/student/Student_button"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import LanguageSwitcher from "../LanguageSwitcher"
 import { useEffect, useRef, useState } from 'react'
@@ -31,9 +31,13 @@ export default function Header({
 }: Props) {
   const { t } = useTranslation(['common'])
   const navigate = useNavigate()
+  const location = useLocation()
 
   // Use auth hook for authentication state
-  const { isAuthenticated, user, getDashboardPath, logout } = useAuth()
+  const { isAuthenticated, user, getDashboardPath, logout, getUserRole } = useAuth()
+  
+  // Get user role for conditional navigation
+  const userRole = getUserRole()?.toLowerCase()
 
   // Local UI state for the profile menu and avatar
   const [menuOpen, setMenuOpen] = useState(false)
@@ -206,9 +210,12 @@ export default function Header({
             ) : (
               <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
             )}
-          </div>          {/* Navigation - chỉ hiển thị khi không phải admin mode và teacher mode */}
-          {showNavigation && !isAdminMode && !isTeacherMode && isAuthenticated && (
+          </div>          {/* Navigation - chỉ hiển thị cho sinh viên, parent và trang chủ khi chưa login */}
+          {showNavigation && (isLandingPage || (!isAuthenticated) || (isAuthenticated && (userRole === 'student' || userRole === 'parent'))) && !isAdminMode && !isTeacherMode && (
             <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+              {/* Student Navigation */}
+              {userRole === 'student' && (
+                <>
               {/* Learn Dropdown */}
               <div className="relative group">
                 <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
@@ -397,6 +404,61 @@ export default function Header({
                   </div>
                 </div>
               </div>
+              </>
+              )}
+
+              {/* Parent Navigation */}
+              {userRole === 'parent' && (
+                <>
+                  {/* Dashboard Link */}
+                  <Link 
+                    to="/parent/dashboard" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/parent/dashboard'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.dashboard') || 'Dashboard'}
+                  </Link>
+
+                  {/* Book Appointment Link */}
+                  <Link 
+                    to="/appointments" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/appointments'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.bookAppointment') || 'Book Appointment'}
+                  </Link>
+
+                  {/* Student Details Link */}
+                  <Link 
+                    to="/parent/student-details" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/parent/student-details'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.studentDetails') || 'Student Details'}
+                  </Link>
+
+                  {/* Chat Link */}
+                  <Link 
+                    to="/parent/chat" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/parent/chat'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.chat') || 'Chat'}
+                  </Link>
+                </>
+              )}
             </nav>
           )}
 

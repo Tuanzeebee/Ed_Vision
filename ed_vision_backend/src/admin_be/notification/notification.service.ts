@@ -52,21 +52,21 @@ export class NotificationService {
         const students = await this.prisma.student.findMany({
           select: { account_id: true },
         });
-        accountIds = students.map(s => s.account_id);
+        accountIds = students.map((s) => s.account_id);
         break;
 
       case 'Giảng viên':
         const instructors = await this.prisma.instructor.findMany({
           select: { account_id: true },
         });
-        accountIds = instructors.map(i => i.account_id);
+        accountIds = instructors.map((i) => i.account_id);
         break;
 
       case 'Phụ huynh':
         const parents = await this.prisma.parent.findMany({
           select: { account_id: true },
         });
-        accountIds = parents.map(p => p.account_id);
+        accountIds = parents.map((p) => p.account_id);
         break;
 
       case 'Lãnh đạo':
@@ -78,7 +78,7 @@ export class NotificationService {
           },
           select: { account_id: true },
         });
-        accountIds = leaders.map(l => l.account_id);
+        accountIds = leaders.map((l) => l.account_id);
         break;
 
       case 'Tất cả':
@@ -87,7 +87,7 @@ export class NotificationService {
           where: { status: 'active' },
           select: { account_id: true },
         });
-        accountIds = allAccounts.map(a => a.account_id);
+        accountIds = allAccounts.map((a) => a.account_id);
         break;
     }
 
@@ -98,7 +98,7 @@ export class NotificationService {
    * Tạo thông báo cho nhiều người nhận - Sử dụng kiến trúc NotificationMaster + NotificationRecipient
    * 1 row trong NotificationMaster = 1 broadcast
    * N rows trong NotificationRecipient = N người nhận
-   * 
+   *
    * LƯU Ý: Chỉ ghi vào NotificationMaster + NotificationRecipient
    * Bảng Notification cũ được giữ lại cho dữ liệu legacy, không ghi mới
    */
@@ -123,7 +123,9 @@ export class NotificationService {
           priority: dto.priority || 'Trung bình',
           target: dto.target,
           channel: 'in_app',
-          attachments: dto.attachments ? JSON.parse(JSON.stringify(dto.attachments)) : undefined,
+          attachments: dto.attachments
+            ? JSON.parse(JSON.stringify(dto.attachments))
+            : undefined,
           created_by: dto.createdBy || 1, // Default to admin account 1 if not provided
         },
       });
@@ -133,7 +135,7 @@ export class NotificationService {
       // KHÔNG lưu title, body, attachments... (đã có trong NotificationMaster)
       const now = new Date();
       await this.prisma.notificationRecipient.createMany({
-        data: accountIds.map(account_id => ({
+        data: accountIds.map((account_id) => ({
           master_id: master.id,
           account_id,
           is_read: false,
@@ -162,7 +164,10 @@ export class NotificationService {
         masterId: master.id,
       };
     } catch (error) {
-      console.error('[NotificationService] Error creating notifications:', error);
+      console.error(
+        '[NotificationService] Error creating notifications:',
+        error,
+      );
       throw error;
     }
   }
@@ -211,7 +216,7 @@ export class NotificationService {
           totalRecipients: total,
           readCount,
         };
-      })
+      }),
     );
 
     return {
@@ -261,11 +266,14 @@ export class NotificationService {
    * Lấy thông báo của một user - sử dụng NotificationRecipient với join NotificationMaster
    * Kết hợp cả dữ liệu mới (NotificationRecipient) và legacy (Notification)
    */
-  async getMyNotifications(accountId: number, options?: {
-    page?: number;
-    limit?: number;
-    onlyUnread?: boolean;
-  }) {
+  async getMyNotifications(
+    accountId: number,
+    options?: {
+      page?: number;
+      limit?: number;
+      onlyUnread?: boolean;
+    },
+  ) {
     const { page = 1, limit = 20, onlyUnread = false } = options || {};
     const skip = (page - 1) * limit;
 
@@ -305,7 +313,7 @@ export class NotificationService {
     ]);
 
     // Chuyển đổi recipients thành format chung
-    const newNotifications = recipients.map(r => ({
+    const newNotifications = recipients.map((r) => ({
       notification_id: r.id,
       account_id: r.account_id,
       title: r.master.title,
@@ -321,7 +329,7 @@ export class NotificationService {
     }));
 
     // Format legacy notifications
-    const formattedLegacy = legacyNotifications.map(n => ({
+    const formattedLegacy = legacyNotifications.map((n) => ({
       notification_id: n.notification_id,
       account_id: n.account_id,
       title: n.title,
@@ -338,7 +346,10 @@ export class NotificationService {
 
     // Gộp và sắp xếp theo thời gian
     const allNotifications = [...newNotifications, ...formattedLegacy]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
       .slice(0, limit);
 
     return {
@@ -378,7 +389,11 @@ export class NotificationService {
    * Đánh dấu thông báo đã đọc
    * Xác định nguồn dựa vào source được truyền từ frontend hoặc thử cả 2 bảng
    */
-  async markAsRead(notificationId: number, accountId: number, source?: 'new' | 'legacy'): Promise<boolean> {
+  async markAsRead(
+    notificationId: number,
+    accountId: number,
+    source?: 'new' | 'legacy',
+  ): Promise<boolean> {
     const now = new Date();
 
     if (source === 'new' || !source) {
@@ -411,7 +426,10 @@ export class NotificationService {
   /**
    * Đánh dấu thông báo đã đọc bằng master_id (cho kiến trúc mới)
    */
-  async markAsReadByMasterId(masterId: number, accountId: number): Promise<boolean> {
+  async markAsReadByMasterId(
+    masterId: number,
+    accountId: number,
+  ): Promise<boolean> {
     const now = new Date();
     const result = await this.prisma.notificationRecipient.updateMany({
       where: {
@@ -465,7 +483,8 @@ export class NotificationService {
 
     const where: any = {};
     if (type && type !== 'Tất cả loại') where.type = type;
-    if (target && target !== 'Tất cả đối tượng' && target !== 'Tất cả') where.target = target;
+    if (target && target !== 'Tất cả đối tượng' && target !== 'Tất cả')
+      where.target = target;
 
     const [masters, total] = await Promise.all([
       this.prisma.notificationMaster.findMany({
@@ -501,14 +520,18 @@ export class NotificationService {
           target: master.target,
           attachments: master.attachments,
           createdAt: master.created_at,
-          createdBy: master.creator?.profile?.full_name || master.creator?.email || 'Admin',
+          createdBy:
+            master.creator?.profile?.full_name ||
+            master.creator?.email ||
+            'Admin',
           totalRecipients: master._count.recipients,
           readCount,
-          readPercent: master._count.recipients > 0 
-            ? Math.round((readCount / master._count.recipients) * 100) 
-            : 0,
+          readPercent:
+            master._count.recipients > 0
+              ? Math.round((readCount / master._count.recipients) * 100)
+              : 0,
         };
-      })
+      }),
     );
 
     return { masters: mastersWithStats, total, page, limit };
@@ -546,8 +569,9 @@ export class NotificationService {
       target: master.target,
       attachments: master.attachments,
       createdAt: master.created_at,
-      createdBy: master.creator?.profile?.full_name || master.creator?.email || 'Admin',
-      recipients: master.recipients.map(r => ({
+      createdBy:
+        master.creator?.profile?.full_name || master.creator?.email || 'Admin',
+      recipients: master.recipients.map((r) => ({
         id: r.id,
         accountId: r.account_id,
         name: r.account?.profile?.full_name || r.account?.email || 'Unknown',
@@ -571,7 +595,9 @@ export class NotificationService {
         type: dto.type,
         target: dto.target,
         priority: dto.priority,
-        attachments: dto.attachments ? JSON.parse(JSON.stringify(dto.attachments)) : undefined,
+        attachments: dto.attachments
+          ? JSON.parse(JSON.stringify(dto.attachments))
+          : undefined,
         created_by: dto.createdBy,
       },
     });
@@ -629,8 +655,10 @@ export class NotificationService {
         ...(dto.type && { type: dto.type }),
         ...(dto.target && { target: dto.target }),
         ...(dto.priority && { priority: dto.priority }),
-        ...(dto.attachments !== undefined && { 
-          attachments: dto.attachments ? JSON.parse(JSON.stringify(dto.attachments)) : null 
+        ...(dto.attachments !== undefined && {
+          attachments: dto.attachments
+            ? JSON.parse(JSON.stringify(dto.attachments))
+            : null,
         }),
       },
     });
@@ -682,7 +710,7 @@ export class NotificationService {
 
     // Lưu tất cả vào history
     await this.prisma.notificationHistory.createMany({
-      data: drafts.map(draft => ({
+      data: drafts.map((draft) => ({
         action: 'deleted',
         title: draft.title,
         content: draft.content,
@@ -756,9 +784,9 @@ export class NotificationService {
    * Gửi nhiều drafts
    */
   async sendDrafts(ids: number[]) {
-    const results = await Promise.all(ids.map(id => this.sendDraft(id)));
+    const results = await Promise.all(ids.map((id) => this.sendDraft(id)));
     const totalSent = results.reduce((sum, r) => sum + (r.count || 0), 0);
-    const successCount = results.filter(r => r.success).length;
+    const successCount = results.filter((r) => r.success).length;
     return { success: true, successCount, totalRecipients: totalSent };
   }
 
@@ -782,7 +810,8 @@ export class NotificationService {
       where.action = action === 'Đã gửi' ? 'sent' : 'deleted';
     }
     if (type && type !== 'Tất cả loại') where.type = type;
-    if (target && target !== 'Tất cả đối tượng' && target !== 'Tất cả') where.target = target;
+    if (target && target !== 'Tất cả đối tượng' && target !== 'Tất cả')
+      where.target = target;
 
     const [historyRaw, total] = await Promise.all([
       this.prisma.notificationHistory.findMany({
@@ -798,16 +827,17 @@ export class NotificationService {
     const history = await Promise.all(
       historyRaw.map(async (h) => {
         if (h.master_id && h.action === 'sent') {
-          const realTimeReadCount = await this.prisma.notificationRecipient.count({
-            where: {
-              master_id: h.master_id,
-              is_read: true,
-            },
-          });
+          const realTimeReadCount =
+            await this.prisma.notificationRecipient.count({
+              where: {
+                master_id: h.master_id,
+                is_read: true,
+              },
+            });
           return { ...h, read_count: realTimeReadCount };
         }
         return h;
-      })
+      }),
     );
 
     return { history, total, page, limit };
@@ -909,23 +939,30 @@ export class NotificationService {
     // Previous period stats for comparison
     const [prevTotal, prevRead, prevUnread] = await Promise.all([
       this.prisma.notification.count({
-        where: viewMode !== 'all' ? { 
-          created_at: { gte: previousStartDate, lt: previousEndDate } 
-        } : {},
+        where:
+          viewMode !== 'all'
+            ? {
+                created_at: { gte: previousStartDate, lt: previousEndDate },
+              }
+            : {},
       }),
       this.prisma.notification.count({
         where: {
-          ...(viewMode !== 'all' ? { 
-            created_at: { gte: previousStartDate, lt: previousEndDate } 
-          } : {}),
+          ...(viewMode !== 'all'
+            ? {
+                created_at: { gte: previousStartDate, lt: previousEndDate },
+              }
+            : {}),
           is_read: true,
         },
       }),
       this.prisma.notification.count({
         where: {
-          ...(viewMode !== 'all' ? { 
-            created_at: { gte: previousStartDate, lt: previousEndDate } 
-          } : {}),
+          ...(viewMode !== 'all'
+            ? {
+                created_at: { gte: previousStartDate, lt: previousEndDate },
+              }
+            : {}),
           is_read: false,
         },
       }),
@@ -974,10 +1011,16 @@ export class NotificationService {
               where: { created_at: { gte: startHour, lt: endHour } },
             }),
             this.prisma.notification.count({
-              where: { created_at: { gte: startHour, lt: endHour }, is_read: true },
+              where: {
+                created_at: { gte: startHour, lt: endHour },
+                is_read: true,
+              },
             }),
             this.prisma.notification.count({
-              where: { created_at: { gte: startHour, lt: endHour }, is_read: false },
+              where: {
+                created_at: { gte: startHour, lt: endHour },
+                is_read: false,
+              },
             }),
           ]);
 
@@ -994,7 +1037,7 @@ export class NotificationService {
 
         for (let i = 5; i >= 0; i--) {
           const startWeek = new Date(now);
-          startWeek.setDate(startWeek.getDate() - (i * 7));
+          startWeek.setDate(startWeek.getDate() - i * 7);
           startWeek.setHours(0, 0, 0, 0);
           const endWeek = new Date(startWeek);
           endWeek.setDate(endWeek.getDate() + 7);
@@ -1004,10 +1047,16 @@ export class NotificationService {
               where: { created_at: { gte: startWeek, lt: endWeek } },
             }),
             this.prisma.notification.count({
-              where: { created_at: { gte: startWeek, lt: endWeek }, is_read: true },
+              where: {
+                created_at: { gte: startWeek, lt: endWeek },
+                is_read: true,
+              },
             }),
             this.prisma.notification.count({
-              where: { created_at: { gte: startWeek, lt: endWeek }, is_read: false },
+              where: {
+                created_at: { gte: startWeek, lt: endWeek },
+                is_read: false,
+              },
             }),
           ]);
 
@@ -1020,24 +1069,47 @@ export class NotificationService {
 
       case 'year': {
         // Last 6 months
-        const monthNames = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+        const monthNames = [
+          'Th1',
+          'Th2',
+          'Th3',
+          'Th4',
+          'Th5',
+          'Th6',
+          'Th7',
+          'Th8',
+          'Th9',
+          'Th10',
+          'Th11',
+          'Th12',
+        ];
 
         for (let i = 5; i >= 0; i--) {
           const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
           labels.push(monthNames[month.getMonth()]);
 
           const startMonth = new Date(month.getFullYear(), month.getMonth(), 1);
-          const endMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+          const endMonth = new Date(
+            month.getFullYear(),
+            month.getMonth() + 1,
+            1,
+          );
 
           const [sent, read, unread] = await Promise.all([
             this.prisma.notification.count({
               where: { created_at: { gte: startMonth, lt: endMonth } },
             }),
             this.prisma.notification.count({
-              where: { created_at: { gte: startMonth, lt: endMonth }, is_read: true },
+              where: {
+                created_at: { gte: startMonth, lt: endMonth },
+                is_read: true,
+              },
             }),
             this.prisma.notification.count({
-              where: { created_at: { gte: startMonth, lt: endMonth }, is_read: false },
+              where: {
+                created_at: { gte: startMonth, lt: endMonth },
+                is_read: false,
+              },
             }),
           ]);
 
@@ -1054,8 +1126,12 @@ export class NotificationService {
 
         // Simplified: just return total counts divided into 6 parts
         const total = await this.prisma.notification.count();
-        const read = await this.prisma.notification.count({ where: { is_read: true } });
-        const unread = await this.prisma.notification.count({ where: { is_read: false } });
+        const read = await this.prisma.notification.count({
+          where: { is_read: true },
+        });
+        const unread = await this.prisma.notification.count({
+          where: { is_read: false },
+        });
 
         // Distribute data across labels (this is simplified, real implementation would use actual date ranges)
         const avgSent = Math.round(total / 6);

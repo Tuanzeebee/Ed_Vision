@@ -149,7 +149,10 @@ export function validateTranscriptRecords(
       record.converted_numeric_score !== null &&
       typeof record.converted_numeric_score === 'number'
     ) {
-      if (record.converted_numeric_score < 0 || record.converted_numeric_score > 4) {
+      if (
+        record.converted_numeric_score < 0 ||
+        record.converted_numeric_score > 4
+      ) {
         errors.push({
           row,
           field: 'converted_numeric_score',
@@ -180,20 +183,22 @@ export function validateCSVFile(filePath: string): {
       trim: true,
     });
 
-    const transcriptRecords: TranscriptRecord[] = records.map((record: any) => ({
-      student_id: parseInt(record.student_id),
-      year: parseInt(record.year),
-      semester_number: parseInt(record.semester_number),
-      course_code: record.course_code,
-      course_name: record.course_name,
-      study_format: record.study_format || 'offline',
-      credits_unit: parseInt(record.credits_unit),
-      raw_score: record.raw_score ? parseFloat(record.raw_score) : undefined,
-      converted_score: record.converted_score || undefined,
-      converted_numeric_score: record.converted_numeric_score
-        ? parseFloat(record.converted_numeric_score)
-        : undefined,
-    }));
+    const transcriptRecords: TranscriptRecord[] = records.map(
+      (record: any) => ({
+        student_id: parseInt(record.student_id),
+        year: parseInt(record.year),
+        semester_number: parseInt(record.semester_number),
+        course_code: record.course_code,
+        course_name: record.course_name,
+        study_format: record.study_format || 'offline',
+        credits_unit: parseInt(record.credits_unit),
+        raw_score: record.raw_score ? parseFloat(record.raw_score) : undefined,
+        converted_score: record.converted_score || undefined,
+        converted_numeric_score: record.converted_numeric_score
+          ? parseFloat(record.converted_numeric_score)
+          : undefined,
+      }),
+    );
 
     const validationErrors = validateTranscriptRecords(transcriptRecords);
 

@@ -28,7 +28,9 @@ export class GradeStructureController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createGradeStructureDto: CreateGradeStructureDto) {
-    const result = await this.gradeStructureService.create(createGradeStructureDto);
+    const result = await this.gradeStructureService.create(
+      createGradeStructureDto,
+    );
     return {
       success: true,
       message: 'Tạo cấu trúc bảng điểm thành công!',

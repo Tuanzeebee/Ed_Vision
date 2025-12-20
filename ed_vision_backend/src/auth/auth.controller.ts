@@ -43,13 +43,13 @@ export class AuthController {
   async login(@Body() dto: LoginDto) {
     try {
       const result = await this.authService.login(dto.email, dto.password);
-      
+
       // Broadcast instructor online stats update
       await this.broadcastInstructorStats();
-      
+
       // Broadcast student online stats update
       await this.broadcastStudentStats();
-      
+
       return { success: true, data: result };
     } catch (e) {
       // Log full error here to aid debugging of 500 cases from frontend
@@ -64,13 +64,13 @@ export class AuthController {
   @Post('logout')
   async logout(@Body() dto: LogoutDto) {
     const result = await this.authService.logout(dto.email);
-    
+
     // Broadcast instructor online stats update
     await this.broadcastInstructorStats();
-    
+
     // Broadcast student online stats update
     await this.broadcastStudentStats();
-    
+
     return { success: true, data: result };
   }
 
@@ -86,7 +86,7 @@ export class AuthController {
       dto.email,
       dto.code,
       dto.newPassword,
-      dto.confirmPassword
+      dto.confirmPassword,
     );
     return { success: true, message: result };
   }
@@ -94,14 +94,16 @@ export class AuthController {
   private async broadcastInstructorStats() {
     try {
       const totalCount = await this.prisma.instructor.count();
-      const onlineResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
+      const onlineResult = await this.prisma.$queryRaw<
+        Array<{ count: bigint }>
+      >`
         SELECT COUNT(*) as count FROM "Instructor" i
         INNER JOIN "Account" a ON i.account_id = a.account_id
         WHERE a.last_login_at IS NOT NULL
           AND (a.last_logout_at IS NULL OR a.last_login_at > a.last_logout_at)
       `;
       const onlineCount = Number(onlineResult[0]?.count || 0);
-      
+
       this.instructorStatsGateway.broadcastOnlineStats({
         totalCount,
         onlineCount,
@@ -114,14 +116,16 @@ export class AuthController {
   private async broadcastStudentStats() {
     try {
       const totalCount = await this.prisma.student.count();
-      const onlineResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
+      const onlineResult = await this.prisma.$queryRaw<
+        Array<{ count: bigint }>
+      >`
         SELECT COUNT(*) as count FROM "Student" s
         INNER JOIN "Account" a ON s.account_id = a.account_id
         WHERE a.last_login_at IS NOT NULL
           AND (a.last_logout_at IS NULL OR a.last_login_at > a.last_logout_at)
       `;
       const onlineCount = Number(onlineResult[0]?.count || 0);
-      
+
       this.studentStatsGateway.broadcastOnlineStats({
         totalCount,
         onlineCount,

@@ -5,9 +5,9 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [DashboardController],
-    providers: [DashboardService, DevAuthGuard],
-    exports: [DashboardService],
+  imports: [PrismaModule],
+  controllers: [DashboardController],
+  providers: [DashboardService, DevAuthGuard],
+  exports: [DashboardService],
 })
-export class DashboardModule { }
+export class DashboardModule {}

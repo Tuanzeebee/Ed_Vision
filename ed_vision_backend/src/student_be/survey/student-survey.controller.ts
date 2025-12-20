@@ -27,7 +27,7 @@ export class StudentSurveyController {
   /**
    * Kiểm tra trạng thái khảo sát của student
    * Trả về input survey cần làm (nếu có) và danh sách periodic surveys
-   * 
+   *
    * GET /student/survey/status
    */
   @Get('status')
@@ -38,7 +38,7 @@ export class StudentSurveyController {
 
   /**
    * Lấy danh sách tất cả surveys cho student
-   * 
+   *
    * GET /student/survey/list
    */
   @Get('list')
@@ -49,7 +49,7 @@ export class StudentSurveyController {
 
   /**
    * Lấy lịch sử khảo sát đã làm
-   * 
+   *
    * GET /student/survey/history
    */
   @Get('history')
@@ -60,7 +60,7 @@ export class StudentSurveyController {
 
   /**
    * Lấy chi tiết một survey với tất cả questions
-   * 
+   *
    * GET /student/survey/:id
    */
   @Get(':id')
@@ -75,7 +75,7 @@ export class StudentSurveyController {
   /**
    * Submit survey response
    * Chỉ ghi nhận khi hoàn thành TẤT CẢ câu hỏi bắt buộc
-   * 
+   *
    * POST /student/survey/submit
    */
   @Post('submit')

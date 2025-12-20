@@ -8,12 +8,23 @@ export function showToast(message: string, type: ToastType = 'success') {
   window.dispatchEvent(event);
 }
 
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string, t?: any): string {
   // Parse date string as local time to avoid timezone issues
   // dateString format: "YYYY-MM-DD"
   const [year, month, day] = dateString.split('-').map(Number);
   const date = new Date(year, month - 1, day); // month is 0-indexed
   
+  // If translation function provided, use it for i18n support
+  if (t) {
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const weekday = t(`scheduleManagement.detail.${dayKeys[date.getDay()]}`);
+    const dayNum = date.getDate();
+    const monthNum = date.getMonth() + 1;
+    const yearNum = date.getFullYear();
+    return `${weekday}, ${dayNum} tháng ${monthNum}, ${yearNum}`;
+  }
+  
+  // Fallback to locale date for backward compatibility
   const options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     year: 'numeric',

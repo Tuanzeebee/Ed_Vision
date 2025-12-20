@@ -6,9 +6,9 @@ import { messageProviders } from '../../mongodb/message.providers';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Module({
-    imports: [DatabaseModule],
-    controllers: [MessagesController],
-    providers: [MessagesService, ...messageProviders, PrismaService],
-    exports: [MessagesService],
+  imports: [DatabaseModule],
+  controllers: [MessagesController],
+  providers: [MessagesService, ...messageProviders, PrismaService],
+  exports: [MessagesService],
 })
-export class MessagesModule { }
+export class MessagesModule {}
