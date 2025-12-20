@@ -4,6 +4,7 @@ import { BookingApiService, type Appointment } from "@/services/api/booking.api"
 import Header from "../../components/layout/Header"
 import { useToast } from '@/lib/useToast'
 import { ToastContainer } from '@/components/ui/Toast'
+import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 
 type Props = {
   // Add any props here if needed
@@ -96,6 +97,9 @@ export default function AllAppointments({}: Props) {
   const [displayCount, setDisplayCount] = useState(6);
   const ITEMS_PER_PAGE = 6;
 
+  // Real-time notification socket
+  const { newNotification } = useNotificationSocket();
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -117,6 +121,21 @@ export default function AllAppointments({}: Props) {
     // Load appointments from API
     loadAppointments();
   }, []);
+
+  // Listen for appointment status change notifications
+  useEffect(() => {
+    if (newNotification) {
+      console.log('📬 [AllAppointments] Received notification:', newNotification);
+      
+      // Reload appointments if notification is about appointment status change
+      if (newNotification.type === 'appointment_confirmed' || 
+          newNotification.type === 'appointment_rejected' ||
+          newNotification.type === 'appointment_canceled') {
+        console.log('🔄 [AllAppointments] Reloading appointments due to status change');
+        loadAppointments();
+      }
+    }
+  }, [newNotification]);
 
   const loadAppointments = async () => {
     try {

@@ -51,7 +51,8 @@ export class GradeStructure {
   totalWeight?: number; // Tổng trọng số (tính toán tự động)
 }
 
-export const GradeStructureSchema = SchemaFactory.createForClass(GradeStructure);
+export const GradeStructureSchema =
+  SchemaFactory.createForClass(GradeStructure);
 
 // Index để tìm kiếm nhanh
 GradeStructureSchema.index({ academicYear: 1, semester: 1, courseCode: 1 });

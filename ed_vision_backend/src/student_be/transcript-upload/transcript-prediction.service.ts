@@ -8,7 +8,7 @@ interface PredictionFeatures {
   course_code: string;
   study_format: string;
   credits_unit: number;
-  
+
   // Historical features
   last_score: number;
   mean_prev_score: number;
@@ -18,7 +18,7 @@ interface PredictionFeatures {
   recent_improvement: number;
   n_assessments: number;
   study_load: number;
-  
+
   // External factors from StudentSurveyFactors
   weekly_study_hours: number;
   part_time_hours: number;
@@ -42,7 +42,9 @@ export class TranscriptPredictionService {
     private readonly configService: ConfigService,
   ) {
     // Get ML service URL from environment or use default
-    this.mlServiceUrl = this.configService.get<string>('PYTHON_ML_API_URL') || 'http://localhost:8000';
+    this.mlServiceUrl =
+      this.configService.get<string>('PYTHON_ML_API_URL') ||
+      'http://localhost:8000';
     this.logger.log(`ML Service URL configured: ${this.mlServiceUrl}`);
   }
 
@@ -61,7 +63,9 @@ export class TranscriptPredictionService {
       });
 
       if (!student) {
-        throw new BadRequestException(`Student with code ${studentCode} not found`);
+        throw new BadRequestException(
+          `Student with code ${studentCode} not found`,
+        );
       }
 
       // 2. Get external factors from StudentSurveyFactors
@@ -97,7 +101,9 @@ export class TranscriptPredictionService {
       });
 
       if (completedCourses.length === 0) {
-        this.logger.warn(`No completed courses found for ${studentCode}. Cannot calculate historical features.`);
+        this.logger.warn(
+          `No completed courses found for ${studentCode}. Cannot calculate historical features.`,
+        );
         return;
       }
 
@@ -120,43 +126,52 @@ export class TranscriptPredictionService {
       });
 
       if (plannedCourses.length === 0) {
-        this.logger.log(`No planned courses found for ${studentCode}. Nothing to predict.`);
+        this.logger.log(
+          `No planned courses found for ${studentCode}. Nothing to predict.`,
+        );
         return;
       }
 
-      this.logger.log(`Found ${plannedCourses.length} courses to predict for ${studentCode} (excluding DEM courses)`);
+      this.logger.log(
+        `Found ${plannedCourses.length} courses to predict for ${studentCode} (excluding DEM courses)`,
+      );
 
       // 5. Calculate historical features
       const scores = completedCourses
-        .map(c => Number(c.raw_score))
-        .filter(s => !isNaN(s) && s > 0);
+        .map((c) => Number(c.raw_score))
+        .filter((s) => !isNaN(s) && s > 0);
 
       const lastScore = scores[scores.length - 1] || 5.0;
-      const meanPrevScore = scores.length > 0 
-        ? scores.reduce((sum, s) => sum + s, 0) / scores.length 
-        : 5.0;
+      const meanPrevScore =
+        scores.length > 0
+          ? scores.reduce((sum, s) => sum + s, 0) / scores.length
+          : 5.0;
 
       // Calculate score trend (linear regression slope)
       const scoreTrend = this.calculateScoreTrend(scores);
-      
+
       // Calculate score stability (standard deviation)
       const scoreStability = this.calculateStandardDeviation(scores);
-      
+
       // Calculate coefficient of variation
-      const scoreStabilityCV = meanPrevScore > 0 ? scoreStability / meanPrevScore : 0;
-      
+      const scoreStabilityCV =
+        meanPrevScore > 0 ? scoreStability / meanPrevScore : 0;
+
       // Recent improvement (last 3 scores trend)
       const recentScores = scores.slice(-3);
-      const recentImprovement = recentScores.length >= 2 
-        ? this.calculateScoreTrend(recentScores)
-        : 0;
+      const recentImprovement =
+        recentScores.length >= 2 ? this.calculateScoreTrend(recentScores) : 0;
 
       const nAssessments = scores.length;
-      
+
       // Study load: ratio of current semester credits to average
-      const avgCredits = completedCourses.length > 0
-        ? completedCourses.reduce((sum, c) => sum + (c.course?.credits_unit || 0), 0) / completedCourses.length
-        : 3;
+      const avgCredits =
+        completedCourses.length > 0
+          ? completedCourses.reduce(
+              (sum, c) => sum + (c.course?.credits_unit || 0),
+              0,
+            ) / completedCourses.length
+          : 3;
 
       const historicalFeatures = {
         last_score: lastScore,
@@ -168,7 +183,10 @@ export class TranscriptPredictionService {
         n_assessments: nAssessments,
       };
 
-      this.logger.log(`Historical features for ${studentCode}:`, historicalFeatures);
+      this.logger.log(
+        `Historical features for ${studentCode}:`,
+        historicalFeatures,
+      );
 
       // 6. Predict for each planned course
       for (const plannedCourse of plannedCourses) {
@@ -176,13 +194,13 @@ export class TranscriptPredictionService {
           // Skip if study_format is DEM (should already be filtered, but double check)
           if (plannedCourse.course?.study_format === 'DEM') {
             this.logger.log(
-              `Skipping DEM course: ${plannedCourse.course?.course_code} (Demonstration/Lab course)`
+              `Skipping DEM course: ${plannedCourse.course?.course_code} (Demonstration/Lab course)`,
             );
             continue;
           }
 
-          const studyLoad = plannedCourse.course?.credits_unit 
-            ? plannedCourse.course.credits_unit / avgCredits 
+          const studyLoad = plannedCourse.course?.credits_unit
+            ? plannedCourse.course.credits_unit / avgCredits
             : 1.0;
 
           const features: PredictionFeatures = {
@@ -207,19 +225,22 @@ export class TranscriptPredictionService {
           });
 
           this.logger.log(
-            `Predicted score for ${studentCode} - ${plannedCourse.course?.course_code}: ${predictedScore}`
+            `Predicted score for ${studentCode} - ${plannedCourse.course?.course_code}: ${predictedScore}`,
           );
         } catch (error) {
           this.logger.error(
             `Failed to predict for course ${plannedCourse.course?.course_code}:`,
-            error.message
+            error.message,
           );
         }
       }
 
       this.logger.log(`Completed predictions for student: ${studentCode}`);
     } catch (error) {
-      this.logger.error(`Error in triggerPredictionAfterUpload for ${studentCode}:`, error);
+      this.logger.error(
+        `Error in triggerPredictionAfterUpload for ${studentCode}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -237,17 +258,17 @@ export class TranscriptPredictionService {
           headers: {
             'Content-Type': 'application/json',
           },
-        }
+        },
       );
 
       return response.data.predicted_score;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         this.logger.error(
-          `ML Service error: ${error.response?.status} - ${error.response?.data?.detail || error.message}`
+          `ML Service error: ${error.response?.status} - ${error.response?.data?.detail || error.message}`,
         );
         throw new BadRequestException(
-          `ML Service failed: ${error.response?.data?.detail || error.message}`
+          `ML Service failed: ${error.response?.data?.detail || error.message}`,
         );
       }
       throw error;
@@ -322,7 +343,8 @@ export class TranscriptPredictionService {
     if (scores.length === 0) return 0;
 
     const mean = scores.reduce((sum, s) => sum + s, 0) / scores.length;
-    const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
+    const variance =
+      scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
 
     return Math.sqrt(variance);
   }
@@ -330,7 +352,11 @@ export class TranscriptPredictionService {
   /**
    * Get predictions for a student
    */
-  async getPredictions(studentId: number, courseId?: number, modelType?: string) {
+  async getPredictions(
+    studentId: number,
+    courseId?: number,
+    modelType?: string,
+  ) {
     const where: any = {
       student_id: studentId,
       prediction_status: 'active',
@@ -358,7 +384,7 @@ export class TranscriptPredictionService {
       },
     });
 
-    return predictions.map(p => ({
+    return predictions.map((p) => ({
       prediction_id: p.prediction_id,
       student_id: p.student_id,
       course_id: p.course_id,
@@ -366,7 +392,9 @@ export class TranscriptPredictionService {
       course_name: p.course?.course_name || '',
       predicted_gpa: Number(p.predicted_gpa),
       predicted_fail_warning: p.predicted_fail_warning || false,
-      prediction_confidence: p.prediction_confidence ? Number(p.prediction_confidence) : null,
+      prediction_confidence: p.prediction_confidence
+        ? Number(p.prediction_confidence)
+        : null,
       model_type: p.model_type,
       model_version: p.model_version,
       term_id: p.term_id,

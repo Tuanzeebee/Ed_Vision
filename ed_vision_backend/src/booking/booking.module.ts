@@ -8,10 +8,14 @@ import { NotificationModule } from '../admin_be/notification/notification.module
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-	imports: [NotificationModule, PrismaModule],
-	controllers: [BookingController],
-	providers: [BookingService, BookingRepository, BookingCronService, DevAuthGuard],
-	exports: [BookingService],
+  imports: [NotificationModule, PrismaModule],
+  controllers: [BookingController],
+  providers: [
+    BookingService,
+    BookingRepository,
+    BookingCronService,
+    DevAuthGuard,
+  ],
+  exports: [BookingService],
 })
 export class BookingModule {}
-

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TokenManager } from "@/lib/tokenManager";
+import { useTranslation } from 'react-i18next';
 
 type Parent = {
   id: string;
@@ -62,6 +63,7 @@ export default function StudentParentLinks({
   registrationCode: _registrationCode = "PH2024-A7B3",
   onRegisterParent: _onRegisterParent,
 }: Props) {
+  const { t } = useTranslation('profile');
   const [_isCodeModalOpen, _setIsCodeModalOpen] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
@@ -72,7 +74,7 @@ export default function StudentParentLinks({
       // Call API to generate or get existing link code
       const token = TokenManager.getToken();
       if (!token) {
-        alert('Vui lòng đăng nhập');
+        alert(t('common.loginRequired'));
         return;
       }
 
@@ -97,14 +99,14 @@ export default function StudentParentLinks({
       const linkCode = data.linkCode;
 
       if (!linkCode) {
-        throw new Error('Không nhận được mã liên kết từ server');
+        throw new Error(t('studentParentLinks.linkError'));
       }
 
       // Redirect to register page with the link code
       window.location.href = `/auth/register?linkCode=${linkCode}`;
     } catch (error: any) {
       console.error('Error generating parent link:', error);
-      alert(error.message || 'Có lỗi xảy ra khi tạo mã liên kết');
+      alert(error.message || t('studentParentLinks.linkError'));
     } finally {
       setIsGeneratingLink(false);
     }
@@ -114,7 +116,7 @@ export default function StudentParentLinks({
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Phụ huynh liên kết</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('studentParentLinks.title')}</h3>
         </div>
 
         {/* Table View (Desktop) */}
@@ -123,16 +125,16 @@ export default function StudentParentLinks({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Họ tên phụ huynh
+                  {t('studentParentLinks.parentName')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quan hệ
+                  {t('studentParentLinks.relationship')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  {t('studentParentLinks.parentEmail')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Số điện thoại
+                  {t('studentParentLinks.parentPhone')}
                 </th>
               </tr>
             </thead>
@@ -231,12 +233,12 @@ export default function StudentParentLinks({
             {isGeneratingLink ? (
               <>
                 <i className="fas fa-spinner fa-spin mr-2"></i>
-                Đang tạo mã liên kết...
+                {t('studentParentLinks.generating')}
               </>
             ) : (
               <>
                 <i className="fas fa-plus-circle mr-2"></i>
-                Đăng ký tài khoản phụ huynh
+                {t('studentParentLinks.generateCode')}
               </>
             )}
           </button>

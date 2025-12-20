@@ -23,7 +23,7 @@ import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
 import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
 import { StudentChatModule } from './student_be/chat/student-chat.module';
-import { ParentChatModule } from './parent_be/chat/parent-chat.module';
+import { AttendanceModule } from './attendance/attendance.module';
 import { ChatModule } from './mongodb/chat.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
@@ -40,9 +40,7 @@ import * as path from 'path';
         path: path.join(__dirname, '/i18n/'),
         watch: true,
       },
-      resolvers: [
-        AcceptLanguageResolver,
-      ],
+      resolvers: [AcceptLanguageResolver],
     }),
     PrismaModule,
     InstructorAvailabilityModule,
@@ -65,7 +63,7 @@ import * as path from 'path';
     ChatModule,
     TeacherChatModule,
     StudentChatModule,
-    ParentChatModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [AppService, ReminderSchedulerService],

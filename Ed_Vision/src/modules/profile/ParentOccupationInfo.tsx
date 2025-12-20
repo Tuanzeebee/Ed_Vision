@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 type OccupationInfo = {
   relationshipType: string;
   occupation: string;
@@ -10,17 +12,19 @@ type Props = {
 };
 
 export default function ParentOccupationInfo({ occupationInfo, onEdit }: Props) {
+  const { t } = useTranslation('profile');
+  
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Thông tin nghề nghiệp</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{t('parentOccupation.title')}</h3>
         {onEdit && (
           <button
             onClick={onEdit}
             className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
           >
             <i className="fas fa-pencil-alt mr-2"></i>
-            Chỉnh sửa
+            {t('common.edit')}
           </button>
         )}
       </div>

@@ -896,7 +896,7 @@ export default function TeacherDashboard() {
                                     onChange={(e) => setSelectedFaculty(e.target.value)}
                                     disabled={loadingFilters}
                                 >
-                                    <option value="all">Tất cả các trường</option>
+                                    <option value="all">{t('dashboard.allSchools')}</option>
                                     {filterOptions.faculties.filter((f: string) => f !== 'Tất cả').map((faculty: string, idx: number) => (
                                         <option key={idx} value={faculty}>{faculty}</option>
                                     ))}
@@ -909,7 +909,7 @@ export default function TeacherDashboard() {
                                     onChange={(e) => setSelectedIntake(e.target.value)}
                                     disabled={loadingFilters || selectedFaculty === 'all'}
                                 >
-                                    <option value="all">Tất cả khóa</option>
+                                    <option value="all">{t('dashboard.allIntakes')}</option>
                                     {filteredIntakes.map((course: string, idx: number) => (
                                         <option key={idx} value={course}>{course}</option>
                                     ))}
@@ -1002,7 +1002,7 @@ export default function TeacherDashboard() {
                 <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
-                            <CardTitle>Quan tâm Sinh viên</CardTitle>
+                            <CardTitle>{t('dashboard.studentConcern')}</CardTitle>
                             <Badge className="text-xs bg-red-100 text-red-800">{chartStats.atRiskCount} {t('dashboard.students')}</Badge>
                         </div>
                     </CardHeader>
@@ -1022,7 +1022,7 @@ export default function TeacherDashboard() {
                                     const colors = isHighRisk 
                                         ? { bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-600', text: 'text-red-600' }
                                         : { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'bg-yellow-500', text: 'text-yellow-600' };
-                                    const label = isHighRisk ? 'Cần theo dõi' : 'Theo dõi';
+                                    const label = isHighRisk ? t('dashboard.needMonitoring') : t('dashboard.monitoring');
                                     
                                     return (
                                         <div key={idx} className={`${colors.bg} border ${colors.border} rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer`}>
@@ -1042,8 +1042,8 @@ export default function TeacherDashboard() {
                                                     <p className="text-sm text-gray-600">{student.studentCode} - {student.class}</p>
                                                     <div className="flex items-center space-x-3 mt-1">
                                                         <span className={`text-xs ${colors.text}`}>📊 GPA: {student.gpa.toFixed(2)}</span>
-                                                        <span className={`text-xs ${colors.text}`}>❌ Vắng: {student.absences}/12</span>
-                                                        <span className={`text-xs ${colors.text}`}>📚 Nợ: {student.debtCourses} môn</span>
+                                                        <span className={`text-xs ${colors.text}`}>❌ {t('dashboard.absent')}: {student.absences}/12</span>
+                                                        <span className={`text-xs ${colors.text}`}>📚 {t('dashboard.debt')}: {student.debtCourses} {t('dashboard.courses')}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1062,7 +1062,7 @@ export default function TeacherDashboard() {
                         ) : (
                             <div className="text-center py-8 text-gray-500">
                                 <i className="fas fa-check-circle text-4xl text-green-500 mb-2"></i>
-                                <p className="text-sm">Không có sinh viên cần quan tâm đặc biệt</p>
+                                <p className="text-sm">{t('dashboard.noStudentConcern')}</p>
                             </div>
                         )}
                     </CardContent>

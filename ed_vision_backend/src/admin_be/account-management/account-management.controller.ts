@@ -58,7 +58,7 @@ export class AccountManagementController {
   ): Promise<AccountResponse> {
     // Parse the JSON data from the 'data' field
     const createAccountDto: CreateAccountDto = JSON.parse(body.data || '{}');
-    
+
     return this.accountManagementService.create(createAccountDto, avatar);
   }
 

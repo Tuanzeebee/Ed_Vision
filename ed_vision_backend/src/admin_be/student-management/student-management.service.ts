@@ -37,7 +37,7 @@ export class StudentManagementService {
 
     return {
       onlineCount,
-      totalCount
+      totalCount,
     };
   }
 
@@ -54,24 +54,24 @@ export class StudentManagementService {
       select: {
         program_name: true,
         department: {
-          select: { name: true }
-        }
+          select: { name: true },
+        },
       },
       orderBy: { program_name: 'asc' },
     });
 
     return {
-      departments: departments.map(d => d.name),
-      programs: programs.map(p => ({
+      departments: departments.map((d) => d.name),
+      programs: programs.map((p) => ({
         name: p.program_name,
-        department: p.department.name
+        department: p.department.name,
       })),
       statuses: [
         { code: 'active', name: 'Đang học' },
         { code: 'inactive', name: 'Tạm nghỉ' },
         { code: 'at-risk', name: 'Cảnh báo' },
-        { code: 'blocked', name: 'Đã khóa' }
-      ]
+        { code: 'blocked', name: 'Đã khóa' },
+      ],
     };
   }
 
@@ -108,9 +108,9 @@ export class StudentManagementService {
         program: {
           ...where.classGroup?.program,
           department: {
-            name: department
-          }
-        }
+            name: department,
+          },
+        },
       };
     }
 
@@ -120,8 +120,8 @@ export class StudentManagementService {
         ...where.classGroup,
         program: {
           ...where.classGroup?.program,
-          program_name: program
-        }
+          program_name: program,
+        },
       };
     }
 

@@ -34,22 +34,28 @@ export class BookingRepository {
     });
   }
 
-  async findCancelledAppointmentForSlotAndStudent(slotId: number, studentId: number) {
+  async findCancelledAppointmentForSlotAndStudent(
+    slotId: number,
+    studentId: number,
+  ) {
     return this.prisma.appointment.findFirst({
       where: {
         slot_id: slotId,
         student_id: studentId,
-        status: 'canceled'
+        status: 'canceled',
       },
     });
   }
 
-  async findActiveAppointmentForSlotAndStudent(slotId: number, studentId: number) {
+  async findActiveAppointmentForSlotAndStudent(
+    slotId: number,
+    studentId: number,
+  ) {
     return this.prisma.appointment.findFirst({
       where: {
         slot_id: slotId,
         student_id: studentId,
-        status: { in: ['pending', 'confirmed'] }
+        status: { in: ['pending', 'confirmed'] },
       },
     });
   }
@@ -60,7 +66,7 @@ export class BookingRepository {
         slot_id: slotId,
         student_id: studentId,
       },
-      orderBy: { created_at: 'desc' } // Get the most recent one
+      orderBy: { created_at: 'desc' }, // Get the most recent one
     });
   }
 
@@ -68,7 +74,14 @@ export class BookingRepository {
     return this.prisma.appointment.create({ data });
   }
 
-  async reactivateCancelledAppointment(appointmentId: number, status: string, meetingType: any, meetingPurpose?: string, bookerAccountId?: number, bookerRole?: string) {
+  async reactivateCancelledAppointment(
+    appointmentId: number,
+    status: string,
+    meetingType: any,
+    meetingPurpose?: string,
+    bookerAccountId?: number,
+    bookerRole?: string,
+  ) {
     const updateData: any = {
       status,
       meeting_type: meetingType,
@@ -108,21 +121,23 @@ export class BookingRepository {
         contact_email: data.contact_email ?? null,
         relationship_to_student: data.relationship_to_student ?? null,
       },
-    })
+    });
   }
 
   async getAppointmentsForAccount(accountId: number) {
     // Check what roles this account has
     const studentRecord = await this.prisma.student.findUnique({
-      where: { account_id: accountId }
+      where: { account_id: accountId },
     });
     const parentRecord = await this.prisma.parent.findUnique({
-      where: { account_id: accountId }
+      where: { account_id: accountId },
     });
 
     // If account has both roles, this is an error - should not happen
     if (studentRecord && parentRecord) {
-      throw new Error(`Account ${accountId} has both student and parent records - this should not happen`);
+      throw new Error(
+        `Account ${accountId} has both student and parent records - this should not happen`,
+      );
     }
 
     // Return appointments that this account booked (booker_account_id)
@@ -135,20 +150,23 @@ export class BookingRepository {
         instructor: {
           include: {
             account: {
-              include: { profile: true }
-            }
-          }
+              include: { profile: true },
+            },
+          },
         },
         student: {
           include: {
             account: {
-              include: { profile: true }
+              include: { profile: true },
             },
             classGroup: {
               include: {
                 adviserAssignments: {
                   where: {
-                    OR: [{ ended_date: null }, { ended_date: { gt: new Date() } }],
+                    OR: [
+                      { ended_date: null },
+                      { ended_date: { gt: new Date() } },
+                    ],
                   },
                   orderBy: [{ ended_date: 'asc' }, { assigned_date: 'desc' }],
                   take: 1,
@@ -156,15 +174,15 @@ export class BookingRepository {
                     instructor: {
                       include: {
                         account: {
-                          include: { profile: true }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
+                          include: { profile: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         appointmentContact: true,
       },
@@ -180,9 +198,9 @@ export class BookingRepository {
       where: { appointment_id: appointmentId },
       include: {
         slot: { include: { date: { include: { week: true } } } },
-        instructor: true,
-        student: true,
-        booker: true,
+        instructor: { include: { account: { include: { profile: true } } } },
+        student: { include: { account: { include: { profile: true } } } },
+        booker: { include: { profile: true } },
         appointmentContact: true,
       },
     });
@@ -191,12 +209,16 @@ export class BookingRepository {
   async cancelAppointment(appointmentId: number, reason?: string) {
     return this.prisma.appointment.update({
       where: { appointment_id: appointmentId },
-      data: { status: 'cancelled', cancel_reason: reason ?? null, canceled_at: new Date() },
+      data: {
+        status: 'cancelled',
+        cancel_reason: reason ?? null,
+        canceled_at: new Date(),
+      },
     });
   }
 
   async getStudentByAccountId(accountId: number) {
-    const now = new Date()
+    const now = new Date();
     return this.prisma.student.findUnique({
       where: { account_id: accountId },
       include: {
@@ -240,11 +262,15 @@ export class BookingRepository {
   }
 
   async verifyParentStudentLink(parentId: number, studentId: number) {
-    return this.prisma.parentStudentLink.findUnique({ where: { parent_id_student_id: { parent_id: parentId, student_id: studentId } } });
+    return this.prisma.parentStudentLink.findUnique({
+      where: {
+        parent_id_student_id: { parent_id: parentId, student_id: studentId },
+      },
+    });
   }
 
   async getStudentsForParent(parentId: number) {
-    const now = new Date()
+    const now = new Date();
     return this.prisma.parentStudentLink.findMany({
       where: { parent_id: parentId },
       include: {
@@ -277,7 +303,7 @@ export class BookingRepository {
           },
         },
       },
-    })
+    });
   }
 
   // Get instructor by account_id
@@ -304,7 +330,11 @@ export class BookingRepository {
   }
 
   // Get appointments for instructor (as adviser)
-  async getAppointmentsForInstructor(instructorId: number, status?: string[], bookerRole?: string) {
+  async getAppointmentsForInstructor(
+    instructorId: number,
+    status?: string[],
+    bookerRole?: string,
+  ) {
     const where: any = { instructor_id: instructorId };
     if (status && status.length > 0) {
       where.status = { in: status };
@@ -317,8 +347,8 @@ export class BookingRepository {
     return this.prisma.appointment.findMany({
       where,
       include: {
-        slot: { 
-          include: { 
+        slot: {
+          include: {
             date: {
               include: {
                 week: {
@@ -334,18 +364,18 @@ export class BookingRepository {
             },
           },
         },
-        instructor: { 
-          include: { 
+        instructor: {
+          include: {
             account: { include: { profile: true } },
           },
         },
-        student: { 
-          include: { 
+        student: {
+          include: {
             account: { include: { profile: true } },
             classGroup: true,
           },
         },
-        booker: { 
+        booker: {
           include: { profile: true },
         },
         appointmentContact: true,
@@ -355,7 +385,10 @@ export class BookingRepository {
   }
 
   // Accept appointment
-  async acceptAppointment(appointmentId: number, data?: { meetingLink?: string; meetingLocation?: string; notes?: string }) {
+  async acceptAppointment(
+    appointmentId: number,
+    data?: { meetingLink?: string; meetingLocation?: string; notes?: string },
+  ) {
     return this.prisma.appointment.update({
       where: { appointment_id: appointmentId },
       data: {
@@ -367,11 +400,21 @@ export class BookingRepository {
   }
 
   // Reject appointment
-  async rejectAppointment(appointmentId: number, data: { reason: string; suggestedDate?: string; suggestedTime?: string; notes?: string }) {
+  async rejectAppointment(
+    appointmentId: number,
+    data: {
+      reason: string;
+      suggestedDate?: string;
+      suggestedTime?: string;
+      notes?: string;
+    },
+  ) {
     const rejectNotes = [
       data.reason,
       data.notes,
-      data.suggestedDate && data.suggestedTime ? `Suggested: ${data.suggestedDate} at ${data.suggestedTime}` : null,
+      data.suggestedDate && data.suggestedTime
+        ? `Suggested: ${data.suggestedDate} at ${data.suggestedTime}`
+        : null,
     ]
       .filter(Boolean)
       .join(' | ');

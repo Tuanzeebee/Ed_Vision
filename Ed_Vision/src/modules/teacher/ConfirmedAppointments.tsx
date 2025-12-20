@@ -9,6 +9,7 @@ import {
 import type { AppointmentRequest } from './types/appointment.types';
 import { Button } from '@/components/ui/teacher/teacher_button';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmedAppointmentsProps {
   requests: AppointmentRequest[];
@@ -24,13 +25,13 @@ const getAuthToken = () => {
 };
 
 // Helper function to format date/time from slot data
-const formatDateTime = (slot: any) => {
-  if (!slot) return { date: 'Unknown', time: 'Unknown' };
+const formatDateTime = (slot: any, t: any) => {
+  if (!slot) return { date: t('appointments.management.unknown'), time: t('appointments.management.unknown') };
   
-  const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayName = slot.dayOfWeek !== undefined && slot.dayOfWeek !== null 
-    ? dayNames[slot.dayOfWeek] 
-    : 'Unknown';
+    ? t(`scheduleManagement.detail.${dayKeys[slot.dayOfWeek]}`)
+    : t('appointments.management.unknown');
   
   const formatTime = (timeStr: any) => {
     if (!timeStr) return '';
@@ -66,6 +67,7 @@ export default function ConfirmedAppointments({
   setRequests: propSetRequests,
   showToast,
 }: ConfirmedAppointmentsProps) {
+  const { t } = useTranslation('teacher');
   const { filterOptions, loading: loadingFilters } = useFilterOptions()
   const [requests, setRequests] = useState<AppointmentRequest[]>(propRequests);
   const [loading, setLoading] = useState(false);
@@ -107,7 +109,7 @@ export default function ConfirmedAppointments({
       
       // Transform API data to match AppointmentRequest type
       const transformedRequests: AppointmentRequest[] = (Array.isArray(data) ? data : []).map((appt: any) => {
-        const { date, time } = formatDateTime(appt.slot);
+        const { date, time } = formatDateTime(appt.slot, t);
         
         // Format requestedAt date properly
         const formatRequestedAt = (dateStr: any) => {

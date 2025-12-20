@@ -254,7 +254,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         // ignore malformed payloads
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.warn('Không thể lấy danh sách lịch hẹn hiện có', error)
     }
   }
@@ -317,7 +317,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
       await navigator.clipboard.writeText(text)
       pushSuccessToast('Đã sao chép liên kết tham gia.')
     } catch (e) {
-      // eslint-disable-next-line no-console
+       
       console.error('Copy failed', e)
       pushErrorToast('Không thể sao chép liên kết, vui lòng thử lại.')
     }

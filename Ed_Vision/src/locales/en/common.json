@@ -78,7 +78,11 @@
       "predict": "Predict",
       "plan": "Plan",
       "communicate": "Communicate",
-      "survey": "Survey"
+      "survey": "Survey",
+      "dashboard": "Dashboard",
+      "bookAppointment": "Book Appointment",
+      "studentDetails": "Student Details",
+      "chat": "Chat"
     },
     "features": {
       "gradeForecasting": {

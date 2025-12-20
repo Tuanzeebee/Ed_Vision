@@ -28,29 +28,21 @@ export default function StudentDetails({}: Props) {
       {/* Header */}
       <Header isParentMode={true} />
       <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-24">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center">
-              <button 
-                className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
-                onClick={() => navigate('/parent/dashboard')}
-              >
-                <img src={iconArrowLeft} alt={t('parent:studentDetails.back')} className="w-5 h-5" />
-              </button>
-              <div className="bg-blue-600 rounded-lg p-2 ml-3">
-                <img src={iconUser} alt="Student" className="w-6 h-6" />
-              </div>
-              <div className="ml-3">
-                <h1 className="text-xl font-semibold text-gray-900">{t('parent:studentDetails.title')}</h1>
-                <p className="text-sm text-gray-500">{t('parent:studentDetails.subtitle')}</p>
-              </div>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center py-4">
+            <div className="bg-blue-600 rounded-lg p-2">
+              <img src={iconUser} alt="Student" className="w-6 h-6" />
+            </div>
+            <div className="ml-3">
+              <h1 className="text-xl font-semibold text-gray-900">{t('parent:studentDetails.title')}</h1>
+              <p className="text-sm text-gray-500">{t('parent:studentDetails.subtitle')}</p>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="p-6">
-        <div className="flex gap-6 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex gap-6">
           {/* Left Column */}
         <div className="flex-1 space-y-6">
           {/* Student Profile Card */}

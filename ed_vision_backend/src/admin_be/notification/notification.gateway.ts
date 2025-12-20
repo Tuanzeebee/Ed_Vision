@@ -29,7 +29,9 @@ interface ConnectedClient {
   },
   namespace: '/notifications',
 })
-export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -55,9 +57,12 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   /**
    * Broadcast thông báo đến các client theo target
    */
-  broadcastNotification(notification: NotificationPayload, recipientAccountIds: number[]) {
+  broadcastNotification(
+    notification: NotificationPayload,
+    recipientAccountIds: number[],
+  ) {
     let sentCount = 0;
-    
+
     this.connectedClients.forEach((client) => {
       // Kiểm tra xem client có trong danh sách người nhận không
       if (recipientAccountIds.includes(client.accountId)) {
@@ -74,7 +79,7 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
    */
   broadcastToRole(notification: NotificationPayload, targetRoles: string[]) {
     let sentCount = 0;
-    
+
     this.connectedClients.forEach((client) => {
       if (targetRoles.includes('all') || targetRoles.includes(client.role)) {
         client.socket.emit('newNotification', notification);

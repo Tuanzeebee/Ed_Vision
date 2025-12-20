@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   SubmitSurveyDto,
@@ -17,11 +22,11 @@ export class StudentSurveyService {
    */
   private mapQuestionType(dbType: string): string {
     const typeMap: Record<string, string> = {
-      'scale': 'likert',
-      'yes_no': 'yes-no',
-      'multiple_choice': 'multiple-choice',
-      'free_text': 'free-text',
-      'rating': 'slider',
+      scale: 'likert',
+      yes_no: 'yes-no',
+      multiple_choice: 'multiple-choice',
+      free_text: 'free-text',
+      rating: 'slider',
     };
     return typeMap[dbType] || dbType;
   }
@@ -32,7 +37,7 @@ export class StudentSurveyService {
   private calculateEstimatedTime(questionCount: number): string {
     const minutesPerQuestion = 0.75; // Trung bình 45 giây/câu
     const totalMinutes = Math.ceil(questionCount * minutesPerQuestion);
-    
+
     if (totalMinutes <= 5) return '3-5 phút';
     if (totalMinutes <= 10) return '5-10 phút';
     if (totalMinutes <= 15) return '10-15 phút';
@@ -77,7 +82,9 @@ export class StudentSurveyService {
           description: survey.description || undefined,
           type: 'input',
           totalQuestions: survey.surveyQuestions.length,
-          estimatedTime: this.calculateEstimatedTime(survey.surveyQuestions.length),
+          estimatedTime: this.calculateEstimatedTime(
+            survey.surveyQuestions.length,
+          ),
           startDate: survey.start_date || undefined,
           endDate: survey.end_date || undefined,
           isCompleted: false,
@@ -96,16 +103,10 @@ export class StudentSurveyService {
         type: 'periodic',
         is_active: true,
         target_role: 'student',
-        OR: [
-          { start_date: null },
-          { start_date: { lte: now } },
-        ],
+        OR: [{ start_date: null }, { start_date: { lte: now } }],
         AND: [
           {
-            OR: [
-              { end_date: null },
-              { end_date: { gte: now } },
-            ],
+            OR: [{ end_date: null }, { end_date: { gte: now } }],
           },
         ],
       },
@@ -131,7 +132,9 @@ export class StudentSurveyService {
           description: survey.description || undefined,
           type: 'periodic',
           totalQuestions: survey.surveyQuestions.length,
-          estimatedTime: this.calculateEstimatedTime(survey.surveyQuestions.length),
+          estimatedTime: this.calculateEstimatedTime(
+            survey.surveyQuestions.length,
+          ),
           startDate: survey.start_date || undefined,
           endDate: survey.end_date || undefined,
           isCompleted: false,
@@ -149,7 +152,10 @@ export class StudentSurveyService {
   /**
    * Lấy chi tiết survey với tất cả questions
    */
-  async getSurveyDetail(surveyId: number, accountId: number): Promise<SurveyDetailDto> {
+  async getSurveyDetail(
+    surveyId: number,
+    accountId: number,
+  ): Promise<SurveyDetailDto> {
     const survey = await this.prisma.survey.findUnique({
       where: { survey_id: surveyId },
       include: {
@@ -189,23 +195,27 @@ export class StudentSurveyService {
     }
 
     // Map questions
-    const questions: SurveyQuestionDto[] = survey.surveyQuestions.map((link) => {
-      const q = link.question;
-      return {
-        questionId: q.question_id,
-        questionText: q.question_text,
-        questionType: this.mapQuestionType(q.question_type || 'multiple_choice'),
-        category: q.category || undefined,
-        isRequired: q.question_type !== 'free_text', // free_text không bắt buộc
-        minValue: q.min_value ?? undefined,
-        maxValue: q.max_value ?? undefined,
-        options: q.surveyOptions.map((opt) => ({
-          optionId: opt.option_id,
-          text: opt.option_text || '',
-          value: opt.option_value || 0,
-        })),
-      };
-    });
+    const questions: SurveyQuestionDto[] = survey.surveyQuestions.map(
+      (link) => {
+        const q = link.question;
+        return {
+          questionId: q.question_id,
+          questionText: q.question_text,
+          questionType: this.mapQuestionType(
+            q.question_type || 'multiple_choice',
+          ),
+          category: q.category || undefined,
+          isRequired: q.question_type !== 'free_text', // free_text không bắt buộc
+          minValue: q.min_value ?? undefined,
+          maxValue: q.max_value ?? undefined,
+          options: q.surveyOptions.map((opt) => ({
+            optionId: opt.option_id,
+            text: opt.option_text || '',
+            value: opt.option_value || 0,
+          })),
+        };
+      },
+    );
 
     return {
       surveyId: survey.survey_id,
@@ -222,7 +232,10 @@ export class StudentSurveyService {
    * Submit survey response
    * Chỉ ghi nhận khi hoàn thành TẤT CẢ câu hỏi bắt buộc
    */
-  async submitSurvey(accountId: number, submitDto: SubmitSurveyDto): Promise<{ success: boolean; message: string }> {
+  async submitSurvey(
+    accountId: number,
+    submitDto: SubmitSurveyDto,
+  ): Promise<{ success: boolean; message: string }> {
     const { surveyId, answers } = submitDto;
 
     // Lấy survey và questions
@@ -258,8 +271,9 @@ export class StudentSurveyService {
     }
 
     // Validate: phải trả lời tất cả câu hỏi (bao gồm cả free_text)
-    const requiredQuestionIds = survey.surveyQuestions
-      .map((link) => link.question.question_id);
+    const requiredQuestionIds = survey.surveyQuestions.map(
+      (link) => link.question.question_id,
+    );
 
     // Use Set for answered IDs to handle multiple entries per question (multiple-choice)
     const answeredQuestionIdsSet = new Set<number>();
@@ -273,13 +287,20 @@ export class StudentSurveyService {
     });
 
     const missingRequired = requiredQuestionIds.filter(
-      (qId) => !answeredQuestionIdsSet.has(qId)
+      (qId) => !answeredQuestionIdsSet.has(qId),
     );
 
     if (missingRequired.length > 0) {
-      console.log('Missing required questions:', missingRequired, 'Answered:', [...answeredQuestionIdsSet], 'Required:', requiredQuestionIds);
+      console.log(
+        'Missing required questions:',
+        missingRequired,
+        'Answered:',
+        [...answeredQuestionIdsSet],
+        'Required:',
+        requiredQuestionIds,
+      );
       throw new BadRequestException(
-        `Bạn cần trả lời tất cả ${requiredQuestionIds.length} câu hỏi bắt buộc. Còn thiếu ${missingRequired.length} câu.`
+        `Bạn cần trả lời tất cả ${requiredQuestionIds.length} câu hỏi bắt buộc. Còn thiếu ${missingRequired.length} câu.`,
       );
     }
 
@@ -297,7 +318,10 @@ export class StudentSurveyService {
       // Create answers - only save valid option_id (positive integer), otherwise null
       const answerData = answers.map((answer) => {
         const optId = answer.optionId;
-        const validOptionId = (typeof optId === 'number' && optId > 0 && Number.isFinite(optId)) ? optId : null;
+        const validOptionId =
+          typeof optId === 'number' && optId > 0 && Number.isFinite(optId)
+            ? optId
+            : null;
         return {
           response_id: response.response_id,
           question_id: answer.questionId,
@@ -327,10 +351,7 @@ export class StudentSurveyService {
       where: {
         is_active: true,
         target_role: 'student',
-        OR: [
-          { start_date: null },
-          { start_date: { lte: now } },
-        ],
+        OR: [{ start_date: null }, { start_date: { lte: now } }],
       },
       include: {
         surveyQuestions: true,
@@ -348,7 +369,9 @@ export class StudentSurveyService {
 
     return surveys.map((survey) => {
       const isCompleted = survey.surveyResponses.length > 0;
-      const completedAt = isCompleted ? survey.surveyResponses[0].submitted_at : undefined;
+      const completedAt = isCompleted
+        ? survey.surveyResponses[0].submitted_at
+        : undefined;
 
       return {
         surveyId: survey.survey_id,
@@ -356,7 +379,9 @@ export class StudentSurveyService {
         description: survey.description || undefined,
         type: survey.type || 'input',
         totalQuestions: survey.surveyQuestions.length,
-        estimatedTime: this.calculateEstimatedTime(survey.surveyQuestions.length),
+        estimatedTime: this.calculateEstimatedTime(
+          survey.surveyQuestions.length,
+        ),
         startDate: survey.start_date || undefined,
         endDate: survey.end_date || undefined,
         isCompleted,
@@ -393,7 +418,9 @@ export class StudentSurveyService {
         description: response.survey!.description || undefined,
         type: response.survey!.type || 'input',
         totalQuestions: response.survey!.surveyQuestions.length,
-        estimatedTime: this.calculateEstimatedTime(response.survey!.surveyQuestions.length),
+        estimatedTime: this.calculateEstimatedTime(
+          response.survey!.surveyQuestions.length,
+        ),
         startDate: response.survey!.start_date || undefined,
         endDate: response.survey!.end_date || undefined,
         isCompleted: true,
