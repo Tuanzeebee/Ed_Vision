@@ -1,0 +1,23 @@
+{
+  "title": "Grade Prediction Workflow",
+  "subtitle": "Upload → Survey → Predict → SHAP Analysis",
+  "historyButton": "Upload history",
+  "historyTitle": "Upload History",
+  "loadingHistory": "Loading history...",
+  "noHistory": "No upload history",
+  "noHistoryDesc": "Upload your first file to get started",
+  "step1Title": "Step 1: Upload Academic Data",
+  "step1Subtitle": "Accept CSV or Excel files (.csv, .xlsx)",
+  "dragDropFile": "Drag and drop file here or click to select",
+  "supportedFormats": "Supports: CSV, XLSX (max 10MB)",
+  "processNote": "Processing note:",
+  "processNoteDesc": "Always validate file, standardize data, and save to database.",
+  "behaviorInitNote": "After successful upload, four behavior fields will be initialized with average values for each student.",
+  "uploadButton": "Upload File",
+  "uploading": "Processing file and saving to database...",
+  "uploadSuccessTitle": "Upload successful!",
+  "uploadSuccessDesc": "Processed and saved {{count}} records to database. Behavior fields are in NULL state.",
+  "errorTitle": "Error",
+  "step2Title": "Step 2: Student List and Behavior Status",
+  "step2Subtitle": "Display uploaded data and survey status"
+}

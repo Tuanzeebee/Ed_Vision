@@ -1,0 +1,23 @@
+{
+  "title": "Workflow Dự đoán Điểm",
+  "subtitle": "Upload → Khảo sát → Dự đoán → Phân tích SHAP",
+  "historyButton": "Lịch sử upload",
+  "historyTitle": "Lịch sử upload file",
+  "loadingHistory": "Đang tải lịch sử...",
+  "noHistory": "Chưa có lịch sử upload",
+  "noHistoryDesc": "Upload file đầu tiên để bắt đầu",
+  "step1Title": "Bước 1: Upload dữ liệu điểm học phần",
+  "step1Subtitle": "Chấp nhận file CSV hoặc Excel (.csv, .xlsx)",
+  "dragDropFile": "Kéo thả file vào đây hoặc nhấn để chọn",
+  "supportedFormats": "Hỗ trợ: CSV, XLSX (tối đa 10MB)",
+  "processNote": "Quy trình xử lý:",
+  "processNoteDesc": "Hệ thống sẽ xử lý file, chuẩn hóa dữ liệu, và lưu vào database.",
+  "behaviorInitNote": "Sau khi upload thành công, bốn trường behavior sẽ được khởi tạo giá trị trung bình cho từng sinh viên.",
+  "uploadButton": "Upload File",
+  "uploading": "Đang xử lý file và lưu vào database...",
+  "uploadSuccessTitle": "Upload thành công!",
+  "uploadSuccessDesc": "Đã xử lý và lưu {{count}} bản ghi vào database. Các trường behavior đang ở trạng thái NULL.",
+  "errorTitle": "Lỗi",
+  "step2Title": "Bước 2: Danh sách sinh viên và trạng thái behavior",
+  "step2Subtitle": "Hiển thị dữ liệu đã upload và trạng thái khảo sát"
+}

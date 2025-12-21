@@ -7,14 +7,17 @@ import { DatabaseLogger } from './database.logger';
   imports: [
     MongooseModule.forRootAsync({
       useFactory: () => {
-        const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/ed_vision';
-        
+        const uri =
+          process.env.MONGO_URI || 'mongodb://localhost:27017/ed_vision';
+
         return {
           uri,
-          auth: process.env.MONGO_USER ? {
-            username: process.env.MONGO_USER,
-            password: process.env.MONGO_PASS,
-          } : undefined,
+          auth: process.env.MONGO_USER
+            ? {
+                username: process.env.MONGO_USER,
+                password: process.env.MONGO_PASS,
+              }
+            : undefined,
         };
       },
     }),

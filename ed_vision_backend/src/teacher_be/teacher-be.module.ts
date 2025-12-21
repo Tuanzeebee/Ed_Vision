@@ -11,6 +11,7 @@ import { PredictionModule } from './prediction/prediction.module';
 import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
 import { AcademicDataModule } from './academic-data/academic-data.module';
 import { GradeStructureModule } from './grade-structure/grade-structure.module';
+import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
 
 @Module({
     imports: [
@@ -26,6 +27,7 @@ import { GradeStructureModule } from './grade-structure/grade-structure.module';
         MeetingLogsModule,
         AcademicDataModule,
         GradeStructureModule,
+        GpaMetricsModule,
     ],
     exports: [
         DashboardModule,
@@ -40,6 +42,7 @@ import { GradeStructureModule } from './grade-structure/grade-structure.module';
         MeetingLogsModule,
         AcademicDataModule,
         GradeStructureModule,
+        GpaMetricsModule,
     ],
 })
-export class TeacherBeModule { }
+export class TeacherBeModule {}

@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from 'react-i18next';
 
 type UserData = {
   name: string;
@@ -30,6 +31,8 @@ export default function UserProfile({
   onEditPersonalInfo,
   onEditAvatar,
 }: Props) {
+  const { t } = useTranslation('profile');
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
@@ -66,7 +69,7 @@ export default function UserProfile({
                 {userData.name}
               </h1>
               {userData.age && (
-                <p className="text-sm text-gray-500 mt-1">{userData.age} tuổi</p>
+                <p className="text-sm text-gray-500 mt-1">{userData.age} {t('common.yearsOld', { defaultValue: 'years old' })}</p>
               )}
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-2">
                 <i className="fas fa-circle text-green-500 mr-1.5" style={{ fontSize: "6px" }}></i>
@@ -83,21 +86,21 @@ export default function UserProfile({
           {/* Personal Information Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Thông tin cá nhân</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('personalInfo.title')}</h3>
               {onEditPersonalInfo && (
                 <button
                   onClick={onEditPersonalInfo}
                   className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   <i className="fas fa-pencil-alt mr-2"></i>
-                  Chỉnh sửa
+                  {t('common.edit')}
                 </button>
               )}
             </div>
             <div className="px-4 sm:px-6 py-5 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Họ và tên
+                  {t('personalInfo.fullName')}
                 </label>
                 <p className="text-sm font-medium text-gray-900">
                   {userData.personalInfo.fullName}
@@ -107,7 +110,7 @@ export default function UserProfile({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
-                    Ngày sinh
+                    {t('personalInfo.dateOfBirth')}
                   </label>
                   <p className="text-sm font-medium text-gray-900">
                     {userData.personalInfo.dateOfBirth}
@@ -115,7 +118,7 @@ export default function UserProfile({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
-                    Giới tính
+                    {t('personalInfo.gender')}
                   </label>
                   <p className="text-sm font-medium text-gray-900">
                     {userData.personalInfo.gender}
@@ -125,7 +128,7 @@ export default function UserProfile({
 
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Quốc tịch
+                  {t('personalInfo.nationality', { defaultValue: 'Nationality' })}
                 </label>
                 <p className="text-sm font-medium text-gray-900">
                   {userData.personalInfo.nationality}
@@ -133,14 +136,14 @@ export default function UserProfile({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Địa chỉ</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{t('personalInfo.address')}</label>
                 <p className="text-sm font-medium text-gray-900">
                   {userData.personalInfo.address}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{t('personalInfo.email')}</label>
                 <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                   <i className="fas fa-envelope text-gray-400 flex-shrink-0"></i>
                   <span className="break-all">{userData.personalInfo.email}</span>
@@ -149,7 +152,7 @@ export default function UserProfile({
 
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Số điện thoại
+                  {t('personalInfo.phone')}
                 </label>
                 <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                   <i className="fas fa-phone text-gray-400 flex-shrink-0"></i>

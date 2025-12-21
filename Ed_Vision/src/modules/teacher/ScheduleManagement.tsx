@@ -145,7 +145,7 @@ export default function ScheduleManagement({
         setAvailableDates(data);
         // Don't show success toast on every load to avoid spam
       }
-    } catch (err) {
+    } catch (_err) {
       // Nếu API lỗi, tạo template tuần rỗng để UI vẫn hiển thị được
       const weekDates = getDatesInWeek(week);
       const emptyWeekData: AvailableDate[] = weekDates.map((date: Date) => ({
@@ -230,7 +230,7 @@ export default function ScheduleManagement({
 
   const handleAddDate = async (date: string) => {
     if (!date) {
-      showToast(t('scheduleManagement.pleaseSelectDate'), 'error');
+      showToast(t('scheduleManagement.management.pleaseSelectDate'), 'error');
       return;
     }
 
@@ -240,14 +240,14 @@ export default function ScheduleManagement({
     todayDate.setHours(0, 0, 0, 0);
 
     if (selectedDateObj < todayDate) {
-      showToast(t('scheduleManagement.cannotAddPastDate'), 'error');
+      showToast(t('scheduleManagement.management.cannotAddPastDate'), 'error');
       return;
     }
 
     // Check if date already exists and is enabled
     const existingDate = availableDates.find((d) => d.date === date);
     if (existingDate?.isAvailable) {
-      showToast(t('scheduleManagement.dateAlreadyEnabled'), 'warning');
+      showToast(t('scheduleManagement.management.dateAlreadyEnabled'), 'warning');
       return;
     }
 
@@ -264,9 +264,9 @@ export default function ScheduleManagement({
         d.date === date ? { ...d, isAvailable: true } : d
       );
       setAvailableDates(updatedDates);
-      showToast(t('scheduleManagement.dateEnabledSuccess'), 'success');
-    } catch (err) {
-      showToast(t('scheduleManagement.dateEnableError'), 'error');
+      showToast(t('scheduleManagement.management.dateEnabledSuccess'), 'success');
+    } catch (_err) {
+      showToast(t('scheduleManagement.management.dateEnableError'), 'error');
     }
   };
 
@@ -289,7 +289,7 @@ export default function ScheduleManagement({
     todayDate.setHours(0, 0, 0, 0);
 
     if (selectedDateObj < todayDate) {
-      showToast(t('scheduleManagement.cannotDeletePastDate'), 'error');
+      showToast(t('scheduleManagement.management.cannotDeletePastDate'), 'error');
       return;
     }
 
@@ -309,9 +309,9 @@ export default function ScheduleManagement({
 
       // Show appropriate message
       if (hasTimeSlots) {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
       } else {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)}!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)}!`, 'success');
       }
     } catch (err) {
       console.error('Error removing date:', err);
@@ -359,12 +359,12 @@ export default function ScheduleManagement({
 
       // Show appropriate message
       if (hasTimeSlots) {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
       } else {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date)}!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)}!`, 'success');
       }
-    } catch (err) {
-      console.error('Error confirming delete date:', err);
+    } catch (_err) {
+      console.error('Error confirming delete date:', _err);
       // Refresh data to ensure UI shows correct state
       await loadCurrentWeekData();
       showToast('Không thể tắt ngày. Vui lòng thử lại!', 'error');
@@ -376,7 +376,7 @@ export default function ScheduleManagement({
   const cancelDeleteDate = () => {
     setDeleteConfirmOpen(false);
     setDateToDelete(null);
-    showToast(t('scheduleManagement.cancelledDelete'), 'info');
+    showToast(t('scheduleManagement.management.cancelledDelete'), 'info');
   };
 
   const handleOpenTimeModal = (date: string) => {
@@ -401,7 +401,7 @@ export default function ScheduleManagement({
 
   const handleAddTimeSlot = async () => {
     if (!currentDateForTime || !startTime || !endTime) {
-      showToast(t('scheduleManagement.enterAllTimes'), 'error');
+      showToast(t('scheduleManagement.management.enterAllTimes'), 'error');
       return;
     }
 
@@ -417,7 +417,7 @@ export default function ScheduleManagement({
     }
 
     if (startTime >= endTime) {
-      showToast(t('scheduleManagement.startBeforeEnd'), 'error');
+      showToast(t('scheduleManagement.management.startBeforeEnd'), 'error');
       return;
     }
 
@@ -428,7 +428,7 @@ export default function ScheduleManagement({
     }
 
     if (isTimeSlotOverlapping(startTime, endTime, availableDates[dateIndex].timeSlots)) {
-      showToast(t('scheduleManagement.slotOverlap'), 'warning');
+      showToast(t('scheduleManagement.management.slotOverlap'), 'warning');
       return;
     }
 
@@ -446,7 +446,7 @@ export default function ScheduleManagement({
       
       setTimeModalOpen(false);
       showToast(`Đã thêm khung giờ ${startTime} - ${endTime} thành công!`, 'success');
-    } catch (err) {
+    } catch (_err) {
       showToast('Không thể thêm khung giờ. Vui lòng thử lại!', 'error');
     }
   };
@@ -471,7 +471,7 @@ export default function ScheduleManagement({
         await loadCurrentWeekData();
         
         showToast(`Đã xóa khung giờ ${removedSlot.start} - ${removedSlot.end}!`, 'warning');
-      } catch (err) {
+      } catch (_err) {
         showToast('Không thể xóa khung giờ. Vui lòng thử lại!', 'error');
       }
     }
@@ -569,9 +569,9 @@ export default function ScheduleManagement({
             <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-6 rounded-xl shadow-lg mb-6">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">{t('scheduleManagement.title')}</h1>
+                  <h1 className="text-3xl font-bold mb-2">{t('scheduleManagement.management.title')}</h1>
                   <p className="text-teal-100">
-                    {t('scheduleManagement.subtitle')}
+                    {t('scheduleManagement.management.subtitle')}
                   </p>
                 </div>
                 
@@ -582,8 +582,8 @@ export default function ScheduleManagement({
                       <div className="flex items-center gap-2">
                         <GraduationCap className="w-4 h-4 text-white" />
                         <div>
-                          <div className="text-xs text-white/80">Lớp cố vấn</div>
-                          <div className="text-sm font-semibold text-white">{adviserClasses.length} lớp</div>
+                          <div className="text-xs text-white/80">{t('scheduleManagement.management.adviserClasses')}</div>
+                          <div className="text-sm font-semibold text-white">{adviserClasses.length} {t('scheduleManagement.management.classes')}</div>
                         </div>
                       </div>
                     </div>
@@ -592,7 +592,7 @@ export default function ScheduleManagement({
                   {/* Hiển thị thông tin tuần hiện tại */}
                   <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2.5 border border-white/20 hover:bg-white/20 transition-colors">
                     <div>
-                      <div className="text-xs text-white/80">{t('scheduleManagement.currentWeek')}</div>
+                      <div className="text-xs text-white/80">{t('scheduleManagement.management.currentWeek')}</div>
                       <div className="text-sm font-semibold text-white">{currentWeek?.displayText || 'Loading...'}</div>
                     </div>
                   </div>
@@ -605,7 +605,7 @@ export default function ScheduleManagement({
                     }}
                     disabled={loading}
                     className="ml-auto px-4 py-2.5 bg-white dark:bg-white text-teal-600 dark:text-teal-600 rounded-lg text-sm font-semibold transition-all border border-white/30 dark:border-gray-300 hover:bg-white dark:hover:bg-white hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 group"
-                    title={t('scheduleManagement.reload', 'Tải lại dữ liệu')}
+                    title={t('scheduleManagement.management.reload', 'Tải lại dữ liệu')}
                   >
                     <svg 
                       className={`w-4 h-4 transition-transform ${loading ? 'animate-spin' : 'group-hover:rotate-180 duration-300'}`}
@@ -615,7 +615,7 @@ export default function ScheduleManagement({
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span>{loading ? t('scheduleManagement.loading', 'Đang tải...') : t('scheduleManagement.reload', 'Tải lại')}</span>
+                    <span>{loading ? t('scheduleManagement.management.loading', 'Đang tải...') : t('scheduleManagement.management.reload', 'Tải lại')}</span>
                   </button>
                 </div>
               </div>
@@ -631,11 +631,11 @@ export default function ScheduleManagement({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-sm font-semibold text-blue-900">{t('scheduleManagement.hintTitle')}</h4>
+                    <h4 className="text-sm font-semibold text-blue-900">{t('scheduleManagement.management.hintTitle')}</h4>
                   </div>
                   <p className="text-sm text-blue-800">
-                    {t('scheduleManagement.hintStep1')} <span className="inline-flex items-center justify-center p-2 bg-blue-100 rounded mx-1"><Clock className="w-4 h-4 text-blue-600" /></span> 
-                    {t('scheduleManagement.hintStep2')} <span className="font-semibold bg-blue-200 px-1 py-0.5 rounded">link online</span>, <span className="font-semibold bg-blue-200 px-1 py-0.5 rounded">{t('scheduleManagement.meetingLocation', 'địa điểm gặp mặt')}</span> {t('scheduleManagement.and', 'và')} <span className="font-semibold bg-blue-200 px-1 py-0.5 rounded">{t('scheduleManagement.exportReport', 'xuất báo cáo cuộc họp')}</span>.
+                    {t('scheduleManagement.management.hintStep1')} <span className="inline-flex items-center justify-center p-2 bg-blue-100 rounded mx-1"><Clock className="w-4 h-4 text-blue-600" /></span> 
+                    {t('scheduleManagement.management.hintStep2')} <span className="font-semibold bg-blue-200 px-1 py-0.5 rounded">link online</span>, <span className="font-semibold bg-blue-200 px-1 py-0.5 rounded">{t('scheduleManagement.management.meetingLocation', 'địa điểm gặp mặt')}</span> {t('scheduleManagement.management.and', 'và')} <span className="font-semibold bg-blue-200 px-1 py-0.5 rounded">{t('scheduleManagement.management.exportReport', 'xuất báo cáo cuộc họp')}</span>.
                   </p>
                 </div>
                 <button
@@ -649,35 +649,35 @@ export default function ScheduleManagement({
 
         {/* Statistics */}
         <div className="bg-blue-50 dark:bg-blue-50 border-blue-200 dark:border-blue-200 border rounded-lg p-4 mb-6">
-          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-900 mb-4">{t('scheduleManagement.stats')}</h3>
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-900 mb-4">{t('scheduleManagement.management.stats')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center bg-white dark:bg-white rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-200">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-600 mb-1">{totalDates}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.totalDates')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.management.totalDates')}</div>
             </div>
             <div className="text-center bg-white dark:bg-white rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-200">
               <div className="text-2xl font-bold text-green-600 dark:text-green-600 mb-1">{totalTimeSlots}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.totalSlots')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.management.totalSlots')}</div>
             </div>
             <div className="text-center bg-white dark:bg-white rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-200">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-600 mb-1">{totalHours.toFixed(1)}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.totalHours')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.management.totalHours')}</div>
             </div>
             <div className="text-center bg-white dark:bg-white rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-200">
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-600 mb-1">{upcomingDates}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.upcomingDates')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-600">{t('scheduleManagement.management.upcomingDates')}</div>
             </div>
           </div>
         </div>
 
         {/* Add Date Form */}
         <div className="bg-white dark:bg-white rounded-lg shadow-sm border border-gray-200 dark:border-gray-300 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-900 mb-4">{t('scheduleManagement.addDate')}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-900 mb-4">{t('scheduleManagement.management.addDate')}</h2>
 
           {/* Quick Date Selection - Week View */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-700 mb-3">
-              {t('scheduleManagement.quickSelectWeek', 'Chọn nhanh ngày trong tuần hiện tại')} ({currentWeek?.displayText || 'Loading...'})
+              {t('scheduleManagement.management.quickSelectWeek', 'Chọn nhanh ngày trong tuần hiện tại')} ({currentWeek?.displayText || 'Loading...'})
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
               {availableDates.map((dateEntry, index) => {
@@ -700,19 +700,19 @@ export default function ScheduleManagement({
                     key={index}
                     onClick={() => {
                       if (isPast && !isEnabled) {
-                        showToast(t('scheduleManagement.cannotAddPastDate'), 'error');
+                        showToast(t('scheduleManagement.management.cannotAddPastDate'), 'error');
                         return;
                       }
 
                       if (isPast && isEnabled) {
-                        showToast(t('scheduleManagement.cannotDeletePastDate'), 'error');
+                        showToast(t('scheduleManagement.management.cannotDeletePastDate'), 'error');
                         return;
                       }
                       
                       if (isEnabled) {
                         // Validate dateIndex before removing
                         if (dateIndex === -1) {
-                          showToast(t('scheduleManagement.dateNotFound', 'Lỗi: Không tìm thấy ngày để xóa!'), 'error');
+                          showToast(t('scheduleManagement.management.dateNotFound', 'Lỗi: Không tìm thấy ngày để xóa!'), 'error');
                           return;
                         }
                         // Toggle: Disable date if currently enabled
@@ -738,12 +738,12 @@ export default function ScheduleManagement({
                       }`}
                     title={
                       isPast && isEnabled 
-                        ? t('scheduleManagement.cannotDeletePast', 'Không thể xóa ngày đã qua')
+                        ? t('scheduleManagement.management.cannotDeletePast', 'Không thể xóa ngày đã qua')
                         : isPast && !isEnabled
-                          ? t('scheduleManagement.pastDate', 'Ngày đã qua')
+                          ? t('scheduleManagement.management.pastDate', 'Ngày đã qua')
                           : isEnabled
-                            ? t('scheduleManagement.clickToDisable', 'Click để tắt ngày này')
-                            : t('scheduleManagement.clickToEnable', 'Click để bật ngày này')
+                            ? t('scheduleManagement.management.clickToDisable', 'Click để tắt ngày này')
+                            : t('scheduleManagement.management.clickToEnable', 'Click để bật ngày này')
                     }
                   >
                     <div className="text-xs font-medium text-gray-600 dark:text-gray-600 mb-1">
@@ -758,22 +758,22 @@ export default function ScheduleManagement({
                     {isEnabled && (
                       <div className="text-xs text-green-600 dark:text-green-600 mt-1 font-medium flex items-center justify-center gap-1">
                         <Check className="w-3 h-3" /> 
-                        {hasTimeSlots ? `${dateEntry?.timeSlots?.length || 0} slot` : t('scheduleManagement.enabled', 'Đã bật')}
+                        {hasTimeSlots ? `${dateEntry?.timeSlots?.length || 0} slot` : t('scheduleManagement.management.enabled', 'Đã bật')}
                       </div>
                     )}
                     {!isEnabled && !isPast && (
                       <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        {t('scheduleManagement.notEnabled', 'Chưa bật')}
+                        {t('scheduleManagement.management.notEnabled', 'Chưa bật')}
                       </div>
                     )}
                     {isPast && !isEnabled && (
                       <div className="text-xs text-gray-400 dark:text-gray-400 mt-1">
-                        {t('scheduleManagement.past', 'Đã qua')}
+                        {t('scheduleManagement.management.past', 'Đã qua')}
                       </div>
                     )}
                     {isToday && (
                       <div className="text-xs text-blue-600 dark:text-blue-600 mt-1 font-medium">
-                        {t('scheduleManagement.today', 'Hôm nay')}
+                        {t('scheduleManagement.management.today', 'Hôm nay')}
                       </div>
                     )}
                   </button>
@@ -790,9 +790,9 @@ export default function ScheduleManagement({
             <div className="bg-gray-100 dark:bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalendarPlus className="h-8 w-8 text-gray-400 dark:text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-900 mb-2">{t('scheduleManagement.noDatesEnabled', 'Chưa có ngày rảnh nào được bật')}</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-900 mb-2">{t('scheduleManagement.management.noDatesEnabled', 'Chưa có ngày rảnh nào được bật')}</h3>
             <p className="text-gray-600 dark:text-gray-600">
-              {t('scheduleManagement.enableFirstDate', 'Hãy bật ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn')}
+              {t('scheduleManagement.management.enableFirstDate', 'Hãy bật ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn')}
             </p>
           </div>
         ) : (
@@ -821,12 +821,12 @@ export default function ScheduleManagement({
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900">
-                          {formatDate(dateObj.date)}
+                          {formatDate(dateObj.date, t)}
                         </h3>
                         <p className="text-sm text-gray-600 dark:text-gray-600">
                           <Clock className="inline w-4 h-4 mr-1" />
-                          {dateObj.timeSlots.length} {t('scheduleManagement.timeSlots', 'khung giờ')}
-                          {!isUpcoming && ' • ' + t('scheduleManagement.past', 'Đã qua')}
+                          {dateObj.timeSlots.length} {t('scheduleManagement.management.timeSlots', 'khung giờ')}
+                          {!isUpcoming && ' • ' + t('scheduleManagement.management.past', 'Đã qua')}
                         </p>
                       </div>
                     </div>
@@ -839,17 +839,17 @@ export default function ScheduleManagement({
                             ? 'bg-green-600 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700'
                             : 'bg-gray-300 dark:bg-gray-300 text-gray-500 dark:text-gray-500 cursor-not-allowed opacity-60'
                         }`}
-                        title={!isUpcoming ? t('scheduleManagement.cannotAddToPast', 'Không thể thêm giờ vào ngày đã qua') : t('scheduleManagement.addNewTimeSlot', 'Thêm khung giờ mới')}
+                        title={!isUpcoming ? t('scheduleManagement.management.cannotAddToPast', 'Không thể thêm giờ vào ngày đã qua') : t('scheduleManagement.management.addNewTimeSlot', 'Thêm khung giờ mới')}
                       >
                         <Plus className="w-4 h-4" />
-                        {t('scheduleManagement.addTime', 'Thêm giờ')}
+                        {t('scheduleManagement.management.addTime', 'Thêm giờ')}
                       </button>
                       <button
                         onClick={() => {
                           // Tìm index thực tế trong availableDates array
                           const actualIndex = availableDates.findIndex(d => d.date === dateObj.date);
                           if (actualIndex === -1) {
-                            showToast(t('scheduleManagement.dateNotFound', 'Lỗi: Không tìm thấy ngày để xóa!'), 'error');
+                            showToast(t('scheduleManagement.management.dateNotFound', 'Lỗi: Không tìm thấy ngày để xóa!'), 'error');
                             return;
                           }
                           
@@ -863,7 +863,7 @@ export default function ScheduleManagement({
                             ? 'bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700'
                             : 'bg-gray-300 dark:bg-gray-300 text-gray-500 dark:text-gray-500 cursor-not-allowed opacity-60'
                         }`}
-                        title={!isUpcoming ? t('scheduleManagement.cannotDeletePast', 'Không thể xóa ngày đã qua') : t('scheduleManagement.disableThisDate', 'Tắt ngày rảnh này')}
+                        title={!isUpcoming ? t('scheduleManagement.management.cannotDeletePast', 'Không thể xóa ngày đã qua') : t('scheduleManagement.management.disableThisDate', 'Tắt ngày rảnh này')}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -914,13 +914,13 @@ export default function ScheduleManagement({
                               // Tìm index thực tế trong availableDates array
                               const actualIndex = availableDates.findIndex(d => d.date === dateObj.date);
                               if (actualIndex === -1) {
-                                showToast(t('scheduleManagement.slotNotFound', 'Lỗi: Không tìm thấy ngày để xóa khung giờ!'), 'error');
+                                showToast(t('scheduleManagement.management.slotNotFound', 'Lỗi: Không tìm thấy ngày để xóa khung giờ!'), 'error');
                                 return;
                               }
                               handleRemoveTimeSlot(actualIndex, slotIndex);
                             }}
                             className="ml-3 text-blue-600 dark:text-blue-600 hover:text-red-600 dark:hover:text-red-600 transition-colors"
-                            title={t('scheduleManagement.deleteSlot', 'Xóa khung giờ')}
+                            title={t('scheduleManagement.management.deleteSlot', 'Xóa khung giờ')}
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -929,8 +929,8 @@ export default function ScheduleManagement({
                     </div>
                   ) : (
                     <div className="text-gray-500 dark:text-gray-500 text-center py-6 border-2 border-dashed border-gray-200 dark:border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-100">
-                      <p className="font-medium">{t('scheduleManagement.noSlots', 'Chưa có khung giờ nào')}</p>
-                      <p className="text-sm">{t('scheduleManagement.addSlotsPrompt', 'Hãy thêm khung giờ rảnh cho ngày này!')}</p>
+                      <p className="font-medium">{t('scheduleManagement.management.noSlots', 'Chưa có khung giờ nào')}</p>
+                      <p className="text-sm">{t('scheduleManagement.management.addSlotsPrompt', 'Hãy thêm khung giờ rảnh cho ngày này!')}</p>
                     </div>
                   )}
                 </div>
@@ -955,7 +955,7 @@ export default function ScheduleManagement({
           <div className="bg-white dark:bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-900">{t('scheduleManagement.addTimeSlotModal')}</h3>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-900">{t('scheduleManagement.management.addTimeSlotModal')}</h3>
                 <button
                   onClick={() => setTimeModalOpen(false)}
                   className="text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-700"
@@ -965,13 +965,13 @@ export default function ScheduleManagement({
               </div>
 
               <p className="text-sm text-gray-600 dark:text-gray-700 mb-4">
-                {currentDateForTime && formatDate(currentDateForTime)}
+                {currentDateForTime && formatDate(currentDateForTime, t)}
               </p>
 
               {/* Quick Time Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-800 mb-3">
-                  {t('scheduleManagement.quickSelectTime', 'Chọn nhanh khung giờ phổ biến')}
+                  {t('scheduleManagement.management.quickSelectTime', 'Chọn nhanh khung giờ phổ biến')}
                 </label>
                 <div className="grid grid-cols-2 gap-2 mb-4">
                   {[
@@ -1000,12 +1000,12 @@ export default function ScheduleManagement({
               {/* Custom Time */}
               <div className="border-t border-gray-200 dark:border-gray-300 pt-4 mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-800 mb-3">
-                  {t('scheduleManagement.orCustomTime', 'Hoặc tùy chỉnh thời gian')}
+                  {t('scheduleManagement.management.orCustomTime', 'Hoặc tùy chỉnh thời gian')}
                 </label>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label htmlFor="startTime" className="block text-xs font-medium text-gray-600 dark:text-gray-700 mb-2">
-                      {t('scheduleManagement.startTime')}
+                      {t('scheduleManagement.management.startTime')}
                     </label>
                     <input
                       type="time"
@@ -1017,7 +1017,7 @@ export default function ScheduleManagement({
                   </div>
                   <div>
                     <label htmlFor="endTime" className="block text-xs font-medium text-gray-600 dark:text-gray-700 mb-2">
-                      {t('scheduleManagement.endTime')}
+                      {t('scheduleManagement.management.endTime')}
                     </label>
                     <input
                       type="time"
@@ -1033,12 +1033,12 @@ export default function ScheduleManagement({
               {/* Meeting Type and Capacity */}
               <div className="border-t border-gray-200 dark:border-gray-300 pt-4 mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-800 mb-3">
-                  {t('scheduleManagement.additionalInfo', 'Thông tin bổ sung')}
+                  {t('scheduleManagement.management.additionalInfo', 'Thông tin bổ sung')}
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="meetingType" className="block text-xs font-medium text-gray-600 dark:text-gray-700 mb-2">
-                      {t('scheduleManagement.meetingTypeLabel', 'Loại cuộc họp')}
+                      {t('scheduleManagement.management.meetingTypeLabel', 'Loại cuộc họp')}
                     </label>
                     <select
                       id="meetingType"
@@ -1046,14 +1046,14 @@ export default function ScheduleManagement({
                       onChange={(e) => setMeetingType(e.target.value as 'online' | 'offline' | 'both')}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-white text-gray-900 dark:text-gray-900"
                     >
-                      <option value="both">🌍 {t('scheduleManagement.both')} ({t('scheduleManagement.bothLabel', 'Cả hai')})</option>
-                      <option value="online">🌐 {t('scheduleManagement.online', 'Online')}</option>
-                      <option value="offline">🏫 {t('scheduleManagement.offline', 'Offline')} ({t('scheduleManagement.offlineLabel', 'Trực tiếp')})</option>
+                      <option value="both">🌍 {t('scheduleManagement.management.both')} ({t('scheduleManagement.management.bothLabel', 'Cả hai')})</option>
+                      <option value="online">🌐 {t('scheduleManagement.management.online', 'Online')}</option>
+                      <option value="offline">🏫 {t('scheduleManagement.management.offline', 'Offline')} ({t('scheduleManagement.management.offlineLabel', 'Trực tiếp')})</option>
                     </select>
                   </div>
                   <div>
                     <label htmlFor="capacity" className="block text-xs font-medium text-gray-600 dark:text-gray-700 mb-2">
-                      {t('scheduleManagement.capacityLabel', 'Số lượng slot')}
+                      {t('scheduleManagement.management.capacityLabel', 'Số lượng slot')}
                     </label>
                     <input
                       type="number"
@@ -1068,7 +1068,7 @@ export default function ScheduleManagement({
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-600 mt-2 flex items-center gap-1">
                   <Info className="w-3 h-3" />
-                  {t('scheduleManagement.capacityHelp', 'Số lượng slot là số phụ huynh tối đa có thể đặt lịch trong khung giờ này')}
+                  {t('scheduleManagement.management.capacityHelp', 'Số lượng slot là số phụ huynh tối đa có thể đặt lịch trong khung giờ này')}
                 </p>
               </div>
 
@@ -1077,14 +1077,14 @@ export default function ScheduleManagement({
                   onClick={() => setTimeModalOpen(false)}
                   className="flex-1 bg-gray-100 dark:bg-gray-100 hover:bg-gray-200 dark:hover:bg-gray-200 text-gray-700 dark:text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                  {t('scheduleManagement.cancel')}
+                  {t('scheduleManagement.management.cancel')}
                 </button>
                 <button
                   onClick={handleAddTimeSlot}
                   className="flex-1 bg-green-600 dark:bg-green-600 hover:bg-green-700 dark:hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  {t('scheduleManagement.addTime', 'Thêm giờ')}
+                  {t('scheduleManagement.management.addTime', 'Thêm giờ')}
                 </button>
               </div>
             </div>
@@ -1106,14 +1106,14 @@ export default function ScheduleManagement({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-900">
-                    {t('scheduleManagement.deleteConfirm')}
+                    {t('scheduleManagement.management.deleteConfirm')}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-700 mt-0.5">
-                    {formatDate(dateToDelete.date.date)}
+                    {formatDate(dateToDelete.date.date, t)}
                   </p>
                   {dateToDelete.date.timeSlots.length > 0 && (
                     <p className="text-xs text-red-600 dark:text-red-600 mt-1 font-medium">
-                      {t('scheduleManagement.willDeleteSlots', 'Sẽ xóa {count} khung giờ', { count: dateToDelete.date.timeSlots.length })}
+                      {t('scheduleManagement.management.willDeleteSlots', 'Sẽ xóa {count} khung giờ', { count: dateToDelete.date.timeSlots.length })}
                     </p>
                   )}
                 </div>
@@ -1131,7 +1131,7 @@ export default function ScheduleManagement({
                   onClick={cancelDeleteDate}
                   className="flex-1 bg-gray-100 dark:bg-gray-100 hover:bg-gray-200 dark:hover:bg-gray-200 text-gray-700 dark:text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
-                  {t('scheduleManagement.cancel')}
+                  {t('scheduleManagement.management.cancel')}
                 </button>
                 <button
                   onClick={confirmDeleteDate}
@@ -1140,7 +1140,7 @@ export default function ScheduleManagement({
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  {t('scheduleManagement.delete', 'Xóa')}
+                  {t('scheduleManagement.management.delete', 'Xóa')}
                 </button>
               </div>
             </div>

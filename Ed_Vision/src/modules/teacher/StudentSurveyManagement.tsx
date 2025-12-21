@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Button } from "@/components/ui/teacher/teacher_button"
 import { Input } from "@/components/ui/teacher/teacher_input"
 import TeacherLayout from "./components/TeacherLayout"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import { useSurveys } from "../../hooks/useSurveys"
 import { useToast } from "../../lib/useToast"
 import { useFilterOptions } from "../../hooks/useFilterOptions"
@@ -151,6 +152,7 @@ const StudentSurveyManagement = () => {
 
     // Toast notifications
     const toast = useToast()
+    const { t } = useTranslation('teacher')
 
     // API Hook - Replace mock data
     const {
@@ -216,55 +218,58 @@ const StudentSurveyManagement = () => {
         } else {
             fetchSurveys({ status: 'closed' }) // Get only closed
         }
-    }, [activeTab])
+    }, [activeTab, fetchDashboard, fetchSurveys])
 
     // Load available questions from database on mount
-    useEffect(() => {
-        const loadAvailableQuestions = async () => {
-            setLoadingQuestions(true)
-            try {
-                const questions = await apiGetAvailableQuestions()
-                setAvailableQuestions(questions || [])
-            } catch (error) {
-                console.error('Error loading questions:', error)
-            } finally {
-                setLoadingQuestions(false)
-            }
+    const loadAvailableQuestions = useCallback(async () => {
+        setLoadingQuestions(true)
+        try {
+            const questions = await apiGetAvailableQuestions()
+            setAvailableQuestions(questions || [])
+        } catch (error) {
+            console.error('Error loading questions:', error)
+        } finally {
+            setLoadingQuestions(false)
         }
+    }, [apiGetAvailableQuestions])
+
+    useEffect(() => {
         loadAvailableQuestions()
-    }, [])
+    }, [loadAvailableQuestions])
 
     // Load history statistics when on history tab
-    useEffect(() => {
-        const loadHistoryStats = async () => {
-            if (activeTab === 'history') {
-                try {
-                    const stats = await getHistoryStatistics()
-                    if (stats) {
-                        setHistoryStats(stats)
-                    }
-                } catch (error) {
-                    console.error('Error loading history statistics:', error)
+    const loadHistoryStats = useCallback(async () => {
+        if (activeTab === 'history') {
+            try {
+                const stats = await getHistoryStatistics()
+                if (stats) {
+                    setHistoryStats(stats)
                 }
+            } catch (error) {
+                console.error('Error loading history statistics:', error)
             }
         }
+    }, [activeTab, getHistoryStatistics])
+
+    useEffect(() => {
         loadHistoryStats()
-    }, [activeTab])
+    }, [loadHistoryStats])
 
     // Load target student count when filters change or on create survey tab
-    useEffect(() => {
-        const loadStudentCount = async () => {
-            if (activeTab === 'create') {
-                try {
-                    const count = await getTargetStudentCount(targetFaculty, targetClass)
-                    setTargetStudentCount(count)
-                } catch (error) {
-                    console.error('Error loading student count:', error)
-                }
+    const loadStudentCount = useCallback(async () => {
+        if (activeTab === 'create') {
+            try {
+                const count = await getTargetStudentCount(targetFaculty, targetClass)
+                setTargetStudentCount(count)
+            } catch (error) {
+                console.error('Error loading student count:', error)
             }
         }
+    }, [activeTab, targetFaculty, targetClass, getTargetStudentCount])
+
+    useEffect(() => {
         loadStudentCount()
-    }, [activeTab, targetFaculty, targetClass])
+    }, [loadStudentCount])
 
     // Helper function to map backend status to frontend status
     const mapStatusToFrontend = (backendStatus: string): "draft" | "active" | "completed" | "expired" => {
@@ -296,7 +301,7 @@ const StudentSurveyManagement = () => {
             totalStudents: 150,
             completedResponses: s.totalResponses || 0,
             avgCompletion: Math.round(s.responseRate || 0),
-            faculty: "Khoa Công nghệ thông tin",
+            faculty: t('surveyManagement.faculty') || "Faculty of Information Technology",
             className: "CNTT-K19A",
             description: s.description,
             reminders: 0,
@@ -318,7 +323,7 @@ const StudentSurveyManagement = () => {
         totalStudents: 145,
         completedResponses: s.totalResponses || 0,
         avgCompletion: 100,
-        faculty: "Khoa Công nghệ thông tin",
+            faculty: t('surveyManagement.faculty') || "Faculty of Information Technology",
         className: "CNTT-K19A",
         description: s.description,
         reminders: 3,
@@ -427,7 +432,7 @@ const StudentSurveyManagement = () => {
             }
         } catch (error) {
             console.error('Error loading survey details:', error)
-            toast.error('Không thể tải chi tiết khảo sát')
+            toast.error(t('surveyManagement.loadSurveyDetailFailed'))
         }
     }
 
@@ -437,27 +442,28 @@ const StudentSurveyManagement = () => {
             const incompleteStudents = await getIncompleteStudents(survey.id)
             
             if (!incompleteStudents || incompleteStudents.length === 0) {
-                toast.info('Tất cả sinh viên đã hoàn thành khảo sát')
+                toast.info(t('surveyManagement.allStudentsCompleted'))
                 return
             }
             
             setSelectedIncompleteStudents(incompleteStudents)
             setShowIncompleteModal(true)
             setBulkReminderMessage(
-                `Thông báo quan trọng: Khảo sát "${survey.title}" sẽ hết hạn vào ${survey.dueDate}. ` +
-                `Vui lòng hoàn thành khảo sát để giúp giảng viên nắm bắt tình hình học tập và hỗ trợ bạn tốt hơn. ` +
-                `Truy cập hệ thống học tập để thực hiện khảo sát.`
+                t('surveyManagement.reminderNotification', { 
+                    title: survey.title, 
+                    dueDate: survey.dueDate 
+                })
             )
         } catch (error) {
             console.error('Error loading incomplete students:', error)
-            toast.error('Không thể tải danh sách sinh viên chưa hoàn thành')
+            toast.error(t('surveyManagement.loadIncompleteStudentsFailed'))
         }
     }
 
     const sendBulkReminder = () => {
         if (selectedIncompleteStudents.length > 0 && bulkReminderMessage.trim()) {
             // Bulk reminder API integration point
-            toast.success(`Đã gửi nhắc nhở đến ${selectedIncompleteStudents.length} sinh viên`)
+            toast.success(t('surveyManagement.reminderSentToStudents', { count: selectedIncompleteStudents.length }))
             setShowIncompleteModal(false)
             setSelectedIncompleteStudents([])
             setBulkReminderMessage("")
@@ -466,9 +472,9 @@ const StudentSurveyManagement = () => {
 
     const getTypeText = (type: string) => {
         switch (type) {
-            case "beginning": return "Đầu kỳ"
-            case "midterm": return "Giữa kỳ"
-            case "final": return "Cuối kỳ"
+            case "beginning": return t('surveyManagement.beginning')
+            case "midterm": return t('surveyManagement.midterm')
+            case "final": return t('surveyManagement.final')
             default: return type
         }
     }
@@ -559,8 +565,10 @@ const StudentSurveyManagement = () => {
         const survey = mockActiveSurveys.find(s => s.id === surveyId)
         if (survey) {
             setReminderMessage(
-                `Nhắc nhở: Bạn chưa hoàn thành khảo sát "${survey.title}". ` +
-                `Hạn chót: ${survey.dueDate}. Vui lòng hoàn thành khảo sát để giúp giảng viên nắm bắt tình hình học tập của bạn.`
+                t('surveyManagement.reminderDefault', { 
+                    title: survey.title, 
+                    dueDate: survey.dueDate 
+                })
             )
         }
     }
@@ -568,7 +576,7 @@ const StudentSurveyManagement = () => {
     const confirmSendReminder = () => {
         if (reminderSurveyId && reminderMessage) {
             // Reminder notification API integration point
-            toast.success("Đã gửi nhắc nhở")
+            toast.success(t('surveyManagement.reminderSent'))
             setShowReminderDialog(false)
             setReminderSurveyId(null)
             setReminderMessage("")
@@ -587,22 +595,22 @@ const StudentSurveyManagement = () => {
             setEditingSurveyId(surveyId)
             setActiveTab("create")
             // Survey edit mode - questions loaded from API
-            toast.info("Chế độ chỉnh sửa")
+            toast.info(t('surveyManagement.editMode'))
         }
     }
 
     const handleCreateSurvey = async () => {
         // Validate required fields
         if (!surveyTitle.trim()) {
-            toast.warning("Chưa nhập tiêu đề")
+            toast.warning(t('surveyManagement.titleRequired'))
             return
         }
         if (!surveyDueDate) {
-            toast.warning("Chưa chọn hạn hoàn thành")
+            toast.warning(t('surveyManagement.dueDateRequired'))
             return
         }
         if (questions.length === 0) {
-            toast.warning("Chưa có câu hỏi nào")
+            toast.warning(t('surveyManagement.noQuestionsAdded'))
             return
         }
 
@@ -612,7 +620,7 @@ const StudentSurveyManagement = () => {
         
         for (const q of questions) {
             if (!q.question || !q.question.trim()) {
-                toast.error(`Câu hỏi ${questions.indexOf(q) + 1} chưa có nội dung`)
+                toast.error(t('surveyManagement.questionEmpty', { index: questions.indexOf(q) + 1 }))
                 return
             }
             
@@ -632,15 +640,14 @@ const StudentSurveyManagement = () => {
                 normalize(q.question) === duplicates[0]
             )
             toast.error(
-                `Phát hiện câu hỏi trùng lặp: "${firstDuplicate?.question}". ` +
-                `Vui lòng xóa hoặc chỉnh sửa các câu hỏi trùng lặp trước khi tạo khảo sát.`
+                t('surveyManagement.duplicateQuestionDesc', { question: firstDuplicate?.question })
             )
             return
         }
 
         if (targetFaculty === "all" && targetClass === "all") {
             const confirm = window.confirm(
-                "Bạn đang tạo khảo sát cho TẤT CẢ sinh viên. Bạn có chắc chắn muốn tiếp tục?"
+                t('surveyManagement.confirmAllStudents')
             )
             if (!confirm) return
         }
@@ -690,7 +697,7 @@ const StudentSurveyManagement = () => {
             fetchSurveys({ status: 'active' })
         } catch (error: any) {
             console.error('Error creating survey:', error)
-            const errorMessage = error.response?.data?.message || error.message || "Không thể tạo khảo sát. Vui lòng thử lại!"
+            const errorMessage = error.response?.data?.message || error.message || t('surveyManagement.createFailed')
             
             // Show detailed error message
             toast.error(errorMessage)
@@ -727,18 +734,18 @@ const StudentSurveyManagement = () => {
             setSelectedSemester('all')
             setSelectedSurveyType('all')
             setSearchTerm('')
-            toast.info('Đã xóa bộ lọc')
+            toast.info(t('surveyManagement.filtersCleared'))
         }
 
         return (
             <Card className="mb-6">
                 <CardContent className="pt-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Bộ lọc</h3>
+                        <h3 className="text-lg font-semibold">{t('surveyManagement.filters')}</h3>
                         {activeFilterCount > 0 && (
                             <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                                    {activeFilterCount} bộ lọc đang áp dụng
+                                    {activeFilterCount} {t('surveyManagement.filtersActive')}
                                 </Badge>
                                 <Button
                                     variant="ghost"
@@ -747,21 +754,21 @@ const StudentSurveyManagement = () => {
                                     className="text-sm"
                                 >
                                     <X className="w-4 h-4 mr-1" />
-                                    Xóa bộ lọc
+                                    {t('surveyManagement.clearFilters')}
                                 </Button>
                             </div>
                         )}
                     </div>
                     <div className="flex flex-wrap gap-4">
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-sm font-medium mb-2 block">Khoa</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.faculty')}</label>
                             <select
                                 value={selectedFaculty}
                                 onChange={(e) => setSelectedFaculty(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
                                 disabled={loadingFilters}
                             >
-                                <option value="all">Tất cả khoa</option>
+                                <option value="all">{t('surveyManagement.allFaculties')}</option>
                                 {filterOptions.faculties.map((faculty, idx) => (
                                     <option key={idx} value={faculty}>{faculty}</option>
                                 ))}
@@ -769,14 +776,14 @@ const StudentSurveyManagement = () => {
                         </div>
 
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-sm font-medium mb-2 block">Lớp</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.class')}</label>
                             <select
                                 value={selectedClass}
                                 onChange={(e) => setSelectedClass(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
                                 disabled={loadingFilters}
                             >
-                                <option value="all">Tất cả lớp</option>
+                                <option value="all">{t('surveyManagement.allClasses')}</option>
                                 {filterOptions.classes.map((cls, idx) => (
                                     <option key={idx} value={cls}>{cls}</option>
                                 ))}
@@ -784,14 +791,14 @@ const StudentSurveyManagement = () => {
                         </div>
 
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-sm font-medium mb-2 block">Năm học</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.academicYear')}</label>
                             <select
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
                                 disabled={loadingFilters}
                             >
-                                <option value="all">Tất cả năm học</option>
+                                <option value="all">{t('surveyManagement.allYears')}</option>
                                 {filterOptions.academicYears.map((year, idx) => (
                                     <option key={idx} value={year}>{year}</option>
                                 ))}
@@ -799,29 +806,29 @@ const StudentSurveyManagement = () => {
                         </div>
 
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-sm font-medium mb-2 block">Học kỳ</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.semester')}</label>
                             <select
                                 value={selectedSemester}
                                 onChange={(e) => setSelectedSemester(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg"
                                 disabled={loadingFilters}
                             >
-                                <option value="all">Tất cả học kỳ</option>
+                                <option value="all">{t('surveyManagement.allSemesters')}</option>
                                 {filterOptions.semesters.map((semester, idx) => (
-                                    <option key={idx} value={semester.toLowerCase()}>{`Học kỳ ${semester.replace('HK', '')}`}</option>
+                                    <option key={idx} value={semester.toLowerCase()}>{`${t('common.semester')} ${semester.replace('HK', '')}`}</option>
                                 ))}
                             </select>
                         </div>                        <div className="flex-1 min-w-[200px]">
-                            <label className="text-sm font-medium mb-2 block">Loại khảo sát</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.surveyType')}</label>
                             <select
                                 value={selectedSurveyType}
                                 onChange={(e) => setSelectedSurveyType(e.target.value as any)}
                                 className="w-full px-3 py-2 border rounded-lg"
                             >
-                                <option value="all">Tất cả</option>
-                                <option value="beginning">Đầu kỳ</option>
-                                <option value="midterm">Giữa kỳ</option>
-                                <option value="final">Cuối kỳ</option>
+                                <option value="all">{t('surveyManagement.allTypes')}</option>
+                                <option value="beginning">{t('surveyManagement.beginning')}</option>
+                                <option value="midterm">{t('surveyManagement.midterm')}</option>
+                                <option value="final">{t('surveyManagement.final')}</option>
                             </select>
                         </div>
                     </div>
@@ -830,7 +837,7 @@ const StudentSurveyManagement = () => {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <Input
-                                placeholder="Tìm kiếm theo tên khảo sát, sinh viên..."
+                                placeholder={t('surveyManagement.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                                 className="pl-10"
@@ -849,9 +856,9 @@ const StudentSurveyManagement = () => {
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                             <Badge className={getStatusColor(survey.status)}>
-                                {survey.status === "active" ? "Đang diễn ra" :
-                                    survey.status === "completed" || survey.status === "closed" ? "Đã hoàn thành" :
-                                        survey.status === "draft" ? "Nháp" : "Hết hạn"}
+                                {survey.status === "active" ? t('surveyManagement.statusActive') :
+                                    survey.status === "completed" || survey.status === "closed" ? t('surveyManagement.statusCompleted') :
+                                        survey.status === "draft" ? t('surveyManagement.statusDraft') : t('surveyManagement.statusExpired')}
                             </Badge>
                             {survey.type && <Badge variant="outline">{getTypeText(survey.type)}</Badge>}
                         </div>
@@ -866,7 +873,7 @@ const StudentSurveyManagement = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => viewSurveyDetails(survey)}
-                                title="Xem chi tiết"
+                                title={t('surveyManagement.viewDetails')}
                             >
                                 <Eye className="w-4 h-4" />
                             </Button>
@@ -874,13 +881,13 @@ const StudentSurveyManagement = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => viewIncompleteStudents(survey)}
-                                title="Sinh viên chưa làm"
+                                title={t('surveyManagement.incompleteStudentsTitle')}
                             >
                                 <Users className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={async () => {
                                 const success = await apiExportResponses(survey.id)
-                                if (success) toast.success("Đã tải xuống")
+                                if (success) toast.success(t('surveyManagement.downloaded'))
                             }}>
                                 <Download className="w-4 h-4" />
                             </Button>
@@ -889,21 +896,16 @@ const StudentSurveyManagement = () => {
                                 size="sm"
                                 onClick={async () => {
                                     // Enhanced confirmation for active surveys
-                                    let confirmMessage = `Bạn có chắc muốn xóa khảo sát "${survey.title}"?`
-                                    
+                                    let confirmMessage = t('surveyManagement.confirmDelete', { title: survey.title })
+
                                     if (survey.status === 'active') {
-                                        confirmMessage = `⚠️ CẢNH BÁO: Khảo sát "${survey.title}" đang HOẠT ĐỘNG!\n\n` +
-                                            `Việc xóa sẽ:\n` +
-                                            `- Khiến sinh viên không thể truy cập khảo sát này nữa\n` +
-                                            `- Xóa vĩnh viễn nếu chưa có phản hồi nào\n\n` +
-                                            `Bạn có chắc chắn muốn XÓA không?\n` +
-                                            `(Gợi ý: Nên ĐÓNG khảo sát thay vì xóa)`
+                                        confirmMessage = t('surveyManagement.deleteActiveWarning', { title: survey.title })
                                     }
-                                    
+
                                     if (confirm(confirmMessage)) {
                                         const success = await apiDeleteSurvey(survey.id)
                                         if (success) {
-                                            toast.success("Đã xóa khảo sát")
+                                            toast.success(t('surveyManagement.deleted'))
                                             // Refetch based on current tab
                                             await Promise.all([
                                                 fetchSurveys({ status: activeTab === 'active' ? 'all' : 'closed' }),
@@ -912,7 +914,7 @@ const StudentSurveyManagement = () => {
                                         }
                                     }
                                 }}
-                                title="Xóa khảo sát"
+                                title={t('surveyManagement.deleteQuestion')}
                                 className={survey.status === 'active' ? 'hover:bg-red-50' : ''}
                             >
                                 <X className="w-4 h-4 text-red-600" />
@@ -998,42 +1000,42 @@ const StudentSurveyManagement = () => {
         return (
             <div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <Card>
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Tổng số khảo sát</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.totalSurveys')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold">{activeSurveysCount}</span>
+                                <span className="text-3xl font-bold text-blue-900">{activeSurveysCount}</span>
                                 <ClipboardList className="w-8 h-8 text-blue-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Đang diễn ra</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.statusActive')}</p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Tổng phản hồi</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.totalResponses')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold">{totalResponses}</span>
+                                <span className="text-3xl font-bold text-green-900">{totalResponses}</span>
                                 <Users className="w-8 h-8 text-green-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Phản hồi đã nhận</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.studentResponses')}</p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Trung bình hoàn thành</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.avgResponseRate')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold">{avgResponseRate}%</span>
+                                <span className="text-3xl font-bold text-purple-900">{avgResponseRate}%</span>
                                 <BarChart3 className="w-8 h-8 text-purple-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Tỷ lệ hoàn thành</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.responseRate')}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -1044,12 +1046,12 @@ const StudentSurveyManagement = () => {
                             <ClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                             <p className="text-gray-600 mb-4">
                                 {mockActiveSurveys.length === 0
-                                    ? "Chưa có khảo sát nào đang hoạt động"
-                                    : "Không tìm thấy khảo sát phù hợp với bộ lọc"}
+                                    ? t('surveyManagement.noActiveSurveys')
+                                    : t('surveyManagement.noActiveSurveysDesc')}
                             </p>
                             {mockActiveSurveys.length === 0 && (
                                 <Button onClick={() => setActiveTab("create")}>
-                                    Tạo khảo sát mới
+                                    {t('surveyManagement.createNewSurvey')}
                                 </Button>
                             )}
                         </div>
@@ -1073,55 +1075,55 @@ const StudentSurveyManagement = () => {
         return (
             <div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                    <Card>
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Tổng khảo sát</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.totalSurveys')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold">{surveysToCount.length}</span>
+                                <span className="text-3xl font-bold text-green-900">{surveysToCount.length}</span>
                                 <CheckCircle2 className="w-8 h-8 text-green-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Đã hoàn thành</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.statusCompleted')}</p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Tổng sinh viên</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.totalResponses')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold">{totalCompletedResponses}</span>
+                                <span className="text-3xl font-bold text-blue-900">{totalCompletedResponses}</span>
                                 <Users className="w-8 h-8 text-blue-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Đã tham gia khảo sát</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.participatedInSurvey')}</p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Cải thiện</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.improving')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold text-green-600">{historyStats.improvingStudents}</span>
+                                <span className="text-3xl font-bold text-green-900">{historyStats.improvingStudents}</span>
                                 <TrendingUp className="w-8 h-8 text-green-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Đang tiến bộ</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.progressing')}</p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="bg-gradient-to-br from-red-50 to-red-100">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-gray-600">Cần hỗ trợ</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.needSupport')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between">
-                                <span className="text-3xl font-bold text-red-600">{historyStats.needSupportStudents}</span>
+                                <span className="text-3xl font-bold text-red-900">{historyStats.needSupportStudents}</span>
                                 <AlertTriangle className="w-8 h-8 text-red-600" />
                             </div>
-                            <p className="text-sm text-gray-500 mt-2">Mức độ cao</p>
+                            <p className="text-sm text-gray-600 mt-2">{t('surveyManagement.highPriority')}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -1132,8 +1134,8 @@ const StudentSurveyManagement = () => {
                             <ClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                             <p className="text-gray-600 mb-4">
                                 {mockCompletedSurveys.length === 0
-                                    ? "Chưa có khảo sát hoàn thành nào"
-                                    : "Không tìm thấy khảo sát phù hợp với bộ lọc"}
+                                    ? t('surveyManagement.noCompletedSurveys')
+                                    : t('surveyManagement.noSurveysMatchFilter')}
                             </p>
                         </div>
                     ) : (
@@ -1143,16 +1145,16 @@ const StudentSurveyManagement = () => {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Lịch sử khảo sát sinh viên</CardTitle>
+                        <CardTitle>{t('surveyManagement.studentSurveyHistory')}</CardTitle>
                         <CardDescription>
-                            Theo dõi chi tiết kết quả khảo sát và xu hướng phát triển của từng sinh viên
+                            {t('surveyManagement.studentSurveyHistoryDesc')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="text-center py-12 text-gray-500">
                             <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                            <p className="text-lg font-medium mb-2">Chưa có dữ liệu lịch sử khảo sát</p>
-                            <p className="text-sm">Dữ liệu sẽ được hiển thị sau khi sinh viên hoàn thành khảo sát</p>
+                            <p className="text-lg font-medium mb-2">{t('surveyManagement.noHistoryData')}</p>
+                            <p className="text-sm">{t('surveyManagement.noHistoryDataDesc')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -1163,52 +1165,52 @@ const StudentSurveyManagement = () => {
     const renderCreateSurvey = () => (
         <div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <Card>
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-gray-600">Câu hỏi đã tạo</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.questionsCreated')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-center justify-between">
-                            <span className="text-3xl font-bold">{questions.length}</span>
+                            <span className="text-3xl font-bold text-blue-900">{questions.length}</span>
                             <FileText className="w-8 h-8 text-blue-600" />
                         </div>
-                        <p className="text-sm text-gray-500 mt-2">
-                            {questions.length === 0 ? "Chưa có câu hỏi" : "câu hỏi"}
+                        <p className="text-sm text-gray-600 mt-2">
+                            {questions.length === 0 ? t('surveyManagement.noQuestionsYet') : t('surveyManagement.questionsLabel')}
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-gradient-to-br from-green-50 to-green-100">
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-gray-600">Đối tượng</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.target')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-center justify-between">
-                            <span className="text-3xl font-bold">
-                                {targetFaculty === "all" && targetClass === "all" ? "Tất cả" :
-                                    targetClass === "all" ? "1 khoa" : "1 lớp"}
+                            <span className="text-3xl font-bold text-green-900">
+                                {targetFaculty === "all" && targetClass === "all" ? t('surveyManagement.allTargets') :
+                                    targetClass === "all" ? t('surveyManagement.oneFaculty') : t('surveyManagement.oneClass')}
                             </span>
                             <Users className="w-8 h-8 text-green-600" />
                         </div>
-                        <p className="text-sm text-gray-500 mt-2">
-                            {targetStudentCount} sinh viên
+                        <p className="text-sm text-gray-600 mt-2">
+                            {targetStudentCount} {t('surveyManagement.studentsCount')}
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-gray-600">Trạng thái</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-700">{t('surveyManagement.surveyStatus')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-center justify-between">
-                            <span className="text-3xl font-bold">
-                                {editingSurveyId ? "Chỉnh sửa" : "Mới"}
+                            <span className="text-3xl font-bold text-purple-900">
+                                {editingSurveyId ? t('surveyManagement.editing') : t('surveyManagement.new')}
                             </span>
                             <ClipboardList className="w-8 h-8 text-purple-600" />
                         </div>
-                        <p className="text-sm text-gray-500 mt-2">
-                            {editingSurveyId ? "Đang cập nhật" : "Đang tạo"}
+                        <p className="text-sm text-gray-600 mt-2">
+                            {editingSurveyId ? t('surveyManagement.updating') : t('surveyManagement.creating')}
                         </p>
                     </CardContent>
                 </Card>
@@ -1220,8 +1222,8 @@ const StudentSurveyManagement = () => {
                         <div className="flex items-center gap-2 text-blue-700">
                             <AlertTriangle className="w-5 h-5" />
                             <div>
-                                <p className="font-medium">Đang chỉnh sửa khảo sát</p>
-                                <p className="text-sm">Các thay đổi sẽ được cập nhật vào khảo sát đang diễn ra</p>
+                                <p className="font-medium">{t('surveyManagement.editingSurvey')}</p>
+                                <p className="text-sm">{t('surveyManagement.editingWarning')}</p>
                             </div>
                             <Button
                                 variant="outline"
@@ -1229,7 +1231,7 @@ const StudentSurveyManagement = () => {
                                 className="ml-auto"
                                 onClick={resetSurveyForm}
                             >
-                                Hủy chỉnh sửa
+                                {t('surveyManagement.cancelEditing')}
                             </Button>
                         </div>
                     </CardContent>
@@ -1238,26 +1240,26 @@ const StudentSurveyManagement = () => {
 
             <Card className="mb-6">
                 <CardHeader>
-                    <CardTitle>Thông tin khảo sát</CardTitle>
-                    <CardDescription>Điền thông tin cơ bản cho bản khảo sát mới</CardDescription>
+                    <CardTitle>{t('surveyManagement.surveyInfo')}</CardTitle>
+                    <CardDescription>{t('surveyManagement.surveyInfoDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-medium mb-2 block">Tiêu đề khảo sát *</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.surveyTitleLabel')}</label>
                             <Input
-                                placeholder="VD: Khảo sát đầu học kỳ I - 2024-2025"
+                                placeholder={t('surveyManagement.surveyTitlePlaceholderFull')}
                                 value={surveyTitle}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSurveyTitle(e.target.value)}
                             />
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium mb-2 block">Mô tả khảo sát</label>
+                            <label className="text-sm font-medium mb-2 block">{t('surveyManagement.surveyDescriptionLabel')}</label>
                             <textarea
                                 className="w-full px-3 py-2 border rounded-lg"
                                 rows={3}
-                                placeholder="Mô tả mục đích và nội dung của khảo sát..."
+                                placeholder={t('surveyManagement.surveyDescPlaceholderFull')}
                                 value={surveyDescription}
                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSurveyDescription(e.target.value)}
                             />
@@ -1265,20 +1267,20 @@ const StudentSurveyManagement = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Loại khảo sát *</label>
+                                <label className="text-sm font-medium mb-2 block">{t('surveyManagement.surveyTypeLabel')}</label>
                                 <select
                                     value={surveyType}
                                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSurveyType(e.target.value as any)}
                                     className="w-full px-3 py-2 border rounded-lg"
                                 >
-                                    <option value="beginning">Đầu kỳ - Thu thập thông tin ban đầu</option>
-                                    <option value="midterm">Giữa kỳ - Đánh giá tiến độ học tập</option>
-                                    <option value="final">Cuối kỳ - Tổng kết và đánh giá</option>
+                                    <option value="beginning">{t('surveyManagement.beginningOption')}</option>
+                                    <option value="midterm">{t('surveyManagement.midtermOption')}</option>
+                                    <option value="final">{t('surveyManagement.finalOption')}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Hạn hoàn thành *</label>
+                                <label className="text-sm font-medium mb-2 block">{t('surveyManagement.dueDateLabel')}</label>
                                 <Input
                                     type="date"
                                     value={surveyDueDate}
@@ -1289,14 +1291,14 @@ const StudentSurveyManagement = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Khoa *</label>
+                                <label className="text-sm font-medium mb-2 block">{t('surveyManagement.facultyLabel')}</label>
                                 <select
                                     value={targetFaculty}
                                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTargetFaculty(e.target.value)}
                                     className="w-full px-3 py-2 border rounded-lg"
                                     disabled={loadingFilters}
                                 >
-                                    <option value="all">Tất cả khoa</option>
+                                    <option value="all">{t('surveyManagement.allFacultiesOption')}</option>
                                     {filterOptions.faculties.map((faculty, idx) => (
                                         <option key={idx} value={faculty}>{faculty}</option>
                                     ))}
@@ -1304,20 +1306,20 @@ const StudentSurveyManagement = () => {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Lớp</label>
+                                <label className="text-sm font-medium mb-2 block">{t('surveyManagement.classLabel')}</label>
                                 <select
                                     value={targetClass}
                                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTargetClass(e.target.value)}
                                     className="w-full px-3 py-2 border rounded-lg"
                                     disabled={loadingFilters || targetFaculty === "all"}
                                 >
-                                    <option value="all">Tất cả lớp của khoa</option>
+                                    <option value="all">{t('surveyManagement.allClassesOption')}</option>
                                     {filterOptions.classes.map((cls, idx) => (
                                         <option key={idx} value={cls}>{cls}</option>
                                     ))}
                                 </select>
                                 {targetFaculty === "all" && (
-                                    <p className="text-xs text-gray-500 mt-1">Chọn một khoa để lọc theo lớp</p>
+                                    <p className="text-xs text-gray-500 mt-1">{t('surveyManagement.selectFacultyHint')}</p>
                                 )}
                             </div>
                         </div>
@@ -1329,9 +1331,9 @@ const StudentSurveyManagement = () => {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Câu hỏi khảo sát</CardTitle>
+                            <CardTitle>{t('surveyManagement.surveyQuestions')}</CardTitle>
                             <CardDescription>
-                                Thêm câu hỏi để thu thập thông tin từ sinh viên
+                                {t('surveyManagement.surveyQuestionsDesc')}
                             </CardDescription>
                         </div>
                         <div className="flex gap-2">
@@ -1355,7 +1357,7 @@ const StudentSurveyManagement = () => {
                     {questions.length === 0 ? (
                         <div className="text-center py-12 text-gray-500">
                             <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p className="mb-2">Chưa có câu hỏi nào. Nhấn "Thêm câu hỏi" hoặc "Từ ngân hàng" để bắt đầu</p>
+                            <p className="mb-2">{t('surveyManagement.noQuestionsDesc')}</p>
                             <p className="text-sm">Gợi ý: Thêm câu hỏi về tài chính, tâm lý, học tập và xã hội</p>
                         </div>
                     ) : (
@@ -1475,7 +1477,7 @@ const StudentSurveyManagement = () => {
                     <CardHeader className="bg-blue-50">
                         <CardTitle>Xem trước khảo sát</CardTitle>
                         <CardDescription>
-                            {surveyTitle || "Chưa có tiêu đề"} - {getTypeText(surveyType)}
+                            {(surveyTitle && surveyTitle.length > 0 ? surveyTitle : t('surveyManagement.noTitle')) + ' - ' + getTypeText(surveyType)}
                             {surveyDueDate && ` - Hạn: ${surveyDueDate}`}
                         </CardDescription>
                     </CardHeader>
@@ -1491,7 +1493,7 @@ const StudentSurveyManagement = () => {
                                     <div className="flex items-start gap-3 mb-3">
                                         <span className="font-medium text-lg">{idx + 1}.</span>
                                         <div className="flex-1">
-                                            <p className="font-medium text-base">{question.question || "Chưa có câu hỏi"}</p>
+                                            <p className="font-medium text-base">{question.question || t('surveyManagement.noQuestions')}</p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className="text-sm text-gray-600">
                                                     {question.category === "financial" && "💰 Tài chính"}
@@ -1549,7 +1551,7 @@ const StudentSurveyManagement = () => {
                 <div className="flex items-center justify-center h-screen">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Đang tải dữ liệu...</p>
+                        <p className="text-gray-600">{t('common.loading')}</p>
                     </div>
                 </div>
             </TeacherLayout>
@@ -1564,11 +1566,11 @@ const StudentSurveyManagement = () => {
                     <div className="text-center">
                         <div className="text-red-600 mb-4">
                             <AlertTriangle className="w-12 h-12 mx-auto mb-2" />
-                            <p className="font-semibold">Có lỗi xảy ra</p>
+                            <p className="font-semibold">{t('common.error')}</p>
                         </div>
                         <p className="text-gray-600 mb-4">{error}</p>
                         <Button onClick={() => fetchSurveys()}>
-                            Thử lại
+                            {t('surveyManagement.tryAgain')}
                         </Button>
                     </div>
                 </div>
@@ -1580,9 +1582,9 @@ const StudentSurveyManagement = () => {
         <TeacherLayout currentPage="survey-management">
             <div className="p-6">
                 <div className="bg-gradient-to-r from-pink-600 to-rose-600 text-white p-6 rounded-xl shadow-lg mb-6">
-                    <h1 className="text-3xl font-bold mb-2">Khảo sát sinh viên</h1>
+                    <h1 className="text-3xl font-bold mb-2">{t('surveyManagement.title')}</h1>
                     <p className="text-pink-100">
-                        Quản lý khảo sát định kỳ để theo dõi tình hình sinh viên và hỗ trợ dự đoán điểm
+                        {t('surveyManagement.subtitle')}
                     </p>
                 </div>
 
@@ -1597,7 +1599,7 @@ const StudentSurveyManagement = () => {
                                 }`}
                             onClick={() => setActiveTab("active")}
                         >
-                            Đang khảo sát
+                            {t('surveyManagement.activeTab')}
                         </button>
                         <button
                             className={`px-6 py-3 font-medium transition-colors ${activeTab === "history"
@@ -1606,7 +1608,7 @@ const StudentSurveyManagement = () => {
                                 }`}
                             onClick={() => setActiveTab("history")}
                         >
-                            Lịch sử khảo sát
+                            {t('surveyManagement.historyTab')}
                         </button>
                         <button
                             className={`px-6 py-3 font-medium transition-colors ${activeTab === "create"
@@ -1615,7 +1617,7 @@ const StudentSurveyManagement = () => {
                                 }`}
                             onClick={() => setActiveTab("create")}
                         >
-                            Tạo khảo sát mới
+                            {t('surveyManagement.createTab')}
                         </button>
                     </div>
                 </div>
@@ -1632,13 +1634,13 @@ const StudentSurveyManagement = () => {
                         <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
                             <div className="flex items-center gap-3 mb-4">
                                 <MessageSquare className="w-6 h-6 text-blue-600" />
-                                <h3 className="text-xl font-bold">Gửi nhắc nhở</h3>
+                                <h3 className="text-xl font-bold">{t('surveyManagement.reminderDialog')}</h3>
                             </div>
                             <p className="text-sm text-gray-600 mb-4">
-                                Nhắc nhở sẽ được gửi đến các sinh viên chưa hoàn thành khảo sát qua thông báo hệ thống và email.
+                                {t('surveyManagement.reminderDescription')}
                             </p>
                             <div className="mb-4">
-                                <label className="text-sm font-medium mb-2 block">Nội dung nhắc nhở</label>
+                                <label className="text-sm font-medium mb-2 block">{t('surveyManagement.reminderMessage')}</label>
                                 <textarea
                                     className="w-full px-3 py-2 border rounded-lg"
                                     rows={5}
@@ -1656,10 +1658,10 @@ const StudentSurveyManagement = () => {
                                         setReminderMessage("")
                                     }}
                                 >
-                                    Hủy
+                                    {t('common.cancel')}
                                 </Button>
                                 <Button className="flex-1" onClick={confirmSendReminder}>
-                                    Gửi nhắc nhở
+                                    {t('surveyManagement.sendReminder')}
                                 </Button>
                             </div>
                         </div>
@@ -1673,8 +1675,8 @@ const StudentSurveyManagement = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <FileText className="w-6 h-6 text-green-600" />
-                                    <h3 className="text-xl font-bold">Ngân hàng câu hỏi</h3>
-                                    <Badge variant="outline">{availableQuestions.length} câu hỏi</Badge>
+                                    <h3 className="text-xl font-bold">{t('surveyManagement.questionBank')}</h3>
+                                    <Badge variant="outline">{availableQuestions.length} {t('surveyManagement.questions')}</Badge>
                                 </div>
                                 <Button variant="ghost" onClick={() => setShowQuestionBank(false)}>
                                     <X className="w-5 h-5" />
@@ -1688,15 +1690,15 @@ const StudentSurveyManagement = () => {
                                     onChange={(e) => setQuestionBankCategory(e.target.value)}
                                     className="w-full md:w-64 px-3 py-2 border rounded-lg bg-white"
                                 >
-                                    <option value="all">Tất cả danh mục</option>
-                                    <option value="financial">💰 Tài chính</option>
-                                    <option value="mental">🧠 Tâm lý</option>
-                                    <option value="academic">📚 Học tập</option>
-                                    <option value="social">👥 Xã hội</option>
-                                    <option value="teaching_quality">👨‍🏫 Chất lượng giảng dạy</option>
-                                    <option value="facilities">🏢 Cơ sở vật chất</option>
-                                    <option value="extracurricular">🎭 Ngoại khóa</option>
-                                    <option value="academic_advising">📋 Tư vấn học tập</option>
+                                    <option value="all">{t('surveyManagement.allCategories')}</option>
+                                    <option value="financial">💰 {t('surveyManagement.financial')}</option>
+                                    <option value="mental">🧠 {t('surveyManagement.mental')}</option>
+                                    <option value="academic">📚 {t('surveyManagement.academic')}</option>
+                                    <option value="social">👥 {t('surveyManagement.social')}</option>
+                                    <option value="teaching_quality">👨‍🏫 {t('surveyManagement.teachingQuality')}</option>
+                                    <option value="facilities">🏢 {t('surveyManagement.facilities')}</option>
+                                    <option value="extracurricular">🎭 {t('surveyManagement.extracurricular')}</option>
+                                    <option value="academic_advising">📋 {t('surveyManagement.academicAdvising')}</option>
                                 </select>
                                 <Badge variant="secondary">
                                     {availableQuestions
@@ -1706,7 +1708,7 @@ const StudentSurveyManagement = () => {
                                                 existingQ.question.toLowerCase().trim() === q.question.toLowerCase().trim()
                                             );
                                             return !isAlreadyAdded;
-                                        }).length} câu hỏi còn lại
+                                        }).length} {t('surveyManagement.questionsRemaining')}
                                 </Badge>
                             </div>
 
@@ -1746,7 +1748,7 @@ const StudentSurveyManagement = () => {
                                                         <p className="text-sm font-medium mb-1">{q.question}</p>
                                                         {q.options && q.options.length > 0 && (
                                                             <p className="text-xs text-gray-500">
-                                                                {q.options.length} lựa chọn
+                                                                {q.options.length} {t('surveyManagement.choices')}
                                                             </p>
                                                         )}
                                                     </div>
@@ -1755,11 +1757,11 @@ const StudentSurveyManagement = () => {
                                                         onClick={() => {
                                                             const newQuestion = convertApiQuestionToComponent(q)
                                                             setQuestions([...questions, newQuestion])
-                                                            toast.success('Đã thêm câu hỏi')
+                                                            toast.success(t('surveyManagement.addedQuestion'))
                                                         }}
                                                     >
                                                         <Plus className="w-4 h-4 mr-1" />
-                                                        Thêm
+                                                        {t('surveyManagement.add')}
                                                     </Button>
                                                 </div>
                                             </CardContent>
@@ -1787,7 +1789,7 @@ const StudentSurveyManagement = () => {
 
                             <div className="mt-6 flex gap-3">
                                 <Button variant="outline" className="flex-1" onClick={() => setShowQuestionBank(false)}>
-                                    Đóng
+                                    {t('surveyManagement.close')}
                                 </Button>
                                 <Button
                                     className="flex-1"
@@ -1810,13 +1812,13 @@ const StudentSurveyManagement = () => {
                                         if (selectedQuestions.length > 0) {
                                             setQuestions([...questions, ...selectedQuestions])
                                             setShowQuestionBank(false)
-                                            toast.success(`Đã thêm ${selectedQuestions.length} câu hỏi`)
+                                            toast.success(t('surveyManagement.questionsAdded', { count: selectedQuestions.length }))
                                         } else {
-                                            toast.info('Tất cả câu hỏi đã được thêm')
+                                            toast.info(t('surveyManagement.allQuestionsAlreadyAdded'))
                                         }
                                     }}
                                 >
-                                    Thêm 5 câu ngẫu nhiên
+                                    {t('surveyManagement.addRandomQuestions')}
                                 </Button>
                             </div>
                         </div>
@@ -1830,7 +1832,7 @@ const StudentSurveyManagement = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Users className="w-6 h-6 text-orange-600" />
-                                    <h3 className="text-xl font-bold">Sinh viên chưa hoàn thành</h3>
+                                    <h3 className="text-xl font-bold">{t('surveyManagement.incompleteStudentsTitle')}</h3>
                                 </div>
                                 <Button variant="ghost" onClick={() => setShowIncompleteModal(false)}>
                                     <X className="w-5 h-5" />
@@ -1844,12 +1846,12 @@ const StudentSurveyManagement = () => {
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <h4 className="font-medium">{student.studentName}</h4>
-                                                    <p className="text-sm text-gray-600">Mã SV: {student.studentCode}</p>
-                                                    <p className="text-sm text-gray-500">Truy cập cuối: {student.lastAccess}</p>
+                                                    <p className="text-sm text-gray-600">{t('surveyManagement.studentCode')}: {student.studentCode}</p>
+                                                    <p className="text-sm text-gray-500">{t('surveyManagement.lastAccess')}: {student.lastAccess}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <Badge variant="outline" className="text-orange-600 border-orange-200">
-                                                        {student.remindersSent} nhắc nhở đã gửi
+                                                        {student.remindersSent} {t('surveyManagement.remindersSent')}
                                                     </Badge>
                                                     <div className="text-sm text-gray-500 mt-1">
                                                         <p>{student.email}</p>
@@ -1864,21 +1866,21 @@ const StudentSurveyManagement = () => {
 
                             <div className="mt-6 space-y-4">
                                 <div>
-                                    <label className="text-sm font-medium mb-2 block">Nội dung nhắc nhở hàng loạt</label>
+                                    <label className="text-sm font-medium mb-2 block">{t('surveyManagement.bulkReminderContent')}</label>
                                     <textarea
                                         className="w-full px-3 py-2 border rounded-lg"
                                         rows={4}
                                         value={bulkReminderMessage}
                                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBulkReminderMessage(e.target.value)}
-                                        placeholder="Nhập nội dung nhắc nhở..."
+                                        placeholder={t('surveyManagement.reminderPlaceholder')}
                                     />
                                 </div>
                                 <div className="flex gap-3">
                                     <Button variant="outline" className="flex-1" onClick={() => setShowIncompleteModal(false)}>
-                                        Đóng
+                                        {t('common.close')}
                                     </Button>
                                     <Button className="flex-1" onClick={sendBulkReminder}>
-                                        Gửi nhắc nhở ({selectedIncompleteStudents.length} sinh viên)
+                                        {t('surveyManagement.sendReminderToStudents', { count: selectedIncompleteStudents.length })}
                                     </Button>
                                 </div>
                             </div>
@@ -1893,7 +1895,7 @@ const StudentSurveyManagement = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Eye className="w-6 h-6 text-blue-600" />
-                                    <h3 className="text-xl font-bold">Chi tiết khảo sát</h3>
+                                    <h3 className="text-xl font-bold">{t('surveyManagement.surveyDetailTitle')}</h3>
                                 </div>
                                 <Button variant="ghost" onClick={() => setShowDetailView(false)}>
                                     <X className="w-5 h-5" />
@@ -1903,54 +1905,54 @@ const StudentSurveyManagement = () => {
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <h4 className="font-medium mb-2">Thông tin cơ bản</h4>
+                                        <h4 className="font-medium mb-2">{t('surveyManagement.basicInformation')}</h4>
                                         <div className="space-y-2 text-sm">
-                                            <p><strong>Tiêu đề:</strong> {selectedSurvey.title}</p>
+                                            <p><strong>{t('surveyManagement.title')}:</strong> {selectedSurvey.title}</p>
                                             {selectedSurvey.description && (
-                                                <p><strong>Mô tả:</strong> {selectedSurvey.description}</p>
+                                                <p><strong>{t('surveyManagement.description')}:</strong> {selectedSurvey.description}</p>
                                             )}
                                             {selectedSurvey.type && (
-                                                <p><strong>Loại:</strong> {getTypeText(selectedSurvey.type)}</p>
+                                                <p><strong>{t('surveyManagement.typeLabel')}:</strong> {getTypeText(selectedSurvey.type)}</p>
                                             )}
                                             {selectedSurvey.targetClasses && selectedSurvey.targetClasses.length > 0 && (
-                                                <p><strong>Lớp mục tiêu:</strong> {selectedSurvey.targetClasses.join(', ')}</p>
+                                                <p><strong>{t('surveyManagement.targetClasses')}:</strong> {selectedSurvey.targetClasses.join(', ')}</p>
                                             )}
-                                            <p><strong>Trạng thái:</strong>
+                                            <p><strong>{t('surveyManagement.status')}:</strong>
                                                 <Badge className={`ml-2 ${getStatusColor(selectedSurvey.status)}`}>
-                                                    {selectedSurvey.status === "active" ? "Đang diễn ra" :
-                                                        selectedSurvey.status === "completed" || selectedSurvey.status === "closed" ? "Đã hoàn thành" :
-                                                            selectedSurvey.status === "draft" ? "Nháp" : "Hết hạn"}
+                                                    {selectedSurvey.status === "active" ? t('surveyManagement.statusActive') :
+                                                        selectedSurvey.status === "completed" || selectedSurvey.status === "closed" ? t('surveyManagement.statusCompleted') :
+                                                            selectedSurvey.status === "draft" ? t('surveyManagement.statusDraft') : t('surveyManagement.statusExpired')}
                                                 </Badge>
                                             </p>
                                         </div>
                                     </div>
                                     <div>
-                                        <h4 className="font-medium mb-2">Thống kê & Thời gian</h4>
+                                        <h4 className="font-medium mb-2">{t('surveyManagement.statisticsAndTime')}</h4>
                                         <div className="space-y-2 text-sm">
                                             {selectedSurvey.totalResponses !== undefined && (
-                                                <p><strong>Tổng phản hồi:</strong> {selectedSurvey.totalResponses}</p>
+                                                <p><strong>{t('surveyManagement.totalResponsesLabel')}:</strong> {selectedSurvey.totalResponses}</p>
                                             )}
                                             {selectedSurvey.responseRate !== undefined && (
-                                                <p><strong>Tỷ lệ phản hồi:</strong> {selectedSurvey.responseRate.toFixed(1)}%</p>
+                                                <p><strong>{t('surveyManagement.responseRateLabel')}:</strong> {selectedSurvey.responseRate.toFixed(1)}%</p>
                                             )}
                                             {selectedSurvey.startDate && (
-                                                <p><strong>Ngày bắt đầu:</strong> {new Date(selectedSurvey.startDate).toLocaleDateString('vi-VN')}</p>
+                                                <p><strong>{t('surveyManagement.startDate')}:</strong> {new Date(selectedSurvey.startDate).toLocaleDateString('vi-VN')}</p>
                                             )}
                                             {selectedSurvey.endDate && (
-                                                <p><strong>Ngày kết thúc:</strong> {new Date(selectedSurvey.endDate).toLocaleDateString('vi-VN')}</p>
+                                                <p><strong>{t('surveyManagement.endDate')}:</strong> {new Date(selectedSurvey.endDate).toLocaleDateString('vi-VN')}</p>
                                             )}
                                             {selectedSurvey.createdAt && (
-                                                <p><strong>Ngày tạo:</strong> {new Date(selectedSurvey.createdAt).toLocaleDateString('vi-VN')}</p>
+                                                <p><strong>{t('surveyManagement.createdDate')}:</strong> {new Date(selectedSurvey.createdAt).toLocaleDateString('vi-VN')}</p>
                                             )}
                                             {selectedSurvey.createdDate && !selectedSurvey.createdAt && (
-                                                <p><strong>Ngày tạo:</strong> {new Date(selectedSurvey.createdDate).toLocaleDateString('vi-VN')}</p>
+                                                <p><strong>{t('surveyManagement.createdDate')}:</strong> {new Date(selectedSurvey.createdDate).toLocaleDateString('vi-VN')}</p>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium mb-3">Danh sách câu hỏi ({selectedSurvey.questions?.length || 0} câu)</h4>
+                                    <h4 className="font-medium mb-3">{t('surveyManagement.questionsList')} {t('surveyManagement.questionsCount', { count: selectedSurvey.questions?.length || 0 })}</h4>
                                     <div className="space-y-3">
                                         {selectedSurvey.questions && selectedSurvey.questions.length > 0 ? (
                                             selectedSurvey.questions.map((question: any, idx: number) => (
@@ -1964,22 +1966,22 @@ const StudentSurveyManagement = () => {
                                                                 <p className="font-medium">{question.question}</p>
                                                                 <div className="flex items-center gap-2 mt-1">
                                                                     <Badge variant="outline" className="text-xs">
-                                                                        {question.category === "financial" ? "💰 Tài chính" :
-                                                                            question.category === "mental" ? "🧠 Tâm lý" :
-                                                                                question.category === "academic" ? "📚 Học tập" : "👥 Xã hội"}
+                                                                        {question.category === "financial" ? `💰 ${t('surveyManagement.financial')}` :
+                                                                            question.category === "mental" ? `🧠 ${t('surveyManagement.mental')}` :
+                                                                                question.category === "academic" ? `📚 ${t('surveyManagement.academic')}` : `👥 ${t('surveyManagement.social')}`}
                                                                     </Badge>
                                                                     <Badge variant="outline" className="text-xs">
-                                                                        {question.type === "scale" ? "Đánh giá" : question.type === "choice" ? "Trắc nghiệm" : "Văn bản"}
+                                                                        {question.type === "scale" ? t('surveyManagement.rating') : question.type === "choice" ? t('surveyManagement.multipleChoice') : t('surveyManagement.textType')}
                                                                     </Badge>
                                                                     {question.required && (
                                                                         <Badge variant="outline" className="text-xs text-red-600 border-red-200">
-                                                                            Bắt buộc
+                                                                            {t('surveyManagement.requiredQuestion')}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
                                                                 {question.options && question.options.length > 0 && (
                                                                     <div className="mt-2 text-sm text-gray-600">
-                                                                        <p className="font-medium mb-1">Các lựa chọn:</p>
+                                                                        <p className="font-medium mb-1">{t('surveyManagement.questionOptions')}:</p>
                                                                         <ul className="list-disc list-inside space-y-1">
                                                                             {question.options.map((opt: string, i: number) => (
                                                                                 <li key={i}>{opt}</li>
@@ -1993,7 +1995,7 @@ const StudentSurveyManagement = () => {
                                                 </Card>
                                             ))
                                         ) : (
-                                            <p className="text-gray-500 text-center py-4">Không có câu hỏi nào</p>
+                                            <p className="text-gray-500 text-center py-4">{t('surveyManagement.noQuestions')}</p>
                                         )}
                                     </div>
                                 </div>
@@ -2002,7 +2004,7 @@ const StudentSurveyManagement = () => {
                                 {selectedSurvey.completedStudents && selectedSurvey.completedStudents.length > 0 && (
                                     <div>
                                         <h4 className="font-medium mb-3">
-                                            Sinh viên đã hoàn thành ({selectedSurvey.completedStudents.length})
+                                            {t('surveyManagement.completedStudentsList')} {t('surveyManagement.completedCount', { count: selectedSurvey.completedStudents.length })}
                                         </h4>
                                         <div className="max-h-[300px] overflow-y-auto space-y-2">
                                             {selectedSurvey.completedStudents.map((student) => (
@@ -2014,13 +2016,13 @@ const StudentSurveyManagement = () => {
                                                                 <div>
                                                                     <p className="font-medium text-sm">{student.studentName}</p>
                                                                     <p className="text-xs text-gray-500">
-                                                                        Mã SV: {student.studentCode}
+                                                                        {t('surveyManagement.studentCode')}: {student.studentCode}
                                                                     </p>
                                                                 </div>
                                                             </div>
                                                             <div className="text-right">
                                                                 <Badge variant="outline" className="text-xs text-green-600 border-green-200">
-                                                                    Đã hoàn thành
+                                                                    {t('surveyManagement.completedStatus')}
                                                                 </Badge>
                                                                 <p className="text-xs text-gray-500 mt-1">
                                                                     {student.completedDate ? new Date(student.completedDate).toLocaleString('vi-VN') : ''}
@@ -2038,7 +2040,7 @@ const StudentSurveyManagement = () => {
                                 {(!selectedSurvey.completedStudents || selectedSurvey.completedStudents.length === 0) && (
                                     <div className="text-center py-6 bg-gray-50 rounded-lg">
                                         <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                                        <p className="text-gray-600 text-sm">Chưa có sinh viên nào hoàn thành khảo sát</p>
+                                        <p className="text-gray-600 text-sm">{t('surveyManagement.noStudentsCompleted')}</p>
                                     </div>
                                 )}
                             </div>

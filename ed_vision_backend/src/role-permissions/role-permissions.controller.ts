@@ -25,8 +25,8 @@ export class RolePermissionsController {
 
   @Get('roles')
   async getRoles() {
-    const roles = await this.svc.getAllRoles()
-    return { success: true, roles }
+    const roles = await this.svc.getAllRoles();
+    return { success: true, roles };
   }
 
   @Get('permissions')

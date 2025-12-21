@@ -18,9 +18,7 @@ export class MeetingLogsService {
   /**
    * Lấy thông tin instructor theo account_id
    */
-  async getInstructorInfo(
-    accountId: number,
-  ): Promise<InstructorInfoResponse> {
+  async getInstructorInfo(accountId: number): Promise<InstructorInfoResponse> {
     const instructor = await this.prisma.instructor.findUnique({
       where: { account_id: accountId },
       include: {
@@ -107,7 +105,9 @@ export class MeetingLogsService {
     }
 
     // Lấy ngày cụ thể từ date record
-    const specificDate = slot.date ? new Date(slot.date.specific_date) : new Date();
+    const specificDate = slot.date
+      ? new Date(slot.date.specific_date)
+      : new Date();
     const dayOfWeek = specificDate.getUTCDay() || 7; // Sunday = 0 -> 7
 
     const students = slot.appointments
@@ -166,9 +166,7 @@ export class MeetingLogsService {
       // Tính ngày đầu tuần (Monday)
       const dayOfWeek = targetDate.getUTCDay() || 7; // Sunday = 0 -> 7
       const weekStartDate = new Date(targetDate);
-      weekStartDate.setUTCDate(
-        targetDate.getUTCDate() - dayOfWeek + 1,
-      );
+      weekStartDate.setUTCDate(targetDate.getUTCDate() - dayOfWeek + 1);
       weekStartDate.setUTCHours(0, 0, 0, 0);
 
       // Parse time theo GMT+0800 (ICT) để khớp với database
@@ -177,51 +175,49 @@ export class MeetingLogsService {
       const endTimeDate = new Date(`1970-01-01T${endTime}:00.000+08:00`);
 
       // Tìm week và dates với slots
-      const week =
-        await this.prisma.instructorAvailabilityWeek.findUnique({
-          where: {
-            instructor_id_week_start_date: {
-              instructor_id: instructorId,
-              week_start_date: weekStartDate,
-            },
+      const week = await this.prisma.instructorAvailabilityWeek.findUnique({
+        where: {
+          instructor_id_week_start_date: {
+            instructor_id: instructorId,
+            week_start_date: weekStartDate,
           },
-          include: {
-            instructor: {
-              include: {
-                account: {
-                  include: {
-                    profile: true,
-                  },
+        },
+        include: {
+          instructor: {
+            include: {
+              account: {
+                include: {
+                  profile: true,
                 },
               },
             },
-            instructorAvailabilityDates: {
-              where: {
-                specific_date: targetDate,
-              },
-              include: {
-                slots: {
-                  where: {
-                    start_time_local: startTimeDate,
-                    end_time_local: endTimeDate,
-                  },
-                  include: {
-                    appointments: {
-                      where: {
-                        status: {
-                          in: ['confirmed', 'pending'],
-                        },
+          },
+          instructorAvailabilityDates: {
+            where: {
+              specific_date: targetDate,
+            },
+            include: {
+              slots: {
+                where: {
+                  start_time_local: startTimeDate,
+                  end_time_local: endTimeDate,
+                },
+                include: {
+                  appointments: {
+                    where: {
+                      status: {
+                        in: ['confirmed', 'pending'],
                       },
-                      include: {
-                        student: {
-                          include: {
-                            account: {
-                              include: {
-                                profile: true,
-                              },
+                    },
+                    include: {
+                      student: {
+                        include: {
+                          account: {
+                            include: {
+                              profile: true,
                             },
-                            classGroup: true,
                           },
+                          classGroup: true,
                         },
                       },
                     },
@@ -230,7 +226,8 @@ export class MeetingLogsService {
               },
             },
           },
-        });
+        },
+      });
 
       // Extract slot from nested structure
       const dateRecord = week?.instructorAvailabilityDates?.[0];

@@ -1,10 +1,22 @@
-import { Injectable, BadRequestException, InternalServerErrorException, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  Inject,
+  NotFoundException,
+} from '@nestjs/common';
 import { Model } from 'mongoose';
 import * as XLSX from 'xlsx';
 import { Readable } from 'stream';
 import { StudentGrade, StudentRecord } from './schemas/student-grade.schema';
-import { UploadGradesDto, UploadGradesResponseDto } from './dto/upload-grades.dto';
-import { UpdateBehaviorDto, BulkUpdateBehaviorDto } from './dto/update-behavior.dto';
+import {
+  UploadGradesDto,
+  UploadGradesResponseDto,
+} from './dto/upload-grades.dto';
+import {
+  UpdateBehaviorDto,
+  BulkUpdateBehaviorDto,
+} from './dto/update-behavior.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeStructure } from '../../mongodb/schemas/grade-structure.schema';
 
@@ -28,7 +40,9 @@ export class PredictionService {
     });
 
     if (!instructor) {
-      throw new NotFoundException('Instructor profile not found for this account');
+      throw new NotFoundException(
+        'Instructor profile not found for this account',
+      );
     }
 
     return instructor.instructor_id.toString();
@@ -39,53 +53,62 @@ export class PredictionService {
    * Returns a map of student_code -> behavior data
    * If no data found, returns default medium values
    */
-  private async fetchBehaviorDataForStudents(studentCodes: string[]): Promise<Map<string, {
-    weekly_study_hours: number;
-    part_time_hours: number;
-    financial_support: number;
-    emotional_support: number;
-    has_survey_data: boolean; // true nếu có dữ liệu thực từ khảo sát, false nếu dùng default
-    full_name?: string; // Họ tên từ Profile (chỉ có khi has_survey_data = true)
-  }>> {
-    try {
-      // Fetch students with their survey factors, account, and profile
-      const studentsWithSurveyFactors = await this.prismaService.student.findMany({
-        where: {
-          student_code: {
-            in: studentCodes,
-          },
-        },
-        select: {
-          student_code: true,
-          surveyFactors: {
-            select: {
-              study_time_hours: true,
-              work_time_hours: true,
-              financial_support_score: true,
-              mental_health_score: true,
-            },
-          },
-          account: {
-            select: {
-              profile: {
-                select: {
-                  full_name: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // Create a map of student_code -> behavior data
-      const behaviorMap = new Map<string, {
+  private async fetchBehaviorDataForStudents(studentCodes: string[]): Promise<
+    Map<
+      string,
+      {
         weekly_study_hours: number;
         part_time_hours: number;
         financial_support: number;
         emotional_support: number;
-        has_survey_data: boolean;
-        full_name?: string;
-      }>();
+        has_survey_data: boolean; // true nếu có dữ liệu thực từ khảo sát, false nếu dùng default
+        full_name?: string; // Họ tên từ Profile (chỉ có khi has_survey_data = true)
+      }
+    >
+  > {
+    try {
+      // Fetch students with their survey factors, account, and profile
+      const studentsWithSurveyFactors =
+        await this.prismaService.student.findMany({
+          where: {
+            student_code: {
+              in: studentCodes,
+            },
+          },
+          select: {
+            student_code: true,
+            surveyFactors: {
+              select: {
+                study_time_hours: true,
+                work_time_hours: true,
+                financial_support_score: true,
+                mental_health_score: true,
+              },
+            },
+            account: {
+              select: {
+                profile: {
+                  select: {
+                    full_name: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+      // Create a map of student_code -> behavior data
+      const behaviorMap = new Map<
+        string,
+        {
+          weekly_study_hours: number;
+          part_time_hours: number;
+          financial_support: number;
+          emotional_support: number;
+          has_survey_data: boolean;
+          full_name?: string;
+        }
+      >();
 
       // Default medium values (middle of range)
       const DEFAULT_VALUES = {
@@ -98,16 +121,24 @@ export class PredictionService {
 
       for (const studentCode of studentCodes) {
         const studentData = studentsWithSurveyFactors.find(
-          s => s.student_code === studentCode
+          (s) => s.student_code === studentCode,
         );
 
         if (studentData?.surveyFactors) {
           // Use actual survey data if available
           behaviorMap.set(studentCode, {
-            weekly_study_hours: studentData.surveyFactors.study_time_hours ?? DEFAULT_VALUES.weekly_study_hours,
-            part_time_hours: studentData.surveyFactors.work_time_hours ?? DEFAULT_VALUES.part_time_hours,
-            financial_support: studentData.surveyFactors.financial_support_score ?? DEFAULT_VALUES.financial_support,
-            emotional_support: studentData.surveyFactors.mental_health_score ?? DEFAULT_VALUES.emotional_support,
+            weekly_study_hours:
+              studentData.surveyFactors.study_time_hours ??
+              DEFAULT_VALUES.weekly_study_hours,
+            part_time_hours:
+              studentData.surveyFactors.work_time_hours ??
+              DEFAULT_VALUES.part_time_hours,
+            financial_support:
+              studentData.surveyFactors.financial_support_score ??
+              DEFAULT_VALUES.financial_support,
+            emotional_support:
+              studentData.surveyFactors.mental_health_score ??
+              DEFAULT_VALUES.emotional_support,
             has_survey_data: true, // Có dữ liệu khảo sát thực tế
             full_name: studentData.account?.profile?.full_name, // Lấy full_name từ Profile
           });
@@ -128,7 +159,7 @@ export class PredictionService {
         emotional_support: 2,
         has_survey_data: false,
       };
-      
+
       const behaviorMap = new Map<string, typeof DEFAULT_VALUES>();
       for (const studentCode of studentCodes) {
         behaviorMap.set(studentCode, DEFAULT_VALUES);
@@ -151,7 +182,9 @@ export class PredictionService {
 
       // Validate required fields
       if (!uploadDto.academic_year || !uploadDto.semester) {
-        throw new BadRequestException('Academic year and semester are required');
+        throw new BadRequestException(
+          'Academic year and semester are required',
+        );
       }
 
       const academicYear = uploadDto.academic_year;
@@ -168,14 +201,16 @@ export class PredictionService {
         'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ];
-      
+
       if (!allowedMimeTypes.includes(file.mimetype)) {
-        throw new BadRequestException('Invalid file type. Only CSV and Excel files are allowed.');
+        throw new BadRequestException(
+          'Invalid file type. Only CSV and Excel files are allowed.',
+        );
       }
 
       // Parse file based on type
       let parsedData: any[];
-      
+
       if (file.mimetype === 'text/csv') {
         parsedData = await this.parseCSV(file.buffer);
       } else {
@@ -195,7 +230,7 @@ export class PredictionService {
       for (let i = 0; i < parsedData.length; i++) {
         try {
           const row = parsedData[i];
-          
+
           // Validate required fields
           if (!row.student_id && !row.Student_ID && !row.StudentID) {
             errors.push(`Row ${i + 1}: Missing student_id`);
@@ -204,17 +239,35 @@ export class PredictionService {
           }
 
           // Extract student_id with flexible field names
-          const studentId = row.student_id || row.Student_ID || row.StudentID || row.STUDENT_ID;
-          const studentName = row.student_name || row.Student_Name || row.StudentName || row.STUDENT_NAME || '';
+          const studentId =
+            row.student_id || row.Student_ID || row.StudentID || row.STUDENT_ID;
+          const studentName =
+            row.student_name ||
+            row.Student_Name ||
+            row.StudentName ||
+            row.STUDENT_NAME ||
+            '';
 
           // Separate grades from behavior fields
           const grades: Record<string, any> = {};
           const excludedFields = [
-            'student_id', 'Student_ID', 'StudentID', 'STUDENT_ID',
-            'student_name', 'Student_Name', 'StudentName', 'STUDENT_NAME',
-            'weekly_study_hours_by_course', 'part_time_hours_by_course',
-            'financial_support_by_course', 'emotional_support_by_course',
-            'No', 'no', 'NO', 'STT', 'stt' // Exclude số thứ tự columns
+            'student_id',
+            'Student_ID',
+            'StudentID',
+            'STUDENT_ID',
+            'student_name',
+            'Student_Name',
+            'StudentName',
+            'STUDENT_NAME',
+            'weekly_study_hours_by_course',
+            'part_time_hours_by_course',
+            'financial_support_by_course',
+            'emotional_support_by_course',
+            'No',
+            'no',
+            'NO',
+            'STT',
+            'stt', // Exclude số thứ tự columns
           ];
 
           for (const [key, value] of Object.entries(row)) {
@@ -264,19 +317,23 @@ export class PredictionService {
 
       // Immediately fetch behavior data from StudentSurveyFactors and update MongoDB
       try {
-        const studentCodes = processedStudents.map(s => s.student_id);
-        const behaviorMap = await this.fetchBehaviorDataForStudents(studentCodes);
+        const studentCodes = processedStudents.map((s) => s.student_id);
+        const behaviorMap =
+          await this.fetchBehaviorDataForStudents(studentCodes);
 
         // Update each student with behavior data
         for (let i = 0; i < savedDocument.students.length; i++) {
           const student = savedDocument.students[i];
           const behaviorData = behaviorMap.get(student.student_id);
-          
+
           if (behaviorData) {
-            student.weekly_study_hours_by_course = behaviorData.weekly_study_hours;
+            student.weekly_study_hours_by_course =
+              behaviorData.weekly_study_hours;
             student.part_time_hours_by_course = behaviorData.part_time_hours;
-            student.financial_support_by_course = behaviorData.financial_support;
-            student.emotional_support_by_course = behaviorData.emotional_support;
+            student.financial_support_by_course =
+              behaviorData.financial_support;
+            student.emotional_support_by_course =
+              behaviorData.emotional_support;
             student.has_survey_data = behaviorData.has_survey_data; // Lưu flag có dữ liệu khảo sát hay không
             student.full_name = behaviorData.full_name; // Lưu full_name từ Profile
           }
@@ -284,10 +341,15 @@ export class PredictionService {
 
         // Save updated document with behavior data
         await savedDocument.save();
-        
-        console.log(`[UploadGrades] Enriched ${studentCodes.length} students with behavior data from StudentSurveyFactors`);
+
+        console.log(
+          `[UploadGrades] Enriched ${studentCodes.length} students with behavior data from StudentSurveyFactors`,
+        );
       } catch (behaviorError) {
-        console.error('[UploadGrades] Failed to enrich behavior data:', behaviorError);
+        console.error(
+          '[UploadGrades] Failed to enrich behavior data:',
+          behaviorError,
+        );
         // Don't fail the upload if behavior enrichment fails
       }
 
@@ -307,7 +369,9 @@ export class PredictionService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException(`Failed to upload grades: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to upload grades: ${error.message}`,
+      );
     }
   }
 
@@ -323,7 +387,9 @@ export class PredictionService {
       const data = XLSX.utils.sheet_to_json(worksheet);
       return data;
     } catch (error) {
-      throw new BadRequestException(`Failed to parse CSV file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to parse CSV file: ${error.message}`,
+      );
     }
   }
 
@@ -338,7 +404,9 @@ export class PredictionService {
       const data = XLSX.utils.sheet_to_json(worksheet);
       return data;
     } catch (error) {
-      throw new BadRequestException(`Failed to parse Excel file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to parse Excel file: ${error.message}`,
+      );
     }
   }
 
@@ -353,37 +421,46 @@ export class PredictionService {
       }
 
       const gradeDocument = await this.studentGradeModel.findOne(query).lean();
-      
+
       if (!gradeDocument) {
         throw new BadRequestException('Upload not found');
       }
 
       // Extract student codes from the grade document
-      const studentCodes = gradeDocument.students.map(s => s.student_id);
+      const studentCodes = gradeDocument.students.map((s) => s.student_id);
 
       // Fetch behavior data from StudentSurveyFactors table
       const behaviorMap = await this.fetchBehaviorDataForStudents(studentCodes);
 
       // Enrich student data with behavior information
-      const enrichedStudents = gradeDocument.students.map(student => {
+      const enrichedStudents = gradeDocument.students.map((student) => {
         const behaviorData = behaviorMap.get(student.student_id);
-        
+
         // Only update if behavior data is not already set (null values)
-        if (behaviorData && 
-            (student.weekly_study_hours_by_course === null || 
-             student.part_time_hours_by_course === null ||
-             student.financial_support_by_course === null ||
-             student.emotional_support_by_course === null)) {
+        if (
+          behaviorData &&
+          (student.weekly_study_hours_by_course === null ||
+            student.part_time_hours_by_course === null ||
+            student.financial_support_by_course === null ||
+            student.emotional_support_by_course === null)
+        ) {
           return {
             ...student,
-            weekly_study_hours_by_course: student.weekly_study_hours_by_course ?? behaviorData.weekly_study_hours,
-            part_time_hours_by_course: student.part_time_hours_by_course ?? behaviorData.part_time_hours,
-            financial_support_by_course: student.financial_support_by_course ?? behaviorData.financial_support,
-            emotional_support_by_course: student.emotional_support_by_course ?? behaviorData.emotional_support,
+            weekly_study_hours_by_course:
+              student.weekly_study_hours_by_course ??
+              behaviorData.weekly_study_hours,
+            part_time_hours_by_course:
+              student.part_time_hours_by_course ?? behaviorData.part_time_hours,
+            financial_support_by_course:
+              student.financial_support_by_course ??
+              behaviorData.financial_support,
+            emotional_support_by_course:
+              student.emotional_support_by_course ??
+              behaviorData.emotional_support,
             has_survey_data: behaviorData.has_survey_data, // Cập nhật flag
           };
         }
-        
+
         return student;
       });
 
@@ -395,7 +472,9 @@ export class PredictionService {
         },
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to retrieve grades: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to retrieve grades: ${error.message}`,
+      );
     }
   }
 
@@ -412,18 +491,20 @@ export class PredictionService {
       const uploads = await this.studentGradeModel
         .find(query)
         .sort({ upload_date: -1 })
-        .select('_id course_code class_code semester academic_year upload_date students')
+        .select(
+          '_id course_code class_code semester academic_year upload_date students',
+        )
         .lean();
 
       // Add summary info
-      const uploadsWithSummary = uploads.map(upload => ({
+      const uploadsWithSummary = uploads.map((upload) => ({
         ...upload,
         total_students: upload.students.length,
         students_with_behavior: upload.students.filter(
-          s => s.weekly_study_hours_by_course !== null
+          (s) => s.weekly_study_hours_by_course !== null,
         ).length,
         students_with_prediction: upload.students.filter(
-          s => s.final_pred !== null
+          (s) => s.final_pred !== null,
         ).length,
       }));
 
@@ -432,7 +513,9 @@ export class PredictionService {
         data: uploadsWithSummary,
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to retrieve uploads: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to retrieve uploads: ${error.message}`,
+      );
     }
   }
 
@@ -448,13 +531,17 @@ export class PredictionService {
         },
         {
           $set: {
-            'students.$.weekly_study_hours_by_course': updateDto.weekly_study_hours_by_course,
-            'students.$.part_time_hours_by_course': updateDto.part_time_hours_by_course,
-            'students.$.financial_support_by_course': updateDto.financial_support_by_course,
-            'students.$.emotional_support_by_course': updateDto.emotional_support_by_course,
+            'students.$.weekly_study_hours_by_course':
+              updateDto.weekly_study_hours_by_course,
+            'students.$.part_time_hours_by_course':
+              updateDto.part_time_hours_by_course,
+            'students.$.financial_support_by_course':
+              updateDto.financial_support_by_course,
+            'students.$.emotional_support_by_course':
+              updateDto.emotional_support_by_course,
             'students.$.updated_at': new Date(),
           },
-        }
+        },
       );
 
       if (result.matchedCount === 0) {
@@ -466,7 +553,9 @@ export class PredictionService {
         message: 'Behavior data updated successfully',
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to update behavior: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to update behavior: ${error.message}`,
+      );
     }
   }
 
@@ -479,13 +568,17 @@ export class PredictionService {
         { _id: bulkUpdateDto.upload_id },
         {
           $set: {
-            'students.$[].weekly_study_hours_by_course': bulkUpdateDto.weekly_study_hours_by_course,
-            'students.$[].part_time_hours_by_course': bulkUpdateDto.part_time_hours_by_course,
-            'students.$[].financial_support_by_course': bulkUpdateDto.financial_support_by_course,
-            'students.$[].emotional_support_by_course': bulkUpdateDto.emotional_support_by_course,
+            'students.$[].weekly_study_hours_by_course':
+              bulkUpdateDto.weekly_study_hours_by_course,
+            'students.$[].part_time_hours_by_course':
+              bulkUpdateDto.part_time_hours_by_course,
+            'students.$[].financial_support_by_course':
+              bulkUpdateDto.financial_support_by_course,
+            'students.$[].emotional_support_by_course':
+              bulkUpdateDto.emotional_support_by_course,
             'students.$[].updated_at': new Date(),
           },
-        }
+        },
       );
 
       if (result.matchedCount === 0) {
@@ -497,7 +590,9 @@ export class PredictionService {
         message: 'Behavior data updated for all students successfully',
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to bulk update behavior: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to bulk update behavior: ${error.message}`,
+      );
     }
   }
 
@@ -522,7 +617,9 @@ export class PredictionService {
         message: 'Upload deleted successfully',
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to delete upload: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to delete upload: ${error.message}`,
+      );
     }
   }
 
@@ -539,7 +636,7 @@ export class PredictionService {
       }
 
       // Get student codes from upload
-      const studentCodes = upload.students.map(s => s.student_id);
+      const studentCodes = upload.students.map((s) => s.student_id);
 
       // Find students in database with their accounts
       const students = await this.prismaService.student.findMany({
@@ -566,29 +663,32 @@ export class PredictionService {
       });
 
       // Filter students who have accounts
-      const studentsWithAccounts = students.filter(s => s.account);
-      const accountIds = studentsWithAccounts.map(s => s.account.account_id);
+      const studentsWithAccounts = students.filter((s) => s.account);
+      const accountIds = studentsWithAccounts.map((s) => s.account.account_id);
 
       if (accountIds.length === 0) {
-        throw new BadRequestException('No students with accounts found in this upload');
+        throw new BadRequestException(
+          'No students with accounts found in this upload',
+        );
       }
 
       // Create notification master
-      const notificationMaster = await this.prismaService.notificationMaster.create({
-        data: {
-          title: '📋 Khảo sát Behavior - Dự đoán Kết quả Học tập',
-          body: `Chào bạn! Giảng viên đã yêu cầu bạn hoàn tất khảo sát hành vi học tập cho môn ${upload.course_code} - ${upload.class_code}. Khảo sát này giúp hệ thống dự đoán chính xác hơn kết quả học tập của bạn. Vui lòng hoàn tất khảo sát trong mục "Khảo sát" trên hệ thống.`,
-          type: 'Khảo Sát',
-          priority: 'Cao',
-          target: 'Sinh viên',
-          channel: 'in_app',
-          created_by: 1, // System/Admin account
-        },
-      });
+      const notificationMaster =
+        await this.prismaService.notificationMaster.create({
+          data: {
+            title: '📋 Khảo sát Behavior - Dự đoán Kết quả Học tập',
+            body: `Chào bạn! Giảng viên đã yêu cầu bạn hoàn tất khảo sát hành vi học tập cho môn ${upload.course_code} - ${upload.class_code}. Khảo sát này giúp hệ thống dự đoán chính xác hơn kết quả học tập của bạn. Vui lòng hoàn tất khảo sát trong mục "Khảo sát" trên hệ thống.`,
+            type: 'Khảo Sát',
+            priority: 'Cao',
+            target: 'Sinh viên',
+            channel: 'in_app',
+            created_by: 1, // System/Admin account
+          },
+        });
 
       // Create notification recipients for each student
       await this.prismaService.notificationRecipient.createMany({
-        data: accountIds.map(accountId => ({
+        data: accountIds.map((accountId) => ({
           master_id: notificationMaster.id,
           account_id: accountId,
           delivered_at: new Date(),
@@ -606,7 +706,9 @@ export class PredictionService {
         },
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to send survey notification: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to send survey notification: ${error.message}`,
+      );
     }
   }
 
@@ -622,15 +724,15 @@ export class PredictionService {
       }
 
       // Extract student codes from the upload
-      const studentCodes = upload.students.map(s => s.student_id);
+      const studentCodes = upload.students.map((s) => s.student_id);
 
       // Fetch behavior data from StudentSurveyFactors table
       const behaviorMap = await this.fetchBehaviorDataForStudents(studentCodes);
 
       // Enrich student data with behavior information
-      const enrichedStudents = upload.students.map(student => {
+      const enrichedStudents = upload.students.map((student) => {
         const behaviorData = behaviorMap.get(student.student_id);
-        
+
         if (behaviorData) {
           // Always update full_name and has_survey_data if behavior data exists
           const enriched = {
@@ -640,19 +742,28 @@ export class PredictionService {
           };
 
           // Only update behavior fields if they are currently null
-          if (student.weekly_study_hours_by_course === null || 
-              student.part_time_hours_by_course === null ||
-              student.financial_support_by_course === null ||
-              student.emotional_support_by_course === null) {
-            enriched.weekly_study_hours_by_course = student.weekly_study_hours_by_course ?? behaviorData.weekly_study_hours;
-            enriched.part_time_hours_by_course = student.part_time_hours_by_course ?? behaviorData.part_time_hours;
-            enriched.financial_support_by_course = student.financial_support_by_course ?? behaviorData.financial_support;
-            enriched.emotional_support_by_course = student.emotional_support_by_course ?? behaviorData.emotional_support;
+          if (
+            student.weekly_study_hours_by_course === null ||
+            student.part_time_hours_by_course === null ||
+            student.financial_support_by_course === null ||
+            student.emotional_support_by_course === null
+          ) {
+            enriched.weekly_study_hours_by_course =
+              student.weekly_study_hours_by_course ??
+              behaviorData.weekly_study_hours;
+            enriched.part_time_hours_by_course =
+              student.part_time_hours_by_course ?? behaviorData.part_time_hours;
+            enriched.financial_support_by_course =
+              student.financial_support_by_course ??
+              behaviorData.financial_support;
+            enriched.emotional_support_by_course =
+              student.emotional_support_by_course ??
+              behaviorData.emotional_support;
           }
 
           return enriched;
         }
-        
+
         return student;
       });
 
@@ -667,7 +778,9 @@ export class PredictionService {
         students: enrichedStudents,
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to get students: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to get students: ${error.message}`,
+      );
     }
   }
 
@@ -692,7 +805,7 @@ export class PredictionService {
             'students.$.confidence': confidence,
             'students.$.updated_at': new Date(),
           },
-        }
+        },
       );
 
       if (result.matchedCount === 0) {
@@ -704,7 +817,9 @@ export class PredictionService {
         message: 'Prediction updated successfully',
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to update prediction: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to update prediction: ${error.message}`,
+      );
     }
   }
 
@@ -715,7 +830,7 @@ export class PredictionService {
   async getAvailableAcademicTerms(courseCode?: string) {
     try {
       const filter: any = { isActive: true };
-      
+
       // If courseCode is provided, filter by it
       if (courseCode) {
         filter.courseCode = courseCode;
@@ -738,7 +853,9 @@ export class PredictionService {
         },
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to fetch academic terms: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to fetch academic terms: ${error.message}`,
+      );
     }
   }
 
@@ -755,69 +872,83 @@ export class PredictionService {
       }
 
       // 2. Lấy grade structure
-      const gradeStructure = await this.gradeStructureModel.findOne({
-        courseCode: upload.course_code,
-        academicYear: upload.academic_year,
-        semester: upload.semester,
-      }).exec();
+      const gradeStructure = await this.gradeStructureModel
+        .findOne({
+          courseCode: upload.course_code,
+          academicYear: upload.academic_year,
+          semester: upload.semester,
+        })
+        .exec();
 
       if (!gradeStructure) {
-        throw new NotFoundException('Grade structure not found for this course');
+        throw new NotFoundException(
+          'Grade structure not found for this course',
+        );
       }
 
       // 3. Tính toán cho từng sinh viên
-      const studentsWithThreshold = upload.students.map((student: StudentRecord) => {
-        const grades = student.grades;
-        let currentScore = 0;
-        let currentWeightUsed = 0;
-        let finalWeightNeeded = 0;
-        let finalColumnKey = '';
+      const studentsWithThreshold = upload.students.map(
+        (student: StudentRecord) => {
+          const grades = student.grades;
+          let currentScore = 0;
+          let currentWeightUsed = 0;
+          let finalWeightNeeded = 0;
+          let finalColumnKey = '';
 
-        // Tìm cột final (chưa có điểm)
-        const finalColumn = gradeStructure.columns.find(col => 
-          col.key === 'final' || col.key === 'finalexam' || col.key.includes('final')
-        );
+          // Tìm cột final (chưa có điểm)
+          const finalColumn = gradeStructure.columns.find(
+            (col) =>
+              col.key === 'final' ||
+              col.key === 'finalexam' ||
+              col.key.includes('final'),
+          );
 
-        if (finalColumn) {
-          finalWeightNeeded = finalColumn.weight;
-          finalColumnKey = finalColumn.key;
-        }
-
-        // Tính điểm hiện tại từ các cột đã có
-        gradeStructure.columns.forEach(column => {
-          const gradeValue = grades[column.key];
-          if (gradeValue !== null && gradeValue !== undefined && column.key !== finalColumnKey) {
-            // Normalize về thang 10
-            const normalizedGrade = (gradeValue / column.maxScore) * 10;
-            // Cộng điểm có trọng số
-            currentScore += (normalizedGrade * column.weight) / 100;
-            currentWeightUsed += column.weight;
+          if (finalColumn) {
+            finalWeightNeeded = finalColumn.weight;
+            finalColumnKey = finalColumn.key;
           }
-        });
 
-        // Tính điểm final cần thiết để đạt 5.0
-        const passingScore = 5.0;
-        const remainingWeight = 100 - currentWeightUsed;
-        let finalScoreNeeded = 0;
+          // Tính điểm hiện tại từ các cột đã có
+          gradeStructure.columns.forEach((column) => {
+            const gradeValue = grades[column.key];
+            if (
+              gradeValue !== null &&
+              gradeValue !== undefined &&
+              column.key !== finalColumnKey
+            ) {
+              // Normalize về thang 10
+              const normalizedGrade = (gradeValue / column.maxScore) * 10;
+              // Cộng điểm có trọng số
+              currentScore += (normalizedGrade * column.weight) / 100;
+              currentWeightUsed += column.weight;
+            }
+          });
 
-        if (remainingWeight > 0) {
-          // Công thức: currentScore + (finalScore * remainingWeight / 100) = 5.0
-          // => finalScore = (5.0 - currentScore) * 100 / remainingWeight
-          finalScoreNeeded = ((passingScore - currentScore) * 100) / remainingWeight;
-          finalScoreNeeded = Math.max(0, Math.min(10, finalScoreNeeded)); // Clamp 0-10
-        }
+          // Tính điểm final cần thiết để đạt 5.0
+          const passingScore = 5.0;
+          const remainingWeight = 100 - currentWeightUsed;
+          let finalScoreNeeded = 0;
 
-        return {
-          student_id: student.student_id,
-          currentScore: parseFloat(currentScore.toFixed(2)),
-          currentWeightUsed: parseFloat(currentWeightUsed.toFixed(2)),
-          finalWeightNeeded: parseFloat(remainingWeight.toFixed(2)),
-          finalScoreNeeded: parseFloat(finalScoreNeeded.toFixed(2)),
-          finalColumnKey,
-          isPassing: currentScore >= passingScore,
-          canPass: finalScoreNeeded <= 10, // Có thể pass nếu điểm final cần ≤ 10
-        };
-      });
+          if (remainingWeight > 0) {
+            // Công thức: currentScore + (finalScore * remainingWeight / 100) = 5.0
+            // => finalScore = (5.0 - currentScore) * 100 / remainingWeight
+            finalScoreNeeded =
+              ((passingScore - currentScore) * 100) / remainingWeight;
+            finalScoreNeeded = Math.max(0, Math.min(10, finalScoreNeeded)); // Clamp 0-10
+          }
+
+          return {
+            student_id: student.student_id,
+            currentScore: parseFloat(currentScore.toFixed(2)),
+            currentWeightUsed: parseFloat(currentWeightUsed.toFixed(2)),
+            finalWeightNeeded: parseFloat(remainingWeight.toFixed(2)),
+            finalScoreNeeded: parseFloat(finalScoreNeeded.toFixed(2)),
+            finalColumnKey,
+            isPassing: currentScore >= passingScore,
+            canPass: finalScoreNeeded <= 10, // Có thể pass nếu điểm final cần ≤ 10
+          };
+        },
+      );
 
       return {
         gradeStructure: {
@@ -829,7 +960,9 @@ export class PredictionService {
         students: studentsWithThreshold,
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to calculate pass threshold: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to calculate pass threshold: ${error.message}`,
+      );
     }
   }
 }

@@ -146,6 +146,7 @@
     "dropZoneTitle": "Drop your transcript file here",
     "dropZoneDescription": "or click to browse and select from your device",
     "orClickToBrowse": "or click to browse and select from your device",
+    "browseFiles": "Browse Files",
     "fileSelected": "File selected",
     "uploadNow": "Upload Now",
     "uploading": "Uploading...",

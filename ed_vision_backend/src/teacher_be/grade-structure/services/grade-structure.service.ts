@@ -1,7 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { GradeStructure, GradeStructureDocument } from '../../../mongodb/schemas/grade-structure.schema';
+import {
+  GradeStructure,
+  GradeStructureDocument,
+} from '../../../mongodb/schemas/grade-structure.schema';
 import { CreateGradeStructureDto } from '../dto/create-grade-structure.dto';
 import { UpdateGradeStructureDto } from '../dto/update-grade-structure.dto';
 
@@ -15,7 +22,9 @@ export class GradeStructureService {
   /**
    * Tạo mới cấu trúc bảng điểm
    */
-  async create(createGradeStructureDto: CreateGradeStructureDto): Promise<GradeStructure> {
+  async create(
+    createGradeStructureDto: CreateGradeStructureDto,
+  ): Promise<GradeStructure> {
     // Validate tổng trọng số
     const totalWeight = createGradeStructureDto.columns.reduce(
       (sum, col) => sum + col.weight,
@@ -68,10 +77,7 @@ export class GradeStructureService {
       if (filters.isActive !== undefined) query.isActive = filters.isActive;
     }
 
-    return this.gradeStructureModel
-      .find(query)
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.gradeStructureModel.find(query).sort({ createdAt: -1 }).exec();
   }
 
   /**
@@ -81,7 +87,9 @@ export class GradeStructureService {
     const gradeStructure = await this.gradeStructureModel.findById(id).exec();
 
     if (!gradeStructure) {
-      throw new NotFoundException(`Không tìm thấy cấu trúc bảng điểm với ID: ${id}`);
+      throw new NotFoundException(
+        `Không tìm thấy cấu trúc bảng điểm với ID: ${id}`,
+      );
     }
 
     return gradeStructure;
@@ -131,7 +139,9 @@ export class GradeStructureService {
       .exec();
 
     if (!updatedGradeStructure) {
-      throw new NotFoundException(`Không tìm thấy cấu trúc bảng điểm với ID: ${id}`);
+      throw new NotFoundException(
+        `Không tìm thấy cấu trúc bảng điểm với ID: ${id}`,
+      );
     }
 
     return updatedGradeStructure;
@@ -146,7 +156,9 @@ export class GradeStructureService {
       .exec();
 
     if (!deletedGradeStructure) {
-      throw new NotFoundException(`Không tìm thấy cấu trúc bảng điểm với ID: ${id}`);
+      throw new NotFoundException(
+        `Không tìm thấy cấu trúc bảng điểm với ID: ${id}`,
+      );
     }
 
     return deletedGradeStructure;
@@ -159,7 +171,9 @@ export class GradeStructureService {
     const result = await this.gradeStructureModel.findByIdAndDelete(id).exec();
 
     if (!result) {
-      throw new NotFoundException(`Không tìm thấy cấu trúc bảng điểm với ID: ${id}`);
+      throw new NotFoundException(
+        `Không tìm thấy cấu trúc bảng điểm với ID: ${id}`,
+      );
     }
   }
 
@@ -171,27 +185,33 @@ export class GradeStructureService {
     semester: number,
     courseCode: string,
   ): Promise<string[]> {
-    const structure = await this.findByCourse(academicYear, semester, courseCode);
-    
+    const structure = await this.findByCourse(
+      academicYear,
+      semester,
+      courseCode,
+    );
+
     if (!structure) {
       return [];
     }
 
-    return structure.columns.map(col => col.key);
+    return structure.columns.map((col) => col.key);
   }
 
   /**
    * Lấy danh sách courses đã có grade structure (có weights)
    * Dùng để populate combobox khi upload prediction
    */
-  async getAvailableCourses(): Promise<Array<{
-    courseCode: string;
-    courseName: string;
-    academicYear: string;
-    semester: number;
-    credits: number;
-    totalWeight: number;
-  }>> {
+  async getAvailableCourses(): Promise<
+    Array<{
+      courseCode: string;
+      courseName: string;
+      academicYear: string;
+      semester: number;
+      credits: number;
+      totalWeight: number;
+    }>
+  > {
     const structures = await this.gradeStructureModel
       .find({ isActive: true })
       .select('courseCode courseName academicYear semester credits totalWeight')
@@ -201,7 +221,7 @@ export class GradeStructureService {
 
     // Deduplicate by courseCode (lấy course mới nhất)
     const courseMap = new Map();
-    
+
     for (const structure of structures) {
       const key = structure.courseCode;
       if (!courseMap.has(key)) {

@@ -1,5 +1,6 @@
-import { useState, useEffect, lazy, Suspense, useCallback, useMemo, useTransition } from 'react';
+import { useState, useEffect, lazy, Suspense, useCallback, useMemo, useTransition, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Toaster, toast } from 'react-hot-toast';
 import type { SoundType, Track, JournalEntry } from './types/learningSpace';
 import type { LiveTheme } from '@/data/liveThemes';
 import { getLiveThemeById } from '@/data/liveThemes';
@@ -9,11 +10,13 @@ import ClockDisplay from './components/ClockDisplay';
 import DockMenu from './components/DockMenu';
 import SnowEffect from './components/SnowEffect';
 import RainEffect from './components/RainEffect';
+import { MusicPlayerProvider } from './music/MusicPlayerContext';
 
 // Lazy load heavy components
 const MusicWidget = lazy(() => import('./components/MusicWidget'));
 const PomodoroPanel = lazy(() => import('./components/PomodoroPanel'));
 const PomodoroOverlay = lazy(() => import('./components/PomodoroOverlay'));
+const PomodoroCompactWidget = lazy(() => import('./components/PomodoroCompactWidget'));
 const ExplosionEffect = lazy(() => import('./components/ExplosionEffect'));
 const ConfettiEffect = lazy(() => import('./components/ConfettiEffect'));
 const AmbiencePanel = lazy(() => import('./components/AmbiencePanel'));
@@ -31,6 +34,21 @@ type Props = {
   className?: string;
 };
 
+// Sound URLs mapping
+const SOUND_URLS: Record<SoundType, string> = {
+  rain: 'https://static.wixstatic.com/mp3/3d08de_0c9159454b04482c8032ac56dc427314.mp3',
+  birds: 'https://static.wixstatic.com/mp3/3d08de_24a228e2b84f4afaade5486edd484d90.mp3',
+  campfire: 'https://static.wixstatic.com/mp3/3d08de_0948c4b3598f413294d31676194a3149.mp3',
+  waves: 'https://static.wixstatic.com/mp3/3d08de_30e42bff6e614ea5b03d8819ebedb688.mp3',
+  thunderstorm: 'https://orangefreesounds.com/wp-content/uploads/2025/12/Distant-storm-thunder-sound-effect.mp3',
+  keyboard: 'https://www.chosic.com/wp-content/uploads/2021/09/Keyboard-Typing(chosic.com).mp3',
+  cafe: 'https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-glitched-tones/glitched_tones_coffee_machine_334.mp3',
+  'wind-chimes': 'https://cdn.uppbeat.io/audio-files/c24ff33df632944a432b6a23b261de86/ff0bf2b30ae6824a5cbc0ed1e07a6cbe/5c7e6c8ec34c8df3832d3fa09f6b78d4/STREAMING-wind-chimes-with-ambient-drones-aroshanti-light-with-nature-4-01-24.mp3',
+  'singing-bowl': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d0.mp3',
+  'white-noise': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_0788523c6f.mp3',
+  crickets: 'https://assets.mixkit.co/sfx/preview/mixkit-crickets-and-insects-in-the-wild-ambience-39.mp3',
+};
+
 export default function LearningSpace({ className = '' }: Props) {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
@@ -43,8 +61,14 @@ export default function LearningSpace({ className = '' }: Props) {
   // Panel visibility
   const [pomoVisible, setPomoVisible] = useState(false);
   const [pomoOverlayVisible, setPomoOverlayVisible] = useState(false);
+  const [pomoCompactVisible, setPomoCompactVisible] = useState(false);
+  const [pomoViewMode, setPomoViewMode] = useState<'spotlight' | 'minimalist'>('spotlight');
+  const prevRunningRef = useRef(false);
   const [pomoFocusTitle, setPomoFocusTitle] = useState('');
   const [pomoTimeLeft, setPomoTimeLeft] = useState(0);
+  const [pomoTotalTime, setPomoTotalTime] = useState(0);
+  const [pomoRunning, setPomoRunning] = useState(false);
+  const [pomoJustStopped, setPomoJustStopped] = useState(false);
   const [showExplosion, setShowExplosion] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ambienceVisible, setAmbienceVisible] = useState(false);
@@ -64,9 +88,23 @@ export default function LearningSpace({ className = '' }: Props) {
   const [musicWidgetVisible, setMusicWidgetVisible] = useState(true);
   const [currentTrack, setCurrentTrack] = useState<Track | undefined>();
 
-  // Ambience
-  const [selectedSound, setSelectedSound] = useState<SoundType | null>('rain');
-  const [soundVolume, setSoundVolume] = useState(70);
+  // Ambience - Multi-sound support
+  const [soundVolumes, setSoundVolumes] = useState<Record<SoundType, number>>({
+    rain: 0,
+    birds: 0,
+    campfire: 0,
+    waves: 0,
+    thunderstorm: 0,
+    keyboard: 0,
+    cafe: 0,
+    'wind-chimes': 0,
+    'singing-bowl': 0,
+    'white-noise': 0,
+    crickets: 0,
+  });
+  
+  // Refs for audio elements to manage multiple sounds
+  const audioRefs = useRef<Partial<Record<SoundType, HTMLAudioElement>>>({});
 
   // Background & Live Theme - Initialize with cached values immediately
   const [backgroundImage, setBackgroundImage] = useState(() => {
@@ -77,6 +115,43 @@ export default function LearningSpace({ className = '' }: Props) {
   const [liveEnabled, setLiveEnabled] = useState(() => loadThemeState().liveEnabled);
   const [videoMuted, setVideoMuted] = useState(() => loadThemeState().videoMuted ?? true);
   const [videoVolume, setVideoVolume] = useState(() => loadThemeState().videoVolume ?? 70);
+
+  // Handle Ambience Sounds
+  useEffect(() => {
+    Object.entries(soundVolumes).forEach(([type, volume]) => {
+      const soundType = type as SoundType;
+      
+      // Initialize audio element if not exists
+      if (!audioRefs.current[soundType]) {
+        audioRefs.current[soundType] = new Audio(SOUND_URLS[soundType]);
+        audioRefs.current[soundType]!.loop = true;
+      }
+
+      const audio = audioRefs.current[soundType]!;
+
+      // Update volume
+      audio.volume = volume / 100;
+
+      // Play or pause based on volume
+      if (volume > 0) {
+        if (audio.paused) {
+          audio.play().catch(e => console.log(`Audio playback failed for ${soundType}:`, e));
+        }
+      } else {
+        if (!audio.paused) {
+          audio.pause();
+          audio.currentTime = 0; // Reset to beginning when stopped
+        }
+      }
+    });
+  }, [soundVolumes]);
+
+  const handleSoundVolumeChange = useCallback((sound: SoundType, volume: number) => {
+    setSoundVolumes(prev => ({
+      ...prev,
+      [sound]: volume
+    }));
+  }, []);
 
   // Load theme state asynchronously to avoid blocking render
   useEffect(() => {
@@ -278,16 +353,63 @@ export default function LearningSpace({ className = '' }: Props) {
     setShowSnow(true);
   }, []);
 
-  const handlePomoStart = useCallback((isRunning: boolean, title: string, timeLeft: number) => {
+  useEffect(() => {
+    // Expose title updater to window for overlay
+    (window as any).__pomoUpdateTitleHandler = (newTitle: string) => {
+      setPomoFocusTitle(newTitle);
+    };
+
+    return () => {
+      delete (window as any).__pomoUpdateTitleHandler;
+    };
+  }, []);
+
+  const handlePomoStart = useCallback((isRunning: boolean, title: string, timeLeft: number, totalTime: number) => {
     setPomoTimeLeft(timeLeft);
-    if (isRunning) {
+    setPomoTotalTime(totalTime);
+    setPomoRunning(isRunning);
+    const wasRunning = prevRunningRef.current;
+    if (isRunning && !wasRunning) {
       setPomoFocusTitle(title);
+      if (pomoViewMode === 'spotlight') {
+        if (!pomoOverlayVisible) {
+          setPomoOverlayVisible(true);
+        }
+        setPomoCompactVisible(false);
+        setPomoVisible(false);
+      } else {
+        setPomoOverlayVisible(false);
+        setPomoCompactVisible(true);
+        setPomoVisible(false);
+      }
+    }
+    prevRunningRef.current = isRunning;
+  }, [pomoOverlayVisible, pomoViewMode]);
+
+  useEffect(() => {
+    if (pomoJustStopped) return;
+    // Only consider active if running OR if paused but time has elapsed (not at start/reset state)
+    const isActive = pomoRunning || (pomoTotalTime > 0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft > 0);
+    if (!isActive) return;
+    if (pomoViewMode === 'spotlight') {
       setPomoOverlayVisible(true);
-      setPomoVisible(false); // Close panel when timer starts
+      setPomoCompactVisible(false);
     } else {
       setPomoOverlayVisible(false);
+      setPomoCompactVisible(true);
     }
-  }, []);
+  }, [pomoViewMode, pomoRunning, pomoTotalTime, pomoTimeLeft, pomoJustStopped]);
+
+  useEffect(() => {
+    if (pomoRunning && pomoJustStopped) {
+      setPomoJustStopped(false);
+      return;
+    }
+    const isActive = pomoRunning || (pomoTotalTime > 0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft > 0);
+    if (!isActive && pomoJustStopped) {
+      setPomoJustStopped(false);
+    }
+  }, [pomoRunning, pomoTimeLeft, pomoTotalTime, pomoJustStopped]);
 
   const handleModuleClick = useCallback((moduleId: number, courseId: string) => {
     setSelectedModuleId(moduleId);
@@ -304,10 +426,23 @@ export default function LearningSpace({ className = '' }: Props) {
   }), [liveEnabled, activeLiveTheme, backgroundImage]);
 
   return (
+    <MusicPlayerProvider>
     <div
       className={`min-h-screen overflow-hidden relative ${className}`}
       style={backgroundStyle}
     >
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 2000,
+          style: {
+            background: '#333',
+            color: '#fff',
+            borderRadius: '10px',
+            fontSize: '14px',
+          },
+        }}
+      />
       {/* YouTube Live Background - Lazy loaded */}
       {liveEnabled && activeLiveTheme && (
         <Suspense fallback={<div className="fixed inset-0 bg-black/20 animate-pulse" />}>
@@ -332,19 +467,69 @@ export default function LearningSpace({ className = '' }: Props) {
             visible={pomoOverlayVisible}
             focusTitle={pomoFocusTitle}
             timeLeft={pomoTimeLeft}
+            totalTime={pomoTotalTime}
+            isRunning={pomoRunning}
             onClose={() => setPomoOverlayVisible(false)}
             onOpenPanel={() => setPomoVisible(true)}
             onPause={() => {
               // Handle pause/resume
-              setPomoVisible(true);
+              if ((window as any).__pomoToggleHandler) {
+                (window as any).__pomoToggleHandler();
+              }
+              // Don't open panel on pause anymore, stay on overlay
             }}
             onStop={() => {
+              // Mark just stopped to avoid re-open race
+              setPomoJustStopped(true);
+              // Close UI immediately
+              setPomoOverlayVisible(false);
               // Stop the timer in panel
               if ((window as any).__pomoStopHandler) {
                 (window as any).__pomoStopHandler();
               }
-              setPomoOverlayVisible(false);
               setShowExplosion(true);
+            }}
+            onAddTime={(amount) => {
+              // Ensure we check for the handler on window
+              const adjustHandler = (window as any).__pomoAdjustTimeHandler;
+              
+              if (amount < 0 && (pomoTimeLeft + amount) <= 0) {
+                toast.error("Không thể giảm thời gian về 0 hoặc thấp hơn!", {
+                  id: 'pomo-min-limit'
+                });
+                return;
+              }
+
+              if (adjustHandler) {
+                adjustHandler(amount);
+              } else {
+                console.warn('Pomodoro adjust handler not found on window');
+              }
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* Pomodoro Compact Widget */}
+      {pomoCompactVisible && (
+        <Suspense fallback={null}>
+          <PomodoroCompactWidget
+            visible={pomoCompactVisible}
+            focusTitle={pomoFocusTitle}
+            timeLeft={pomoTimeLeft}
+            totalTime={pomoTotalTime}
+            isRunning={pomoRunning}
+            onPause={() => {
+              if ((window as any).__pomoToggleHandler) {
+                (window as any).__pomoToggleHandler();
+              }
+            }}
+            onStop={() => {
+              setPomoJustStopped(true);
+              setPomoCompactVisible(false);
+              if ((window as any).__pomoStopHandler) {
+                (window as any).__pomoStopHandler();
+              }
             }}
           />
         </Suspense>
@@ -370,7 +555,6 @@ export default function LearningSpace({ className = '' }: Props) {
             visible={showConfetti}
             onComplete={() => {
               setShowConfetti(false);
-              setPomoVisible(true);
             }}
           />
         </Suspense>
@@ -388,25 +572,24 @@ export default function LearningSpace({ className = '' }: Props) {
           <MusicWidget
             visible={musicWidgetVisible && !musicPanelVisible}
             onClose={() => setMusicWidgetVisible(false)}
-            currentTrack={currentTrack}
           />
         </Suspense>
       )}
 
-      {/* Pomodoro Panel */}
-      {pomoVisible && (
-        <Suspense fallback={null}>
-          <PomodoroPanel
-            visible={pomoVisible}
-            onClose={() => setPomoVisible(false)}
-            onStartTimer={handlePomoStart}
-            onStopTimer={() => {
-              setPomoOverlayVisible(false);
-              setPomoVisible(true);
-            }}
-          />
-        </Suspense>
-      )}
+      {/* Pomodoro Panel - Always mounted to keep timer state */}
+      <Suspense fallback={null}>
+        <PomodoroPanel
+          visible={pomoVisible}
+          onClose={() => setPomoVisible(false)}
+          onStartTimer={handlePomoStart}
+          onStopTimer={() => {
+            setPomoOverlayVisible(false);
+            setPomoCompactVisible(false);
+            setPomoVisible(true);
+          }}
+          onViewModeChange={(m) => setPomoViewMode(m)}
+        />
+      </Suspense>
 
       {/* Ambience Panel */}
       {ambienceVisible && (
@@ -414,10 +597,8 @@ export default function LearningSpace({ className = '' }: Props) {
           <AmbiencePanel
             visible={ambienceVisible}
             onClose={() => setAmbienceVisible(false)}
-            selectedSound={selectedSound}
-            onSelectSound={setSelectedSound}
-            soundVolume={soundVolume}
-            onVolumeChange={setSoundVolume}
+            soundVolumes={soundVolumes}
+            onSoundVolumeChange={handleSoundVolumeChange}
             showRain={showRain}
             showSnow={showSnow}
             onToggleRain={() => setShowRain(!showRain)}
@@ -464,12 +645,19 @@ export default function LearningSpace({ className = '' }: Props) {
 
       {/* Music Panel */}
       {musicPanelVisible && (
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="fixed inset-0 z-40 flex items-center justify-center">
+            <div className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-white/20 border-t-purple-500 rounded-full animate-spin"></div>
+                <span className="text-white/80 text-sm">Loading Music Panel...</span>
+              </div>
+            </div>
+          </div>
+        }>
           <MusicPanel
             visible={musicPanelVisible}
             onClose={() => setMusicPanelVisible(false)}
-            tracks={tracks}
-            onSelectTrack={handleSelectTrack}
           />
         </Suspense>
       )}
@@ -539,5 +727,6 @@ export default function LearningSpace({ className = '' }: Props) {
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       />
     </div>
+    </MusicPlayerProvider>
   );
 }

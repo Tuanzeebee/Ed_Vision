@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/teacher/teacher_card"
 import { Button } from "@/components/ui/teacher/teacher_button"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
@@ -85,10 +86,11 @@ const debugLog = (...args: any[]) => {
 }
 
 export default function MessagesNotifications() {
+    const { t } = useTranslation('teacher')
     // Get studentId from URL params
     const [searchParams] = useSearchParams()
     const studentIdFromUrl = searchParams.get('studentId')
-    const { filterOptions, loading: loadingFilters } = useFilterOptions()
+    const { filterOptions, loading: _loadingFilters } = useFilterOptions()
 
     // Tab state cho 2 nhóm sinh viên
     const [activeGroup, setActiveGroup] = useState<StudentGroup>('atrisk')
@@ -144,11 +146,11 @@ export default function MessagesNotifications() {
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
-    const [loading, setLoading] = useState(false)
-    const [loadingStudents, setLoadingStudents] = useState(false)
-    const [loadingParents, setLoadingParents] = useState(false)
+    const [_loading, setLoading] = useState(false)
+    const [_loadingStudents, setLoadingStudents] = useState(false)
+    const [_loadingParents, setLoadingParents] = useState(false)
     const [classes, setClasses] = useState<Array<{ id: number; code: string; name: string; studentCount: number }>>([])
-    const [loadingClasses, setLoadingClasses] = useState(false)
+    const [_loadingClasses, setLoadingClasses] = useState(false)
 
     // Load students và parents từ backend
     useEffect(() => {
@@ -229,7 +231,7 @@ export default function MessagesNotifications() {
         }
     }
 
-    const loadConversations = async () => {
+    const loadConversations = useCallback(async () => {
         try {
             setLoading(true)
             const data = await chatService.getTeacherConversations()
@@ -241,9 +243,9 @@ export default function MessagesNotifications() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    const loadMessages = async (conversationId: string) => {
+    const loadMessages = useCallback(async (conversationId: string) => {
         try {
             setLoading(true)
             const data = await chatService.getConversationMessages(conversationId)
@@ -253,7 +255,7 @@ export default function MessagesNotifications() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
     // Remove mock parents data
     // const parents: Parent[] = []
@@ -570,7 +572,7 @@ export default function MessagesNotifications() {
         }
     }
 
-    const handleSelectStudent = async (student: Student | Parent) => {
+    const handleSelectStudent = useCallback(async (student: Student | Parent) => {
         // Leave previous conversation room
         if (currentConversationId) {
             socketService.leaveConversation(currentConversationId)
@@ -628,7 +630,7 @@ export default function MessagesNotifications() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [currentConversationId, loadMessages, loadConversations])
 
     const handleUseSuggestion = (question: string) => {
         setMessageInput(question)
@@ -656,7 +658,7 @@ export default function MessagesNotifications() {
             // Send bulk message
             const result = await chatService.sendBulkMessage(data)
 
-            alert(`✅ Đã gửi thành công!\n- Sinh viên: ${result.sentToStudents}\n- Phụ huynh: ${result.sentToParents}`)
+            alert(t('messagesNotifications.bulkNotificationModal.sendingSuccess') + `\n- ${t('messagesNotifications.students')}: ${result.sentToStudents}\n- ${t('messagesNotifications.parents')}: ${result.sentToParents}`)
             setIsBulkModalOpen(false)
             setBulkForm({ recipient: 'all', selectedClass: '', title: '', content: '' })
             
@@ -684,7 +686,7 @@ export default function MessagesNotifications() {
 
             const result = await chatService.sendQuickMessage(data)
 
-            alert(`✅ Đã gửi tin nhắn nhanh thành công!\nĐã gửi: ${result.sent} tin nhắn`)
+            alert(t('messagesNotifications.quickMessageModal.sendingSuccess') + `\n${result.sent}`)
             setIsQuickModalOpen(false)
             setQuickForm({ selectedStudent: '', template: '', content: '' })
             
@@ -692,7 +694,7 @@ export default function MessagesNotifications() {
             await loadConversations()
         } catch (error) {
             console.error('Error sending quick message:', error)
-            alert('❌ Gửi tin nhắn thất bại. Vui lòng thử lại!')
+            alert(t('messagesNotifications.quickMessageModal.sendingError'))
         } finally {
             setLoading(false)
         }
@@ -701,7 +703,7 @@ export default function MessagesNotifications() {
     const handleUrgentSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!urgentForm.confirmed) {
-            alert('Vui lòng xác nhận để gửi cảnh báo!')
+            alert(t('messagesNotifications.urgentAlertModal.enterMessageError'))
             return
         }
         try {
@@ -718,7 +720,7 @@ export default function MessagesNotifications() {
             }
 
             if (studentIds.length === 0) {
-                alert('Không có sinh viên nào được chọn!')
+                alert(t('messagesNotifications.bulkNotificationModal.noStudentsSelected'))
                 return
             }
 
@@ -733,7 +735,7 @@ export default function MessagesNotifications() {
 
             const result = await chatService.sendUrgentAlert(data)
 
-            alert(`🚨 Đã gửi cảnh báo khẩn cấp!\n- Sinh viên: ${result.sentToStudents}\n- Phụ huynh: ${result.sentToParents}`)
+            alert(t('messagesNotifications.urgentAlertModal.sendingSuccess') + `\n- ${t('messagesNotifications.students')}: ${result.sentToStudents}\n- ${t('messagesNotifications.parents')}: ${result.sentToParents}`)
             setIsUrgentModalOpen(false)
             setUrgentForm({ type: 'academic', recipient: 'atrisk', content: '', confirmed: false })
             
@@ -741,7 +743,7 @@ export default function MessagesNotifications() {
             await loadConversations()
         } catch (error) {
             console.error('Error sending urgent alert:', error)
-            alert('❌ Gửi cảnh báo thất bại. Vui lòng thử lại!')
+            alert(t('messagesNotifications.urgentAlertModal.sendingError'))
         } finally {
             setLoading(false)
         }
@@ -863,10 +865,10 @@ export default function MessagesNotifications() {
 
     // Pagination for students
     const totalStudents = filteredAndSortedStudents.length
-    const totalStudentPages = Math.ceil(totalStudents / studentsPerPage)
+    const _totalStudentPages = Math.ceil(totalStudents / studentsPerPage)
     const startStudentIndex = (currentStudentPage - 1) * studentsPerPage
     const endStudentIndex = startStudentIndex + studentsPerPage
-    const paginatedStudents = filteredAndSortedStudents.slice(startStudentIndex, endStudentIndex)
+    const _paginatedStudents = filteredAndSortedStudents.slice(startStudentIndex, endStudentIndex)
 
     // Pagination for parents
     const totalParents = filteredAndSortedParents.length
@@ -929,8 +931,8 @@ export default function MessagesNotifications() {
                     <div className="p-6">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
                             <div>
-                                <h2 className="text-3xl font-bold mb-2">Truyền thông & Tư vấn</h2>
-                                <p className="text-blue-100">Quản lý tin nhắn và thông báo đến sinh viên</p>
+                                <h2 className="text-3xl font-bold mb-2">{t('messagesNotifications.title')}</h2>
+                                <p className="text-blue-100">{t('messagesNotifications.subtitle')}</p>
                             </div>
                             <div className="flex flex-wrap gap-3">
                                 {/* Quick Actions */}
@@ -940,7 +942,7 @@ export default function MessagesNotifications() {
                                             size="sm"
                                         >
                                             <Megaphone className="w-4 h-4 mr-2" />
-                                            Thông báo hàng loạt
+                                            {t('messagesNotifications.bulkNotification')}
                                         </Button>
                                         <Button
                                             onClick={() => setIsQuickModalOpen(true)}
@@ -948,7 +950,7 @@ export default function MessagesNotifications() {
                                             size="sm"
                                         >
                                             <Zap className="w-4 h-4 mr-2" />
-                                            Tin nhắn nhanh
+                                            {t('messagesNotifications.quickMessage')}
                                         </Button>
                                         <Button
                                             onClick={() => setIsUrgentModalOpen(true)}
@@ -956,7 +958,7 @@ export default function MessagesNotifications() {
                                             size="sm"
                                         >
                                             <AlertTriangle className="w-4 h-4 mr-2" />
-                                            Cảnh báo khẩn cấp
+                                            {t('messagesNotifications.urgentAlert')}
                                         </Button>
                                     </div>
                                 </div>
@@ -971,7 +973,7 @@ export default function MessagesNotifications() {
                                             }`}
                                     >
                                         <AlertTriangle className="w-5 h-5" />
-                                        <span>Sinh viên cảnh báo</span>
+                                        <span>{t('messagesNotifications.atRiskTab')}</span>
                                         <Badge className="bg-red-500 text-white ml-2 transition-all">
                                             {atRiskStudents.length}
                                         </Badge>
@@ -984,7 +986,7 @@ export default function MessagesNotifications() {
                                             }`}
                                     >
                                         <Users className="w-5 h-5" />
-                                        <span>Sinh viên bình thường</span>
+                                        <span>{t('messagesNotifications.normalTab')}</span>
                                         <Badge className="bg-green-500 text-white ml-2 transition-all">
                                             {normalStudents.length}
                                         </Badge>
@@ -997,7 +999,7 @@ export default function MessagesNotifications() {
                                             }`}
                                     >
                                         <UserCheck className="w-5 h-5" />
-                                        <span>Phụ huynh</span>
+                                        <span>{t('messagesNotifications.parentsTab')}</span>
                                         <Badge className="bg-purple-500 text-white ml-2 transition-all">
                                             {parentsWithConversations.length}
                                         </Badge>
@@ -1011,7 +1013,7 @@ export default function MessagesNotifications() {
                                     <div className="flex items-center gap-2 mb-1">
                                         <Users className="w-4 h-4" />
                                         <span className="text-xs text-blue-100">
-                                            {activeGroup === 'atrisk' ? 'SV cảnh báo' : activeGroup === 'normal' ? 'SV bình thường' : 'Phụ huynh'}
+                                            {activeGroup === 'atrisk' ? t('messagesNotifications.atRiskStudents') : activeGroup === 'normal' ? t('messagesNotifications.normalStudents') : t('messagesNotifications.parents')}
                                         </span>
                                     </div>
                                     <div className="text-2xl font-bold">
@@ -1021,7 +1023,7 @@ export default function MessagesNotifications() {
                                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
                                     <div className="flex items-center gap-2 mb-1">
                                         <AlertTriangle className="w-4 h-4" />
-                                        <span className="text-xs text-blue-100">Chưa đọc</span>
+                                        <span className="text-xs text-blue-100">{t('messagesNotifications.unread')}</span>
                                     </div>
                                     <div className="text-2xl font-bold text-yellow-300">
                                         {activeGroup === 'parents' 
@@ -1033,7 +1035,7 @@ export default function MessagesNotifications() {
                                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
                                     <div className="flex items-center gap-2 mb-1">
                                         <Clock className="w-4 h-4" />
-                                        <span className="text-xs text-blue-100">Cuộc trò chuyện</span>
+                                        <span className="text-xs text-blue-100">{t('messagesNotifications.conversations')}</span>
                                     </div>
                                     <div className="text-2xl font-bold">
                                         {activeGroup === 'parents'
@@ -1046,7 +1048,7 @@ export default function MessagesNotifications() {
                                     <div className="flex items-center gap-2 mb-1">
                                         <MessageCircle className="w-4 h-4" />
                                         <span className="text-xs text-blue-100">
-                                            {activeGroup === 'parents' ? 'Trung bình/PH' : 'Trung bình/SV'}
+                                            {activeGroup === 'parents' ? t('messagesNotifications.avgPerParent') : t('messagesNotifications.avgPerStudent')}
                                         </span>
                                     </div>
                                     <div className="text-2xl font-bold text-green-300">
@@ -1075,20 +1077,20 @@ export default function MessagesNotifications() {
                                 <div className="w-64">
                                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                         <BookOpen className="w-4 h-4" />
-                                        Lọc theo lớp
+                                        {t('messagesNotifications.filterByClass')}
                                     </label>
                                     <div className="relative">
                                         <select
                                             value={selectedClass}
                                             onChange={(e) => setSelectedClass(e.target.value)}
-                                            className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base bg-white cursor-pointer appearance-none pr-10"
+                                            className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base bg-white text-gray-900 cursor-pointer appearance-none pr-10"
                                         >
                                             <option value="all">
-                                                Tất cả lớp ({classes.length})
+                                                {t('messagesNotifications.allClasses')} ({classes.length})
                                             </option>
                                             {classes.map((cls) => (
                                                 <option key={cls.id} value={cls.name}>
-                                                    {cls.name} ({cls.studentCount} sinh viên)
+                                                    {cls.name} ({cls.studentCount} {t('messagesNotifications.students')})
                                                 </option>
                                             ))}
                                         </select>
@@ -1098,29 +1100,17 @@ export default function MessagesNotifications() {
                                 
                                 {/* Search bar tìm sinh viên/phụ huynh */}
                                 <div className="flex-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
-                                        <span className="flex items-center gap-2">
-                                            <Search className="w-4 h-4" />
-                                            Tìm kiếm {activeGroup === 'parents' ? 'phụ huynh' : 'sinh viên'}
-                                        </span>
-                                        {searchTerm && (
-                                            <button
-                                                onClick={() => setSearchTerm('')}
-                                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                                            >
-                                                <X className="w-3 h-3" />
-                                                Xóa
-                                            </button>
-                                        )}
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        {activeGroup === 'parents' ? t('messagesNotifications.searchParent') : t('messagesNotifications.searchStudent')}
                                     </label>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                                         <input
                                             type="text"
-                                            placeholder={`Nhập tên ${activeGroup === 'parents' ? 'phụ huynh hoặc tên con' : 'sinh viên, mã sinh viên'}...`}
+                                            placeholder={activeGroup === 'parents' ? t('messagesNotifications.searchParentPlaceholder') : t('messagesNotifications.searchPlaceholder')}
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full pl-11 pr-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                                            className="w-full pl-11 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
                                         />
                                     </div>
                                 </div>
@@ -1133,15 +1123,15 @@ export default function MessagesNotifications() {
                             {activeGroup !== 'parents' && filteredAndSortedStudents.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-center">
                                     <Users className="w-16 h-16 text-gray-300 mb-4" />
-                                    <p className="text-lg text-gray-500 font-medium">Không tìm thấy sinh viên</p>
-                                    <p className="text-sm text-gray-400 mt-2">Thử thay đổi từ khóa tìm kiếm hoặc filter khác</p>
+                                    <p className="text-lg text-gray-500 font-medium">{t('messagesNotifications.noResults')}</p>
+                                    <p className="text-sm text-gray-400 mt-2">{t('messagesNotifications.tryOtherKeywords')}</p>
                                 </div>
                             )}
 
                             {activeGroup !== 'parents' && (() => {
                                 // Group students by class
                                 const studentsByClass = filteredAndSortedStudents.reduce((acc, student) => {
-                                    const className = student.className || 'Chưa phân lớp'
+                                    const className = student.className || t('messagesNotifications.unclassified')
                                     if (!acc[className]) {
                                         acc[className] = []
                                     }
@@ -1183,14 +1173,14 @@ export default function MessagesNotifications() {
                                                     <div className="text-left">
                                                         <h3 className="font-semibold text-gray-900">{className}</h3>
                                                         <p className="text-xs text-gray-600 mt-0.5">
-                                                            {studentsInClass.length} sinh viên
+                                                                {studentsInClass.length} {t('messagesNotifications.students')}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {unreadCount > 0 && (
                                                         <Badge className="bg-orange-500 text-white animate-pulse">
-                                                            {unreadCount} chưa đọc
+                                                            {unreadCount} {t('messagesNotifications.unreadBadge')}
                                                         </Badge>
                                                     )}
                                                     <Badge className="bg-blue-100 text-blue-700">
@@ -1245,7 +1235,7 @@ export default function MessagesNotifications() {
                                                                     {/* Risk Level Badge */}
                                                                     {student.riskLevel && student.riskLevel !== 'low' && (
                                                                         <Badge className={`text-xs mb-2 ${getRiskBadge(student.riskLevel)}`}>
-                                                                            {student.riskLevel === 'high' ? '⚠️ Cần chú ý' : '⚡ Theo dõi'}
+                                                                            {student.riskLevel === 'high' ? `⚠️ ${t('messagesNotifications.needAttention')}` : `⚡ ${t('messagesNotifications.monitoring')}`}
                                                                         </Badge>
                                                                     )}
 
@@ -1284,8 +1274,8 @@ export default function MessagesNotifications() {
                             {activeGroup === 'parents' && paginatedParents.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-center">
                                     <UserCheck className="w-16 h-16 text-gray-300 mb-4" />
-                                    <p className="text-lg text-gray-500 font-medium">Không tìm thấy phụ huynh</p>
-                                    <p className="text-sm text-gray-400 mt-2">Thử thay đổi từ khóa tìm kiếm</p>
+                                    <p className="text-lg text-gray-500 font-medium">{t('messagesNotifications.noParentsFound')}</p>
+                                    <p className="text-sm text-gray-400 mt-2">{t('messagesNotifications.tryDifferentKeywords')}</p>
                                 </div>
                             )}
 
@@ -1328,7 +1318,7 @@ export default function MessagesNotifications() {
                                                         {parent.name}
                                                     </h4>
                                                     <p className="text-xs text-purple-600 mb-1">
-                                                        PH: {parent.studentName}
+                                                        {t('messagesNotifications.parentOf')}: {parent.studentName}
                                                     </p>
                                                     <p className="text-xs text-gray-500 mb-2">{parent.className}</p>
 
@@ -1369,7 +1359,7 @@ export default function MessagesNotifications() {
                                         disabled={currentStudentPage === 1}
                                     >
                                         <ChevronDown className="w-4 h-4 rotate-90 mr-1" />
-                                        Trước
+                                        {t('messagesNotifications.previous')}
                                     </Button>
                                     
                                     <div className="flex items-center gap-1">
@@ -1406,7 +1396,7 @@ export default function MessagesNotifications() {
                                         onClick={() => setCurrentStudentPage(prev => Math.min(totalParentPages, prev + 1))}
                                         disabled={currentStudentPage === totalParentPages}
                                     >
-                                        Sau
+                                        {t('messagesNotifications.next')}
                                         <ChevronDown className="w-4 h-4 -rotate-90 ml-1" />
                                     </Button>
                                 </div>
@@ -1429,7 +1419,7 @@ export default function MessagesNotifications() {
                                             <button
                                                 onClick={() => setSelectedStudent(null)}
                                                 className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                                title="Quay lại danh sách"
+                                                title={t('messagesNotifications.backToList')}
                                             >
                                                 <ArrowLeft className="w-5 h-5 text-gray-600" />
                                             </button>
@@ -1448,7 +1438,7 @@ export default function MessagesNotifications() {
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-xs text-gray-500">{selectedStudent.className}</p>
                                                     {selectedStudent.isOnline && (
-                                                        <span className="text-xs text-green-600">● Đang hoạt động</span>
+                                                        <span className="text-xs text-green-600">● {t('messagesNotifications.activeNow')}</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -1471,7 +1461,7 @@ export default function MessagesNotifications() {
                                                 className="flex items-center gap-2"
                                             >
                                                 <Clock className="w-4 h-4" />
-                                                Lịch sử ({selectedStudent.totalConversations || 0})
+                                                {t('messagesNotifications.conversationHistory')} ({selectedStudent.totalConversations || 0})
                                             </Button>
                                         </div>
                                     </div>
@@ -1484,10 +1474,10 @@ export default function MessagesNotifications() {
                                         <div className="flex flex-col items-center justify-center h-full text-center py-20">
                                             <MessageCircle className="w-20 h-20 text-gray-300 mb-4" />
                                             <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                                                Chưa có tin nhắn
+                                                {t('messagesNotifications.noMessages')}
                                             </h3>
                                             <p className="text-gray-500 max-w-md">
-                                                Bắt đầu cuộc trò chuyện với {selectedStudent.name} bằng cách gửi tin nhắn bên dưới
+                                                {t('messagesNotifications.startConversation')}
                                             </p>
                                         </div>
                                     )}
@@ -1502,7 +1492,7 @@ export default function MessagesNotifications() {
                                                 className="bg-white hover:bg-gray-100 shadow-sm transition-all duration-200"
                                             >
                                                 <ChevronDown className="w-4 h-4 mr-2 rotate-180" />
-                                                Tải thêm tin nhắn cũ ({totalMessages - displayedMessages.length} tin)
+                                                {t('messagesNotifications.loadMoreMessages')} ({totalMessages - displayedMessages.length} {t('messagesNotifications.messagesCount')})
                                             </Button>
                                         </div>
                                     )}
@@ -1579,7 +1569,7 @@ export default function MessagesNotifications() {
                                                         handleSendMessage()
                                                     }
                                                 }}
-                                                placeholder="Nhập tin nhắn..."
+                                                placeholder={t('messagesNotifications.typingPlaceholder')}
                                                 rows={2}
                                                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                                             />
@@ -1605,9 +1595,9 @@ export default function MessagesNotifications() {
                                             className="text-blue-600 hover:text-blue-700"
                                         >
                                             <MessageCircle className="w-4 h-4 mr-2" />
-                                            {showSuggestions ? 'Ẩn gợi ý' : 'Câu hỏi gợi ý'}
+                                            {showSuggestions ? t('messagesNotifications.hideSuggestions') : t('messagesNotifications.suggestedQuestions')}
                                         </Button>
-                                        <span className="text-xs text-gray-400">Nhấn Enter để gửi, Shift + Enter để xuống dòng</span>
+                                        <span className="text-xs text-gray-400">{t('messagesNotifications.enterShiftEnterInfo')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1627,16 +1617,16 @@ export default function MessagesNotifications() {
                                 <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-blue-50">
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Clock className="w-5 h-5 text-indigo-600" />
-                                        Lịch sử tư vấn
+                                        {t('messagesNotifications.consultingHistory')}
                                     </CardTitle>
                                     {selectedStudent && (
                                         <div className="mt-2 flex items-center gap-2 text-sm">
                                             <Badge className="bg-indigo-100 text-indigo-700">
-                                                {conversationHistories.length} phiên tư vấn
+                                                {conversationHistories.length} {t('messagesNotifications.sessionsCount')}
                                             </Badge>
                                             {conversationHistories.length > 0 && (
                                                 <span className="text-gray-500">
-                                                    Gần nhất: {new Date(conversationHistories[0].date).toLocaleDateString('vi-VN')}
+                                                    {t('messagesNotifications.mostRecent')}: {new Date(conversationHistories[0].date).toLocaleDateString('vi-VN')}
                                                 </span>
                                             )}
                                         </div>
@@ -1683,7 +1673,7 @@ export default function MessagesNotifications() {
                                                                 </span>
                                                                 <span className="flex items-center gap-1">
                                                                     <MessageCircle className="w-3 h-3" />
-                                                                    {conv.messageCount} tin nhắn
+                                                                    {conv.messageCount} {t('messagesNotifications.messages')}
                                                                 </span>
                                                             </div>
 
@@ -1701,7 +1691,7 @@ export default function MessagesNotifications() {
                                                 <div className="flex items-center justify-center h-full p-8 text-center">
                                                     <div>
                                                         <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                                        <p className="text-sm text-gray-500">Chưa có lịch sử tư vấn</p>
+                                                        <p className="text-sm text-gray-500">{t('messagesNotifications.noConsultingHistory')}</p>
                                                     </div>
                                                 </div>
                                             )}
@@ -1710,9 +1700,9 @@ export default function MessagesNotifications() {
                                         <div className="flex items-center justify-center h-full p-8 text-center">
                                             <div>
                                                 <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                                <p className="text-sm text-gray-500">Chọn sinh viên để xem lịch sử</p>
+                                                <p className="text-sm text-gray-500">{t('messagesNotifications.selectStudentToViewHistory')}</p>
                                                 <p className="text-xs text-gray-400 mt-1">
-                                                    Lịch sử giúp theo dõi quá trình tư vấn
+                                                    {t('messagesNotifications.historyHelpTracking')}
                                                 </p>
                                             </div>
                                         </div>
@@ -1726,7 +1716,7 @@ export default function MessagesNotifications() {
                                             <div className="text-center p-2 bg-white rounded-lg border">
                                                 <div className="flex items-center justify-center gap-1 mb-1">
                                                     <TrendingUp className="w-4 h-4 text-green-600" />
-                                                    <span className="text-xs text-gray-600">Tích cực</span>
+                                                    <span className="text-xs text-gray-600">{t('messagesNotifications.positive')}</span>
                                                 </div>
                                                 <div className="text-lg font-bold text-green-600">
                                                     {filteredConversationHistory.filter(c => c.sentiment === 'positive').length}
@@ -1754,14 +1744,14 @@ export default function MessagesNotifications() {
                             <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <MessageCircle className="w-4 h-4 text-purple-600" />
-                                    Câu hỏi gợi ý
+                                    {t('messagesNotifications.suggestedQuestionsTitle')}
                                 </CardTitle>
-                                <p className="text-xs text-gray-600 mt-1">Mẫu câu hỏi tư vấn</p>
+                                <p className="text-xs text-gray-600 mt-1">{t('messagesNotifications.suggestedQuestionsSubtitle')}</p>
                             </CardHeader>
                             <CardContent className="p-0 max-h-[800px] overflow-y-auto">
                                 {/* Tự mở rộng theo nội dung */}
                                 <div>
-                                    {['Học tập', 'Tâm lý', 'Tài chính', 'Xã hội', 'Chung'].map((category) => (
+                                    {[t('messagesNotifications.learning'), t('messagesNotifications.psychology'), t('messagesNotifications.finance'), t('messagesNotifications.social'), t('messagesNotifications.general')].map((category) => (
                                         <div key={category} className="border-b last:border-b-0">
                                             <div className="px-3 py-2 bg-gray-50 font-medium text-xs text-gray-700">
                                                 {category}
@@ -1802,7 +1792,7 @@ export default function MessagesNotifications() {
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold flex items-center">
                                     <Megaphone className="w-5 h-5 mr-3" />
-                                    Thông báo hàng loạt
+                                    {t('messagesNotifications.bulkNotificationModal.title')}
                                 </h3>
                                 <Button
                                     onClick={() => setIsBulkModalOpen(false)}
@@ -1817,13 +1807,14 @@ export default function MessagesNotifications() {
                             <form onSubmit={handleBulkSubmit}>
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">Gửi đến</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-3">{t('messagesNotifications.bulkNotificationModal.selectRecipients')}</label>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {[
-                                                { value: 'all', label: 'Tất cả sinh viên', count: `${students.length} sinh viên` },
-                                                { value: 'class', label: 'Theo lớp', count: 'Chọn lớp cụ thể' },
-                                                { value: 'students', label: 'Chỉ sinh viên', count: `${students.length} sinh viên` },
-                                                { value: 'parents', label: 'Chỉ phụ huynh', count: `${parents.length} phụ huynh` }
+                                            {
+[
+                                                { value: 'all', label: t('messagesNotifications.bulkNotificationModal.allStudents'), count: `${students.length} ${t('messagesNotifications.students')}` },
+                                                { value: 'class', label: t('messagesNotifications.bulkNotificationModal.byClass'), count: t('messagesNotifications.bulkNotificationModal.selectClass') },
+                                                { value: 'students', label: t('messagesNotifications.bulkNotificationModal.atRiskStudents'), count: `${students.length} ${t('messagesNotifications.students')}` },
+                                                { value: 'parents', label: t('messagesNotifications.parentsTab'), count: `${parents.length} ${t('messagesNotifications.parents')}` }
                                             ].map((option) => (
                                                 <label key={option.value} className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                                                     <input
@@ -1845,18 +1836,18 @@ export default function MessagesNotifications() {
 
                                     {bulkForm.recipient === 'class' && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Lớp học</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.class')}</label>
                                             <select
                                                 value={bulkForm.selectedClass}
                                                 onChange={(e) => setBulkForm({ ...bulkForm, selectedClass: e.target.value })}
                                                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                                                 required
                                             >
-                                                <option value="">-- Chọn lớp --</option>
+                                                <option value="">{t('messagesNotifications.bulkNotificationModal.selectClassOption')}</option>
                                                 {classes.length > 0 ? (
                                                     classes.map((cls) => (
                                                         <option key={cls.id} value={cls.id}>
-                                                            {cls.code} ({cls.studentCount} sinh viên)
+                                                            {cls.code} ({cls.studentCount} {t('messagesNotifications.students')})
                                                         </option>
                                                     ))
                                                 ) : (
@@ -1871,25 +1862,25 @@ export default function MessagesNotifications() {
                                     )}
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu đề thông báo</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.bulkNotificationModal.messageTitle')}</label>
                                         <input
                                             type="text"
                                             value={bulkForm.title}
                                             onChange={(e) => setBulkForm(prev => ({ ...prev, title: e.target.value }))}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                            placeholder="Nhập tiêu đề thông báo..."
+                                            placeholder={t('messagesNotifications.bulkNotificationModal.titlePlaceholder')}
                                             required
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung thông báo</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.bulkNotificationModal.messageContent')}</label>
                                         <textarea
                                             rows={5}
                                             value={bulkForm.content}
                                             onChange={(e) => setBulkForm(prev => ({ ...prev, content: e.target.value }))}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                            placeholder="Nhập nội dung thông báo..."
+                                            placeholder={t('messagesNotifications.bulkNotificationModal.messagePlaceholder')}
                                             required
                                         />
                                     </div>
@@ -1897,7 +1888,7 @@ export default function MessagesNotifications() {
                                     <div className="flex space-x-3 pt-4">
                                         <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600">
                                             <Send className="w-4 h-4 mr-2" />
-                                            Gửi thông báo
+                                            {t('messagesNotifications.bulkNotificationModal.send')}
                                         </Button>
                                     </div>
                                 </div>
@@ -1915,7 +1906,7 @@ export default function MessagesNotifications() {
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold flex items-center">
                                     <Zap className="w-5 h-5 mr-3" />
-                                    Tin nhắn nhanh
+                                    {t('messagesNotifications.quickMessageModal.title')}
                                 </h3>
                                 <Button
                                     onClick={() => setIsQuickModalOpen(false)}
@@ -1930,14 +1921,14 @@ export default function MessagesNotifications() {
                             <form onSubmit={handleQuickSubmit}>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Chọn sinh viên</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.studentName')}</label>
                                         <select
                                             value={quickForm.selectedStudent}
                                             onChange={(e) => setQuickForm({ ...quickForm, selectedStudent: e.target.value })}
                                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             required
                                         >
-                                            <option value="">-- Chọn sinh viên --</option>
+                                            <option value="">{t('messagesNotifications.bulkNotificationModal.selectStudentOption')}</option>
                                             {students.map((student) => (
                                                 <option key={student.id} value={student.id}>
                                                     {student.name} - {student.className}
@@ -1947,13 +1938,13 @@ export default function MessagesNotifications() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung tin nhắn</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.bulkNotificationModal.messageContent')}</label>
                                         <textarea
                                             rows={8}
                                             value={quickForm.content}
                                             onChange={(e) => setQuickForm(prev => ({ ...prev, content: e.target.value }))}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Nhập nội dung tin nhắn..."
+                                            placeholder={t('messagesNotifications.bulkNotificationModal.messagePlaceholder')}
                                             required
                                         />
                                     </div>
@@ -1961,7 +1952,7 @@ export default function MessagesNotifications() {
                                     <div className="flex space-x-3 pt-4">
                                         <Button type="submit" className="flex-1 bg-blue-500 hover:bg-blue-600">
                                             <Send className="w-4 h-4 mr-2" />
-                                            Gửi ngay
+                                            {t('messagesNotifications.quickMessageModal.send')}
                                         </Button>
                                     </div>
                                 </div>
@@ -1979,7 +1970,7 @@ export default function MessagesNotifications() {
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold flex items-center">
                                     <AlertTriangle className="w-5 h-5 mr-3" />
-                                    Cảnh báo khẩn cấp
+                                    {t('messagesNotifications.urgentAlertModal.title')}
                                 </h3>
                                 <Button
                                     onClick={() => setIsUrgentModalOpen(false)}
@@ -1989,28 +1980,28 @@ export default function MessagesNotifications() {
                                     <X className="w-6 h-6" />
                                 </Button>
                             </div>
-                            <p className="text-red-100 mt-2">Gửi cảnh báo ưu tiên cao đến sinh viên</p>
+                            <p className="text-red-100 mt-2">{t('messagesNotifications.urgentAlertModal.subtitle')}</p>
                         </div>
                         <div className="p-6">
                             <form onSubmit={handleUrgentSubmit}>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Loại cảnh báo</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.urgentAlertModal.alertType')}</label>
                                         <select
                                             value={urgentForm.type}
                                             onChange={(e) => setUrgentForm({ ...urgentForm, type: e.target.value })}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
                                             required
                                         >
-                                            <option value="academic">🎓 Cảnh báo học tập</option>
-                                            <option value="attendance">📅 Cảnh báo điểm danh</option>
-                                            <option value="behavior">⚠️ Cảnh báo hành vi</option>
-                                            <option value="other">❗ Cảnh báo khác</option>
+                                            <option value="academic">🎓 {t('messagesNotifications.urgentAlertModal.academicWarning')}</option>
+                                            <option value="attendance">📅 {t('messagesNotifications.urgentAlertModal.attendanceWarning')}</option>
+                                            <option value="behavior">⚠️ {t('messagesNotifications.urgentAlertModal.behaviorIssue')}</option>
+                                            <option value="other">❗ {t('messagesNotifications.urgentAlertModal.other')}</option>
                                         </select>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Gửi đến</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.bulkNotificationModal.selectRecipients')}</label>
                                         <div className="space-y-2">
                                             <label className="flex items-center">
                                                 <input
@@ -2021,7 +2012,7 @@ export default function MessagesNotifications() {
                                                     onChange={(e) => setUrgentForm({ ...urgentForm, recipient: e.target.value })}
                                                     className="mr-2"
                                                 />
-                                                <span>Sinh viên cảnh báo ({atRiskStudents.length} sinh viên)</span>
+                                                <span>{t('messagesNotifications.atRiskTab')} ({atRiskStudents.length} {t('messagesNotifications.students')})</span>
                                             </label>
                                             <label className="flex items-center">
                                                 <input
@@ -2032,7 +2023,7 @@ export default function MessagesNotifications() {
                                                     onChange={(e) => setUrgentForm({ ...urgentForm, recipient: e.target.value })}
                                                     className="mr-2"
                                                 />
-                                                <span>Sinh viên bình thường ({normalStudents.length} sinh viên)</span>
+                                                <span>{t('messagesNotifications.normalTab')} ({normalStudents.length} {t('messagesNotifications.students')})</span>
                                             </label>
                                             <label className="flex items-center">
                                                 <input
@@ -2043,19 +2034,19 @@ export default function MessagesNotifications() {
                                                     onChange={(e) => setUrgentForm({ ...urgentForm, recipient: e.target.value })}
                                                     className="mr-2"
                                                 />
-                                                <span>Tất cả sinh viên ({students.length} sinh viên)</span>
+                                                <span>{t('messagesNotifications.bulkNotificationModal.allStudents')} ({students.length} {t('messagesNotifications.students')})</span>
                                             </label>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung cảnh báo</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('messagesNotifications.urgentAlertModal.messageContent')}</label>
                                         <textarea
                                             rows={4}
                                             value={urgentForm.content}
                                             onChange={(e) => setUrgentForm(prev => ({ ...prev, content: e.target.value }))}
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                                            placeholder="Nhập nội dung cảnh báo khẩn cấp..."
+                                            placeholder={t('messagesNotifications.urgentAlertModal.messagePlaceholder')}
                                             required
                                         />
                                     </div>
@@ -2064,8 +2055,8 @@ export default function MessagesNotifications() {
                                         <div className="flex items-start">
                                             <AlertTriangle className="w-5 h-5 text-red-500 mt-1 mr-3" />
                                             <div>
-                                                <h4 className="text-sm font-medium text-red-800">Xác nhận gửi cảnh báo</h4>
-                                                <p className="text-sm text-red-700 mt-1">Cảnh báo khẩn cấp sẽ được gửi ngay lập tức và có mức độ ưu tiên cao.</p>
+                                                <h4 className="text-sm font-medium text-red-800">{t('messagesNotifications.urgentAlertModal.confirmSend')}</h4>
+                                                <p className="text-sm text-red-700 mt-1">{t('messagesNotifications.urgentAlertModal.confirmMessage')}</p>
                                                 <label className="flex items-center mt-3">
                                                     <input
                                                         type="checkbox"
@@ -2074,7 +2065,7 @@ export default function MessagesNotifications() {
                                                         className="mr-2"
                                                         required
                                                     />
-                                                    <span className="text-sm text-red-700">Tôi xác nhận muốn gửi cảnh báo này</span>
+                                                    <span className="text-sm text-red-700">{t('messagesNotifications.urgentAlertModal.confirmCheckbox')}</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -2083,7 +2074,7 @@ export default function MessagesNotifications() {
                                     <div className="flex space-x-3 pt-4">
                                         <Button type="submit" className="flex-1 bg-red-500 hover:bg-red-600">
                                             <AlertTriangle className="w-4 h-4 mr-2" />
-                                            Gửi cảnh báo
+                                            {t('messagesNotifications.urgentAlertModal.send')}
                                         </Button>
                                     </div>
                                 </div>

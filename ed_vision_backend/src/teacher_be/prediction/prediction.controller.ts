@@ -17,7 +17,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PredictionService } from './prediction.service';
 import { UploadGradesDto } from './dto/upload-grades.dto';
-import { UpdateBehaviorDto, BulkUpdateBehaviorDto } from './dto/update-behavior.dto';
+import {
+  UpdateBehaviorDto,
+  BulkUpdateBehaviorDto,
+} from './dto/update-behavior.dto';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 import { MLPredictionService } from './ml-prediction.service';
@@ -49,12 +52,16 @@ export class PredictionController {
 
     // Get account_id from JWT token (req.user is populated by auth middleware)
     const accountId = req.user?.account_id || req.user?.sub;
-    
+
     if (!accountId) {
       throw new BadRequestException('User not authenticated');
     }
 
-    return await this.predictionService.uploadGrades(file, uploadDto, accountId);
+    return await this.predictionService.uploadGrades(
+      file,
+      uploadDto,
+      accountId,
+    );
   }
 
   /**
@@ -95,7 +102,10 @@ export class PredictionController {
     }
 
     // Use instructor_id as teacher_id for MongoDB queries
-    return await this.predictionService.getTeacherUploads(instructor.instructor_id.toString(), courseCode);
+    return await this.predictionService.getTeacherUploads(
+      instructor.instructor_id.toString(),
+      courseCode,
+    );
   }
 
   /**
@@ -154,39 +164,61 @@ export class PredictionController {
   async runPrediction(@Param('uploadId') uploadId: string) {
     try {
       // 1. Lấy dữ liệu từ MongoDB
-      const gradeData = await this.predictionService.getStudentsByUploadId(uploadId);
-      
-      if (!gradeData || !gradeData.students || gradeData.students.length === 0) {
+      const gradeData =
+        await this.predictionService.getStudentsByUploadId(uploadId);
+
+      if (
+        !gradeData ||
+        !gradeData.students ||
+        gradeData.students.length === 0
+      ) {
         throw new BadRequestException('No student data found for this upload');
       }
 
       const courseCode = gradeData.course_code;
-      
+
       // 2. Chuẩn bị data cho Python API
-      const studentsForML = gradeData.students.map((student: any, index: number) => {
-        const row: any = {
-          student_id: student.student_id,
-          course_code: courseCode,
-          no: index + 1,
-          ...student.grades, // attend, quiz, midterm, homework, etc.
-        };
+      const studentsForML = gradeData.students.map(
+        (student: any, index: number) => {
+          const row: any = {
+            student_id: student.student_id,
+            course_code: courseCode,
+            no: index + 1,
+            ...student.grades, // attend, quiz, midterm, homework, etc.
+          };
 
-        // Thêm behavior features nếu có
-        if (student.weekly_study_hours_by_course !== null && student.weekly_study_hours_by_course !== undefined) {
-          row.weekly_study_hours_by_course = student.weekly_study_hours_by_course;
-        }
-        if (student.part_time_hours_by_course !== null && student.part_time_hours_by_course !== undefined) {
-          row.part_time_hours_by_course = student.part_time_hours_by_course;
-        }
-        if (student.financial_support_by_course !== null && student.financial_support_by_course !== undefined) {
-          row.financial_support_by_course = student.financial_support_by_course;
-        }
-        if (student.emotional_support_by_course !== null && student.emotional_support_by_course !== undefined) {
-          row.emotional_support_by_course = student.emotional_support_by_course;
-        }
+          // Thêm behavior features nếu có
+          if (
+            student.weekly_study_hours_by_course !== null &&
+            student.weekly_study_hours_by_course !== undefined
+          ) {
+            row.weekly_study_hours_by_course =
+              student.weekly_study_hours_by_course;
+          }
+          if (
+            student.part_time_hours_by_course !== null &&
+            student.part_time_hours_by_course !== undefined
+          ) {
+            row.part_time_hours_by_course = student.part_time_hours_by_course;
+          }
+          if (
+            student.financial_support_by_course !== null &&
+            student.financial_support_by_course !== undefined
+          ) {
+            row.financial_support_by_course =
+              student.financial_support_by_course;
+          }
+          if (
+            student.emotional_support_by_course !== null &&
+            student.emotional_support_by_course !== undefined
+          ) {
+            row.emotional_support_by_course =
+              student.emotional_support_by_course;
+          }
 
-        return row;
-      });
+          return row;
+        },
+      );
 
       // 3. Gọi Python API để dự đoán
       const predictionResult = await this.mlPredictionService.predictScores(
@@ -207,7 +239,8 @@ export class PredictionController {
       await Promise.all(updatePromises);
 
       // 5. Lấy lại dữ liệu đã cập nhật
-      const updatedData = await this.predictionService.getStudentsByUploadId(uploadId);
+      const updatedData =
+        await this.predictionService.getStudentsByUploadId(uploadId);
 
       return {
         success: true,
@@ -236,46 +269,57 @@ export class PredictionController {
   ) {
     try {
       // 1. Lấy dữ liệu từ MongoDB
-      const gradeData = await this.predictionService.getStudentsByUploadId(uploadId);
-      
-      if (!gradeData || !gradeData.students || gradeData.students.length === 0) {
+      const gradeData =
+        await this.predictionService.getStudentsByUploadId(uploadId);
+
+      if (
+        !gradeData ||
+        !gradeData.students ||
+        gradeData.students.length === 0
+      ) {
         throw new BadRequestException('No student data found for this upload');
       }
 
       const courseCode = gradeData.course_code;
-      
+
       // 2. Chuẩn bị data cho Python API
-      const studentsForML = gradeData.students.map((student: any, index: number) => {
-        const row: any = {
-          student_id: student.student_id,
-          course_code: courseCode,
-          no: index + 1,
-          ...student.grades,
-        };
+      const studentsForML = gradeData.students.map(
+        (student: any, index: number) => {
+          const row: any = {
+            student_id: student.student_id,
+            course_code: courseCode,
+            no: index + 1,
+            ...student.grades,
+          };
 
-        // Behavior features
-        if (student.weekly_study_hours_by_course !== null) {
-          row.weekly_study_hours_by_course = student.weekly_study_hours_by_course;
-        }
-        if (student.part_time_hours_by_course !== null) {
-          row.part_time_hours_by_course = student.part_time_hours_by_course;
-        }
-        if (student.financial_support_by_course !== null) {
-          row.financial_support_by_course = student.financial_support_by_course;
-        }
-        if (student.emotional_support_by_course !== null) {
-          row.emotional_support_by_course = student.emotional_support_by_course;
-        }
+          // Behavior features
+          if (student.weekly_study_hours_by_course !== null) {
+            row.weekly_study_hours_by_course =
+              student.weekly_study_hours_by_course;
+          }
+          if (student.part_time_hours_by_course !== null) {
+            row.part_time_hours_by_course = student.part_time_hours_by_course;
+          }
+          if (student.financial_support_by_course !== null) {
+            row.financial_support_by_course =
+              student.financial_support_by_course;
+          }
+          if (student.emotional_support_by_course !== null) {
+            row.emotional_support_by_course =
+              student.emotional_support_by_course;
+          }
 
-        return row;
-      });
+          return row;
+        },
+      );
 
       // 3. Gọi Python API để lấy SHAP explanation
-      const explanationResult = await this.mlPredictionService.explainPredictions(
-        courseCode,
-        studentsForML,
-        topK || 8,
-      );
+      const explanationResult =
+        await this.mlPredictionService.explainPredictions(
+          courseCode,
+          studentsForML,
+          topK || 8,
+        );
 
       return {
         success: true,
@@ -296,7 +340,8 @@ export class PredictionController {
   @Get(':uploadId/pass-threshold')
   async getPassThreshold(@Param('uploadId') uploadId: string) {
     try {
-      const result = await this.predictionService.calculatePassThreshold(uploadId);
+      const result =
+        await this.predictionService.calculatePassThreshold(uploadId);
       return {
         success: true,
         message: 'Pass threshold calculated successfully',

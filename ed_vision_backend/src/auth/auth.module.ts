@@ -9,7 +9,12 @@ import { InstructorManagementModule } from '../admin_be/instructor-management/in
 import { StudentManagementModule } from '../admin_be/student-management/student-management.module';
 
 @Module({
-  imports: [PrismaModule, RolePermissionsModule, InstructorManagementModule, StudentManagementModule],
+  imports: [
+    PrismaModule,
+    RolePermissionsModule,
+    InstructorManagementModule,
+    StudentManagementModule,
+  ],
   providers: [AuthService, OtpService],
   controllers: [AuthController, OtpController],
 })
