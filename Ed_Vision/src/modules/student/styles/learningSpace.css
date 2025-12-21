@@ -1,5 +1,25 @@
 /* Learning Space Custom Styles */
 
+/* Hide scrollbar for the entire Learning Space page */
+.learning-space-container {
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.learning-space-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Also hide scrollbar on html/body when Learning Space is active */
+.learning-space-active {
+  overflow: hidden !important;
+}
+
+.learning-space-active::-webkit-scrollbar {
+  display: none !important;
+}
+
 /* Hide scrollbar but keep functionality */
 .scrollbar-none {
   scrollbar-width: none;

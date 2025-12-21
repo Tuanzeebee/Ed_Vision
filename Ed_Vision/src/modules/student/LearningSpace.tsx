@@ -10,10 +10,14 @@ import ClockDisplay from './components/ClockDisplay';
 import DockMenu from './components/DockMenu';
 import SnowEffect from './components/SnowEffect';
 import RainEffect from './components/RainEffect';
+import FirefliesEffect from './components/FirefliesEffect';
+import LeavesEffect from './components/LeavesEffect';
+import StarsEffect from './components/StarsEffect';
+import CloudsEffect from './components/CloudsEffect';
 import { MusicPlayerProvider } from './music/MusicPlayerContext';
+import MusicWidgetWrapper from './components/MusicWidgetWrapper';
 
 // Lazy load heavy components
-const MusicWidget = lazy(() => import('./components/MusicWidget'));
 const PomodoroPanel = lazy(() => import('./components/PomodoroPanel'));
 const PomodoroOverlay = lazy(() => import('./components/PomodoroOverlay'));
 const PomodoroCompactWidget = lazy(() => import('./components/PomodoroCompactWidget'));
@@ -47,16 +51,29 @@ const SOUND_URLS: Record<SoundType, string> = {
   'singing-bowl': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d0.mp3',
   'white-noise': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_0788523c6f.mp3',
   crickets: 'https://assets.mixkit.co/sfx/preview/mixkit-crickets-and-insects-in-the-wild-ambience-39.mp3',
+  forest: 'https://cdn.pixabay.com/download/audio/2022/02/22/audio_d1718ab41b.mp3',
+  wind: 'https://cdn.pixabay.com/download/audio/2021/08/09/audio_dc39bde808.mp3',
+  river: 'https://cdn.pixabay.com/download/audio/2022/01/20/audio_7e3b1ff3b1.mp3',
+  owl: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_c518e55634.mp3',
+  city: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_270f49fb4c.mp3',
+  clock: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3',
+  fan: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_8cb749ddd5.mp3',
+  train: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_4986a8125c.mp3',
 };
 
 export default function LearningSpace({ className = '' }: Props) {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Weather effects
   const [showSnow, setShowSnow] = useState(true);
   const [showRain, setShowRain] = useState(false);
+  const [showFireflies, setShowFireflies] = useState(false);
+  const [showLeaves, setShowLeaves] = useState(false);
+  const [showStars, setShowStars] = useState(false);
+  const [showClouds, setShowClouds] = useState(false);
 
   // Panel visibility
   const [pomoVisible, setPomoVisible] = useState(false);
@@ -84,10 +101,6 @@ export default function LearningSpace({ className = '' }: Props) {
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
-  // Music widget
-  const [musicWidgetVisible, setMusicWidgetVisible] = useState(true);
-  const [currentTrack, setCurrentTrack] = useState<Track | undefined>();
-
   // Ambience - Multi-sound support
   const [soundVolumes, setSoundVolumes] = useState<Record<SoundType, number>>({
     rain: 0,
@@ -101,6 +114,14 @@ export default function LearningSpace({ className = '' }: Props) {
     'singing-bowl': 0,
     'white-noise': 0,
     crickets: 0,
+    forest: 0,
+    wind: 0,
+    river: 0,
+    owl: 0,
+    city: 0,
+    clock: 0,
+    fan: 0,
+    train: 0,
   });
   
   // Refs for audio elements to manage multiple sounds
@@ -239,53 +260,43 @@ export default function LearningSpace({ className = '' }: Props) {
     setSettingsVisible(false);
     setLearningMapVisible(false);
     setLearningModuleVisible(false);
-    // Don't close pomodoro panel here
+    setRoomVisible(false);
+    setPomoVisible(false);
   }, []);
 
   const openPanel = useCallback((panel: string) => {
-    // Close other panels but keep pomo if overlay is running
-    if (panel === 'pomo') {
-      // Just open pomo, don't close it
-      setPomoVisible(true);
-      // Close other panels
-      setAmbienceVisible(false);
-      setThemeVisible(false);
-      setMusicPanelVisible(false);
-      setJournalVisible(false);
-      setSettingsVisible(false);
-      setLearningMapVisible(false);
-      setLearningModuleVisible(false);
-    } else {
-      // Close all panels including pomo for other panels
-      setPomoVisible(false);
-      closeAllPanels();
-      
-      switch (panel) {
-        case 'ambience':
-          setAmbienceVisible(true);
-          break;
-        case 'theme':
-          setThemeVisible(true);
-          break;
-        case 'room':
-          setRoomVisible(true);
-          break;
-        case 'music':
-          setMusicPanelVisible(true);
-          break;
-        case 'journal':
-          setJournalVisible(true);
-          break;
-        case 'settings':
-          setSettingsVisible(true);
-          break;
-        case 'map':
-          setLearningMapVisible(true);
-          break;
-        case 'learn':
-          setLearningModuleVisible(true);
-          break;
-      }
+    // Close all panels first
+    closeAllPanels();
+    
+    // Then open the requested panel
+    switch (panel) {
+      case 'pomo':
+        setPomoVisible(true);
+        break;
+      case 'ambience':
+        setAmbienceVisible(true);
+        break;
+      case 'theme':
+        setThemeVisible(true);
+        break;
+      case 'room':
+        setRoomVisible(true);
+        break;
+      case 'music':
+        setMusicPanelVisible(true);
+        break;
+      case 'journal':
+        setJournalVisible(true);
+        break;
+      case 'settings':
+        setSettingsVisible(true);
+        break;
+      case 'map':
+        setLearningMapVisible(true);
+        break;
+      case 'learn':
+        setLearningModuleVisible(true);
+        break;
     }
   }, [closeAllPanels]);
 
@@ -324,12 +335,6 @@ export default function LearningSpace({ className = '' }: Props) {
     reader.readAsDataURL(file);
   }, []);
 
-  const handleSelectTrack = useCallback((track: Track) => {
-    setCurrentTrack(track);
-    setMusicWidgetVisible(true);
-    setMusicPanelVisible(false);
-  }, []);
-
   const handleSaveJournalEntry = useCallback((entry: Omit<JournalEntry, 'id'>) => {
     const newEntry: JournalEntry = {
       ...entry,
@@ -351,6 +356,10 @@ export default function LearningSpace({ className = '' }: Props) {
   const handleResetAnimations = useCallback(() => {
     setShowRain(false);
     setShowSnow(true);
+    setShowFireflies(false);
+    setShowLeaves(false);
+    setShowStars(false);
+    setShowClouds(false);
   }, []);
 
   useEffect(() => {
@@ -418,6 +427,42 @@ export default function LearningSpace({ className = '' }: Props) {
     setLearningModuleVisible(true);
   }, []);
 
+  // Hide scrollbar on body/html when Learning Space is mounted
+  useEffect(() => {
+    document.body.classList.add('learning-space-active');
+    document.documentElement.classList.add('learning-space-active');
+    
+    return () => {
+      document.body.classList.remove('learning-space-active');
+      document.documentElement.classList.remove('learning-space-active');
+    };
+  }, []);
+
+  // Handle fullscreen change events (including F11 and Escape key)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Toggle fullscreen function
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Error toggling fullscreen:', error);
+    }
+  }, []);
+
   // Memoize background style for performance
   const backgroundStyle = useMemo(() => ({
     backgroundImage: liveEnabled && activeLiveTheme ? 'none' : `url('${backgroundImage}')`,
@@ -428,7 +473,7 @@ export default function LearningSpace({ className = '' }: Props) {
   return (
     <MusicPlayerProvider>
     <div
-      className={`min-h-screen overflow-hidden relative ${className}`}
+      className={`min-h-screen overflow-hidden relative learning-space-container ${className}`}
       style={backgroundStyle}
     >
       <Toaster 
@@ -459,6 +504,10 @@ export default function LearningSpace({ className = '' }: Props) {
       {/* Weather Effects - Lightweight, no Suspense needed */}
       <SnowEffect show={showSnow} />
       <RainEffect show={showRain} />
+      <FirefliesEffect show={showFireflies} />
+      <LeavesEffect show={showLeaves} />
+      <StarsEffect show={showStars} />
+      <CloudsEffect show={showClouds} />
 
       {/* Pomodoro Overlay */}
       {pomoOverlayVisible && (
@@ -566,15 +615,8 @@ export default function LearningSpace({ className = '' }: Props) {
       {/* Dock Menu - Lightweight, always visible */}
       <DockMenu items={dockItems} />
 
-      {/* Music Widget - Hidden when MusicPanel is open */}
-      {musicWidgetVisible && !musicPanelVisible && (
-        <Suspense fallback={null}>
-          <MusicWidget
-            visible={musicWidgetVisible && !musicPanelVisible}
-            onClose={() => setMusicWidgetVisible(false)}
-          />
-        </Suspense>
-      )}
+      {/* Music Widget - Shows only when there's a track playing and MusicPanel is closed */}
+      <MusicWidgetWrapper musicPanelVisible={musicPanelVisible} />
 
       {/* Pomodoro Panel - Always mounted to keep timer state */}
       <Suspense fallback={null}>
@@ -601,8 +643,16 @@ export default function LearningSpace({ className = '' }: Props) {
             onSoundVolumeChange={handleSoundVolumeChange}
             showRain={showRain}
             showSnow={showSnow}
+            showFireflies={showFireflies}
+            showLeaves={showLeaves}
+            showStars={showStars}
+            showClouds={showClouds}
             onToggleRain={() => setShowRain(!showRain)}
             onToggleSnow={() => setShowSnow(!showSnow)}
+            onToggleFireflies={() => setShowFireflies(!showFireflies)}
+            onToggleLeaves={() => setShowLeaves(!showLeaves)}
+            onToggleStars={() => setShowStars(!showStars)}
+            onToggleClouds={() => setShowClouds(!showClouds)}
             onResetAnimations={handleResetAnimations}
           />
         </Suspense>
@@ -726,6 +776,15 @@ export default function LearningSpace({ className = '' }: Props) {
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       />
+
+      {/* Fullscreen Toggle Button */}
+      <button
+        onClick={toggleFullscreen}
+        className="fixed bottom-4 left-4 z-50 w-10 h-10 rounded-full backdrop-blur-md bg-black/30 border border-white/20 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/50 hover:scale-110 transition-all duration-200 shadow-lg"
+        title={isFullscreen ? 'Thoát chế độ toàn màn hình (F11)' : 'Phóng to toàn màn hình (F11)'}
+      >
+        <i className={`fas ${isFullscreen ? 'fa-compress' : 'fa-expand'} text-sm`}></i>
+      </button>
     </div>
     </MusicPlayerProvider>
   );
