@@ -2,6 +2,7 @@ require('dotenv').config();
 const { BigQuery } = require('@google-cloud/bigquery');
 const { PrismaClient } = require('@prisma/client');
 const { throttler } = require('./bigQueryThrottler');
+const { studentSemesterLock } = require('./studentSemesterLock');
 const prisma = new PrismaClient();
 
 const bigquery = new BigQuery({ projectId: process.env.BIGQUERY_PROJECT_ID });
@@ -51,6 +52,8 @@ async function processStudentCourseEvent(event) {
     return { ok: false, reason: 'missing required fields' };
   }
 
+  // Use lock to serialize updates for the same student/semester to avoid BigQuery concurrent update errors
+  return await studentSemesterLock.withLock(student_sk, academic_year, semester_number, async () => {
     try {
       if (op === 'DELETE') {
         const deleteSql = `DELETE FROM ${tableId} WHERE record_sk = @record_sk`;
@@ -146,12 +149,33 @@ async function processStudentCourseEvent(event) {
         }
       };
 
-      await throttler.execute(() => bigquery.query(options));
-      return { ok: true, action: 'upsert_aggregated', total_credits: new_total_credits, gpa: new_gpa };
-  } catch (err) {
-    console.error('studentCourseETL error', err);
-    return { ok: false, error: String(err) };
-  }
+      // With lock in place, retry logic should rarely be needed
+      // But keep it as a safety net
+      let retries = 0;
+      const maxRetries = 2;
+      while (retries <= maxRetries) {
+        try {
+          if (retries > 0) {
+            const delayMs = Math.floor(Math.random() * 500) + 200; // 200-700ms
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+          await throttler.execute(() => bigquery.query(options));
+          return { ok: true, action: 'upsert_aggregated', total_credits: new_total_credits, gpa: new_gpa };
+        } catch (bqErr) {
+          if (bqErr.message && bqErr.message.includes('concurrent update') && retries < maxRetries) {
+            console.warn(`[studentCourseETL] Concurrent update retry ${retries + 1}/${maxRetries} for student=${student_sk}, semester=${academic_year}-${semester_number}`);
+            retries++;
+            continue;
+          }
+          throw bqErr;
+        }
+      }
+    } catch (err) {
+      console.error('studentCourseETL error', err.message || err);
+      return { ok: false, error: String(err.message || err) };
+    }
+  }); // End of withLock
 }
+
 
 module.exports = { processStudentCourseEvent };
