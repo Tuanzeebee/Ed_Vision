@@ -44,7 +44,9 @@ export default function ScheduleManagement({
   setAvailableDates,
   showToast,
 }: ScheduleManagementProps) {
-  const { t } = useTranslation('teacher');
+  const { t, i18n } = useTranslation('teacher');
+  const LOCALE_MAP: Record<string, string> = { en: 'en-US', vi: 'vi-VN' };
+  const locale = LOCALE_MAP[i18n?.language] || i18n?.language || (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
   const navigate = useNavigate();
   const [showHintBanner, setShowHintBanner] = useState(true);
 
@@ -114,63 +116,85 @@ export default function ScheduleManagement({
   };
 
   // Chỉ load dữ liệu tuần hiện tại
-  const loadCurrentWeekData = useCallback(async () => {
-    if (!instructorId || !currentWeek) return;
-    
-    const week = currentWeek;
-    
+  const currentWeekRef = useRef<WeekInfo | null>(currentWeek);
+  useEffect(() => {
+    currentWeekRef.current = currentWeek;
+  }, [currentWeek]);
+
+  const loadingWeeksRef = useRef<Set<string>>(new Set());
+  const loadedWeeksRef = useRef<Set<string>>(new Set());
+
+  const loadCurrentWeekData = useCallback(async (week?: WeekInfo, opts?: { force?: boolean }) => {
+    const wk = week ?? currentWeekRef.current;
+    if (!instructorId || !wk) return;
+
+    const weekKey = wk.displayText;
+
+    if (loadingWeeksRef.current.has(weekKey) && !opts?.force) return;
+    loadingWeeksRef.current.add(weekKey);
+
     try {
-      const startDate = formatDateForAPI(week.startDate);
-      const endDate = formatDateForAPI(week.endDate);
-      // Chỉ load những ngày có sẵn, có thể tự động tạo tuần mới nếu cần
-      // forceRefresh = true to always get fresh data from server
+      const startDate = formatDateForAPI(wk.startDate);
+      const endDate = formatDateForAPI(wk.endDate);
       const data = await fetchWeeklyAvailability(startDate, endDate, true, true);
-      
-      // Nếu không có dữ liệu (tuần chưa được tạo), tạo template tuần rỗng
+
       if (!data || data.length === 0) {
-        const weekDates = getDatesInWeek(week);
+        const weekDates = getDatesInWeek(wk);
         const emptyWeekData: AvailableDate[] = weekDates.map((date: Date) => ({
           date: formatDateForAPI(date),
           isAvailable: false,
           timeSlots: [],
         }));
         setAvailableDates(emptyWeekData);
-        // Only show toast for empty weeks, not on every load
-        const weekKey = `toastShown_${week.displayText}`;
-        if (!sessionStorage.getItem(weekKey)) {
-          showToast(`Khởi tạo tuần hiện tại ${week.displayText}`, 'info');
-          sessionStorage.setItem(weekKey, 'true');
+        const toastKey = `toastShown_${wk.displayText}`;
+        if (!sessionStorage.getItem(toastKey)) {
+          showToast(`Khởi tạo tuần hiện tại ${wk.displayText}`, 'info');
+          sessionStorage.setItem(toastKey, 'true');
         }
       } else {
         setAvailableDates(data);
-        // Don't show success toast on every load to avoid spam
       }
     } catch (_err) {
-      // Nếu API lỗi, tạo template tuần rỗng để UI vẫn hiển thị được
-      const weekDates = getDatesInWeek(week);
+      const weekDates = getDatesInWeek(wk);
       const emptyWeekData: AvailableDate[] = weekDates.map((date: Date) => ({
         date: formatDateForAPI(date),
         isAvailable: false,
         timeSlots: [],
       }));
       setAvailableDates(emptyWeekData);
-      // Only show error toast once per week
-      const errorKey = `errorShown_${week.displayText}`;
+      const errorKey = `errorShown_${wk.displayText}`;
       if (!sessionStorage.getItem(errorKey)) {
         showToast('Không thể tải dữ liệu. Hiển thị tuần trống.', 'warning');
         sessionStorage.setItem(errorKey, 'true');
       }
+    } finally {
+      loadingWeeksRef.current.delete(weekKey);
     }
-  }, [instructorId, currentWeek, fetchWeeklyAvailability, setAvailableDates, showToast]);
+  }, [instructorId, fetchWeeklyAvailability, setAvailableDates, showToast]);
 
-  // Reload data when week changes
+  // Load data when instructor becomes available or week changes
   useEffect(() => {
-    if (instructorId && currentWeek) {
-      // Clear loaded status for the new week
-      loadedWeeksRef.current.delete(currentWeek.displayText);
-      loadCurrentWeekData();
+    if (profileLoading || !instructorId || !currentWeek) return;
+
+    const weekDisplayText = currentWeek.displayText;
+
+    // Prevent double-loading the same week
+    if (loadedWeeksRef.current.has(weekDisplayText)) {
+      return;
     }
-  }, [currentWeek?.displayText, instructorId]); // Use displayText to avoid object comparison, remove loadCurrentWeekData
+
+    const doLoad = async () => {
+      try {
+        await loadCurrentWeekData(currentWeek);
+        loadedWeeksRef.current.add(weekDisplayText);
+      } catch (err) {
+        console.error('Error loading data for week:', weekDisplayText, err);
+        loadedWeeksRef.current.add(weekDisplayText);
+      }
+    };
+
+    doLoad();
+  }, [instructorId, profileLoading, currentWeek?.displayText, loadCurrentWeekData]);
 
   // Show profile error if any
   useEffect(() => {
@@ -186,40 +210,7 @@ export default function ScheduleManagement({
     }
   }, [startTime, duration]);
 
-  // Track loaded weeks to prevent infinite loading
-  const loadedWeeksRef = useRef<Set<string>>(new Set());
-
-  // Load data when instructor becomes available
-  useEffect(() => {
-    // Don't load if profile is still loading or instructor not available or currentWeek not set
-    if (profileLoading || !instructorId || !currentWeek) {
-      return;
-    }
-
-    const weekDisplayText = currentWeek.displayText;
-
-    // Check if we've already loaded this week
-    if (loadedWeeksRef.current.has(weekDisplayText)) {
-      console.log('Data already loaded for week:', weekDisplayText);
-      return;
-    }
-
-    const loadInitialData = async () => {
-      console.log('Loading data for week:', weekDisplayText);
-      try {
-        await loadCurrentWeekData();
-        // Mark as loaded
-        loadedWeeksRef.current.add(weekDisplayText);
-        console.log('Data loaded successfully for week:', weekDisplayText);
-      } catch (err) {
-        console.error('Error loading data for week:', weekDisplayText, err);
-        // Still mark as loaded to prevent infinite retries
-        loadedWeeksRef.current.add(weekDisplayText);
-      }
-    };
-
-    loadInitialData();
-  }, [instructorId, profileLoading, currentWeek]); // Remove loadCurrentWeekData from dependencies to prevent infinite loop
+  
 
   // Show API errors via toast
   useEffect(() => {
@@ -308,11 +299,11 @@ export default function ScheduleManagement({
       await loadCurrentWeekData();
 
       // Show appropriate message
-      if (hasTimeSlots) {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
-      } else {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)}!`, 'success');
-      }
+        if (hasTimeSlots) {
+          showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, locale)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
+        } else {
+          showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, locale)}!`, 'success');
+        }
     } catch (err) {
       console.error('Error removing date:', err);
       // Refresh data to ensure UI shows correct state
@@ -359,9 +350,9 @@ export default function ScheduleManagement({
 
       // Show appropriate message
       if (hasTimeSlots) {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, locale)} và xóa ${dateToDisable.timeSlots?.length || 0} khung giờ!`, 'success');
       } else {
-        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, t)}!`, 'success');
+        showToast(`Đã tắt ngày ${formatDate(dateToDisable.date, locale)}!`, 'success');
       }
     } catch (_err) {
       console.error('Error confirming delete date:', _err);
@@ -821,7 +812,7 @@ export default function ScheduleManagement({
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900">
-                          {formatDate(dateObj.date, t)}
+                          {formatDate(dateObj.date, locale)}
                         </h3>
                         <p className="text-sm text-gray-600 dark:text-gray-600">
                           <Clock className="inline w-4 h-4 mr-1" />
@@ -965,7 +956,7 @@ export default function ScheduleManagement({
               </div>
 
               <p className="text-sm text-gray-600 dark:text-gray-700 mb-4">
-                {currentDateForTime && formatDate(currentDateForTime, t)}
+                {currentDateForTime && formatDate(currentDateForTime, locale)}
               </p>
 
               {/* Quick Time Selection */}
@@ -1109,7 +1100,7 @@ export default function ScheduleManagement({
                     {t('scheduleManagement.management.deleteConfirm')}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-700 mt-0.5">
-                    {formatDate(dateToDelete.date.date, t)}
+                    {formatDate(dateToDelete.date.date, locale)}
                   </p>
                   {dateToDelete.date.timeSlots.length > 0 && (
                     <p className="text-xs text-red-600 dark:text-red-600 mt-1 font-medium">

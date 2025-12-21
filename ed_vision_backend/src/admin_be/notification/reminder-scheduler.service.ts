@@ -7,6 +7,7 @@ interface ReminderWithDetails {
   reminder_id: number;
   appointment_id: number | null;
   account_id: number;
+  recipient_role: 'booker' | 'instructor';
   template_code: string;
   remind_at: Date;
   sent_at: Date | null;
@@ -50,6 +51,12 @@ interface ReminderWithDetails {
       contact_phone: string | null;
       contact_email: string | null;
       relationship_to_student: string | null;
+    } | null;
+    booker?: {
+      account_id: number;
+      profile: {
+        full_name: string | null;
+      } | null;
     } | null;
   } | null;
   account: {
@@ -97,13 +104,13 @@ export class ReminderSchedulerService implements OnModuleInit {
       // 1. Lấy các reminder đến giờ gửi mà chưa gửi và chưa bị hủy
       const dueReminders = (await this.prisma.reminderSchedule.findMany({
         where: {
-          sent_at: null,
-          canceled: false,
-          remind_at: {
-            gte: windowStart,
-            lte: now,
+            sent_at: null,
+            canceled: false,
+            remind_at: {
+              gte: windowStart,
+              lte: now,
+            },
           },
-        },
         include: {
           appointment: {
             include: {
@@ -128,6 +135,12 @@ export class ReminderSchedulerService implements OnModuleInit {
                       profile: true,
                     },
                   },
+                },
+              },
+              // include the booker (account who created the appointment) so we can read profile.full_name
+              booker: {
+                include: {
+                  profile: true,
                 },
               },
               appointmentContact: true,
@@ -184,6 +197,25 @@ export class ReminderSchedulerService implements OnModuleInit {
       return;
     }
 
+    // Try to atomically mark this reminder as sent to avoid race conditions
+    // Atomically mark ALL reminders for the same appointment/account/remind_at/recipient_role as sent
+    // This prevents duplicate sends when duplicate rows already exist in the DB or different recipient roles
+    const markResult = await this.prisma.reminderSchedule.updateMany({
+      where: {
+        appointment_id: reminder.appointment_id ?? undefined,
+        account_id: reminder.account_id,
+        remind_at: reminder.remind_at,
+        // include recipient_role to avoid marking instructor reminders when marking booker reminders
+        recipient_role: reminder.recipient_role as any,
+        sent_at: null,
+      },
+      data: { sent_at: new Date() },
+    });
+
+    if (markResult.count === 0) {
+      return;
+    }
+
     // Render nội dung notification từ template
     const { title, body } = await this.renderNotificationContent(reminder);
 
@@ -210,12 +242,6 @@ export class ReminderSchedulerService implements OnModuleInit {
       },
     });
 
-    // Đánh dấu reminder đã gửi
-    await this.prisma.reminderSchedule.update({
-      where: { reminder_id: reminder.reminder_id },
-      data: { sent_at: new Date() },
-    });
-
     // Push real-time qua WebSocket
     const payload = {
       masterId: master.id,
@@ -226,13 +252,9 @@ export class ReminderSchedulerService implements OnModuleInit {
       attachments: null,
       createdAt: new Date().toISOString(),
     };
-    this.notificationGateway.broadcastNotification(payload, [
-      reminder.account_id,
-    ]);
+    this.notificationGateway.broadcastNotification(payload, [reminder.account_id]);
 
-    this.logger.log(
-      `Sent reminder ${reminder.reminder_id} to account ${reminder.account_id}`,
-    );
+    this.logger.log(`Sent reminder ${reminder.reminder_id} to account ${reminder.account_id}`);
   }
 
   /**
@@ -257,17 +279,27 @@ export class ReminderSchedulerService implements OnModuleInit {
     const meetingPurpose =
       reminder.appointment?.meeting_purpose || 'Cuộc hẹn tư vấn';
 
-    // Nếu là parent đặt lịch, lấy tên parent từ appointmentContact
+    // Nếu là parent đặt lịch, lấy tên parent ưu tiên theo thứ tự: appointment.booker.profile, appointmentContact.contact_name, recipient account profile
     const bookerRole = reminder.appointment?.booker_role;
-    const bookerName =
-      bookerRole === 'parent'
-        ? reminder.appointment?.appointmentContact?.contact_name || 'Phụ huynh'
-        : studentName;
+    const bookerName = ((): string => {
+      if (bookerRole === 'parent') {
+        const bookerProfileName = reminder.appointment?.booker?.profile?.full_name;
+        if (bookerProfileName && String(bookerProfileName).trim().length > 0) return bookerProfileName;
 
-    // Detect xem recipient là teacher hay student để hiển thị đúng tên người kia
-    const isTeacher =
-      reminder.account_id ===
-      reminder.appointment?.instructor?.account?.account_id;
+        const contactName = reminder.appointment?.appointmentContact?.contact_name;
+        if (contactName && String(contactName).trim().length > 0) return contactName;
+
+        // Fall back to account profile of the recipient/booker if available
+        const bookerAccountProfile = reminder.account?.profile?.full_name;
+        if (bookerAccountProfile && String(bookerAccountProfile).trim().length > 0)
+          return bookerAccountProfile;
+        return 'Phụ huynh';
+      }
+      return studentName;
+    })();
+
+    // Determine recipient role from stored recipient_role instead of inferring from account_id
+    const isTeacher = reminder.recipient_role === 'instructor';
     // Nếu teacher nhận reminder, hiển thị tên người đặt (parent hoặc student)
     // Nếu student/parent nhận reminder, hiển thị tên teacher
     const otherPartyName = isTeacher ? bookerName : instructorName;
@@ -338,6 +370,13 @@ export class ReminderSchedulerService implements OnModuleInit {
     }
 
     // Default content nếu không có template
+    if (isTeacher) {
+      return {
+        title: '⏰ Nhắc nhở lịch hẹn',
+        body: `Bạn có lịch hẹn "${meetingPurpose}" với ${otherPartyName} lúc ${timeStr} ${dateStr}. Cuộc hẹn sẽ bắt đầu trong ${timeRemainingStr}.`,
+      };
+    }
+
     return {
       title: '⏰ Nhắc nhở lịch hẹn',
       body: `${recipientName}, bạn có lịch hẹn "${meetingPurpose}" với ${otherPartyName} lúc ${timeStr} ${dateStr}. Cuộc hẹn sẽ bắt đầu trong ${timeRemainingStr}.`,
@@ -352,6 +391,7 @@ export class ReminderSchedulerService implements OnModuleInit {
     appointmentId: number,
     accountId: number,
     appointmentTime: Date,
+    options?: { intendedRecipient?: 'booker' | 'instructor' },
   ) {
     // Tạo 3 reminder: trước 10 phút, 5 phút, 1 phút
     const reminderOffsets = [10, 5, 1]; // phút
@@ -361,6 +401,7 @@ export class ReminderSchedulerService implements OnModuleInit {
       return {
         appointment_id: appointmentId,
         account_id: accountId,
+        recipient_role: options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
         template_code: 'appointment.reminder',
         remind_at: remindAt,
         channel: 'in_app',
@@ -368,35 +409,60 @@ export class ReminderSchedulerService implements OnModuleInit {
       };
     });
 
+    // Fetch appointment to inspect instructor account and for logging
+    const appointmentRecord = await this.prisma.appointment.findUnique({
+      where: { appointment_id: appointmentId },
+      include: { instructor: { include: { account: true } }, appointmentContact: true },
+    });
+
+    // Guard: if we're asked to create a reminder for the instructor using the instructor's own account
+    // when this call was intended for booker, skip to avoid creating cross-account reminders.
+    const instructorAccountId = appointmentRecord?.instructor?.account?.account_id ?? null;
+
     // Chỉ tạo reminder nếu thời gian nhắc nhở còn trong tương lai
     const now = new Date();
     const validReminders = reminders.filter((r) => r.remind_at > now);
 
-    if (validReminders.length > 0) {
-      // Kiểm tra xem đã có reminder cho appointment + account này chưa
-      const existingCount = await this.prisma.reminderSchedule.count({
-        where: {
-          appointment_id: appointmentId,
-          account_id: accountId,
-        },
-      });
+    if (validReminders.length === 0) return 0;
 
-      if (existingCount > 0) {
-        this.logger.warn(
-          `Reminders already exist for appointment ${appointmentId}, account ${accountId}. Skipping.`,
-        );
-        return 0;
-      }
-
-      await this.prisma.reminderSchedule.createMany({
-        data: validReminders,
-      });
-      this.logger.log(
-        `Created ${validReminders.length} reminders for appointment ${appointmentId}, account ${accountId}`,
-      );
+    // Safety guard & logging: only skip when the caller explicitly intended to create reminders for the booker
+    // but the provided accountId equals the instructor's account id (indicating a likely caller bug).
+    if (
+      options?.intendedRecipient === 'booker' &&
+      instructorAccountId &&
+      accountId === instructorAccountId &&
+      appointmentRecord?.booker_account_id !== instructorAccountId
+    ) {
+      return 0;
     }
 
-    return validReminders.length;
+    // Avoid creating duplicates: check existing reminders for the same appointment+account and same remind_at timestamps
+    const remindAtTimes = validReminders.map((r) => r.remind_at);
+    const existing = await this.prisma.reminderSchedule.findMany({
+      where: {
+        appointment_id: appointmentId,
+        account_id: accountId,
+        remind_at: { in: remindAtTimes },
+        recipient_role: options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
+      },
+      select: { remind_at: true },
+    });
+
+    const existingTimes = new Set(existing.map((e) => new Date(e.remind_at).getTime()));
+    const toCreate = validReminders.filter((r) => !existingTimes.has(new Date(r.remind_at).getTime()));
+
+    // debug info suppressed
+
+    if (toCreate.length === 0) {
+      return 0;
+    }
+
+    // Cast to any so TypeScript accepts the enum values from runtime; ensure you run
+    // `npx prisma migrate dev` and `npx prisma generate` so @prisma/client types are up-to-date.
+    await this.prisma.reminderSchedule.createMany({ data: toCreate as any, skipDuplicates: true });
+    
+
+    return toCreate.length;
   }
 
   /**
@@ -412,11 +478,13 @@ export class ReminderSchedulerService implements OnModuleInit {
       appointmentId,
       studentAccountId,
       appointmentTime,
+      { intendedRecipient: 'booker' },
     );
     const instructorCount = await this.createRemindersForAppointment(
       appointmentId,
       instructorAccountId,
       appointmentTime,
+      { intendedRecipient: 'instructor' },
     );
 
     return { studentCount, instructorCount };
@@ -460,6 +528,7 @@ export class ReminderSchedulerService implements OnModuleInit {
       id: r.reminder_id,
       appointment_id: r.appointment_id,
       account_id: r.account_id,
+      recipient_role: (r as any).recipient_role || 'booker',
       remind_at: r.remind_at.toISOString(),
       remind_at_local: r.remind_at.toLocaleString('vi-VN', {
         timeZone: 'Asia/Ho_Chi_Minh',
@@ -485,6 +554,9 @@ export class ReminderSchedulerService implements OnModuleInit {
             instructor: {
               include: { account: { include: { profile: true } } },
             },
+            // Ensure forced trigger has booker/contact so rendering picks correct names
+            booker: { include: { profile: true } },
+            appointmentContact: true,
           },
         },
         account: { include: { profile: true } },
