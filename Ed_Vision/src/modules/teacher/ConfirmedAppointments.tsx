@@ -386,6 +386,7 @@ export default function ConfirmedAppointments({
                           <h3 className="font-semibold text-gray-900">{request.parentName}</h3>
                           <p className="text-sm text-gray-600">
                             Phụ huynh của {request.studentName} - {request.studentClass}
+                            <span className="ml-2 text-xs text-gray-500">{t('appointments.requests.children')}</span>
                           </p>
                         </div>
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">

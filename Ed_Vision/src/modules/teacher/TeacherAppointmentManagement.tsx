@@ -8,6 +8,7 @@ import {
   Video,
   MapPin,
   GraduationCap,
+  Users,
   Search,
   Grid3X3,
   List,
@@ -20,6 +21,8 @@ import {
   XCircle,
   AlertTriangle,
 } from 'lucide-react';
+
+import { formatDate } from './utils/appointmentUtils';
 
 // Types
 interface AppointmentData {
@@ -34,9 +37,14 @@ interface AppointmentData {
   status: 'pending' | 'confirmed' | 'completed' | 'canceled' | 'cancelled' | 'rejected';
   bookerRole: 'student' | 'parent';
   desiredDate: string;
+  desiredDateRaw?: string;
   desiredTime: string;
-  reason: string;
+  // reasonRaw: original text from backend (free form)
+  reasonRaw: string;
+  // reasonKey: canonical key when available ('study'|'progress'|'thesis'|'other')
+  reasonKey?: string | null;
   requestedAt: string;
+  requestedAtRaw?: string;
   platform?: string;
   location?: string;
   meetingLink?: string;
@@ -86,30 +94,7 @@ const getAvatarColor = (name: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Helper function to format date in Vietnamese
-const formatDateVN = (dateStr: string, t: any): string => {
-  if (!dateStr) return t('appointments.management.undetermined');
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return t('appointments.management.undetermined');
-    const days = [
-      t('appointments.management.sunday'),
-      t('appointments.management.monday'),
-      t('appointments.management.tuesday'),
-      t('appointments.management.wednesday'),
-      t('appointments.management.thursday'),
-      t('appointments.management.friday'),
-      t('appointments.management.saturday')
-    ];
-    const dayName = days[date.getDay()];
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${dayName}, ${day}/${month}/${year}`;
-  } catch {
-    return t('appointments.management.undetermined');
-  }
-};
+// NOTE: date formatting is centralized via `formatDate` and locale passed from components
 
 // Helper function to extract time from ISO string or format time
 const extractTime = (isoString: string | undefined): string => {
@@ -134,18 +119,18 @@ const extractTime = (isoString: string | undefined): string => {
 };
 
 // Helper function to format date/time from slot data
-const formatDateTime = (slot: any, appt: any, t: any) => {
+const formatDateTime = (slot: any, appt: any, t: any, locale: string) => {
   if (!slot && !appt) return { date: t('appointments.management.undetermined'), time: t('appointments.management.undetermined') };
-  
+
   // Try to get specific_date from slot.date
   const dateStr = slot?.date?.specific_date || slot?.specificDate || appt?.createdAt || '';
-  const formattedDate = formatDateVN(dateStr, t);
-  
+  const formattedDate = formatDate(dateStr, locale);
+
   // Get time
   const startTime = extractTime(slot?.start_time_local || slot?.startTime);
   const endTime = extractTime(slot?.end_time_local || slot?.endTime);
   const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : t('appointments.management.undetermined');
-  
+
   return {
     date: formattedDate,
     time: timeStr,
@@ -155,7 +140,57 @@ const formatDateTime = (slot: any, appt: any, t: any) => {
 export default function TeacherAppointmentManagement({
   showToast,
 }: TeacherAppointmentManagementProps) {
-  const { t } = useTranslation('teacher');
+  const { t, i18n } = useTranslation('teacher');
+
+  const locale = useMemo(() => {
+    const lang = i18n?.language;
+    if (!lang) return (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
+    if (lang === 'en') return 'en-US';
+    if (lang === 'vi') return 'vi-VN';
+    return lang;
+  }, [i18n?.language]);
+
+  const formatRequestedAt = useMemo(() => {
+    return (dateStr?: string) => {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleString(locale, {
+          hour: '2-digit',
+          minute: '2-digit',
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        });
+      } catch {
+        return '';
+      }
+    };
+  }, [locale]);
+
+  // Normalize stored meeting purpose values (may be keys or localized labels in EN/VI)
+  const normalizePurpose = (raw?: string) => {
+    // Return canonical key if we can detect it from raw input; otherwise null
+    if (!raw) return null;
+    const v = raw.trim();
+    const purposeKeys = ['study', 'progress', 'thesis', 'other'];
+
+    // If backend stores canonical key already
+    if (purposeKeys.includes(v)) return v;
+
+    // Compare against known translations in both languages to detect stored localized labels
+    for (const key of purposeKeys) {
+      const enLabel = t(`appointments.requests.purpose.${key}`, { lng: 'en' });
+      const viLabel = t(`appointments.requests.purpose.${key}`, { lng: 'vi' });
+      if (v.toLowerCase() === enLabel.toLowerCase() || v.toLowerCase() === viLabel.toLowerCase()) {
+        return key;
+      }
+    }
+
+    return null;
+  };
+
   // State
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,24 +239,14 @@ export default function TeacherAppointmentManagement({
       
       // Transform API data
       const transformedData: AppointmentData[] = (Array.isArray(data) ? data : []).map((appt: any) => {
-        const { date, time } = formatDateTime(appt.slot, appt, t);
+        const slot = appt?.slot || null;
+        const { date, time } = formatDateTime(slot, appt, t, locale);
         
-        const formatRequestedAt = (dateStr: any) => {
-          if (!dateStr) return '';
-          try {
-            const d = new Date(dateStr);
-            return d.toLocaleString('vi-VN', {
-              hour: '2-digit',
-              minute: '2-digit',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            });
-          } catch {
-            return '';
-          }
-        };
+        // We'll store raw timestamp and format at render time so locale changes apply immediately
         
+        const rawReason = appt.reason || appt.meetingPurpose || '';
+        const detectedKey = normalizePurpose(rawReason);
+
         return {
           id: appt.appointmentId || appt.id,
           parentName: appt.parentName || appt.studentName || t('appointments.management.unknown'),
@@ -234,9 +259,12 @@ export default function TeacherAppointmentManagement({
           status: appt.status || 'pending',
           bookerRole: appt.bookerRole || 'parent',
           desiredDate: date,
+          desiredDateRaw: slot?.date?.specific_date || slot?.specificDate || appt?.createdAt || '',
           desiredTime: time,
-          reason: appt.reason || appt.meetingPurpose || t('appointments.management.noReason'),
-          requestedAt: formatRequestedAt(appt.requestedAt || appt.createdAt),
+          reasonRaw: rawReason || t('appointments.management.noReason'),
+          reasonKey: detectedKey,
+          requestedAt: '',
+          requestedAtRaw: appt.requestedAt || appt.createdAt,
           platform: appt.platform || (appt.meetingType === 'online' ? 'Google Meet' : undefined),
           location: appt.location || appt.meetingLocation || '',
           meetingLink: appt.meetingLink || '',
@@ -266,8 +294,8 @@ export default function TeacherAppointmentManagement({
         if (
           !apt.parentName.toLowerCase().includes(searchLower) &&
           !apt.studentName.toLowerCase().includes(searchLower) &&
-          !apt.reason.toLowerCase().includes(searchLower) &&
-          !apt.studentClass.toLowerCase().includes(searchLower)
+          !apt.studentClass.toLowerCase().includes(searchLower) &&
+          !(apt.reasonRaw || '').toLowerCase().includes(searchLower)
         ) {
           return false;
         }
@@ -459,6 +487,7 @@ export default function TeacherAppointmentManagement({
     const avatarColor = getAvatarColor(appointment.parentName);
     const statusBadge = getStatusBadge(appointment.status);
     const StatusIcon = statusBadge.icon;
+    const displayReason = appointment.reasonKey ? t(`appointments.requests.purpose.${appointment.reasonKey}`) : appointment.reasonRaw;
 
     // Theme colors based on status and meeting type
     let cardBg = 'bg-white';
@@ -526,28 +555,59 @@ export default function TeacherAppointmentManagement({
         {/* Body */}
         <div className="px-4 py-3 space-y-2.5">
           {/* Student Info */}
-          <div className="flex items-start gap-2.5">
-            <GraduationCap className="w-4 h-4 text-gray-400 mt-0.5" />
-            <div>
-              <p className="text-gray-900 font-medium text-sm">{appointment.studentName}</p>
-              <p className="text-xs text-gray-500">{appointment.studentClass}</p>
-            </div>
-          </div>
+            {(() => {
+              const isBookerStudent = appointment.bookerRole === 'student';
+
+              return (
+                <div className="flex items-center gap-2.5">
+                  {isBookerStudent ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0"
+                      aria-hidden
+                    >
+                      <path d="M3 11L12 4l9 7" />
+                      <path d="M21 22v-7a2 2 0 0 0-1-1.732L12 9 4 13.268A2 2 0 0 0 3 15v7" />
+                      <path d="M9 22v-6h6v6" />
+                    </svg>
+                  ) : (
+                    <GraduationCap className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div>
+                    {!isBookerStudent && (
+                      <p className="text-gray-900 font-medium text-sm">{appointment.studentName}</p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <p className={isBookerStudent ? 'text-xs text-gray-700 font-semibold' : 'text-xs text-gray-500'}>{appointment.studentClass}</p>
+                      {!isBookerStudent && (
+                        <span className="text-xs text-gray-500">{t('appointments.requests.children')}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
           {/* Date & Time */}
           <div className="flex items-start gap-2.5">
             <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
             <div>
-              <p className="text-gray-900 font-medium text-sm">{appointment.desiredDate}</p>
+              <p className="text-gray-900 font-medium text-sm">{formatDate(appointment.desiredDateRaw || appointment.desiredDate, locale)}</p>
               <p className="text-xs text-gray-500">{appointment.desiredTime}</p>
             </div>
           </div>
 
           {/* Meeting Purpose */}
-          {appointment.reason && (
+          {(appointment.reasonKey || appointment.reasonRaw) && (
             <div className="flex items-start gap-2.5">
               <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5" />
-              <p className="text-xs text-gray-600 line-clamp-2">{appointment.reason}</p>
+              <p className="text-xs text-gray-600 line-clamp-2">{displayReason}</p>
             </div>
           )}
 
@@ -597,7 +657,7 @@ export default function TeacherAppointmentManagement({
 
           {/* Requested At */}
           <div className="text-xs text-gray-400 pt-1">
-            {t('appointments.management.requestedAt')} {appointment.requestedAt}
+            {t('appointments.management.requestedAt')} {formatRequestedAt(appointment.requestedAtRaw)}
           </div>
 
           {/* Cancel Reason */}
@@ -880,8 +940,8 @@ export default function TeacherAppointmentManagement({
               <p className="text-sm text-gray-600">
                 <span className="font-medium">{t('appointments.management.studentName')}</span> {selectedAppointment.studentName}
               </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">{t('appointments.management.time')}</span> {selectedAppointment.desiredDate} - {selectedAppointment.desiredTime}
+                <p className="text-sm text-gray-600">
+                <span className="font-medium">{t('appointments.management.time')}</span> {formatDate(selectedAppointment.desiredDateRaw || selectedAppointment.desiredDate, locale)} - {selectedAppointment.desiredTime}
               </p>
             </div>
 

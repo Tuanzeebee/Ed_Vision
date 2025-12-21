@@ -14,6 +14,11 @@ enum MeetingType {
   both
 }
 
+enum RecipientRole {
+  booker
+  instructor
+}
+
 model Account {
   account_id         Int              @id @default(autoincrement())
   email              String           @unique @db.VarChar(255)
@@ -528,6 +533,7 @@ model ReminderSchedule {
   reminder_id    Int          @id @default(autoincrement())
   appointment_id Int?         // Optional appointment link
   account_id     Int          // Who will receive the reminder
+  recipient_role RecipientRole @default(booker)
   template_code  String       @db.VarChar(120) // Maps to NotificationTemplate.code
   remind_at      DateTime     @db.Timestamptz(6) // When to send
   sent_at        DateTime?    @db.Timestamptz(6) // When it was sent (null = not sent)
@@ -539,7 +545,7 @@ model ReminderSchedule {
   appointment    Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
   account        Account      @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   template       NotificationTemplate? @relation(fields: [template_code], references: [code], onDelete: SetNull)
-
+  @@unique([appointment_id, account_id, remind_at, template_code, recipient_role])
   @@index([remind_at, sent_at])
   @@map("ReminderSchedule")
 }
@@ -567,7 +573,6 @@ model Role {
   updatedAt       DateTime         @updatedAt @db.Timestamptz(6)
   accounts        Account[]
   rolePermissions RolePermission[]
-
   @@map("Role")
 }
 

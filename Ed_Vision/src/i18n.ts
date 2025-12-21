@@ -11,6 +11,10 @@ import enParent from './locales/en/parent.json';
 import viParent from './locales/vi/parent.json';
 import enStudent from './locales/en/student.json';
 import viStudent from './locales/vi/student.json';
+import enStudentAppointments from './locales/en/student/appointments.json';
+import viStudentAppointments from './locales/vi/student/appointments.json';
+import enStudentBookingSchedules from './locales/en/student/bookingSchedules.json';
+import viStudentBookingSchedules from './locales/vi/student/bookingSchedules.json';
 import enTeacher from './locales/en/teacher.json';
 import viTeacher from './locales/vi/teacher.json';
 import enAdmin from './locales/en/admin.json';
@@ -48,7 +52,11 @@ i18n
         common: enCommon,
         auth: enAuth,
         parent: enParent,
-        student: enStudent,
+        student: {
+          ...enStudent,
+          appointments: enStudentAppointments,
+          bookingSchedules: enStudentBookingSchedules,
+        },
         teacher: {
           ...enTeacher,
           dashboard: enTeacherDashboard,
@@ -68,7 +76,11 @@ i18n
         common: viCommon,
         auth: viAuth,
         parent: viParent,
-        student: viStudent,
+        student: {
+          ...viStudent,
+          appointments: viStudentAppointments,
+          bookingSchedules: viStudentBookingSchedules,
+        },
         teacher: {
           ...viTeacher,
           dashboard: viTeacherDashboard,

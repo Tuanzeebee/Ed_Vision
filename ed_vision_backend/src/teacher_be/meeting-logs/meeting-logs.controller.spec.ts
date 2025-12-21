@@ -7,6 +7,10 @@ describe('MeetingLogsController', () => {
   let controller: MeetingLogsController;
   let service: MeetingLogsService;
 
+  // Generate non-hardcoded IDs for tests to avoid static id collisions
+  let _idCounter = 1000;
+  const genId = () => ++_idCounter;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MeetingLogsController],
@@ -23,9 +27,11 @@ describe('MeetingLogsController', () => {
 
   describe('getInstructorInfo', () => {
     it('should return instructor info', async () => {
+      const instructorId = genId();
+      const accountId = genId();
       const mockInstructorInfo = {
-        instructor_id: 1,
-        account_id: 10,
+        instructor_id: instructorId,
+        account_id: accountId,
         employee_code: 'GV001',
         full_name: 'TS. Nguyễn Văn A',
         academic_title: 'Tiến sĩ',
@@ -42,16 +48,20 @@ describe('MeetingLogsController', () => {
         .spyOn(service, 'getInstructorInfo')
         .mockResolvedValue(mockInstructorInfo);
 
-      const result = await controller.getInstructorInfo(10);
+      const result = await controller.getInstructorInfo(accountId);
       expect(result).toEqual(mockInstructorInfo);
-      expect(service.getInstructorInfo).toHaveBeenCalledWith(10);
+      expect(service.getInstructorInfo).toHaveBeenCalledWith(accountId);
     });
   });
 
   describe('getStudentsByTimeSlot', () => {
     it('should return students for a specific time slot', async () => {
+      const slotId = genId();
+      const studentId = genId();
+      const accountId = genId();
+
       const mockResponse = {
-        slot_id: 123,
+        slot_id: slotId,
         date: '2025-11-25',
         day_of_week: 1,
         start_time: '09:00',
@@ -62,7 +72,9 @@ describe('MeetingLogsController', () => {
         meeting_type: 'offline',
         students: [
           {
-            id: 1,
+            id: studentId,
+            student_id: studentId,
+            account_id: accountId,
             student_code: 'SV001',
             name: 'Nguyễn Văn B',
             class_name: 'K28 CMU TPM 1',
@@ -99,19 +111,23 @@ describe('MeetingLogsController', () => {
 
   describe('createMeetingLog', () => {
     it('should create a meeting log', async () => {
+      const createInstructorId = genId();
+      const createSlotId = genId();
+      const studentIds = [genId(), genId(), genId()];
+
       const createDto = {
-        instructor_id: 1,
-        slot_id: 123,
+        instructor_id: createInstructorId,
+        slot_id: createSlotId,
         date: '2025-11-25',
         start_time: '09:00',
         end_time: '10:00',
         content: '<html>Test content</html>',
-        student_ids: [1, 2, 3],
+        student_ids: studentIds,
         location: 'Phòng A101',
       };
 
       const mockResponse = {
-        id: 1,
+        id: genId(),
         ...createDto,
         created_at: new Date(),
         updated_at: new Date(),
