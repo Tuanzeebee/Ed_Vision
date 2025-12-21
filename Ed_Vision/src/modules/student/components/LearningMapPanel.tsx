@@ -659,14 +659,108 @@ export default function LearningMapPanel({
                 <div className="relative">
                   {/* Car body with shadow */}
                   <div className="relative animate-bounce-subtle">
-                    <img 
-                      src="https://i.imgur.com/9JlRGr7.png"
-                      alt="Car"
-                      className="w-16 h-16 drop-shadow-2xl"
+                    {/* SVG Car - Clear and Colorful */}
+                    <svg 
+                      width="64" 
+                      height="64" 
+                      viewBox="0 0 64 64" 
+                      className="drop-shadow-2xl"
                       style={{
                         filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4))'
                       }}
-                    />
+                    >
+                      {/* Car Shadow */}
+                      <ellipse cx="32" cy="56" rx="24" ry="4" fill="rgba(0,0,0,0.2)" />
+                      
+                      {/* Car Body - Main */}
+                      <path 
+                        d="M8 36 L12 24 L20 20 L44 20 L52 24 L56 36 L56 44 L8 44 Z" 
+                        fill="url(#carBodyGradient)" 
+                        stroke="#c0392b" 
+                        strokeWidth="1.5"
+                      />
+                      
+                      {/* Car Roof */}
+                      <path 
+                        d="M16 24 L20 14 L44 14 L48 24 Z" 
+                        fill="url(#carRoofGradient)" 
+                        stroke="#2c3e50" 
+                        strokeWidth="1"
+                      />
+                      
+                      {/* Windows */}
+                      <path 
+                        d="M18 22 L21 16 L30 16 L30 22 Z" 
+                        fill="#87CEEB" 
+                        stroke="#5dade2" 
+                        strokeWidth="0.5"
+                      />
+                      <path 
+                        d="M34 16 L43 16 L46 22 L34 22 Z" 
+                        fill="#87CEEB" 
+                        stroke="#5dade2" 
+                        strokeWidth="0.5"
+                      />
+                      
+                      {/* Window Reflection */}
+                      <path d="M19 18 L21 16 L28 16 L28 17 Z" fill="rgba(255,255,255,0.5)" />
+                      <path d="M36 16 L42 16 L44 18 L36 17 Z" fill="rgba(255,255,255,0.5)" />
+                      
+                      {/* Headlights */}
+                      <circle cx="12" cy="34" r="3" fill="#f1c40f" stroke="#f39c12" strokeWidth="0.5" />
+                      <circle cx="52" cy="34" r="3" fill="#f1c40f" stroke="#f39c12" strokeWidth="0.5" />
+                      <circle cx="12" cy="34" r="1.5" fill="#fff" opacity="0.8" />
+                      <circle cx="52" cy="34" r="1.5" fill="#fff" opacity="0.8" />
+                      
+                      {/* Tail Lights */}
+                      <rect x="6" y="38" width="4" height="3" rx="1" fill="#e74c3c" />
+                      <rect x="54" y="38" width="4" height="3" rx="1" fill="#e74c3c" />
+                      
+                      {/* Wheels */}
+                      <circle cx="18" cy="46" r="8" fill="#2c3e50" stroke="#1a252f" strokeWidth="1" />
+                      <circle cx="18" cy="46" r="5" fill="#7f8c8d" />
+                      <circle cx="18" cy="46" r="2" fill="#bdc3c7" />
+                      
+                      <circle cx="46" cy="46" r="8" fill="#2c3e50" stroke="#1a252f" strokeWidth="1" />
+                      <circle cx="46" cy="46" r="5" fill="#7f8c8d" />
+                      <circle cx="46" cy="46" r="2" fill="#bdc3c7" />
+                      
+                      {/* Wheel Details */}
+                      <g fill="#95a5a6">
+                        <rect x="16" y="42" width="4" height="1" rx="0.5" />
+                        <rect x="16" y="49" width="4" height="1" rx="0.5" />
+                        <rect x="14" y="44" width="1" height="4" rx="0.5" />
+                        <rect x="21" y="44" width="1" height="4" rx="0.5" />
+                        
+                        <rect x="44" y="42" width="4" height="1" rx="0.5" />
+                        <rect x="44" y="49" width="4" height="1" rx="0.5" />
+                        <rect x="42" y="44" width="1" height="4" rx="0.5" />
+                        <rect x="49" y="44" width="1" height="4" rx="0.5" />
+                      </g>
+                      
+                      {/* Door Handle */}
+                      <rect x="28" y="30" width="8" height="2" rx="1" fill="#a93226" />
+                      
+                      {/* Body Shine */}
+                      <path 
+                        d="M14 28 L20 22 L44 22 L50 28 L50 32 L14 32 Z" 
+                        fill="rgba(255,255,255,0.15)" 
+                      />
+                      
+                      {/* Gradients */}
+                      <defs>
+                        <linearGradient id="carBodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#e74c3c" />
+                          <stop offset="50%" stopColor="#c0392b" />
+                          <stop offset="100%" stopColor="#a93226" />
+                        </linearGradient>
+                        <linearGradient id="carRoofGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#34495e" />
+                          <stop offset="100%" stopColor="#2c3e50" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    
                     {isCarMoving && (
                       <div className="absolute inset-0 animate-pulse">
                         <div className="w-full h-full bg-blue-400 rounded-full blur-xl opacity-50"></div>
@@ -679,6 +773,14 @@ export default function LearningMapPanel({
                       <div className="h-0.5 w-8 bg-blue-400 opacity-70 animate-speed-line"></div>
                       <div className="h-0.5 w-6 bg-blue-300 opacity-50 animate-speed-line" style={{ animationDelay: '0.1s' }}></div>
                       <div className="h-0.5 w-4 bg-blue-200 opacity-30 animate-speed-line" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  )}
+                  {/* Dust particles when moving */}
+                  {isCarMoving && (
+                    <div className="absolute -left-4 bottom-0 space-x-1 flex">
+                      <div className="w-2 h-2 bg-amber-200 rounded-full opacity-60 animate-dust-1"></div>
+                      <div className="w-1.5 h-1.5 bg-amber-300 rounded-full opacity-40 animate-dust-2"></div>
+                      <div className="w-1 h-1 bg-amber-100 rounded-full opacity-30 animate-dust-3"></div>
                     </div>
                   )}
                 </div>
@@ -844,6 +946,27 @@ export default function LearningMapPanel({
                 }
                 .animate-speed-line {
                   animation: speed-line 0.6s ease-out infinite;
+                }
+                @keyframes dust-1 {
+                  0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+                  100% { transform: translate(-15px, -8px) scale(0.3); opacity: 0; }
+                }
+                @keyframes dust-2 {
+                  0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+                  100% { transform: translate(-12px, 5px) scale(0.2); opacity: 0; }
+                }
+                @keyframes dust-3 {
+                  0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+                  100% { transform: translate(-10px, -3px) scale(0.1); opacity: 0; }
+                }
+                .animate-dust-1 {
+                  animation: dust-1 0.8s ease-out infinite;
+                }
+                .animate-dust-2 {
+                  animation: dust-2 0.6s ease-out infinite 0.1s;
+                }
+                .animate-dust-3 {
+                  animation: dust-3 0.5s ease-out infinite 0.2s;
                 }
               `}</style>
             </div>

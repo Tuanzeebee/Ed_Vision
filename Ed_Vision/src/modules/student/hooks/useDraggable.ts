@@ -3,6 +3,7 @@ import type { DragState } from '../types/learningSpace';
 
 type UseDraggableReturn = {
   position: { x: number; y: number };
+  setPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
   handleMouseDown: (e: React.MouseEvent) => void;
   isDragging: boolean;
 };
@@ -52,6 +53,7 @@ export const useDraggable = (initialX: number, initialY: number): UseDraggableRe
 
   return {
     position,
+    setPosition,
     handleMouseDown,
     isDragging: dragState.isDragging,
   };

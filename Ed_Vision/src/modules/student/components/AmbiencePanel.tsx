@@ -10,8 +10,16 @@ type Props = {
   onSoundVolumeChange: (sound: SoundType, volume: number) => void;
   showRain: boolean;
   showSnow: boolean;
+  showFireflies: boolean;
+  showLeaves: boolean;
+  showStars: boolean;
+  showClouds: boolean;
   onToggleRain: () => void;
   onToggleSnow: () => void;
+  onToggleFireflies: () => void;
+  onToggleLeaves: () => void;
+  onToggleStars: () => void;
+  onToggleClouds: () => void;
   onResetAnimations: () => void;
   initialX?: number;
   initialY?: number;
@@ -26,8 +34,16 @@ export default function AmbiencePanel({
   onSoundVolumeChange,
   showRain,
   showSnow,
+  showFireflies,
+  showLeaves,
+  showStars,
+  showClouds,
   onToggleRain,
   onToggleSnow,
+  onToggleFireflies,
+  onToggleLeaves,
+  onToggleStars,
+  onToggleClouds,
   onResetAnimations,
   initialX = (window.innerWidth - 800) / 2,
   initialY = (window.innerHeight - 600 - 80) / 2,
@@ -52,6 +68,14 @@ export default function AmbiencePanel({
     { type: 'singing-bowl', icon: 'fas fa-om', label: 'singing bowl' },
     { type: 'white-noise', icon: 'fas fa-wave-square', label: 'white noise' },
     { type: 'crickets', icon: 'fas fa-bug', label: 'crickets' },
+    { type: 'forest', icon: 'fas fa-tree', label: 'forest' },
+    { type: 'wind', icon: 'fas fa-wind', label: 'wind' },
+    { type: 'river', icon: 'fas fa-stream', label: 'river' },
+    { type: 'owl', icon: 'fas fa-moon', label: 'night owl' },
+    { type: 'city', icon: 'fas fa-city', label: 'city' },
+    { type: 'clock', icon: 'fas fa-clock', label: 'clock' },
+    { type: 'fan', icon: 'fas fa-fan', label: 'fan' },
+    { type: 'train', icon: 'fas fa-train', label: 'train' },
   ];
 
   // Màu vàng cam giống hình (Amber/Gold)
@@ -209,7 +233,8 @@ export default function AmbiencePanel({
           {tab === 'animations' && (
             <>
               <h3 className="text-white text-xl font-bold mb-6">Animations</h3>
-              <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Rain */}
                 <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">💧</span>
@@ -230,9 +255,11 @@ export default function AmbiencePanel({
                     ></div>
                   </div>
                 </div>
+
+                {/* Snow */}
                 <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">❄</span>
+                    <span className="text-2xl">❄️</span>
                     <span className="text-white font-medium">Snow</span>
                   </div>
                   <div
@@ -246,6 +273,94 @@ export default function AmbiencePanel({
                     <div
                       className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
                         showSnow ? 'left-[26px]' : 'left-0.5'
+                      }`}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Fireflies */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">✨</span>
+                    <span className="text-white font-medium">Fireflies</span>
+                  </div>
+                  <div
+                    onClick={onToggleFireflies}
+                    className={`relative w-12 h-6 rounded-full cursor-pointer transition ${
+                      showFireflies
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_12px_rgba(249,115,22,0.5)]'
+                        : 'bg-white/20'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
+                        showFireflies ? 'left-[26px]' : 'left-0.5'
+                      }`}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Leaves */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🍂</span>
+                    <span className="text-white font-medium">Leaves</span>
+                  </div>
+                  <div
+                    onClick={onToggleLeaves}
+                    className={`relative w-12 h-6 rounded-full cursor-pointer transition ${
+                      showLeaves
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_12px_rgba(249,115,22,0.5)]'
+                        : 'bg-white/20'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
+                        showLeaves ? 'left-[26px]' : 'left-0.5'
+                      }`}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Stars */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">⭐</span>
+                    <span className="text-white font-medium">Stars</span>
+                  </div>
+                  <div
+                    onClick={onToggleStars}
+                    className={`relative w-12 h-6 rounded-full cursor-pointer transition ${
+                      showStars
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_12px_rgba(249,115,22,0.5)]'
+                        : 'bg-white/20'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
+                        showStars ? 'left-[26px]' : 'left-0.5'
+                      }`}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Clouds */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">☁️</span>
+                    <span className="text-white font-medium">Clouds</span>
+                  </div>
+                  <div
+                    onClick={onToggleClouds}
+                    className={`relative w-12 h-6 rounded-full cursor-pointer transition ${
+                      showClouds
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_12px_rgba(249,115,22,0.5)]'
+                        : 'bg-white/20'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
+                        showClouds ? 'left-[26px]' : 'left-0.5'
                       }`}
                     ></div>
                   </div>
