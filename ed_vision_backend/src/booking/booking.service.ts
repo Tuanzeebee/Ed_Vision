@@ -139,6 +139,11 @@ export class BookingService {
 					needsBookerUpdate ? bookerRole : undefined
 				);
 
+				// If booker changed, delete old appointment contact
+				if (needsBookerUpdate) {
+					await this.repository.deleteAppointmentContact(updatedAppointment.appointment_id);
+				}
+
 				// re-fetch to include slot and related info
 				const full = await this.repository.getAppointmentById(updatedAppointment.appointment_id);
 

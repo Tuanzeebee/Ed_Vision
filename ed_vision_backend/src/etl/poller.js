@@ -27,6 +27,23 @@ async function processEventRow(ev) {
     if (table === 'Appointment') {
       return await processAppointmentEvent({ operation: op, payload, dataset });
     }
+    if (table === 'Account') {
+      const res = await processAccountEvent({ operation: op, payload, dataset });
+      if (payload && (payload.last_logout_at || payload.last_login_at)) {
+        try {
+          await processSessionEvent({ operation: op, payload, dataset });
+        } catch (e) {
+          console.warn('poller: session handler failed for account event', e.message || e);
+        }
+      }
+      return res;
+    }
+    if (table === 'Instructor') {
+      return await processInstructorEvent({ operation: op, payload, dataset });
+    }
+    if (table === 'StudentCourseRecord') {
+      return await processStudentCourseEvent({ operation: op, payload, dataset });
+    }
     console.info('poller: no handler for table', table);
     return { ok: true, reason: 'noop' };
   } catch (err) {
@@ -38,7 +55,12 @@ async function processEventRow(ev) {
 async function pollOnce() {
   try {
     // get candidate ids (unprocessed and not failed)
-    const candidates = await prisma.$queryRaw('SELECT id FROM "EventLog" WHERE processed = false OR processed IS NULL AND failed = false ORDER BY id ASC LIMIT $1', BATCH_SIZE);
+    const candidates = await prisma.$queryRaw`
+      SELECT id FROM "EventLog" 
+      WHERE (processed = false OR processed IS NULL) AND (failed = false OR failed IS NULL)
+      ORDER BY id ASC 
+      LIMIT ${BATCH_SIZE}
+    `;
     if (!candidates || candidates.length === 0) return;
 
     const workerId = process.env.WORKER_ID || `${os.hostname()}_${process.pid}`;
@@ -47,11 +69,12 @@ async function pollOnce() {
       const id = row.id;
       try {
         // try to atomically claim this event
-        const claimed = await prisma.$queryRaw(
-          'UPDATE "EventLog" SET processing = true, processing_by = $1, processing_started_at = NOW() WHERE id = $2 AND (processing IS NULL OR processing = false) RETURNING id, table_name, operation, payload, retry_count',
-          workerId,
-          Number(id)
-        );
+        const claimed = await prisma.$queryRaw`
+          UPDATE "EventLog" 
+          SET processing = true, processing_by = ${workerId}, processing_started_at = NOW() 
+          WHERE id = ${Number(id)} AND (processing IS NULL OR processing = false) 
+          RETURNING id, table_name, operation, payload, retry_count
+        `;
         if (!claimed || claimed.length === 0) {
           // someone else claimed it
           continue;
@@ -61,13 +84,21 @@ async function pollOnce() {
         console.log('poller: claimed and processing event', ev.id, ev.table_name, ev.operation);
         try {
           await processEventRow(ev);
-          await prisma.$executeRaw('UPDATE "EventLog" SET processed = true, processed_at = NOW(), processing = false, processing_by = NULL, processing_started_at = NULL, last_error = NULL WHERE id = $1', ev.id);
+          await prisma.$executeRaw`
+            UPDATE "EventLog" 
+            SET processed = true, processed_at = NOW(), processing = false, processing_by = NULL, processing_started_at = NULL, last_error = NULL 
+            WHERE id = ${ev.id}
+          `;
         } catch (procErr) {
           console.error('poller: processing failed for event', ev.id, procErr);
           const retryLimit = Number(process.env.ETL_RETRY_LIMIT || 5);
           const nextRetry = (ev.retry_count || 0) + 1;
           const isFailed = nextRetry >= retryLimit;
-          await prisma.$executeRaw('UPDATE "EventLog" SET retry_count = $1, last_error = $2, processing = false, processing_by = NULL, processing_started_at = NULL, failed = $3 WHERE id = $4', nextRetry, String(procErr.message || procErr), isFailed, ev.id);
+          await prisma.$executeRaw`
+            UPDATE "EventLog" 
+            SET retry_count = ${nextRetry}, last_error = ${String(procErr.message || procErr)}, processing = false, processing_by = NULL, processing_started_at = NULL, failed = ${isFailed} 
+            WHERE id = ${ev.id}
+          `;
         }
       } catch (e) {
         console.error('poller: failed to claim/process event', id, e);

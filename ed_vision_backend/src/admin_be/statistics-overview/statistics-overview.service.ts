@@ -18,9 +18,11 @@ import {
 export class StatisticsOverviewService {
   private readonly bigquery: BigQuery;
   private readonly logger = new Logger(StatisticsOverviewService.name);
+  private readonly dataset: string;
 
   constructor() {
     this.bigquery = new BigQuery();
+    this.dataset = process.env.BIGQUERY_DATASET || 'edvision_dw';
   }
 
   // Helper: map semester string to number
@@ -55,19 +57,19 @@ export class StatisticsOverviewService {
   async getFilterOptions() {
     const sqlDepartments = `
       SELECT DISTINCT department_name 
-      FROM vuong_dw.dim_student 
+      FROM ${this.dataset}.dim_student 
       WHERE department_name IS NOT NULL 
       ORDER BY department_name
     `;
     const sqlMajors = `
       SELECT DISTINCT major, department_name 
-      FROM vuong_dw.dim_student 
+      FROM ${this.dataset}.dim_student 
       WHERE major IS NOT NULL 
       ORDER BY major
     `;
     const sqlClasses = `
       SELECT DISTINCT class_code, cohort_year, major AS program, department_name AS school 
-      FROM vuong_dw.dim_student 
+      FROM ${this.dataset}.dim_student 
       WHERE class_code IS NOT NULL 
       ORDER BY class_code
     `;
@@ -75,13 +77,13 @@ export class StatisticsOverviewService {
     // Query lấy danh sách năm học và học kỳ có dữ liệu trong fact_student_course_performance
     const sqlAcademicYears = `
       SELECT DISTINCT academic_year 
-      FROM vuong_dw.fact_student_course_performance 
+      FROM ${this.dataset}.fact_student_course_performance 
       WHERE academic_year IS NOT NULL 
       ORDER BY academic_year DESC
     `;
     const sqlSemesters = `
       SELECT DISTINCT semester_number 
-      FROM vuong_dw.fact_student_course_performance 
+      FROM ${this.dataset}.fact_student_course_performance 
       WHERE semester_number IS NOT NULL 
       ORDER BY semester_number
     `;
@@ -195,8 +197,8 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.created_at BETWEEN @startDate AND @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.created_at BETWEEN @prevStart AND @prevEnd, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
-          INNER JOIN vuong_dw.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_student ds
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('student', 'students') AND (${whereClauseStudent});
         `;
 
@@ -217,18 +219,18 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(di.created_at BETWEEN @startDate AND @endDate, di.instructor_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(di.created_at BETWEEN @prevStart AND @prevEnd, di.instructor_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_instructor di
-          INNER JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_instructor di
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
         `;
 
         // Query performance
         const sqlPerformance = `
           SELECT role_code, performance_rate, activity_date
-          FROM vuong_dw.fact_daily_account_activity
+          FROM ${this.dataset}.fact_daily_account_activity
           WHERE activity_date = (
             SELECT MAX(activity_date)
-            FROM vuong_dw.fact_daily_account_activity
+            FROM ${this.dataset}.fact_daily_account_activity
             WHERE activity_date BETWEEN @startDate AND @endDate
           )
           AND role_code IN ('student', 'students', 'instructor', 'teacher', 'instructors')
@@ -238,7 +240,7 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at BETWEEN @startDate AND @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at BETWEEN @prevStart AND @prevEnd, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
+          FROM ${this.dataset}.dim_student ds
           WHERE (${whereClauseStudent});
         `;
 
@@ -306,8 +308,8 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.created_at <= @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.created_at <= @prevEndDate, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
-          INNER JOIN vuong_dw.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_student ds
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('student', 'students') AND (${whereClauseStudent});
         `;
 
@@ -326,18 +328,18 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(di.created_at <= @endDate, di.instructor_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(di.created_at <= @prevEndDate, di.instructor_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_instructor di
-          INNER JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_instructor di
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
         `;
 
         // Query performance
         const sqlPerformance = `
           SELECT role_code, performance_rate, activity_date
-          FROM vuong_dw.fact_daily_account_activity
+          FROM ${this.dataset}.fact_daily_account_activity
           WHERE activity_date = (
             SELECT MAX(activity_date)
-            FROM vuong_dw.fact_daily_account_activity
+            FROM ${this.dataset}.fact_daily_account_activity
             WHERE activity_date BETWEEN @startDate AND @endDate
           )
           AND role_code IN ('student', 'students', 'instructor', 'teacher', 'instructors')
@@ -348,7 +350,7 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at <= @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at <= @prevEndDate, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
+          FROM ${this.dataset}.dim_student ds
           WHERE (${whereClauseStudent});
         `;
 
@@ -545,8 +547,8 @@ export class StatisticsOverviewService {
             WHEN fsp.academic_year = @prevAcademicYear AND fsp.semester_number = @prevSemesterNumber THEN 'previous'
             ELSE NULL
           END AS period
-        FROM vuong_dw.fact_student_course_performance fsp
-        JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+        FROM ${this.dataset}.fact_student_course_performance fsp
+        JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
         WHERE (${whereClauseStudent})
           AND (fsp.academic_year = @academicYear OR fsp.academic_year = @prevAcademicYear)
       )
@@ -577,8 +579,8 @@ export class StatisticsOverviewService {
           fsp.student_sk,
           fsp.gpa,
           ds.department_name
-        FROM vuong_dw.fact_student_course_performance fsp
-        JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+        FROM ${this.dataset}.fact_student_course_performance fsp
+        JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
         WHERE (${whereClauseStudent})
           AND fsp.academic_year = @academicYear
           AND fsp.semester_number = @semesterNumber
@@ -604,8 +606,8 @@ export class StatisticsOverviewService {
           ds.department_name,
           ds.major,
           ds.class_code
-        FROM vuong_dw.fact_student_course_performance fsp
-        JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+        FROM ${this.dataset}.fact_student_course_performance fsp
+        JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
         WHERE (${whereClauseStudent})
           AND fsp.academic_year = @academicYear
           AND fsp.semester_number = @semesterNumber
@@ -634,8 +636,8 @@ export class StatisticsOverviewService {
 
     const sqlInstructors = `
       SELECT COUNT(DISTINCT di.instructor_sk) AS total_instructors
-      FROM vuong_dw.dim_instructor di
-      JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+      FROM ${this.dataset}.dim_instructor di
+      JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
       WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
     `;
 
@@ -850,8 +852,8 @@ export class StatisticsOverviewService {
 
     // Đếm số học sinh current & previous
     const baseStudentSql = `
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
         AND fsp.academic_year = @academicYear
         ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
@@ -902,8 +904,8 @@ export class StatisticsOverviewService {
 
     const sqlInstructors = `
       SELECT COUNT(DISTINCT di.instructor_sk) AS cnt
-      FROM vuong_dw.dim_instructor di
-      JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+      FROM ${this.dataset}.dim_instructor di
+      JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
       WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
     `;
 
@@ -919,8 +921,8 @@ export class StatisticsOverviewService {
     `;
     const sqlAtRiskPrev = `
       SELECT COUNT(DISTINCT fsp.student_sk) AS cnt
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
         AND fsp.academic_year = @prevAcademicYear
         ${prevSemesterNumber !== null ? 'AND fsp.semester_number = @prevSemesterNumber' : ''}
@@ -1023,8 +1025,8 @@ export class StatisticsOverviewService {
         SUM(CASE WHEN fsp.gpa >= 6.5 AND fsp.gpa < 8.0 THEN 1 ELSE 0 END) AS good,
         SUM(CASE WHEN fsp.gpa < 6.5 THEN 1 ELSE 0 END) AS average,
         COUNT(*) AS total
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''};
@@ -1068,8 +1070,8 @@ export class StatisticsOverviewService {
         CAST(FLOOR(fsp.gpa * 2) / 2 AS FLOAT64) AS gpa_bucket,
         COUNT(*) AS student_count,
         SUM(fsp.gpa) AS total_gpa
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
@@ -1151,8 +1153,8 @@ export class StatisticsOverviewService {
         ds.class_code AS class,
         fsp.gpa,
         ROW_NUMBER() OVER (ORDER BY fsp.gpa DESC) AS rank
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
@@ -1208,7 +1210,7 @@ export class StatisticsOverviewService {
         SUM(CASE WHEN LOWER(period) = 'morning' THEN 1 ELSE 0 END) AS morning,
         SUM(CASE WHEN LOWER(period) = 'afternoon' THEN 1 ELSE 0 END) AS afternoon,
         SUM(CASE WHEN LOWER(period) = 'evening' THEN 1 ELSE 0 END) AS evening
-      FROM vuong_dw.fact_user_session
+      FROM ${this.dataset}.fact_user_session
       WHERE period IS NOT NULL
         AND DATE(login_time) >= '${startDateStr}'
         AND DATE(login_time) <= '${endDateStr}'
@@ -1232,7 +1234,7 @@ export class StatisticsOverviewService {
   async debugSessions() {
     const sql = `
       SELECT session_id, account_sk, login_time, period, role_code
-      FROM vuong_dw.fact_user_session
+      FROM ${this.dataset}.fact_user_session
       ORDER BY login_time DESC
       LIMIT 20
     `;

@@ -13,6 +13,7 @@ class BigQueryThrottler {
   async execute(fn) {
     // Nếu đang quá tải → thêm vào queue
     if (this.activeRequests >= this.maxConcurrent) {
+      // console.log(`[Throttler] Queue full, adding to queue. Active: ${this.activeRequests}, Queued: ${this.queue.length + 1}`);
       return new Promise((resolve, reject) => {
         this.queue.push({ fn, resolve, reject });
       });
@@ -24,12 +25,14 @@ class BigQueryThrottler {
 
   async _run(fn) {
     this.activeRequests++;
+    // console.log(`[Throttler] Starting request. Active: ${this.activeRequests}, Queued: ${this.queue.length}`);
     
     try {
       const result = await fn();
       return result;
     } finally {
       this.activeRequests--;
+      // console.log(`[Throttler] Finished request. Active: ${this.activeRequests}, Queued: ${this.queue.length}`);
       
       // Process queue nếu có
       if (this.queue.length > 0) {

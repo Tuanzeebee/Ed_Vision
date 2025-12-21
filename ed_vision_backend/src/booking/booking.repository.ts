@@ -92,6 +92,12 @@ export class BookingRepository {
     });
   }
 
+  async deleteAppointmentContact(appointmentId: number) {
+    return this.prisma.appointmentContact.delete({
+      where: { appointment_id: appointmentId },
+    }).catch(() => null); // Silently ignore if not exists
+  }
+
   async upsertAppointmentContact(data: any) {
     return this.prisma.appointmentContact.upsert({
       where: { appointment_id: data.appointment_id },
