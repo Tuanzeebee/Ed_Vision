@@ -16,8 +16,10 @@ export default function MusicWidget({
   initialX = window.innerWidth - 320,
   initialY = window.innerHeight - 280,
 }: Props) {
-  const { position, handleMouseDown } = useDraggable(initialX, initialY);
+  const { position, setPosition, handleMouseDown, isDragging } = useDraggable(initialX, initialY);
   const [expanded, setExpanded] = useState(false);
+  const [savedY, setSavedY] = useState<number | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
   
   // Use shared music player context
   const {
@@ -38,10 +40,21 @@ export default function MusicWidget({
     playTrack,
   } = useMusicPlayer();
 
-  // Format time helper
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+  // Format time helper - Video music standard format (HH:MM:SS or MM:SS)
+  // Shows "LIVE" for live streams (duration = 0 or very large)
+  const formatTime = (seconds: number, isLive?: boolean) => {
+    // Check for live stream
+    if (isLive || seconds <= 0 || seconds >= 86400) { // 86400 = 24 hours
+      return 'LIVE';
+    }
+    
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -117,7 +130,7 @@ export default function MusicWidget({
 
   return (
     <div
-      className="fixed z-30 select-none"
+      className={`fixed z-30 select-none ${isAnimating && !isDragging ? 'transition-all duration-500 ease-out' : ''}`}
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     >
       <div
@@ -182,25 +195,73 @@ export default function MusicWidget({
               <i className="fas fa-forward text-sm"></i>
             </button>
             <button
-              onClick={() => setExpanded(!expanded)}
+              onClick={() => {
+                if (!expanded) {
+                  // Expanding: calculate if widget will overflow and move up
+                  const expandedHeight = 500; // max-h-[500px]
+                  const currentBottom = position.y + 180; // approximate collapsed height
+                  const newBottom = currentBottom + expandedHeight;
+                  const viewportHeight = window.innerHeight;
+                  
+                  if (newBottom > viewportHeight - 20) {
+                    // Save current position to restore later
+                    setSavedY(position.y);
+                    // Enable smooth animation
+                    setIsAnimating(true);
+                    // Move up so expanded content is visible
+                    const newY = Math.max(20, viewportHeight - expandedHeight - 200);
+                    setPosition(prev => ({ ...prev, y: newY }));
+                    // Disable animation after transition completes
+                    setTimeout(() => setIsAnimating(false), 500);
+                  }
+                } else {
+                  // Collapsing: restore original position if saved
+                  if (savedY !== null) {
+                    // Enable smooth animation
+                    setIsAnimating(true);
+                    setPosition(prev => ({ ...prev, y: savedY }));
+                    setSavedY(null);
+                    // Disable animation after transition completes
+                    setTimeout(() => setIsAnimating(false), 500);
+                  }
+                }
+                setExpanded(!expanded);
+              }}
               className="text-white/70 hover:text-white transition"
+              title={expanded ? 'Thu gọn' : 'Mở rộng'}
             >
               <i className={`fas ${expanded ? 'fa-compress' : 'fa-expand'}`}></i>
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-white/50 text-xs">{formatTime(currentTime)}</span>
-            <div 
-              className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const percentage = (e.clientX - rect.left) / rect.width;
-                seekTo(duration * percentage);
-              }}
-            >
-              <div className="h-full bg-white/60 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
-            </div>
-            <span className="text-white/50 text-xs">{formatTime(duration)}</span>
+            {/* Check if LIVE stream */}
+            {duration <= 0 || duration >= 86400 ? (
+              <>
+                <span className="text-red-400 text-xs font-semibold flex items-center gap-1">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                  LIVE
+                </span>
+                <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-400/60 rounded-full w-full animate-pulse"></div>
+                </div>
+                <span className="text-white/50 text-xs">{formatTime(currentTime)}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-white/50 text-xs">{formatTime(currentTime)}</span>
+                <div 
+                  className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const percentage = (e.clientX - rect.left) / rect.width;
+                    seekTo(duration * percentage);
+                  }}
+                >
+                  <div className="h-full bg-white/60 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
+                </div>
+                <span className="text-white/50 text-xs">{formatTime(duration)}</span>
+              </>
+            )}
           </div>
 
           <div

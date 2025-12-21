@@ -82,6 +82,9 @@ export default function MusicPanel({
   // Song Detail Modal
   const [showSongDetail, setShowSongDetail] = useState(false);
   const [selectedSong, setSelectedSong] = useState<Track | null>(null);
+  
+  // Liked Songs List Modal
+  const [showLikedSongsList, setShowLikedSongsList] = useState(false);
 
   // Lyrics data with timestamps
   const lyrics = [
@@ -252,10 +255,21 @@ export default function MusicPanel({
     setSearchError(null);
   }, []);
 
-  // Format time
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+  // Format time - Video music standard format (HH:MM:SS or MM:SS)
+  // Shows "LIVE" for live streams (duration = 0 or very large)
+  const formatTime = (seconds: number, isLive?: boolean) => {
+    // Check for live stream
+    if (isLive || seconds <= 0 || seconds >= 86400) { // 86400 = 24 hours
+      return 'LIVE';
+    }
+    
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -386,7 +400,7 @@ export default function MusicPanel({
               
               {/* YouTube Search Results */}
               {searchMode === 'youtube' && youtubeSearchResults.length > 0 && (
-                <div className="mt-2 bg-black/60 backdrop-blur-sm rounded-lg max-h-80 overflow-y-auto scrollbar-none">
+                <div className="mt-2 bg-white/15 backdrop-blur-xl border border-white/20 rounded-lg max-h-80 overflow-y-auto scrollbar-none">
                   <div className="p-2 border-b border-white/10">
                     <span className="text-white/50 text-xs">
                       {youtubeSearchResults.length} results
@@ -420,7 +434,7 @@ export default function MusicPanel({
 
               {/* Local Search Results */}
               {searchMode === 'local' && searchResults.tracks.length > 0 && (
-                <div className="mt-2 bg-black/60 backdrop-blur-sm rounded-lg max-h-80 overflow-y-auto scrollbar-none">
+                <div className="mt-2 bg-white/15 backdrop-blur-xl border border-white/20 rounded-lg max-h-80 overflow-y-auto scrollbar-none">
                   <div className="p-2 border-b border-white/10">
                     <span className="text-white/50 text-xs">
                       <i className="fas fa-music text-purple-400 mr-1"></i>
@@ -953,11 +967,24 @@ export default function MusicPanel({
                         className="cursor-pointer hover:bg-white/5 rounded-xl p-4 transition group"
                       >
                         <div className="relative mb-3">
-                          <img
-                            src={show.cover}
-                            alt={show.title}
-                            className="w-full aspect-square rounded-xl object-cover"
-                          />
+                          <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={show.cover}
+                              alt={show.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                                // Show fallback icon
+                                const parent = target.parentElement;
+                                if (parent && !parent.querySelector('.fallback-icon')) {
+                                  const icon = document.createElement('i');
+                                  icon.className = 'fas fa-podcast text-white/80 text-4xl fallback-icon';
+                                  parent.appendChild(icon);
+                                }
+                              }}
+                            />
+                          </div>
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center">
                             <button className="w-12 h-12 bg-white/0 group-hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform scale-75 group-hover:scale-100">
                               <i className="fas fa-play text-black ml-1"></i>
@@ -993,7 +1020,23 @@ export default function MusicPanel({
                         })}
                         className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition group"
                       >
-                        <img src={episode.thumbnail} alt={episode.title} className="w-16 h-16 rounded-lg" />
+                        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <img 
+                            src={episode.thumbnail} 
+                            alt={episode.title} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent && !parent.querySelector('.fallback-icon')) {
+                                const icon = document.createElement('i');
+                                icon.className = 'fas fa-microphone text-white/80 text-xl fallback-icon';
+                                parent.appendChild(icon);
+                              }
+                            }}
+                          />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-white text-sm font-medium truncate">{episode.title}</div>
                           <div className="text-white/50 text-xs truncate">{episode.showTitle}</div>
@@ -1259,23 +1302,39 @@ export default function MusicPanel({
               
               {/* Progress Bar */}
               <div className="w-full max-w-2xl flex items-center gap-3">
-                <span className="text-white/60 text-xs font-mono">{formatTime(currentTime)}</span>
-                <div 
-                  className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer group"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const percentage = (e.clientX - rect.left) / rect.width;
-                    seekTo(percentage * duration);
-                  }}
-                >
-                  <div 
-                    className="h-full bg-gradient-to-r from-red-500 to-pink-500 relative"
-                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                  >
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition"></div>
-                  </div>
-                </div>
-                <span className="text-white/60 text-xs font-mono">{formatTime(duration)}</span>
+                {/* Check if LIVE stream */}
+                {duration <= 0 || duration >= 86400 ? (
+                  <>
+                    <span className="text-red-400 text-xs font-semibold flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                      LIVE
+                    </span>
+                    <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-red-400/60 rounded-full w-full animate-pulse"></div>
+                    </div>
+                    <span className="text-white/60 text-xs font-mono">{formatTime(currentTime)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-white/60 text-xs font-mono">{formatTime(currentTime)}</span>
+                    <div 
+                      className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer group"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const percentage = (e.clientX - rect.left) / rect.width;
+                        seekTo(percentage * duration);
+                      }}
+                    >
+                      <div 
+                        className="h-full bg-gradient-to-r from-red-500 to-pink-500 relative"
+                        style={{ width: `${(currentTime / duration) * 100}%` }}
+                      >
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition"></div>
+                      </div>
+                    </div>
+                    <span className="text-white/60 text-xs font-mono">{formatTime(duration)}</span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1385,8 +1444,25 @@ export default function MusicPanel({
 
             {/* Liked Tracks */}
             {likedTracks.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-white font-semibold mb-3">Liked Songs</h4>
+              <div className="mt-6 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 
+                    className={`text-white font-semibold ${likedTracks.length >= 10 ? 'cursor-pointer hover:text-purple-400 transition' : ''}`}
+                    onClick={() => likedTracks.length >= 10 && setShowLikedSongsList(true)}
+                  >
+                    Liked Songs
+                    <span className="ml-2 text-white/50 text-sm font-normal">({likedTracks.length})</span>
+                  </h4>
+                  {likedTracks.length >= 10 && (
+                    <button
+                      onClick={() => setShowLikedSongsList(true)}
+                      className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition"
+                      title="View all liked songs"
+                    >
+                      <i className="fas fa-ellipsis-h text-sm"></i>
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {likedTracks.slice(0, 4).map((track) => (
                     <div 
@@ -1406,7 +1482,107 @@ export default function MusicPanel({
                       <i className="fas fa-heart text-red-400 text-xs"></i>
                     </div>
                   ))}
+                  {likedTracks.length > 4 && (
+                    <button
+                      onClick={() => setShowLikedSongsList(true)}
+                      className="w-full text-center text-white/60 hover:text-white text-sm py-2 hover:bg-white/5 rounded-lg transition"
+                    >
+                      View all {likedTracks.length} songs
+                    </button>
+                  )}
                 </div>
+                
+                {/* Liked Songs List Modal */}
+                {showLikedSongsList && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl w-[500px] max-h-[70vh] flex flex-col shadow-2xl">
+                      {/* Modal Header */}
+                      <div className="flex items-center justify-between p-4 border-b border-white/10">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-red-500 rounded-lg flex items-center justify-center">
+                            <i className="fas fa-heart text-white text-xl"></i>
+                          </div>
+                          <div>
+                            <h3 className="text-white font-bold text-lg">Liked Songs</h3>
+                            <p className="text-white/60 text-sm">{likedTracks.length} songs</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowLikedSongsList(false)}
+                          className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </div>
+                      
+                      {/* Modal Content - Scrollable List */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-none">
+                        {likedTracks.map((track, index) => (
+                          <div 
+                            key={track.id} 
+                            onClick={() => {
+                              playTrack(track);
+                              setShowLikedSongsList(false);
+                            }}
+                            className={`flex items-center gap-3 cursor-pointer hover:bg-white/10 p-3 rounded-lg transition group ${
+                              currentTrack?.id === track.id ? 'bg-purple-600/30' : ''
+                            }`}
+                          >
+                            <span className="text-white/40 text-sm w-6 text-right">{index + 1}</span>
+                            <div className="relative">
+                              <img
+                                src={track.thumbnail}
+                                alt={track.title}
+                                className="w-12 h-12 rounded-lg object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                <i className={`fas fa-${currentTrack?.id === track.id && isPlaying ? 'pause' : 'play'} text-white text-sm`}></i>
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-sm font-medium truncate ${currentTrack?.id === track.id ? 'text-purple-400' : 'text-white'}`}>
+                                {track.title}
+                              </div>
+                              <div className="text-white/50 text-xs truncate">{track.artist}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-white/40 text-xs">{track.duration || ''}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleLike(track);
+                                }}
+                                className="text-red-400 hover:text-red-300 transition"
+                              >
+                                <i className="fas fa-heart"></i>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Modal Footer */}
+                      <div className="p-4 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-white/50 text-sm">
+                          Total: {likedTracks.length} songs
+                        </span>
+                        <button
+                          onClick={() => {
+                            // Play all liked songs
+                            if (likedTracks.length > 0) {
+                              playTrack(likedTracks[0]);
+                              setShowLikedSongsList(false);
+                            }
+                          }}
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-sm font-medium transition flex items-center gap-2"
+                        >
+                          <i className="fas fa-play"></i>
+                          Play All
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1414,13 +1590,13 @@ export default function MusicPanel({
         )}
 
         {/* Song Detail View - Full screen within Music Panel */}
-        {showSongDetail && selectedSong && (
+        {showSongDetail && (selectedSong || currentTrack) && (
           <div className="flex-1 flex flex-col overflow-hidden relative">
-            {/* Background Album Art */}
+            {/* Background Album Art - Always sync with currentTrack */}
             <div className="absolute inset-0 opacity-15">
               <img
-                src={selectedSong.thumbnail || currentTrack?.thumbnail}
-                alt={selectedSong.title}
+                src={currentTrack?.thumbnail || selectedSong?.thumbnail}
+                alt={currentTrack?.title || selectedSong?.title || 'Album Art'}
                 className="w-full h-full object-cover blur-3xl scale-110"
               />
             </div>
@@ -1450,42 +1626,45 @@ export default function MusicPanel({
             {/* Main Content Area */}
             <div className="flex-1 overflow-auto relative z-10 flex items-center justify-center px-8 py-6">
               <div className="flex items-center gap-16 max-w-6xl w-full">
-                {/* Left Section - Album & Info with AnimatedList */}
-                <div className="w-[420px] h-[400px] flex-shrink-0">
-                  <AnimatedList
-                    items={topBillboard}
-                    onItemSelect={(song) => {
-                      setSelectedSong(song);
-                      playTrack(song);
-                    }}
-                    showGradients={false}
-                    enableArrowNavigation={true}
-                    displayScrollbar={false}
-                    itemHeight={320}
-                    renderItem={(song, _index, isActive) => (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <img
-                          src={song.image}
-                          alt={song.title}
-                          className={`rounded-2xl shadow-2xl object-cover mb-6 transition-all duration-500 ${
-                            isActive ? 'w-56 h-56' : 'w-40 h-40'
-                          }`}
-                        />
-                        <div className="text-center px-4">
-                          <div className={`text-white font-bold mb-2 leading-tight transition-all duration-500 ${
-                            isActive ? 'text-2xl' : 'text-lg'
-                          }`}>
-                            {song.title}
-                          </div>
-                          <div className={`text-white/70 transition-all duration-500 ${
-                            isActive ? 'text-lg' : 'text-sm'
-                          }`}>
-                            {song.artist}
-                          </div>
-                        </div>
+                {/* Left Section - Current Track Album Art */}
+                <div className="w-[420px] h-[400px] flex-shrink-0 flex items-center justify-center">
+                  <div className="flex flex-col items-center justify-center">
+                    {/* Album Art - Synced with current playing track */}
+                    <div className="relative group">
+                      <img
+                        src={currentTrack?.thumbnail || selectedSong?.thumbnail || '/default-album.png'}
+                        alt={currentTrack?.title || selectedSong?.title || 'Album Art'}
+                        className="w-64 h-64 rounded-2xl shadow-2xl object-cover transition-all duration-500 group-hover:scale-105"
+                        style={{
+                          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(148, 255, 181, 0.15)'
+                        }}
+                      />
+                      {/* Overlay on hover */}
+                      <div className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button
+                          onClick={togglePlayPause}
+                          className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
+                        >
+                          <i className={`fas fa-${isPlaying ? 'pause' : 'play'} text-2xl ${!isPlaying ? 'ml-1' : ''}`}></i>
+                        </button>
                       </div>
-                    )}
-                  />
+                    </div>
+                    
+                    {/* Track Info */}
+                    <div className="text-center mt-6 px-4">
+                      <div className="text-white font-bold text-2xl mb-2 leading-tight">
+                        {currentTrack?.title || selectedSong?.title || 'Unknown Track'}
+                      </div>
+                      <div className="text-white/70 text-lg">
+                        {currentTrack?.artist || selectedSong?.artist || 'Unknown Artist'}
+                      </div>
+                      {(currentTrack?.album || selectedSong?.album) && (
+                        <div className="text-white/50 text-sm mt-1">
+                          {currentTrack?.album || selectedSong?.album}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right - Circular Progress */}
@@ -1584,7 +1763,12 @@ export default function MusicPanel({
                         color: 'rgba(255, 255, 255, 0.7)'
                       }}
                     >
-                      {formatTime(currentTime)}
+                      {duration <= 0 || duration >= 86400 ? (
+                        <span className="flex items-center gap-1 text-red-400 font-semibold">
+                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                          LIVE
+                        </span>
+                      ) : formatTime(currentTime)}
                     </div>
                     
                     <div 
@@ -1596,7 +1780,7 @@ export default function MusicPanel({
                         color: 'rgba(255, 255, 255, 0.7)'
                       }}
                     >
-                      {formatTime(duration)}
+                      {duration <= 0 || duration >= 86400 ? formatTime(currentTime) : formatTime(duration)}
                     </div>
 
                     {/* Side Icons Stack */}
@@ -1696,18 +1880,8 @@ export default function MusicPanel({
                     </div>
                   </div>
 
-                  {/* Song Title and Subtitle */}
-                  <div className="text-center mt-6">
-                    <h3 className="text-xl font-semibold text-white">
-                      {selectedSong?.title || currentTrack?.title || "Unknown Track"}
-                    </h3>
-                    <p className="text-sm mt-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                      {selectedSong?.artist || currentTrack?.artist || "Unknown Artist"}
-                    </p>
-                  </div>
-
                   {/* Lyrics - Dynamic based on current time */}
-                  <div className="text-center max-w-md mt-4">
+                  <div className="text-center max-w-md mt-6">
                     <div className="text-white/70 text-sm leading-relaxed">
                       <p className="mb-1 transition-all duration-500 ease-in-out transform">
                         {getCurrentLyrics().current?.text || "♪ Playing music..."}
