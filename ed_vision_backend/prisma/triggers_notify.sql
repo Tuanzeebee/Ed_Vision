@@ -17,14 +17,21 @@ BEGIN
     v_payload := to_jsonb(OLD);
   END IF;
 
-  -- Xác định record_id dựa trên khóa phổ biến
-  v_record_id := COALESCE(
-    (v_payload->>'account_id')::INT,
-    (v_payload->>'student_id')::INT,
-    (v_payload->>'instructor_id')::INT,
-    (v_payload->>'record_id')::INT,
-    (v_payload->>'appointment_id')::INT
-  );
+  -- Xác định record_id dựa trên primary key của từng table
+  v_record_id := CASE TG_TABLE_NAME
+    WHEN 'Account' THEN (v_payload->>'account_id')::INT
+    WHEN 'Student' THEN (v_payload->>'student_id')::INT
+    WHEN 'Instructor' THEN (v_payload->>'instructor_id')::INT
+    WHEN 'StudentCourseRecord' THEN (v_payload->>'record_id')::INT
+    WHEN 'Appointment' THEN (v_payload->>'appointment_id')::INT
+    ELSE COALESCE(
+      (v_payload->>'record_id')::INT,
+      (v_payload->>'account_id')::INT,
+      (v_payload->>'student_id')::INT,
+      (v_payload->>'instructor_id')::INT,
+      (v_payload->>'appointment_id')::INT
+    )
+  END;
 
   -- Ghi log vào bảng EventLog
   INSERT INTO "EventLog" (table_name, operation, record_id, payload, created_at)

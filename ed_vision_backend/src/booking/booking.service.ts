@@ -180,15 +180,19 @@ export class BookingService {
           existingAppointment.booker_account_id !== accountId ||
           existingAppointment.booker_role !== bookerRole;
 
-        const updatedAppointment =
-          await this.repository.reactivateCancelledAppointment(
-            existingAppointment.appointment_id,
-            status,
-            meetingType as any,
-            dto.meetingPurpose,
-            needsBookerUpdate ? accountId : undefined,
-            needsBookerUpdate ? bookerRole : undefined,
-          );
+				const updatedAppointment = await this.repository.reactivateCancelledAppointment(
+					existingAppointment.appointment_id,
+					status,
+					meetingType as any,
+					dto.meetingPurpose,
+					needsBookerUpdate ? accountId : undefined,
+					needsBookerUpdate ? bookerRole : undefined
+				);
+
+				// If booker changed, delete old appointment contact
+				if (needsBookerUpdate) {
+					await this.repository.deleteAppointmentContact(updatedAppointment.appointment_id);
+				}
 
         // re-fetch to include slot and related info
         const full = await this.repository.getAppointmentById(

@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
-import type { Track } from '../types/learningSpace';
-import type { MusicTrack } from '../types/musicTypes';
+import { useState } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
+import { useMusicPlayer } from '../music/MusicPlayerContext';
+import { TRACKS } from '../music/mockData';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  currentTrack?: Track | MusicTrack;
   initialX?: number;
   initialY?: number;
 };
@@ -14,110 +13,107 @@ type Props = {
 export default function MusicWidget({
   visible,
   onClose,
-  currentTrack,
   initialX = window.innerWidth - 320,
   initialY = window.innerHeight - 280,
 }: Props) {
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
   const [expanded, setExpanded] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null);
+  
+  // Use shared music player context
+  const {
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    queue,
+    pause,
+    resume,
+    seekTo,
+    setVolume,
+    playNext,
+    playPrevious,
+    toggleLike,
+    isLiked,
+    playTrack,
+  } = useMusicPlayer();
 
-  // Normalize track format (support both Track and MusicTrack)
-  const normalizedTrack = currentTrack ? {
-    id: currentTrack.id,
-    title: currentTrack.title,
-    artist: currentTrack.artist,
-    duration: currentTrack.duration,
-    albumArt: ('imageUrl' in currentTrack && typeof currentTrack.imageUrl === 'string' ? currentTrack.imageUrl : 
-               ('albumArt' in currentTrack && typeof currentTrack.albumArt === 'string' ? currentTrack.albumArt : 
-               'https://via.placeholder.com/100')),
-    source: ('source' in currentTrack ? currentTrack.source : 'local') as 'local' | 'spotify',
-    spotifyUrl: ('spotifyUrl' in currentTrack && typeof currentTrack.spotifyUrl === 'string' ? currentTrack.spotifyUrl : undefined),
-  } : {
-    id: '1',
-    title: 'Late night lofi',
-    artist: 'ICARUS – Tony Ann',
-    duration: '3:08',
-    albumArt: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100&h=100&fit=crop',
-    source: 'local' as const,
+  // Format time helper
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Audio player control
-  useEffect(() => {
-    const preview_url = normalizedTrack.spotifyUrl || (currentTrack && 'preview_url' in currentTrack ? (currentTrack as any).preview_url : null);
-    
-    if (preview_url && isPlaying) {
-      if (audioPlayer) {
-        audioPlayer.pause();
-      }
-      const audio = new Audio(preview_url);
-      audio.volume = 0.7;
-      audio.play().catch(err => {
-        console.error('Error playing audio:', err);
-        setIsPlaying(false);
-      });
-      setAudioPlayer(audio);
-
-      audio.addEventListener('loadedmetadata', () => {
-        setDuration(Math.floor(audio.duration));
-      });
-
-      audio.addEventListener('timeupdate', () => {
-        setCurrentTime(Math.floor(audio.currentTime));
-      });
-
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-      });
-
-      return () => {
-        audio.pause();
-        audio.remove();
-      };
-    } else if (audioPlayer && !isPlaying) {
-      audioPlayer.pause();
+  // Toggle play/pause
+  const handleTogglePlay = () => {
+    if (isPlaying) {
+      pause();
+    } else {
+      resume();
     }
-  }, [currentTrack, isPlaying]);
+  };
+
+  // Handle play next/previous using TRACKS list when queue is empty
+  const handlePlayNext = () => {
+    if (queue.length > 0) {
+      playNext();
+    } else if (currentTrack) {
+      const currentIndex = TRACKS.findIndex(t => t.id === currentTrack.id);
+      if (currentIndex !== -1 && currentIndex < TRACKS.length - 1) {
+        playTrack(TRACKS[currentIndex + 1]);
+      }
+    }
+  };
+
+  const handlePlayPrevious = () => {
+    if (currentTrack) {
+      const currentIndex = TRACKS.findIndex(t => t.id === currentTrack.id);
+      if (currentIndex > 0) {
+        playTrack(TRACKS[currentIndex - 1]);
+      } else {
+        playPrevious();
+      }
+    }
+  };
 
   if (!visible) return null;
 
-  const track = normalizedTrack;
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // Default track info when no track is playing
+  const track = currentTrack ? {
+    id: currentTrack.id,
+    title: currentTrack.title,
+    artist: currentTrack.artist,
+    duration: currentTrack.duration || formatTime(duration),
+    albumArt: currentTrack.thumbnail || 'https://via.placeholder.com/100',
+  } : {
+    id: '',
+    title: 'No track playing',
+    artist: 'Select a track from Music Panel',
+    duration: '0:00',
+    albumArt: 'https://via.placeholder.com/100',
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const upNextTracks = [
-    {
-      id: '2',
-      title: 'Peaceful Piano',
-      artist: 'Study Music',
-      duration: '4:22',
-      albumArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=40&h=40&fit=crop',
-    },
-    {
-      id: '3',
-      title: 'Ambient Focus',
-      artist: 'Deep Concentration',
-      duration: '5:15',
-      albumArt: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=40&h=40&fit=crop',
-    },
-    {
-      id: '4',
-      title: 'Jazz Vibes',
-      artist: 'Smooth Jazz',
-      duration: '6:42',
-      albumArt: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=40&h=40&fit=crop',
-    },
-  ];
+  // Get next tracks from queue or from TRACKS list
+  const upNextTracks = queue.length > 0 
+    ? queue.slice(0, 3).map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: t.artist,
+        duration: t.duration || '0:00',
+        albumArt: t.thumbnail || 'https://via.placeholder.com/40',
+      }))
+    : currentTrack 
+      ? TRACKS.filter(t => t.id !== currentTrack.id).slice(0, 3).map(t => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          duration: t.duration || '0:00',
+          albumArt: t.thumbnail || 'https://via.placeholder.com/40',
+        }))
+      : [];
 
   return (
     <div
@@ -142,7 +138,7 @@ export default function MusicWidget({
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-500 to-pink-500">
               <img
-                src={track.albumArt || 'https://via.placeholder.com/100'}
+                src={track.albumArt}
                 alt="Album Cover"
                 className="w-full h-full object-cover"
               />
@@ -150,19 +146,16 @@ export default function MusicWidget({
             <div className="flex-1 min-w-0">
               <div className="text-white font-semibold text-sm truncate flex items-center gap-2">
                 {track.title}
-                {track.source === 'spotify' && (
-                  <i className="fab fa-spotify text-green-400 text-xs"></i>
-                )}
               </div>
               <div className="text-white/60 text-xs truncate">{track.artist}</div>
             </div>
-            {track.source === 'spotify' && track.spotifyUrl && (
+            {currentTrack && (
               <button
-                onClick={() => window.open(track.spotifyUrl, '_blank')}
-                className="text-green-400 hover:text-green-300 transition flex-shrink-0 mr-2"
-                title="Open in Spotify"
+                onClick={() => toggleLike(currentTrack)}
+                className={`transition flex-shrink-0 mr-2 ${isLiked(currentTrack.id) ? 'text-pink-500' : 'text-white/60 hover:text-white'}`}
+                title={isLiked(currentTrack.id) ? 'Unlike' : 'Like'}
               >
-                <i className="fab fa-spotify text-sm"></i>
+                <i className={`fas fa-heart text-sm`}></i>
               </button>
             )}
             <button
@@ -176,16 +169,16 @@ export default function MusicWidget({
 
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between mb-3">
-            <button className="text-white/70 hover:text-white transition">
+            <button onClick={handlePlayPrevious} className="text-white/70 hover:text-white transition">
               <i className="fas fa-backward text-sm"></i>
             </button>
             <button 
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={handleTogglePlay}
               className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition"
             >
               <i className={`fas fa-${isPlaying ? 'pause' : 'play'} text-xs ${!isPlaying ? 'ml-0.5' : ''}`}></i>
             </button>
-            <button className="text-white/70 hover:text-white transition">
+            <button onClick={handlePlayNext} className="text-white/70 hover:text-white transition">
               <i className="fas fa-forward text-sm"></i>
             </button>
             <button
@@ -197,10 +190,17 @@ export default function MusicWidget({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-white/50 text-xs">{formatTime(currentTime)}</span>
-            <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer">
+            <div 
+              className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const percentage = (e.clientX - rect.left) / rect.width;
+                seekTo(duration * percentage);
+              }}
+            >
               <div className="h-full bg-white/60 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
             </div>
-            <span className="text-white/50 text-xs">{duration > 0 ? formatTime(duration) : track.duration}</span>
+            <span className="text-white/50 text-xs">{formatTime(duration)}</span>
           </div>
 
           <div
@@ -210,16 +210,28 @@ export default function MusicWidget({
           >
             <div className="pt-4 border-t border-white/20 mt-4">
               <div className="mb-4">
-                <div className="text-white/70 text-xs font-medium mb-2">Album</div>
-                <div className="text-white text-sm">WonderSpace Lofi Collection</div>
+                <div className="text-white/70 text-xs font-medium mb-2">Now Playing</div>
+                <div className="text-white text-sm">{currentTrack ? currentTrack.album || 'Music' : 'No track'}</div>
               </div>
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <i className="fas fa-volume-up text-white/60 text-sm"></i>
-                  <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-white/60 rounded-full" style={{ width: '70%' }}></div>
+                  <button 
+                    onClick={() => setVolume(volume === 0 ? 70 : 0)}
+                    className="text-white/60 hover:text-white transition"
+                  >
+                    <i className={`fas fa-volume-${volume === 0 ? 'mute' : volume < 50 ? 'down' : 'up'} text-sm`}></i>
+                  </button>
+                  <div 
+                    className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden cursor-pointer"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const percentage = (e.clientX - rect.left) / rect.width;
+                      setVolume(Math.round(percentage * 100));
+                    }}
+                  >
+                    <div className="h-full bg-white/60 rounded-full" style={{ width: `${volume}%` }}></div>
                   </div>
-                  <span className="text-white/60 text-xs">70%</span>
+                  <span className="text-white/60 text-xs">{volume}%</span>
                 </div>
               </div>
               <div className="flex items-center justify-between text-white/60 text-xs mb-4">
@@ -229,9 +241,14 @@ export default function MusicWidget({
                 <button className="hover:text-white transition">
                   <i className="fas fa-repeat"></i>
                 </button>
-                <button className="hover:text-white transition">
-                  <i className="fas fa-heart"></i>
-                </button>
+                {currentTrack && (
+                  <button 
+                    onClick={() => toggleLike(currentTrack)}
+                    className={`transition ${isLiked(currentTrack.id) ? 'text-pink-500' : 'hover:text-white'}`}
+                  >
+                    <i className="fas fa-heart"></i>
+                  </button>
+                )}
                 <button className="hover:text-white transition">
                   <i className="fas fa-list"></i>
                 </button>
@@ -239,23 +256,33 @@ export default function MusicWidget({
               <div>
                 <div className="text-white/70 text-xs font-medium mb-2">Up Next</div>
                 <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-none">
-                  {upNextTracks.map((nextTrack) => (
-                    <div
-                      key={nextTrack.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition"
-                    >
-                      <img
-                        src={nextTrack.albumArt}
-                        alt="Track"
-                        className="w-8 h-8 rounded"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white text-xs truncate">{nextTrack.title}</div>
-                        <div className="text-white/50 text-xs truncate">{nextTrack.artist}</div>
+                  {upNextTracks.map((nextTrack) => {
+                    // Find the original track from TRACKS to play
+                    const originalTrack = TRACKS.find(t => t.id === nextTrack.id);
+                    return (
+                      <div
+                        key={nextTrack.id}
+                        onClick={() => originalTrack && playTrack(originalTrack)}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition group"
+                      >
+                        <div className="relative">
+                          <img
+                            src={nextTrack.albumArt}
+                            alt="Track"
+                            className="w-8 h-8 rounded"
+                          />
+                          <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <i className="fas fa-play text-white text-[8px]"></i>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white text-xs truncate group-hover:text-purple-300 transition">{nextTrack.title}</div>
+                          <div className="text-white/50 text-xs truncate">{nextTrack.artist}</div>
+                        </div>
+                        <div className="text-white/50 text-xs">{nextTrack.duration}</div>
                       </div>
-                      <div className="text-white/50 text-xs">{nextTrack.duration}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -43,6 +43,7 @@ export interface PhysicalEducationGPAResult {
 
 @Injectable()
 export class GPACalculatorService {
+  private readonly logger = new Logger(GPACalculatorService.name);
 
   private readonly logger = new Logger(GPACalculatorService.name);
 
