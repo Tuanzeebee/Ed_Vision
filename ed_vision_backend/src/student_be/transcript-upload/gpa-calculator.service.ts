@@ -45,8 +45,6 @@ export interface PhysicalEducationGPAResult {
 export class GPACalculatorService {
   private readonly logger = new Logger(GPACalculatorService.name);
 
-  private readonly logger = new Logger(GPACalculatorService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: StudentCacheService,

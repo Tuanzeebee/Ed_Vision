@@ -22,7 +22,10 @@ export class DevAuthGuard implements CanActivate {
 
     const account = await this.prisma.account.findUnique({
       where: { account_id: accountId },
-      include: { roleRel: true },
+      include: { 
+        roleRel: true,
+        instructor: true, // Include instructor info
+      },
     });
 
     if (!account) throw new UnauthorizedException('Không tìm thấy tài khoản');
@@ -31,6 +34,7 @@ export class DevAuthGuard implements CanActivate {
       account_id: account.account_id,
       email: account.email,
       role: account.roleRel?.code ?? null,
+      instructorId: (account as any).instructor?.instructor_id ?? null, // Add instructorId
     };
     req.account = account;
 

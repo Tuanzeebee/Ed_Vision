@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 type Props = {
   videoId: string;
@@ -9,17 +9,82 @@ type Props = {
   volume?: number;
 };
 
-// Declare YouTube IFrame API types
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
+// YouTube Player types for background video (local interface to avoid conflict)
+interface YTBackgroundPlayer {
+  destroy: () => void;
+  mute: () => void;
+  unMute: () => void;
+  setVolume: (volume: number) => void;
+  playVideo: () => void;
+  seekTo: (seconds: number) => void;
+}
+
+interface YTBackgroundPlayerEvent {
+  target: YTBackgroundPlayer;
+  data?: number;
 }
 
 export default function YouTubeBackground({ videoId, start = 0, end, className = '', muted = true, volume = 70 }: Props) {
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YTBackgroundPlayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const playerContainerId = useRef(`yt-bg-${videoId}-${Date.now()}`);
+
+  const onPlayerReady = useCallback((event: YTBackgroundPlayerEvent) => {
+    if (muted) {
+      event.target.mute();
+    } else {
+      event.target.unMute();
+      event.target.setVolume(volume);
+    }
+    event.target.playVideo();
+  }, [muted, volume]);
+
+  const onPlayerStateChange = useCallback((event: YTBackgroundPlayerEvent) => {
+    // When video ends, replay it (backup for loop)
+    if (event.data === window.YT?.PlayerState?.ENDED) {
+      event.target.seekTo(start || 0);
+      event.target.playVideo();
+    }
+  }, [start]);
+
+  const initializePlayer = useCallback(() => {
+    if (!containerRef.current) return;
+
+    // Set the id on the container for YouTube API
+    containerRef.current.id = playerContainerId.current;
+
+    // Destroy existing player if any
+    if (playerRef.current) {
+      playerRef.current.destroy();
+    }
+
+    // Create new player using element ID (string) - cast to our local type
+    playerRef.current = new window.YT.Player(playerContainerId.current, {
+      height: '100%',
+      width: '100%',
+      videoId: videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        iv_load_policy: 3,
+        modestbranding: 1,
+        playsinline: 1,
+        rel: 0,
+        showinfo: 0,
+        start: start,
+        end: end || 0,
+        loop: 1,
+        playlist: videoId, // Required for looping
+        mute: 1, // Mute audio
+      },
+      events: {
+        onReady: onPlayerReady as (event: { target: unknown }) => void,
+        onStateChange: onPlayerStateChange as (event: { data: number; target: unknown }) => void,
+      },
+    }) as unknown as YTBackgroundPlayer;
+  }, [videoId, start, end, onPlayerReady, onPlayerStateChange]);
 
   useEffect(() => {
     // Load YouTube IFrame API if not already loaded
@@ -39,7 +104,7 @@ export default function YouTubeBackground({ videoId, start = 0, end, className =
         playerRef.current.destroy();
       }
     };
-  }, [videoId]);
+  }, [initializePlayer]);
 
   // Handle mute/unmute when prop changes
   useEffect(() => {
@@ -52,58 +117,6 @@ export default function YouTubeBackground({ videoId, start = 0, end, className =
       }
     }
   }, [muted, volume]);
-
-  const initializePlayer = () => {
-    if (!containerRef.current) return;
-
-    // Destroy existing player if any
-    if (playerRef.current) {
-      playerRef.current.destroy();
-    }
-
-    // Create new player
-    playerRef.current = new window.YT.Player(containerRef.current, {
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 0,
-        disablekb: 1,
-        fs: 0,
-        iv_load_policy: 3,
-        modestbranding: 1,
-        playsinline: 1,
-        rel: 0,
-        showinfo: 0,
-        start: start,
-        end: end,
-        loop: 1,
-        playlist: videoId, // Required for looping
-        mute: 1, // Mute audio
-      },
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onPlayerStateChange,
-      },
-    });
-  };
-
-  const onPlayerReady = (event: any) => {
-    if (muted) {
-      event.target.mute();
-    } else {
-      event.target.unMute();
-      event.target.setVolume(volume);
-    }
-    event.target.playVideo();
-  };
-
-  const onPlayerStateChange = (event: any) => {
-    // When video ends, replay it (backup for loop)
-    if (event.data === window.YT.PlayerState.ENDED) {
-      event.target.seekTo(start || 0);
-      event.target.playVideo();
-    }
-  };
 
   return (
     <div className={`youtube-background ${className}`}>
