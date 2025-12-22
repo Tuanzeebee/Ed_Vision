@@ -16,14 +16,19 @@ export class ClassManagementService {
    * Lấy danh sách các lớp mà giảng viên phụ trách
    */
   async getInstructorClasses(instructorId: number) {
-    // Get all classes where this instructor is the adviser
+    const now = new Date();
+    
+    // Get all classes where this instructor is the adviser (active assignment)
     const classGroups = await this.prisma.classGroup.findMany({
       where: {
         status: 'active',
         adviserAssignments: {
           some: {
             instructor_id: instructorId,
-            ended_date: null,
+            OR: [
+              { ended_date: null },
+              { ended_date: { gte: now } },
+            ],
           },
         },
       },
@@ -48,7 +53,10 @@ export class ClassManagementService {
         adviserAssignments: {
           where: {
             instructor_id: instructorId,
-            ended_date: null,
+            OR: [
+              { ended_date: null },
+              { ended_date: { gte: now } },
+            ],
           },
           include: {
             instructor: {
@@ -285,12 +293,16 @@ export class ClassManagementService {
           },
         });
       } else {
-        // Check permission
+        // Check permission - assignment must be active (no end date or end date in future)
+        const now = new Date();
         const isAdviser = await this.prisma.adviserAssignment.findFirst({
           where: {
             class_id: classGroup.class_id,
             instructor_id: instructorId,
-            ended_date: null,
+            OR: [
+              { ended_date: null },
+              { ended_date: { gte: now } },
+            ],
           },
         });
         if (!isAdviser)
