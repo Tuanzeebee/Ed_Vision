@@ -372,29 +372,26 @@ export class BookingService {
         // Parse thành UTC
         const appointmentTimeUTC = new Date(datetimeVN);
 
-        this.logger.log(`[Reminder] Date: ${dateStr}, Time VN: ${timeStr}`);
-        this.logger.log(`[Reminder] DateTime VN: ${datetimeVN}`);
-        this.logger.log(
-          `[Reminder] appointmentTimeUTC: ${appointmentTimeUTC.toISOString()}`,
-        );
-        this.logger.log(`[Reminder] Now (UTC): ${new Date().toISOString()}`);
+        
 
         // Tạo reminder cho người đặt lịch (student hoặc parent)
         await this.reminderScheduler.createRemindersForAppointment(
           appointment.appointment_id,
           accountId,
           appointmentTimeUTC,
+          { intendedRecipient: 'booker' },
         );
 
         // Nếu có instructor, tạo reminder cho instructor
         if (instructorId) {
           const instructorAccount =
             await this.repository.getInstructorById(instructorId);
-          if (instructorAccount) {
+            if (instructorAccount) {
             await this.reminderScheduler.createRemindersForAppointment(
               appointment.appointment_id,
               instructorAccount.account_id,
               appointmentTimeUTC,
+              { intendedRecipient: 'instructor' },
             );
           }
         }
@@ -427,16 +424,7 @@ export class BookingService {
             include: { profile: true },
           });
 
-          // DEBUG LOGGING
-          this.logger.log(`========== NOTIFICATION DEBUG ==========`);
-          this.logger.log(`accountId: ${accountId}`);
-          this.logger.log(`bookerRole: ${bookerRole}`);
-          this.logger.log(`bookerAccount found: ${!!bookerAccount}`);
-          this.logger.log(
-            `bookerAccount.profile: ${JSON.stringify(bookerAccount?.profile)}`,
-          );
-          this.logger.log(`studentName: ${studentName}`);
-
+          // Debug block removed
           // Ưu tiên sử dụng parentContactDefaults nếu là parent (đã có sẵn tên chính xác)
           let bookerName: string;
           if (bookerRole === 'parent' && parentContactDefaults?.contact_name) {
@@ -447,8 +435,7 @@ export class BookingService {
               (bookerRole === 'parent' ? 'Phụ huynh' : studentName);
           }
 
-          this.logger.log(`FINAL bookerName: ${bookerName}`);
-          this.logger.log(`========================================`);
+          
 
           // Format date
           const slotDate = fullWithSlot?.slot?.date?.specific_date

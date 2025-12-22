@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ChangeEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Header from '@/components/layout/Header'
@@ -87,14 +88,16 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
   const [parentInfoResolved, setParentInfoResolved] = useState<boolean>(false)
   const [linkedStudents, setLinkedStudents] = useState<any[]>([])
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
+  const { t, i18n } = useTranslation('student')
+
   const PURPOSE_OPTIONS: MeetingPurposeOption[] = useMemo(
     () => [
-      { value: 'study', label: 'Tư vấn học tập' },
-      { value: 'progress', label: 'Thảo luận tiến độ' },
-      { value: 'thesis', label: 'Hướng dẫn khóa luận' },
-      { value: 'other', label: 'Khác' },
+      { value: 'study', label: t('appointments.management.purposes.studyAdvice', 'Study advising') },
+      { value: 'progress', label: t('appointments.management.purposes.progressDiscussion', 'Progress discussion') },
+      { value: 'thesis', label: t('appointments.management.purposes.thesisGuidance', 'Thesis guidance') },
+      { value: 'other', label: t('appointments.management.purposes.other', 'Other') },
     ],
-    [],
+    [t],
   )
   const [meetingPurpose, setMeetingPurpose] = useState<string>(PURPOSE_OPTIONS[0].value)
   const [customPurpose, setCustomPurpose] = useState<string>('')
@@ -254,8 +257,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         // ignore malformed payloads
       }
     } catch (error) {
-       
-      console.warn('Không thể lấy danh sách lịch hẹn hiện có', error)
+      console.warn(t('bookingSchedules.error.loadAvailability'), error)
     }
   }
 
@@ -292,20 +294,20 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
   const onConfirm = async () => {
     if (selectedSlot && bookedSlotIds.includes(selectedSlot)) {
-      pushWarningToast('Bạn đã đặt lịch cho khung giờ này. Vui lòng chọn khung giờ khác.')
+      pushWarningToast(t('bookingSchedules.toast.slotAlreadyBooked'))
       return
     }
     if (isBooking) {
-      pushInfoToast('Hệ thống đang xử lý yêu cầu trước đó. Vui lòng chờ trong giây lát.')
+      pushInfoToast(t('bookingSchedules.toast.processingPrevious'))
       return
     }
     if (!canConfirm) {
       if (!isPurposeValid) {
-        pushWarningToast('Vui lòng nhập mục đích buổi hẹn.')
+        pushWarningToast(t('bookingSchedules.toast.missingPurpose'))
       } else if (!isContactValid) {
-        pushWarningToast('Vui lòng nhập thông tin liên hệ của phụ huynh.')
+        pushWarningToast(t('bookingSchedules.toast.missingContact'))
       } else if (!isStudentSelectionValid) {
-        pushWarningToast('Vui lòng chọn sinh viên cho buổi hẹn.')
+        pushWarningToast(t('bookingSchedules.toast.missingStudent'))
       }
       return
     }
@@ -315,11 +317,10 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      pushSuccessToast('Đã sao chép liên kết tham gia.')
+      pushSuccessToast(t('bookingSchedules.toast.copySuccess'))
     } catch (e) {
-       
       console.error('Copy failed', e)
-      pushErrorToast('Không thể sao chép liên kết, vui lòng thử lại.')
+      pushErrorToast(t('bookingSchedules.toast.copyError'))
     }
   }
 
@@ -431,9 +432,9 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
         }
     } catch (e: any) {
       if (e?.message) {
-        setError(`Không thể tải lịch sẵn có. Chi tiết: ${e.message}`)
+        setError(`${t('bookingSchedules.error.loadAvailability')} ${e.message}`)
       } else {
-        setError('Không thể tải lịch sẵn có. Vui lòng thử lại.')
+        setError(t('bookingSchedules.error.loadAvailability'))
       }
     } finally {
       setLoading(false)
@@ -556,11 +557,11 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                   }
                 }
               } catch (e: any) {
-                if (e?.message) {
-                  setError(`Không thể tải lịch sẵn có. Chi tiết: ${e.message}`)
-                } else {
-                  setError('Không thể tải lịch sẵn có. Vui lòng thử lại.')
-                }
+                  if (e?.message) {
+                    setError(`${t('bookingSchedules.error.loadAvailability')} ${e.message}`)
+                  } else {
+                    setError(t('bookingSchedules.error.loadAvailability'))
+                  }
               } finally {
                 setLoading(false)
               }
@@ -725,7 +726,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
   const doBooking = async () => {
     if (!selectedSlot) {
-      pushWarningToast('Vui lòng chọn khung giờ trước khi đặt lịch.')
+      pushWarningToast(t('bookingSchedules.toast.selectSlotBeforeBooking'))
       return
     }
   const token = localStorage.getItem('dev-token') || TokenManager.getToken() || localStorage.getItem('token')
@@ -775,7 +776,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           throw new Error('SLOT_FULL')
         }
 
-        throw new Error(responseMessage || `Không thể đặt lịch (mã ${res.status}).`)
+        throw new Error(responseMessage || `Unable to book (code ${res.status}).`)
       }
       setShowSuccessModal(true)
       setBookedSlotIds((prev) => (prev.includes(slotIdBeingBooked) ? prev : [...prev, slotIdBeingBooked]))
@@ -784,7 +785,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
       let rawMessage = e instanceof Error ? e.message : String(e)
 
       if (rawMessage === 'SLOT_FULL') {
-        pushErrorToast('Không thể đặt lịch: Slot này đã đầy chỗ.')
+        pushErrorToast(t('bookingSchedules.toast.slotFull'))
         return
       }
 
@@ -798,8 +799,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
       }
 
       const normalized = (rawMessage || '').trim()
-      const detail = normalized && normalized.toLowerCase() !== 'error' ? ` Chi tiết: ${normalized}` : ''
-      pushErrorToast(`Không thể đặt lịch. Vui lòng thử lại sau.${detail}`)
+      const detail = normalized && normalized.toLowerCase() !== 'error' ? ` ${normalized}` : ''
+      pushErrorToast(t('bookingSchedules.toast.bookingFailed') + detail)
     } finally {
       setIsBooking(false)
     }
@@ -833,14 +834,14 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
     }
   })()
   const isOnlineFormat = selectedFormat !== 'offline'
-  const participationLabel = isOnlineFormat ? 'Link tham gia' : 'Địa điểm'
+  const participationLabel = isOnlineFormat ? t('bookingSchedules.participation.labelLink') : t('bookingSchedules.participation.labelLocation')
   const participationValue = isOnlineFormat
-    ? currentSlotMeta.meetingLink || 'Chưa có link tham gia'
-    : currentSlotMeta.meetingLocation || 'Chưa có địa điểm'
+    ? currentSlotMeta.meetingLink || t('bookingSchedules.participation.noLink')
+    : currentSlotMeta.meetingLocation || t('bookingSchedules.participation.noLocation')
   const participationCopyValue = isOnlineFormat ? currentSlotMeta.meetingLink : currentSlotMeta.meetingLocation
   const selectedPurposeLabel = meetingPurpose === 'other'
-    ? customPurpose.trim() || 'Khác'
-    : PURPOSE_OPTIONS.find((opt) => opt.value === meetingPurpose)?.label ?? 'Tư vấn học tập'
+    ? customPurpose.trim() || t('appointments.management.purposes.other')
+    : PURPOSE_OPTIONS.find((opt) => opt.value === meetingPurpose)?.label ?? t('appointments.management.purposes.studyAdvice')
   const isPurposeValid = meetingPurpose !== 'other' || customPurpose.trim().length > 0
   const isParentRole = !!parentInfo
   const hasBookedSelectedSlot = selectedSlot !== null && bookedSlotIds.includes(selectedSlot)
@@ -932,7 +933,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Quay lại
+              {t('bookingSchedules.back')}
             </button>
           </div>
 
@@ -942,7 +943,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
           <div className="max-w-3xl mx-auto px-3 sm:px-4 py-2.5">
             <div className="flex items-center justify-center mb-2">
               <div className="flex items-center space-x-3 sm:space-x-4">
-                <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow transition-all ${
                       currentStep === 1 ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' : 'bg-gray-200 text-gray-500'
@@ -951,7 +952,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                     {currentStep === 1 ? '1' : '✓'}
                   </div>
                   <span className={`font-semibold text-xs transition-colors ${currentStep === 1 ? 'text-blue-600' : 'text-gray-500'}`}>
-                    Chọn thời gian
+                    {t('bookingSchedules.step.chooseTime')}
                   </span>
                 </div>
                 <div className="w-8 sm:w-12 h-0.5 bg-gray-200 rounded-full"></div>
@@ -964,7 +965,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                     2
                   </div>
                   <span className={`font-semibold text-xs transition-colors ${currentStep === 2 ? 'text-blue-600' : 'text-gray-500'}`}>
-                    Xác nhận
+                    {t('bookingSchedules.step.confirm')}
                   </span>
                 </div>
               </div>
@@ -994,10 +995,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         />
                       </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy giảng viên cố vấn</h2>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Vui lòng liên hệ với phòng Đào tạo để được phân công giảng viên cố vấn học tập.
-                    </p>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">{t('bookingSchedules.noAdvisor.title')}</h2>
+                    <p className="text-sm text-gray-600 mb-4">{t('bookingSchedules.noAdvisor.subtitle')}</p>
                   </div>
                 ) : (
                   <>
@@ -1021,17 +1020,15 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       }}
                       disabled={loading}
                       className="absolute top-0 right-0 flex items-center justify-center w-8 h-8 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-                      title="Làm mới dữ liệu"
+                      title={t('bookingSchedules.refresh')}
                     >
                       <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                     </button>
                   </div>
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">Chọn thời gian tư vấn</h1>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    Hãy chọn ngày và khung giờ phù hợp để đặt lịch hẹn với giảng viên cố vấn của bạn.
-                  </p>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">{t('bookingSchedules.title')}</h1>
+                  <p className="text-xs sm:text-sm text-gray-600">{t('bookingSchedules.subtitle')}</p>
                 </div>
 
                 {/* Weekly Calendar */}
@@ -1054,24 +1051,23 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         const firstMonth = firstDate.getUTCMonth() + 1
                         const lastMonth = lastDate.getUTCMonth() + 1
                         const year = firstDate.getUTCFullYear()
-                        
-                        if (firstMonth === lastMonth) {
-                          return `Tuần từ ${firstDay} - ${lastDay} Tháng ${firstMonth}, ${year}`
-                        } else {
-                          return `Tuần từ ${firstDay} Tháng ${firstMonth} - ${lastDay} Tháng ${lastMonth}, ${year}`
-                        }
-                      })() : 'Chọn tuần'}
+
+                        const startLabel = firstMonth === lastMonth ? `${firstDay}` : `${firstDay} Tháng ${firstMonth}`
+                        const endLabel = firstMonth === lastMonth ? `${lastDay} Tháng ${firstMonth}, ${year}` : `${lastDay} Tháng ${lastMonth}, ${year}`
+
+                        return t('bookingSchedules.weekRange', { start: startLabel, end: endLabel })
+                      })() : t('bookingSchedules.weekRange', { start: '', end: '' })}
                     </div>
                   </h2>
 
                   {groupedTotal === 0 && (
-                    <div className="text-center text-sm text-gray-600 py-4">Chưa có khung giờ được công bố cho ngày này.</div>
+                    <div className="text-center text-sm text-gray-600 py-4">{t('bookingSchedules.noSlots')}</div>
                   )}
 
                   <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-3">
-                    {loading && <div className="col-span-7 text-center text-xs">Đang tải lịch...</div>}
+                    {loading && <div className="col-span-7 text-center text-xs">{t('bookingSchedules.loading')}</div>}
                     {!loading && availabilities.length === 0 && (
-                      <div className="col-span-7 text-center text-xs">Không có ngày khả dụng</div>
+                      <div className="col-span-7 text-center text-xs">{t('bookingSchedules.noSlots')}</div>
                     )}
                                     {!loading && weekDates.map((dateStr, idx) => {
                                       const dateObj = new Date(dateStr + 'T00:00:00Z')
@@ -1122,11 +1118,11 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                   <div className="flex items-center justify-center space-x-4 text-xs">
                     <div className="flex items-center space-x-1.5">
                       <div className="w-2.5 h-2.5 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full" />
-                      <span className="text-gray-700 font-medium">Đã chọn</span>
+                      <span className="text-gray-700 font-medium">{t('bookingSchedules.selected')}</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <div className="w-2.5 h-2.5 bg-gray-400 rounded-full" />
-                      <span className="text-gray-700 font-medium">Không khả dụng</span>
+                      <span className="text-gray-700 font-medium">{t('bookingSchedules.unavailable')}</span>
                     </div>
                     {error && <div className="text-red-600 text-xs">{error}</div>}
                   </div>
@@ -1143,7 +1139,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    Khung giờ khả dụng
+                    {t('bookingSchedules.availableSlots')}
                   </h2>
 
                   {/* Morning */}
@@ -1156,7 +1152,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                           clipRule="evenodd"
                         />
                       </svg>
-                      Buổi sáng
+                      {t('bookingSchedules.morning')}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {groupedSlots.morning.map((s) => {
@@ -1190,7 +1186,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                           <div className="flex flex-wrap gap-1.5 mb-1.5 items-center">
                             {s.meetingType === 'both' ? (
                               <div className="w-full">
-                                <div className="text-xs text-gray-600 mb-1.5 font-medium">Chọn hình thức:</div>
+                                <div className="text-xs text-gray-600 mb-1.5 font-medium">{t('bookingSchedules.format.label')}</div>
                                 <div className="flex space-x-1.5">
                                   <div
                                     data-format="offline"
@@ -1219,7 +1215,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                       )}
-                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>Trực tiếp</span>
+                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>{t('bookingSchedules.format.offline')}</span>
                                     </div>
                                   </div>
 
@@ -1250,27 +1246,27 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18" />
                                         </svg>
                                       )}
-                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>Trực tuyến</span>
+                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>{t('bookingSchedules.format.online')}</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             ) : (
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${selectedSlot === s.slotId ? 'bg-white/20 text-white' : s.meetingType === 'online' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {s.meetingType === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
+                                {s.meetingType === 'online' ? t('bookingSchedules.format.online') : t('bookingSchedules.format.offline')}
                               </span>
                             )}
                           </div>
 
                           {selectedSlot === s.slotId && selectedFormat === 'online' && (
-                            <div className="text-xs text-white/90 cursor-pointer flex items-center font-medium mt-2 underline">
-                              {s.meetingType === 'online' ? 'Link sẽ được gửi vào email' : ''}
+                                <div className="text-xs text-white/90 cursor-pointer flex items-center font-medium mt-2 underline">
+                              {s.meetingType === 'online' ? '' : ''}
                             </div>
                           )}
                           
                           {!s.isOpen && (
                             <div className="text-xs text-red-500 font-medium mt-1">
-                              Không khả dụng
+                              {t('bookingSchedules.unavailable')}
                             </div>
                           )}
                         </div>
@@ -1289,7 +1285,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                           clipRule="evenodd"
                         />
                       </svg>
-                      Buổi chiều
+                      {t('bookingSchedules.afternoon')}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {groupedSlots.afternoon.map((s) => {
@@ -1322,7 +1318,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                           <div className="flex flex-wrap gap-1.5 mb-1.5 items-center">
                             {s.meetingType === 'both' ? (
                               <div className="w-full">
-                                <div className="text-xs text-gray-600 mb-1.5 font-medium">Chọn hình thức:</div>
+                                <div className="text-xs text-gray-600 mb-1.5 font-medium">{t('bookingSchedules.format.label')}</div>
                                 <div className="flex space-x-1.5">
                                   <div
                                     data-format="offline"
@@ -1351,7 +1347,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                       )}
-                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>Trực tiếp</span>
+                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>{t('bookingSchedules.format.offline')}</span>
                                     </div>
                                   </div>
 
@@ -1382,7 +1378,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18" />
                                         </svg>
                                       )}
-                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>Trực tuyến</span>
+                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>{t('bookingSchedules.format.online')}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1393,19 +1389,19 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                   selectedSlot === s.slotId ? 'bg-white/20 text-white' : s.meetingType === 'online' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                 }`}
                               >
-                                {s.meetingType === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
+                                {s.meetingType === 'online' ? t('bookingSchedules.format.online') : t('bookingSchedules.format.offline')}
                               </span>
                             )}
                           </div>
-                          {selectedSlot === s.slotId && selectedFormat === 'online' && (
+                            {selectedSlot === s.slotId && selectedFormat === 'online' && (
                             <div className="text-xs text-white/90 cursor-pointer flex items-center font-medium mt-2 underline">
-                              {s.meetingType === 'online' ? 'Link sẽ được gửi vào email' : ''}
+                              {s.meetingType === 'online' ? t('bookingSchedules.linkReminder') : ''}
                             </div>
                           )}
                           
                           {!s.isOpen && (
                             <div className="text-xs text-red-500 font-medium mt-1">
-                              Không khả dụng
+                              {t('bookingSchedules.unavailable')}
                             </div>
                           )}
                         </div>
@@ -1420,7 +1416,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       <svg className="w-3.5 h-3.5 mr-1.5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                       </svg>
-                      Buổi tối
+                      {t('bookingSchedules.evening')}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {groupedSlots.evening.map((s) => {
@@ -1453,7 +1449,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                           <div className="flex flex-wrap gap-1.5 mb-1.5 items-center">
                             {s.meetingType === 'both' ? (
                               <div className="w-full">
-                                <div className="text-xs text-gray-600 mb-1.5 font-medium">Chọn hình thức:</div>
+                                <div className="text-xs text-gray-600 mb-1.5 font-medium">{t('bookingSchedules.format.label')}</div>
                                 <div className="flex space-x-1.5">
                                   <div
                                     data-format="offline"
@@ -1482,7 +1478,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                       )}
-                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>Trực tiếp</span>
+                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'offline' ? 'text-white' : 'text-gray-700'}`}>{t('bookingSchedules.format.offline')}</span>
                                     </div>
                                   </div>
 
@@ -1507,7 +1503,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                       <svg className={`w-3 h-3 ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                       </svg>
-                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>Trực tuyến</span>
+                                      <span className={`text-xs font-semibold ${selectedSlot === s.slotId && selectedFormat === 'online' ? 'text-white' : 'text-gray-700'}`}>{t('bookingSchedules.format.online')}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1518,19 +1514,19 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                   selectedSlot === s.slotId ? 'bg-white/20 text-white' : s.meetingType === 'online' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                 }`}
                               >
-                                {s.meetingType === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
+                                {s.meetingType === 'online' ? t('bookingSchedules.format.online') : t('bookingSchedules.format.offline')}
                               </span>
                             )}
                           </div>
                           {selectedSlot === s.slotId && selectedFormat === 'online' && (
                             <div className="text-xs text-white/90 cursor-pointer flex items-center font-medium mt-2 underline">
-                              {s.meetingType === 'online' ? 'Link sẽ được gửi vào email' : ''}
+                              {s.meetingType === 'online' ? t('bookingSchedules.linkReminder') : ''}
                             </div>
                           )}
                           
                           {!s.isOpen && (
                             <div className="text-xs text-red-500 font-medium mt-1">
-                              Không khả dụng
+                              {t('bookingSchedules.unavailable')}
                             </div>
                           )}
                         </div>
@@ -1549,11 +1545,11 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                      <span>Quay lại</span>
+                      <span>{t('bookingSchedules.back')}</span>
                     </button>
 
                     <div className="text-xs text-gray-500 font-semibold">
-                      <span>Bước {currentStep}/2</span>
+                      <span>{t('bookingSchedules.stepLabel', { current: currentStep, total: 2 })}</span>
                     </div>
 
                     <button
@@ -1561,7 +1557,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       disabled={groupedTotal === 0}
                       className={`px-4 py-2 rounded-lg font-semibold flex items-center space-x-1.5 transition-all active:scale-95 text-xs ${groupedTotal === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:shadow-lg text-white'}`}
                     >
-                      <span>Tiếp tục</span>
+                      <span>{t('bookingSchedules.continue')}</span>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -1586,8 +1582,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       />
                     </svg>
                   </div>
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">Xác nhận lịch hẹn</h1>
-                  <p className="text-xs sm:text-sm text-gray-600">Vui lòng kiểm tra thông tin trước khi xác nhận.</p>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">{t('bookingSchedules.step.confirm')}</h1>
+                  <p className="text-xs sm:text-sm text-gray-600">{t('bookingSchedules.confirmSubtitle')}</p>
                 </div>
 
                 {/* Summary Card */}
@@ -1595,7 +1591,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="inline-flex items-center px-2 py-1 bg-white/20 rounded-lg text-xs font-semibold mb-2 backdrop-blur-sm">
-                        Buổi tư vấn học tập
+                        {t('bookingSchedules.summarySession')}
                       </div>
                       <h2 className="text-base sm:text-lg font-bold mb-1">
                         {(() => {
@@ -1607,17 +1603,17 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                             instructorProfile?.full_name ||
                             advisorName ||
                             (instructorProfile
-                              ? instructorProfile.full_name || instructorProfile.employee_code || (instructorProfile.instructor_id ? `Giảng viên #${instructorProfile.instructor_id}` : 'Giảng viên')
+                              ? (instructorProfile.full_name || instructorProfile.employee_code || (instructorProfile.instructor_id ? t('bookingSchedules.advisor.withId', { id: instructorProfile.instructor_id }) : t('bookingSchedules.advisor.label')))
                               : activeInstructorId
-                                ? `Giảng viên #${activeInstructorId}`
-                                : 'Giảng viên')
+                                ? t('bookingSchedules.advisor.withId', { id: activeInstructorId })
+                                : t('bookingSchedules.advisor.label'))
                           )
                         })()}
                       </h2>
                       <p className="text-white/90 text-xs">
                         {(() => {
                           const slot = slotDetails?.slot ?? slotDetails
-                          return slot?.week?.instructor?.academic_title || instructorProfile?.academic_title || instructorProfile?.position || 'Cố vấn học tập'
+                          return slot?.week?.instructor?.academic_title || instructorProfile?.academic_title || instructorProfile?.position || t('bookingSchedules.advisor.role')
                         })()}
                       </p>
                     </div>
@@ -1626,21 +1622,21 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
-                      <div className="text-xs opacity-90 mb-1">Ngày</div>
+                      <div className="text-xs opacity-90 mb-1">{t('bookingSchedules.summary.date')}</div>
                       <div className="font-bold text-xs">
-                        {chosenDate ? new Date(chosenDate.date).toLocaleDateString('vi-VN') : ''}
+                        {chosenDate ? new Date(chosenDate.date).toLocaleDateString(i18n.language) : ''}
                       </div>
                     </div>
                     <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
-                      <div className="text-xs opacity-90 mb-1">Thời gian</div>
+                      <div className="text-xs opacity-90 mb-1">{t('bookingSchedules.summary.time')}</div>
                       <div className="font-bold text-xs">{chosenSlot ? `${chosenSlot.startTime} – ${chosenSlot.endTime}` : ''}</div>
                     </div>
                     <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
-                      <div className="text-xs opacity-90 mb-1">Hình thức</div>
-                      <div className="font-bold text-xs">{selectedFormat === 'online' ? 'Trực tuyến' : 'Trực tiếp'}</div>
+                      <div className="text-xs opacity-90 mb-1">{t('bookingSchedules.summary.format')}</div>
+                      <div className="font-bold text-xs">{selectedFormat === 'online' ? t('bookingSchedules.format.online') : t('bookingSchedules.format.offline')}</div>
                     </div>
                     <div className="bg-white/20 rounded-lg p-2.5 backdrop-blur-sm">
-                      <div className="text-xs opacity-90 mb-1">Mục đích</div>
+                      <div className="text-xs opacity-90 mb-1">{t('bookingSchedules.summary.purpose')}</div>
                       <div className="font-bold text-xs truncate" title={selectedPurposeLabel}>
                         {selectedPurposeLabel}
                       </div>
@@ -1697,7 +1693,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           }`}
                         >
-                          {participationCopyValue ? `Sao chép ${isOnlineFormat ? 'link' : 'địa điểm'}` : 'Chưa có thông tin để sao chép'}
+                          {participationCopyValue ? (isOnlineFormat ? t('bookingSchedules.participation1.copyLink') : t('bookingSchedules.participation1.copyLocation')) : t('bookingSchedules.participation1.noCopyInfo')}
                         </button>
                       </div>
                     </div>
@@ -1716,7 +1712,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         </svg>
                       </div>
                       <div className="flex-1 space-y-2">
-                        <label className="text-xs font-semibold text-gray-700 block">Mục đích buổi hẹn</label>
+                              <label className="text-xs font-semibold text-gray-700 block">{t('bookingSchedules.purposeLabel')}</label>
                         <select
                           value={meetingPurpose}
                           onChange={(e) => {
@@ -1736,12 +1732,12 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                             type="text"
                             value={customPurpose}
                             onChange={(e) => setCustomPurpose(e.target.value)}
-                            placeholder="Nhập mục đích cụ thể"
+                            placeholder={t('bookingSchedules.placeholder.enterPurpose')}
                             className="w-full border border-purple-300 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-700 font-medium"
                           />
                         )}
                         {meetingPurpose === 'other' && customPurpose.trim().length === 0 && (
-                          <p className="text-[11px] text-purple-700">Vui lòng nhập mục đích cụ thể.</p>
+                          <p className="text-[11px] text-purple-700">{t('bookingSchedules.validation.enterSpecificPurpose')}</p>
                         )}
                       </div>
                     </div>
@@ -1760,37 +1756,37 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <div className="text-xs font-semibold text-gray-700 mb-2">Thông tin sinh viên</div>
+                        <div className="text-xs font-semibold text-gray-700 mb-2">{t('bookingSchedules.studentInfo.title')}</div>
                         <div className="space-y-1.5 text-xs">
                           {studentInfo ? (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Họ và tên:</span>
+                                <span className="text-gray-600">{t('bookingSchedules.studentInfo.fullName')}</span>
                                 <span className="font-bold text-gray-900">{studentInfo.fullName || studentInfo.full_name || '—'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Mã SV:</span>
+                                <span className="text-gray-600">{t('bookingSchedules.studentInfo.studentCode')}</span>
                                 <span className="font-bold text-gray-900">{studentInfo.studentCode || studentInfo.student_code || '—'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Lớp:</span>
+                                <span className="text-gray-600">{t('bookingSchedules.studentInfo.class')}</span>
                                 <span className="font-bold text-gray-900">{studentInfo.className || '—'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Trạng thái:</span>
+                                <span className="text-gray-600">{t('bookingSchedules.studentInfo.status')}</span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                  {studentInfo.verified || studentInfo.status === 'active' ? 'Đã xác thực' : 'Chưa xác thực'}
+                                  {studentInfo.verified || studentInfo.status === 'active' ? t('bookingSchedules.studentInfo.verified') : t('bookingSchedules.studentInfo.unverified')}
                                 </span>
                               </div>
                               {isParentRole && linkedStudents.length > 0 && (
                                 <div className="mt-3 w-full text-left">
-                                  <label className="text-[11px] font-medium text-gray-600 block mb-1">Chọn sinh viên</label>
+                                  <label className="text-[11px] font-medium text-gray-600 block mb-1">{t('bookingSchedules.parent.selectStudentLabel')}</label>
                                   <select
                                     value={selectedStudentId ?? ''}
                                     onChange={(e) => setSelectedStudentId(e.target.value ? Number(e.target.value) : null)}
                                     className="w-full border border-emerald-200 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white text-gray-700"
                                   >
-                                    <option value="" disabled>-- Chọn sinh viên --</option>
+                                    <option value="" disabled>{t('bookingSchedules.parent.selectStudentPlaceholder')}</option>
                                     {linkedStudents.map((st) => (
                                       <option key={st.studentId} value={st.studentId}>
                                         {st.fullName || st.full_name || st.student_code}
@@ -1798,14 +1794,14 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                                     ))}
                                   </select>
                                   {!isStudentSelectionValid && (
-                                    <p className="text-[11px] text-emerald-700 mt-1">Phụ huynh cần chọn sinh viên để đặt lịch.</p>
+                                    <p className="text-[11px] text-emerald-700 mt-1">{t('bookingSchedules.parent.selectionRequiredText')}</p>
                                   )}
                                 </div>
                               )}
                             </>
                           ) : (
                             <>
-                              <div className="text-sm text-gray-700">Chưa có thông tin sinh viên. Vui lòng đăng nhập hoặc cung cấp thông tin.</div>
+                              <div className="text-sm text-gray-700">{t('bookingSchedules.noStudentInfo')}</div>
                             </>
                           )}
                         </div>
@@ -1828,32 +1824,32 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         </div>
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-700">Thông tin phụ huynh</span>
-                            <span className="text-[11px] text-amber-700">Có thể chỉnh sửa</span>
+                            <span className="text-xs font-semibold text-gray-700">{t('bookingSchedules.parent.contactInfoTitle')}</span>
+                            <span className="text-[11px] text-amber-700">{t('bookingSchedules.parent.contactEditableNote')}</span>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div>
-                              <label className="text-[11px] font-medium text-gray-600 block mb-1">Họ và tên</label>
+                              <label className="text-[11px] font-medium text-gray-600 block mb-1">{t('bookingSchedules.parent.nameLabel')}</label>
                               <input
                                 type="text"
                                 value={contactFields.name}
                                 onChange={onContactFieldChange('name')}
-                                placeholder="Nhập họ tên phụ huynh"
+                                placeholder={t('bookingSchedules.parent.placeholder.name')}
                                 className="w-full border border-amber-300 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-gray-700"
                               />
                             </div>
                             <div>
-                              <label className="text-[11px] font-medium text-gray-600 block mb-1">Số điện thoại</label>
+                              <label className="text-[11px] font-medium text-gray-600 block mb-1">{t('bookingSchedules.parent.phoneLabel')}</label>
                               <input
-                                type="tel"
-                                value={contactFields.phone}
-                                onChange={onContactFieldChange('phone')}
-                                placeholder="Ví dụ: 0901..."
-                                className="w-full border border-amber-300 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-gray-700"
-                              />
+                                    type="text"
+                                    value={customPurpose}
+                                    onChange={(e) => setCustomPurpose(e.target.value)}
+                                    placeholder={t('bookingSchedules.placeholder.enterPurpose')}
+                                    className="w-full border border-purple-200 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 bg-white text-gray-700"
+                                  />
                             </div>
                             <div>
-                              <label className="text-[11px] font-medium text-gray-600 block mb-1">Email</label>
+                              <label className="text-[11px] font-medium text-gray-600 block mb-1">{t('bookingSchedules.parent.emailLabel')}</label>
                               <input
                                 type="email"
                                 value={contactFields.email}
@@ -1863,18 +1859,18 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                               />
                             </div>
                             <div>
-                              <label className="text-[11px] font-medium text-gray-600 block mb-1">Quan hệ với sinh viên</label>
+                              <label className="text-[11px] font-medium text-gray-600 block mb-1">{t('bookingSchedules.parent.relationshipLabel')}</label>
                               <input
                                 type="text"
                                 value={contactFields.relationship}
                                 onChange={onContactFieldChange('relationship')}
-                                placeholder="Ví dụ: Bố, Mẹ, Người giám hộ"
+                                placeholder={t('bookingSchedules.parent.placeholder.relationshipExample')}
                                 className="w-full border border-amber-300 rounded-lg text-xs px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-gray-700"
                               />
                             </div>
                           </div>
                           {!isContactValid && (
-                            <p className="text-[11px] text-amber-700">Vui lòng nhập họ và tên phụ huynh để liên hệ.</p>
+                            <p className="text-[11px] text-amber-700">{t('bookingSchedules.validation.enterParentName')}</p>
                           )}
                         </div>
                       </div>
@@ -1891,9 +1887,8 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                     />
                     <span className="text-xs text-gray-700 leading-relaxed">
-                      Tôi xác nhận rằng các thông tin trên là chính xác và đồng ý với{' '}
-                      <span className="text-blue-600 font-bold">chính sách buổi hẹn của EdVision</span>. Tôi cam kết có mặt
-                      đúng giờ hoặc hủy lịch trước thời hạn quy định.
+                      {t('bookingSchedules.confirmationPrefix')}{' '}
+                      <span className="text-blue-600 font-bold">{t('bookingSchedules.confirmationPolicy')}</span>. {t('bookingSchedules.confirmationSuffix')}
                     </span>
                   </label>
                 </div>
@@ -1906,11 +1901,11 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    <span>Quay lại</span>
+                    <span>{t('bookingSchedules.back')}</span>
                   </button>
 
                   <div className="text-xs text-gray-500 font-semibold">
-                    <span>Bước 2/2</span>
+                    <span>{t('bookingSchedules.stepLabel', { current: 2, total: 2 })}</span>
                   </div>
 
                   <button
@@ -1928,11 +1923,11 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span>{isBooking ? 'Đang xử lý...' : 'Xác nhận lịch hẹn'}</span>
+                      <span>{isBooking ? t('bookingSchedules.processing') : t('bookingSchedules.bookButton')}</span>
                   </button>
                   {hasBookedSelectedSlot && (
                     <p className="text-[11px] text-amber-700 mt-2 text-right">
-                      Bạn đã đặt lịch cho khung giờ này. Vui lòng chọn khung giờ khác.
+                      {t('bookingSchedules.toast.slotAlreadyBooked')}
                     </p>
                   )}
                 </div>
@@ -1953,10 +1948,12 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                 </svg>
               </div>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Đặt lịch thành công!</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">{t('bookingSchedules.success')}</h2>
             <p className="text-xs sm:text-sm text-gray-600 mb-6 leading-relaxed">
-              Bạn đã đặt lịch hẹn vào <span className="font-bold text-gray-900">{chosenDate ? new Date(chosenDate.date).toLocaleDateString('vi-VN') : ''}</span> lúc{' '}
-              <span className="font-bold text-gray-900">{chosenSlot ? `${chosenSlot.startTime} – ${chosenSlot.endTime}` : ''}</span>.
+              {t('bookingSchedules.successDescription', {
+                date: chosenDate ? new Date(chosenDate.date).toLocaleDateString(i18n.language || 'en-US') : '',
+                time: chosenSlot ? `${chosenSlot.startTime} – ${chosenSlot.endTime}` : '',
+              })}
             </p>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 animate-in slide-in-from-bottom delay-100 duration-500">
@@ -1969,9 +1966,9 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <div className="text-xs sm:text-sm text-gray-700">
-                  <p className="font-bold text-gray-900 mb-1.5">Thông tin đã được ghi lại</p>
-                  <p className="text-gray-600">Vui lòng truy cập quản lý lịch hẹn để xem chi tiết hoặc hủy lịch.</p>
+                  <div className="text-xs sm:text-sm text-gray-700">
+                  <p className="font-bold text-gray-900 mb-1.5">{t('bookingSchedules.success')}</p>
+                  <p className="text-gray-600">{t('bookingSchedules.successInfo')}</p>
                 </div>
               </div>
             </div>
@@ -1983,7 +1980,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
               }}
               className="w-full px-5 py-3 bg-gradient-to-r from-purple-600 to-purple-800 hover:shadow-xl text-white rounded-xl font-bold transition-all text-sm active:scale-95"
             >
-              Trở lại lịch hẹn
+              {t('bookingSchedules.back')}
             </button>
           </div>
         </div>
