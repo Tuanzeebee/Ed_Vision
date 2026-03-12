@@ -1,0 +1,75 @@
+{
+	"title": "Lịch Hẹn Của Tôi",
+	"subtitle": "Quản lý các buổi gặp gỡ cố vấn",
+	"searchPlaceholder": "Tìm kiếm theo tên giảng viên hoặc mục đích...",
+	"loading": "Đang tải danh sách lịch hẹn...",
+	"filtering": "Đang lọc dữ liệu...",
+	"tryAgain": "Thử lại",
+	"noAppointments": "Bạn chưa có lịch hẹn nào",
+	"noAppointmentsFilter": "Không tìm thấy lịch hẹn phù hợp với bộ lọc",
+
+	"pleaseEnterCancelReason": "Vui lòng nhập lý do hủy lịch hẹn.",
+	"cancelSuccess": "Đã hủy lịch hẹn thành công.",
+	"cancelFailed": "Không thể hủy lịch hẹn. Vui lòng thử lại.",
+	"updateFailed": "Không thể cập nhật trạng thái. Vui lòng thử lại.",
+	"restoreFailed": "Không thể khôi phục lịch hẹn. Vui lòng thử lại.",
+
+	"management": {
+		"create": "Đặt Lịch Mới",
+		"confirmCancelTitle": "Xác nhận hủy lịch hẹn",
+		"confirmCancelBody": "Bạn có chắc chắn muốn hủy lịch hẹn với",
+		"confirmCancelButton": "Xác nhận hủy",
+		"back": "Quay lại",
+		"confirmMarkComplete": "Bạn có chắc chắn muốn đánh dấu buổi học này là đã hoàn thành?",
+		"cancelReasonPlaceholder": "Nhập lý do hủy lịch hẹn...",
+		"bookFirst": "Đặt lịch hẹn đầu tiên",
+		"allStatuses": "Tất cả trạng thái",
+		"allTimes": "Tất cả thời gian",
+		"timeFilters": {
+			"upcoming": "Sắp tới",
+			"past": "Đã qua",
+			"this_week": "Tuần này",
+			"this_month": "Tháng này"
+		},
+
+		"timePeriod": {
+			"morning": "Sáng",
+			"afternoon": "Chiều",
+			"evening": "Tối"
+		},
+
+		"typeOnline": "Trực tuyến",
+		"typeOffline": "Trực tiếp",
+		"waitingForLink": "(Chờ cố vấn thêm link)",
+		"waitingForLocation": "(Chờ cố vấn thêm vị trí)",
+		"undetermined": "Chưa xác định",
+		"join": "Tham gia",
+		"markCompleted": "Đánh dấu hoàn thành",
+		"instructor": "Giảng viên",
+		"purposes": {
+			"progressDiscussion": "Thảo luận tiến độ",
+			"studyAdvice": "Tư vấn học tập",
+			"thesisGuidance": "Hướng dẫn khóa luận",
+			"other": "Khác"
+		},
+		"loadMore": "Xem thêm",
+		"showing": "Đang hiển thị",
+		"appointments": "lịch hẹn",
+		"remaining": "còn lại",
+		"reschedule": "Đặt lại lịch",
+		"restoreExpired": "Quá thời gian đặt lại",
+
+		"statusConfirmed": "Đã xác nhận",
+		"statusPending": "Chờ xác nhận",
+		"statusCompleted": "Hoàn thành",
+		"statusCanceled": "Đã hủy",
+		"statusRejected": "Bị từ chối",
+
+		"cancelReason": "Lý do hủy:",
+		"cancel": "Hủy",
+		"markComplete": "Đánh dấu hoàn thành",
+		"bookedBy": "Đặt bởi"
+	}
+}
+
+

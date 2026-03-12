@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '../teacher/utils/appointmentUtils';
 import { BookingApiService, type Appointment } from "@/services/api/booking.api";
 import Header from "../../components/layout/Header"
 import { useToast } from '@/lib/useToast'
@@ -48,24 +50,9 @@ const getAvatarColor = (name: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Helper function to format date in Vietnamese
-const formatDateVN = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-  const dayName = days[date.getDay()];
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  return `${dayName}, ${day}/${month}/${year}`;
-};
+// Date formatting uses centralized utility (locale provided by component)
 
-// Helper function to get time period label
-const getTimePeriod = (timeStr: string): string => {
-  const hour = parseInt(timeStr.split(':')[0], 10);
-  if (hour < 12) return 'Sáng';
-  if (hour < 18) return 'Chiều';
-  return 'Tối';
-};
+// Time period labels are provided via i18n inside the component
 
 // Helper function to extract time from ISO string
 const extractTime = (isoString: string | undefined): string => {
@@ -74,7 +61,7 @@ const extractTime = (isoString: string | undefined): string => {
   return match ? match[1] : '';
 };
 
-export default function AllAppointments({}: Props) {
+export default function AllAppointments(_props: Props) {
   const navigate = useNavigate();
   const { toasts, error: showErrorToast, success: showSuccessToast, hideToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -171,6 +158,23 @@ export default function AllAppointments({}: Props) {
     };
   }, []); // Recalculate only when component mounts or when we want to refresh
 
+  const { t, i18n } = useTranslation('student');
+
+  const locale = useMemo(() => {
+    const lang = i18n?.language;
+    if (!lang) return (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
+    if (lang === 'en') return 'en-US';
+    if (lang === 'vi') return 'vi-VN';
+    return lang;
+  }, [i18n?.language]);
+
+  const getTimePeriod = (timeStr: string): string => {
+    const hour = parseInt(timeStr.split(':')[0], 10);
+    if (hour < 12) return t('appointments.management.timePeriod.morning');
+    if (hour < 18) return t('appointments.management.timePeriod.afternoon');
+    return t('appointments.management.timePeriod.evening');
+  };
+
   // Filter appointments based on search and filters
   const filteredAppointments = useMemo(() => {
     const result = appointments.filter(apt => {
@@ -264,7 +268,7 @@ export default function AllAppointments({}: Props) {
 
     // Validate that cancel reason is provided
     if (!cancelReason.trim()) {
-      showErrorToast('Vui lòng nhập lý do hủy lịch hẹn.');
+      showErrorToast(t('appointments.pleaseEnterCancelReason'));
       return;
     }
 
@@ -272,22 +276,22 @@ export default function AllAppointments({}: Props) {
       await BookingApiService.cancelAppointment(selectedAppointment.appointment_id, cancelReason.trim());
       await loadAppointments();
       closeDeleteModal();
-      showSuccessToast('Đã hủy lịch hẹn thành công.');
+      showSuccessToast(t('appointments.cancelSuccess'));
     } catch (err) {
       console.error('Failed to cancel appointment:', err);
-      showErrorToast('Không thể hủy lịch hẹn. Vui lòng thử lại.');
+      showErrorToast(t('appointments.cancelFailed'));
     }
   };
 
   const markAsCompleted = async (appointment: Appointment) => {
-    if (!confirm('Bạn có chắc chắn muốn đánh dấu buổi học này là đã hoàn thành?')) return;
+    if (!confirm(t('appointments.management.confirmMarkComplete'))) return;
 
     try {
       await BookingApiService.updateAppointmentStatus(appointment.appointment_id, 'completed');
       await loadAppointments();
     } catch (err) {
       console.error('Failed to mark appointment as completed:', err);
-      alert('Không thể cập nhật trạng thái. Vui lòng thử lại.');
+      alert(t('appointments.updateFailed'));
     }
   };
 
@@ -299,7 +303,7 @@ export default function AllAppointments({}: Props) {
       await loadAppointments();
     } catch (err) {
       console.error('Failed to restore canceled appointment:', err);
-      alert('Không thể khôi phục lịch hẹn. Vui lòng thử lại.');
+      alert(t('appointments.restoreFailed'));
     }
   };
 
@@ -307,16 +311,16 @@ export default function AllAppointments({}: Props) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return { bg: 'bg-emerald-500/10', text: 'text-emerald-500', label: 'Đã xác nhận' };
+        return { bg: 'bg-emerald-500/10', text: 'text-emerald-500', label: t('appointments.management.statusConfirmed') };
       case 'pending':
-        return { bg: 'bg-amber-500/10', text: 'text-amber-500', label: 'Chờ xác nhận' };
+        return { bg: 'bg-amber-500/10', text: 'text-amber-500', label: t('appointments.management.statusPending') };
       case 'completed':
-        return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Hoàn thành' };
+        return { bg: 'bg-gray-100', text: 'text-gray-600', label: t('appointments.management.statusCompleted') };
       case 'canceled':
       case 'cancelled':
-        return { bg: 'bg-red-500/10', text: 'text-red-500', label: 'Đã hủy' };
+        return { bg: 'bg-red-500/10', text: 'text-red-500', label: t('appointments.management.statusCanceled') };
       case 'rejected':
-        return { bg: 'bg-gray-500/10', text: 'text-gray-500', label: 'Bị từ chối' };
+        return { bg: 'bg-gray-500/10', text: 'text-gray-500', label: t('appointments.management.statusRejected') };
       default:
         return { bg: 'bg-gray-100', text: 'text-gray-600', label: status };
     }
@@ -344,18 +348,28 @@ export default function AllAppointments({}: Props) {
   const renderAppointmentCard = (appointment: Appointment) => {
     const isOnline = appointment.meeting_type === 'online';
     const isPast = isPastAppointment(appointment);
-    const instructorName = appointment.instructor?.account?.profile?.full_name || 'Giảng viên';
+    const instructorName = appointment.instructor?.account?.profile?.full_name || t('appointments.management.instructor');
     const initials = getInitials(instructorName);
     const avatarColor = getAvatarColor(instructorName);
     const statusBadge = getStatusBadge(appointment.status);
     
     // Date and time formatting
     const appointmentDate = appointment.slot?.date?.specific_date || appointment.created_at;
-    const dateFormatted = formatDateVN(appointmentDate);
+    const dateFormatted = formatDate(appointmentDate, locale);
     const startTime = extractTime(appointment.slot?.start_time_local);
     const endTime = extractTime(appointment.slot?.end_time_local);
-    const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : 'Chưa xác định';
+    const timeStr = startTime && endTime ? `${startTime} - ${endTime}` : t('appointments.management.undetermined');
     const timePeriod = startTime ? getTimePeriod(startTime) : '';
+
+    const translatePurpose = (purpose?: string) => {
+      if (!purpose) return '';
+      const p = purpose.trim().toLowerCase();
+      if (p.includes('thảo') || p.includes('progress')) return t('appointments.management.purposes.progressDiscussion');
+      if (p.includes('tư vấn') || p.includes('study')) return t('appointments.management.purposes.studyAdvice');
+      if (p.includes('khóa') || p.includes('thesis')) return t('appointments.management.purposes.thesisGuidance');
+      if (p.includes('khác') || p.includes('other')) return t('appointments.management.purposes.other');
+      return purpose;
+    };
 
     // Theme colors based on status and meeting type
     let cardBg = 'bg-white';
@@ -421,12 +435,12 @@ export default function AllAppointments({}: Props) {
                 {isOnline ? (
                   <>
                     <i className={`fas fa-video ${typeIconColor} text-xs`}></i>
-                    <span className={`text-xs ${typeTextColor} font-medium`}>Trực tuyến</span>
+                    <span className={`text-xs ${typeTextColor} font-medium`}>{t('appointments.management.typeOnline')}</span>
                   </>
                 ) : (
                   <>
                     <i className={`fas fa-location-dot ${typeIconColor} text-xs`}></i>
-                    <span className={`text-xs ${typeTextColor} font-medium`}>Trực tiếp</span>
+                    <span className={`text-xs ${typeTextColor} font-medium`}>{t('appointments.management.typeOffline')}</span>
                   </>
                 )}
               </div>
@@ -452,7 +466,7 @@ export default function AllAppointments({}: Props) {
           {appointment.meeting_purpose && (
             <div className="flex items-start gap-2.5">
               <i className="fas fa-comment-dots text-gray-400 text-sm mt-0.5"></i>
-              <p className="text-xs text-gray-600">{appointment.meeting_purpose}</p>
+              <p className="text-xs text-gray-600">{translatePurpose(appointment.meeting_purpose)}</p>
             </div>
           )}
 
@@ -465,7 +479,7 @@ export default function AllAppointments({}: Props) {
                   {appointment.slot.meeting_link}
                 </a>
               ) : (
-                <span className="text-xs text-gray-500">(Chờ cố vấn thêm link)</span>
+                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLink')}</span>
               )}
             </div>
           )}
@@ -477,7 +491,7 @@ export default function AllAppointments({}: Props) {
               {appointment.slot?.meeting_location ? (
                 <p className="text-xs text-gray-600">{appointment.slot.meeting_location}</p>
               ) : (
-                <span className="text-xs text-gray-500">(Chờ cố vấn thêm vị trí)</span>
+                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLocation')}</span>
               )}
             </div>
           )}
@@ -485,7 +499,7 @@ export default function AllAppointments({}: Props) {
           {/* Parent Contact Info */}
           {appointment.appointmentContact && (
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-              <p className="text-xs font-medium text-gray-700 mb-1.5">Đặt bởi phụ huynh</p>
+              <p className="text-xs font-medium text-gray-700 mb-1.5">{t('appointments.management.bookedBy')}</p>
               <div className="space-y-0.5">
                 {appointment.appointmentContact.contact_name && (
                   <p className="text-xs text-gray-600">
@@ -511,7 +525,7 @@ export default function AllAppointments({}: Props) {
           {appointment.status === 'completed' && (
             <div className="flex items-center gap-1.5 text-xs text-emerald-500">
               <i className="fas fa-check-circle"></i>
-              <span>Buổi họp đã hoàn thành</span>
+              <span>{t('appointments.management.statusCompleted')}</span>
             </div>
           )}
 
@@ -519,10 +533,10 @@ export default function AllAppointments({}: Props) {
           {appointment.status === 'canceled' || appointment.status === 'cancelled' ? (
             <div className="bg-red-50 rounded-lg p-2.5 border border-red-100">
               <p className="text-xs text-red-500">
-                Đã hủy {appointment.canceled_at ? `vào ${new Date(appointment.canceled_at).toLocaleDateString('vi-VN')}` : ''}
+                {t('appointments.management.statusCanceled')}{appointment.canceled_at ? ` ${new Date(appointment.canceled_at).toLocaleDateString(locale)}` : ''}
               </p>
               {appointment.cancel_reason && (
-                <p className="text-xs text-red-400 mt-1">Lý do: {appointment.cancel_reason}</p>
+                <p className="text-xs text-red-400 mt-1">{t('appointments.management.cancelReason')} {appointment.cancel_reason}</p>
               )}
             </div>
           ) : null}
@@ -531,10 +545,10 @@ export default function AllAppointments({}: Props) {
           {appointment.status === 'rejected' ? (
             <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
               <p className="text-xs text-gray-600">
-                Đã bị từ chối {appointment.canceled_at ? `vào ${new Date(appointment.canceled_at).toLocaleDateString('vi-VN')}` : ''}
+                {t('appointments.management.statusRejected')}{appointment.canceled_at ? ` ${new Date(appointment.canceled_at).toLocaleDateString(locale)}` : ''}
               </p>
               {appointment.cancel_reason && (
-                <p className="text-xs text-gray-500 mt-1">Lý do: {appointment.cancel_reason}</p>
+                <p className="text-xs text-gray-500 mt-1">{t('appointments.management.cancelReason')} {appointment.cancel_reason}</p>
               )}
             </div>
           ) : null}
@@ -553,13 +567,13 @@ export default function AllAppointments({}: Props) {
                 }}
               >
                 <i className="fas fa-play text-xs"></i>
-                <span>Tham gia</span>
+                <span>{t('appointments.management.join')}</span>
               </button>
               {isPastButNotCompleted(appointment) && (
                 <button 
                   onClick={() => markAsCompleted(appointment)} 
                   className="px-3 py-2 border border-green-200 rounded-lg text-green-600 hover:bg-green-50 transition-colors text-sm cursor-pointer"
-                  title="Đánh dấu hoàn thành"
+                  title={t('appointments.management.markCompleted')}
                 >
                   <i className="fas fa-check text-xs"></i>
                 </button>
@@ -567,7 +581,7 @@ export default function AllAppointments({}: Props) {
               <button 
                 onClick={() => openDeleteModal(appointment)} 
                 className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"
-                title="Hủy lịch"
+                title={t('appointments.management.cancel')}
               >
                 <i className="fas fa-trash text-xs"></i>
               </button>
@@ -578,7 +592,7 @@ export default function AllAppointments({}: Props) {
             <>
               <button className="flex-1 bg-gray-300 text-gray-600 px-3 py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 text-sm">
                 <i className="fas fa-map-marker-alt text-xs"></i>
-                <span>Gặp trực tiếp</span>
+                <span>{t('appointments.management.typeOffline')}</span>
               </button>
               {isPastButNotCompleted(appointment) && (
                 <button 
@@ -592,7 +606,7 @@ export default function AllAppointments({}: Props) {
               <button 
                 onClick={() => openDeleteModal(appointment)} 
                 className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"
-                title="Hủy lịch"
+                title={t('appointments.management.cancel')}
               >
                 <i className="fas fa-trash text-xs"></i>
               </button>
@@ -603,12 +617,12 @@ export default function AllAppointments({}: Props) {
             <>
               <button className="flex-1 bg-gray-300 text-gray-500 px-3 py-2 rounded-lg font-medium cursor-not-allowed flex items-center justify-center gap-1.5 text-sm">
                 <i className="fas fa-clock text-xs"></i>
-                <span>Đang chờ</span>
+                <span>{t('appointments.management.statusPending')}</span>
               </button>
               <button 
                 onClick={() => openDeleteModal(appointment)} 
                 className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"
-                title="Hủy lịch"
+                title={t('appointments.management.cancel')}
               >
                 <i className="fas fa-trash text-xs"></i>
               </button>
@@ -617,7 +631,7 @@ export default function AllAppointments({}: Props) {
 
           {appointment.status === 'completed' && (
             <button className="w-full bg-gray-200 text-gray-500 px-3 py-2 rounded-lg font-medium cursor-not-allowed text-sm">
-              Đã kết thúc
+              {t('appointments.management.statusCompleted')}
             </button>
           )}
 
@@ -646,7 +660,7 @@ export default function AllAppointments({}: Props) {
                   const now = new Date();
                   
                   isPast = slotStartDateTime <= now;
-                } catch (error) {
+                } catch (_error) {
                   // Fallback to date-only check if parsing fails
                   const aptDate = new Date(appointment.slot?.date?.specific_date || appointment.created_at);
                   isPast = aptDate < new Date();
@@ -667,7 +681,7 @@ export default function AllAppointments({}: Props) {
                   onClick={isPast ? undefined : () => restoreCanceledAppointment(appointment)}
                   disabled={isPast}
                 >
-                  {isPast ? 'Quá thời gian đặt lại' : 'Đặt lại lịch'}
+                  {isPast ? t('appointments.management.restoreExpired') : t('appointments.management.reschedule')}
                 </button>
               );
             })()
@@ -675,7 +689,7 @@ export default function AllAppointments({}: Props) {
 
           {appointment.status === 'rejected' && (
             <button className="w-full bg-gray-200 text-gray-500 px-3 py-2 rounded-lg font-medium cursor-not-allowed text-sm">
-              Đã bị từ chối
+              {t('appointments.management.statusRejected')}
             </button>
           )}
         </div>
@@ -693,15 +707,15 @@ export default function AllAppointments({}: Props) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Lịch Hẹn Của Tôi</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Quản lý các buổi gặp gỡ cố vấn</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('appointments.title')}</h1>
+              <p className="text-xs text-gray-500 mt-0.5">{t('appointments.subtitle')}</p>
             </div>
             <button 
               className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm"
               onClick={() => navigate('/booking/scheduler')}
             >
               <i className="fas fa-plus"></i>
-              <span>Đặt Lịch Mới</span>
+              <span>{t('appointments.management.create')}</span>
             </button>
           </div>
         </div>
@@ -716,7 +730,7 @@ export default function AllAppointments({}: Props) {
                 <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                 <input 
                   type="text" 
-                  placeholder="Tìm kiếm theo tên giảng viên hoặc mục đích..." 
+                  placeholder={t('appointments.searchPlaceholder')} 
                   className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -735,12 +749,12 @@ export default function AllAppointments({}: Props) {
                   });
                 }}
               >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="pending">Chờ xác nhận</option>
-                <option value="confirmed">Đã xác nhận</option>
-                <option value="completed">Hoàn thành</option>
-                <option value="canceled">Đã hủy</option>
-                <option value="rejected">Đã từ chối</option>
+                <option value="all">{t('appointments.management.allStatuses')}</option>
+                <option value="pending">{t('appointments.management.statusPending')}</option>
+                <option value="confirmed">{t('appointments.management.statusConfirmed') || t('appointments.management.statusConfirmed')}</option>
+                <option value="completed">{t('appointments.management.statusCompleted')}</option>
+                <option value="canceled">{t('appointments.management.statusCanceled')}</option>
+                <option value="rejected">{t('appointments.management.statusRejected')}</option>
               </select>
               
               <select 
@@ -753,11 +767,11 @@ export default function AllAppointments({}: Props) {
                   });
                 }}
               >
-                <option value="all">Tất cả thời gian</option>
-                <option value="upcoming">Sắp tới</option>
-                <option value="past">Đã qua</option>
-                <option value="this_week">Tuần này</option>
-                <option value="this_month">Tháng này</option>
+                <option value="all">{t('appointments.management.allTimes')}</option>
+                <option value="upcoming">{t('appointments.management.timeFilters.upcoming')}</option>
+                <option value="past">{t('appointments.management.timeFilters.past')}</option>
+                <option value="this_week">{t('appointments.management.timeFilters.this_week')}</option>
+                <option value="this_month">{t('appointments.management.timeFilters.this_month')}</option>
               </select>
               
               <div className="flex gap-1 border border-gray-200 rounded-xl p-0.5">
@@ -784,7 +798,7 @@ export default function AllAppointments({}: Props) {
         {(loading || isPending) && (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-500">{isPending ? 'Đang lọc dữ liệu...' : 'Đang tải danh sách lịch hẹn...'}</span>
+            <span className="ml-3 text-gray-500">{isPending ? t('appointments.filtering') : t('appointments.loading')}</span>
           </div>
         )}
 
@@ -795,7 +809,7 @@ export default function AllAppointments({}: Props) {
               onClick={loadAppointments} 
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
             >
-              Thử lại
+              {t('appointments.tryAgain')}
             </button>
           </div>
         )}
@@ -807,14 +821,14 @@ export default function AllAppointments({}: Props) {
             </div>
             <div className="text-gray-500 mb-4">
               {searchQuery || statusFilter !== 'all' || timeFilter !== 'all' 
-                ? 'Không tìm thấy lịch hẹn phù hợp với bộ lọc'
-                : 'Bạn chưa có lịch hẹn nào'}
+                ? t('appointments.noAppointmentsFilter')
+                : t('appointments.noAppointments')}
             </div>
             <button 
               className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium"
               onClick={() => navigate('/booking/scheduler')}
             >
-              Đặt lịch hẹn đầu tiên
+              {t('appointments.management.bookFirst')}
             </button>
           </div>
         )}
@@ -836,14 +850,14 @@ export default function AllAppointments({}: Props) {
                   className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors font-medium shadow-sm"
                 >
                   <i className="fas fa-chevron-down"></i>
-                  <span>Xem thêm ({filteredAppointments.length - displayCount} lịch hẹn còn lại)</span>
+                  <span>{t('appointments.management.loadMore')} ({filteredAppointments.length - displayCount} {t('appointments.management.appointments')} {t('appointments.management.remaining')})</span>
                 </button>
               </div>
             )}
             
             {/* Showing count */}
             <div className="text-center mt-4 text-sm text-gray-500">
-              Đang hiển thị {displayedAppointments.length} / {filteredAppointments.length} lịch hẹn
+              {t('appointments.management.showing')} {displayedAppointments.length} / {filteredAppointments.length} {t('appointments.management.appointments')}
             </div>
           </>
         )}
@@ -856,15 +870,15 @@ export default function AllAppointments({}: Props) {
             <div className="flex items-center mb-4">
               <i className="fas fa-exclamation-triangle text-red-500 text-2xl mr-3"></i>
               <h3 className="text-lg font-semibold text-gray-900">
-                Xác nhận hủy lịch hẹn
+                {t('appointments.management.confirmCancelTitle')}
               </h3>
             </div>
 
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                Bạn có chắc chắn muốn hủy lịch hẹn với{' '}
+                {t('appointments.management.confirmCancelBody')}{' '}
                 <span className="font-semibold text-gray-900">
-                  {selectedAppointment?.instructor?.account?.profile?.full_name || 'Giảng viên'}
+                  {selectedAppointment?.instructor?.account?.profile?.full_name || t('appointments.management.instructor')}
                 </span>?
               </p>
               <p className="text-sm text-gray-500">
@@ -873,12 +887,12 @@ export default function AllAppointments({}: Props) {
 
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lý do hủy <span className="text-red-500">*</span> (bắt buộc)
+                  {t('appointments.management.cancelReason')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   className="w-full px-3 py-2 text-sm border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-100 text-gray-900 placeholder-gray-500"
                   rows={3}
-                  placeholder="Nhập lý do hủy lịch hẹn..."
+                  placeholder={t('appointments.management.cancelReasonPlaceholder')}
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                 />
@@ -890,13 +904,13 @@ export default function AllAppointments({}: Props) {
                 onClick={closeDeleteModal}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors cursor-pointer"
               >
-                Quay lại
+                {t('appointments.management.back')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
               >
-                Xác nhận hủy
+                {t('appointments.management.confirmCancelButton')}
               </button>
             </div>
           </div>

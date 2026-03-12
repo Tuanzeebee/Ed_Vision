@@ -72,6 +72,11 @@ describe('TranscriptUploadController', () => {
           student_code: 'SV001',
         },
       ]);
+      mockPrismaService.student.findUnique.mockResolvedValue({
+        student_id: 1,
+        student_code: 'SV001',
+      });
+      const mockReq = { user: { account_id: 1 } } as any;
       mockPrismaService.academicTerm.findFirst.mockResolvedValue({
         term_id: 1,
         academic_year: '2023-2024',
@@ -86,7 +91,7 @@ describe('TranscriptUploadController', () => {
         record_id: 1,
       });
 
-      const result = await controller.uploadTranscript(uploadDto);
+      const result = await controller.uploadTranscript(uploadDto, mockReq);
 
       expect(result.success).toBe(true);
       expect(result.data.successfulRecords).toBe(1);

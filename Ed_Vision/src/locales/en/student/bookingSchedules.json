@@ -1,0 +1,121 @@
+{
+  "title": "Choose consultation time",
+  "subtitle": "Select a date and time slot to book an appointment with your advisor.",
+  "weekRange": "Week from {{start}} - {{end}}",
+  "availableSlots": "Available time slots",
+  "morning": "Morning",
+  "afternoon": "Afternoon",
+  "evening": "Evening",
+  "selected": "Selected",
+  "unavailable": "Unavailable",
+  "back": "Back",
+  "step": {
+    "chooseTime": "Choose time",
+    "confirm": "Confirm"
+  },
+  "format": {
+    "label": "Choose format:",
+    "online": "Online",
+    "offline": "In-person"
+  },
+  "timeLabel": "{{start}} - {{end}}",
+  "noSlots": "No slots available",
+  "bookButton": "Confirm booking",
+  "success": "Booking successful",
+  "refresh": "Refresh",
+  "participation": {
+    "labelLink": "Participation link",
+    "labelLocation": "Location",
+    "noLink": "No participation link",
+    "noLocation": "No location provided"
+  }
+  ,
+  "loading": "Loading availability...",
+  "noAdvisor": {
+    "title": "Advisor not found",
+    "subtitle": "Please contact the Academic Office to get assigned an advisor."
+  },
+  "continue": "Continue",
+  "stepLabel": "Step {{current}}/{{total}}",
+  "confirmSubtitle": "Please review information before confirming.",
+  "summarySession": "Study session",
+  "degree" : {
+    "professor": "Professor",
+    "doctor": "Doctor",
+    "master": "Master",
+    "lecturer": "Lecturer"
+  },
+  "purposeLabel": "Meeting purpose",
+  "validation": {
+    "enterSpecificPurpose": "Please enter a specific purpose.",
+    "enterParentName": "Please enter parent's full name for contact."
+  },
+  "noStudentInfo": "No student information available. Please log in or provide student details.",
+  "studentInfo": {
+    "title": "Student information",
+    "fullName": "Full name",
+    "studentCode": "Student code",
+    "class": "Class",
+    "status": "Status",
+    "verified": "Verified",
+    "unverified": "Unverified"
+  },
+  "parent": {
+    "selectStudentLabel": "Select student",
+    "selectStudentPlaceholder": "-- Select student --",
+    "selectionRequiredText": "Parent must select a student to book.",
+    "contactInfoTitle": "Parent information",
+    "contactEditableNote": "Editable",
+    "nameLabel": "Full name",
+    "phoneLabel": "Phone number",
+    "emailLabel": "Email",
+    "relationshipLabel": "Relationship to student",
+    "placeholder": {
+      "name": "Enter parent's full name",
+      "relationshipExample": "E.g.: Father, Mother, Guardian"
+    }
+  },
+  "advisor": {
+    "label": "Advisor",
+    "withId": "Advisor #{{id}}",
+    "role": "Academic advisor"
+  },
+  "summary": {
+    "date": "Date",
+    "time": "Time",
+    "format": "Format",
+    "purpose": "Purpose"
+  },
+  "placeholder": {
+    "enterPurpose": "Enter specific purpose"
+  },
+  "successDescription": "You have booked an appointment on {{date}} at {{time}}.",
+  "successInfo": "Please visit booking management to view details or cancel.",
+  "confirmationPrefix": "I confirm that the information above is correct and agree to the",
+  "confirmationPolicy": "booking policy of EdVision",
+  "confirmationSuffix": "I commit to attend on time or cancel before the required deadline.",
+  "linkReminder": "Link will be sent to your email",
+  "error": {
+    "loadAvailability": "Could not load availability."
+  },
+  "processing": "Processing...",
+  "toast": {
+    "slotAlreadyBooked": "You have already booked this slot. Please choose another.",
+    "processingPrevious": "System is processing previous request. Please wait.",
+    "missingPurpose": "Please enter the purpose of the meeting.",
+    "missingContact": "Please enter parent's contact information.",
+    "missingStudent": "Please select a student for the booking.",
+    "copySuccess": "Participation link copied.",
+    "copyError": "Unable to copy link. Please try again.",
+    "selectSlotBeforeBooking": "Please select a time slot before booking.",
+    "slotFull": "Cannot book: this slot is full.",
+    "bookingFailed": "Unable to book. Please try again later."
+  },
+  "participation1": {
+    "copyLink": "Copy link",
+    "copyLocation": "Copy location",
+    "noCopyInfo": "No information to copy",
+    "labelLinkShort": "link",
+    "labelLocationShort": "location"
+  }
+}

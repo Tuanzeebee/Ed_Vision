@@ -75,6 +75,9 @@ import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
 import StudentSurvey from "./modules/survey/StudentSurvey";
 import SettingGradeTable from "./modules/teacher/SettingGradeTable";
+import CertificateReview from "./modules/student/CertificateReview";
+import CertificateDetail from "./modules/student/CertificateDetail";
+import CertificateLessonPage from "./modules/student/CertificateLessonPage";
 
 function App() {
         // Initialize permissions on app startup
@@ -130,6 +133,9 @@ function App() {
                                                 <Route path="student-notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
                                                 <Route path="profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
                                                 <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
+                                                <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
+                                                <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
+                                                <Route path="certificate-review/:certId/lesson/:topicKey" element={<ProtectedRoute permission="student_course_overview"><CertificateLessonPage /></ProtectedRoute>} />
                                         </Route>
 
                                         {/* Route cho parent */}

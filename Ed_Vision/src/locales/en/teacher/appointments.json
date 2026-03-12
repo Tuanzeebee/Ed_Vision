@@ -84,6 +84,7 @@
     "parentName": "Parent:",
     "studentName": "Student:",
     "studentClass": "Class:",
+    "children": "Children",
     "platform": "Platform:",
     "navigatingToConfirmed": "Navigating to confirmed appointments...",
     "page": "Page",
@@ -92,6 +93,12 @@
     "next": "Next",
     "parentOf": "Parent of",
     "meetingReason": "Meeting reason",
+    "purpose": {
+      "study": "Study advising",
+      "progress": "Progress discussion",
+      "thesis": "Thesis supervision",
+      "other": "Other"
+    },
     "requestTime": "Request time",
     "showing": "Showing",
     "to": "to",

@@ -84,6 +84,7 @@
     "parentName": "Phụ huynh:",
     "studentName": "Sinh viên:",
     "studentClass": "Lớp:",
+    "children": "Con cái",
     "platform": "Nền tảng:",
     "navigatingToConfirmed": "Đang chuyển đến lịch đã xác nhận...",
     "page": "Trang",
@@ -92,6 +93,12 @@
     "next": "Tiếp",
     "parentOf": "Phụ huynh của",
     "meetingReason": "Lý do gặp mặt",
+    "purpose": {
+      "study": "Tư vấn học tập",
+      "progress": "Thảo luận tiến độ",
+      "thesis": "Hướng dẫn khóa luận",
+      "other": "Khác"
+    },
     "requestTime": "Thời gian yêu cầu",
     "showing": "Hiển thị",
     "to": "đến",

@@ -1,0 +1,75 @@
+{
+	"title": "My Appointments",
+	"subtitle": "Manage your meetings and bookings",
+	"searchPlaceholder": "Search by instructor name or purpose...",
+	"loading": "Loading appointments...",
+	"filtering": "Filtering data...",
+	"tryAgain": "Try again",
+	"noAppointments": "You have no appointments",
+	"noAppointmentsFilter": "No appointments match the selected filters",
+
+	"pleaseEnterCancelReason": "Please enter a cancellation reason.",
+	"cancelSuccess": "Appointment cancelled successfully.",
+	"cancelFailed": "Unable to cancel appointment. Please try again.",
+	"updateFailed": "Unable to update status. Please try again.",
+	"restoreFailed": "Unable to restore appointment. Please try again.",
+
+	"management": {
+		"create": "Create New",
+		"confirmCancelTitle": "Confirm cancellation",
+		"confirmCancelBody": "Are you sure you want to cancel the appointment with",
+		"confirmCancelButton": "Confirm cancellation",
+		"back": "Back",
+		"confirmMarkComplete": "Are you sure you want to mark this session as completed?",
+		"cancelReasonPlaceholder": "Enter cancellation reason...",
+		"bookFirst": "Book an appointment first",
+		"allStatuses": "All statuses",
+		"allTimes": "All times",
+		"timeFilters": {
+			"upcoming": "Upcoming",
+			"past": "Past",
+			"this_week": "This week",
+			"this_month": "This month"
+		},
+
+		"timePeriod": {
+			"morning": "Morning",
+			"afternoon": "Afternoon",
+			"evening": "Evening"
+		},
+
+		"typeOnline": "Online",
+		"typeOffline": "In-person",
+		"waitingForLink": "(Waiting for advisor to add link)",
+		"waitingForLocation": "(Waiting for advisor to add location)",
+		"undetermined": "Undetermined",
+		"join": "Join",
+		"markCompleted": "Mark complete",
+		"instructor": "Instructor",
+		"purposes": {
+			"progressDiscussion": "Progress discussion",
+			"studyAdvice": "Study advising",
+			"thesisGuidance": "Thesis supervision",
+			"other": "Other"
+		},
+		"loadMore": "Load more",
+		"showing": "Showing",
+		"appointments": "appointments",
+		"remaining": "remaining",
+		"reschedule": "Reschedule",
+		"restoreExpired": "Past reschedule",
+
+		"statusConfirmed": "Confirmed",
+		"statusPending": "Pending",
+		"statusCompleted": "Completed",
+		"statusCanceled": "Canceled",
+		"statusRejected": "Rejected",
+
+		"cancelReason": "Cancel reason:",
+		"cancel": "Cancel",
+		"markComplete": "Mark complete",
+		"bookedBy": "Booked by"
+	}
+}
+
+

@@ -115,6 +115,10 @@
         "learningSpace": {
           "title": "Không gian Học tập",
           "description": "Tài nguyên và tài liệu học tập"
+        },
+        "certificateReview": {
+          "title": "Ôn Luyện Chứng Chỉ",
+          "description": "IELTS, TOEIC, MOS – luyện thi & thi thử"
         }
       },
       "predict": {
