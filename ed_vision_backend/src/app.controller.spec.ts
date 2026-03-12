@@ -15,8 +15,9 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return mongo status object', async () => {
+      const result = await appController.mongoStatus();
+      expect(result).toHaveProperty('mongoConnected');
     });
   });
 });

@@ -22,7 +22,9 @@ export default function AppointmentSchedulePage({
   onAddTimeSlot,
   onRemoveTimeSlot,
 }: AppointmentSchedulePageProps) {
-  const { t } = useTranslation('teacher');
+  const { t, i18n } = useTranslation('teacher');
+  const LOCALE_MAP: Record<string, string> = { en: 'en-US', vi: 'vi-VN' };
+  const locale = LOCALE_MAP[i18n?.language] || i18n?.language || (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
   const today = getTodayString();
   const maxDate = getMaxDateString(6);
 
@@ -179,7 +181,7 @@ export default function AppointmentSchedulePage({
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {formatDate(dateObj.date, t)}
+                          {formatDate(dateObj.date, locale)}
                           {!isUpcoming && (
                             <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full ml-2">
                               Đã qua

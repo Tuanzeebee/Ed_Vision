@@ -8,12 +8,15 @@ import {
   UploadedFile,
   Body,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClassManagementService } from './class-management.service';
 import { UploadClassDto } from './dto/upload-class.dto';
+import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 
 @Controller('teacher/class-management')
+@UseGuards(DevAuthGuard)
 export class ClassManagementController {
   constructor(
     private readonly classManagementService: ClassManagementService,
@@ -25,7 +28,10 @@ export class ClassManagementController {
    */
   @Get('classes')
   async getInstructorClasses(@Req() req: any) {
-    const instructorId = req.user?.instructorId || 1;
+    const instructorId = req.user?.instructorId;
+    if (!instructorId) {
+      throw new BadRequestException('Instructor ID not found in token');
+    }
     return this.classManagementService.getInstructorClasses(instructorId);
   }
 
@@ -35,7 +41,10 @@ export class ClassManagementController {
    */
   @Get('statistics')
   async getStatistics(@Req() req: any) {
-    const instructorId = req.user?.instructorId || 1;
+    const instructorId = req.user?.instructorId;
+    if (!instructorId) {
+      throw new BadRequestException('Instructor ID not found in token');
+    }
     return this.classManagementService.getStatistics(instructorId);
   }
 
@@ -69,7 +78,10 @@ export class ClassManagementController {
     @Body() uploadDto: UploadClassDto,
   ) {
     try {
-      const instructorId = req.user?.instructorId || 1;
+      const instructorId = req.user?.instructorId;
+      if (!instructorId) {
+        throw new BadRequestException('Instructor ID not found in token');
+      }
 
       if (!file) {
         throw new BadRequestException('No file uploaded');
