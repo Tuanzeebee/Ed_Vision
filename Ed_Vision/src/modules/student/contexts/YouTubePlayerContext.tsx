@@ -4,7 +4,8 @@
  */
 
 import React, { createContext, useContext, useCallback, useEffect } from 'react';
-import { useYouTubePlayer, UseYouTubePlayerReturn } from '../hooks/useYouTubePlayer';
+import { useYouTubePlayer } from '../hooks/useYouTubePlayer';
+import type { UseYouTubePlayerReturn } from '../hooks/useYouTubePlayer';
 import type { YouTubeTrack } from '../types/youtubeTypes';
 
 interface YouTubePlayerContextValue extends UseYouTubePlayerReturn {

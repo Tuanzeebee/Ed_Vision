@@ -29,6 +29,8 @@ import { ReminderSchedulerService } from './admin_be/notification/reminder-sched
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
 import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
+import { TtsModule } from './tts/tts.module';
+import { SttModule } from './stt/stt.module';
 
 @Module({
   imports: [
@@ -66,6 +68,8 @@ import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
     StudentChatModule,
     AttendanceModule,
     YouTubeMusicModule,
+    TtsModule,
+    SttModule,
   ],
   controllers: [AppController],
   providers: [AppService, ReminderSchedulerService],
