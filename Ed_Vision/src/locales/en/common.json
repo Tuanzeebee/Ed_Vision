@@ -115,6 +115,10 @@
         "learningSpace": {
           "title": "Learning Space",
           "description": "Learning resources and materials"
+        },
+        "certificateReview": {
+          "title": "Certificate Review",
+          "description": "IELTS, TOEIC, MOS – practice & mock tests"
         }
       },
       "predict": {

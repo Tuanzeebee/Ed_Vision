@@ -2,9 +2,9 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 /**
- * PrismaService manages database connections using Prisma Client
- * Implements OnModuleInit to connect on startup
- * Implements OnModuleDestroy to disconnect on shutdown
+ * PrismaService manages database connections using Prisma Client.
+ * Implements OnModuleInit to connect on startup.
+ * Implements OnModuleDestroy to disconnect on shutdown.
  */
 @Injectable()
 export class PrismaService

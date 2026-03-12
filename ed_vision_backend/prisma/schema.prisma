@@ -93,6 +93,7 @@ model Student {
   predictionResults  PredictionResult[]
   surveyFactors      StudentSurveyFactors?
   attendanceSessions AttendanceSession[]   // Offline attendance sessions for this student
+  certificateEnrollments CertificateEnrollment[] // Certificate band enrollments
 
   @@map("Student")
 }
@@ -796,4 +797,44 @@ model CampusNetworkConfig {
 
   @@unique([campus_name])
   @@map("CampusNetworkConfig")
+}
+
+// ===== CERTIFICATE REVIEW MODELS =====
+
+/// Records which band/level a student has enrolled in for a given certificate.
+/// Constraint: only ONE active enrollment per (student, cert_type) at a time.
+/// To switch bands the student must complete the current band first.
+model CertificateEnrollment {
+  id            Int       @id @default(autoincrement())
+  student_id    Int
+  cert_type     String    @db.VarChar(30)   // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
+  target_band   String    @db.VarChar(20)   // '4.0' | '5.0' | '6.0' | '6.5' | '7.0' | '7.5+' | '350-495' | '500-599' | '600-699' | '700-799' | '800+' | 'associate' | 'expert'
+  status        String    @default("active") @db.VarChar(20) // 'active' | 'completed'
+  completed_at  DateTime? @db.Timestamptz(6)
+  enrolled_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @updatedAt @db.Timestamptz(6)
+
+  student       Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  topicProgress CertificateTopicProgress[]
+
+  // A student may only have one active enrollment per cert at a time (enforced in service layer).
+  // The unique key includes target_band so historical completed rows are preserved.
+  @@unique([student_id, cert_type, target_band])
+  @@index([student_id, cert_type, status])
+  @@map("CertificateEnrollment")
+}
+
+/// Tracks which individual topics a student has completed within an enrollment.
+/// topic_key uses a stable dot-notation key, e.g. 'grammar.basic_tenses'.
+model CertificateTopicProgress {
+  id             Int                    @id @default(autoincrement())
+  enrollment_id  Int
+  topic_key      String                 @db.VarChar(100) // e.g. 'grammar.basic_tenses', 'listening.part1_form_fill'
+  completed_at   DateTime               @default(now()) @db.Timestamptz(6)
+
+  enrollment     CertificateEnrollment  @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+
+  @@unique([enrollment_id, topic_key])
+  @@index([enrollment_id])
+  @@map("CertificateTopicProgress")
 }
