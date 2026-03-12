@@ -1,429 +1,461 @@
 /**
- * Hardcoded Music Data for Demo
- * Using YouTube video IDs for legal playback via IFrame Player
+ * Mock Data for Music Module
+ * Hard-coded data cho demo - Dễ dàng thay thế bằng API thật sau này
  */
 
-export type Track = {
-  id: string;            // YouTube videoId
-  title: string;
-  artist: string;
-  album?: string;
-  thumbnail: string;
-  duration?: string;
-};
+import type { Track, Album, Playlist, Artist, PodcastShow, PodcastEpisode } from './types';
 
-export type Album = {
-  id: string;
-  title: string;
-  artist: string;
-  cover: string;
-  tracks: Track[];
-};
-
-export type Playlist = {
-  id: string;
-  title: string;
-  description: string;
-  cover: string;
-  tracks: Track[];
-};
-
-export type Artist = {
-  id: string;
-  name: string;
-  image: string;
-  followers?: string;
-};
-
-export type PodcastShow = {
-  id: string;
-  title: string;
-  host: string;
-  cover: string;
-  episodes: PodcastEpisode[];
-};
-
-export type PodcastEpisode = {
-  id: string;          // YouTube videoId
-  title: string;
-  duration: string;
-  thumbnail: string;
-};
-
-// ============ TRACKS ============
-export const TRACKS: Track[] = [
+// ============ TOP TRACKS (Top Charts) ============
+export const TOP_TRACKS: Track[] = [
   {
-    id: "jfKfPfyJRdk",
-    title: "Lofi Hip Hop Radio - Beats to Relax/Study To",
-    artist: "Lofi Girl",
-    album: "Lofi Beats",
-    thumbnail: "https://i.ytimg.com/vi/jfKfPfyJRdk/hqdefault.jpg",
-    duration: "LIVE"
+    id: 'track-1',
+    title: 'Blinding Lights',
+    artist: 'The Weeknd',
+    album: 'After Hours',
+    duration: '3:20',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36',
+    plays: 3_500_000_000,
   },
   {
-    id: "5qap5aO4i9A",
-    title: "Chillhop Essentials - Fall 2024",
-    artist: "Chillhop Music",
-    album: "Chillhop Essentials",
-    thumbnail: "https://i.ytimg.com/vi/5qap5aO4i9A/hqdefault.jpg",
-    duration: "1:02:34"
+    id: 'track-2',
+    title: 'Shape of You',
+    artist: 'Ed Sheeran',
+    album: '÷ (Divide)',
+    duration: '3:53',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
+    plays: 3_400_000_000,
   },
   {
-    id: "lTRiuFIWV54",
-    title: "Jazz Piano Radio - Relaxing Jazz Music",
-    artist: "Cafe Music BGM",
-    album: "Jazz Collection",
-    thumbnail: "https://i.ytimg.com/vi/lTRiuFIWV54/hqdefault.jpg",
-    duration: "LIVE"
+    id: 'track-3',
+    title: 'Someone Like You',
+    artist: 'Adele',
+    album: '21',
+    duration: '4:45',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732118bf9b198b05a95ded6300',
+    plays: 1_500_000_000,
   },
   {
-    id: "DWcJFNfaw9c",
-    title: "Deep Focus - Music For Studying",
-    artist: "Quiet Quest",
-    album: "Study Music",
-    thumbnail: "https://i.ytimg.com/vi/DWcJFNfaw9c/hqdefault.jpg",
-    duration: "3:58:42"
+    id: 'track-4',
+    title: 'Dance Monkey',
+    artist: 'Tones and I',
+    album: 'The Kids Are Coming',
+    duration: '3:29',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36ecdc3ed6e0a1f169',
+    plays: 2_800_000_000,
   },
   {
-    id: "7NOSDKb0HlU",
-    title: "Peaceful Piano & Soft Rain",
-    artist: "Soothing Relaxation",
-    album: "Piano Collection",
-    thumbnail: "https://i.ytimg.com/vi/7NOSDKb0HlU/hqdefault.jpg",
-    duration: "3:00:11"
+    id: 'track-5',
+    title: 'Watermelon Sugar',
+    artist: 'Harry Styles',
+    album: 'Fine Line',
+    duration: '2:54',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b27377fdcfda6535601aff081b6a',
+    plays: 2_100_000_000,
   },
   {
-    id: "Na0w3Mz46GA",
-    title: "Relaxing Classical Music",
-    artist: "HALIDONMUSIC",
-    album: "Classical Essentials",
-    thumbnail: "https://i.ytimg.com/vi/Na0w3Mz46GA/hqdefault.jpg",
-    duration: "3:05:22"
+    id: 'track-6',
+    title: 'Levitating',
+    artist: 'Dua Lipa',
+    album: 'Future Nostalgia',
+    duration: '3:23',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
+    plays: 1_900_000_000,
   },
   {
-    id: "kgx4WGK0oNU",
-    title: "Morning Jazz - Wake Up Coffee",
-    artist: "Cafe Music BGM",
-    album: "Morning Jazz",
-    thumbnail: "https://i.ytimg.com/vi/kgx4WGK0oNU/hqdefault.jpg",
-    duration: "3:12:56"
+    id: 'track-7',
+    title: 'Stay',
+    artist: 'The Kid LAROI & Justin Bieber',
+    album: 'F*CK LOVE 3: OVER YOU',
+    duration: '2:21',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273a51460f6bdc55fa9f0fad8cf',
+    plays: 2_500_000_000,
   },
   {
-    id: "rUxyKA_-grg",
-    title: "Rainy Day Coffee Shop Ambience",
-    artist: "Calmed By Nature",
-    album: "Ambience",
-    thumbnail: "https://i.ytimg.com/vi/rUxyKA_-grg/hqdefault.jpg",
-    duration: "8:00:00"
+    id: 'track-8',
+    title: 'Heat Waves',
+    artist: 'Glass Animals',
+    album: 'Dreamland',
+    duration: '3:58',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273712701c5e263efc8726b1464',
+    plays: 2_200_000_000,
   },
   {
-    id: "lP26UCnoH9s",
-    title: "Study With Me - 2 Hour Pomodoro",
-    artist: "The Sherry Formula",
-    album: "Study Sessions",
-    thumbnail: "https://i.ytimg.com/vi/lP26UCnoH9s/hqdefault.jpg",
-    duration: "2:00:00"
+    id: 'track-9',
+    title: 'Peaches',
+    artist: 'Justin Bieber ft. Daniel Caesar',
+    album: 'Justice',
+    duration: '3:18',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738aa3f71695cd1cf3103ee5e5',
+    plays: 1_800_000_000,
   },
   {
-    id: "TURbeWK2wwg",
-    title: "Chill Lofi Mix - Homework Radio",
-    artist: "The Bootleg Boy",
-    album: "Lofi Mixes",
-    thumbnail: "https://i.ytimg.com/vi/TURbeWK2wwg/hqdefault.jpg",
-    duration: "54:23"
+    id: 'track-10',
+    title: 'Bad Guy',
+    artist: 'Billie Eilish',
+    album: 'WHEN WE ALL FALL ASLEEP',
+    duration: '3:14',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce',
+    plays: 2_300_000_000,
   },
   {
-    id: "77ZozI0rw7w",
-    title: "Synthwave Radio - Retro Vibes",
-    artist: "Synthwave Goose",
-    album: "Synthwave",
-    thumbnail: "https://i.ytimg.com/vi/77ZozI0rw7w/hqdefault.jpg",
-    duration: "LIVE"
+    id: 'track-11',
+    title: 'Shivers',
+    artist: 'Ed Sheeran',
+    album: '= (Equals)',
+    duration: '3:27',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ef24c3fdbf856340d55cfeb2',
+    plays: 1_600_000_000,
   },
   {
-    id: "hHW1oY26kxQ",
-    title: "Ambient Study Music - Deep Concentration",
-    artist: "Yellow Brick Cinema",
-    album: "Ambient Music",
-    thumbnail: "https://i.ytimg.com/vi/hHW1oY26kxQ/hqdefault.jpg",
-    duration: "3:00:32"
+    id: 'track-12',
+    title: 'As It Was',
+    artist: 'Harry Styles',
+    album: "Harry's House",
+    duration: '2:47',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0',
+    plays: 2_700_000_000,
   },
-  {
-    id: "tNkZsRW7h2c",
-    title: "Anime Lofi Hip Hop Mix",
-    artist: "Dreamy",
-    album: "Anime Lofi",
-    thumbnail: "https://i.ytimg.com/vi/tNkZsRW7h2c/hqdefault.jpg",
-    duration: "1:23:45"
-  },
-  {
-    id: "HuFYqnbVbzY",
-    title: "Night City - Cyberpunk Music",
-    artist: "Aim To Head",
-    album: "Cyberpunk",
-    thumbnail: "https://i.ytimg.com/vi/HuFYqnbVbzY/hqdefault.jpg",
-    duration: "1:00:12"
-  },
-  {
-    id: "mPZkdNFkNps",
-    title: "Acoustic Covers - Popular Songs",
-    artist: "Music Lab",
-    album: "Acoustic",
-    thumbnail: "https://i.ytimg.com/vi/mPZkdNFkNps/hqdefault.jpg",
-    duration: "2:15:00"
-  }
 ];
 
-// ============ ALBUMS ============
-export const ALBUMS: Album[] = [
+// ============ LOFI / STUDY TRACKS ============
+export const LOFI_TRACKS: Track[] = [
   {
-    id: "lofi-beats",
-    title: "Lofi Beats to Study/Relax To",
-    artist: "Lofi Girl",
-    cover: "https://i.ytimg.com/vi/jfKfPfyJRdk/maxresdefault.jpg",
-    tracks: TRACKS.filter(t => t.album === "Lofi Beats" || t.album === "Lofi Mixes" || t.album === "Anime Lofi")
+    id: 'lofi-1',
+    title: 'Cozy Coffee Shop',
+    artist: 'Lofi Girl',
+    album: 'Chilledcow Sessions',
+    duration: '3:24',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273a8f7c0ae8bf2f6f7e2d1e8c9',
+    plays: 50_000_000,
   },
   {
-    id: "jazz-collection",
-    title: "Jazz & Coffee",
-    artist: "Various Artists",
-    cover: "https://i.ytimg.com/vi/lTRiuFIWV54/maxresdefault.jpg",
-    tracks: TRACKS.filter(t => t.album?.includes("Jazz") || t.album === "Morning Jazz")
+    id: 'lofi-2',
+    title: 'Rainy Day Vibes',
+    artist: 'Chillhop Music',
+    album: 'Essentials',
+    duration: '2:58',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273c4d6e8b9f4a5c3d2e1f0a9b8',
+    plays: 45_000_000,
   },
   {
-    id: "study-focus",
-    title: "Deep Focus & Study",
-    artist: "Various Artists",
-    cover: "https://i.ytimg.com/vi/DWcJFNfaw9c/maxresdefault.jpg",
-    tracks: TRACKS.filter(t => t.album === "Study Music" || t.album === "Study Sessions" || t.album === "Ambient Music")
+    id: 'lofi-3',
+    title: 'Late Night Study',
+    artist: 'Sleepy Fish',
+    album: 'Midnight Dreams',
+    duration: '4:12',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273d5e7f8a9b0c1d2e3f4a5b6c7',
+    plays: 38_000_000,
   },
   {
-    id: "piano-classics",
-    title: "Piano & Classical",
-    artist: "Various Artists",
-    cover: "https://i.ytimg.com/vi/7NOSDKb0HlU/maxresdefault.jpg",
-    tracks: TRACKS.filter(t => t.album?.includes("Piano") || t.album?.includes("Classical"))
+    id: 'lofi-4',
+    title: 'Autumn Leaves',
+    artist: 'L.Dre',
+    album: 'Seasonal Beats',
+    duration: '3:45',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273e8f9a0b1c2d3e4f5a6b7c8d9',
+    plays: 32_000_000,
   },
   {
-    id: "chillhop",
-    title: "Chillhop Essentials",
-    artist: "Chillhop Music",
-    cover: "https://i.ytimg.com/vi/5qap5aO4i9A/maxresdefault.jpg",
-    tracks: TRACKS.filter(t => t.album === "Chillhop Essentials")
+    id: 'lofi-5',
+    title: 'Peaceful Morning',
+    artist: 'Idealism',
+    album: 'Sunrise Collection',
+    duration: '3:15',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273f0a1b2c3d4e5f6a7b8c9d0e1',
+    plays: 28_000_000,
+  },
+];
+
+// ============ TOP ARTISTS ============
+export const TOP_ARTISTS: Artist[] = [
+  {
+    id: 'artist-1',
+    name: 'The Weeknd',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb214f3cf1cbe7139c1e26ffbb',
+    followers: '85.2M',
+    genres: ['Pop', 'R&B'],
   },
   {
-    id: "synthwave-cyber",
-    title: "Synthwave & Cyberpunk",
-    artist: "Various Artists",
-    cover: "https://i.ytimg.com/vi/77ZozI0rw7w/maxresdefault.jpg",
-    tracks: TRACKS.filter(t => t.album === "Synthwave" || t.album === "Cyberpunk")
-  }
+    id: 'artist-2',
+    name: 'Ed Sheeran',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb3bcef85e105dfc42399ef0ba',
+    followers: '92.4M',
+    genres: ['Pop', 'Folk'],
+  },
+  {
+    id: 'artist-3',
+    name: 'Taylor Swift',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb5a00969a4698c3bc19e3e0a4',
+    followers: '88.1M',
+    genres: ['Pop', 'Country'],
+  },
+  {
+    id: 'artist-4',
+    name: 'Drake',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9',
+    followers: '73.5M',
+    genres: ['Hip-Hop', 'Rap'],
+  },
+  {
+    id: 'artist-5',
+    name: 'Billie Eilish',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5ebd8b9980db67272cb4d2c3daf',
+    followers: '65.8M',
+    genres: ['Pop', 'Alternative'],
+  },
+  {
+    id: 'artist-6',
+    name: 'Dua Lipa',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb0c68f6c95232e716f0abee8d',
+    followers: '58.3M',
+    genres: ['Pop', 'Dance'],
+  },
+  {
+    id: 'artist-7',
+    name: 'Lofi Girl',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb8df3e8f7f3e1b3c2d1a0e9f8',
+    followers: '12.5M',
+    genres: ['Lofi', 'Chillhop'],
+  },
+  {
+    id: 'artist-8',
+    name: 'Harry Styles',
+    imageUrl: 'https://i.scdn.co/image/ab6761610000e5ebf7db7c8ede90a019c54590bb',
+    followers: '52.1M',
+    genres: ['Pop', 'Rock'],
+  },
 ];
 
 // ============ PLAYLISTS ============
 export const PLAYLISTS: Playlist[] = [
   {
-    id: "study-playlist",
-    title: "Study Session",
-    description: "Perfect background music for studying and focusing",
-    cover: "https://i.ytimg.com/vi/DWcJFNfaw9c/maxresdefault.jpg",
-    tracks: [TRACKS[0], TRACKS[3], TRACKS[4], TRACKS[8], TRACKS[11]]
+    id: 'playlist-1',
+    title: 'Today\'s Top Hits',
+    description: 'The hottest tracks right now',
+    imageUrl: 'https://i.scdn.co/image/ab67706f00000003b3f2f6c7d1e8f9a0b1c2d3e4',
+    tracks: TOP_TRACKS.slice(0, 6),
+    createdBy: 'Spotify',
   },
   {
-    id: "chill-vibes",
-    title: "Chill Vibes",
-    description: "Relaxing music to unwind",
-    cover: "https://i.ytimg.com/vi/5qap5aO4i9A/maxresdefault.jpg",
-    tracks: [TRACKS[1], TRACKS[9], TRACKS[12], TRACKS[7]]
+    id: 'playlist-2',
+    title: 'Lofi Beats',
+    description: 'Chill beats to study/relax to',
+    imageUrl: 'https://i.scdn.co/image/ab67706f00000003cafe91c8a9a5f2e3d4b5c6a7',
+    tracks: LOFI_TRACKS,
+    createdBy: 'Lofi Girl',
   },
   {
-    id: "morning-coffee",
-    title: "Morning Coffee",
-    description: "Start your day with great music",
-    cover: "https://i.ytimg.com/vi/kgx4WGK0oNU/maxresdefault.jpg",
-    tracks: [TRACKS[2], TRACKS[6], TRACKS[4]]
+    id: 'playlist-3',
+    title: 'Deep Focus',
+    description: 'Keep calm and focus with ambient and post-rock music',
+    imageUrl: 'https://i.scdn.co/image/ab67706f00000003d5f7e8a9b0c1d2e3f4a5b6c7',
+    tracks: [...LOFI_TRACKS.slice(0, 3), ...TOP_TRACKS.slice(6, 9)],
+    createdBy: 'Spotify',
   },
   {
-    id: "late-night",
-    title: "Late Night Coding",
-    description: "Music for late night productivity",
-    cover: "https://i.ytimg.com/vi/77ZozI0rw7w/maxresdefault.jpg",
-    tracks: [TRACKS[10], TRACKS[13], TRACKS[0], TRACKS[12]]
-  }
+    id: 'playlist-4',
+    title: 'Chill Vibes',
+    description: 'Relaxing music for your day',
+    imageUrl: 'https://i.scdn.co/image/ab67706f00000003e8f9a0b1c2d3e4f5a6b7c8d9',
+    tracks: [...TOP_TRACKS.slice(2, 5), ...LOFI_TRACKS.slice(1, 4)],
+    createdBy: 'Spotify',
+  },
+  {
+    id: 'playlist-5',
+    title: 'Mood Booster',
+    description: 'Get happy with these feel-good songs',
+    imageUrl: 'https://i.scdn.co/image/ab67706f00000003f0a1b2c3d4e5f6a7b8c9d0e1',
+    tracks: TOP_TRACKS.slice(4, 10),
+    createdBy: 'Spotify',
+  },
+  {
+    id: 'playlist-6',
+    title: 'Acoustic Chill',
+    description: 'Soft acoustic vibes for any moment',
+    imageUrl: 'https://i.scdn.co/image/ab67706f00000003a1b2c3d4e5f6a7b8c9d0e1f2',
+    tracks: [...TOP_TRACKS.slice(1, 4), ...LOFI_TRACKS.slice(2, 5)],
+    createdBy: 'Spotify',
+  },
 ];
 
-// ============ ARTISTS ============
-export const ARTISTS: Artist[] = [
+// ============ ALBUMS ============
+export const ALBUMS: Album[] = [
   {
-    id: "lofi-girl",
-    name: "Lofi Girl",
-    image: "https://i.ytimg.com/vi/jfKfPfyJRdk/hqdefault.jpg",
-    followers: "14.2M"
+    id: 'album-1',
+    title: 'After Hours',
+    artist: 'The Weeknd',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36',
+    year: 2020,
+    tracks: [
+      { id: 'ah-1', title: 'Alone Again', artist: 'The Weeknd', duration: '4:10', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+      { id: 'ah-2', title: 'Too Late', artist: 'The Weeknd', duration: '3:59', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+      { id: 'ah-3', title: 'Hardest To Love', artist: 'The Weeknd', duration: '3:31', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+      { id: 'ah-4', title: 'Scared To Live', artist: 'The Weeknd', duration: '3:11', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+      { id: 'ah-5', title: 'Blinding Lights', artist: 'The Weeknd', duration: '3:20', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+      { id: 'ah-6', title: 'In Your Eyes', artist: 'The Weeknd', duration: '3:57', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+      { id: 'ah-7', title: 'Save Your Tears', artist: 'The Weeknd', duration: '3:35', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36' },
+    ],
   },
   {
-    id: "chillhop",
-    name: "Chillhop Music",
-    image: "https://i.ytimg.com/vi/5yx6BWlEVcY/hqdefault.jpg",
-    followers: "3.8M"
+    id: 'album-2',
+    title: '÷ (Divide)',
+    artist: 'Ed Sheeran',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
+    year: 2017,
+    tracks: [
+      { id: 'div-1', title: 'Eraser', artist: 'Ed Sheeran', duration: '3:47', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96' },
+      { id: 'div-2', title: 'Castle on the Hill', artist: 'Ed Sheeran', duration: '4:21', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96' },
+      { id: 'div-3', title: 'Dive', artist: 'Ed Sheeran', duration: '3:58', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96' },
+      { id: 'div-4', title: 'Shape of You', artist: 'Ed Sheeran', duration: '3:53', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96' },
+      { id: 'div-5', title: 'Perfect', artist: 'Ed Sheeran', duration: '4:23', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96' },
+      { id: 'div-6', title: 'Galway Girl', artist: 'Ed Sheeran', duration: '2:50', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96' },
+    ],
   },
   {
-    id: "cafe-music",
-    name: "Cafe Music BGM",
-    image: "https://i.ytimg.com/vi/rUxyKA_-grg/hqdefault.jpg",
-    followers: "8.5M"
+    id: 'album-3',
+    title: 'Future Nostalgia',
+    artist: 'Dua Lipa',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
+    year: 2020,
+    tracks: [
+      { id: 'fn-1', title: 'Future Nostalgia', artist: 'Dua Lipa', duration: '3:04', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946' },
+      { id: 'fn-2', title: "Don't Start Now", artist: 'Dua Lipa', duration: '3:03', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946' },
+      { id: 'fn-3', title: 'Cool', artist: 'Dua Lipa', duration: '3:29', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946' },
+      { id: 'fn-4', title: 'Physical', artist: 'Dua Lipa', duration: '3:13', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946' },
+      { id: 'fn-5', title: 'Levitating', artist: 'Dua Lipa', duration: '3:23', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946' },
+      { id: 'fn-6', title: 'Break My Heart', artist: 'Dua Lipa', duration: '3:41', imageUrl: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946' },
+    ],
   },
   {
-    id: "quiet-quest",
-    name: "Quiet Quest",
-    image: "https://i.ytimg.com/vi/lTRiuFIWV54/hqdefault.jpg",
-    followers: "1.2M"
+    id: 'album-4',
+    title: "Harry's House",
+    artist: 'Harry Styles',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0',
+    year: 2022,
+    tracks: [
+      { id: 'hh-1', title: 'Music For a Sushi Restaurant', artist: 'Harry Styles', duration: '3:12', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0' },
+      { id: 'hh-2', title: 'Late Night Talking', artist: 'Harry Styles', duration: '2:57', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0' },
+      { id: 'hh-3', title: 'As It Was', artist: 'Harry Styles', duration: '2:47', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0' },
+      { id: 'hh-4', title: 'Daylight', artist: 'Harry Styles', duration: '2:44', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0' },
+      { id: 'hh-5', title: 'Matilda', artist: 'Harry Styles', duration: '4:05', imageUrl: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0' },
+    ],
   },
   {
-    id: "soothing-relaxation",
-    name: "Soothing Relaxation",
-    image: "https://i.ytimg.com/vi/hlWiI4xVXKY/hqdefault.jpg",
-    followers: "5.1M"
+    id: 'album-5',
+    title: 'WHEN WE ALL FALL ASLEEP',
+    artist: 'Billie Eilish',
+    imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce',
+    year: 2019,
+    tracks: [
+      { id: 'ww-1', title: '!!!!!!!', artist: 'Billie Eilish', duration: '0:13', imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce' },
+      { id: 'ww-2', title: 'bad guy', artist: 'Billie Eilish', duration: '3:14', imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce' },
+      { id: 'ww-3', title: 'xanny', artist: 'Billie Eilish', duration: '4:03', imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce' },
+      { id: 'ww-4', title: 'you should see me in a crown', artist: 'Billie Eilish', duration: '3:00', imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce' },
+      { id: 'ww-5', title: 'bury a friend', artist: 'Billie Eilish', duration: '3:13', imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce' },
+      { id: 'ww-6', title: 'lovely', artist: 'Billie Eilish & Khalid', duration: '3:20', imageUrl: 'https://i.scdn.co/image/ab67616d0000b27350a3147b4edd7701a876c6ce' },
+    ],
   },
-  {
-    id: "halidonmusic",
-    name: "HALIDONMUSIC",
-    image: "https://i.ytimg.com/vi/mOYZaiDZ7BM/hqdefault.jpg",
-    followers: "6.3M"
-  }
 ];
 
 // ============ PODCASTS ============
 export const PODCAST_SHOWS: PodcastShow[] = [
   {
-    id: "ted-ed",
-    title: "TED-Ed",
-    host: "TED",
-    cover: "https://yt3.googleusercontent.com/ytc/AIdro_kxYaqdLj_jO64I5jNZ_i5bSNj8uMtYS0vGQuKWbQ=s176-c-k-c0x00ffffff-no-rj",
-    episodes: [
-      {
-        id: "Z0ipq4cS9TE",
-        title: "How to learn any language in 6 months",
-        duration: "14:36",
-        thumbnail: "https://i.ytimg.com/vi/Z0ipq4cS9TE/hqdefault.jpg"
-      },
-      {
-        id: "5MgBikgcWnY",
-        title: "The science of sleep",
-        duration: "5:12",
-        thumbnail: "https://i.ytimg.com/vi/5MgBikgcWnY/hqdefault.jpg"
-      }
-    ]
+    id: 'podcast-1',
+    title: 'The Joe Rogan Experience',
+    host: 'Joe Rogan',
+    description: 'The podcast of comedian Joe Rogan',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a7a7b9c1c2d3e4f5a6b7c8d9e',
+    episodes: [],
   },
   {
-    id: "crash-course",
-    title: "Crash Course",
-    host: "Complexly",
-    cover: "https://yt3.googleusercontent.com/ytc/AIdro_nj1X6N0y5rOUBF_IgKVgBME2YCCk0PCXI8D0Jfig=s176-c-k-c0x00ffffff-no-rj",
-    episodes: [
-      {
-        id: "kBdfcR-8hEY",
-        title: "The Psychology of Memory",
-        duration: "11:23",
-        thumbnail: "https://i.ytimg.com/vi/kBdfcR-8hEY/hqdefault.jpg"
-      }
-    ]
+    id: 'podcast-2',
+    title: 'TED Talks Daily',
+    host: 'TED',
+    description: 'Every weekday, TED Talks Daily brings you the latest talks in audio',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a8e9f0a1b2c3d4e5f6a7b8c9d',
+    episodes: [],
   },
   {
-    id: "kurzgesagt",
-    title: "Kurzgesagt – In a Nutshell",
-    host: "Kurzgesagt",
-    cover: "https://yt3.googleusercontent.com/ytc/AIdro_lJ-w7UVoqNVJsLqGfWPZq0y7sEuLL7M7L4E_u36A=s176-c-k-c0x00ffffff-no-rj",
-    episodes: [
-      {
-        id: "JtUAAXe_0VI",
-        title: "The Immune System Explained",
-        duration: "6:48",
-        thumbnail: "https://i.ytimg.com/vi/JtUAAXe_0VI/hqdefault.jpg"
-      },
-      {
-        id: "n3Xv_g3g-mA",
-        title: "Optimistic Nihilism",
-        duration: "6:02",
-        thumbnail: "https://i.ytimg.com/vi/n3Xv_g3g-mA/hqdefault.jpg"
-      }
-    ]
-  }
+    id: 'podcast-3',
+    title: 'The Daily',
+    host: 'The New York Times',
+    description: "This is what the news should sound like",
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a9f0a1b2c3d4e5f6a7b8c9d0e',
+    episodes: [],
+  },
 ];
 
-// ============ CATEGORIES / TAGS ============
-export const MUSIC_TAGS = [
+export const PODCAST_EPISODES: PodcastEpisode[] = [
+  {
+    id: 'episode-1',
+    title: 'How to Build Good Habits',
+    show: 'TED Talks Daily',
+    duration: '18:24',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a8e9f0a1b2c3d4e5f6a7b8c9d',
+    description: 'Learn the science behind habit formation',
+    publishedAt: '2025-12-18',
+  },
+  {
+    id: 'episode-2',
+    title: 'The Science of Sleep',
+    show: 'The Joe Rogan Experience',
+    duration: '2:45:30',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a7a7b9c1c2d3e4f5a6b7c8d9e',
+    description: 'Deep dive into sleep science with Dr. Matthew Walker',
+    publishedAt: '2025-12-17',
+  },
+  {
+    id: 'episode-3',
+    title: 'Breaking News Today',
+    show: 'The Daily',
+    duration: '25:10',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a9f0a1b2c3d4e5f6a7b8c9d0e',
+    description: 'The latest headlines and analysis',
+    publishedAt: '2025-12-20',
+  },
+  {
+    id: 'episode-4',
+    title: 'Mindfulness for Beginners',
+    show: 'TED Talks Daily',
+    duration: '15:42',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a8e9f0a1b2c3d4e5f6a7b8c9d',
+    description: 'Start your mindfulness journey',
+    publishedAt: '2025-12-16',
+  },
+  {
+    id: 'episode-5',
+    title: 'AI and the Future of Work',
+    show: 'TED Talks Daily',
+    duration: '22:15',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a8e9f0a1b2c3d4e5f6a7b8c9d',
+    description: 'How AI is reshaping our careers',
+    publishedAt: '2025-12-15',
+  },
+  {
+    id: 'episode-6',
+    title: 'Comedy Special Review',
+    show: 'The Joe Rogan Experience',
+    duration: '1:32:45',
+    imageUrl: 'https://i.scdn.co/image/ab6765630000ba8a7a7b9c1c2d3e4f5a6b7c8d9e',
+    description: 'Discussing the best comedy specials of the year',
+    publishedAt: '2025-12-14',
+  },
+];
+
+// ============ FEATURED / HERO TRACK ============
+export const HERO_TRACK: Track = TOP_TRACKS[0];
+
+// ============ GENRES / TAGS ============
+export const AVAILABLE_TAGS = [
   'Lofi', 'Jazz', 'Classical', 'Pop', 'Rock', 'Hip Hop',
   'R&B', 'Electronic', 'Acoustic', 'Piano', 'Guitar',
-  'Instrumental', 'Chill', 'Study', 'Focus', 'Ambient',
-  'Synthwave', 'Cyberpunk', 'Coffee Shop', 'Rain'
+  'Instrumental', 'Chill', 'Study', 'Focus', 'Workout',
+  'Party', 'Sleep', 'Meditation', 'Nature Sounds'
 ];
 
-// ============ UTILITY FUNCTIONS ============
-
-/**
- * Search tracks locally
- */
-export function searchTracks(query: string): Track[] {
-  const lowerQuery = query.toLowerCase().trim();
-  if (!lowerQuery) return [];
-  
-  return TRACKS.filter(track => 
-    track.title.toLowerCase().includes(lowerQuery) ||
-    track.artist.toLowerCase().includes(lowerQuery) ||
-    track.album?.toLowerCase().includes(lowerQuery)
-  );
-}
-
-/**
- * Search albums locally
- */
-export function searchAlbums(query: string): Album[] {
-  const lowerQuery = query.toLowerCase().trim();
-  if (!lowerQuery) return [];
-  
-  return ALBUMS.filter(album =>
-    album.title.toLowerCase().includes(lowerQuery) ||
-    album.artist.toLowerCase().includes(lowerQuery)
-  );
-}
-
-/**
- * Search everything
- */
-export function searchAll(query: string): { tracks: Track[]; albums: Album[]; artists: Artist[] } {
-  const lowerQuery = query.toLowerCase().trim();
-  if (!lowerQuery) return { tracks: [], albums: [], artists: [] };
-  
-  return {
-    tracks: searchTracks(query),
-    albums: searchAlbums(query),
-    artists: ARTISTS.filter(artist => artist.name.toLowerCase().includes(lowerQuery))
-  };
-}
-
-/**
- * Get track by ID
- */
-export function getTrackById(id: string): Track | undefined {
-  return TRACKS.find(track => track.id === id);
-}
-
-/**
- * Get album by ID
- */
-export function getAlbumById(id: string): Album | undefined {
-  return ALBUMS.find(album => album.id === id);
-}
-
-/**
- * Get YouTube thumbnail URL
- */
-export function getYouTubeThumbnail(videoId: string, quality: 'default' | 'medium' | 'high' | 'maxres' = 'high'): string {
-  const qualityMap = {
-    default: 'default',
-    medium: 'mqdefault',
-    high: 'hqdefault',
-    maxres: 'maxresdefault'
-  };
-  return `https://i.ytimg.com/vi/${videoId}/${qualityMap[quality]}.jpg`;
-}
+// ============ ALL TRACKS (for search) ============
+export const ALL_TRACKS: Track[] = [
+  ...TOP_TRACKS,
+  ...LOFI_TRACKS,
+  ...ALBUMS.flatMap(album => album.tracks),
+];

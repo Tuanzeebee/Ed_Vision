@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useMusicPlayer } from '../music/MusicPlayerContext';
-import { TRACKS } from '../music/mockData';
+import { TOP_TRACKS as TRACKS } from '../music/mockData';
+import type { Track } from '../music/types';
 
 type Props = {
   visible: boolean;
@@ -124,7 +125,7 @@ export default function MusicWidget({
           title: t.title,
           artist: t.artist,
           duration: t.duration || '0:00',
-          albumArt: t.thumbnail || 'https://via.placeholder.com/40',
+          albumArt: t.imageUrl || 'https://via.placeholder.com/40',
         }))
       : [];
 
