@@ -1,6 +1,6 @@
 import { STUDENT_ASSETS } from "@/assets/student"
 import { Button } from "../ui/student/Student_button"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import LanguageSwitcher from "../LanguageSwitcher"
 import { useEffect, useRef, useState } from 'react'
@@ -14,6 +14,7 @@ type Props = {
   isLandingPage?: boolean
   isAdminMode?: boolean
   isTeacherMode?: boolean
+  isParentMode?: boolean
   onLogin?: () => void
   onRegister?: () => void
 }
@@ -24,25 +25,30 @@ export default function Header({
   isLandingPage = false,
   isAdminMode = false,
   isTeacherMode = false,
+  isParentMode = false,
   onLogin,
   onRegister
 }: Props) {
   const { t } = useTranslation(['common'])
   const navigate = useNavigate()
+  const location = useLocation()
 
   // Use auth hook for authentication state
-  const { isAuthenticated, user, getDashboardPath, logout } = useAuth()
+  const { isAuthenticated, user, getDashboardPath, logout, getUserRole } = useAuth()
+  
+  // Get user role for conditional navigation
+  const userRole = getUserRole()?.toLowerCase()
 
   // Local UI state for the profile menu and avatar
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
-  
+
   // Initialize avatar and name from user object immediately (no flash)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
     if (!isAuthenticated) return null
     return user?.avatarUrl || user?.avatar_url || user?.avatar || null
   })
-  
+
   const [displayName, setDisplayName] = useState<string | null>(() => {
     if (!isAuthenticated) return null
     return user?.fullName || user?.full_name || user?.name || null
@@ -60,7 +66,7 @@ export default function Header({
       // Check if user object already has full data (skip if force refetch)
       const existingAvatar = user?.avatarUrl || user?.avatar_url || user?.avatar
       const existingName = user?.fullName || user?.full_name || user?.name
-      
+
       if (!forceRefetch && existingAvatar && existingName) {
         setAvatarUrl(existingAvatar)
         setDisplayName(existingName)
@@ -81,15 +87,15 @@ export default function Header({
           const profileData = await response.json()
           const avatar = profileData?.profile?.avatarUrl || profileData?.avatarUrl || null
           const fullName = profileData?.profile?.fullName || profileData?.profile?.full_name || profileData?.fullName || null
-          
+
           if (avatar) {
             setAvatarUrl(avatar)
           }
-          
+
           if (fullName) {
             setDisplayName(fullName)
           }
-          
+
           // Update user object in localStorage
           const userStr = localStorage.getItem('user')
           if (userStr) {
@@ -204,9 +210,12 @@ export default function Header({
             ) : (
               <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
             )}
-          </div>          {/* Navigation - chỉ hiển thị khi không phải admin mode và teacher mode */}
-          {showNavigation && !isAdminMode && !isTeacherMode && isAuthenticated && (
+          </div>          {/* Navigation - chỉ hiển thị cho sinh viên, parent và trang chủ khi chưa login */}
+          {showNavigation && (isLandingPage || (!isAuthenticated) || (isAuthenticated && (userRole === 'student' || userRole === 'parent'))) && !isAdminMode && !isTeacherMode && (
             <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+              {/* Student Navigation */}
+              {userRole === 'student' && (
+                <>
               {/* Learn Dropdown */}
               <div className="relative group">
                 <button className="flex items-center gap-1 px-4 py-2.5 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-600 hover:bg-slate-50">
@@ -242,6 +251,27 @@ export default function Header({
                       <div>
                         <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.learn.courseDetail.title')}</div>
                         <div className="text-xs text-slate-500">{t('common:header.menu.learn.courseDetail.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/learning-space" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="mt-1 p-1.5 rounded-md bg-indigo-50 text-indigo-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">{t('common:header.menu.learn.learningSpace.title')}</div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.learn.learningSpace.description')}</div>
+                      </div>
+                    </a>
+                    <a href="/student/certificate-review" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border-t border-slate-50 mt-1 pt-2">
+                      <div className="mt-1 p-1.5 rounded-md bg-amber-50 text-amber-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                          {t('common:header.menu.learn.certificateReview.title')}
+                          <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">Mới</span>
+                        </div>
+                        <div className="text-xs text-slate-500">{t('common:header.menu.learn.certificateReview.description')}</div>
                       </div>
                     </a>
                   </div>
@@ -323,7 +353,7 @@ export default function Header({
                 </button>
                 <div className="absolute top-full right-0 w-64 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="p-2 space-y-1">
-                    <a href="/student/chat" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <a href="/student/chat-student" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="mt-1 p-1.5 rounded-md bg-blue-50 text-blue-600">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                       </div>
@@ -332,7 +362,7 @@ export default function Header({
                         <div className="text-xs text-slate-500">{t('common:header.menu.communicate.chatWithTeachers.description')}</div>
                       </div>
                     </a>
-                    <a href="/student/messages" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <a href="/student/chat-student" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="mt-1 p-1.5 rounded-md bg-pink-50 text-pink-600">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       </div>
@@ -341,7 +371,7 @@ export default function Header({
                         <div className="text-xs text-slate-500">{t('common:header.menu.communicate.messages.description')}</div>
                       </div>
                     </a>
-                    <a href="/booking/scheduler" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <a href="/appointments" className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="mt-1 p-1.5 rounded-md bg-indigo-50 text-indigo-600">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       </div>
@@ -386,6 +416,61 @@ export default function Header({
                   </div>
                 </div>
               </div>
+              </>
+              )}
+
+              {/* Parent Navigation */}
+              {userRole === 'parent' && (
+                <>
+                  {/* Dashboard Link */}
+                  <Link 
+                    to="/parent/dashboard" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/parent/dashboard'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.dashboard') || 'Dashboard'}
+                  </Link>
+
+                  {/* Book Appointment Link */}
+                  <Link 
+                    to="/appointments" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/appointments'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.bookAppointment') || 'Book Appointment'}
+                  </Link>
+
+                  {/* Student Details Link */}
+                  <Link 
+                    to="/parent/student-details" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/parent/student-details'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.studentDetails') || 'Student Details'}
+                  </Link>
+
+                  {/* Chat Link */}
+                  <Link 
+                    to="/parent/chat" 
+                    className={`px-4 py-2.5 rounded-lg text-base font-medium transition-all ${
+                      location.pathname === '/parent/chat'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t('common:header.navigation.chat') || 'Chat'}
+                  </Link>
+                </>
+              )}
             </nav>
           )}
 
@@ -394,11 +479,12 @@ export default function Header({
             {/* Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Notification Dropdown - For Teacher and Admin Mode */}
-            {(isTeacherMode || isAdminMode) && isAuthenticated && (
-              <NotificationDropdown 
-                isAdminMode={isAdminMode} 
-                isTeacherMode={isTeacherMode} 
+            {/* Notification Dropdown - For All Authenticated Users */}
+            {isAuthenticated && (
+              <NotificationDropdown
+                isAdminMode={isAdminMode}
+                isTeacherMode={isTeacherMode}
+                isParentMode={isParentMode}
               />
             )}
 
@@ -431,10 +517,10 @@ export default function Header({
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((s) => !s)}
-                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200 cursor-pointer"
                   aria-expanded={menuOpen}
                 >
-                  <img 
+                  <img
                     src={avatarUrl || user?.avatarUrl || user?.avatar_url || user?.avatar || STUDENT_ASSETS.defaultAvatar}
                     alt="User Avatar"
                     className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"
@@ -480,7 +566,7 @@ export default function Header({
                           View Profile
                         </button>
                       )}
-                      
+
                       {/* Settings */}
                       <button
                         onClick={() => {
@@ -501,9 +587,9 @@ export default function Header({
                         </svg>
                         Settings
                       </button>
-                      
+
                       <div className="h-px bg-slate-100 my-1"></div>
-                      
+
                       {/* Logout */}
                       <button
                         onClick={async () => {

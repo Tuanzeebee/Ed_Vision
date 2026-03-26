@@ -113,8 +113,24 @@ export interface CreateSurveyFromQuestionsDto {
 export interface SurveyAnalytics {
     surveyId: string;
     title: string;
+    survey?: any; // Full survey object from backend
     totalResponses: number;
     responseRate: number;
+    responses?: Array<{
+        id: string;
+        surveyId: string;
+        student?: {
+            id: string;
+            code: string;
+            name: string;
+            class: string;
+        };
+        answers: Array<{
+            questionId: string;
+            answer: string | string[] | number;
+        }>;
+        submittedAt: Date | string;
+    }>;
     questionAnalytics: {
         questionId: string;
         question: string;
@@ -130,6 +146,7 @@ export interface SurveyAnalytics {
         mode?: number;
         textAnswers?: string[];
     }[];
+    charts?: any; // Charts data from backend
 }
 
 /**
@@ -229,6 +246,14 @@ export const getSurveyAnalytics = async (id: string): Promise<SurveyAnalytics> =
 };
 
 /**
+ * Get incomplete students for a survey
+ */
+export const getIncompleteStudents = async (id: string): Promise<any[]> => {
+    const response = await axios.get(`${API_BASE_URL}/teacher/surveys/${id}/incomplete-students`);
+    return response.data;
+};
+
+/**
  * Send reminder to incomplete students
  */
 export const sendReminder = async (data: {
@@ -237,6 +262,36 @@ export const sendReminder = async (data: {
     studentIds?: string[];
 }): Promise<void> => {
     await axios.post(`${API_BASE_URL}/teacher/surveys/send-reminder`, data);
+};
+
+/**
+ * Get history statistics for completed surveys
+ */
+export const getHistoryStatistics = async (): Promise<{
+    totalCompletedSurveys: number;
+    totalResponses: number;
+    improvingStudents: number;
+    needSupportStudents: number;
+}> => {
+    const response = await axios.get(`${API_BASE_URL}/teacher/surveys/history-statistics`);
+    return response.data;
+};
+
+/**
+ * Get target student count by faculty and class
+ */
+export const getTargetStudentCount = async (
+    facultyId?: string,
+    classId?: string,
+): Promise<number> => {
+    const params = new URLSearchParams();
+    if (facultyId && facultyId !== 'all') params.append('facultyId', facultyId);
+    if (classId && classId !== 'all') params.append('classId', classId);
+    
+    const response = await axios.get(
+        `${API_BASE_URL}/teacher/surveys/target-student-count?${params.toString()}`
+    );
+    return response.data;
 };
 
 /**

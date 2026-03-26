@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { buildUrl } from "@/services/api/config";
 import { TokenManager } from "@/lib/tokenManager";
+import { useTranslation } from 'react-i18next';
 
 type AdvisedClass = {
   classId: number;
@@ -23,6 +24,7 @@ export default function EditAdvisedClassesModal({
   currentClasses,
   onSuccess,
 }: Props) {
+  const { t } = useTranslation('profile');
   const [availableClasses, setAvailableClasses] = useState<any[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<
     { classId: number; assignedDate: string }[]
@@ -132,7 +134,7 @@ export default function EditAdvisedClassesModal({
       setLoading(true);
       const token = TokenManager.getToken();
       if (!token) {
-        alert("Vui lòng đăng nhập");
+        alert(t('common.loginRequired'));
         return;
       }
 
@@ -150,14 +152,14 @@ export default function EditAdvisedClassesModal({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.message || "Cập nhật thất bại");
+        throw new Error(errData?.message || t('teacherAdvisedClasses.updateError'));
       }
 
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error("Error updating advised classes:", error);
-      alert(error?.message || "Có lỗi xảy ra khi cập nhật");
+      alert(error?.message || t('teacherAdvisedClasses.updateError'));
     } finally {
       setLoading(false);
     }
@@ -188,9 +190,9 @@ export default function EditAdvisedClassesModal({
                   <i className="fas fa-users text-xl"></i>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Chỉnh sửa lớp cố vấn</h3>
+                  <h3 className="text-xl font-bold">{t('teacherAdvisedClasses.modalTitle')}</h3>
                   <p className="text-sm text-green-100 mt-0.5">
-                    Quản lý các lớp cố vấn của bạn
+                    {t('teacherAdvisedClasses.currentClasses')}
                   </p>
                 </div>
               </div>
@@ -215,7 +217,7 @@ export default function EditAdvisedClassesModal({
                     <div className="flex-1 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-2">
-                          Lớp <span className="text-red-500">*</span>
+                          {t('teacherAdvisedClasses.classCode')} <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={selected.classId}
@@ -225,10 +227,10 @@ export default function EditAdvisedClassesModal({
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                           required
                         >
-                          <option value={0}>-- Chọn lớp --</option>
+                          <option value={0}>-- {t('teacherWork.selectDepartment', { defaultValue: 'Select' })} --</option>
                           {availableClasses.map((cls) => (
                             <option key={cls.classId} value={cls.classId}>
-                              {cls.classCode} - Khóa {cls.cohortYear}
+                              {cls.classCode} - {t('teacherAdvisedClasses.cohortYear')} {cls.cohortYear}
                             </option>
                           ))}
                         </select>
@@ -236,7 +238,7 @@ export default function EditAdvisedClassesModal({
 
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-2">
-                          Ngày bắt đầu <span className="text-red-500">*</span>
+                          {t('teacherAdvisedClasses.startDate')} <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="date"
@@ -253,7 +255,7 @@ export default function EditAdvisedClassesModal({
                       type="button"
                       onClick={() => handleRemoveClass(index)}
                       className="mt-7 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Xóa lớp này"
+                      title={t('teacherAdvisedClasses.removeTitle')}
                     >
                       <i className="fas fa-trash"></i>
                     </button>
@@ -268,7 +270,7 @@ export default function EditAdvisedClassesModal({
               className="mt-4 w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-all"
             >
               <i className="fas fa-plus mr-2"></i>
-              Thêm lớp cố vấn
+              {t('studentParentLinks.generateCode', { defaultValue: 'Add' })}
             </button>
 
             {/* Footer buttons */}
@@ -279,7 +281,7 @@ export default function EditAdvisedClassesModal({
                 className="px-6 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
                 disabled={loading}
               >
-                Hủy
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -289,12 +291,12 @@ export default function EditAdvisedClassesModal({
                 {loading ? (
                   <>
                     <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Đang lưu...
+                    {t('common.saving')}
                   </>
                 ) : (
                   <>
                     <i className="fas fa-save mr-2"></i>
-                    Lưu thay đổi
+                    {t('common.save')}
                   </>
                 )}
               </button>

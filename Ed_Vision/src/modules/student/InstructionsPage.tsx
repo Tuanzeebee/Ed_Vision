@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/student/Student_card"
 import { Button } from "@/components/ui/student/Student_button"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from 'react-i18next'
 import Header from "../../components/layout/Header"
+import { useMemo } from 'react'
 import Footer from "../../components/layout/Footer"
 
 // Import image assets
@@ -33,13 +35,14 @@ interface StepData {
 
 export default function InstructionsPage({}: Props) {
   const navigate = useNavigate()
+  const { t } = useTranslation('student')
 
-  const steps: StepData[] = [
+  const steps: StepData[] = useMemo(() => ([
     {
       id: "step1",
       number: "1",
-      title: "Add Extensions From Webstore",
-      description: "Add the extension to extract your academic transcript in CSV/Excel format for study planning.",
+      title: t('instructions.step1.title'),
+      description: t('instructions.step1.description'),
       image: imgUploadTranscript,
       bgColor: "bg-blue-500",
       stepColor: "text-blue-600"
@@ -47,8 +50,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step2", 
       number: "2",
-      title: "Log in to MyDTU",
-      description: "Sign in with your MyDTU account.",
+      title: t('instructions.step2.title'),
+      description: t('instructions.step2.description'),
       image: imgVerifyInformation,
       bgColor: "bg-green-500",
       stepColor: "text-green-600"
@@ -56,8 +59,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step3",
       number: "3", 
-      title: "Select Learning → Transcript",
-      description: "Go to Learning and choose Transcript to access your grades.",
+      title: t('instructions.step3.title'),
+      description: t('instructions.step3.description'),
       image: imgSetGoals,
       bgColor: "bg-purple-500",
       stepColor: "text-purple-600"
@@ -65,8 +68,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step4",
       number: "4",
-      title: "Open Student Grade Extractor", 
-      description: "Open the extension and select the Extractor menu to process your transcript.",
+      title: t('instructions.step4.title'), 
+      description: t('instructions.step4.description'),
       image: imgConfigureSchedule,
       bgColor: "bg-orange-500",
       stepColor: "text-orange-600"
@@ -74,8 +77,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step5",
       number: "5",
-      title: "Click Extract & Download CSV",
-      description: "Click Extract to download your transcript as a CSV file.",
+      title: t('instructions.step5.title'),
+      description: t('instructions.step5.description'),
       image: imgReviewRequirements,
       bgColor: "bg-red-500", 
       stepColor: "text-red-600"
@@ -83,8 +86,8 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step6",
       number: "6",
-      title: "Upload Transcript to the System",
-      description: "Upload the CSV file to enable grade prediction and study plan recommendations.",
+      title: t('instructions.step6.title'),
+      description: t('instructions.step6.description'),
       image: imgGeneratePlan,
       bgColor: "bg-teal-500",
       stepColor: "text-teal-600"
@@ -92,13 +95,13 @@ export default function InstructionsPage({}: Props) {
     {
       id: "step7",
       number: "7",
-      title: "Adjust Parameters",
-      description: "Customize your settings and view an overview of your current GPA and study progress.",
+      title: t('instructions.step7.title'),
+      description: t('instructions.step7.description'),
       image: imgTrackProgress,
       bgColor: "bg-indigo-500",
       stepColor: "text-indigo-600"
     }
-  ]
+  ]), [t])
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -114,7 +117,7 @@ export default function InstructionsPage({}: Props) {
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconInstructions} alt="" className="w-5 h-5" />
-                    <span className="text-blue-600 font-medium">Instructions</span>
+                    <span className="text-blue-600 font-medium">{t('instructions.title')}</span>
                   </div>
                 </div>
                 <button
@@ -126,7 +129,7 @@ export default function InstructionsPage({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3">
                     <img src={iconUpload} alt="" className="w-5 h-5" />
-                    <span className="text-gray-500 font-medium">Upload Transcript</span>
+                    <span className="text-gray-500 font-medium">{t('upload.title')}</span>
                   </div>
                 </button>
                 <button
@@ -138,9 +141,9 @@ export default function InstructionsPage({}: Props) {
                 >
                   <div className="flex items-center justify-center h-14 gap-3 relative">
                     <img src={iconAdjust} alt="" className="w-5 h-5" />
-                    <span className="text-gray-400 font-medium">Adjust Parameters</span>
-                    <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full absolute right-8">
-                      Upload Required
+                    <span className="text-gray-400 font-medium">{t('adjust.tab')}</span>
+                    <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full absolute right-4 top-2.5">
+                      {t('instructions.uploadRequired')}
                     </span>
                   </div>
                 </button>
@@ -152,10 +155,10 @@ export default function InstructionsPage({}: Props) {
               {/* Header Section */}
               <div className="text-center space-y-3">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Complete Getting Started Guide
+                  {t('instructions.pageTitle')}
                 </h1>
                 <p className="text-base text-gray-600">
-                  Follow these 7 steps to optimize your academic planning experience
+                  {t('instructions.subtitle')}
                 </p>
               </div>
 
@@ -172,6 +175,7 @@ export default function InstructionsPage({}: Props) {
                             src={step.image} 
                             alt={step.title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         </div>
                         
@@ -205,6 +209,7 @@ export default function InstructionsPage({}: Props) {
                             src={step.image} 
                             alt={step.title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         </div>
                         
@@ -238,6 +243,7 @@ export default function InstructionsPage({}: Props) {
                             src={steps[6].image} 
                             alt={steps[6].title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         </div>
                         
@@ -271,10 +277,10 @@ export default function InstructionsPage({}: Props) {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg h-auto inline-flex items-center gap-3"
                 >
                   <img src={iconStart} alt="" className="w-5 h-5" />
-                  <span className="text-lg font-bold">Start Upload Transcript</span>
+                  <span className="text-lg font-bold">{t('instructions.startUpload')}</span>
                 </Button>
                 <p className="text-sm text-gray-500">
-                  Ready to begin? Click above to start with step 1
+                  {t('instructions.readyToBegin')}
                 </p>
               </div>
             </div>

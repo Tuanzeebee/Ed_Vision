@@ -1,47 +1,78 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { UploadTranscriptDto, TranscriptRecordDto } from './dto/upload-transcript.dto';
-import { TranscriptUploadResponse, StudentTranscriptResponse } from './models/transcript-upload-response.type';
+import {
+  UploadTranscriptDto,
+  TranscriptRecordDto,
+} from './dto/upload-transcript.dto';
+import {
+  TranscriptUploadResponse,
+  StudentTranscriptResponse,
+} from './models/transcript-upload-response.type';
+import { TranscriptPredictionService, StudentCacheService } from './logic';
 
 @Injectable()
 export class TranscriptUploadService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(TranscriptUploadService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private predictionService: TranscriptPredictionService,
+    private cache: StudentCacheService,
+  ) {}
 
   /**
    * Upload và lưu transcript records vào database
    */
-  async uploadTranscript(uploadDto: UploadTranscriptDto): Promise<TranscriptUploadResponse> {
+  async uploadTranscript(
+    uploadDto: UploadTranscriptDto,
+  ): Promise<TranscriptUploadResponse> {
     const { records } = uploadDto;
     let successfulRecords = 0;
     let failedRecords = 0;
     const errors: Array<{ row: number; error: string }> = [];
+    const touchedStudents = new Set<number>();
 
     // Validate students exist - use student_code instead of student_id
-    const studentCodes = [...new Set(records.map(r => r.student_code))];
+    const studentCodes = [...new Set(records.map((r) => r.student_code))];
     const students = await this.prisma.student.findMany({
       where: { student_code: { in: studentCodes } },
       select: { student_id: true, student_code: true },
     });
 
     const studentCodeToIdMap = new Map(
-      students.map(s => [s.student_code, s.student_id])
+      students.map((s) => [s.student_code, s.student_id]),
     );
 
     for (let i = 0; i < records.length; i++) {
       const record = records[i];
       try {
         // Validate required fields
-        if (!record.student_code || !record.course_code || !record.year || !record.semester_number) {
+        if (
+          !record.student_code ||
+          !record.course_code ||
+          !record.year ||
+          !record.semester_number
+        ) {
           errors.push({
             row: i + 2,
-            error: 'Missing required fields (student_code, course_code, year, or semester_number)',
+            error:
+              'Missing required fields (student_code, course_code, year, or semester_number)',
           });
           failedRecords++;
           continue;
         }
 
         // Validate semester_number is valid
-        if (isNaN(record.semester_number) || record.semester_number < 1 || record.semester_number > 3) {
+        if (
+          isNaN(record.semester_number) ||
+          record.semester_number < 1 ||
+          record.semester_number > 3
+        ) {
           errors.push({
             row: i + 2,
             error: 'Invalid semester_number. Must be 1, 2, or 3',
@@ -50,14 +81,16 @@ export class TranscriptUploadService {
           continue;
         }
 
-        // Get student_id from student_code
         const studentId = studentCodeToIdMap.get(record.student_code);
         if (!studentId) {
           throw new Error(`Student with code ${record.student_code} not found`);
         }
 
         // Find or create academic term
-        const academicYear = this.constructAcademicYear(record.year, record.semester_number);
+        const academicYear = this.constructAcademicYear(
+          record.year,
+          record.semester_number,
+        );
         let academicTerm = await this.prisma.academicTerm.findFirst({
           where: {
             academic_year: academicYear,
@@ -76,20 +109,40 @@ export class TranscriptUploadService {
           });
         }
 
-        // Find or create course
+        // Find existing course only (do NOT auto-create)
+        // NOTE: Schema uses unique constraint on [course_code, study_format]
+        // Try find by composite (course_code + study_format), then fallback to course_code only
+        const studyFormatRaw = record.study_format || 'offline';
+        const studyFormat = String(studyFormatRaw).trim();
+
         let course = await this.prisma.course.findUnique({
-          where: { course_code: record.course_code },
+          where: {
+            course_code_study_format: {
+              course_code: record.course_code,
+              study_format: studyFormat,
+            },
+          },
         });
 
         if (!course) {
-          course = await this.prisma.course.create({
-            data: {
+          course = await this.prisma.course.findFirst({
+            where: {
               course_code: record.course_code,
-              course_name: record.course_name,
               credits_unit: record.credits_unit,
-              study_format: record.study_format || 'offline',
             },
           });
+        }
+
+        if (!course) {
+          course = await this.prisma.course.findFirst({
+            where: { course_code: record.course_code },
+          });
+        }
+
+        if (!course) {
+          throw new BadRequestException(
+            `Course not found for code '${record.course_code}'${studyFormat ? ` with format '${studyFormat}'` : ''}. Please ensure the course exists in the catalog.`,
+          );
         }
 
         // Create or update student course record
@@ -102,7 +155,10 @@ export class TranscriptUploadService {
           },
           update: {
             term_id: academicTerm.term_id,
-            status: record.raw_score !== undefined && record.raw_score !== null ? 'completed' : 'planned',
+            status:
+              record.raw_score !== undefined && record.raw_score !== null
+                ? 'completed'
+                : 'planned',
             raw_score: record.raw_score,
             converted_score: record.converted_score,
             converted_numeric_score: record.converted_numeric_score,
@@ -111,7 +167,10 @@ export class TranscriptUploadService {
             student_id: studentId,
             course_id: course.course_id,
             term_id: academicTerm.term_id,
-            status: record.raw_score !== undefined && record.raw_score !== null ? 'completed' : 'planned',
+            status:
+              record.raw_score !== undefined && record.raw_score !== null
+                ? 'completed'
+                : 'planned',
             raw_score: record.raw_score,
             converted_score: record.converted_score,
             converted_numeric_score: record.converted_numeric_score,
@@ -119,6 +178,7 @@ export class TranscriptUploadService {
         });
 
         successfulRecords++;
+        touchedStudents.add(studentId);
       } catch (error) {
         failedRecords++;
         errors.push({
@@ -128,11 +188,26 @@ export class TranscriptUploadService {
       }
     }
 
+    if (touchedStudents.size > 0) {
+      for (const id of touchedStudents) {
+        this.cache.clearByStudent(id);
+      }
+    }
+
+    // Trigger prediction if upload was successful
+    if (successfulRecords > 0 && studentCodes.length > 0) {
+      // Run prediction asynchronously (don't block response)
+      this.triggerPredictionsForStudents(studentCodes).catch((err) => {
+        this.logger.error('Failed to trigger predictions:', err);
+      });
+    }
+
     return {
       success: failedRecords === 0,
-      message: failedRecords === 0 
-        ? 'All records uploaded successfully' 
-        : `Uploaded ${successfulRecords} records, ${failedRecords} failed`,
+      message:
+        failedRecords === 0
+          ? 'All records uploaded successfully'
+          : `Uploaded ${successfulRecords} records, ${failedRecords} failed`,
       data: {
         totalRecords: records.length,
         successfulRecords,
@@ -143,9 +218,39 @@ export class TranscriptUploadService {
   }
 
   /**
-   * Lấy transcript của student theo student_id
+   * Trigger predictions for all uploaded students
    */
-  async getStudentTranscript(studentId: number): Promise<StudentTranscriptResponse> {
+  private async triggerPredictionsForStudents(
+    studentCodes: string[],
+  ): Promise<void> {
+    this.logger.log(
+      `Triggering predictions for ${studentCodes.length} students...`,
+    );
+
+    for (const studentCode of studentCodes) {
+      try {
+        await this.predictionService.triggerPredictionAfterUpload(studentCode);
+      } catch (error) {
+        this.logger.error(
+          `Failed to predict for student ${studentCode}:`,
+          error.message,
+        );
+        // Continue with other students even if one fails
+      }
+    }
+
+    this.logger.log('Prediction trigger completed for all students');
+  }
+
+  /**
+   * Lấy transcript của student theo student_id
+   * Sử dụng JOIN để lấy thông tin từ Account và Profile
+   * CHỈ TÍNH GPA VỚI CÁC MÔN CÓ ĐIỂM (converted_numeric_score NOT NULL)
+   */
+  async getStudentTranscript(
+    studentId: number,
+  ): Promise<StudentTranscriptResponse> {
+    // JOIN trực tiếp: Student -> Account -> Profile
     const student = await this.prisma.student.findUnique({
       where: { student_id: studentId },
       include: {
@@ -171,7 +276,7 @@ export class TranscriptUploadService {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
 
-    const records = student.courseRecords.map(record => ({
+    const records = student.courseRecords.map((record) => ({
       record_id: record.record_id,
       student_id: record.student_id!,
       course_code: record.course?.course_code || '',
@@ -184,22 +289,37 @@ export class TranscriptUploadService {
       status: record.status || 'planned',
     }));
 
-    // Calculate credits
     const totalCredits = records.reduce((sum, r) => sum + r.credits_unit, 0);
-    const completedCredits = records
-      .filter(r => r.status === 'completed' && r.raw_score !== undefined)
-      .reduce((sum, r) => sum + r.credits_unit, 0);
+    const normalizeCode = (code: string | undefined) =>
+      (code || '').replace(/\s|[-_]/g, '').toUpperCase();
+    const completedCredits = student.courseRecords
+      .filter((r) => r.status === 'completed')
+      .filter((r) => r.course?.study_format !== 'DEM')
+      .filter((r) => normalizeCode(r.course?.course_code) !== 'ES100')
+      .reduce((sum, r) => sum + (r.course?.credits_unit || 0), 0);
 
-    // Calculate GPA (simple average of converted_numeric_score)
+    // Calculate GPA - CHỈ TÍNH CÁC MÔN CÓ ĐIỂM (converted_numeric_score NOT NULL)
     const completedRecordsWithScore = student.courseRecords.filter(
-      r => r.status === 'completed' && r.converted_numeric_score !== null,
+      (r) => r.status === 'completed' && r.converted_numeric_score !== null,
     );
-    const gpa = completedRecordsWithScore.length > 0
-      ? completedRecordsWithScore.reduce(
-          (sum, r) => sum + Number(r.converted_numeric_score),
-          0,
-        ) / completedRecordsWithScore.length
-      : undefined;
+
+    let weightedSum = 0;
+    let totalCreditsForGPA = 0;
+
+    for (const record of completedRecordsWithScore) {
+      const score = Number(record.converted_numeric_score);
+      const credits = record.course?.credits_unit || 0;
+
+      if (credits > 0) {
+        weightedSum += score * credits;
+        totalCreditsForGPA += credits;
+      }
+    }
+
+    const gpa =
+      totalCreditsForGPA > 0
+        ? Number((weightedSum / totalCreditsForGPA).toFixed(2))
+        : undefined;
 
     return {
       studentId: student.student_id,
@@ -210,7 +330,7 @@ export class TranscriptUploadService {
       records,
       totalCredits,
       completedCredits,
-      gpa: gpa ? Number(gpa.toFixed(2)) : undefined,
+      gpa,
     };
   }
 

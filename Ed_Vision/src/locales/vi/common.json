@@ -78,7 +78,11 @@
       "predict": "Dự đoán",
       "plan": "Lập kế hoạch",
       "communicate": "Giao tiếp",
-      "survey": "Khảo sát"
+      "survey": "Khảo sát",
+      "dashboard": "Trang chủ",
+      "bookAppointment": "Đặt lịch hẹn",
+      "studentDetails": "Chi tiết học sinh",
+      "chat": "Trò chuyện"
     },
     "features": {
       "gradeForecasting": {
@@ -107,6 +111,14 @@
         "courseDetail": {
           "title": "Chi tiết Khóa học",
           "description": "Thông tin chi tiết môn học"
+        },
+        "learningSpace": {
+          "title": "Không gian Học tập",
+          "description": "Tài nguyên và tài liệu học tập"
+        },
+        "certificateReview": {
+          "title": "Ôn Luyện Chứng Chỉ",
+          "description": "IELTS, TOEIC, MOS – luyện thi & thi thử"
         }
       },
       "predict": {
@@ -140,7 +152,7 @@
         },
         "appointments": {
           "title": "Lịch hẹn",
-          "description": "Đặt lịch gặp mặt"
+          "description": "Xem và quản lý lịch hẹn"
         }
       },
       "survey": {
@@ -198,5 +210,127 @@
       }
     },
     "copyright": "© {{year}} GradeForecast. Bản quyền thuộc về chúng tôi."
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "newCount": "{{count}} mới",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "noNotifications": "Không có thông báo mới",
+    "viewAllNotifications": "Xem tất cả thông báo",
+    "filters": {
+      "allTypes": "Tất cả loại",
+      "allPriorities": "Tất cả mức độ",
+      "allStatuses": "Tất cả trạng thái",
+      "unread": "Chưa đọc",
+      "read": "Đã đọc"
+    },
+    "types": {
+      "examSchedule": "Lịch Thi",
+      "systemUpdate": "Cập Nhật Hệ Thống",
+      "academicWarning": "Cảnh Báo Học Tập",
+      "organizationEvent": "Sự Kiện Tổ Chức",
+      "personalRecognition": "Vinh Danh Cá Nhân",
+      "generalInfo": "Thông Tin Chung"
+    },
+    "priorities": {
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "page": {
+      "unreadSubtitle": "Bạn có {{count}} thông báo chưa đọc",
+      "allReadSubtitle": "Tất cả thông báo đã được đọc"
+    },
+    "empty": {
+      "noneTitle": "Không có thông báo nào",
+      "noneSubtitle": "Các thông báo mới sẽ xuất hiện ở đây"
+    },
+    "detail": {
+      "attachments": "File đính kèm",
+      "sentDate": "Ngày gửi",
+      "selectPrompt": "Chọn một thông báo để xem chi tiết"
+    }
+  },
+  "error": {
+    "user": {
+      "notFound": "Không tìm thấy người dùng",
+      "alreadyExists": "Người dùng đã tồn tại",
+      "invalidCredentials": "Thông tin đăng nhập không hợp lệ",
+      "unauthorized": "Truy cập không được phép",
+      "forbidden": "Bị cấm truy cập"
+    },
+    "auth": {
+      "invalidPassword": "Mật khẩu không hợp lệ",
+      "invalidToken": "Token không hợp lệ",
+      "tokenExpired": "Token đã hết hạn",
+      "invalidOtp": "Mã OTP không hợp lệ",
+      "otpExpired": "Mã OTP đã hết hạn"
+    },
+    "validation": {
+      "required": "Trường này là bắt buộc",
+      "invalidEmail": "Định dạng email không hợp lệ",
+      "invalidPhone": "Số điện thoại không hợp lệ"
+    },
+    "server": {
+      "internalError": "Lỗi máy chủ nội bộ",
+      "serviceUnavailable": "Dịch vụ không khả dụng",
+      "badRequest": "Yêu cầu không hợp lệ"
+    },
+    "booking": {
+      "notFound": "Không tìm thấy lịch hẹn",
+      "slotUnavailable": "Khung giờ không khả dụng",
+      "alreadyBooked": "Đã đặt lịch cho khung giờ này"
+    },
+    "student": {
+      "notFound": "Không tìm thấy học sinh",
+      "invalidStatus": "Trạng thái học sinh không hợp lệ"
+    },
+    "teacher": {
+      "notFound": "Không tìm thấy giáo viên",
+      "notAvailable": "Giáo viên không khả dụng"
+    }
+  },
+  "student": {
+    "status": {
+      "active": "Đang học",
+      "inactive": "Không hoạt động",
+      "suspended": "Đình chỉ",
+      "graduated": "Đã tốt nghiệp"
+    },
+    "grade": {
+      "excellent": "Xuất sắc",
+      "good": "Giỏi",
+      "average": "Trung bình",
+      "belowAverage": "Yếu",
+      "poor": "Kém"
+    }
+  },
+  "teacher": {
+    "status": {
+      "active": "Đang hoạt động",
+      "inactive": "Không hoạt động",
+      "onLeave": "Đang nghỉ phép"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Chờ xử lý",
+      "confirmed": "Đã xác nhận",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy",
+      "canceled": "Đã hủy",
+      "rejected": "Từ chối"
+    },
+    "type": {
+      "consultation": "Tư vấn",
+      "appointment": "Cuộc hẹn",
+      "meeting": "Họp"
+    }
+  },
+  "role": {
+    "admin": "Quản trị viên",
+    "teacher": "Giáo viên",
+    "student": "Học sinh",
+    "parent": "Phụ huynh"
   }
 }

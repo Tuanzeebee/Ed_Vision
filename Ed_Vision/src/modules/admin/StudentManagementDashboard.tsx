@@ -1,7 +1,8 @@
 import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { studentService, type StudentOnlineStats } from "@/services/api/studentService";
+import dashboardStatsService, { type LearningDashboardSummaryResponse } from "@/services/api/dashboardStatsService";
 import { useToast } from "@/lib/useToast";
 import { io, Socket } from "socket.io-client";
 import {
@@ -47,6 +48,31 @@ export default function StudentManagementDashboard() {
     totalCount: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [learningStats, setLearningStats] = useState<LearningDashboardSummaryResponse | null>(null);
+  const [isLoadingLearning, setIsLoadingLearning] = useState(true);
+  const [totalStudents, setTotalStudents] = useState<number>(0);
+  const [topStudentsAll, setTopStudentsAll] = useState<any[]>([]);
+
+  // Tự động lấy năm học và học kỳ hiện tại
+  const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    if (currentMonth >= 7) { // từ tháng 8 trở đi
+      return `${currentYear}-${currentYear + 1}`;
+    } else {
+      return `${currentYear - 1}-${currentYear}`;
+    }
+  };
+
+  const getCurrentSemester = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    // Kỳ 1: tháng 8-12, Kỳ 2: tháng 1-5, Kỳ hè: tháng 6-7
+    if (currentMonth >= 7 && currentMonth <= 11) return "Kỳ 1";
+    if (currentMonth >= 0 && currentMonth <= 4) return "Kỳ 2";
+    return "Kỳ hè";
+  };
 
   // Fetch online stats on mount and refresh every 30 seconds
   useEffect(() => {
@@ -96,66 +122,44 @@ export default function StudentManagementDashboard() {
     };
   }, [showToast]);
 
-  // Dữ liệu mẫu cho biểu đồ sinh viên theo khoa
-  const facultyData = {
-    labels: ['CNTT', 'Công Nghệ', 'Y-Dược', 'Kinh tế', 'Ngoại ngữ', 'Luật', 'Kỹ thuật'],
-    datasets: [
-      {
-        label: 'Số lượng sinh viên',
-        data: [3245, 2876, 2654, 2398, 1876, 1654, 1543],
-        backgroundColor: '#3B82F6',
-        borderColor: '#1D4ED8',
-        borderWidth: 1,
-        borderRadius: 4,
-      },
-    ],
-  };
+  // Fetch learning stats (sinh viên theo trường, At-Risk, Top students)
+  useEffect(() => {
+    const fetchLearningStats = async () => {
+      setIsLoadingLearning(true);
+      try {
+        // Lấy tổng số sinh viên TOÀN HỆ THỐNG (không filter)
+        const overviewStats = await dashboardStatsService.getDashboardStats({
+          timeFilter: 'tất-cả',
+        });
+        setTotalStudents(overviewStats.current.students);
 
-  // Dữ liệu mẫu cho biểu đồ sinh viên At-Risk
-  const atRiskData = {
-    labels: ['CNTT', 'Công Nghệ', 'Y-Dược', 'Kinh tế', 'Ngoại ngữ', 'Luật', 'Kỹ thuật'],
-    datasets: [
-      {
-        label: 'Tỉ lệ At-Risk (%)',
-        data: [12.5, 15.2, 8.7, 18.3, 14.6, 16.8, 13.9],
-        backgroundColor: '#F59E0B',
-        borderColor: '#D97706',
-        borderWidth: 1,
-        borderRadius: 4,
-      },
-    ],
-  };
+        // Lấy TOP 10 SINH VIÊN GPA CAO NHẤT TOÀN HỆ THỐNG (không filter trường/kỳ)
+        const topStudentsResponse = await dashboardStatsService.getTopStudents({
+          // Không truyền filter gì để lấy toàn bộ
+        });
+        setTopStudentsAll(topStudentsResponse.students || []);
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
+        // Lấy dữ liệu học tập theo kỳ hiện tại (cho At-Risk)
+        const params = {
+          semester: getCurrentSemester(),
+          academicYear: getCurrentAcademicYear(),
+        };
+        const stats = await dashboardStatsService.getLearningDashboardSummary(params);
+        setLearningStats(stats);
+      } catch (error) {
+        console.error('Failed to fetch learning stats:', error);
+        showToast('Không thể tải thống kê học tập', 'error');
+      } finally {
+        setIsLoadingLearning(false);
       }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.1)'
-        },
-        ticks: {
-          font: { size: 12 },
-          color: '#6b7280'
-        }
-      },
-      x: {
-        grid: {
-          display: false
-        },
-        ticks: {
-          font: { size: 12 },
-          color: '#6b7280'
-        }
-      }
-    }
-  };
+    };
+    fetchLearningStats();
+  }, [showToast]);
+
+  // Danh sách top 10 sinh viên GPA cao nhất toàn hệ thống
+  const topStudents = useMemo(() => {
+    return topStudentsAll.slice(0, 10); // Top 10
+  }, [topStudentsAll]);
 
   const handleViewStudentList = () => {
     navigate('/admin/students/list');
@@ -180,84 +184,109 @@ export default function StudentManagementDashboard() {
         </div>
 
         {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700 mb-1">Sinh viên đang trực tuyến</p>
-                  {isLoadingStats ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
-                      <p className="text-sm text-green-600">Đang tải...</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-3xl font-bold text-green-600">{onlineStats.onlineCount}</p>
-                      <p className="text-sm text-green-600 mt-1">trên tổng {onlineStats.totalCount.toLocaleString()}</p>
-                    </>
-                  )}
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-users text-green-600 text-xl"></i>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-700 mb-1">Sinh viên bị cảnh báo</p>
-                  <p className="text-3xl font-bold text-orange-600">81</p>
-                  <p className="text-sm text-red-600 font-medium mt-1">
-                    <i className="fas fa-arrow-up mr-1"></i>
-                    +55 sinh viên so với tháng trước
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Tổng số sinh viên */}
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700 mb-1">Sinh viên cần hỗ trợ</p>
-                  <p className="text-3xl font-bold text-blue-600">36</p>
-                  <p className="text-sm text-green-600 font-medium mt-1">
-                    <i className="fas fa-arrow-down mr-1"></i>
-                    -5 sinh viên so với tháng trước
-                  </p>
+                  <p className="text-sm font-medium text-blue-700 mb-1">Tổng số sinh viên</p>
+                  {isLoadingLearning ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {totalStudents?.toLocaleString() ?? 0}
+                      </p>
+                      <p className="text-sm text-blue-600 mt-1">sinh viên trong hệ thống</p>
+                    </>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-hands-helping text-blue-600 text-xl"></i>
+                  <i className="fas fa-user-graduate text-blue-600 text-xl"></i>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
+          {/* Sinh viên đang trực tuyến */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Số lượng sinh viên theo từng Trường</h3>
-              <div className="h-80">
-                <Bar data={facultyData} options={chartOptions} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-700 mb-1">Đang trực tuyến</p>
+                  {isLoadingStats ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-green-600">{onlineStats.onlineCount}</p>
+                      <p className="text-sm text-green-600 mt-1">
+                        {onlineStats.totalCount > 0 
+                          ? `${((onlineStats.onlineCount / onlineStats.totalCount) * 100).toFixed(1)}% đang hoạt động`
+                          : 'chưa có dữ liệu'}
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-circle text-green-600 text-xl animate-pulse"></i>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Sinh viên At-Risk */}
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Tỉ lệ sinh viên At-Risk (%)</h3>
-              <div className="h-80">
-                <Bar data={atRiskData} options={chartOptions} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700 mb-1">Sinh viên At-Risk</p>
+                  {isLoadingLearning ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-red-600">
+                        {learningStats?.current?.atRisk ?? 0}
+                      </p>
+                      <p className="text-sm text-red-600 mt-1">GPA &lt; 2.0</p>
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sinh viên cần hỗ trợ */}
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-700 mb-1">Cần hỗ trợ</p>
+                  {isLoadingLearning ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-orange-600">
+                        {(learningStats?.current?.warning ?? 0) + (learningStats?.current?.atRisk ?? 0)}
+                      </p>
+                      <p className="text-sm text-orange-600 mt-1">GPA &lt; 2.5</p>
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-hands-helping text-orange-600 text-xl"></i>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -268,73 +297,72 @@ export default function StudentManagementDashboard() {
           {/* Top Performing Students */}
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bảng xếp hạng sinh viên hàng đầu</h3>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-sm">1</div>
-                  <img src="/src/assets/parent/avatarJohnSmith.png" alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Nguyễn Văn An</p>
-                    <p className="text-sm text-gray-600">CNTT - K19</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">9.8</p>
-                    <p className="text-xs text-gray-500">GPA</p>
-                  </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Bảng xếp hạng Top 10 sinh viên GPA cao nhất
+                <span className="text-sm font-normal text-gray-600 ml-2">(Toàn hệ thống)</span>
+              </h3>
+              {isLoadingLearning ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold text-sm">2</div>
-                  <img src="/src/assets/parent/avatarJohnSmith.png" alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Trần Thị Bình</p>
-                    <p className="text-sm text-gray-600">Y-Dược - K18</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">9.7</p>
-                    <p className="text-xs text-gray-500">GPA</p>
-                  </div>
+              ) : topStudents.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <i className="fas fa-inbox text-4xl mb-2"></i>
+                  <p>Chưa có dữ liệu xếp hạng</p>
                 </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm">3</div>
-                  <img src="/src/assets/parent/avatarJohnSmith.png" alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Lê Văn Cường</p>
-                    <p className="text-sm text-gray-600">Kinh tế - K19</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">9.6</p>
-                    <p className="text-xs text-gray-500">GPA</p>
-                  </div>
+              ) : (
+                <div className="space-y-3">
+                  {topStudents.map((student, index) => {
+                    // Top 3 có màu đặc biệt
+                    const bgColors = [
+                      'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300',
+                      'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-300',
+                      'bg-gradient-to-r from-orange-50 to-orange-100 border-orange-300',
+                      'bg-white border-gray-200',
+                      'bg-white border-gray-200',
+                      'bg-white border-gray-200',
+                      'bg-white border-gray-200',
+                      'bg-white border-gray-200',
+                      'bg-white border-gray-200',
+                      'bg-white border-gray-200',
+                    ];
+                    const badgeColors = [
+                      'bg-gradient-to-br from-yellow-400 to-yellow-600',
+                      'bg-gradient-to-br from-gray-300 to-gray-500',
+                      'bg-gradient-to-br from-orange-400 to-orange-600',
+                      'bg-blue-500',
+                      'bg-blue-500',
+                      'bg-blue-500',
+                      'bg-blue-500',
+                      'bg-blue-500',
+                      'bg-blue-500',
+                      'bg-blue-500',
+                    ];
+                    
+                    return (
+                      <div key={student.id} className={`flex items-center space-x-3 p-3 rounded-lg border ${bgColors[index]} transition-all hover:shadow-md`}>
+                        <div className={`w-10 h-10 ${badgeColors[index]} rounded-full flex items-center justify-center text-white font-bold shadow-lg`}>
+                          {index + 1}
+                        </div>
+                        <img 
+                          src="/src/assets/parent/avatarJohnSmith.png" 
+                          alt="Avatar" 
+                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" 
+                        />
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{student.name}</p>
+                          <p className="text-sm text-gray-600">{student.school}</p>
+                          <p className="text-xs text-gray-500">{student.major} - {student.class}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600 text-lg">{student.gpa.toFixed(2)}</p>
+                          <p className="text-xs text-gray-500">GPA</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold text-sm">4</div>
-                  <img src="/src/assets/parent/avatarJohnSmith.png" alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Phạm Thị Diệu</p>
-                    <p className="text-sm text-gray-600">Ngoại ngữ - K18</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">9.5</p>
-                    <p className="text-xs text-gray-500">GPA</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold text-sm">5</div>
-                  <img src="/src/assets/parent/avatarJohnSmith.png" alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Hoàng Văn Em</p>
-                    <p className="text-sm text-gray-600">Luật - K19</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">9.4</p>
-                    <p className="text-xs text-gray-500">GPA</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

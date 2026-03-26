@@ -10,14 +10,17 @@ import {
 } from '@/stores/notificationStore';
 import type { SystemNotification } from '@/stores/notificationStore';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { useTranslation } from 'react-i18next';
 
 interface NotificationDropdownProps {
   isAdminMode?: boolean;
   isTeacherMode?: boolean;
+  isParentMode?: boolean;
 }
 
-export default function NotificationDropdown({ isAdminMode, isTeacherMode }: NotificationDropdownProps) {
+export default function NotificationDropdown({ isAdminMode, isTeacherMode, isParentMode }: NotificationDropdownProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -74,6 +77,8 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
       navigate('/admin/my-notifications');
     } else if (isTeacherMode) {
       navigate('/teacher/notifications');
+    } else if (isParentMode) {
+      navigate('/parent/notifications');
     } else {
       navigate('/student/notifications');
     }
@@ -85,6 +90,8 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
       navigate('/admin/my-notifications');
     } else if (isTeacherMode) {
       navigate('/teacher/notifications');
+    } else if (isParentMode) {
+      navigate('/parent/notifications');
     } else {
       navigate('/student/notifications');
     }
@@ -143,8 +150,8 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
       {/* Bell Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none"
-        aria-label="Thông báo"
+        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
+        aria-label={t('notifications.title')}
       >
         <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -164,10 +171,10 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
           {/* Header with gradient */}
           <div className="bg-purple-600 px-6 py-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Thông báo</h3>
+              <h3 className="text-lg font-bold text-white">{t('notifications.title')}</h3>
               {unreadCount > 0 && (
                 <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">
-                  {unreadCount} mới
+                  {t('notifications.newCount', { count: unreadCount })}
                 </span>
               )}
             </div>
@@ -178,12 +185,12 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
             <div className="px-6 py-2 bg-gray-50 border-b border-gray-200">
               <button
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Đánh dấu tất cả đã đọc
+                {t('notifications.markAllAsRead')}
               </button>
             </div>
           )}
@@ -197,7 +204,7 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                 </div>
-                <p className="text-sm text-gray-500">Không có thông báo mới</p>
+                <p className="text-sm text-gray-500">{t('notifications.noNotifications')}</p>
               </div>
             ) : (
               <div>
@@ -251,9 +258,9 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode }: Not
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <button
               onClick={handleViewAll}
-              className="w-full text-center text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+              className="w-full text-center text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors cursor-pointer"
             >
-              Xem tất cả thông báo
+              {t('notifications.viewAllNotifications')}
               <i className="fas fa-arrow-right ml-2"></i>
             </button>
           </div>

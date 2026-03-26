@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -9,6 +10,7 @@ import { AccountManagementModule } from './admin_be/account-management/account-m
 import { StudentManagementModule } from './admin_be/student-management/student-management.module';
 import { InstructorManagementModule } from './admin_be/instructor-management/instructor-management.module';
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
+import { QuestionManagementModule } from './admin_be/question-management/question-management.module';
 import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
 import { NotificationModule } from './admin_be/notification/notification.module';
 import { BookingModule } from './booking/booking.module';
@@ -19,8 +21,30 @@ import { StudentBeModule } from './student_be/student-be.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './mongodb/database.module';
 import { ProfileModule } from './profile/profile.module';
+import { TeacherChatModule } from './teacher_be/chat/teacher-chat.module';
+import { StudentChatModule } from './student_be/chat/student-chat.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { ChatModule } from './mongodb/chat.module';
+import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
+import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
+import * as path from 'path';
+import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
+import { TtsModule } from './tts/tts.module';
+import { SttModule } from './stt/stt.module';
+
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
+    // i18n Configuration
+    I18nModule.forRoot({
+      fallbackLanguage: 'vi',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [AcceptLanguageResolver],
+    }),
     PrismaModule,
     InstructorAvailabilityModule,
     BookingModule,
@@ -31,16 +55,27 @@ import { ProfileModule } from './profile/profile.module';
     StudentManagementModule,
     InstructorManagementModule,
     SurveyManagementModule,
+    QuestionManagementModule,
     StatisticsOverviewModule,
     NotificationModule,
     ClassManagementModule,
     SurveysModule,
     TeacherBeModule,
     StudentBeModule,
-    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    ChatModule,
+    TeacherChatModule,
+    StudentChatModule,
+    AttendanceModule,
+    YouTubeMusicModule,
+    TtsModule,
+    SttModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ReminderSchedulerService],
 })
-export class AppModule { }
+export class AppModule {
+  constructor(private readonly reminderScheduler: ReminderSchedulerService) {
+    // Inject to ensure instantiation
+  }
+}

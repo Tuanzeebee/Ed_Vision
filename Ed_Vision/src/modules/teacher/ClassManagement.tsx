@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from "@/components/ui/teacher/teacher_card"
 import { Badge } from "@/components/ui/teacher/teacher_badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/teacher/teacher_table"
@@ -26,6 +27,7 @@ import {
 } from "lucide-react"
 
 export default function ClassManagement() {
+    const { t } = useTranslation('teacher')
     const [selectedClass, setSelectedClass] = useState<string | null>(null)
     const [showStudentDetail, setShowStudentDetail] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
@@ -41,6 +43,7 @@ export default function ClassManagement() {
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [uploadFile, setUploadFile] = useState<File | null>(null)
     const [uploadClassCode, setUploadClassCode] = useState('')
+    const [availableClasses, setAvailableClasses] = useState<any[]>([])
 
     // State for API data
     const [classData, setClassData] = useState<any[]>([])
@@ -66,6 +69,13 @@ export default function ClassManagement() {
         }
     }, [selectedClass])
 
+    // Fetch available classes when upload modal opens
+    useEffect(() => {
+        if (showUploadModal && availableClasses.length === 0) {
+            fetchAvailableClasses()
+        }
+    }, [showUploadModal])
+
     const fetchClasses = async () => {
         try {
             setLoading(true)
@@ -90,12 +100,48 @@ export default function ClassManagement() {
     const fetchStudents = async (classCode: string) => {
         try {
             setLoading(true)
-            const data = await classManagementAPI.getStudentsByClass(classCode)
-            setStudentsData(data)
+            const [students, gpaMetrics] = await Promise.all([
+                classManagementAPI.getStudentsByClass(classCode),
+                classManagementAPI.getGpaMetricsByClass(classCode)
+            ])
+            const metricMap = new Map<string, { currentGPA: number; predictedGPA: number }>()
+            if (gpaMetrics?.metrics && Array.isArray(gpaMetrics.metrics)) {
+                for (const m of gpaMetrics.metrics) {
+                    metricMap.set(String(m.student_code), {
+                        currentGPA: Number(m.currentGPA ?? 0),
+                        predictedGPA: Number(m.predictedGPA ?? 0),
+                    })
+                }
+            }
+            const merged = students.map((s: any) => {
+                const m = metricMap.get(String(s.masv))
+                if (m) {
+                    const cur = Number(m.currentGPA ?? 0)
+                    const pred = Number(m.predictedGPA ?? 0)
+                    return {
+                        ...s,
+                        gpa: cur > 0 ? Number(cur.toFixed(2)) : null,
+                        predictedGpa: pred > 0 ? Number(pred.toFixed(2)) : null,
+                    }
+                }
+                return s
+            })
+            setStudentsData(merged)
         } catch (error) {
             console.error('Error fetching students:', error)
+            toast.error(t('classManagement.loadStudentsError'))
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchAvailableClasses = async () => {
+        try {
+            const data = await classManagementAPI.getClasses()
+            setAvailableClasses(data)
+        } catch (error) {
+            console.error('Error fetching available classes:', error)
+            toast.error(t('classManagement.loadError'))
         }
     }
 
@@ -118,10 +164,10 @@ export default function ClassManagement() {
                 await fetchStudents(selectedClass)
             }
             
-            toast.success('Data refreshed successfully!')
+            toast.success(t('classManagement.refreshSuccess'))
         } catch (error) {
             console.error('Error refreshing:', error)
-            toast.error('Failed to refresh data')
+            toast.error(t('classManagement.refreshError'))
         } finally {
             setLoading(false)
         }
@@ -136,7 +182,7 @@ export default function ClassManagement() {
 
     const handleUploadSubmit = async () => {
         if (!uploadFile || !uploadClassCode) {
-            toast.error('Please select file and enter class code')
+            toast.error(t('classManagement.selectFileFirst'))
             return
         }
 
@@ -151,7 +197,7 @@ export default function ClassManagement() {
             console.log('Upload result:', result)
 
             if (result.success) {
-                toast.success(result.message || 'Upload successful!')
+                toast.success(result.message || t('classManagement.uploadSuccess', { count: result.data?.length || 0 }))
                 // Auto close modal after 1.5 seconds and refresh
                 setTimeout(() => {
                     resetUploadModal()
@@ -159,7 +205,7 @@ export default function ClassManagement() {
                 await fetchClasses()
                 await fetchStatistics()
             } else {
-                toast.error(result.message || 'Upload failed')
+                toast.error(result.message || t('classManagement.uploadError'))
             }
         } catch (error: any) {
             console.error('Upload error:', error)
@@ -221,10 +267,10 @@ export default function ClassManagement() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-3xl font-bold mb-2">
-                            {showStudentDetail && selectedClass ? `Chi tiết sinh viên - Lớp ${selectedClass}` : 'Quản lý Lớp Cố Vấn'}
+                            {showStudentDetail && selectedClass ? t('classManagement.studentDetailTitle', { class: selectedClass }) : t('classManagement.title')}
                         </h2>
                         <p className="text-green-100">
-                            {showStudentDetail && selectedClass ? 'Xem thông tin chi tiết từng sinh viên trong lớp' : 'Quản lý và theo dõi các lớp học được phân công'}
+                            {showStudentDetail && selectedClass ? t('classManagement.studentDetailSubtitle') : t('classManagement.subtitle')}
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -237,14 +283,14 @@ export default function ClassManagement() {
                                     title="Refresh data and clear cache"
                                 >
                                     <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                                    <span>Refresh</span>
+                                    <span>{t('classManagement.refresh')}</span>
                                 </button>
                                 <button
                                     onClick={() => setShowUploadModal(true)}
                                     className="bg-white text-green-600 hover:bg-green-50 px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all shadow-md hover:shadow-lg font-semibold"
                                 >
                                     <Upload className="w-5 h-5" />
-                                    <span>Upload danh sách lớp</span>
+                                    <span>{t('classManagement.uploadClassList')}</span>
                                 </button>
                             </>
                         )}
@@ -254,7 +300,7 @@ export default function ClassManagement() {
                                 className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30"
                             >
                                 <X className="w-4 h-4" />
-                                <span>Quay lại</span>
+                                <span>{t('classManagement.back')}</span>
                             </button>
                         )}
                     </div>
@@ -263,74 +309,15 @@ export default function ClassManagement() {
 
             {!showStudentDetail ? (
                 <>
-                    {/* Statistics Section */}
-                    <div className="grid grid-cols-4 gap-6 mb-6">
-                        <Card>
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-600">Tổng số lớp</p>
-                                        <p className="text-2xl font-bold text-gray-900">{totalClasses}</p>
-                                    </div>
-                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <BookOpen className="w-6 h-6 text-blue-600" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-600">Tổng sinh viên</p>
-                                        <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
-                                    </div>
-                                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                        <Users className="w-6 h-6 text-green-600" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-600">Lớp đang hoạt động</p>
-                                        <p className="text-2xl font-bold text-gray-900">{activeClasses}</p>
-                                    </div>
-                                    <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                        <GraduationCap className="w-6 h-6 text-yellow-600" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-600">Sinh viên At-Risk</p>
-                                        <p className="text-2xl font-bold text-red-600">{totalAtRisk}</p>
-                                    </div>
-                                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                                        <AlertTriangle className="w-6 h-6 text-red-600" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
                     {/* Class Cards Grid */}
                     <div className="grid grid-cols-3 gap-6">
                         {loading ? (
                             <div className="col-span-3 text-center py-12">
-                                <p className="text-gray-500">Đang tải dữ liệu...</p>
+                                <p className="text-gray-500">{t('classManagement.loading')}</p>
                             </div>
                         ) : classData.length === 0 ? (
                             <div className="col-span-3 text-center py-12">
-                                <p className="text-gray-500">Không có dữ liệu lớp học</p>
+                                <p className="text-gray-500">{t('classManagement.noData')}</p>
                             </div>
                         ) : (
                             classData.map((classItem) => {
@@ -352,7 +339,7 @@ export default function ClassManagement() {
                                                             : "bg-yellow-100 text-yellow-800"
                                                     }
                                                 >
-                                                    {classItem.status}
+                                                    {classItem.status === "Đang hoạt động" ? t('classManagement.active') : classItem.status}
                                                 </Badge>
                                             </div>
 
@@ -365,17 +352,17 @@ export default function ClassManagement() {
                                             {/* Details */}
                                             <div className="space-y-2 mb-4">
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">Sĩ số:</span>
-                                                    <span className="text-sm text-slate-900">{classItem.students} sinh viên</span>
+                                                    <span className="text-sm text-gray-600">{t('classManagement.students')}:</span>
+                                                    <span className="text-sm text-slate-900">{classItem.students} {t('classManagement.students').toLowerCase()}</span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-sm text-gray-600">GVCV:</span>
                                                     <span className="text-sm text-slate-900">{classItem.teacher}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">At-Risk:</span>
+                                                    <span className="text-sm text-gray-600">{t('classManagement.atRisk')}:</span>
                                                     <span className={`text-sm ${classItem.atRisk > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                        {classItem.atRisk} sinh viên
+                                                        {classItem.atRisk} {t('classManagement.students').toLowerCase()}
                                                     </span>
                                                 </div>
                                             </div>
@@ -393,7 +380,7 @@ export default function ClassManagement() {
                                                         setShowStudentDetail(true)
                                                     }}
                                                 >
-                                                    Xem chi tiết
+                                                    {t('classManagement.viewDetails')}
                                                     <ChevronRight className="w-4 h-4 ml-1" />
                                                 </button>
                                             </div>
@@ -419,7 +406,7 @@ export default function ClassManagement() {
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                                 <input
                                                     type="text"
-                                                    placeholder="Tìm kiếm theo tên, mã SV..."
+                                                    placeholder={t('classManagement.searchPlaceholder')}
                                                     value={searchTerm}
                                                     onChange={(e) => handleSearchChange(e.target.value)}
                                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -433,11 +420,10 @@ export default function ClassManagement() {
                                                     onChange={(e) => handleFilterChange(e.target.value)}
                                                     className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
-                                                    <option value="all">Tất cả mức độ</option>
-                                                    <option value="None">Không có rủi ro</option>
-                                                    <option value="Monitor">Cần theo dõi</option>
-                                                    <option value="Medium">Nguy cơ trung bình</option>
-                                                    <option value="High">Nguy cơ cao</option>
+                                                    <option value="all">{t('classManagement.allRiskLevels')}</option>
+                                                    <option value="None">{t('classManagement.normal')}</option>
+                                                    <option value="Monitor">{t('classManagement.needMonitoring')}</option>
+                                                    <option value="High">{t('classManagement.highRisk')}</option>
                                                 </select>
                                                 <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                                             </div>
@@ -487,12 +473,12 @@ export default function ClassManagement() {
                                                 <TableRow className="bg-gray-50">
                                                     <TableHead className="w-16 text-center">STT</TableHead>
                                                     <TableHead className="w-20 text-center">Avatar</TableHead>
-                                                    <TableHead className="min-w-[200px]">Thông tin sinh viên</TableHead>
-                                                    <TableHead className="w-32 text-center">GPA</TableHead>
+                                                    <TableHead className="min-w-[200px]">{t('classManagement.studentName')}</TableHead>
+                                                    <TableHead className="w-32 text-center">{t('classManagement.gpa')}</TableHead>
                                                     <TableHead className="w-32 text-center">GPA Dự đoán</TableHead>
                                                     <TableHead className="w-32 text-center">Điểm danh</TableHead>
-                                                    <TableHead className="w-36 text-center">Mức độ rủi ro</TableHead>
-                                                    <TableHead className="w-32 text-center">Hành động</TableHead>
+                                                    <TableHead className="w-36 text-center">{t('classManagement.riskLevel')}</TableHead>
+                                                    <TableHead className="w-32 text-center">{t('classManagement.actions')}</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -642,7 +628,7 @@ export default function ClassManagement() {
                                             <div className="text-sm text-gray-500">
                                                 {(() => {
                                                     const filteredStudents = getFilteredStudents()
-                                                    return `Hiển thị ${Math.min(currentPage * itemsPerPage, filteredStudents.length)} / ${filteredStudents.length} sinh viên`
+                                                    return `${t('classManagement.showing')} ${Math.min(currentPage * itemsPerPage, filteredStudents.length)} / ${filteredStudents.length} ${t('classManagement.students').toLowerCase()}`
                                                 })()}
                                             </div>
 
@@ -709,7 +695,7 @@ export default function ClassManagement() {
                         </div>
                     ) : (
                         <div className="text-center py-8">
-                            <p className="text-gray-500">Không có dữ liệu sinh viên cho lớp này</p>
+                            <p className="text-gray-500">{t('classManagement.noStudentsYet')}</p>
                         </div>
                     )}
                 </div>
@@ -927,7 +913,7 @@ export default function ClassManagement() {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
                                     <Upload className="w-10 h-10 bg-white/20 rounded-lg p-2" />
-                                    <h3 className="text-xl font-bold">Upload Class List</h3>
+                                    <h3 className="text-xl font-bold">{t('classManagement.uploadModalTitle')}</h3>
                                 </div>
                                 <button onClick={resetUploadModal} className="text-white hover:text-gray-200">
                                     <X className="w-6 h-6" />
@@ -936,19 +922,32 @@ export default function ClassManagement() {
                         </div>
                         
                         <div className="p-6 space-y-4">
-                            {/* Class Code Input */}
+                            {/* Class Selection Dropdown */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Class Code <span className="text-red-500">*</span>
+                                    {t('classManagement.selectClass')} <span className="text-red-500">*</span>
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={uploadClassCode} 
-                                    onChange={(e) => setUploadClassCode(e.target.value.toUpperCase())} 
-                                    placeholder="e.g. CMU-TPM7" 
-                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
-                                    required 
-                                />
+                                <div className="relative">
+                                    <select
+                                        value={uploadClassCode}
+                                        onChange={(e) => setUploadClassCode(e.target.value)}
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition-colors appearance-none bg-white"
+                                        required
+                                    >
+                                        <option value="">-- {t('classManagement.selectClass')} --</option>
+                                        {availableClasses.map((cls) => (
+                                            <option key={cls.id} value={cls.class_code}>
+                                                {cls.class_code} - {cls.major} ({cls.students} students)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                                </div>
+                                {uploadClassCode && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Selected: <span className="font-semibold text-green-600">{uploadClassCode}</span>
+                                    </p>
+                                )}
                             </div>
 
                             {/* File Upload Dropzone */}
@@ -982,7 +981,7 @@ export default function ClassManagement() {
                                     ) : (
                                         <div className="text-center">
                                             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                                            <p className="text-gray-600 font-medium">Click to select file</p>
+                                            <p className="text-gray-600 font-medium">{t('classManagement.chooseFile')}</p>
                                             <p className="text-sm text-gray-400 mt-1">Supports Excel (.xlsx, .xls) or CSV</p>
                                         </div>
                                     )}
@@ -1002,10 +1001,10 @@ export default function ClassManagement() {
                                 {loading ? (
                                     <span className="flex items-center justify-center gap-2">
                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        Uploading...
+                                        {t('classManagement.loading')}
                                     </span>
                                 ) : (
-                                    'Upload Class List'
+                                    t('classManagement.uploadFile')
                                 )}
                             </button>
                         </div>

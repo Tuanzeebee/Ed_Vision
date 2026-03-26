@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import { useEffect, useState } from "react";
 import { buildUrl } from "@/services/api/config";
 import { TokenManager } from "@/lib/tokenManager";
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   // Add any specific props if needed
@@ -36,6 +37,7 @@ type ApiParentLink = {
 };
 
 export default function StudentProfilePage({}: Props) {
+  const { t } = useTranslation('profile');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +55,7 @@ export default function StudentProfilePage({}: Props) {
 
       const token = TokenManager.getToken();
       if (!token) {
-        throw new Error("Vui lòng đăng nhập để xem hồ sơ");
+        throw new Error(t('common.loginRequiredProfile'));
       }
 
       const res = await fetch(endpoint, {
@@ -64,16 +66,15 @@ export default function StudentProfilePage({}: Props) {
         },
       });
       if (!res.ok) {
-        throw new Error(`Không thể tải dữ liệu hồ sơ (status: ${res.status})`);
+        throw new Error(t('common.loadError', { status: res.status }));
       }
 
       const data = await res.json().catch(() => ({}));
       
-      console.log('API Response:', data);
       setStudent(data ?? null);
       setParentLinks(data?.parentLinks ?? []);
     } catch (err: any) {
-      setError(err?.message ?? "Lỗi khi tải dữ liệu");
+      setError(err?.message ?? t('common.dataLoadError'));
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,7 @@ export default function StudentProfilePage({}: Props) {
         setUploadingAvatar(true);
         const token = TokenManager.getToken();
         if (!token) {
-          alert('Vui lòng đăng nhập');
+          alert(t('common.loginRequired'));
           return;
         }
 
@@ -172,7 +173,7 @@ export default function StudentProfilePage({}: Props) {
         await refetchProfile();
       } catch (error: any) {
         console.error('Error uploading avatar:', error);
-        alert(error?.message || 'Có lỗi xảy ra khi tải ảnh lên');
+        alert(error?.message || t('common.uploadError'));
       } finally {
         setUploadingAvatar(false);
       }
@@ -210,7 +211,6 @@ export default function StudentProfilePage({}: Props) {
 
   // Map API data to component props expected by UserProfile and children
   const profile = (student as any)?.profile || {};
-  console.log('Profile avatar URL:', profile.avatarUrl);
   
   // Convert relative avatar URL to full URL if needed
   const getFullAvatarUrl = (url: string | null | undefined): string => {
@@ -220,11 +220,15 @@ export default function StudentProfilePage({}: Props) {
   };
   
   const mappedUser = {
-    name: profile.fullName || (student as any)?.studentCode || "Người dùng",
+    name: profile.fullName || (student as any)?.studentCode || t('common.user', { defaultValue: 'User' }),
     age: undefined as number | undefined,
     avatar: getFullAvatarUrl(profile.avatarUrl),
     status: ((student as any)?.status as "active" | "inactive") || "active",
-    statusLabel: (student as any)?.status || "Đang học",
+    statusLabel: (student as any)?.status === "active" 
+      ? t('studentAcademic.active') 
+      : (student as any)?.status === "inactive" 
+      ? t('studentAcademic.inactive') 
+      : t('studentAcademic.active'),
     personalInfo: {
       fullName: profile.fullName || "",
       dateOfBirth: formatDate(profile.dateOfBirth),

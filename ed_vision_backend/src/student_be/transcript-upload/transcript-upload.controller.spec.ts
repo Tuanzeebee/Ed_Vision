@@ -38,7 +38,9 @@ describe('TranscriptUploadController', () => {
       ],
     }).compile();
 
-    controller = module.get<TranscriptUploadController>(TranscriptUploadController);
+    controller = module.get<TranscriptUploadController>(
+      TranscriptUploadController,
+    );
     service = module.get<TranscriptUploadService>(TranscriptUploadService);
   });
 
@@ -64,10 +66,17 @@ describe('TranscriptUploadController', () => {
         ],
       };
 
-      mockPrismaService.student.findMany.mockResolvedValue([{ 
+      mockPrismaService.student.findMany.mockResolvedValue([
+        {
+          student_id: 1,
+          student_code: 'SV001',
+        },
+      ]);
+      mockPrismaService.student.findUnique.mockResolvedValue({
         student_id: 1,
-        student_code: 'SV001'
-      }]);
+        student_code: 'SV001',
+      });
+      const mockReq = { user: { account_id: 1 } } as any;
       mockPrismaService.academicTerm.findFirst.mockResolvedValue({
         term_id: 1,
         academic_year: '2023-2024',
@@ -82,7 +91,7 @@ describe('TranscriptUploadController', () => {
         record_id: 1,
       });
 
-      const result = await controller.uploadTranscript(uploadDto);
+      const result = await controller.uploadTranscript(uploadDto, mockReq);
 
       expect(result.success).toBe(true);
       expect(result.data.successfulRecords).toBe(1);
@@ -93,7 +102,7 @@ describe('TranscriptUploadController', () => {
   describe('getStudentTranscript', () => {
     it('should return student transcript', async () => {
       const studentId = 1;
-      
+
       mockPrismaService.student.findUnique.mockResolvedValue({
         student_id: 1,
         student_code: 'SV001',

@@ -14,6 +14,11 @@ enum MeetingType {
   both
 }
 
+enum RecipientRole {
+  booker
+  instructor
+}
+
 model Account {
   account_id         Int              @id @default(autoincrement())
   email              String           @unique @db.VarChar(255)
@@ -35,6 +40,11 @@ model Account {
   createdSurveys     Survey[]         @relation("AccountCreatedSurveys")
   notifications      Notification[]      // In-app notifications delivered to this account
   reminderSchedules  ReminderSchedule[]  // Scheduled reminders targeting this account
+  notificationMastersCreated NotificationMaster[] @relation("NotificationMasterCreator") // Notifications created by this account (admin)
+  notificationRecipients     NotificationRecipient[] // Notifications received by this account
+  deviceFingerprints DeviceFingerprint[] // Device fingerprints for attendance verification
+  approvedAttempts   AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
+  verificationAttempts AttendanceVerificationAttempt[] // All verification attempts by this account
   @@map("Account")
 }
 
@@ -82,6 +92,8 @@ model Student {
   courseRecords      StudentCourseRecord[]
   predictionResults  PredictionResult[]
   surveyFactors      StudentSurveyFactors?
+  attendanceSessions AttendanceSession[]   // Offline attendance sessions for this student
+  certificateEnrollments CertificateEnrollment[] // Certificate band enrollments
 
   @@map("Student")
 }
@@ -101,6 +113,7 @@ model Instructor {
   department                  Department?                  @relation(fields: [department_id], references: [department_id])
   instructorAvailabilityWeeks InstructorAvailabilityWeek[]
   predictionResults           PredictionResult[]
+  attendanceSessions          AttendanceSession[]          // Offline attendance sessions created by this instructor
 
   @@map("Instructor")
 }
@@ -184,7 +197,7 @@ model AcademicTerm {
 
 model Course {
   course_id            Int                   @id @default(autoincrement())
-  course_code          String                @unique @db.VarChar(20)
+  course_code          String                @db.VarChar(20)
   course_name          String                @db.VarChar(255)
   credits_unit         Int?                  @db.SmallInt
   study_format         String?               @default("offline") @db.VarChar(20)
@@ -195,6 +208,7 @@ model Course {
   studentCourseRecords StudentCourseRecord[]
   predictionResults    PredictionResult[]
 
+  @@unique([course_code, study_format])
   @@map("Course")
 }
 
@@ -383,6 +397,7 @@ model Appointment {
   student               Student?             @relation(fields: [student_id], references: [student_id])
   appointmentContact    AppointmentContact?
   reminderSchedules     ReminderSchedule[]
+  attendanceSessions    AttendanceSession[]  // Offline attendance verification sessions (one-to-many)
 
   @@map("Appointment")
 }
@@ -413,26 +428,103 @@ model NotificationTemplate {
 
   notifications Notification[]                     // Back-relation: notifications generated from this template
   reminderSchedules ReminderSchedule[]            // Back-relation: reminder schedules referencing this template by `code`
+  notificationMasters NotificationMaster[]        // Back-relation: master notifications using this template
 
   @@map("NotificationTemplate")
 }
 
-// Rendered notifications delivered to accounts (in-app). These are the final messages
-// after templates + metadata are rendered; they are kept for display/audit purposes.
+// Master notification: 1 row per broadcast (admin gửi 1 thông báo = 1 row)
+model NotificationMaster {
+  id              Int       @id @default(autoincrement())
+  title           String    @db.VarChar(255)
+  body            String
+  type            String?   @db.VarChar(100)   // 'Lịch Thi', 'Cập Nhật Hệ Thống', 'Cuộc Hẹn', etc.
+  priority        String?   @db.VarChar(20)    // 'Cao', 'Trung bình', 'Thấp'
+  target          String?   @db.VarChar(100)   // 'Sinh viên', 'Giảng viên', 'Phụ huynh', 'Tất cả', etc.
+  channel         String?   @db.VarChar(20)    // 'in_app' | 'email' | 'both'
+  attachments     Json?                        // JSON array: [{name, size, type, url}]
+  created_by      Int                          // Account ID của admin tạo thông báo
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  template_id     Int?                         // Optional template reference
+
+  creator         Account   @relation("NotificationMasterCreator", fields: [created_by], references: [account_id], onDelete: Cascade)
+  template        NotificationTemplate? @relation(fields: [template_id], references: [template_id], onDelete: SetNull)
+  recipients      NotificationRecipient[]
+
+  @@map("NotificationMaster")
+}
+
+// Recipient notification: 1 row per user nhận thông báo
+model NotificationRecipient {
+  id              Int       @id @default(autoincrement())
+  master_id       Int                          // Reference to NotificationMaster
+  account_id      Int                          // Người nhận
+  is_read         Boolean   @default(false)
+  read_at         DateTime? @db.Timestamptz(6)
+  delivered_at    DateTime? @db.Timestamptz(6) // Thời điểm gửi thành công
+
+  master          NotificationMaster @relation(fields: [master_id], references: [id], onDelete: Cascade)
+  account         Account   @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@unique([master_id, account_id])            // Mỗi user chỉ nhận 1 lần mỗi thông báo
+  @@index([account_id])
+  @@index([master_id])
+  @@map("NotificationRecipient")
+}
+
+// Legacy: Rendered notifications delivered to accounts (in-app) - kept for backward compatibility
+// Consider migrating to NotificationMaster + NotificationRecipient
 model Notification {
   notification_id Int       @id @default(autoincrement())
   account_id      Int        // Receiver account
-  title           String    @db.VarChar(255) // Final title delivered to the user
-  body            String    // Final body delivered to the user
-  type            String?   @db.VarChar(50)  // Logical type, e.g. 'appointment', 'survey'
+  title           String    @db.VarChar(255)
+  body            String
+  type            String?   @db.VarChar(50)
+  priority        String?   @db.VarChar(20)
+  attachments     Json?
   is_read         Boolean   @default(false)
   created_at      DateTime  @default(now()) @db.Timestamptz(6)
-  template_id     Int?      // Optional template reference
+  template_id     Int?
 
   account         Account   @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   template        NotificationTemplate? @relation(fields: [template_id], references: [template_id], onDelete: SetNull)
 
   @@map("Notification")
+}
+
+// Draft notifications created by admin before sending
+model NotificationDraft {
+  draft_id        Int       @id @default(autoincrement())
+  title           String    @db.VarChar(255)
+  content         String
+  type            String    @db.VarChar(100)
+  target          String    @db.VarChar(100)
+  priority        String    @db.VarChar(20)
+  attachments     Json?
+  created_by      Int?                         // Admin who created the draft
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@map("NotificationDraft")
+}
+
+// Notification history for tracking sent/deleted notifications (admin stats)
+model NotificationHistory {
+  history_id       Int       @id @default(autoincrement())
+  action           String    @db.VarChar(20)   // 'sent' | 'deleted'
+  title            String    @db.VarChar(255)
+  content          String
+  type             String    @db.VarChar(100)
+  target           String    @db.VarChar(100)
+  priority         String    @db.VarChar(20)
+  attachments      Json?
+  total_recipients Int       @default(0)
+  read_count       Int       @default(0)
+  action_date      DateTime  @default(now()) @db.Timestamptz(6)
+  created_date     DateTime  @db.Timestamptz(6)
+  master_id        Int?                        // Optional link to NotificationMaster
+
+  @@map("NotificationHistory")
 }
 
 // Generic reminder schedule. Can reference a `NotificationTemplate` by its `code`, or
@@ -442,6 +534,7 @@ model ReminderSchedule {
   reminder_id    Int          @id @default(autoincrement())
   appointment_id Int?         // Optional appointment link
   account_id     Int          // Who will receive the reminder
+  recipient_role RecipientRole @default(booker)
   template_code  String       @db.VarChar(120) // Maps to NotificationTemplate.code
   remind_at      DateTime     @db.Timestamptz(6) // When to send
   sent_at        DateTime?    @db.Timestamptz(6) // When it was sent (null = not sent)
@@ -453,7 +546,7 @@ model ReminderSchedule {
   appointment    Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
   account        Account      @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   template       NotificationTemplate? @relation(fields: [template_code], references: [code], onDelete: SetNull)
-
+  @@unique([appointment_id, account_id, remind_at, template_code, recipient_role])
   @@index([remind_at, sent_at])
   @@map("ReminderSchedule")
 }
@@ -481,7 +574,6 @@ model Role {
   updatedAt       DateTime         @updatedAt @db.Timestamptz(6)
   accounts        Account[]
   rolePermissions RolePermission[]
-
   @@map("Role")
 }
 
@@ -576,4 +668,173 @@ model StudentSurveyFactors {
   // Unique: Một sinh viên chỉ có một bộ yếu tố (có thể update nếu survey lại)
   @@unique([student_id])
   @@map("StudentSurveyFactors")
+}
+
+// ===== ATTENDANCE VERIFICATION MODELS =====
+
+// Session for offline attendance verification
+model AttendanceSession {
+  session_id          String   @id @default(cuid())
+  appointment_id      Int?     // Link to existing appointment (optional for walk-in sessions)
+  instructor_id       Int
+  student_id          Int?     // Optional for walk-in sessions
+  started_at          DateTime @default(now()) @db.Timestamptz(6)
+  ended_at            DateTime? @db.Timestamptz(6)
+  status              String   @default("active") @db.VarChar(20) // 'active', 'completed', 'expired'
+  qr_refresh_interval Int      @default(3000) // milliseconds
+  qr_expiry_seconds   Int      @default(15)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+
+  appointment         Appointment? @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
+  instructor          Instructor  @relation(fields: [instructor_id], references: [instructor_id])
+  student             Student?    @relation(fields: [student_id], references: [student_id])
+  verificationAttempts AttendanceVerificationAttempt[]
+
+  @@map("AttendanceSession")
+}
+
+// Individual verification attempt
+model AttendanceVerificationAttempt {
+  attempt_id          Int      @id @default(autoincrement())
+  session_id          String
+  account_id          Int      // Student account
+  timestamp           DateTime @default(now()) @db.Timestamptz(6)
+
+  // QR Validation (40 points)
+  qr_token            String?  @db.VarChar(255)
+  qr_valid            Boolean  @default(false)
+  qr_fresh            Boolean  @default(false) // Within expiry window
+  qr_not_reused       Boolean  @default(false)
+
+  // Device Binding (30 points)
+  device_fingerprint  String?  @db.VarChar(500) // Hashed fingerprint
+  device_match        Boolean  @default(false)
+  device_changed_recently Boolean @default(false)
+
+  // Network Context (20 points)
+  client_ip           String?  @db.VarChar(45)  // IPv4/IPv6
+  campus_ip           Boolean  @default(false)
+  wifi_ssid           String?  @db.VarChar(100)
+  campus_wifi         Boolean  @default(false)
+  network_latency     Int?     // milliseconds to campus gateway
+
+  // GPS Geofencing (10 points - optional)
+  gps_latitude        Float?
+  gps_longitude       Float?
+  gps_accuracy        Float?   // meters
+  gps_timestamp       DateTime?
+  campus_zone         Boolean  @default(false)
+  gps_spoof_detected  Boolean  @default(false)
+
+  // Behavioral Biometrics (5 points)
+  scan_duration       Int?     // milliseconds from QR display to scan
+  typing_pattern      String?  @db.VarChar(500) // Keystroke dynamics hash
+  behavior_normal     Boolean  @default(false)
+
+  // Trust Score Calculation
+  trust_score         Int      @default(0) // 0-100
+  risk_level          String   @default("high") @db.VarChar(20) // 'high', 'medium', 'low'
+  approved            Boolean  @default(false)
+  approved_by         Int?     // Instructor account_id
+  approved_at         DateTime?
+  review_reason       String?  @db.VarChar(500)
+
+  // Anti-fraud flags
+  suspicious_timing   Boolean  @default(false)
+  multiple_attempts   Boolean  @default(false)
+  vpn_detected        Boolean  @default(false)
+  brute_force_pattern Boolean  @default(false)
+
+  session             AttendanceSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+  account             Account           @relation(fields: [account_id], references: [account_id])
+  approver            Account?          @relation("AttendanceApprover", fields: [approved_by], references: [account_id])
+
+  @@index([session_id, timestamp])
+  @@index([account_id, timestamp])
+  @@map("AttendanceVerificationAttempt")
+}
+
+// Device fingerprinting for binding
+model DeviceFingerprint {
+  fingerprint_id      String   @id @default(cuid())
+  account_id          Int
+  fingerprint_hash    String   @unique @db.VarChar(500) // SHA-256 hash of device data
+  user_agent          String?  @db.VarChar(500)
+  screen_resolution   String?  @db.VarChar(50)  // "1920x1080"
+  timezone            String?  @db.VarChar(100)
+  language            String?  @db.VarChar(10)
+  platform            String?  @db.VarChar(50)
+  hardware_concurrency Int?
+  device_memory       Float?
+  canvas_fingerprint  String?  @db.VarChar(500)
+  webgl_fingerprint   String?  @db.VarChar(500)
+  is_primary          Boolean  @default(false)
+  last_used_at        DateTime @default(now()) @db.Timestamptz(6)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  verified_at         DateTime? // When 2FA was used to verify
+
+  account             Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@unique([account_id, fingerprint_hash])
+  @@index([account_id, is_primary])
+  @@map("DeviceFingerprint")
+}
+
+// Campus network configuration
+model CampusNetworkConfig {
+  config_id           Int      @id @default(autoincrement())
+  campus_name         String   @db.VarChar(100)
+  ip_ranges           String   // JSON array of CIDR ranges: ["192.168.1.0/24", "10.0.0.0/8"]
+  wifi_ssids          String   // JSON array: ["CampusWiFi", "EduNet"]
+  gateway_ips         String   // JSON array for latency tests
+  gps_boundaries      String?  // GeoJSON polygon for campus zone
+  latitude_center     Float?
+  longitude_center    Float?
+  radius_meters       Int?     @default(200) // For simple circle geofence
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([campus_name])
+  @@map("CampusNetworkConfig")
+}
+
+// ===== CERTIFICATE REVIEW MODELS =====
+
+/// Records which band/level a student has enrolled in for a given certificate.
+/// Constraint: only ONE active enrollment per (student, cert_type) at a time.
+/// To switch bands the student must complete the current band first.
+model CertificateEnrollment {
+  id            Int       @id @default(autoincrement())
+  student_id    Int
+  cert_type     String    @db.VarChar(30)   // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
+  target_band   String    @db.VarChar(20)   // '4.0' | '5.0' | '6.0' | '6.5' | '7.0' | '7.5+' | '350-495' | '500-599' | '600-699' | '700-799' | '800+' | 'associate' | 'expert'
+  status        String    @default("active") @db.VarChar(20) // 'active' | 'completed'
+  completed_at  DateTime? @db.Timestamptz(6)
+  enrolled_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @updatedAt @db.Timestamptz(6)
+
+  student       Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  topicProgress CertificateTopicProgress[]
+
+  // A student may only have one active enrollment per cert at a time (enforced in service layer).
+  // The unique key includes target_band so historical completed rows are preserved.
+  @@unique([student_id, cert_type, target_band])
+  @@index([student_id, cert_type, status])
+  @@map("CertificateEnrollment")
+}
+
+/// Tracks which individual topics a student has completed within an enrollment.
+/// topic_key uses a stable dot-notation key, e.g. 'grammar.basic_tenses'.
+model CertificateTopicProgress {
+  id             Int                    @id @default(autoincrement())
+  enrollment_id  Int
+  topic_key      String                 @db.VarChar(100) // e.g. 'grammar.basic_tenses', 'listening.part1_form_fill'
+  completed_at   DateTime               @default(now()) @db.Timestamptz(6)
+
+  enrollment     CertificateEnrollment  @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+
+  @@unique([enrollment_id, topic_key])
+  @@index([enrollment_id])
+  @@map("CertificateTopicProgress")
 }

@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-pandas
-numpy
-scikit-learn
-joblib
-pymongo    # nếu bạn muốn lưu MongoDB, không bắt buộc cho inference

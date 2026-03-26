@@ -9,6 +9,9 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { SurveysModule } from './surveys/surveys.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
+import { AcademicDataModule } from './academic-data/academic-data.module';
+import { GradeStructureModule } from './grade-structure/grade-structure.module';
+import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
 
 @Module({
     imports: [
@@ -22,6 +25,9 @@ import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
         SurveysModule,
         PredictionModule,
         MeetingLogsModule,
+        AcademicDataModule,
+        GradeStructureModule,
+        GpaMetricsModule,
     ],
     exports: [
         DashboardModule,
@@ -34,6 +40,9 @@ import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
         SurveysModule,
         PredictionModule,
         MeetingLogsModule,
+        AcademicDataModule,
+        GradeStructureModule,
+        GpaMetricsModule,
     ],
 })
-export class TeacherBeModule { }
+export class TeacherBeModule {}

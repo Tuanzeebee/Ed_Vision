@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { KeyboardEvent, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/parent/Parent_button';
@@ -13,6 +13,9 @@ import {
   Smile,
   Send,
 } from 'lucide-react';
+import { chatService } from '@/services/chatService';
+import { socketService } from '@/services/socketService';
+import type { Conversation, ChatMessage } from '@/services/chatService';
 
 // Custom Avatar Component
 const Avatar = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
@@ -53,148 +56,302 @@ const Badge = ({
 interface Teacher {
   id: string;
   name: string;
-  title: string;
-  avatar: string;
+  title?: string;
+  avatar?: string;
   status: 'online' | 'away' | 'offline';
   lastMessage: string;
   lastMessageTime: string;
   unreadCount?: number;
   isActive?: boolean;
-}
-
-interface Message {
-  id: string;
-  text: string;
-  isSent: boolean;
-  timestamp: string;
+  students?: Array<{
+    studentId: string;
+    studentName: string;
+    studentCode: string;
+    className: string;
+  }>;
 }
 
 type Props = {};
 
 export default function ChatWithTeachers({}: Props) {
   const { t } = useTranslation(['parent', 'common']);
-  const [teachers] = useState<Teacher[]>([
-    {
-      id: '1',
-      name: 'Dr. Brown',
-      title: t('parent:chat.teacherRoles.mathematics'),
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=48&h=48&fit=crop&crop=face',
-      status: 'online',
-      lastMessage: t('parent:chat.sampleMessages.progress'),
-      lastMessageTime: t('parent:chat.timeAgo.min', { count: 2 }),
-      isActive: true,
-    },
-    {
-      id: '2',
-      name: 'Ms. Johnson',
-      title: t('parent:chat.teacherRoles.science'),
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=48&h=48&fit=crop&crop=face',
-      status: 'online',
-      lastMessage: t('parent:chat.sampleMessages.improvement'),
-      lastMessageTime: t('parent:chat.timeAgo.hour', { count: 1 }),
-      unreadCount: 2,
-    },
-    {
-      id: '3',
-      name: 'Mr. Wilson',
-      title: t('parent:chat.teacherRoles.classTeacher'),
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=48&h=48&fit=crop&crop=face',
-      status: 'away',
-      lastMessage: t('parent:chat.sampleMessages.meetingScheduled'),
-      lastMessageTime: t('parent:chat.timeAgo.hour', { count: 3 }),
-    },
-    {
-      id: '4',
-      name: 'Mrs. Davis',
-      title: t('parent:chat.teacherRoles.english'),
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=48&h=48&fit=crop&crop=face',
-      status: 'offline',
-      lastMessage: t('parent:chat.sampleMessages.feedback'),
-      lastMessageTime: t('parent:chat.timeAgo.day', { count: 1 }),
-    },
-    {
-      id: '5',
-      name: 'Mr. Garcia',
-      title: t('parent:chat.teacherRoles.physicalEducation'),
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=48&h=48&fit=crop&crop=face',
-      status: 'online',
-      lastMessage: t('parent:chat.sampleMessages.sportsDay'),
-      lastMessageTime: t('parent:chat.timeAgo.day', { count: 2 }),
-    },
-  ]);
+  
+  // Real data states
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: t('parent:chat.sampleMessages.discussProgress'),
-      isSent: false,
-      timestamp: '10:30 AM',
-    },
-    {
-      id: '2',
-      text: t('parent:chat.sampleMessages.wonderfulToHear'),
-      isSent: true,
-      timestamp: '10:32 AM',
-    },
-    {
-      id: '3',
-      text: t('parent:chat.sampleMessages.progressReport'),
-      isSent: false,
-      timestamp: '10:35 AM',
-    },
-    {
-      id: '4',
-      text: t('parent:chat.sampleMessages.thankYou'),
-      isSent: true,
-      timestamp: '10:37 AM',
-    },
-  ]);
-
-  const [selectedTeacher, setSelectedTeacher] = useState<Teacher>(teachers[0]);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [showTyping, setShowTyping] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Load teachers and conversations on mount
+  useEffect(() => {
+    loadTeachers();
+    loadConversations();
+  }, []);
+
+  const loadTeachers = async () => {
+    try {
+      setLoadingTeachers(true);
+      const data = await chatService.getParentTeachers();
+      
+      // Transform data to Teacher interface
+      const transformedTeachers: Teacher[] = data.map((teacher: any) => ({
+        id: teacher.id,
+        name: teacher.name,
+        title: teacher.students && teacher.students.length > 0 
+          ? `${t('parent:chat.teacherRoles.classTeacher')} - ${teacher.students[0].className}`
+          : t('parent:chat.teacherRoles.teacher'),
+        avatar: teacher.avatar,
+        status: 'online' as const,
+        lastMessage: '',
+        lastMessageTime: '',
+        unreadCount: 0,
+        isActive: false,
+        students: teacher.students,
+      }));
+      
+      setTeachers(transformedTeachers);
+    } catch (error) {
+      console.error('Error loading teachers:', error);
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
+  const loadConversations = async () => {
+    try {
+      setLoading(true);
+      const data = await chatService.getParentConversations();
+      setConversations(data);
+      
+      // Update teachers with conversation info
+      setTeachers(prev => prev.map(teacher => {
+        const conv = data.find((c: Conversation) => 
+          c.participants.some(p => p.userId === teacher.id && p.userType === 'teacher')
+        );
+        if (conv) {
+          return {
+            ...teacher,
+            lastMessage: conv.lastMessage?.content || '',
+            lastMessageTime: conv.lastMessage?.timestamp 
+              ? new Date(conv.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+              : '',
+            unreadCount: conv.unreadCount || 0,
+          };
+        }
+        return teacher;
+      }));
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async (conversationId: string) => {
+    try {
+      setLoading(true);
+      const data = await chatService.getParentConversationMessages(conversationId);
+      setMessages(data.reverse()); // Reverse to show oldest first
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Socket.IO setup
+  const handleNewMessage = useCallback((message: ChatMessage) => {
+    if (currentConversationId && message.conversationId === currentConversationId) {
+      setMessages(prev => {
+        // Check duplicate
+        if (prev.some(m => m._id === message._id)) {
+          return prev;
+        }
+        return [...prev, message];
+      });
+    }
+  }, [currentConversationId]);
+
+  const handleConversationUpdated = useCallback((data: any) => {
+    setConversations(prev => prev.map(conv => {
+      if (conv._id === data.conversationId) {
+        const isCurrentlyViewing = currentConversationId === data.conversationId;
+        return {
+          ...conv,
+          lastMessage: data.lastMessage,
+          unreadCount: isCurrentlyViewing ? 0 : (conv.unreadCount || 0) + 1
+        };
+      }
+      return conv;
+    }));
+    
+    // Update teachers list
+    setTeachers(prev => prev.map(teacher => {
+      const conv = conversations.find(c => 
+        c._id === data.conversationId && 
+        c.participants.some(p => p.userId === teacher.id)
+      );
+      if (conv) {
+        return {
+          ...teacher,
+          lastMessage: data.lastMessage.content,
+          lastMessageTime: new Date(data.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          unreadCount: currentConversationId === data.conversationId ? 0 : (teacher.unreadCount || 0) + 1
+        };
+      }
+      return teacher;
+    }));
+  }, [currentConversationId, conversations]);
+
+  useEffect(() => {
+    if (conversations.length === 0) return;
+
+    // Get parent userId from first conversation
+    const firstConv = conversations[0];
+    const parentParticipant = firstConv?.participants.find(p => p.userType === 'parent');
+    
+    if (!parentParticipant) {
+      console.warn('No parent participant found in conversations');
+      return;
+    }
+
+    const setupSocket = async () => {
+      if (!socketService.isConnected()) {
+        try {
+          await socketService.connect(parentParticipant.userId, 'parent');
+          console.log('✅ Parent socket ready');
+        } catch (error) {
+          console.error('Failed to connect parent socket:', error);
+          return;
+        }
+      }
+
+      socketService.onNewMessage(handleNewMessage);
+      socketService.onConversationUpdated(handleConversationUpdated);
+    };
+
+    setupSocket();
+
+    return () => {
+      socketService.off('newMessage', handleNewMessage);
+      socketService.off('conversationUpdated', handleConversationUpdated);
+    };
+  }, [conversations.length, handleNewMessage, handleConversationUpdated]);
+
+  // Cleanup socket on unmount
+  useEffect(() => {
+    return () => socketService.disconnect();
+  }, []);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages, showTyping]);
 
-  const handleSendMessage = () => {
+  const handleSelectTeacher = async (teacher: Teacher) => {
+    // Leave previous conversation room
+    if (currentConversationId) {
+      socketService.leaveConversation(currentConversationId);
+    }
+
+    setSelectedTeacher(teacher);
+    setLoading(true);
+    
+    try {
+      // Create or get conversation
+      const conversation = await chatService.createParentConversation(teacher.id);
+      
+      // Save conversation ID
+      setCurrentConversationId(conversation._id);
+      
+      // Join conversation room
+      socketService.joinConversation(conversation._id);
+      
+      // Load messages
+      await loadMessages(conversation._id);
+      
+      // Mark as read
+      await chatService.markParentAsRead(conversation._id);
+      
+      // Refresh conversations
+      await loadConversations();
+      
+      // Update teacher as active
+      setTeachers(prev => prev.map(t => ({
+        ...t,
+        isActive: t.id === teacher.id,
+        unreadCount: t.id === teacher.id ? 0 : t.unreadCount
+      })));
+    } catch (error) {
+      console.error('Error selecting teacher:', error);
+      alert('Có lỗi khi tải cuộc trò chuyện. Vui lòng thử lại!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
     const text = messageInput.trim();
-    if (!text) return;
+    if (!text || !currentConversationId) return;
 
-    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text,
-      isSent: true,
-      timestamp: currentTime,
-    };
+    // Get parent userId from conversations
+    const currentConv = conversations.find(c => c._id === currentConversationId);
+    if (!currentConv) {
+      alert('Không tìm thấy cuộc trò chuyện');
+      return;
+    }
 
-    setMessages([...messages, newMessage]);
-    setMessageInput('');
+    const parentParticipant = currentConv.participants.find(p => p.userType === 'parent');
+    if (!parentParticipant) {
+      alert('Không tìm thấy thông tin phụ huynh trong cuộc trò chuyện');
+      return;
+    }
+
+    const messageText = text;
+    setMessageInput(''); // Clear immediately
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
 
-    // Show typing indicator
-    setShowTyping(true);
-
-    // Simulate teacher response
-    setTimeout(() => {
-      setShowTyping(false);
-      const responseMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: t('parent:chat.sampleMessages.autoResponse'),
-        isSent: false,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages((prev) => [...prev, responseMessage]);
-    }, 2000);
+    try {
+      // Send via Socket.IO for real-time
+      await socketService.sendMessage(
+        currentConversationId,
+        parentParticipant.userId,
+        'parent',
+        messageText
+      );
+      
+      // Update local conversation lastMessage
+      setConversations(prev => prev.map(conv => 
+        conv._id === currentConversationId
+          ? { 
+              ...conv, 
+              lastMessage: {
+                content: messageText,
+                senderId: parentParticipant.userId,
+                senderName: parentParticipant.userName,
+                timestamp: new Date()
+              }
+            }
+          : conv
+      ));
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Có lỗi khi gửi tin nhắn. Vui lòng thử lại!');
+      setMessageInput(messageText); // Restore on error
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -241,6 +398,23 @@ export default function ChatWithTeachers({}: Props) {
     
     return (filteredWords[0][0] + filteredWords[filteredWords.length - 1][0]).toUpperCase();
   };
+
+  // Check if sender is parent (current user)
+  const isMessageFromParent = (message: ChatMessage): boolean => {
+    return message.senderType === 'parent';
+  };
+
+  // Show loading state
+  if (loadingTeachers) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">{t('common:loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -304,203 +478,258 @@ export default function ChatWithTeachers({}: Props) {
           {/* Teachers List */}
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             <div className="p-2">
-              {teachers.map((teacher) => (
-                <div
-                  key={teacher.id}
-                  onClick={() => setSelectedTeacher(teacher)}
-                  className="cursor-pointer"
-                >
-                  <Card
-                    className={`p-3 mb-2 transition-colors border ${
-                      teacher.isActive
-                        ? 'bg-blue-50 border-blue-200'
-                        : 'hover:bg-gray-50 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={teacher.avatar} alt={teacher.name} />
-                        <AvatarFallback>{getInitials(teacher.name)}</AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(
-                          teacher.status
-                        )} border-2 border-white rounded-full`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900 truncate whitespace-nowrap">{teacher.name}</h3>
-                        <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{teacher.lastMessageTime}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 truncate whitespace-nowrap">{teacher.title}</p>
-                      <p
-                        className={`text-sm truncate ${
-                          teacher.isActive ? 'text-blue-600 font-medium' : 'text-gray-500'
-                        }`}
-                      >
-                        {teacher.lastMessage}
-                      </p>
-                    </div>
-                    {teacher.unreadCount && (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        {teacher.unreadCount}
-                      </Badge>
-                    )}
-                    {teacher.isActive && !teacher.unreadCount && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    )}
-                  </div>
-                  </Card>
+              {teachers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>{t('parent:chat.noTeachers')}</p>
                 </div>
-              ))}
+              ) : (
+                teachers.map((teacher) => (
+                  <div
+                    key={teacher.id}
+                    onClick={() => handleSelectTeacher(teacher)}
+                    className="cursor-pointer"
+                  >
+                    <Card
+                      className={`p-3 mb-2 transition-colors border ${
+                        teacher.isActive
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'hover:bg-gray-50 border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={teacher.avatar || ''} alt={teacher.name} />
+                          <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                            {getInitials(teacher.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div
+                          className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(
+                            teacher.status
+                          )} border-2 border-white rounded-full`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-gray-900 truncate whitespace-nowrap">{teacher.name}</h3>
+                          {teacher.lastMessageTime && (
+                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{teacher.lastMessageTime}</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 truncate whitespace-nowrap">{teacher.title}</p>
+                        {teacher.lastMessage && (
+                          <p
+                            className={`text-sm truncate ${
+                              teacher.isActive ? 'text-blue-600 font-medium' : 'text-gray-500'
+                            }`}
+                          >
+                            {teacher.lastMessage}
+                          </p>
+                        )}
+                      </div>
+                      {teacher.unreadCount && teacher.unreadCount > 0 && (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 px-2 py-1 text-xs">
+                          {teacher.unreadCount}
+                        </Badge>
+                      )}
+                      {teacher.isActive && !teacher.unreadCount && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                      )}
+                    </div>
+                    </Card>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
-          {/* Chat Header */}
-          <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-                onClick={() => setShowSidebar(!showSidebar)}
-              >
-                <Menu className="w-5 h-5 text-gray-600" />
-              </Button>
-              <div className="relative">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={selectedTeacher.avatar} alt={selectedTeacher.name} />
-                  <AvatarFallback>{getInitials(selectedTeacher.name)}</AvatarFallback>
-                </Avatar>
-                <div
-                  className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(
-                    selectedTeacher.status
-                  )} border-2 border-white rounded-full`}
-                />
-              </div>
-              <div>
-                <h2 className="font-semibold text-gray-900 whitespace-nowrap">{selectedTeacher.name}</h2>
-                <p className="text-sm text-gray-500 whitespace-nowrap">
-                  {selectedTeacher.title} •{' '}
-                  <span className="text-green-600 capitalize">{t(`parent:chat.${selectedTeacher.status}`)}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages Area */}
-          <div
-            ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 p-4 space-y-4"
-          >
-            {/* Date Separator */}
-            <div className="flex items-center justify-center">
-              <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs px-3 py-1">
-                {t('parent:chat.today')}
-              </Badge>
-            </div>
-
-            {/* Messages */}
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-300 ${
-                  message.isSent ? 'justify-end' : ''
-                }`}
-              >
-                {!message.isSent && (
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarImage src={selectedTeacher.avatar} alt={selectedTeacher.name} />
-                    <AvatarFallback>{getInitials(selectedTeacher.name)}</AvatarFallback>
-                  </Avatar>
-                )}
-
-                <div className={`flex-1 flex flex-col ${message.isSent ? 'items-end' : ''}`}>
-                  <div
-                    className={`rounded-lg p-3 max-w-md break-words ${
-                      message.isSent ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
-                    }`}
+          {selectedTeacher ? (
+            <>
+              {/* Chat Header */}
+              <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+                    onClick={() => setShowSidebar(!showSidebar)}
                   >
-                    <p className="break-words">{message.text}</p>
+                    <Menu className="w-5 h-5 text-gray-600" />
+                  </Button>
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={selectedTeacher.avatar || ''} alt={selectedTeacher.name} />
+                      <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                        {getInitials(selectedTeacher.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div
+                      className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(
+                        selectedTeacher.status
+                      )} border-2 border-white rounded-full`}
+                    />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{message.timestamp}</p>
+                  <div>
+                    <h2 className="font-semibold text-gray-900 whitespace-nowrap">{selectedTeacher.name}</h2>
+                    <p className="text-sm text-gray-500 whitespace-nowrap">
+                      {selectedTeacher.title} •{' '}
+                      <span className="text-green-600 capitalize">{t(`parent:chat.${selectedTeacher.status}`)}</span>
+                    </p>
+                  </div>
                 </div>
+              </div>
 
-                {message.isSent && (
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
-                      ST
-                    </AvatarFallback>
-                  </Avatar>
+              {/* Messages Area */}
+              <div
+                ref={messagesContainerRef}
+                className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 p-4 space-y-4"
+              >
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                    <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    <p>{t('parent:chat.noMessages')}</p>
+                    <p className="text-sm mt-2">{t('parent:chat.startConversation')}</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Date Separator */}
+                    <div className="flex items-center justify-center">
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs px-3 py-1">
+                        {t('parent:chat.today')}
+                      </Badge>
+                    </div>
+
+                    {/* Messages */}
+                    {messages.map((message) => {
+                      const isSent = isMessageFromParent(message);
+                      return (
+                        <div
+                          key={message._id}
+                          className={`flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-300 ${
+                            isSent ? 'justify-end' : ''
+                          }`}
+                        >
+                          {!isSent && (
+                            <Avatar className="w-8 h-8 flex-shrink-0">
+                              <AvatarImage src={selectedTeacher.avatar || ''} alt={selectedTeacher.name} />
+                              <AvatarFallback className="bg-blue-100 text-blue-600 font-medium text-xs">
+                                {getInitials(selectedTeacher.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+
+                          <div className={`flex-1 flex flex-col ${isSent ? 'items-end' : ''}`}>
+                            <div
+                              className={`rounded-lg p-3 max-w-md break-words ${
+                                isSent ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
+                              }`}
+                            >
+                              <p className="break-words">{message.content}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+
+                          {isSent && (
+                            <Avatar className="w-8 h-8 flex-shrink-0">
+                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+                                PH
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Typing Indicator */}
+                    {showTyping && (
+                      <div className="flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-300">
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          <AvatarImage src={selectedTeacher.avatar || ''} alt={selectedTeacher.name} />
+                          <AvatarFallback className="bg-blue-100 text-blue-600 font-medium text-xs">
+                            {getInitials(selectedTeacher.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                              style={{ animationDelay: '0.2s' }}
+                            />
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
+                              style={{ animationDelay: '0.4s' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-            ))}
 
-            {/* Typing Indicator */}
-            {showTyping && (
-              <div className="flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-300">
-                <Avatar className="w-8 h-8 flex-shrink-0">
-                  <AvatarImage src={selectedTeacher.avatar} alt={selectedTeacher.name} />
-                  <AvatarFallback>{getInitials(selectedTeacher.name)}</AvatarFallback>
-                </Avatar>
-                <div className="bg-gray-100 rounded-lg p-3">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                      style={{ animationDelay: '0.2s' }}
+              {/* Message Input */}
+              <div className="bg-white border-t border-gray-200 p-4">
+                <div className="flex items-end space-x-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="p-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </Button>
+                  <div className="flex-1 relative">
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
+                      placeholder={t('parent:chat.typeMessage')}
+                      value={messageInput}
+                      onChange={handleTextareaChange}
+                      onKeyDown={handleKeyDown}
+                      disabled={!currentConversationId}
+                      className="w-full resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                      style={{ animationDelay: '0.4s' }}
-                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <Smile className="w-5 h-5" />
+                    </Button>
                   </div>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleSendMessage}
+                    disabled={!currentConversationId || !messageInput.trim()}
+                  >
+                    <Send className="w-5 h-5" />
+                  </Button>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Message Input */}
-          <div className="bg-white border-t border-gray-200 p-4">
-            <div className="flex items-end space-x-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="p-2 text-gray-400 hover:text-gray-600"
-              >
-                <Paperclip className="w-5 h-5" />
-              </Button>
-              <div className="flex-1 relative">
-                <textarea
-                  ref={textareaRef}
-                  rows={1}
-                  placeholder={t('parent:chat.typeMessage')}
-                  value={messageInput}
-                  onChange={handleTextareaChange}
-                  onKeyDown={handleKeyDown}
-                  className="w-full resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32 outline-none"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-                >
-                  <Smile className="w-5 h-5" />
-                </Button>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <svg className="w-24 h-24 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                </svg>
+                <p className="text-lg font-medium">{t('parent:chat.selectTeacher')}</p>
+                <p className="text-sm mt-2">{t('parent:chat.selectTeacherDescription')}</p>
               </div>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg"
-                onClick={handleSendMessage}
-              >
-                <Send className="w-5 h-5" />
-              </Button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

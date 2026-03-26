@@ -104,7 +104,7 @@ const mapQuestionFromApi = (apiQuestion: SurveyDetailDto['questions'][0]): Quest
         sliderConfig: {
           min: apiQuestion.minValue ?? 0,
           max: apiQuestion.maxValue ?? 10,
-          defaultValue: Math.round((apiQuestion.minValue ?? 0 + apiQuestion.maxValue ?? 10) / 2),
+          defaultValue: Math.round((apiQuestion.minValue ?? 0 + (apiQuestion.maxValue ?? 10)) / 2),
           unit: 'Điểm',
           gradientType: 'stress',
           leftLabel: String(apiQuestion.minValue ?? 0),
@@ -173,7 +173,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
     const blockNavigation = (message?: string) => {
       // Keep UX simple — show alert and prevent navigation
       // Browsers often ignore custom message in beforeunload, so use alert for SPA pushes
-      // eslint-disable-next-line no-alert
+       
       alert(message || 'Bạn cần hoàn thành khảo sát đầu vào trước khi tiếp tục.');
     };
 
@@ -194,7 +194,7 @@ export default function StudentSurvey({ surveyId, onComplete }: Props) {
       const anchor = target.closest && (target.closest('a') as HTMLAnchorElement | null);
       if (anchor && anchor.href && (!anchor.target || anchor.target === '_self')) {
         e.preventDefault();
-        // eslint-disable-next-line no-alert
+         
         alert('Bạn cần hoàn thành khảo sát đầu vào trước khi rời trang.');
       }
     };

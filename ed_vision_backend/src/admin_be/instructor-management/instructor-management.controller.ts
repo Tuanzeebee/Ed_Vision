@@ -31,9 +31,7 @@ export class InstructorManagementController {
 
   // ===== DYNAMIC ROUTES AFTER =====
   @Get(':id/schedule/filter-options')
-  async getScheduleFilterOptions(
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  async getScheduleFilterOptions(@Param('id', ParseIntPipe) id: number) {
     return this.instructorManagementService.getScheduleFilterOptions(id);
   }
 
@@ -64,9 +62,7 @@ export class InstructorManagementController {
   }
 
   @Get(':id/appointments/stats')
-  async getAppointmentStats(
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  async getAppointmentStats(@Param('id', ParseIntPipe) id: number) {
     return this.instructorManagementService.getAppointmentStats(id);
   }
 

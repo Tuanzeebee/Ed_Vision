@@ -6,6 +6,7 @@ import './TimeFilter.css';
 import { format, setYear, setMonth, setDate } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type ViewMode = 'day' | 'month' | 'year' | 'all';
 
@@ -22,6 +23,7 @@ export default function TimeFilter({
   onViewModeChange,
   onDateChange,
 }: TimeFilterProps) {
+  const { t } = useTranslation('admin');
   const datePickerRef = useRef<any>(null);
 
   const openDatePicker = () => {
@@ -64,10 +66,10 @@ export default function TimeFilter({
 
       <div className="flex bg-gray-100 rounded-md p-0.5">
         {([
-          { mode: 'day' as const, label: 'Ngày' },
-          { mode: 'month' as const, label: 'Tháng' },
-          { mode: 'year' as const, label: 'Năm' },
-          { mode: 'all' as const, label: 'Tất cả' },
+          { mode: 'day' as const, label: t('time.day') },
+          { mode: 'month' as const, label: t('time.month') },
+          { mode: 'year' as const, label: t('time.year') },
+          { mode: 'all' as const, label: t('time.allTime') },
         ]).map((item) => (
             <button
               key={item.mode}
@@ -119,7 +121,7 @@ export default function TimeFilter({
         onClick={() => onDateChange(new Date())}
         className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer"
       >
-        Hôm nay
+        {t('time.todayButton')}
       </button>
     </div>
   );

@@ -1,0 +1,42 @@
+{
+  "target": "raw_score",
+  "feature_dim": 79,
+  "categorical_features": [
+    "course_code",
+    "study_format"
+  ],
+  "numerical_features": [
+    "semester_number",
+    "credits_unit",
+    "last_score",
+    "mean_prev_score",
+    "score_trend",
+    "score_stability",
+    "score_stability_cv",
+    "recent_improvement",
+    "n_assessments",
+    "weekly_study_hours",
+    "part_time_hours",
+    "financial_support",
+    "emotional_support",
+    "study_hours_x_part_time_hours",
+    "financial_support_x_part_time_hours",
+    "study_load"
+  ],
+  "use_full_interaction": false,
+  "drop_columns": [
+    "year",
+    "student_id",
+    "raw_score",
+    "cumulative_gpa",
+    "current_semester_gpa",
+    "previous_courses_taken",
+    "previous_credits_earned",
+    "expected_difficulty",
+    "subject_type",
+    "fail_rate_general",
+    "fail_rate_major",
+    "subject_type_num"
+  ],
+  "random_state": 42
+}

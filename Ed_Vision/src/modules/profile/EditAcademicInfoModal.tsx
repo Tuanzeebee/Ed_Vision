@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TokenManager } from '@/lib/tokenManager';
 import { buildUrl } from '@/services/api/config';
 
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic, onSuccess }: Props) {
+  const { t } = useTranslation('profile');
   const [formData, setFormData] = useState<AcademicData>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic
     try {
       const token = TokenManager.getToken();
       if (!token) {
-        throw new Error('Vui lòng đăng nhập');
+        throw new Error(t('common.loginRequired'));
       }
 
       const payload = {
@@ -85,13 +87,13 @@ export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic
       });
 
       if (!res.ok) {
-        throw new Error(`Không thể cập nhật thông tin học tập (status: ${res.status})`);
+        throw new Error(t('studentAcademic.updateError', { status: res.status }));
       }
 
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Lỗi khi lưu thông tin');
+      setError(err?.message || t('common.saveError'));
     } finally {
       setSaving(false);
     }
@@ -104,7 +106,7 @@ export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-800 text-white p-6 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Chỉnh sửa thông tin học tập</h2>
+            <h2 className="text-2xl font-bold">{t('studentAcademic.modalTitle')}</h2>
             <button
               onClick={onClose}
               className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
@@ -125,40 +127,40 @@ export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Mã sinh viên
+              {t('studentAcademic.studentCode')}
             </label>
             <input
               type="text"
               value={formData.studentCode || ''}
               onChange={(e) => setFormData({ ...formData, studentCode: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white !text-gray-900"
-              placeholder="Nhập mã sinh viên"
+              placeholder={t('studentAcademic.studentCodePlaceholder')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Chuyên ngành
+              {t('studentAcademic.major')}
             </label>
             <input
               type="text"
               value={formData.major || ''}
               onChange={(e) => setFormData({ ...formData, major: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white !text-gray-900"
-              placeholder="Nhập chuyên ngành"
+              placeholder={t('studentAcademic.majorPlaceholder')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Năm khóa
+              {t('studentAcademic.cohortYear')}
             </label>
             <input
               type="number"
               value={formData.cohortYear || ''}
               onChange={(e) => setFormData({ ...formData, cohortYear: e.target.value ? parseInt(e.target.value) : null })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white !text-gray-900"
-              placeholder="Nhập năm khóa (VD: 2022)"
+              placeholder={t('studentAcademic.cohortYearPlaceholder')}
               min="2000"
               max="2100"
             />
@@ -166,17 +168,17 @@ export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Lớp
+              {t('studentAcademic.class')}
             </label>
             <select
               value={formData.classCode || ''}
               onChange={(e) => setFormData({ ...formData, classCode: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white !text-gray-900"
             >
-              <option value="">-- Chọn lớp --</option>
+              <option value="">{t('studentAcademic.selectClass')}</option>
               {classes.map((cls) => (
                 <option key={cls.class_id} value={cls.class_code}>
-                  {cls.class_code} (Khóa {cls.cohort_year})
+                  {cls.class_code} ({t('studentAcademic.cohortLabel')} {cls.cohort_year})
                 </option>
               ))}
             </select>
@@ -189,14 +191,14 @@ export default function EditAcademicInfoModal({ isOpen, onClose, currentAcademic
               disabled={saving}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-800 text-white rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
             >
-              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </form>

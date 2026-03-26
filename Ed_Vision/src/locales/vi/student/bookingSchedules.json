@@ -1,0 +1,121 @@
+{
+  "title": "Chọn thời gian tư vấn",
+  "subtitle": "Hãy chọn ngày và khung giờ phù hợp để đặt lịch hẹn với giảng viên cố vấn của bạn.",
+  "weekRange": "Tuần từ {{start}} - {{end}}",
+  "availableSlots": "Khung giờ khả dụng",
+  "morning": "Buổi sáng",
+  "afternoon": "Buổi chiều",
+  "evening": "Buổi tối",
+  "selected": "Đã chọn",
+  "unavailable": "Không khả dụng",
+  "back": "Quay lại",
+  "step": {
+    "chooseTime": "Chọn thời gian",
+    "confirm": "Xác nhận"
+  },
+  "format": {
+    "label": "Chọn hình thức:",
+    "online": "Trực tuyến",
+    "offline": "Trực tiếp"
+  },
+  "timeLabel": "{{start}} - {{end}}",
+  "noSlots": "Không có khung giờ khả dụng",
+  "bookButton": "Xác nhận đặt",
+  "success": "Đặt lịch thành công",
+  "refresh": "Làm mới",
+  "participation": {
+    "labelLink": "Link tham gia",
+    "labelLocation": "Địa điểm",
+    "noLink": "Chưa có link tham gia",
+    "noLocation": "Chưa có địa điểm"
+  }
+  ,
+  "loading": "Đang tải lịch...",
+  "noAdvisor": {
+    "title": "Không tìm thấy giảng viên cố vấn",
+    "subtitle": "Vui lòng liên hệ với phòng Đào tạo để được phân công giảng viên cố vấn học tập."
+  },
+  "continue": "Tiếp tục",
+  "stepLabel": "Bước {{current}}/{{total}}",
+  "confirmSubtitle": "Vui lòng kiểm tra thông tin trước khi xác nhận.",
+  "summarySession": "Buổi tư vấn học tập",
+  "degree" : {
+    "professor": "Giáo sư",
+    "doctor": "Tiến sĩ",
+    "master": "Thạc sĩ",
+    "lecturer": "Giảng viên"
+  },
+  "purposeLabel": "Mục đích buổi hẹn",
+  "validation": {
+    "enterSpecificPurpose": "Vui lòng nhập mục đích cụ thể.",
+    "enterParentName": "Vui lòng nhập họ và tên phụ huynh để liên hệ."
+  },
+  "noStudentInfo": "Chưa có thông tin sinh viên. Vui lòng đăng nhập hoặc cung cấp thông tin.",
+  "studentInfo": {
+    "title": "Thông tin sinh viên",
+    "fullName": "Họ và tên",
+    "studentCode": "Mã SV",
+    "class": "Lớp",
+    "status": "Trạng thái",
+    "verified": "Đã xác thực",
+    "unverified": "Chưa xác thực"
+  },
+  "parent": {
+    "selectStudentLabel": "Chọn sinh viên",
+    "selectStudentPlaceholder": "-- Chọn sinh viên --",
+    "selectionRequiredText": "Phụ huynh cần chọn sinh viên để đặt lịch.",
+    "contactInfoTitle": "Thông tin phụ huynh",
+    "contactEditableNote": "Có thể chỉnh sửa",
+    "nameLabel": "Họ và tên",
+    "phoneLabel": "Số điện thoại",
+    "emailLabel": "Email",
+    "relationshipLabel": "Quan hệ với sinh viên",
+    "placeholder": {
+      "name": "Nhập họ tên phụ huynh",
+      "relationshipExample": "Ví dụ: Bố, Mẹ, Người giám hộ"
+    }
+  },
+  "advisor": {
+    "label": "Giảng viên",
+    "withId": "Giảng viên #{{id}}",
+    "role": "Cố vấn học tập"
+  },
+    "summary": {
+      "date": "Ngày",
+      "time": "Thời gian",
+      "format": "Hình thức",
+      "purpose": "Mục đích"
+    },
+    "placeholder": {
+      "enterPurpose": "Nhập mục đích cụ thể"
+    },
+    "successDescription": "Bạn đã đặt lịch hẹn vào {{date}} lúc {{time}}.",
+    "successInfo": "Vui lòng truy cập quản lý lịch hẹn để xem chi tiết hoặc hủy lịch.",
+  "confirmationPrefix": "Tôi xác nhận thông tin trên là đúng và đồng ý với",
+  "confirmationPolicy": "chính sách buổi hẹn của EdVision",
+  "confirmationSuffix": "Tôi cam kết có mặt đúng giờ hoặc hủy lịch trước thời hạn quy định.",
+  "linkReminder": "Link sẽ được gửi vào email",
+  "error": {
+    "loadAvailability": "Không thể tải lịch sẵn có."
+  },
+  "processing": "Đang xử lý...",
+  "toast": {
+    "slotAlreadyBooked": "Bạn đã đặt lịch cho khung giờ này. Vui lòng chọn khung giờ khác.",
+    "processingPrevious": "Hệ thống đang xử lý yêu cầu trước đó. Vui lòng chờ trong giây lát.",
+    "missingPurpose": "Vui lòng nhập mục đích buổi hẹn.",
+    "missingContact": "Vui lòng nhập thông tin liên hệ của phụ huynh.",
+    "missingStudent": "Vui lòng chọn sinh viên cho buổi hẹn.",
+    "copySuccess": "Đã sao chép liên kết tham gia.",
+    "copyError": "Không thể sao chép liên kết, vui lòng thử lại.",
+    "selectSlotBeforeBooking": "Vui lòng chọn khung giờ trước khi đặt lịch.",
+    "slotFull": "Không thể đặt lịch: Slot này đã đầy chỗ.",
+    "bookingFailed": "Không thể đặt lịch. Vui lòng thử lại sau."
+  },
+  "participation1": {
+    "copyLink": "Sao chép link",
+    "copyLocation": "Sao chép địa điểm",
+    "noCopyInfo": "Chưa có thông tin để sao chép",
+    "labelLinkShort": "link",
+    "labelLocationShort": "địa điểm"
+  }
+}

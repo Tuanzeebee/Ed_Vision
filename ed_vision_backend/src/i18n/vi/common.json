@@ -1,0 +1,127 @@
+{
+  "error": {
+    "user": {
+      "notFound": "Không tìm thấy người dùng",
+      "alreadyExists": "Người dùng đã tồn tại",
+      "invalidCredentials": "Thông tin đăng nhập không hợp lệ",
+      "unauthorized": "Truy cập không được phép",
+      "forbidden": "Bị cấm truy cập"
+    },
+    "auth": {
+      "invalidPassword": "Mật khẩu không hợp lệ",
+      "invalidToken": "Token không hợp lệ",
+      "tokenExpired": "Token đã hết hạn",
+      "invalidOtp": "Mã OTP không hợp lệ",
+      "otpExpired": "Mã OTP đã hết hạn"
+    },
+    "validation": {
+      "required": "Trường này là bắt buộc",
+      "invalidEmail": "Định dạng email không hợp lệ",
+      "invalidPhone": "Số điện thoại không hợp lệ",
+      "minLength": "Độ dài tối thiểu là {{min}} ký tự",
+      "maxLength": "Độ dài tối đa là {{max}} ký tự"
+    },
+    "server": {
+      "internalError": "Lỗi máy chủ nội bộ",
+      "serviceUnavailable": "Dịch vụ không khả dụng",
+      "badRequest": "Yêu cầu không hợp lệ"
+    },
+    "booking": {
+      "notFound": "Không tìm thấy lịch hẹn",
+      "slotUnavailable": "Khung giờ không khả dụng",
+      "alreadyBooked": "Đã đặt lịch cho khung giờ này"
+    },
+    "student": {
+      "notFound": "Không tìm thấy học sinh",
+      "invalidStatus": "Trạng thái học sinh không hợp lệ"
+    },
+    "teacher": {
+      "notFound": "Không tìm thấy giáo viên",
+      "notAvailable": "Giáo viên không khả dụng"
+    }
+  },
+  "mail": {
+    "welcome": {
+      "title": "Chào mừng đến với EdVision",
+      "subject": "Chào mừng đến với nền tảng EdVision"
+    },
+    "reset": {
+      "subject": "Yêu cầu đặt lại mật khẩu",
+      "title": "Đặt lại mật khẩu của bạn"
+    },
+    "booking": {
+      "confirmed": {
+        "subject": "Lịch hẹn đã xác nhận",
+        "title": "Lịch hẹn của bạn đã được xác nhận"
+      },
+      "cancelled": {
+        "subject": "Lịch hẹn đã hủy",
+        "title": "Lịch hẹn của bạn đã bị hủy"
+      }
+    },
+    "otp": {
+      "subject": "Mã OTP của bạn",
+      "title": "Mã xác thực"
+    }
+  },
+  "notification": {
+    "booking": {
+      "created": "Lịch hẹn mới được tạo",
+      "confirmed": "Lịch hẹn đã xác nhận",
+      "cancelled": "Lịch hẹn đã hủy",
+      "completed": "Lịch hẹn hoàn thành"
+    },
+    "student": {
+      "registered": "Học sinh mới đăng ký",
+      "updated": "Thông tin học sinh đã cập nhật"
+    }
+  },
+  "student": {
+    "status": {
+      "active": "Đang học",
+      "inactive": "Không hoạt động",
+      "suspended": "Đình chỉ",
+      "graduated": "Đã tốt nghiệp"
+    },
+    "grade": {
+      "excellent": "Xuất sắc",
+      "good": "Giỏi",
+      "average": "Trung bình",
+      "belowAverage": "Yếu",
+      "poor": "Kém"
+    }
+  },
+  "teacher": {
+    "status": {
+      "active": "Đang hoạt động",
+      "inactive": "Không hoạt động",
+      "onLeave": "Đang nghỉ phép"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Chờ xử lý",
+      "confirmed": "Đã xác nhận",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy",
+      "rejected": "Từ chối"
+    },
+    "type": {
+      "consultation": "Tư vấn",
+      "appointment": "Cuộc hẹn",
+      "meeting": "Họp"
+    }
+  },
+  "role": {
+    "admin": "Quản trị viên",
+    "teacher": "Giáo viên",
+    "student": "Học sinh",
+    "parent": "Phụ huynh"
+  },
+  "export": {
+    "student": "Danh sách học sinh",
+    "teacher": "Danh sách giáo viên",
+    "booking": "Danh sách lịch hẹn",
+    "report": "Báo cáo"
+  }
+}

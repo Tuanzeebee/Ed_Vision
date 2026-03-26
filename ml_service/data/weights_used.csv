@@ -3,6 +3,9 @@ CHE 101,final,0.55
 CHE 101,homework,0.15
 CHE 101,midterm,0.15
 CHE 101,speech_and_discussion,0.15
+CHE 101_lab,attend,0.2
+CHE 101_lab,final,0.55
+CHE 101_lab,practice,0.25
 CMU-CS 246,final,0.35
 CMU-CS 246,group_project,0.2
 CMU-CS 246,homework,0.15
@@ -20,13 +23,11 @@ CMU-CS 297,regular,0.15
 CMU-CS 297,speech_and_discussion,0.05
 CMU-CS 303,final,0.2
 CMU-CS 303,homework,0.1
-CMU-CS 303,individual,0.15
 CMU-CS 303,individual_project,0.15
-CMU-CS 303,lab,0.05
 CMU-CS 303,midterm,0.2
 CMU-CS 303,practice,0.05
-CMU-CS 303,quiz,0.1
 CMU-CS 303,regular,0.1
+CMU-CS 303,student_id_2,0.15
 CMU-CS 311,final,0.35
 CMU-CS 311,group_project,0.2
 CMU-CS 311,homework,0.1
@@ -64,10 +65,10 @@ CMU-IS 401,individual_project,0.15
 CMU-IS 401,midterm,0.2
 CMU-IS 401,regular,0.15
 CMU-IS 432,final,0.35
+CMU-IS 432,group_project,0.2
 CMU-IS 432,homework,0.1
 CMU-IS 432,midterm,0.2
-CMU-IS 432,project,0.2
-CMU-IS 432,quiz,0.15
+CMU-IS 432,regular,0.15
 CMU-SE 100,final,0.4
 CMU-SE 100,group_project,0.15
 CMU-SE 100,homework,0.1
@@ -169,6 +170,11 @@ MTH 103,final,0.55
 MTH 103,midterm,0.15
 MTH 103,regular,0.1
 MTH 103,speech_and_discussion,0.1
+MTH 103_lab,attend,0.1
+MTH 103_lab,final,0.55
+MTH 103_lab,midterm,0.15
+MTH 103_lab,regular,0.1
+MTH 103_lab,speech_and_discussion,0.1
 MTH 104,attend,0.1
 MTH 104,final,0.55
 MTH 104,midterm,0.15
@@ -189,6 +195,12 @@ MTH 254,homework,0.05
 MTH 254,midterm,0.15
 MTH 254,practice,0.15
 MTH 254,speech_and_discussion,0.05
+MTH 254_lab,attend,0.05
+MTH 254_lab,final,0.55
+MTH 254_lab,homework,0.05
+MTH 254_lab,midterm,0.15
+MTH 254_lab,practice,0.15
+MTH 254_lab,speech_and_discussion,0.05
 MTH 291,attend,0.1
 MTH 291,final,0.55
 MTH 291,midterm,0.15
@@ -201,6 +213,7 @@ MTH 341,regular,0.1
 MTH 341,speech_and_discussion,0.1
 PHI 100,attend,0.2
 PHI 100,final,0.8
+PHI 100,Điểm lần 2,0.8
 PHI 150,attend,0.15
 PHI 150,final,0.55
 PHI 150,practice,0.2
@@ -209,6 +222,9 @@ PHY 101,final,0.55
 PHY 101,homework,0.15
 PHY 101,midterm,0.15
 PHY 101,speech_and_discussion,0.15
+PHY 101_lab,attend,0.2
+PHY 101_lab,final,0.55
+PHY 101_lab,practice,0.25
 POS 151,attend,0.15
 POS 151,essay,0.2
 POS 151,final,0.55
@@ -227,3 +243,8 @@ STA 151,final,0.55
 STA 151,midterm,0.15
 STA 151,regular,0.1
 STA 151,speech_and_discussion,0.1
+STA 151_lab,attend,0.1
+STA 151_lab,final,0.55
+STA 151_lab,midterm,0.15
+STA 151_lab,regular,0.1
+STA 151_lab,speech_and_discussion,0.1

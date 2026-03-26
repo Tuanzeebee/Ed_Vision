@@ -18,9 +18,11 @@ import {
 export class StatisticsOverviewService {
   private readonly bigquery: BigQuery;
   private readonly logger = new Logger(StatisticsOverviewService.name);
+  private readonly dataset: string;
 
   constructor() {
     this.bigquery = new BigQuery();
+    this.dataset = process.env.BIGQUERY_DATASET || 'edvision_dw';
   }
 
   // Helper: map semester string to number
@@ -55,33 +57,33 @@ export class StatisticsOverviewService {
   async getFilterOptions() {
     const sqlDepartments = `
       SELECT DISTINCT department_name 
-      FROM vuong_dw.dim_student 
+      FROM ${this.dataset}.dim_student 
       WHERE department_name IS NOT NULL 
       ORDER BY department_name
     `;
     const sqlMajors = `
       SELECT DISTINCT major, department_name 
-      FROM vuong_dw.dim_student 
+      FROM ${this.dataset}.dim_student 
       WHERE major IS NOT NULL 
       ORDER BY major
     `;
     const sqlClasses = `
       SELECT DISTINCT class_code, cohort_year, major AS program, department_name AS school 
-      FROM vuong_dw.dim_student 
+      FROM ${this.dataset}.dim_student 
       WHERE class_code IS NOT NULL 
       ORDER BY class_code
     `;
-    
+
     // Query lấy danh sách năm học và học kỳ có dữ liệu trong fact_student_course_performance
     const sqlAcademicYears = `
       SELECT DISTINCT academic_year 
-      FROM vuong_dw.fact_student_course_performance 
+      FROM ${this.dataset}.fact_student_course_performance 
       WHERE academic_year IS NOT NULL 
       ORDER BY academic_year DESC
     `;
     const sqlSemesters = `
       SELECT DISTINCT semester_number 
-      FROM vuong_dw.fact_student_course_performance 
+      FROM ${this.dataset}.fact_student_course_performance 
       WHERE semester_number IS NOT NULL 
       ORDER BY semester_number
     `;
@@ -89,22 +91,28 @@ export class StatisticsOverviewService {
     const [deptRows] = await this.bigquery.query({ query: sqlDepartments });
     const [majorRows] = await this.bigquery.query({ query: sqlMajors });
     const [classRows] = await this.bigquery.query({ query: sqlClasses });
-    const [academicYearRows] = await this.bigquery.query({ query: sqlAcademicYears });
+    const [academicYearRows] = await this.bigquery.query({
+      query: sqlAcademicYears,
+    });
     const [semesterRows] = await this.bigquery.query({ query: sqlSemesters });
 
-    const departments = (deptRows as any[]).map(r => r.department_name).filter(Boolean);
-    const programs = (majorRows as any[]).map(r => ({
+    const departments = (deptRows as any[])
+      .map((r) => r.department_name)
+      .filter(Boolean);
+    const programs = (majorRows as any[]).map((r) => ({
       program_name: r.major,
       department_name: r.department_name,
     }));
-    const classGroups = (classRows as any[]).map(r => ({
+    const classGroups = (classRows as any[]).map((r) => ({
       class_code: r.class_code,
       cohort_year: r.cohort_year,
       program_name: r.program,
       department_name: r.school,
     }));
 
-    const cohortYears = Array.from(new Set(classGroups.map(c => c.cohort_year).filter(Boolean)))
+    const cohortYears = Array.from(
+      new Set(classGroups.map((c) => c.cohort_year).filter(Boolean)),
+    )
       .sort()
       .map((year: number) => {
         const graduationYear = year + 6;
@@ -113,14 +121,14 @@ export class StatisticsOverviewService {
 
     // Lấy danh sách năm học từ BigQuery
     const academicYears = (academicYearRows as any[])
-      .map(r => r.academic_year)
+      .map((r) => r.academic_year)
       .filter(Boolean);
-    
+
     // Lấy danh sách học kỳ và map sang tên hiển thị
     const semesterNumbers = (semesterRows as any[])
-      .map(r => Number(r.semester_number))
-      .filter(n => !isNaN(n));
-    const semesters = semesterNumbers.map(n => {
+      .map((r) => Number(r.semester_number))
+      .filter((n) => !isNaN(n));
+    const semesters = semesterNumbers.map((n) => {
       if (n === 1) return 'Kỳ 1';
       if (n === 2) return 'Kỳ 2';
       if (n === 3) return 'Kỳ Hè';
@@ -130,7 +138,10 @@ export class StatisticsOverviewService {
     return {
       schools: ['Tất cả các trường', ...departments],
       courseYears: ['Tất cả khóa', ...cohortYears],
-      majors: programs.map((p: any) => ({ name: p.program_name, school: p.department_name })),
+      majors: programs.map((p: any) => ({
+        name: p.program_name,
+        school: p.department_name,
+      })),
       classes: classGroups.map((c: any) => ({
         code: c.class_code,
         cohortYear: c.cohort_year,
@@ -150,17 +161,13 @@ export class StatisticsOverviewService {
     const { timeFilter = 'tháng-này' } = query;
 
     // Tính phạm vi thời gian dựa trên filter
-    const {
-      currentStart,
-      currentEnd,
-      previousStart,
-      previousEnd,
-    } = this.getDateRanges(
-      timeFilter,
-      query.selectedYear,
-      (query as any).anchorDate,
-      (query as any).sinceYear,
-    );
+    const { currentStart, currentEnd, previousStart, previousEnd } =
+      this.getDateRanges(
+        timeFilter,
+        query.selectedYear,
+        (query as any).anchorDate,
+        (query as any).sinceYear,
+      );
 
     let totalStudents = 0;
     let previousStudents = 0;
@@ -182,8 +189,9 @@ export class StatisticsOverviewService {
     const endDateStr = curEndISO.slice(0, 10);
 
     // Xây dựng filter cho query
-    const { whereClauseStudent, params: studentFilterParams } = this.buildBQStudentFilters(query);
-    
+    const { whereClauseStudent, params: studentFilterParams } =
+      this.buildBQStudentFilters(query);
+
     // Xác định mode: ngày/tháng/năm dùng BETWEEN, tất cả dùng snapshot <=
     const isAllMode = timeFilter === 'tất-cả';
 
@@ -195,8 +203,8 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.created_at BETWEEN @startDate AND @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.created_at BETWEEN @prevStart AND @prevEnd, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
-          INNER JOIN vuong_dw.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_student ds
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('student', 'students') AND (${whereClauseStudent});
         `;
 
@@ -217,18 +225,18 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(di.created_at BETWEEN @startDate AND @endDate, di.instructor_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(di.created_at BETWEEN @prevStart AND @prevEnd, di.instructor_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_instructor di
-          INNER JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_instructor di
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
         `;
 
         // Query performance
         const sqlPerformance = `
           SELECT role_code, performance_rate, activity_date
-          FROM vuong_dw.fact_daily_account_activity
+          FROM ${this.dataset}.fact_daily_account_activity
           WHERE activity_date = (
             SELECT MAX(activity_date)
-            FROM vuong_dw.fact_daily_account_activity
+            FROM ${this.dataset}.fact_daily_account_activity
             WHERE activity_date BETWEEN @startDate AND @endDate
           )
           AND role_code IN ('student', 'students', 'instructor', 'teacher', 'instructors')
@@ -238,15 +246,26 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at BETWEEN @startDate AND @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at BETWEEN @prevStart AND @prevEnd, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
+          FROM ${this.dataset}.dim_student ds
           WHERE (${whereClauseStudent});
         `;
 
         // Thực thi song song
-        const [studentRowsRes, instructorRowsRes, atRiskRowsRes, performanceRowsRes] = await Promise.all([
+        const [
+          studentRowsRes,
+          instructorRowsRes,
+          atRiskRowsRes,
+          performanceRowsRes,
+        ] = await Promise.all([
           this.bigquery.query({
             query: sqlTotalStudentsRange,
-            params: { ...studentFilterParams, startDate: curStartISO, endDate: curEndISO, prevStart: prevStartISO, prevEnd: prevEndISO },
+            params: {
+              ...studentFilterParams,
+              startDate: curStartISO,
+              endDate: curEndISO,
+              prevStart: prevStartISO,
+              prevEnd: prevEndISO,
+            },
           }),
           this.bigquery.query({
             query: sqlTotalInstructorsRange,
@@ -254,7 +273,13 @@ export class StatisticsOverviewService {
           }),
           this.bigquery.query({
             query: sqlAtRisk,
-            params: { ...studentFilterParams, startDate: curStartISO, endDate: curEndISO, prevStart: prevStartISO, prevEnd: prevEndISO },
+            params: {
+              ...studentFilterParams,
+              startDate: curStartISO,
+              endDate: curEndISO,
+              prevStart: prevStartISO,
+              prevEnd: prevEndISO,
+            },
           }),
           this.bigquery.query({
             query: sqlPerformance,
@@ -306,8 +331,8 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.created_at <= @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.created_at <= @prevEndDate, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
-          INNER JOIN vuong_dw.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_student ds
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(ds.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('student', 'students') AND (${whereClauseStudent});
         `;
 
@@ -326,18 +351,18 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(di.created_at <= @endDate, di.instructor_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(di.created_at <= @prevEndDate, di.instructor_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_instructor di
-          INNER JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+          FROM ${this.dataset}.dim_instructor di
+          INNER JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
           WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
         `;
 
         // Query performance
         const sqlPerformance = `
           SELECT role_code, performance_rate, activity_date
-          FROM vuong_dw.fact_daily_account_activity
+          FROM ${this.dataset}.fact_daily_account_activity
           WHERE activity_date = (
             SELECT MAX(activity_date)
-            FROM vuong_dw.fact_daily_account_activity
+            FROM ${this.dataset}.fact_daily_account_activity
             WHERE activity_date BETWEEN @startDate AND @endDate
           )
           AND role_code IN ('student', 'students', 'instructor', 'teacher', 'instructors')
@@ -348,15 +373,24 @@ export class StatisticsOverviewService {
           SELECT
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at <= @endDate, ds.student_sk, NULL)) AS current_cnt,
             COUNT(DISTINCT IF(ds.status = 'at-risk' AND ds.created_at <= @prevEndDate, ds.student_sk, NULL)) AS previous_cnt
-          FROM vuong_dw.dim_student ds
+          FROM ${this.dataset}.dim_student ds
           WHERE (${whereClauseStudent});
         `;
 
         // Song song
-        const [studentSnapRowsRes, instructorSnapRowsRes, atRiskRowsRes, performanceRowsRes] = await Promise.all([
+        const [
+          studentSnapRowsRes,
+          instructorSnapRowsRes,
+          atRiskRowsRes,
+          performanceRowsRes,
+        ] = await Promise.all([
           this.bigquery.query({
             query: sqlTotalStudentsSnap,
-            params: { ...studentFilterParams, endDate: curEndISO, prevEndDate: prevEndISO },
+            params: {
+              ...studentFilterParams,
+              endDate: curEndISO,
+              prevEndDate: prevEndISO,
+            },
           }),
           this.bigquery.query({
             query: sqlTotalInstructorsSnap,
@@ -364,7 +398,11 @@ export class StatisticsOverviewService {
           }),
           this.bigquery.query({
             query: sqlAtRisk,
-            params: { ...studentFilterParams, endDate: curEndISO, prevEndDate: prevEndISO },
+            params: {
+              ...studentFilterParams,
+              endDate: curEndISO,
+              prevEndDate: prevEndISO,
+            },
           }),
           this.bigquery.query({
             query: sqlPerformance,
@@ -409,7 +447,7 @@ export class StatisticsOverviewService {
         }
       }
     } catch (err) {
-      this.logger.error('Error querying dim-based totals:', err as any);
+      this.logger.error('Error querying dim-based totals:', err);
       throw err;
     }
 
@@ -419,17 +457,19 @@ export class StatisticsOverviewService {
         const debugDir = path.join(process.cwd(), 'ed_vision_backend', 'tmp');
         fs.mkdirSync(debugDir, { recursive: true });
         const debugPath = path.join(debugDir, 'dashboard_stats_debug.json');
-        fs.writeFileSync(debugPath, JSON.stringify(__debug, null, 2), { encoding: 'utf8' });
+        fs.writeFileSync(debugPath, JSON.stringify(__debug, null, 2), {
+          encoding: 'utf8',
+        });
         this.logger.log(`Wrote debug file to ${debugPath}`);
       } catch (err) {
-        this.logger.error('Failed to write debug file', err as any);
+        this.logger.error('Failed to write debug file', err);
       }
     }
 
     // Lấy performance từ các query đã chạy (đã lấy ở trên)
     const performanceMap = new Map<string, number>();
     let performanceDate: string | null = null;
-    (perfRows as any[]).forEach(r => {
+    perfRows.forEach((r) => {
       const role = String(r.role_code);
       const rate = Number(r.performance_rate ?? 0);
       performanceMap.set(role, rate);
@@ -438,7 +478,8 @@ export class StatisticsOverviewService {
       }
     });
 
-    const studentPerformance = performanceMap.get('student') ?? performanceMap.get('students') ?? 0;
+    const studentPerformance =
+      performanceMap.get('student') ?? performanceMap.get('students') ?? 0;
     const instructorPerformance =
       performanceMap.get('instructor') ??
       performanceMap.get('teacher') ??
@@ -450,9 +491,18 @@ export class StatisticsOverviewService {
       instructor: instructorPerformance,
     };
 
-    const studentComparison = this.calculateComparison(totalStudents, previousStudents);
-    const instructorComparison = this.calculateComparison(totalInstructors, previousInstructors);
-    const atRiskComparison = this.calculateComparison(atRiskCount, previousAtRiskCount);
+    const studentComparison = this.calculateComparison(
+      totalStudents,
+      previousStudents,
+    );
+    const instructorComparison = this.calculateComparison(
+      totalInstructors,
+      previousInstructors,
+    );
+    const atRiskComparison = this.calculateComparison(
+      atRiskCount,
+      previousAtRiskCount,
+    );
 
     // Kết quả trả về
     const response: DashboardStatsResponse = {
@@ -474,7 +524,8 @@ export class StatisticsOverviewService {
       timeRange: timeFilter,
       filters: {
         school: query.school !== 'Tất cả các trường' ? query.school : undefined,
-        courseYear: query.courseYear !== 'Tất cả khóa' ? query.courseYear : undefined,
+        courseYear:
+          query.courseYear !== 'Tất cả khóa' ? query.courseYear : undefined,
         major: query.major !== 'Tất cả' ? query.major : undefined,
         class: query.class !== 'Tất cả' ? query.class : undefined,
       },
@@ -496,10 +547,12 @@ export class StatisticsOverviewService {
         const debugDir = path.join(process.cwd(), 'ed_vision_backend', 'tmp');
         fs.mkdirSync(debugDir, { recursive: true });
         const debugPath = path.join(debugDir, 'dashboard_stats_debug.json');
-        fs.writeFileSync(debugPath, JSON.stringify(debugResponse, null, 2), { encoding: 'utf8' });
+        fs.writeFileSync(debugPath, JSON.stringify(debugResponse, null, 2), {
+          encoding: 'utf8',
+        });
         this.logger.log(`Wrote debug file to ${debugPath}`);
       } catch (err) {
-        this.logger.error('Failed to write debug file', err as any);
+        this.logger.error('Failed to write debug file', err);
       }
     }
 
@@ -508,14 +561,19 @@ export class StatisticsOverviewService {
 
   /** * Phân tích tổng quan Dashboard Learning (theo học kỳ / năm học) */
   async getLearningDashboardSummary(query: any): Promise<any> {
-    const { academicYear, semester = 'Kỳ 1', compare = true, topLimit = 5 } = query as any;
+    const {
+      academicYear,
+      semester = 'Kỳ 1',
+      compare = true,
+      topLimit = 5,
+    } = query;
     if (!academicYear) throw new Error('academicYear is required');
 
     const semesterNumber = this.mapSemesterToNumber(semester);
-    if (!semesterNumber)
-      throw new Error('Invalid semester value');
+    if (!semesterNumber) throw new Error('Invalid semester value');
 
-    const { prevAcademicYear, prevSemesterNumber } = this.getPreviousAcademicPeriod(academicYear, semesterNumber);
+    const { prevAcademicYear, prevSemesterNumber } =
+      this.getPreviousAcademicPeriod(academicYear, semesterNumber);
     const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
 
     // Tham số chính cho query
@@ -545,8 +603,8 @@ export class StatisticsOverviewService {
             WHEN fsp.academic_year = @prevAcademicYear AND fsp.semester_number = @prevSemesterNumber THEN 'previous'
             ELSE NULL
           END AS period
-        FROM vuong_dw.fact_student_course_performance fsp
-        JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+        FROM ${this.dataset}.fact_student_course_performance fsp
+        JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
         WHERE (${whereClauseStudent})
           AND (fsp.academic_year = @academicYear OR fsp.academic_year = @prevAcademicYear)
       )
@@ -577,8 +635,8 @@ export class StatisticsOverviewService {
           fsp.student_sk,
           fsp.gpa,
           ds.department_name
-        FROM vuong_dw.fact_student_course_performance fsp
-        JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+        FROM ${this.dataset}.fact_student_course_performance fsp
+        JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
         WHERE (${whereClauseStudent})
           AND fsp.academic_year = @academicYear
           AND fsp.semester_number = @semesterNumber
@@ -604,8 +662,8 @@ export class StatisticsOverviewService {
           ds.department_name,
           ds.major,
           ds.class_code
-        FROM vuong_dw.fact_student_course_performance fsp
-        JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+        FROM ${this.dataset}.fact_student_course_performance fsp
+        JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
         WHERE (${whereClauseStudent})
           AND fsp.academic_year = @academicYear
           AND fsp.semester_number = @semesterNumber
@@ -634,18 +692,28 @@ export class StatisticsOverviewService {
 
     const sqlInstructors = `
       SELECT COUNT(DISTINCT di.instructor_sk) AS total_instructors
-      FROM vuong_dw.dim_instructor di
-      JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+      FROM ${this.dataset}.dim_instructor di
+      JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
       WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
     `;
 
     try {
-      const [summaryRes, scoreDistRes, topRes, instructorRes] = await Promise.all([
-        this.bigquery.query({ query: sqlSummary, params: bqParamsBase }),
-        this.bigquery.query({ query: sqlScoreDistribution, params: bqParamsBase }),
-        this.bigquery.query({ query: sqlTopStudents, params: { ...bqParamsBase, limit: topLimit } }),
-        this.bigquery.query({ query: sqlInstructors, params: instructorParams }),
-      ]);
+      const [summaryRes, scoreDistRes, topRes, instructorRes] =
+        await Promise.all([
+          this.bigquery.query({ query: sqlSummary, params: bqParamsBase }),
+          this.bigquery.query({
+            query: sqlScoreDistribution,
+            params: bqParamsBase,
+          }),
+          this.bigquery.query({
+            query: sqlTopStudents,
+            params: { ...bqParamsBase, limit: topLimit },
+          }),
+          this.bigquery.query({
+            query: sqlInstructors,
+            params: instructorParams,
+          }),
+        ]);
 
       const summaryRow = (summaryRes[0] as any[])[0] || {};
       const scoreRows = (scoreDistRes[0] as any[]) || [];
@@ -684,10 +752,12 @@ export class StatisticsOverviewService {
       };
       if (totalCurrent > 0) {
         gpaDist.excellent = Math.round(
-          ((Number(summaryRow.excellent_cnt ?? 0) / totalCurrent) * 10000) / 100,
+          ((Number(summaryRow.excellent_cnt ?? 0) / totalCurrent) * 10000) /
+            100,
         );
         gpaDist.veryGood = Math.round(
-          ((Number(summaryRow.very_good_cnt ?? 0) / totalCurrent) * 10000) / 100,
+          ((Number(summaryRow.very_good_cnt ?? 0) / totalCurrent) * 10000) /
+            100,
         );
         gpaDist.good = Math.round(
           ((Number(summaryRow.good_cnt ?? 0) / totalCurrent) * 10000) / 100,
@@ -702,9 +772,17 @@ export class StatisticsOverviewService {
 
       // Phân phối GPA theo trường - thang 0-4 với bước nhảy 0.5 (9 mốc)
       const gpaBuckets = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
-      const schoolMap = new Map<string, { counts: number[]; totalGpa: number; totalStudents: number; weightedSum: number }>();
+      const schoolMap = new Map<
+        string,
+        {
+          counts: number[];
+          totalGpa: number;
+          totalStudents: number;
+          weightedSum: number;
+        }
+      >();
 
-      (scoreRows as any[]).forEach((r: any) => {
+      scoreRows.forEach((r: any) => {
         const school = r.department_name || 'Unknown';
         let gpaBucket = Number(r.gpa_bucket ?? 0);
         // Đảm bảo GPA nằm trong khoảng 0-4
@@ -714,9 +792,14 @@ export class StatisticsOverviewService {
         const bucketIndex = gpaBuckets.indexOf(roundedGpa);
         const count = Number(r.student_count ?? 0);
         const totalGpa = Number(r.total_gpa ?? 0);
-        
+
         if (!schoolMap.has(school)) {
-          schoolMap.set(school, { counts: new Array(9).fill(0), totalGpa: 0, totalStudents: 0, weightedSum: 0 });
+          schoolMap.set(school, {
+            counts: new Array(9).fill(0),
+            totalGpa: 0,
+            totalStudents: 0,
+            weightedSum: 0,
+          });
         }
         const schoolData = schoolMap.get(school)!;
         if (bucketIndex >= 0 && bucketIndex < 9) {
@@ -732,12 +815,14 @@ export class StatisticsOverviewService {
       });
 
       const scoreDistribution = {
-        labels: gpaBuckets.map(g => g.toFixed(1)),
+        labels: gpaBuckets.map((g) => g.toFixed(1)),
         schools: Array.from(schoolMap.entries()).map(([schoolName, data]) => {
           // Ưu tiên dùng totalGpa nếu có, nếu không thì dùng weightedSum
-          const avgGpa = data.totalStudents > 0 
-            ? (data.totalGpa > 0 ? data.totalGpa : data.weightedSum) / data.totalStudents 
-            : 0;
+          const avgGpa =
+            data.totalStudents > 0
+              ? (data.totalGpa > 0 ? data.totalGpa : data.weightedSum) /
+                data.totalStudents
+              : 0;
           return {
             schoolName,
             scores: data.counts,
@@ -759,7 +844,10 @@ export class StatisticsOverviewService {
 
       const totalInstructors = Number(insRow.total_instructors ?? 0);
 
-      const calcComparison = (cur: number, prev: number): ComparisonData | null => {
+      const calcComparison = (
+        cur: number,
+        prev: number,
+      ): ComparisonData | null => {
         if (!compare) return null;
         if (prev === 0) {
           return {
@@ -773,25 +861,30 @@ export class StatisticsOverviewService {
         return {
           value: diff,
           percentage: pct,
-          trend: (diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable') as 'up' | 'down' | 'stable',
+          trend: diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable',
         };
       };
 
-      const studentComparison = calcComparison(currentStudents, previousStudents);
+      const studentComparison = calcComparison(
+        currentStudents,
+        previousStudents,
+      );
       const warningComparison = calcComparison(currentWarning, previousWarning);
       const atRiskComparison = calcComparison(currentAtRisk, previousAtRisk);
 
       const learningContext: LearningStatsContext = {
         currentLabel: `${semester} • Năm học ${academicYear}`,
-        previousLabel: compare ? `${semester} • Năm học ${prevAcademicYear}` : undefined,
+        previousLabel: compare
+          ? `${semester} • Năm học ${prevAcademicYear}`
+          : undefined,
       };
 
       const response: LearningDashboardStatsResponse = {
         current: {
           students: currentStudents,
           instructors: totalInstructors,
-          warning: currentWarning,  // GPA 2.0 - 2.5
-          atRisk: currentAtRisk,    // GPA < 2.0
+          warning: currentWarning, // GPA 2.0 - 2.5
+          atRisk: currentAtRisk, // GPA < 2.0
           performance: {
             student: studentPerformance,
             instructor: studentPerformance,
@@ -827,7 +920,7 @@ export class StatisticsOverviewService {
 
       return response;
     } catch (err) {
-      this.logger.error('Error in getLearningDashboardSummary', err as any);
+      this.logger.error('Error in getLearningDashboardSummary', err);
       throw err;
     }
   }
@@ -843,15 +936,13 @@ export class StatisticsOverviewService {
 
     const semesterNumber = this.mapSemesterToNumber(semester);
     const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
-    const { prevAcademicYear, prevSemesterNumber } = this.getPreviousAcademicPeriod(
-      academicYear,
-      semesterNumber,
-    );
+    const { prevAcademicYear, prevSemesterNumber } =
+      this.getPreviousAcademicPeriod(academicYear, semesterNumber);
 
     // Đếm số học sinh current & previous
     const baseStudentSql = `
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
         AND fsp.academic_year = @academicYear
         ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
@@ -902,12 +993,15 @@ export class StatisticsOverviewService {
 
     const sqlInstructors = `
       SELECT COUNT(DISTINCT di.instructor_sk) AS cnt
-      FROM vuong_dw.dim_instructor di
-      JOIN vuong_dw.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
+      FROM ${this.dataset}.dim_instructor di
+      JOIN ${this.dataset}.dim_account a ON CAST(di.account_id AS STRING) = CAST(a.account_sk AS STRING)
       WHERE a.status = 'active' AND a.role_code IN ('instructor', 'teacher', 'instructors') AND (${instructorWhere});
     `;
 
-    const [insRows] = await this.bigquery.query({ query: sqlInstructors, params: instructorParams });
+    const [insRows] = await this.bigquery.query({
+      query: sqlInstructors,
+      params: instructorParams,
+    });
     const totalInstructors = Number((insRows as any[])[0]?.cnt ?? 0);
     const previousInstructors = totalInstructors; // không có phân biệt theo thời gian
 
@@ -919,8 +1013,8 @@ export class StatisticsOverviewService {
     `;
     const sqlAtRiskPrev = `
       SELECT COUNT(DISTINCT fsp.student_sk) AS cnt
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
         AND fsp.academic_year = @prevAcademicYear
         ${prevSemesterNumber !== null ? 'AND fsp.semester_number = @prevSemesterNumber' : ''}
@@ -965,9 +1059,18 @@ export class StatisticsOverviewService {
     const instructorPerformance = studentPerformance;
 
     // So sánh - so sánh
-    const studentComparison = this.calculateComparison(totalStudents, previousStudents);
-    const instructorComparison = this.calculateComparison(totalInstructors, previousInstructors);
-    const atRiskComparison = this.calculateComparison(atRiskCount, previousAtRiskCount);
+    const studentComparison = this.calculateComparison(
+      totalStudents,
+      previousStudents,
+    );
+    const instructorComparison = this.calculateComparison(
+      totalInstructors,
+      previousInstructors,
+    );
+    const atRiskComparison = this.calculateComparison(
+      atRiskCount,
+      previousAtRiskCount,
+    );
 
     const learningContext: LearningStatsContext = {
       currentLabel: `${semester} • Năm học ${academicYear}`,
@@ -1009,7 +1112,9 @@ export class StatisticsOverviewService {
   // ============================================================
   // ===== MỚI THÊM: GPA Distribution từ BigQuery =====
   // ============================================================
-  async getGPADistribution(query: DashboardStatsQueryDto): Promise<GPADistributionResponse> {
+  async getGPADistribution(
+    query: DashboardStatsQueryDto,
+  ): Promise<GPADistributionResponse> {
     const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
     let semesterNumber: number | null = null;
 
@@ -1023,8 +1128,8 @@ export class StatisticsOverviewService {
         SUM(CASE WHEN fsp.gpa >= 6.5 AND fsp.gpa < 8.0 THEN 1 ELSE 0 END) AS good,
         SUM(CASE WHEN fsp.gpa < 6.5 THEN 1 ELSE 0 END) AS average,
         COUNT(*) AS total
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''};
@@ -1036,7 +1141,10 @@ export class StatisticsOverviewService {
       ...(query.academicYear && { academicYear: query.academicYear }),
     };
 
-    const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
+    const [rows] = await this.bigquery.query({
+      query: sql,
+      params: queryParams,
+    });
     const row = (rows as any[])[0] || {};
     const total = Number(row.total ?? 0);
     if (total === 0) {
@@ -1044,16 +1152,22 @@ export class StatisticsOverviewService {
     }
 
     return {
-      excellent: parseFloat(((Number(row.excellent ?? 0) / total) * 100).toFixed(2)),
+      excellent: parseFloat(
+        ((Number(row.excellent ?? 0) / total) * 100).toFixed(2),
+      ),
       good: parseFloat(((Number(row.good ?? 0) / total) * 100).toFixed(2)),
-      average: parseFloat(((Number(row.average ?? 0) / total) * 100).toFixed(2)),
+      average: parseFloat(
+        ((Number(row.average ?? 0) / total) * 100).toFixed(2),
+      ),
     };
   }
 
   // ============================================================
   // ===== MỚI THÊM: Score Distribution (0-10) từ BigQuery =====
   // ============================================================
-  async getScoreDistribution(query: DashboardStatsQueryDto): Promise<ScoreDistributionResponse> {
+  async getScoreDistribution(
+    query: DashboardStatsQueryDto,
+  ): Promise<ScoreDistributionResponse> {
     const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
     let semesterNumber: number | null = null;
 
@@ -1068,8 +1182,8 @@ export class StatisticsOverviewService {
         CAST(FLOOR(fsp.gpa * 2) / 2 AS FLOAT64) AS gpa_bucket,
         COUNT(*) AS student_count,
         SUM(fsp.gpa) AS total_gpa
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
@@ -1083,12 +1197,23 @@ export class StatisticsOverviewService {
       ...(query.academicYear && { academicYear: query.academicYear }),
     };
 
-    const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
+    const [rows] = await this.bigquery.query({
+      query: sql,
+      params: queryParams,
+    });
 
     // Các mốc GPA: 0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 (9 buckets)
     const gpaBuckets = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
-    const schoolMap = new Map<string, { counts: number[]; totalGpa: number; totalStudents: number; weightedSum: number }>();
-    (rows as any[]).forEach(row => {
+    const schoolMap = new Map<
+      string,
+      {
+        counts: number[];
+        totalGpa: number;
+        totalStudents: number;
+        weightedSum: number;
+      }
+    >();
+    (rows as any[]).forEach((row) => {
       const school = row.department_name || 'Unknown';
       let gpaBucket = Number(row.gpa_bucket);
       // Đảm bảo GPA nằm trong khoảng 0-4
@@ -1098,9 +1223,14 @@ export class StatisticsOverviewService {
       const bucketIndex = gpaBuckets.indexOf(roundedGpa);
       const count = Number(row.student_count);
       const totalGpa = Number(row.total_gpa ?? 0);
-      
+
       if (!schoolMap.has(school)) {
-        schoolMap.set(school, { counts: new Array(9).fill(0), totalGpa: 0, totalStudents: 0, weightedSum: 0 });
+        schoolMap.set(school, {
+          counts: new Array(9).fill(0),
+          totalGpa: 0,
+          totalStudents: 0,
+          weightedSum: 0,
+        });
       }
       const schoolData = schoolMap.get(school)!;
       if (bucketIndex >= 0 && bucketIndex < 9) {
@@ -1115,11 +1245,13 @@ export class StatisticsOverviewService {
     });
 
     return {
-      labels: gpaBuckets.map(g => g.toFixed(1)),
+      labels: gpaBuckets.map((g) => g.toFixed(1)),
       schools: Array.from(schoolMap.entries()).map(([schoolName, data]) => {
-        const avgGpa = data.totalStudents > 0 
-          ? (data.totalGpa > 0 ? data.totalGpa : data.weightedSum) / data.totalStudents 
-          : 0;
+        const avgGpa =
+          data.totalStudents > 0
+            ? (data.totalGpa > 0 ? data.totalGpa : data.weightedSum) /
+              data.totalStudents
+            : 0;
         return {
           schoolName,
           scores: data.counts,
@@ -1132,7 +1264,9 @@ export class StatisticsOverviewService {
   // ============================================================
   // ===== MỚI THÊM: Top Students từ BigQuery =====
   // ============================================================
-  async getTopStudents(query: DashboardStatsQueryDto): Promise<TopStudentResponse> {
+  async getTopStudents(
+    query: DashboardStatsQueryDto,
+  ): Promise<TopStudentResponse> {
     const { whereClauseStudent, params } = this.buildBQStudentFilters(query);
     let semesterNumber: number | null = null;
 
@@ -1151,8 +1285,8 @@ export class StatisticsOverviewService {
         ds.class_code AS class,
         fsp.gpa,
         ROW_NUMBER() OVER (ORDER BY fsp.gpa DESC) AS rank
-      FROM vuong_dw.fact_student_course_performance fsp
-      INNER JOIN vuong_dw.dim_student ds ON fsp.student_sk = ds.student_sk
+      FROM ${this.dataset}.fact_student_course_performance fsp
+      INNER JOIN ${this.dataset}.dim_student ds ON fsp.student_sk = ds.student_sk
       WHERE (${whereClauseStudent})
       ${semesterNumber !== null ? 'AND fsp.semester_number = @semesterNumber' : ''}
       ${query.academicYear ? 'AND fsp.academic_year = @academicYear' : ''}
@@ -1167,9 +1301,12 @@ export class StatisticsOverviewService {
       limit,
     };
 
-    const [rows] = await this.bigquery.query({ query: sql, params: queryParams });
+    const [rows] = await this.bigquery.query({
+      query: sql,
+      params: queryParams,
+    });
 
-    const students = (rows as any[]).map(row => ({
+    const students = (rows as any[]).map((row) => ({
       id: Number(row.id),
       name: String(row.name),
       school: String(row.school),
@@ -1183,14 +1320,16 @@ export class StatisticsOverviewService {
   }
 
   // ===== ACCESS TIME =====
-  async getAccessTimeStats(query: DashboardStatsQueryDto): Promise<AccessTimeStatsResponse> {
+  async getAccessTimeStats(
+    query: DashboardStatsQueryDto,
+  ): Promise<AccessTimeStatsResponse> {
     // Xác định khoảng thời gian cần lấy dữ liệu
     // Nếu có timeFilter thì sử dụng nó, ngược lại mặc định là ngày hôm nay
     const timeFilter = query.timeFilter || 'hôm-nay';
     const anchorDate = query.anchorDate;
     const selectedYear = query.selectedYear;
     const sinceYear = query.sinceYear;
-    
+
     // Lấy khoảng thời gian dựa trên filter
     const { currentStart, currentEnd } = this.getDateRanges(
       timeFilter,
@@ -1198,17 +1337,17 @@ export class StatisticsOverviewService {
       anchorDate,
       sinceYear,
     );
-    
+
     // Format dates cho SQL
     const startDateStr = currentStart.toISOString().split('T')[0];
     const endDateStr = currentEnd.toISOString().split('T')[0];
-    
+
     const sql = `
       SELECT
         SUM(CASE WHEN LOWER(period) = 'morning' THEN 1 ELSE 0 END) AS morning,
         SUM(CASE WHEN LOWER(period) = 'afternoon' THEN 1 ELSE 0 END) AS afternoon,
         SUM(CASE WHEN LOWER(period) = 'evening' THEN 1 ELSE 0 END) AS evening
-      FROM vuong_dw.fact_user_session
+      FROM ${this.dataset}.fact_user_session
       WHERE period IS NOT NULL
         AND DATE(login_time) >= '${startDateStr}'
         AND DATE(login_time) <= '${endDateStr}'
@@ -1221,9 +1360,14 @@ export class StatisticsOverviewService {
     };
     const total = counts.morning + counts.afternoon + counts.evening;
     const percentages = {
-      morning: total > 0 ? parseFloat(((counts.morning / total) * 100).toFixed(2)) : 0,
-      afternoon: total > 0 ? parseFloat(((counts.afternoon / total) * 100).toFixed(2)) : 0,
-      evening: total > 0 ? parseFloat(((counts.evening / total) * 100).toFixed(2)) : 0,
+      morning:
+        total > 0 ? parseFloat(((counts.morning / total) * 100).toFixed(2)) : 0,
+      afternoon:
+        total > 0
+          ? parseFloat(((counts.afternoon / total) * 100).toFixed(2))
+          : 0,
+      evening:
+        total > 0 ? parseFloat(((counts.evening / total) * 100).toFixed(2)) : 0,
     };
     return { data: counts, percentages, total };
   }
@@ -1232,7 +1376,7 @@ export class StatisticsOverviewService {
   async debugSessions() {
     const sql = `
       SELECT session_id, account_sk, login_time, period, role_code
-      FROM vuong_dw.fact_user_session
+      FROM ${this.dataset}.fact_user_session
       ORDER BY login_time DESC
       LIMIT 20
     `;
@@ -1246,7 +1390,12 @@ export class StatisticsOverviewService {
     selectedYear?: string,
     anchorDate?: string,
     sinceYear?: any,
-  ): { currentStart: Date; currentEnd: Date; previousStart: Date; previousEnd: Date } {
+  ): {
+    currentStart: Date;
+    currentEnd: Date;
+    previousStart: Date;
+    previousEnd: Date;
+  } {
     const parseAnchor = (d?: string) => {
       if (!d) return new Date();
       // Accept 'YYYY-MM-DD' or full ISO; ensure we construct UTC midnight
@@ -1254,15 +1403,39 @@ export class StatisticsOverviewService {
       return new Date(d);
     };
 
-    const startOfDayUTC = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
-    const endOfDayUTC = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+    const startOfDayUTC = (d: Date) =>
+      new Date(
+        Date.UTC(
+          d.getUTCFullYear(),
+          d.getUTCMonth(),
+          d.getUTCDate(),
+          0,
+          0,
+          0,
+          0,
+        ),
+      );
+    const endOfDayUTC = (d: Date) =>
+      new Date(
+        Date.UTC(
+          d.getUTCFullYear(),
+          d.getUTCMonth(),
+          d.getUTCDate(),
+          23,
+          59,
+          59,
+          999,
+        ),
+      );
 
     const anchor = parseAnchor(anchorDate);
 
     // Default sinceYear fallback
-    const since = typeof sinceYear === 'number' || (typeof sinceYear === 'string' && /^\d{4}$/.test(String(sinceYear)))
-      ? Number(sinceYear)
-      : undefined;
+    const since =
+      typeof sinceYear === 'number' ||
+      (typeof sinceYear === 'string' && /^\d{4}$/.test(String(sinceYear)))
+        ? Number(sinceYear)
+        : undefined;
 
     if (timeFilter === 'hôm-nay') {
       const curStart = startOfDayUTC(anchor);
@@ -1271,12 +1444,23 @@ export class StatisticsOverviewService {
       prev.setUTCDate(prev.getUTCDate() - 1);
       const prevStart = startOfDayUTC(prev);
       const prevEnd = endOfDayUTC(prev);
-      return { currentStart: curStart, currentEnd: curEnd, previousStart: prevStart, previousEnd: prevEnd };
+      return {
+        currentStart: curStart,
+        currentEnd: curEnd,
+        previousStart: prevStart,
+        previousEnd: prevEnd,
+      };
     }
 
     if (timeFilter === 'tuần-này') {
       // Treat week start as Monday
-      const d = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
+      const d = new Date(
+        Date.UTC(
+          anchor.getUTCFullYear(),
+          anchor.getUTCMonth(),
+          anchor.getUTCDate(),
+        ),
+      );
       const dow = d.getUTCDay(); // 0 (Sun) .. 6 (Sat)
       const mondayOffset = (dow + 6) % 7; // days since Monday
       const monday = new Date(d.getTime());
@@ -1289,7 +1473,12 @@ export class StatisticsOverviewService {
       prevStart.setUTCDate(prevStart.getUTCDate() - 7);
       const prevEnd = new Date(curEnd.getTime());
       prevEnd.setUTCDate(prevEnd.getUTCDate() - 7);
-      return { currentStart: curStart, currentEnd: curEnd, previousStart: prevStart, previousEnd: prevEnd };
+      return {
+        currentStart: curStart,
+        currentEnd: curEnd,
+        previousStart: prevStart,
+        previousEnd: prevEnd,
+      };
     }
 
     if (timeFilter === 'tháng-này') {
@@ -1299,7 +1488,12 @@ export class StatisticsOverviewService {
       const curEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999));
       const prevStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
       const prevEnd = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
-      return { currentStart: curStart, currentEnd: curEnd, previousStart: prevStart, previousEnd: prevEnd };
+      return {
+        currentStart: curStart,
+        currentEnd: curEnd,
+        previousStart: prevStart,
+        previousEnd: prevEnd,
+      };
     }
 
     if (timeFilter === 'năm-này') {
@@ -1309,19 +1503,51 @@ export class StatisticsOverviewService {
       const curEnd = new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999)); // 31/12/Y
       const prevStart = new Date(Date.UTC(y - 1, 0, 1, 0, 0, 0, 0)); // 1/1/(Y-1)
       const prevEnd = new Date(Date.UTC(y - 1, 11, 31, 23, 59, 59, 999)); // 31/12/(Y-1)
-      return { currentStart: curStart, currentEnd: curEnd, previousStart: prevStart, previousEnd: prevEnd };
+      return {
+        currentStart: curStart,
+        currentEnd: curEnd,
+        previousStart: prevStart,
+        previousEnd: prevEnd,
+      };
     }
 
     // 'tất-cả' or fallback: from sinceYear (or 2022) to today; previous = same-length previous period (1 year back)
     const today = startOfDayUTC(anchor);
-    const fromYear = since ?? (selectedYear ? Number(String(selectedYear).split('-')[0]) : undefined);
+    const fromYear =
+      since ??
+      (selectedYear ? Number(String(selectedYear).split('-')[0]) : undefined);
     const defaultSince = fromYear && !Number.isNaN(fromYear) ? fromYear : 2022;
     const curStart = new Date(Date.UTC(defaultSince, 0, 1, 0, 0, 0, 0));
     const curEnd = endOfDayUTC(anchor);
     // previous period: shift by -1 year (same calendar interval)
-    const prevStart = new Date(Date.UTC(curStart.getUTCFullYear() - 1, curStart.getUTCMonth(), curStart.getUTCDate(), 0, 0, 0, 0));
-    const prevEnd = new Date(Date.UTC(curEnd.getUTCFullYear() - 1, curEnd.getUTCMonth(), curEnd.getUTCDate(), 23, 59, 59, 999));
-    return { currentStart: curStart, currentEnd: curEnd, previousStart: prevStart, previousEnd: prevEnd };
+    const prevStart = new Date(
+      Date.UTC(
+        curStart.getUTCFullYear() - 1,
+        curStart.getUTCMonth(),
+        curStart.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+    const prevEnd = new Date(
+      Date.UTC(
+        curEnd.getUTCFullYear() - 1,
+        curEnd.getUTCMonth(),
+        curEnd.getUTCDate(),
+        23,
+        59,
+        59,
+        999,
+      ),
+    );
+    return {
+      currentStart: curStart,
+      currentEnd: curEnd,
+      previousStart: prevStart,
+      previousEnd: prevEnd,
+    };
   }
 
   private buildBQStudentFilters(query: DashboardStatsQueryDto) {
@@ -1356,7 +1582,10 @@ export class StatisticsOverviewService {
     };
   }
 
-  private calculateComparison(current: number, previous: number): ComparisonData {
+  private calculateComparison(
+    current: number,
+    previous: number,
+  ): ComparisonData {
     if (previous === 0) {
       return {
         value: current,

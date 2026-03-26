@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home,
   Users,
@@ -23,67 +25,70 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const { t } = useTranslation('teacher');
+  const location = useLocation();
+
+  // derive active path from prop or location and normalize it to a full route
+  const rawActive = currentPage ? currentPage : location.pathname;
+  const normalizedPath = rawActive.startsWith('/') ? rawActive : `/teacher/${rawActive}`;
+
+  // Map some short slugs to their actual route for menu matching
+  const mappedPath = normalizedPath === '/teacher/management' ? '/teacher/appointments' : normalizedPath;
+
   const [isGradeMenuOpen, setIsGradeMenuOpen] = useState(
-    currentPage === 'grade-management' || currentPage === 'prediction-view' || currentPage === 'prediction-view-v2'
+    mappedPath.includes('/teacher/grade') || mappedPath.includes('/teacher/prediction') || mappedPath.includes('/teacher/setting-grade-table')
   );
 
   const [isAppointmentMenuOpen, setIsAppointmentMenuOpen] = useState(
-    currentPage === 'calendar-overview' || currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+    mappedPath.includes('/teacher/calendar') || mappedPath.includes('/teacher/schedule') || mappedPath.includes('/teacher/appointments')
   );
 
+  useEffect(() => {
+    // Keep menu open when `currentPage` prop (a short slug) or the real pathname indicates a child route
+    let p = currentPage ? (currentPage.startsWith('/') ? currentPage : `/teacher/${currentPage}`) : location.pathname;
+    if (p === '/teacher/management') p = '/teacher/appointments';
+    setIsGradeMenuOpen(p.startsWith('/teacher/grade') || p.startsWith('/teacher/prediction') || p.startsWith('/teacher/setting-grade-table'));
+    setIsAppointmentMenuOpen(p.startsWith('/teacher/calendar') || p.startsWith('/teacher/schedule') || p.startsWith('/teacher/appointments'));
+  }, [location.pathname, currentPage]);
+
   const handleNavigation = (path: string) => {
-    if (onNavigate) {
-      onNavigate(path);
-    }
+    if (onNavigate) onNavigate(path);
   };
 
-  const toggleGradeMenu = () => {
-    setIsGradeMenuOpen(!isGradeMenuOpen);
-  };
+  const toggleGradeMenu = () => setIsGradeMenuOpen((s) => !s);
+  const toggleAppointmentMenu = () => setIsAppointmentMenuOpen((s) => !s);
 
-
-
-  const toggleAppointmentMenu = () => {
-    setIsAppointmentMenuOpen(!isAppointmentMenuOpen);
-  };
-
-    return (
-      <aside className="w-full h-full bg-white flex flex-col text-[15px]">
+  return (
+    <aside className="w-full h-full bg-white flex flex-col text-[15px]">
       <nav className="flex-1 p-4 space-y-1">
-        <button
-          onClick={() => handleNavigation('/teacher/dashboard')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'dashboard'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/dashboard"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <Home className="w-4 h-4" />
-          <span>Dashboard</span>
-        </button>
+          <span>{t('sidebar.dashboard')}</span>
+        </NavLink>
 
-        <button
-          onClick={() => handleNavigation('/teacher/class-management')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'class-management'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/class-management"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <Users className="w-4 h-4" />
-          <span>Quản lý lớp cố vấn</span>
-        </button>
+          <span>{t('sidebar.classManagement')}</span>
+        </NavLink>
 
         {/* Grade Management with Dropdown */}
         <div className="space-y-1">
           <button
             onClick={toggleGradeMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management' || currentPage === 'prediction-view'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isGradeMenuOpen
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
           >
             <div className="flex items-center space-x-3">
               <ClipboardList className="w-4 h-4" />
-              <span>Quản lý điểm</span>
+              <span>{t('sidebar.gradeManagement')}</span>
             </div>
             {isGradeMenuOpen ? (
               <ChevronDown className="w-3 h-3" />
@@ -95,99 +100,76 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           {/* Dropdown Menu */}
           {isGradeMenuOpen && (
             <div className="ml-4 space-y-1">
-              <button
-                onClick={() => handleNavigation('/teacher/grade-management')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'grade-management'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+              <NavLink
+                to="/teacher/grade-management"
+                className={({ isActive }) => `flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>Bảng điểm</span>
-              </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/prediction-view')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'prediction-view'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+                <span>{t('sidebar.gradeTable')}</span>
+              </NavLink>
+              <NavLink
+                to="/teacher/setting-grade-table"
+                className={({ isActive }) => `flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>{t('sidebar.viewPredictions')}</span>
+              </NavLink>
+              <NavLink
+                to="/teacher/prediction-view"
+                className={({ isActive }) => `flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <Brain className="w-4 h-4" />
-                <span>Xem dự đoán</span>
-              </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/prediction-view-v2')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'prediction-view-v2'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <Brain className="w-4 h-4" />
-                <span>Dự đoán v2</span>
-              </button>
+                <span>{t('sidebar.predictionV2')}</span>
+              </NavLink>
             </div>
           )}
         </div>
 
-        <button
-          onClick={() => handleNavigation('/teacher/progress-tracking')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'progress-tracking'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/progress-tracking"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <BarChart3 className="w-4 h-4" />
-          <span>Theo dõi tiến độ</span>
-        </button>
+          <span>{t('sidebar.progressTracking')}</span>
+        </NavLink>
 
         {/* Survey Management */}
-        <button
-          onClick={() => handleNavigation('/teacher/survey-management')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'survey-management'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/survey-management"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <ClipboardCheck className="w-4 h-4" />
-          <span>Khảo sát sinh viên</span>
-        </button>
+          <span>{t('sidebar.surveyManagement')}</span>
+        </NavLink>
 
-        <button
-          onClick={() => handleNavigation('/teacher/reports-alerts')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'reports-alerts'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/reports-alerts"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <AlertTriangle className="w-4 h-4" />
-          <span>Báo cáo & Cảnh báo</span>
-        </button>
+          <span>{t('sidebar.reportsAlerts')}</span>
+        </NavLink>
 
-        <button
-          onClick={() => handleNavigation('/teacher/messages')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'messages'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/messages"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <Bell className="w-4 h-4" />
-          <span>Tin nhắn/Thông báo</span>
-        </button>
+          <span>{t('sidebar.messages')}</span>
+        </NavLink>
 
         {/* Appointment Management with Dropdown */}
         <div className="space-y-1">
           <button
             onClick={toggleAppointmentMenu}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule' || currentPage === 'requests' || currentPage === 'confirmed'
+            className={`flex items-center justify-between px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isAppointmentMenuOpen
               ? 'bg-blue-50 text-blue-600'
               : 'text-gray-700 hover:bg-gray-100'
               }`}
           >
             <div className="flex items-center space-x-3">
               <Calendar className="w-4 h-4" />
-              <span>Quản lý lịch hẹn</span>
+              <span>{t('sidebar.appointmentManagement')}</span>
             </div>
             {isAppointmentMenuOpen ? (
               <ChevronDown className="w-3 h-3" />
@@ -199,62 +181,39 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           {/* Dropdown Menu */}
           {isAppointmentMenuOpen && (
             <div className="ml-4 space-y-1">
-                            <button
-                              onClick={() => handleNavigation('/teacher/calendar-overview')}
-                              className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'calendar-overview'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'text-gray-600 hover:bg-gray-50'
-                                }`}
-                            >
+              <NavLink
+                to="/teacher/calendar-overview"
+                className={({ isActive }) => `flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors cursor-pointer ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
                 <Calendar className="w-4 h-4" />
-                <span>Tổng quan lịch hẹn</span>
-              </button>
-              <button
-                onClick={() => handleNavigation('/teacher/appointments')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'schedule'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+                <span>{t('sidebar.calendarOverview')}</span>
+              </NavLink>
+              <NavLink
+                to="/teacher/schedule"
+                className={({ isActive }) => `flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <CalendarPlus className="w-4 h-4" />
-                <span>Thiết lập lịch rảnh</span>
-              </button>
+                <span>{t('sidebar.scheduleSetup')}</span>
+              </NavLink>
 
-              <button
-                onClick={() => handleNavigation('/teacher/requests')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'requests'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+              <NavLink
+                to="/teacher/appointments"
+                className={({ isActive }) => `flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
               >
-                <Clock className="w-4 h-4" />
-                <span>Yêu cầu lịch hẹn</span>
-              </button>
-
-              <button
-                onClick={() => handleNavigation('/teacher/confirmed')}
-                className={`flex items-center space-x-3 px-4 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'confirmed'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span>Lịch hẹn đã xác nhận</span>
-              </button>
+                <ClipboardList className="w-4 h-4" />
+                <span>{t('sidebar.appointmentList')}</span>
+              </NavLink>
             </div>
           )}
         </div>
 
-        <button
-          onClick={() => handleNavigation('/teacher/settings')}
-          className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${currentPage === 'settings'
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        <NavLink
+          to="/teacher/settings"
+          className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
         >
           <Settings className="w-4 h-4" />
-          <span>Cài đặt tài khoản</span>
-        </button>
+          <span>{t('sidebar.accountSettings')}</span>
+        </NavLink>
       </nav>
     </aside>
   );

@@ -1,16 +1,44 @@
 {
-  "dashboard": {
-    "title": "Trang Giáo Viên",
-    "welcome": "Chào mừng trở lại",
-    "myClasses": "Lớp của tôi"
+  "sidebar": {
+    "dashboard": "Trang chủ",
+    "classManagement": "Quản lý lớp cố vấn",
+    "gradeManagement": "Quản lý điểm",
+    "gradeTable": "Bảng điểm",
+    "viewPredictions": "Xem dự đoán",
+    "predictionV2": "Dự đoán v2",
+    "progressTracking": "Theo dõi tiến độ",
+    "surveyManagement": "Khảo sát sinh viên",
+    "reportsAlerts": "Báo cáo & Cảnh báo",
+    "messages": "Tin nhắn/Thông báo",
+    "appointmentManagement": "Quản lý lịch hẹn",
+    "calendarOverview": "Tổng quan lịch hẹn",
+    "scheduleSetup": "Thiết lập lịch rảnh",
+    "appointmentList": "Quản lý lịch hẹn",
+    "accountSettings": "Cài đặt tài khoản"
   },
   "classes": {
     "title": "Lớp học",
     "viewClass": "Xem lớp",
-    "students": "Học sinh"
+    "students": "Sinh viên"
   },
   "schedule": {
     "title": "Lịch dạy",
     "viewSchedule": "Xem lịch"
+  },
+  "common": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "export": "Xuất",
+    "import": "Nhập",
+    "refresh": "Làm mới",
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "error": "Lỗi",
+    "success": "Thành công"
   }
 }

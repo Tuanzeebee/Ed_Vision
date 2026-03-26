@@ -1,18 +1,33 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import type { AvailableDate, AppointmentRequest } from './types/appointment.types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import TeacherLayout from './components/TeacherLayout';
 import ScheduleManagement from './ScheduleManagement';
-import AppointmentRequests from './AppointmentRequests';
-import ConfirmedAppointments from './ConfirmedAppointments';
+import TeacherAppointmentManagement from './TeacherAppointmentManagement';
 
-type Page = 'schedule' | 'requests' | 'confirmed';
+type Page = 'schedule' | 'management';
 
 export default function TeacherAppointmentDashboard() {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<Page>('schedule');
+  const location = useLocation();
+  
+  // Initialize currentPage based on URL path immediately
+  const getInitialPage = (): Page => {
+    return location.pathname === '/teacher/schedule' ? 'schedule' : 'management';
+  };
+  
+  const [currentPage, setCurrentPage] = useState<Page>(getInitialPage);
+
+  // Update currentPage when URL changes (only if different)
+  useEffect(() => {
+    const pathname = location.pathname;
+    const newPage = pathname === '/teacher/schedule' ? 'schedule' : 'management';
+    if (newPage !== currentPage) {
+      setCurrentPage(newPage);
+    }
+  }, [location.pathname, currentPage]);
 
   // Appointment schedule state
   const [availableDates, setAvailableDates] = useLocalStorage<AvailableDate[]>(
@@ -20,7 +35,7 @@ export default function TeacherAppointmentDashboard() {
     []
   );
 
-  // Request state
+  // Request state (no longer used but kept for compatibility)
   const [requests, setRequests] = useState<AppointmentRequest[]>([
     {
       id: 1,
@@ -110,17 +125,8 @@ export default function TeacherAppointmentDashboard() {
   };
 
   const handleNavigation = (path: string) => {
-    // Handle appointment navigation internally (same page, different views)
-    if (path.includes('/appointments') || path === '/teacher/appointments') {
-      setCurrentPage('schedule');
-    } else if (path.includes('/requests')) {
-      setCurrentPage('requests');
-    } else if (path.includes('/confirmed')) {
-      setCurrentPage('confirmed');
-    } else {
-      // For other paths (Dashboard, Class Management, etc.), use router navigation
-      navigate(path);
-    }
+    // For all paths, just navigate without special handling
+    navigate(path);
   };
 
   return (
@@ -136,19 +142,8 @@ export default function TeacherAppointmentDashboard() {
           />
         )}
 
-        {currentPage === 'requests' && (
-          <AppointmentRequests
-            requests={requests}
-            setRequests={setRequests}
-            showToast={showToast}
-            setCurrentPage={setCurrentPage}
-          />
-        )}
-
-        {currentPage === 'confirmed' && (
-          <ConfirmedAppointments
-            requests={requests}
-            setRequests={setRequests}
+        {currentPage === 'management' && (
+          <TeacherAppointmentManagement
             showToast={showToast}
           />
         )}
