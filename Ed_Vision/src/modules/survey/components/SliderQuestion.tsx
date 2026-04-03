@@ -4,7 +4,7 @@ import type { SliderConfig } from "../types/survey.types";
 
 interface SliderQuestionProps {
   value?: number;
-  onChange: (value: number) => void;
+  onChange: (value: number) =>void;
   config: SliderConfig;
   minValue?: number; // Từ DB
   maxValue?: number; // Từ DB
@@ -32,12 +32,11 @@ export default function SliderQuestion({
         <p className="text-xs text-gray-600 mt-1">{config.unit}</p>
       </div>
       <input
-        type="range"
-        min={min}
+        type="range"min={min}
         max={max}
         step={config.step ?? 1}
         value={currentValue}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) =>onChange(Number(e.target.value))}
         className={cn(
           surveyStyles.slider.track,
           surveyStyles.slider.thumb,
@@ -48,6 +47,5 @@ export default function SliderQuestion({
         <span>{config.leftLabel}</span>
         <span>{config.rightLabel}</span>
       </div>
-    </div>
-  );
+    </div>);
 }

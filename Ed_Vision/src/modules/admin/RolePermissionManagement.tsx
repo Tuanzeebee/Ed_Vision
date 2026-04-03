@@ -118,22 +118,22 @@ export default function RolePermissionManagement() {
   // Load permissions từ DB
   useEffect(() => {
     const loadPermissions = async () => {
-      console.log('🔄 Loading permissions from DB...');
+      console.log(' Loading permissions from DB...');
       try {
         const response = await apiFetch('/admin/permissions');
-        console.log('📥 Permissions API Response:', response);
+        console.log(' Permissions API Response:', response);
         
         if (response?.success && response?.data) {
           const permissionsData = response.data;
-          console.log('✅ Permissions data found:', permissionsData);
+          console.log(' Permissions data found:', permissionsData);
           const grouped = groupPermissionsByModule(permissionsData);
-          console.log('📊 Grouped permissions:', grouped);
+          console.log(' Grouped permissions:', grouped);
           setPermissionGroups(grouped);
         } else {
-          console.log('⚠️ No permissions in response');
+          console.log(' No permissions in response');
         }
       } catch (error) {
-        console.error('❌ Error loading permissions:', error);
+        console.error(' Error loading permissions:', error);
         showToast('Không thể tải danh sách quyền từ server. Sử dụng dữ liệu mẫu.', 'warning');
         // Fallback data
         setPermissionGroups([
@@ -183,14 +183,14 @@ export default function RolePermissionManagement() {
   useEffect(() => {
     const loadRolePermissions = async () => {
       if (selectedRole && permissionGroups.length > 0) {
-        console.log(`🔄 Loading permissions for role: ${selectedRole}`);
+        console.log(` Loading permissions for role: ${selectedRole}`);
         try {
           const response = await apiFetch(`/admin/role-permissions/${selectedRole}`);
-          console.log('📥 Role permissions API Response:', response);
+          console.log(' Role permissions API Response:', response);
           
           if (response?.success && response?.data) {
             const permissionsData = response.data;
-            console.log('✅ Role permissions data:', permissionsData);
+            console.log(' Role permissions data:', permissionsData);
             
             const rolePermissions: PermissionState = {};
             
@@ -199,7 +199,7 @@ export default function RolePermissionManagement() {
               rolePermissions[key] = !!enabled;
             });
             
-            console.log('🎯 Mapped role permissions:', rolePermissions);
+            console.log(' Mapped role permissions:', rolePermissions);
             setPermissions(rolePermissions);
             setSavedPermissions(rolePermissions);
             
@@ -215,7 +215,7 @@ export default function RolePermissionManagement() {
             );
           }
         } catch (error) {
-          console.error('❌ Error loading role permissions:', error);
+          console.error(' Error loading role permissions:', error);
           showToast(`Không thể tải quyền cho vai trò "${selectedRole}"`, 'error');
         }
       }
@@ -307,8 +307,8 @@ export default function RolePermissionManagement() {
   const handleSaveChanges = async () => {
     if (!selectedRole) return;
     
-    console.log('💾 Saving permissions for role:', selectedRole);
-    console.log('📦 Permissions to save:', permissions);
+    console.log(' Saving permissions for role:', selectedRole);
+    console.log(' Permissions to save:', permissions);
     
     try {
       const response = await apiFetch(`/admin/role-permissions/${selectedRole}`, {
@@ -319,7 +319,7 @@ export default function RolePermissionManagement() {
         headers: { 'Content-Type': 'application/json' }
       });
 
-      console.log('📥 Save response:', response);
+      console.log(' Save response:', response);
 
       if (response?.success) {
         setSavedPermissions({ ...permissions });
@@ -328,7 +328,7 @@ export default function RolePermissionManagement() {
         throw new Error(response?.message || 'Save failed');
       }
     } catch (error) {
-      console.error('❌ Error saving permissions:', error);
+      console.error(' Error saving permissions:', error);
       showToast('Có lỗi xảy ra khi lưu. Vui lòng thử lại.', 'error');
     }
   };
@@ -428,7 +428,7 @@ export default function RolePermissionManagement() {
                 )}
                 {!isLoading && filteredRoles.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    <div className="text-4xl mb-4">🤔</div>
+                    <div className="text-4xl mb-4"></div>
                     <p className="text-lg font-medium mb-2">Không tìm thấy vai trò nào</p>
                     <div className="text-sm space-y-1">
                       <p>• Tổng số roles: {roles.length}</p>
@@ -454,9 +454,9 @@ export default function RolePermissionManagement() {
                         <span className={`text-lg mr-3 ${
                           selectedRole === role.id ? 'text-blue-600' : 'text-gray-600'
                         }`}>
-                          {role.icon === 'fas fa-user-graduate' ? '🎓' : 
-                           role.icon === 'fas fa-chalkboard-teacher' ? '👨‍🏫' :
-                           role.icon === 'fas fa-user-tie' ? '👔' : '👪'}
+                          {role.icon === 'fas fa-user-graduate' ? '' : 
+                           role.icon === 'fas fa-chalkboard-teacher' ? '' :
+                           role.icon === 'fas fa-user-tie' ? '' : ''}
                         </span>
                         <div>
                           <h4 className={`font-semibold ${
@@ -472,7 +472,7 @@ export default function RolePermissionManagement() {
                         </div>
                       </div>
                       {selectedRole === role.id && (
-                        <span className="text-green-500 text-lg">✅</span>
+                        <span className="text-green-500 text-lg"></span>
                       )}
                     </div>
                   </div>
@@ -489,9 +489,9 @@ export default function RolePermissionManagement() {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                       <span className="text-blue-600 text-lg mr-3">
-                        {selectedRole === 'student' ? '🎓' : 
-                         selectedRole === 'teacher' ? '👨‍🏫' :
-                         selectedRole === 'leader' ? '👔' : '👪'}
+                        {selectedRole === 'student' ? '' : 
+                         selectedRole === 'teacher' ? '' :
+                         selectedRole === 'leader' ? '' : ''}
                       </span>
                       Vai trò: {roles.find(r => r.id === selectedRole)?.name}
                     </h3>
@@ -515,12 +515,12 @@ export default function RolePermissionManagement() {
                         <div className="flex items-center justify-between">
                           <h4 className="font-semibold text-gray-900 flex items-center">
                             <span className="mr-3 text-xl">
-                              {group.icon === 'fas fa-tachometer-alt' ? '📊' :
-                               group.icon === 'fas fa-user-graduate' ? '🎓' : 
-                               group.name.includes('admin') ? '⚙️' :
-                               group.name.includes('teacher') ? '👨‍🏫' :
-                               group.name.includes('student') ? '🎓' :
-                               group.name.includes('parent') ? '👪' : '📊'}
+                              {group.icon === 'fas fa-tachometer-alt' ? '' :
+                               group.icon === 'fas fa-user-graduate' ? '' : 
+                               group.name.includes('admin') ? '' :
+                               group.name.includes('teacher') ? '' :
+                               group.name.includes('student') ? '' :
+                               group.name.includes('parent') ? '' : ''}
                             </span>
                             {group.name}
                           </h4>
@@ -636,11 +636,11 @@ export default function RolePermissionManagement() {
         {/* Permission Concepts Explanation */}
         <Card className="mt-6">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">💡 Giải thích về Phân quyền</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4"> Giải thích về Phân quyền</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
-                  <span className="mr-2">🏛️</span>
+                  <span className="mr-2"></span>
                   Quyền Kế thừa (Role-based)
                 </h4>
                 <p className="text-blue-700 text-sm mb-2">
@@ -655,7 +655,7 @@ export default function RolePermissionManagement() {
               
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                 <h4 className="font-semibold text-orange-800 mb-2 flex items-center">
-                  <span className="mr-2">⚡</span>
+                  <span className="mr-2"></span>
                   Quyền Override (Cá nhân)
                 </h4>
                 <p className="text-orange-700 text-sm mb-2">
@@ -670,7 +670,7 @@ export default function RolePermissionManagement() {
             </div>
             <div className="border-t pt-4">
               <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                <span className="mr-2">📊</span>
+                <span className="mr-2"></span>
                 Thứ tự ưu tiên quyền
               </h4>
               <div className="flex items-center space-x-4 text-sm">
@@ -687,7 +687,7 @@ export default function RolePermissionManagement() {
         {/* Impact Summary */}
         <Card className="mt-6">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">📈 Tác động thay đổi</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4"> Tác động thay đổi</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600">{stats.accounts.toLocaleString()}</p>

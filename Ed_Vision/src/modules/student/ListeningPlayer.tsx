@@ -150,10 +150,10 @@ function AudioPlayer({
           {isLoading
             ? 'Đang tải audio...'
             : isPlaying
-            ? '🎧 Đang phát...'
+            ? ' Đang phát...'
             : playCount > 0
-            ? `▶ Phát lại (đã nghe ${playCount} lần)`
-            : '▶ Nhấn để nghe'}
+            ? ` Phát lại (đã nghe ${playCount} lần)`
+            : ' Nhấn để nghe'}
         </p>
         {hasError && (
           <p className="text-xs text-amber-600 mt-1 flex items-center justify-center gap-1">
@@ -205,7 +205,7 @@ function AudioPlayer({
 
       {/* Tip */}
       <p className="text-xs text-slate-400 text-center max-w-xs px-4">
-        💡 Tua lại để nghe rõ hơn. Bạn có thể phát lại nhiều lần.
+         Tua lại để nghe rõ hơn. Bạn có thể phát lại nhiều lần.
       </p>
     </div>
   )
@@ -215,9 +215,11 @@ function AudioPlayer({
 function AnswerSection({
   pack,
   onNext,
+  onAnswered,
 }: {
   pack: DialoguePack
   onNext: () => void
+  onAnswered?: (isCorrect: boolean, questionId: string) => void
 }) {
   const [selected, setSelected] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState(false)
@@ -227,7 +229,10 @@ function AnswerSection({
   const isCorrect = answered && selected === pack.question.answer
 
   const handleSubmit = () => {
-    if (selected !== null) setSubmitted(true)
+    if (selected !== null) {
+      onAnswered?.(selected === pack.question.answer, `${pack.theme}-${pack.question.question}`)
+      setSubmitted(true)
+    }
   }
 
   return (
@@ -318,7 +323,7 @@ function AnswerSection({
               <>
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
                 <div>
-                  <p className="font-bold text-emerald-700">Chính xác! 🎉</p>
+                  <p className="font-bold text-emerald-700">Chính xác! </p>
                   <p className="text-sm text-emerald-600 mt-0.5">
                     {pack.question.explanation}
                   </p>
@@ -387,9 +392,10 @@ interface ListeningPlayerProps {
   topicKey: string
   accentColor?: string
   accentBg?: string
+  onQuestionAnswered?: (isCorrect: boolean, questionId: string) => void
 }
 
-export function ListeningPlayer({ topicKey }: ListeningPlayerProps) {
+export function ListeningPlayer({ topicKey, onQuestionAnswered }: ListeningPlayerProps) {
   const packs = LISTENING_PACKS_BY_KEY[topicKey] ?? []
   const [packIndex, setPackIndex] = useState(() => Math.floor(Math.random() * Math.max(packs.length, 1)))
   const [sessionKey, setSessionKey] = useState(0) // remount AnswerSection on new pack
@@ -637,7 +643,12 @@ export function ListeningPlayer({ topicKey }: ListeningPlayerProps) {
       </div>
 
       {/* Q&A section */}
-      <AnswerSection key={`${packIndex}-${sessionKey}`} pack={pack} onNext={loadNextPack} />
+      <AnswerSection
+        key={`${packIndex}-${sessionKey}`}
+        pack={pack}
+        onNext={loadNextPack}
+        onAnswered={onQuestionAnswered}
+      />
     </div>
   )
 }

@@ -1,17 +1,28 @@
 // Types for Seasonal Effects System
 
 export type SeasonalEvent = 
-  | 'CHRISTMAS'      // Noel (25/12)
-  | 'LUNAR_NEW_YEAR' // Tết Nguyên Đán
-  | 'WOMEN_DAY'      // 8/3
-  | 'LIBERATION_DAY' // 30/4
-  | 'LABOR_DAY'      // 1/5
-  | 'CHILDREN_DAY'   // 1/6
-  | 'MID_AUTUMN'     // Tết Trung Thu
-  | 'NATIONAL_DAY'   // 2/9
-  | 'WOMEN_VN_DAY'   // 20/10
-  | 'TEACHER_DAY'    // 20/11
-  | 'HALLOWEEN'      // 31/10
+  | 'CHRISTMAS'
+// Noel (25/12)
+  | 'LUNAR_NEW_YEAR'
+// Tết Nguyên Đán
+  | 'WOMEN_DAY'
+// 8/3
+  | 'LIBERATION_DAY'
+// 30/4
+  | 'LABOR_DAY'
+// 1/5
+  | 'CHILDREN_DAY'
+// 1/6
+  | 'MID_AUTUMN'
+// Tết Trung Thu
+  | 'NATIONAL_DAY'
+// 2/9
+  | 'WOMEN_VN_DAY'
+// 20/10
+  | 'TEACHER_DAY'
+// 20/11
+  | 'HALLOWEEN'
+// 31/10
   | 'NONE';
 
 export interface SeasonalConfig {
@@ -29,7 +40,7 @@ export interface SeasonalEffectContextType {
   currentEvent: SeasonalEvent;
   config: SeasonalConfig | null;
   isEnabled: boolean;
-  toggleEffects: () => void;
+  toggleEffects: () =>void;
 }
 
 // Seasonal events configuration

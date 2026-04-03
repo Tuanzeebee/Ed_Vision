@@ -25,7 +25,7 @@ export interface AtRiskStudent {
     gpa: number;
     absences: number;
     debtCourses: number;
-    riskLevel: 'high' | 'medium' | 'low';
+    riskLevel: 'high'| 'medium'| 'low';
 }
 
 export interface ChartData {
@@ -83,8 +83,7 @@ class TeacherDashboardService {
     async getFilterOptions(): Promise<FilterOptionsResponse> {
         try {
             const response = await apiClient.get<FilterOptionsResponse>(
-                '/teacher/dashboard/filter-options'
-            );
+                '/teacher/dashboard/filter-options');
             return response.data;
         } catch (error) {
             console.error('Error fetching filter options:', error);

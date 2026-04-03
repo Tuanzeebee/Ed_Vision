@@ -8,7 +8,7 @@ import MinimizedQRBar from './MinimizedQRBar';
 interface TeacherLayoutProps {
     children: ReactNode;
     currentPage?: string;
-    onNavigate?: (path: string) => void;
+    onNavigate?: (path: string) =>void;
 }
 
 export default function TeacherLayout({ children, currentPage, onNavigate }: TeacherLayoutProps) {
@@ -54,6 +54,5 @@ export default function TeacherLayout({ children, currentPage, onNavigate }: Tea
                 {/* Global Minimized QR Bar */}
                 <MinimizedQRBar />
             </div>
-        </QRSessionProvider>
-    );
+        </QRSessionProvider>);
 }

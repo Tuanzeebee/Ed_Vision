@@ -16,7 +16,7 @@ export interface Appointment {
   attendance_checked_at?: string;
   attendance_status?: string;
   attended?: boolean;
-  meeting_type: 'online' | 'offline' | 'both';
+  meeting_type: 'online'| 'offline'| 'both';
   slot: {
     slot_id: number;
     date_id: number;
@@ -29,7 +29,7 @@ export interface Appointment {
     auto_accept: boolean;
     meeting_link?: string;
     meeting_location?: string;
-    meeting_type: 'online' | 'offline' | 'both';
+    meeting_type: 'online'| 'offline'| 'both';
     date: {
       date_id: number;
       week_id: number;

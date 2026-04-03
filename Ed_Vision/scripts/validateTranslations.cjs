@@ -31,7 +31,7 @@ function loadJSON(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(content);
   } catch (error) {
-    log(`❌ Error loading ${filePath}: ${error.message}`, 'red');
+    log(` Error loading ${filePath}: ${error.message}`, 'red');
     return null;
   }
 }
@@ -50,13 +50,13 @@ function getAllKeys(obj, prefix = '') {
 }
 
 function validateTranslations() {
-  log('\n🔍 Validating translations...', 'blue');
+  log('\n Validating translations...', 'blue');
   log('='.repeat(50), 'blue');
 
   let hasErrors = false;
 
   for (const namespace of NAMESPACES) {
-    log(`\n📦 Checking namespace: ${namespace}`, 'yellow');
+    log(`\n Checking namespace: ${namespace}`, 'yellow');
 
     const translations = {};
     
@@ -65,7 +65,7 @@ function validateTranslations() {
       const filePath = path.join(LOCALES_DIR, lang, `${namespace}.json`);
       
       if (!fs.existsSync(filePath)) {
-        log(`  ❌ Missing file: ${lang}/${namespace}.json`, 'red');
+        log(`   Missing file: ${lang}/${namespace}.json`, 'red');
         hasErrors = true;
         continue;
       }
@@ -81,7 +81,7 @@ function validateTranslations() {
         keys: getAllKeys(data),
       };
       
-      log(`  ✓ Loaded ${lang}/${namespace}.json (${translations[lang].keys.length} keys)`, 'green');
+      log(`   Loaded ${lang}/${namespace}.json (${translations[lang].keys.length} keys)`, 'green');
     }
 
     // Check if all languages have the same keys
@@ -97,18 +97,18 @@ function validateTranslations() {
         const extraKeys = langKeys.filter(key => !baseKeys.includes(key));
         
         if (missingKeys.length > 0) {
-          log(`  ❌ Missing keys in ${lang}:`, 'red');
+          log(`   Missing keys in ${lang}:`, 'red');
           missingKeys.forEach(key => log(`     - ${key}`, 'red'));
           hasErrors = true;
         }
         
         if (extraKeys.length > 0) {
-          log(`  ⚠️  Extra keys in ${lang}:`, 'yellow');
+          log(`    Extra keys in ${lang}:`, 'yellow');
           extraKeys.forEach(key => log(`     - ${key}`, 'yellow'));
         }
         
         if (missingKeys.length === 0 && extraKeys.length === 0) {
-          log(`  ✓ ${lang} keys match ${LANGUAGES[0]}`, 'green');
+          log(`   ${lang} keys match ${LANGUAGES[0]}`, 'green');
         }
       }
     }
@@ -116,15 +116,15 @@ function validateTranslations() {
 
   log('\n' + '='.repeat(50), 'blue');
   if (hasErrors) {
-    log('❌ Validation failed! Please fix the errors above.', 'red');
+    log(' Validation failed! Please fix the errors above.', 'red');
     process.exit(1);
   } else {
-    log('✅ All translations are valid!', 'green');
+    log(' All translations are valid!', 'green');
   }
 }
 
 function generateStats() {
-  log('\n📊 Translation Statistics', 'blue');
+  log('\n Translation Statistics', 'blue');
   log('='.repeat(50), 'blue');
 
   const stats = {
@@ -155,4 +155,4 @@ function generateStats() {
 validateTranslations();
 generateStats();
 
-log('\n✨ Done!\n', 'green');
+log('\n Done!\n', 'green');

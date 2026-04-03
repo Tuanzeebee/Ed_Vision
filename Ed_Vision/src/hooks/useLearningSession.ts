@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-
 interface LearningSessionOptions {
   autoExtendOnLowTime?: boolean // Tự động gia hạn khi còn ít thời gian
   warningThreshold?: number // Hiển thị cảnh báo khi còn bao nhiêu phút (default: 10)
@@ -22,14 +21,14 @@ export const useLearningSession = (options: LearningSessionOptions = {}) => {
 
   // Tự động gia hạn khi thời gian sắp hết
   const handleAutoExtend = useCallback(() => {
-    if (autoExtendOnLowTime && timeRemaining <= warningThreshold && timeRemaining > 0) {
+    if (autoExtendOnLowTime && timeRemaining <= warningThreshold && timeRemaining >0) {
       if (silentExtend) {
         // Gia hạn thầm lặng
         extendSession()
-        console.log('🎓 Learning session: Tự động gia hạn phiên đăng nhập cho học bài')
+        console.log('Learning session: Tự động gia hạn phiên đăng nhập cho học bài')
       } else {
         // Log để SessionTimeoutWarning component biết và hiển thị popup
-        console.log('🎓 Learning session: Sắp hết hạn, cần gia hạn phiên đăng nhập')
+        console.log('Learning session: Sắp hết hạn, cần gia hạn phiên đăng nhập')
       }
     }
   }, [timeRemaining, warningThreshold, autoExtendOnLowTime, silentExtend, extendSession])
@@ -52,7 +51,7 @@ export const useLearningSession = (options: LearningSessionOptions = {}) => {
   }, [timeRemaining])
 
   const isLearningSessionExpiring = useCallback(() => {
-    return timeRemaining <= warningThreshold && timeRemaining > 0
+    return timeRemaining <= warningThreshold && timeRemaining >0
   }, [timeRemaining, warningThreshold])
 
   return {

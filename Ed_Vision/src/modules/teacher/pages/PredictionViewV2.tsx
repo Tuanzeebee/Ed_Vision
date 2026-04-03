@@ -44,7 +44,7 @@ interface StudentData {
   emotional_support_by_course: number | null;
   has_survey_data?: boolean; // true: có dữ liệu khảo sát thực tế, false: dùng default
   final_pred: number | null;
-  confidence: 'high' | 'medium' | 'low' | null;
+  confidence: 'high'| 'medium'| 'low'| null;
 }
 
 interface ShapFeature {
@@ -109,8 +109,7 @@ export default function PredictionViewV2({}: Props) {
     course_code: '',
     class_code: '',
     academic_year: '',
-    semester: ''
-  });
+    semester: ''});
 
   const [surveyData, setSurveyData] = useState<SurveyData>({
     weekly_study_hours: '',
@@ -182,7 +181,7 @@ export default function PredictionViewV2({}: Props) {
 
   // Countdown timer for notification cooldown
   useEffect(() => {
-    if (notificationCooldown > 0) {
+    if (notificationCooldown >0) {
       const timer = setInterval(() => {
         setNotificationCooldown(prev => {
           if (prev <= 1) {
@@ -196,7 +195,7 @@ export default function PredictionViewV2({}: Props) {
         });
       }, 1000);
       
-      return () => clearInterval(timer);
+      return () =>clearInterval(timer);
     }
   }, [notificationCooldown]);
 
@@ -209,13 +208,11 @@ export default function PredictionViewV2({}: Props) {
       'student_id', 'course_code', 
       'weekly_study_hours_by_course', 'part_time_hours_by_course',
       'financial_support_by_course', 'emotional_support_by_course',
-      'final_pred', 'confidence'
-    ];
+      'final_pred', 'confidence'];
     
     // Lấy tất cả keys là grade columns (attend, quiz, midterm, homework, etc.)
     const columns = Object.keys(firstStudent).filter(
-      key => !excludedKeys.includes(key) && typeof firstStudent[key as keyof StudentData] === 'number'
-    );
+      key =>!excludedKeys.includes(key) && typeof firstStudent[key as keyof StudentData] === 'number');
     
     return columns;
   };
@@ -231,7 +228,7 @@ export default function PredictionViewV2({}: Props) {
   };
 
   const goToPreviousPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+    if (currentPage >1) setCurrentPage(currentPage - 1);
   };
 
   const goToPage = (page: number) => {
@@ -249,7 +246,7 @@ export default function PredictionViewV2({}: Props) {
   };
 
   const goToPreviousPredictionPage = () => {
-    if (predictionCurrentPage > 1) setPredictionCurrentPage(predictionCurrentPage - 1);
+    if (predictionCurrentPage >1) setPredictionCurrentPage(predictionCurrentPage - 1);
   };
 
   const goToPredictionPage = (page: number) => {
@@ -259,7 +256,7 @@ export default function PredictionViewV2({}: Props) {
   // Helper function để giải thích SHAP value
   const explainShapValue = (feature: ShapFeature): string => {
     const absValue = Math.abs(feature.shap_value);
-    const isPositive = feature.shap_value > 0;
+    const isPositive = feature.shap_value >0;
     const featureName = feature.feature;
     const featureValue = feature.value;
     
@@ -272,73 +269,73 @@ export default function PredictionViewV2({}: Props) {
     else impactLevel = 'rất nhẹ';
 
     // Giải thích cụ thể theo từng feature
-    const explanations: Record<string, string> = {
-      'midterm': `Điểm giữa kỳ (${featureValue}) ${isPositive ? 'cao hơn' : 'thấp hơn'} mức trung bình, ảnh hưởng ${impactLevel} ${isPositive ? '+' : ''}${feature.shap_value.toFixed(3)} điểm đến kết quả cuối kỳ.`,
-      'attend': `Điểm chuyên cần (${featureValue}) ${isPositive ? 'tốt' : 'chưa tốt'}, ${isPositive ? 'tăng' : 'giảm'} ${impactLevel} dự đoán ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
-      'quiz': `Điểm quiz (${featureValue}) ${isPositive ? 'cao' : 'thấp'}, đóng góp ${isPositive ? 'tích cực' : 'tiêu cực'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
-      'homework': `Điểm bài tập (${featureValue}) ${isPositive ? 'tốt' : 'kém'}, ảnh hưởng ${isPositive ? 'tích cực' : 'tiêu cực'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
-      'weekly_study_hours': `Sinh viên học ${featureValue} giờ/tuần. ${isPositive ? 'Thời gian học cao giúp tăng' : 'Thời gian học thấp làm giảm'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
-      'part_time_hours': `Sinh viên làm thêm ${featureValue} giờ/tuần. ${!isPositive ? 'Làm thêm nhiều giờ làm giảm' : 'Làm thêm ít giờ giúp tăng'} ${Math.abs(feature.shap_value).toFixed(3)} điểm hiệu suất học tập.`,
-      'emotional_support': `Mức hỗ trợ tinh thần (${featureValue}/10). ${isPositive ? 'Hỗ trợ tốt giúp tăng' : 'Thiếu hỗ trợ làm giảm'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
-      'financial_support': `Mức hỗ trợ tài chính (${featureValue}/10). ${isPositive ? 'Hỗ trợ đủ giúp sinh viên tập trung học tập, tăng' : 'Thiếu hỗ trợ làm giảm'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
-      'baseline_final_weighted': `Điểm baseline dựa trên cấu trúc môn học. Giá trị ${featureValue.toFixed(2)} ${isPositive ? 'cao hơn trung bình, cộng thêm' : 'thấp hơn trung bình, trừ đi'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+    const explanations: Record<string, string>= {
+      'midterm': `Điểm giữa kỳ (${featureValue}) ${isPositive ? 'cao hơn': 'thấp hơn'} mức trung bình, ảnh hưởng ${impactLevel} ${isPositive ? '+': ''}${feature.shap_value.toFixed(3)} điểm đến kết quả cuối kỳ.`,
+      'attend': `Điểm chuyên cần (${featureValue}) ${isPositive ? 'tốt': 'chưa tốt'}, ${isPositive ? 'tăng': 'giảm'} ${impactLevel} dự đoán ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+      'quiz': `Điểm quiz (${featureValue}) ${isPositive ? 'cao': 'thấp'}, đóng góp ${isPositive ? 'tích cực': 'tiêu cực'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+      'homework': `Điểm bài tập (${featureValue}) ${isPositive ? 'tốt': 'kém'}, ảnh hưởng ${isPositive ? 'tích cực': 'tiêu cực'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+      'weekly_study_hours': `Sinh viên học ${featureValue} giờ/tuần. ${isPositive ? 'Thời gian học cao giúp tăng': 'Thời gian học thấp làm giảm'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+      'part_time_hours': `Sinh viên làm thêm ${featureValue} giờ/tuần. ${!isPositive ? 'Làm thêm nhiều giờ làm giảm': 'Làm thêm ít giờ giúp tăng'} ${Math.abs(feature.shap_value).toFixed(3)} điểm hiệu suất học tập.`,
+      'emotional_support': `Mức hỗ trợ tinh thần (${featureValue}/10). ${isPositive ? 'Hỗ trợ tốt giúp tăng': 'Thiếu hỗ trợ làm giảm'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+      'financial_support': `Mức hỗ trợ tài chính (${featureValue}/10). ${isPositive ? 'Hỗ trợ đủ giúp sinh viên tập trung học tập, tăng': 'Thiếu hỗ trợ làm giảm'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
+      'baseline_final_weighted': `Điểm baseline dựa trên cấu trúc môn học. Giá trị ${featureValue.toFixed(2)} ${isPositive ? 'cao hơn trung bình, cộng thêm': 'thấp hơn trung bình, trừ đi'} ${Math.abs(feature.shap_value).toFixed(3)} điểm.`,
     };
 
     // Check nếu feature là course code
     if (featureName.startsWith('course_')) {
       const courseName = featureName.replace('course_', '');
-      return `Môn học ${courseName}: Độ khó và đặc thù môn học ${isPositive ? 'có lợi cho' : 'gây khó khăn với'} sinh viên này, ảnh hưởng ${isPositive ? '+' : ''}${feature.shap_value.toFixed(3)} điểm.`;
+      return `Môn học ${courseName}: Độ khó và đặc thù môn học ${isPositive ? 'có lợi cho': 'gây khó khăn với'} sinh viên này, ảnh hưởng ${isPositive ? '+': ''}${feature.shap_value.toFixed(3)} điểm.`;
     }
 
     // Check nếu feature là mask (thiếu dữ liệu)
     if (featureName.endsWith('_mask')) {
       const baseName = featureName.replace('_mask', '');
-      return `Thiếu dữ liệu ${baseName}. Model dự đoán dựa trên các features khác, điều chỉnh ${isPositive ? '+' : ''}${feature.shap_value.toFixed(3)} điểm.`;
+      return `Thiếu dữ liệu ${baseName}. Model dự đoán dựa trên các features khác, điều chỉnh ${isPositive ? '+': ''}${feature.shap_value.toFixed(3)} điểm.`;
     }
 
     // Trả về explanation cụ thể hoặc generic
     return explanations[featureName] || 
-      `Feature "${featureName}" với giá trị ${featureValue} ${isPositive ? 'tăng' : 'giảm'} dự đoán ${Math.abs(feature.shap_value).toFixed(3)} điểm (ảnh hưởng ${impactLevel}).`;
+      `Feature "${featureName}"với giá trị ${featureValue} ${isPositive ? 'tăng': 'giảm'} dự đoán ${Math.abs(feature.shap_value).toFixed(3)} điểm (ảnh hưởng ${impactLevel}).`;
   };
 
   // Helper function để tạo khuyến nghị cho giảng viên
   const getRecommendation = (feature: ShapFeature): string => {
-    const isPositive = feature.shap_value > 0;
+    const isPositive = feature.shap_value >0;
     const featureName = feature.feature;
 
-    const recommendations: Record<string, string> = {
+    const recommendations: Record<string, string>= {
       'midterm': isPositive ? 
-        '✅ Sinh viên có nền tảng tốt. Tiếp tục duy trì.' : 
-        '⚠️ Cần review lại kiến thức giữa kỳ. Tổ chức buổi ôn tập bổ sung.',
+        'Sinh viên có nền tảng tốt. Tiếp tục duy trì.': 
+        'Cần review lại kiến thức giữa kỳ. Tổ chức buổi ôn tập bổ sung.',
       'attend': isPositive ? 
-        '✅ Sinh viên chuyên cần tốt. Khuyến khích tiếp tục.' : 
-        '⚠️ Tỷ lệ vắng mặt cao. Liên hệ sinh viên để hiểu nguyên nhân.',
+        'Sinh viên chuyên cần tốt. Khuyến khích tiếp tục.': 
+        'Tỷ lệ vắng mặt cao. Liên hệ sinh viên để hiểu nguyên nhân.',
       'quiz': isPositive ? 
-        '✅ Nắm vững kiến thức từng phần. Duy trì.' : 
-        '⚠️ Yếu ở bài kiểm tra nhỏ. Tăng cường luyện tập thêm.',
+        'Nắm vững kiến thức từng phần. Duy trì.': 
+        'Yếu ở bài kiểm tra nhỏ. Tăng cường luyện tập thêm.',
       'homework': isPositive ? 
-        '✅ Hoàn thành bài tập tốt. Tiếp tục động viên.' : 
-        '⚠️ Không hoàn thành đầy đủ bài tập. Nhắc nhở và hỗ trợ.',
+        'Hoàn thành bài tập tốt. Tiếp tục động viên.': 
+        'Không hoàn thành đầy đủ bài tập. Nhắc nhở và hỗ trợ.',
       'weekly_study_hours': !isPositive ? 
-        '⚠️ Thời gian tự học ít. Tư vấn kỹ năng quản lý thời gian.' : 
-        '✅ Thời gian tự học đủ. Hướng dẫn học hiệu quả hơn.',
+        'Thời gian tự học ít. Tư vấn kỹ năng quản lý thời gian.': 
+        'Thời gian tự học đủ. Hướng dẫn học hiệu quả hơn.',
       'part_time_hours': !isPositive ? 
-        '⚠️ Làm thêm quá nhiều ảnh hưởng học tập. Tư vấn cân bằng.' : 
-        '✅ Cân bằng tốt giữa làm thêm và học tập.',
+        'Làm thêm quá nhiều ảnh hưởng học tập. Tư vấn cân bằng.': 
+        'Cân bằng tốt giữa làm thêm và học tập.',
       'emotional_support': !isPositive ? 
-        '⚠️ Thiếu hỗ trợ tinh thần. Kết nối với tư vấn tâm lý.' : 
-        '✅ Được hỗ trợ tinh thần tốt. Tiếp tục theo dõi.',
+        'Thiếu hỗ trợ tinh thần. Kết nối với tư vấn tâm lý.': 
+        'Được hỗ trợ tinh thần tốt. Tiếp tục theo dõi.',
       'financial_support': !isPositive ? 
-        '⚠️ Gặp khó khăn tài chính. Giới thiệu học bổng/hỗ trợ.' : 
-        '✅ Ổn định về tài chính. Tập trung học tập tốt.',
+        'Gặp khó khăn tài chính. Giới thiệu học bổng/hỗ trợ.': 
+        'Ổn định về tài chính. Tập trung học tập tốt.',
     };
 
     if (featureName.endsWith('_mask')) {
-      return '📋 Thu thập đầy đủ dữ liệu để dự đoán chính xác hơn.';
+      return 'Thu thập đầy đủ dữ liệu để dự đoán chính xác hơn.';
     }
 
     return recommendations[featureName] || 
-      (isPositive ? '✅ Đây là điểm mạnh của sinh viên.' : '⚠️ Đây là điểm cần cải thiện.');
+      (isPositive ? 'Đây là điểm mạnh của sinh viên.': 'Đây là điểm cần cải thiện.');
   };
 
   // Toggle upload history
@@ -368,8 +365,7 @@ export default function PredictionViewV2({}: Props) {
         course_code: '',
         class_code: '',
         academic_year: '',
-        semester: ''
-      });
+        semester: ''});
       setPendingFile(file);
       setShowUploadModal(true);
       
@@ -407,8 +403,7 @@ export default function PredictionViewV2({}: Props) {
         course_code: '',
         class_code: '',
         academic_year: '',
-        semester: ''
-      });
+        semester: ''});
       setPendingFile(file);
       setShowUploadModal(true);
       
@@ -537,8 +532,7 @@ export default function PredictionViewV2({}: Props) {
         course_code: '',
         class_code: '',
         academic_year: '',
-        semester: ''
-      });
+        semester: ''});
     } catch (err: any) {
       setError(err.response?.data?.message || 'Upload thất bại. Vui lòng kiểm tra định dạng file.');
       toast.error(`Upload thất bại: ${err.response?.data?.message || err.message}`);
@@ -558,8 +552,7 @@ export default function PredictionViewV2({}: Props) {
       course_code: '',
       class_code: '',
       academic_year: '',
-      semester: ''
-    });
+      semester: ''});
   };
 
   // Handle course selection - reload academic terms filtered by course
@@ -568,7 +561,8 @@ export default function PredictionViewV2({}: Props) {
       ...uploadMetadata,
       course_code: courseCode,
       academic_year: '', // Reset academic year when course changes
-      semester: '' // Reset semester when course changes
+      semester: ''
+// Reset semester when course changes
     });
 
     // Reload academic terms filtered by selected course
@@ -606,16 +600,16 @@ export default function PredictionViewV2({}: Props) {
     const timeSinceLastNotification = (now - lastNotificationTime) / 1000; // convert to seconds
     const cooldownPeriod = 180; // 3 minutes in seconds
     
-    if (timeSinceLastNotification < cooldownPeriod && lastNotificationTime > 0) {
+    if (timeSinceLastNotification < cooldownPeriod && lastNotificationTime >0) {
       const remainingTime = Math.ceil(cooldownPeriod - timeSinceLastNotification);
       const minutes = Math.floor(remainingTime / 60);
       const seconds = remainingTime % 60;
       
       toast.error(
-        `⏰ Vui lòng đợi ${minutes > 0 ? `${minutes} phút` : ''} ${seconds > 0 ? `${seconds} giây` : ''} trước khi gửi thông báo lại`,
+        ` Vui lòng đợi ${minutes >0 ? `${minutes} phút` : ''} ${seconds >0 ? `${seconds} giây` : ''} trước khi gửi thông báo lại`,
         {
           duration: 5000,
-          icon: '⏳',
+          icon: '',
         }
       );
       return;
@@ -640,11 +634,10 @@ export default function PredictionViewV2({}: Props) {
         console.log(`[Cooldown] Saved to localStorage: ${notificationTime}`);
         
         toast.success(
-          `✅ Đã gửi thông báo đến ${students_with_accounts} sinh viên! ` +
-          (students_without_accounts > 0 
+          ` Đã gửi thông báo đến ${students_with_accounts} sinh viên! ` +
+          (students_without_accounts >0 
             ? `(${students_without_accounts} sinh viên chưa có tài khoản sẽ không nhận được thông báo)`
-            : ''
-          ),
+            : ''),
           {
             duration: 7000,
           }
@@ -653,9 +646,9 @@ export default function PredictionViewV2({}: Props) {
         // Show info toast about what students need to do
         setTimeout(() => {
           toast(
-            '📋 Sinh viên sẽ nhận thông báo và cần vào mục "Khảo sát" để hoàn tất khảo sát behavior.',
+            'Sinh viên sẽ nhận thông báo và cần vào mục "Khảo sát"để hoàn tất khảo sát behavior.',
             {
-              icon: 'ℹ️',
+              icon: '',
               duration: 6000,
             }
           );
@@ -801,7 +794,7 @@ export default function PredictionViewV2({}: Props) {
       );
       
       if (studentExplanation && studentExplanation.top_features) {
-        const features: ShapFeature[] = studentExplanation.top_features.map((f: any) => ({
+        const features: ShapFeature[] = studentExplanation.top_features.map((f: any) =>({
           feature: f.feature,
           value: f.value || 0,
           shap_value: f.shap_value
@@ -823,7 +816,7 @@ export default function PredictionViewV2({}: Props) {
       // Process pass threshold data
       if (thresholdResponse.success && thresholdResponse.data) {
         const studentThreshold = thresholdResponse.data.students.find(
-          s => s.student_id === student.student_id
+          s =>s.student_id === student.student_id
         );
         if (studentThreshold) {
           setPassThresholdData(studentThreshold);
@@ -849,7 +842,7 @@ export default function PredictionViewV2({}: Props) {
   const getBehaviorStatus = (student: StudentData) => {
     // Ưu tiên sử dụng trường has_survey_data từ backend
     if (student.has_survey_data !== undefined) {
-      return student.has_survey_data ? 'Đã khảo sát' : 'Giá trị mặc định';
+      return student.has_survey_data ? 'Đã khảo sát': 'Giá trị mặc định';
     }
     
     // Fallback: Check if using default values (20, 10, 2, 2)
@@ -866,8 +859,7 @@ export default function PredictionViewV2({}: Props) {
     // Ưu tiên sử dụng trường has_survey_data từ backend
     if (student.has_survey_data !== undefined) {
       return student.has_survey_data 
-        ? 'bg-green-100 text-green-800' 
-        : 'bg-blue-100 text-blue-800';
+        ? 'bg-green-100 text-green-800': 'bg-blue-100 text-blue-800';
     }
     
     // Fallback: Check if using default values
@@ -891,32 +883,31 @@ export default function PredictionViewV2({}: Props) {
 
   // Helper function để phân loại điểm dự đoán
   const getPredictionCategory = (score: number | null): { label: string; color: string; icon: string } => {
-    if (score === null) return { label: 'N/A', color: 'bg-gray-100 text-gray-800', icon: '❓' };
+    if (score === null) return { label: 'N/A', color: 'bg-gray-100 text-gray-800', icon: ''};
     
     if (score >= 7) {
-      return { label: 'Pass', color: 'bg-green-100 text-green-800', icon: '✅' };
+      return { label: 'Pass', color: 'bg-green-100 text-green-800', icon: ''};
     } else if (score >= 3.5) {
-      return { label: 'Warning', color: 'bg-amber-100 text-amber-800', icon: '⚠️' };
+      return { label: 'Warning', color: 'bg-amber-100 text-amber-800', icon: ''};
     } else {
-      return { label: 'Fail', color: 'bg-red-100 text-red-800', icon: '❌' };
+      return { label: 'Fail', color: 'bg-red-100 text-red-800', icon: ''};
     }
   };
 
   // Memoize expensive calculations
   const averagePrediction = useMemo(() => {
     if (studentData.length === 0) return 0;
-    return studentData.reduce((sum, s) => sum + (s.final_pred || 0), 0) / studentData.length;
+    return studentData.reduce((sum, s) =>sum + (s.final_pred || 0), 0) / studentData.length;
   }, [studentData]);
 
   const highConfidenceCount = useMemo(() => {
-    return studentData.filter(s => s.confidence === 'high').length;
+    return studentData.filter(s =>s.confidence === 'high').length;
   }, [studentData]);
 
   return (
     <TeacherLayout currentPage="prediction-view-v2">
       <Toaster 
-        position="top-right"
-        toastOptions={{
+        position="top-right"toastOptions={{
           duration: 4000,
           style: {
             background: '#fff',
@@ -950,13 +941,12 @@ export default function PredictionViewV2({}: Props) {
           <div className="flex items-center space-x-4">
             <button
               onClick={toggleHistory}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-              title={t('prediction.historyButton')}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"title={t('prediction.historyButton')}
             >
-              <History className="w-5 h-5" />
+              <History className="w-5 h-5"/>
             </button>
             <div className="hidden md:block">
-              <TrendingUp className="w-16 h-16 opacity-20" />
+              <TrendingUp className="w-16 h-16 opacity-20"/>
             </div>
           </div>
         </div>
@@ -970,31 +960,28 @@ export default function PredictionViewV2({}: Props) {
               <CardContent className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <History className="w-6 h-6 text-blue-500" />
+                    <History className="w-6 h-6 text-blue-500"/>
                     {t('prediction.historyTitle')}
                   </h3>
                   <button
-                    onClick={() => setShowHistory(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
+                    onClick={() =>setShowHistory(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <X className="w-5 h-5 text-gray-500"/>
                   </button>
                 </div>
 
                 {loadingHistory ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500"/>
                     <span className="ml-3 text-gray-600 text-lg">{t('prediction.loadingHistory')}</span>
-                  </div>
-                ) : uploadHistory.length === 0 ? (
+                  </div>) : uploadHistory.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
-                    <FileText className="w-16 h-16 mx-auto mb-3 opacity-50" />
+                    <FileText className="w-16 h-16 mx-auto mb-3 opacity-50"/>
                     <p className="text-lg">{t('prediction.noHistory')}</p>
                     <p className="text-sm mt-2">{t('prediction.noHistoryDesc')}</p>
-                  </div>
-                ) : (
+                  </div>) : (
                   <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                    {uploadHistory.map((upload: any) => (
+                    {uploadHistory.map((upload: any) =>(
                       <div
                         key={upload._id}
                         onClick={() => {
@@ -1003,7 +990,7 @@ export default function PredictionViewV2({}: Props) {
                           // Reload data for this upload
                           predictionService.getStudentsByUploadId(upload._id).then(response => {
                             if (response.success && response.data) {
-                              const mappedData = response.data.students.map((student: any) => ({
+                              const mappedData = response.data.students.map((student: any) =>({
                                 student_id: student.student_id,
                                 course_code: response.data!.course_code,
                                 ...student.grades,
@@ -1044,11 +1031,10 @@ export default function PredictionViewV2({}: Props) {
                             }
                           });
                         }}
-                        className="group p-5 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-lg"
-                      >
+                        className="group p-5 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-lg">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-blue-500" />
+                            <FileText className="w-5 h-5 text-blue-500"/>
                             <span className="font-bold text-gray-800 text-lg group-hover:text-blue-600">
                               {upload.course_code}
                             </span>
@@ -1059,37 +1045,32 @@ export default function PredictionViewV2({}: Props) {
                               month: '2-digit',
                               day: '2-digit',
                               hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                              minute: '2-digit'})}
                           </span>
                         </div>
                         <div className="flex gap-4 text-sm">
                           <span className="flex items-center gap-1 text-gray-600">
-                            <Users className="w-4 h-4" />
-                            <strong>{upload.total_students}</strong> sinh viên
+                            <Users className="w-4 h-4"/>
+                            <strong>{upload.total_students}</strong>sinh viên
                           </span>
                           <span className="text-blue-600 font-medium">
                             {upload.students_with_prediction}/{upload.total_students} đã dự đoán
                           </span>
                         </div>
-                        <div className="mt-2 text-xs text-gray-400 group-hover:text-gray-600">
-                          Click để tải lại dữ liệu này
+                        <div className="mt-2 text-xs text-gray-400 group-hover:text-gray-600">Click để tải lại dữ liệu này
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>))}
+                  </div>)}
               </CardContent>
             </Card>
-          </div>
-        )}
+          </div>)}
 
         {/* Step 1: Upload */}
         <Card>
           <CardContent className="p-6 lg:p-8">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Upload className="w-6 h-6 text-blue-600" />
+                <Upload className="w-6 h-6 text-blue-600"/>
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">{t('prediction.step1Title')}</h3>
@@ -1101,19 +1082,14 @@ export default function PredictionViewV2({}: Props) {
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               className={`border-2 border-dashed rounded-lg p-8 lg:p-12 text-center transition-colors cursor-pointer ${
-                uploading ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-300 hover:border-blue-400'
-              }`}
+                uploading ? 'bg-blue-50 border-blue-400': 'bg-gray-50 border-gray-300 hover:border-blue-400'}`}
             >
               <input 
-                type="file" 
-                id="fileInput" 
-                accept=".csv,.xlsx" 
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <label htmlFor="fileInput" className="cursor-pointer">
+                type="file"id="fileInput"accept=".csv,.xlsx"onChange={handleFileUpload}
+                className="hidden"/>
+              <label htmlFor="fileInput"className="cursor-pointer">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CloudUpload className="w-8 h-8 text-blue-600" />
+                  <CloudUpload className="w-8 h-8 text-blue-600"/>
                 </div>
                 <p className="text-lg font-semibold text-gray-900 mb-2">{t('prediction.dragDropFile')}</p>
                 <p className="text-sm text-gray-500">{t('prediction.supportedFormats')}</p>
@@ -1122,21 +1098,20 @@ export default function PredictionViewV2({}: Props) {
 
             {uploading && (
               <div className="mt-6 flex items-center justify-center space-x-3 text-blue-600">
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin"/>
                 <span className="font-medium">{t('prediction.uploading')}</span>
-              </div>
-            )}
+              </div>)}
 
             <div className="mt-6 space-y-3">
               <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
-                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"/>
                 <div className="flex-1 text-sm text-gray-700">
                   <p className="font-medium mb-1">{t('prediction.processNote')}</p>
                   <p>{t('prediction.processNoteDesc')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3 p-4 bg-amber-50 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0"/>
                 <div className="flex-1 text-sm text-gray-700">
                   <p>{t('prediction.behaviorInitNote')}</p>
                 </div>
@@ -1146,7 +1121,7 @@ export default function PredictionViewV2({}: Props) {
             {uploadSuccess && (
               <div className="mt-6 space-y-4">
                 <div className="flex items-center space-x-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0"/>
                   <div className="flex-1">
                     <p className="font-semibold text-green-900">{t('prediction.uploadSuccessTitle')}</p>
                     <p className="text-sm text-green-700">
@@ -1154,18 +1129,16 @@ export default function PredictionViewV2({}: Props) {
                     </p>
                   </div>
                 </div>
-              </div>
-            )}
+              </div>)}
 
             {error && (
               <div className="mt-6 flex items-center space-x-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0"/>
                 <div className="flex-1">
                   <p className="font-semibold text-red-900">{t('prediction.errorTitle')}</p>
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
-              </div>
-            )}
+              </div>)}
           </CardContent>
         </Card>
 
@@ -1176,7 +1149,7 @@ export default function PredictionViewV2({}: Props) {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Users className="w-6 h-6 text-purple-600" />
+                    <Users className="w-6 h-6 text-purple-600"/>
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">{t('prediction.step2Title')}</h3>
@@ -1184,10 +1157,9 @@ export default function PredictionViewV2({}: Props) {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setShowResults(!showResults)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <ChevronDown className={`w-6 h-6 transition-transform ${showResults ? 'rotate-180' : ''}`} />
+                  onClick={() =>setShowResults(!showResults)}
+                  className="text-blue-600 hover:text-blue-800">
+                  <ChevronDown className={`w-6 h-6 transition-transform ${showResults ? 'rotate-180': ''}`} />
                 </button>
               </div>
 
@@ -1201,11 +1173,10 @@ export default function PredictionViewV2({}: Props) {
                           <th className="px-4 py-3 text-left font-semibold text-gray-700">Student ID</th>
                           <th className="px-4 py-3 text-left font-semibold text-gray-700">Course</th>
                           {/* Dynamic grade columns */}
-                          {gradeColumns.map(col => (
+                          {gradeColumns.map(col =>(
                             <th key={col} className="px-4 py-3 text-left font-semibold text-gray-700">
                               {col.charAt(0).toUpperCase() + col.slice(1)}
-                            </th>
-                          ))}
+                            </th>))}
                           <th className="px-4 py-3 text-left font-semibold text-gray-700">Weekly Hours</th>
                           <th className="px-4 py-3 text-left font-semibold text-gray-700">Part-time Hours</th>
                           <th className="px-4 py-3 text-left font-semibold text-gray-700">Financial Support</th>
@@ -1214,35 +1185,34 @@ export default function PredictionViewV2({}: Props) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {currentStudents.map((student, index) => (
+                        {currentStudents.map((student, index) =>(
                           <tr key={student.student_id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-center font-medium text-gray-600">{indexOfFirstStudent + index + 1}</td>
                             <td className="px-4 py-3 font-medium text-gray-900">{student.student_id}</td>
                             <td className="px-4 py-3 text-gray-700">{student.course_code}</td>
                             {/* Dynamic grade columns */}
-                            {gradeColumns.map(col => (
+                            {gradeColumns.map(col =>(
                               <td key={col} className="px-4 py-3 text-gray-700">
                                 {(student as any)[col] ?? 0}
-                              </td>
-                            ))}
+                              </td>))}
                             <td className="px-4 py-3 text-gray-700">
-                              <span className={student.weekly_study_hours_by_course === null ? 'text-amber-600 font-semibold' : ''}>
-                                {student.weekly_study_hours_by_course === null ? 'NULL' : student.weekly_study_hours_by_course}
+                              <span className={student.weekly_study_hours_by_course === null ? 'text-amber-600 font-semibold': ''}>
+                                {student.weekly_study_hours_by_course === null ? 'NULL': student.weekly_study_hours_by_course}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-gray-700">
-                              <span className={student.part_time_hours_by_course === null ? 'text-amber-600 font-semibold' : ''}>
-                                {student.part_time_hours_by_course === null ? 'NULL' : student.part_time_hours_by_course}
+                              <span className={student.part_time_hours_by_course === null ? 'text-amber-600 font-semibold': ''}>
+                                {student.part_time_hours_by_course === null ? 'NULL': student.part_time_hours_by_course}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-gray-700">
-                              <span className={student.financial_support_by_course === null ? 'text-amber-600 font-semibold' : ''}>
-                                {student.financial_support_by_course === null ? 'NULL' : student.financial_support_by_course}
+                              <span className={student.financial_support_by_course === null ? 'text-amber-600 font-semibold': ''}>
+                                {student.financial_support_by_course === null ? 'NULL': student.financial_support_by_course}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-gray-700">
-                              <span className={student.emotional_support_by_course === null ? 'text-amber-600 font-semibold' : ''}>
-                                {student.emotional_support_by_course === null ? 'NULL' : student.emotional_support_by_course}
+                              <span className={student.emotional_support_by_course === null ? 'text-amber-600 font-semibold': ''}>
+                                {student.emotional_support_by_course === null ? 'NULL': student.emotional_support_by_course}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -1252,26 +1222,22 @@ export default function PredictionViewV2({}: Props) {
                                 </Badge>
                               </div>
                             </td>
-                          </tr>
-                        ))}
+                          </tr>))}
                       </tbody>
                     </table>
                   </div>
 
                   {/* Pagination Controls */}
-                  {studentData.length > studentsPerPage && (
+                  {studentData.length >studentsPerPage && (
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200 rounded-lg">
-                      <div className="text-sm text-gray-700">
-                        Hiển thị {indexOfFirstStudent + 1} - {Math.min(indexOfLastStudent, studentData.length)} trong tổng số {studentData.length} sinh viên
+                      <div className="text-sm text-gray-700">Hiển thị {indexOfFirstStudent + 1} - {Math.min(indexOfLastStudent, studentData.length)} trong tổng số {studentData.length} sinh viên
                       </div>
                       
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={goToPreviousPage}
                           disabled={currentPage === 1}
-                          className="px-3 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Trước
+                          className="px-3 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Trước
                         </button>
                         
                         <div className="flex items-center space-x-1">
@@ -1290,55 +1256,43 @@ export default function PredictionViewV2({}: Props) {
                             return (
                               <button
                                 key={pageNum}
-                                onClick={() => goToPage(pageNum)}
+                                onClick={() =>goToPage(pageNum)}
                                 className={`px-3 py-1 text-sm font-medium rounded-md ${
                                   currentPage === pageNum
-                                    ? 'bg-blue-600 text-white'
-                                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                                }`}
+                                    ? 'bg-blue-600 text-white': 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
                               >
                                 {pageNum}
-                              </button>
-                            );
+                              </button>);
                           })}
                         </div>
                         
                         <button
                           onClick={goToNextPage}
                           disabled={currentPage === totalPages}
-                          className="px-3 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Sau
+                          className="px-3 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Sau
                         </button>
                       </div>
-                    </div>
-                  )}
+                    </div>)}
 
                   <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"/>
                     <div className="flex-1">
                       <p className="font-semibold text-blue-900">Thông tin dữ liệu khảo sát</p>
                       <p className="text-sm text-blue-700">
-                        {studentsWithActualSurvey > 0 ? (
-                          <>
-                            Có <strong>{studentsWithActualSurvey}/{recordCount}</strong> sinh viên đã có khảo sát thực tế. 
+                        {studentsWithActualSurvey >0 ? (
+                          <>Có <strong>{studentsWithActualSurvey}/{recordCount}</strong>sinh viên đã có khảo sát thực tế. 
                             Các sinh viên còn lại sử dụng giá trị trung bình mặc định cho dự đoán. 
                             Dữ liệu khảo sát thực tế sẽ được cập nhật tự động khi sinh viên hoàn tất khảo sát.
-                          </>
-                        ) : (
-                          <>
-                            Tất cả sinh viên đang sử dụng <strong>giá trị trung bình mặc định</strong> (20h học/tuần, 10h làm thêm/tuần, hỗ trợ tài chính & tinh thần: trung bình = 2/3). 
+                          </>) : (
+                          <>Tất cả sinh viên đang sử dụng <strong>giá trị trung bình mặc định</strong>(20h học/tuần, 10h làm thêm/tuần, hỗ trợ tài chính & tinh thần: trung bình = 2/3). 
                             Dữ liệu khảo sát thực tế sẽ được cập nhật tự động khi sinh viên hoàn tất khảo sát.
-                          </>
-                        )}
+                          </>)}
                       </p>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>)}
             </CardContent>
-          </Card>
-        )}
+          </Card>)}
 
         {/* Step 3: Survey */}
         {uploadSuccess && (
@@ -1346,7 +1300,7 @@ export default function PredictionViewV2({}: Props) {
             <CardContent className="p-6 lg:p-8">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <ClipboardList className="w-6 h-6 text-green-600" />
+                  <ClipboardList className="w-6 h-6 text-green-600"/>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Bước 3: Khảo sát Behavior Features</h3>
@@ -1355,53 +1309,45 @@ export default function PredictionViewV2({}: Props) {
               </div>
 
               <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg mb-6">
-                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"/>
                 <div className="flex-1 text-sm text-gray-700">
                   <p className="font-medium mb-2">Thông tin khảo sát:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li>Hiện có <strong>{studentsWithActualSurvey}/{recordCount}</strong> sinh viên đã có dữ liệu khảo sát thực tế</li>
-                    <li>Sinh viên chưa khảo sát đang dùng <strong>giá trị trung bình mặc định</strong> (20h học, 10h làm thêm, hỗ trợ: trung bình = 2)</li>
+                    <li>Hiện có <strong>{studentsWithActualSurvey}/{recordCount}</strong>sinh viên đã có dữ liệu khảo sát thực tế</li>
+                    <li>Sinh viên chưa khảo sát đang dùng <strong>giá trị trung bình mặc định</strong>(20h học, 10h làm thêm, hỗ trợ: trung bình = 2)</li>
                     <li>Bạn có thể chạy dự đoán ngay hoặc gửi thông báo để sinh viên hoàn tất khảo sát</li>
                     <li>Dữ liệu dự đoán sẽ chính xác hơn khi sinh viên hoàn tất khảo sát hành vi của họ</li>
                   </ul>
                 </div>
               </div>
 
-              {notificationCooldown > 0 && (
+              {notificationCooldown >0 && (
                 <div className="flex items-center space-x-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
-                  <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 animate-pulse" />
+                  <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 animate-pulse"/>
                   <p className="text-sm text-amber-800">
-                    <strong>⏳ Đợi {Math.floor(notificationCooldown / 60)}:{String(notificationCooldown % 60).padStart(2, '0')}</strong> trước khi có thể gửi thông báo lại
+                    <strong>Đợi {Math.floor(notificationCooldown / 60)}:{String(notificationCooldown % 60).padStart(2, '0')}</strong>trước khi có thể gửi thông báo lại
                   </p>
-                </div>
-              )}
+                </div>)}
 
               <Button 
                 onClick={openSurveyModal}
-                disabled={uploading || notificationCooldown > 0}
+                disabled={uploading || notificationCooldown >0}
                 className={`w-full py-6 ${
-                  notificationCooldown > 0 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800'
-                }`}
+                  notificationCooldown >0 
+                    ? 'bg-gray-400 cursor-not-allowed': 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800'}`}
               >
-                {notificationCooldown > 0 ? (
+                {notificationCooldown >0 ? (
                   <>
-                    <Clock className="w-5 h-5 mr-2" />
-                    Đợi {Math.floor(notificationCooldown / 60)}:{String(notificationCooldown % 60).padStart(2, '0')} để gửi lại
-                  </>
-                ) : (
+                    <Clock className="w-5 h-5 mr-2"/>Đợi {Math.floor(notificationCooldown / 60)}:{String(notificationCooldown % 60).padStart(2, '0')} để gửi lại
+                  </>) : (
                   <>
-                    <Bell className="w-5 h-5 mr-2" />
+                    <Bell className="w-5 h-5 mr-2"/>
                     {studentsWithActualSurvey === recordCount 
-                      ? '✓ Tất cả sinh viên đã có khảo sát - Gửi nhắc nhở' 
-                      : `📧 Gửi thông báo khảo sát cho ${recordCount - studentsWithActualSurvey} sinh viên`}
-                  </>
-                )}
+                      ? 'Tất cả sinh viên đã có khảo sát - Gửi nhắc nhở': ` Gửi thông báo khảo sát cho ${recordCount - studentsWithActualSurvey} sinh viên`}
+                  </>)}
               </Button>
             </CardContent>
-          </Card>
-        )}
+          </Card>)}
 
         {/* Step 4: Prediction */}
         {uploadSuccess && (
@@ -1409,7 +1355,7 @@ export default function PredictionViewV2({}: Props) {
             <CardContent className="p-6 lg:p-8">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <Brain className="w-6 h-6 text-indigo-600" />
+                  <Brain className="w-6 h-6 text-indigo-600"/>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Bước 4: Chạy mô hình dự đoán</h3>
@@ -1419,12 +1365,12 @@ export default function PredictionViewV2({}: Props) {
 
               <div className="space-y-4">
                 <div className="flex items-start space-x-3 p-4 bg-indigo-50 rounded-lg">
-                  <Info className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                  <Info className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0"/>
                   <div className="flex-1 text-sm text-gray-700">
                     <p className="font-medium mb-2">Về mô hình:</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Hệ thống sẽ chạy mô hình Gradient Boosting với fallback strategy theo hệ số R² từng môn học</li>
-                      <li>Dữ liệu khảo sát: <strong>{studentsWithActualSurvey}/{recordCount}</strong> sinh viên có khảo sát thực tế, còn lại dùng giá trị trung bình</li>
+                      <li>Dữ liệu khảo sát: <strong>{studentsWithActualSurvey}/{recordCount}</strong>sinh viên có khảo sát thực tế, còn lại dùng giá trị trung bình</li>
                       <li>Mô hình đã sẵn sàng chạy dự đoán với dữ liệu hiện tại</li>
                     </ul>
                   </div>
@@ -1433,16 +1379,14 @@ export default function PredictionViewV2({}: Props) {
                 <Button 
                   onClick={runPrediction}
                   disabled={predictionRun}
-                  className="w-full py-6 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800"
-                >
-                  <Brain className="w-5 h-5 mr-2" />
-                  {predictionRun ? 'Đã hoàn tất dự đoán' : 'Dự đoán ngay'}
-                  {predictionRun && <CheckCircle className="w-5 h-5 ml-2" />}
+                  className="w-full py-6 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800">
+                  <Brain className="w-5 h-5 mr-2"/>
+                  {predictionRun ? 'Đã hoàn tất dự đoán': 'Dự đoán ngay'}
+                  {predictionRun && <CheckCircle className="w-5 h-5 ml-2"/>}
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>)}
 
         {/* Results */}
         {predictionRun && (
@@ -1450,7 +1394,7 @@ export default function PredictionViewV2({}: Props) {
             <CardContent className="p-6 lg:p-8">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <ChartBar className="w-6 h-6 text-blue-600" />
+                  <ChartBar className="w-6 h-6 text-blue-600"/>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Kết quả Dự đoán</h3>
@@ -1487,10 +1431,9 @@ export default function PredictionViewV2({}: Props) {
                             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden max-w-[100px]">
                               <div 
                                 className={`h-full rounded-full ${
-                                  student.confidence === 'high' ? 'bg-green-500 w-full' :
-                                  student.confidence === 'medium' ? 'bg-amber-500 w-2/3' :
-                                  'bg-red-500 w-1/3'
-                                }`}
+                                  student.confidence === 'high'? 'bg-green-500 w-full':
+                                  student.confidence === 'medium'? 'bg-amber-500 w-2/3':
+                                  'bg-red-500 w-1/3'}`}
                               />
                             </div>
                             <Badge className={getConfidenceColor(student.confidence)}>
@@ -1500,36 +1443,26 @@ export default function PredictionViewV2({}: Props) {
                         </td>
                         <td className="px-4 py-3">
                           <Button 
-                            onClick={() => showShap(student)}
-                            variant="default"
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <ChartBar className="w-4 h-4 mr-2" />
-                            Xem giải thích
+                            onClick={() =>showShap(student)}
+                            variant="default"size="sm"className="bg-blue-600 hover:bg-blue-700">
+                            <ChartBar className="w-4 h-4 mr-2"/>Xem giải thích
                           </Button>
                         </td>
-                      </tr>
-                    )})}
+                      </tr>)})}
                   </tbody>
                 </table>
               </div>
 
               {/* Pagination for Prediction Results */}
-              {totalPredictionPages > 1 && (
+              {totalPredictionPages >1 && (
                 <div className="flex items-center justify-between mb-6 pt-4 border-t border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    Hiển thị {indexOfFirstPrediction + 1}-{Math.min(indexOfLastPrediction, studentData.length)} trong tổng số {studentData.length} sinh viên
+                  <div className="text-sm text-gray-600">Hiển thị {indexOfFirstPrediction + 1}-{Math.min(indexOfLastPrediction, studentData.length)} trong tổng số {studentData.length} sinh viên
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button
                       onClick={goToPreviousPredictionPage}
                       disabled={predictionCurrentPage === 1}
-                      variant="outline"
-                      size="sm"
-                      className="px-3 py-1"
-                    >
-                      Trước
+                      variant="outline"size="sm"className="px-3 py-1">Trước
                     </Button>
                     
                     {/* Page Numbers */}
@@ -1548,16 +1481,13 @@ export default function PredictionViewV2({}: Props) {
                           pages.push(
                             <button
                               key={i}
-                              onClick={() => goToPredictionPage(i)}
+                              onClick={() =>goToPredictionPage(i)}
                               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                                 predictionCurrentPage === i
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                              }`}
+                                  ? 'bg-blue-600 text-white': 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'}`}
                             >
                               {i}
-                            </button>
-                          );
+                            </button>);
                         }
                         return pages;
                       })()}
@@ -1566,39 +1496,34 @@ export default function PredictionViewV2({}: Props) {
                     <Button
                       onClick={goToNextPredictionPage}
                       disabled={predictionCurrentPage === totalPredictionPages}
-                      variant="outline"
-                      size="sm"
-                      className="px-3 py-1"
-                    >
-                      Sau
+                      variant="outline"size="sm"className="px-3 py-1">Sau
                     </Button>
                   </div>
-                </div>
-              )}
+                </div>)}
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-blue-900">Tổng sinh viên</p>
-                    <Users className="w-5 h-5 text-blue-600" />
+                    <Users className="w-5 h-5 text-blue-600"/>
                   </div>
                   <p className="text-3xl font-bold text-blue-900">{studentData.length}</p>
                 </div>
                 
                 <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-green-900">✅ Pass</p>
-                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <p className="text-sm font-medium text-green-900">Pass</p>
+                    <TrendingUp className="w-5 h-5 text-green-600"/>
                   </div>
                   <p className="text-3xl font-bold text-green-900">
-                    {studentData.filter(s => (s.final_pred || 0) >= 7).length}
+                    {studentData.filter(s =>(s.final_pred || 0) >= 7).length}
                   </p>
                 </div>
                 
                 <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-amber-900">⚠️ Warning</p>
-                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-900">Warning</p>
+                    <AlertTriangle className="w-5 h-5 text-amber-600"/>
                   </div>
                   <p className="text-3xl font-bold text-amber-900">
                     {studentData.filter(s => {
@@ -1610,17 +1535,16 @@ export default function PredictionViewV2({}: Props) {
                 
                 <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-red-900">❌ Fail</p>
-                    <X className="w-5 h-5 text-red-600" />
+                    <p className="text-sm font-medium text-red-900">Fail</p>
+                    <X className="w-5 h-5 text-red-600"/>
                   </div>
                   <p className="text-3xl font-bold text-red-900">
-                    {studentData.filter(s => (s.final_pred || 0) < 3.5).length}
+                    {studentData.filter(s =>(s.final_pred || 0) < 3.5).length}
                   </p>
                 </div>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>)}
       </div>
 
       {/* Upload Metadata Modal - Centered */}
@@ -1629,19 +1553,17 @@ export default function PredictionViewV2({}: Props) {
           {/* Backdrop */}
           <div 
             onClick={closeUploadModal}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             {/* Modal Container */}
             <div 
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out scale-100 animate-in"
-            >
+              onClick={(e) =>e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out scale-100 animate-in">
               {/* Header */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
-                      <Upload className="w-5 h-5 text-white" />
+                      <Upload className="w-5 h-5 text-white"/>
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white">Thông tin Upload</h3>
@@ -1650,9 +1572,8 @@ export default function PredictionViewV2({}: Props) {
                   </div>
                   <button 
                     onClick={closeUploadModal}
-                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                    <X className="w-5 h-5 text-white"/>
                   </button>
                 </div>
               </div>
@@ -1664,150 +1585,123 @@ export default function PredictionViewV2({}: Props) {
                     {/* Course Code */}
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                       <label className="flex items-center text-sm font-semibold text-gray-800 mb-2">
-                        <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">1</span>
-                        Course Code <span className="text-red-500 ml-1">*</span>
+                        <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">1</span>Course Code <span className="text-red-500 ml-1">*</span>
                       </label>
                       {loadingCourses ? (
                         <div className="flex items-center justify-center p-3 border border-gray-300 rounded-lg bg-gray-50">
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-600 mr-2" />
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-600 mr-2"/>
                           <span className="text-xs text-gray-600">Đang tải...</span>
-                        </div>
-                      ) : availableCourses.length === 0 ? (
+                        </div>) : availableCourses.length === 0 ? (
                         <div className="p-3 border border-amber-300 rounded-lg bg-amber-50">
-                          <p className="text-xs text-amber-800">
-                            ⚠️ Chưa có môn học nào được setup weights.
+                          <p className="text-xs text-amber-800">Chưa có môn học nào được setup weights.
                           </p>
-                        </div>
-                      ) : (
+                        </div>) : (
                         <>
                           <select
                             value={uploadMetadata.course_code}
-                            onChange={(e) => handleCourseChange(e.target.value)}
+                            onChange={(e) =>handleCourseChange(e.target.value)}
                             required
-                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
-                          >
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
                             <option value="">-- Chọn môn học --</option>
-                            {availableCourses.map((course) => (
+                            {availableCourses.map((course) =>(
                               <option key={course.courseCode} value={course.courseCode}>
                                 {course.courseCode} - {course.courseName}
-                              </option>
-                            ))}
+                              </option>))}
                           </select>
-                          <p className="text-xs text-gray-500 mt-1.5">
-                            Đã setup {availableCourses.length} môn học
+                          <p className="text-xs text-gray-500 mt-1.5">Đã setup {availableCourses.length} môn học
                           </p>
-                        </>
-                      )}
+                        </>)}
                     </div>
 
                     {/* Mã Lớp */}
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
                       <label className="flex items-center text-sm font-semibold text-gray-800 mb-2">
-                        <span className="bg-green-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">2</span>
-                        Mã Lớp <span className="text-red-500 ml-1">*</span>
+                        <span className="bg-green-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">2</span>Mã Lớp <span className="text-red-500 ml-1">*</span>
                       </label>
                       <input
-                        type="text"
-                        value={uploadMetadata.class_code}
-                        onChange={(e) => setUploadMetadata({...uploadMetadata, class_code: e.target.value.toUpperCase()})}
+                        type="text"value={uploadMetadata.class_code}
+                        onChange={(e) =>setUploadMetadata({...uploadMetadata, class_code: e.target.value.toUpperCase()})}
                         required
-                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                        placeholder="VD: AIS, DTE-01"
-                        maxLength={20}
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"placeholder="VD: AIS, DTE-01"maxLength={20}
                       />
-                      <p className="text-xs text-gray-500 mt-1.5">
-                        Mã lớp: {uploadMetadata.course_code || 'CMU-CS 297'} - {uploadMetadata.class_code || 'AIS'}
+                      <p className="text-xs text-gray-500 mt-1.5">Mã lớp: {uploadMetadata.course_code || 'CMU-CS 297'} - {uploadMetadata.class_code || 'AIS'}
                       </p>
                     </div>
 
                     {/* Năm Học */}
                     <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
                       <label className="flex items-center text-sm font-semibold text-gray-800 mb-2">
-                        <span className="bg-purple-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">3</span>
-                        Năm Học <span className="text-red-500 ml-1">*</span>
+                        <span className="bg-purple-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">3</span>Năm Học <span className="text-red-500 ml-1">*</span>
                       </label>
                       {!uploadMetadata.course_code ? (
                         <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                          <p className="text-xs text-gray-600">📋 Vui lòng chọn môn học trước</p>
-                        </div>
-                      ) : loadingAcademicTerms ? (
+                          <p className="text-xs text-gray-600">Vui lòng chọn môn học trước</p>
+                        </div>) : loadingAcademicTerms ? (
                         <div className="flex items-center justify-center p-3 border border-purple-200 rounded-lg bg-purple-50">
-                          <Loader2 className="w-4 h-4 animate-spin text-purple-600 mr-2" />
+                          <Loader2 className="w-4 h-4 animate-spin text-purple-600 mr-2"/>
                           <span className="text-xs text-purple-700">Đang tải...</span>
-                        </div>
-                      ) : availableAcademicYears.length === 0 ? (
+                        </div>) : availableAcademicYears.length === 0 ? (
                         <div className="p-3 border border-amber-300 rounded-lg bg-amber-50">
-                          <p className="text-xs text-amber-800">⚠️ Môn này chưa có năm học nào</p>
-                        </div>
-                      ) : (
+                          <p className="text-xs text-amber-800">Môn này chưa có năm học nào</p>
+                        </div>) : (
                         <>
                           <select
                             value={uploadMetadata.academic_year}
-                            onChange={(e) => setUploadMetadata({...uploadMetadata, academic_year: e.target.value})}
+                            onChange={(e) =>setUploadMetadata({...uploadMetadata, academic_year: e.target.value})}
                             required
-                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm"
-                          >
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm">
                             <option value="">-- Chọn năm học --</option>
-                            {availableAcademicYears.map((year) => (
+                            {availableAcademicYears.map((year) =>(
                               <option key={year} value={year}>
                                 {year}
-                              </option>
-                            ))}
+                              </option>))}
                           </select>
                           <p className="text-xs text-gray-500 mt-1.5">
                             {availableAcademicYears.length} năm học khả dụng
                           </p>
-                        </>
-                      )}
+                        </>)}
                     </div>
 
                     {/* Học Kỳ */}
                     <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200">
                       <label className="flex items-center text-sm font-semibold text-gray-800 mb-2">
-                        <span className="bg-orange-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">4</span>
-                        Học Kỳ <span className="text-red-500 ml-1">*</span>
+                        <span className="bg-orange-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">4</span>Học Kỳ <span className="text-red-500 ml-1">*</span>
                       </label>
                       {!uploadMetadata.course_code ? (
                         <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                          <p className="text-xs text-gray-600">📋 Vui lòng chọn môn học trước</p>
-                        </div>
-                      ) : loadingAcademicTerms ? (
+                          <p className="text-xs text-gray-600">Vui lòng chọn môn học trước</p>
+                        </div>) : loadingAcademicTerms ? (
                         <div className="flex items-center justify-center p-3 border border-orange-200 rounded-lg bg-orange-50">
-                          <Loader2 className="w-4 h-4 animate-spin text-orange-600 mr-2" />
+                          <Loader2 className="w-4 h-4 animate-spin text-orange-600 mr-2"/>
                           <span className="text-xs text-orange-700">Đang tải...</span>
-                        </div>
-                      ) : availableSemesters.length === 0 ? (
+                        </div>) : availableSemesters.length === 0 ? (
                         <div className="p-3 border border-amber-300 rounded-lg bg-amber-50">
-                          <p className="text-xs text-amber-800">⚠️ Môn này chưa có học kỳ nào</p>
-                        </div>
-                      ) : (
+                          <p className="text-xs text-amber-800">Môn này chưa có học kỳ nào</p>
+                        </div>) : (
                         <>
                           <select
                             value={uploadMetadata.semester}
-                            onChange={(e) => setUploadMetadata({...uploadMetadata, semester: e.target.value})}
+                            onChange={(e) =>setUploadMetadata({...uploadMetadata, semester: e.target.value})}
                             required
-                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm"
-                          >
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-sm">
                             <option value="">-- Chọn học kỳ --</option>
-                            {availableSemesters.map((sem) => (
+                            {availableSemesters.map((sem) =>(
                               <option key={sem} value={sem.toString()}>
-                                {sem === 3 ? 'Học kỳ hè' : `Học kỳ ${sem}`}
-                              </option>
-                            ))}
+                                {sem === 3 ? 'Học kỳ hè': `Học kỳ ${sem}`}
+                              </option>))}
                           </select>
                           <p className="text-xs text-gray-500 mt-1.5">
                             {availableSemesters.length} học kỳ khả dụng
                           </p>
-                        </>
-                      )}
+                        </>)}
                     </div>
 
                     {/* File Info */}
                     <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-4 rounded-xl border border-gray-200">
                       <div className="flex items-start space-x-2">
-                        <FileText className="w-4 h-4 text-gray-600 mt-0.5" />
+                        <FileText className="w-4 h-4 text-gray-600 mt-0.5"/>
                         <div className="flex-1">
-                          <p className="text-xs font-semibold text-gray-700 mb-1">📄 File đã chọn:</p>
+                          <p className="text-xs font-semibold text-gray-700 mb-1">File đã chọn:</p>
                           <p className="text-sm font-medium text-gray-900 bg-white px-2 py-1 rounded border border-gray-200">
                             {pendingFile?.name}
                           </p>
@@ -1822,13 +1716,9 @@ export default function PredictionViewV2({}: Props) {
               <div className="border-t bg-gray-50 px-6 py-4">
                 <div className="flex gap-3">
                   <Button 
-                    type="button"
-                    onClick={closeUploadModal}
-                    variant="outline"
-                    className="flex-1 py-3"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Hủy
+                    type="button"onClick={closeUploadModal}
+                    variant="outline"className="flex-1 py-3">
+                    <X className="w-4 h-4 mr-2"/>Hủy
                   </Button>
                   <Button 
                     onClick={() => {
@@ -1844,32 +1734,28 @@ export default function PredictionViewV2({}: Props) {
                       !uploadMetadata.academic_year || 
                       !uploadMetadata.semester
                     }
-                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Xác nhận Upload
+                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50">
+                    <Upload className="w-4 h-4 mr-2"/>Xác nhận Upload
                   </Button>
                 </div>
               </div>
             </div>
           </div>
-        </>
-      )}
+        </>)}
 
       {/* Survey Modal */}
       {showSurveyModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div 
-              onClick={() => setShowSurveyModal(false)}
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-            />
+              onClick={() =>setShowSurveyModal(false)}
+              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"/>
             
             <div className="relative inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <ClipboardList className="w-6 h-6 text-purple-600" />
+                    <ClipboardList className="w-6 h-6 text-purple-600"/>
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">Khảo sát Hành vi Sinh viên</h3>
@@ -1877,68 +1763,49 @@ export default function PredictionViewV2({}: Props) {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setShowSurveyModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
+                  onClick={() =>setShowSurveyModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X className="w-6 h-6"/>
                 </button>
               </div>
 
               <form onSubmit={saveSurvey} className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <Clock className="w-4 h-4 inline text-blue-600 mr-2" />
-                    Số giờ học tập hàng tuần cho môn này
+                    <Clock className="w-4 h-4 inline text-blue-600 mr-2"/>Số giờ học tập hàng tuần cho môn này
                   </label>
                   <input 
-                    type="number" 
-                    value={surveyData.weekly_study_hours}
-                    onChange={(e) => setSurveyData({...surveyData, weekly_study_hours: e.target.value})}
-                    min="0" 
-                    max="60" 
-                    required 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
-                    placeholder="Nhập số giờ (0-60)"
-                  />
+                    type="number"value={surveyData.weekly_study_hours}
+                    onChange={(e) =>setSurveyData({...surveyData, weekly_study_hours: e.target.value})}
+                    min="0"max="60"required 
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"placeholder="Nhập số giờ (0-60)"/>
                   <p className="text-xs text-gray-500 mt-1">Số giờ sinh viên dành để học tập cho môn học này mỗi tuần</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <Briefcase className="w-4 h-4 inline text-green-600 mr-2" />
-                    Số giờ làm thêm hàng tuần
+                    <Briefcase className="w-4 h-4 inline text-green-600 mr-2"/>Số giờ làm thêm hàng tuần
                   </label>
                   <input 
-                    type="number" 
-                    value={surveyData.part_time_hours}
-                    onChange={(e) => setSurveyData({...surveyData, part_time_hours: e.target.value})}
-                    min="0" 
-                    max="60" 
-                    required 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
-                    placeholder="Nhập số giờ (0-60)"
-                  />
+                    type="number"value={surveyData.part_time_hours}
+                    onChange={(e) =>setSurveyData({...surveyData, part_time_hours: e.target.value})}
+                    min="0"max="60"required 
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"placeholder="Nhập số giờ (0-60)"/>
                   <p className="text-xs text-gray-500 mt-1">Số giờ sinh viên làm việc bán thời gian mỗi tuần</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <DollarSign className="w-4 h-4 inline text-amber-600 mr-2" />
-                    Mức độ hỗ trợ tài chính: <span className="font-bold text-purple-600">
-                      {surveyData.financial_support === 0 ? 'Thấp' : 
-                       surveyData.financial_support === 1 ? 'Trung bình' : 
-                       surveyData.financial_support === 2 ? 'Cao' : 'Rất cao'}
+                    <DollarSign className="w-4 h-4 inline text-amber-600 mr-2"/>Mức độ hỗ trợ tài chính: <span className="font-bold text-purple-600">
+                      {surveyData.financial_support === 0 ? 'Thấp': 
+                       surveyData.financial_support === 1 ? 'Trung bình': 
+                       surveyData.financial_support === 2 ? 'Cao': 'Rất cao'}
                     </span>
                   </label>
                   <input 
-                    type="range" 
-                    value={surveyData.financial_support}
-                    onChange={(e) => setSurveyData({...surveyData, financial_support: parseInt(e.target.value)})}
-                    min="0" 
-                    max="3" 
-                    step="1" 
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                  />
+                    type="range"value={surveyData.financial_support}
+                    onChange={(e) =>setSurveyData({...surveyData, financial_support: parseInt(e.target.value)})}
+                    min="0"max="3"step="1"className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"/>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>0 - Thấp</span>
                     <span>1 - Trung bình</span>
@@ -1950,22 +1817,16 @@ export default function PredictionViewV2({}: Props) {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <Heart className="w-4 h-4 inline text-red-600 mr-2" />
-                    Mức độ hỗ trợ tinh thần: <span className="font-bold text-purple-600">
-                      {surveyData.emotional_support === 0 ? 'Thấp' : 
-                       surveyData.emotional_support === 1 ? 'Trung bình' : 
-                       surveyData.emotional_support === 2 ? 'Cao' : 'Rất cao'}
+                    <Heart className="w-4 h-4 inline text-red-600 mr-2"/>Mức độ hỗ trợ tinh thần: <span className="font-bold text-purple-600">
+                      {surveyData.emotional_support === 0 ? 'Thấp': 
+                       surveyData.emotional_support === 1 ? 'Trung bình': 
+                       surveyData.emotional_support === 2 ? 'Cao': 'Rất cao'}
                     </span>
                   </label>
                   <input 
-                    type="range" 
-                    value={surveyData.emotional_support}
-                    onChange={(e) => setSurveyData({...surveyData, emotional_support: parseInt(e.target.value)})}
-                    min="0" 
-                    max="3" 
-                    step="1" 
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                  />
+                    type="range"value={surveyData.emotional_support}
+                    onChange={(e) =>setSurveyData({...surveyData, emotional_support: parseInt(e.target.value)})}
+                    min="0"max="3"step="1"className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"/>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>0 - Thấp</span>
                     <span>1 - Trung bình</span>
@@ -1976,104 +1837,84 @@ export default function PredictionViewV2({}: Props) {
                 </div>
 
                 <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
-                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"/>
                   <p className="text-sm text-gray-700">Thông tin khảo sát sẽ được áp dụng cho tất cả sinh viên và lưu vào database. Các trường behavior sẽ được cập nhật từ NULL sang giá trị số.</p>
                 </div>
 
                 <div className="flex gap-3 pt-4">
                   <Button 
-                    type="button"
-                    onClick={() => setShowSurveyModal(false)}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Hủy
+                    type="button"onClick={() =>setShowSurveyModal(false)}
+                    variant="outline"className="flex-1">Hủy
                   </Button>
                   <Button 
-                    type="submit"
-                    className="flex-1 bg-purple-600 hover:bg-purple-700"
-                  >
-                    Lưu khảo sát cho tất cả
+                    type="submit"className="flex-1 bg-purple-600 hover:bg-purple-700">Lưu khảo sát cho tất cả
                   </Button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
+        </div>)}
 
       {/* SHAP Modal */}
       {showShapModal && selectedStudent && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div 
-              onClick={() => setShowShapModal(false)}
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-            />
+              onClick={() =>setShowShapModal(false)}
+              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"/>
             
             <div className="relative inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <ChartBar className="w-6 h-6 text-indigo-600" />
+                    <ChartBar className="w-6 h-6 text-indigo-600"/>
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">SHAP Explanation - Giải thích mô hình AI</h3>
-                    <p className="text-sm text-gray-500">
-                      Student ID: {selectedStudent.student_id} | Course: {selectedStudent.course_code}
+                    <p className="text-sm text-gray-500">Student ID: {selectedStudent.student_id} | Course: {selectedStudent.course_code}
                     </p>
                     <div className="mt-1">
                       {(() => {
                         const category = getPredictionCategory(selectedStudent.final_pred);
                         return (
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${category.color}`}>
-                            <span className="mr-1">{category.icon}</span>
-                            Kết quả dự đoán: {category.label}
-                          </span>
-                        );
+                            <span className="mr-1">{category.icon}</span>Kết quả dự đoán: {category.label}
+                          </span>);
                       })()}
                     </div>
                   </div>
                 </div>
                 <button 
-                  onClick={() => setShowShapModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
+                  onClick={() =>setShowShapModal(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X className="w-6 h-6"/>
                 </button>
               </div>
 
               {/* Debug Info Panel - Ẩn đi cho end-user */}
               {/* <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                 <p className="text-xs text-yellow-800 font-mono">
-                  <strong>Debug:</strong> Student {selectedStudent.student_id} | 
+                  <strong>Debug:</strong>Student {selectedStudent.student_id} | 
                   Features loaded: {shapFeatures.length} | 
-                  {loadingShap ? 'Loading...' : 'Ready'}
+                  {loadingShap ? 'Loading...': 'Ready'}
                 </p>
-              </div> */}
+              </div>*/}
 
               {/* Pass Threshold Info Card */}
               {passThresholdData && !loadingShap && (
                 <div className={`mb-6 p-4 rounded-lg border-2 ${
                   passThresholdData.isPassing 
-                    ? 'bg-green-50 border-green-300' 
-                    : passThresholdData.canPass 
-                      ? 'bg-amber-50 border-amber-300'
-                      : 'bg-red-50 border-red-300'
-                }`}>
+                    ? 'bg-green-50 border-green-300': passThresholdData.canPass 
+                      ? 'bg-amber-50 border-amber-300': 'bg-red-50 border-red-300'}`}>
                   <div className="flex items-start space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       passThresholdData.isPassing 
-                        ? 'bg-green-200' 
-                        : passThresholdData.canPass 
-                          ? 'bg-amber-200'
-                          : 'bg-red-200'
-                    }`}>
-                      {passThresholdData.isPassing ? '✅' : passThresholdData.canPass ? '⚠️' : '❌'}
+                        ? 'bg-green-200': passThresholdData.canPass 
+                          ? 'bg-amber-200': 'bg-red-200'}`}>
+                      {passThresholdData.isPassing ? '': passThresholdData.canPass ? '': ''}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-2">
-                        📊 Phân tích điểm hiện tại & Điểm cần đạt để pass môn
+                      <h4 className="font-bold text-gray-900 mb-2">Phân tích điểm hiện tại & Điểm cần đạt để pass môn
                       </h4>
                       
                       <div className="grid grid-cols-2 gap-4 mb-3">
@@ -2082,54 +1923,41 @@ export default function PredictionViewV2({}: Props) {
                           <p className="text-2xl font-bold text-blue-600">
                             {passThresholdData.currentScore.toFixed(2)}/10
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            (Dựa trên {passThresholdData.currentWeightUsed.toFixed(0)}% trọng số)
+                          <p className="text-xs text-gray-500 mt-1">(Dựa trên {passThresholdData.currentWeightUsed.toFixed(0)}% trọng số)
                           </p>
                         </div>
                         
                         <div className="bg-white/50 p-3 rounded">
-                          <p className="text-xs text-gray-600 mb-1">
-                            Điểm {gradeStructureColumns.find(c => c.key === passThresholdData.finalColumnKey)?.name || 'Final'} cần đạt
+                          <p className="text-xs text-gray-600 mb-1">Điểm {gradeStructureColumns.find(c =>c.key === passThresholdData.finalColumnKey)?.name || 'Final'} cần đạt
                           </p>
                           <p className={`text-2xl font-bold ${
-                            passThresholdData.finalScoreNeeded <= 5 ? 'text-green-600' :
-                            passThresholdData.finalScoreNeeded <= 7 ? 'text-amber-600' :
-                            passThresholdData.finalScoreNeeded <= 10 ? 'text-red-600' : 'text-red-800'
-                          }`}>
+                            passThresholdData.finalScoreNeeded <= 5 ? 'text-green-600':
+                            passThresholdData.finalScoreNeeded <= 7 ? 'text-amber-600':
+                            passThresholdData.finalScoreNeeded <= 10 ? 'text-red-600': 'text-red-800'}`}>
                             {passThresholdData.finalScoreNeeded.toFixed(2)}/10
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            (Trọng số: {passThresholdData.finalWeightNeeded.toFixed(0)}%)
+                          <p className="text-xs text-gray-500 mt-1">(Trọng số: {passThresholdData.finalWeightNeeded.toFixed(0)}%)
                           </p>
                         </div>
                       </div>
 
                       <div className="text-sm">
                         {passThresholdData.isPassing ? (
-                          <p className="text-green-700 font-medium">
-                            ✅ Sinh viên đã đạt điểm pass (≥5.0) với điểm hiện tại. Tiếp tục duy trì!
-                          </p>
-                        ) : passThresholdData.canPass ? (
-                          <p className="text-amber-700">
-                            ⚠️ Sinh viên cần đạt <strong>{passThresholdData.finalScoreNeeded.toFixed(2)}/10</strong> ở bài thi cuối kỳ để pass môn (≥5.0).
-                            {passThresholdData.finalScoreNeeded > 7 && (
-                              <span className="block mt-1 text-red-600 font-medium">
-                                🚨 Yêu cầu cao! Cần hỗ trợ và ôn tập kỹ cho bài thi cuối.
-                              </span>
-                            )}
-                          </p>
-                        ) : (
-                          <p className="text-red-700 font-medium">
-                            ❌ Sinh viên KHÔNG THỂ pass môn (cần {'>'}{passThresholdData.finalScoreNeeded.toFixed(2)}/10 {'>'} 10 điểm). 
+                          <p className="text-green-700 font-medium">Sinh viên đã đạt điểm pass (≥5.0) với điểm hiện tại. Tiếp tục duy trì!
+                          </p>) : passThresholdData.canPass ? (
+                          <p className="text-amber-700">Sinh viên cần đạt <strong>{passThresholdData.finalScoreNeeded.toFixed(2)}/10</strong>ở bài thi cuối kỳ để pass môn (≥5.0).
+                            {passThresholdData.finalScoreNeeded >7 && (
+                              <span className="block mt-1 text-red-600 font-medium">Yêu cầu cao! Cần hỗ trợ và ôn tập kỹ cho bài thi cuối.
+                              </span>)}
+                          </p>) : (
+                          <p className="text-red-700 font-medium">Sinh viên KHÔNG THỂ pass môn (cần {'>'}{passThresholdData.finalScoreNeeded.toFixed(2)}/10 {'>'} 10 điểm). 
                             Can thiệp ngay để cứu vãn!
-                          </p>
-                        )}
+                          </p>)}
                       </div>
 
                       {/* Bảng cấu trúc điểm */}
                       <details className="mt-3">
-                        <summary className="text-xs text-blue-600 cursor-pointer hover:underline">
-                          📋 Xem cấu trúc điểm chi tiết của môn học
+                        <summary className="text-xs text-blue-600 cursor-pointer hover:underline">Xem cấu trúc điểm chi tiết của môn học
                         </summary>
                         <div className="mt-2 overflow-x-auto">
                           <table className="w-full text-xs border border-gray-300 rounded">
@@ -2154,13 +1982,10 @@ export default function PredictionViewV2({}: Props) {
                                     </td>
                                     <td className="px-2 py-1 text-center">
                                       {hasGrade ? (
-                                        <span className="text-green-600">✓</span>
-                                      ) : (
-                                        <span className="text-gray-400">Chưa có</span>
-                                      )}
+                                        <span className="text-green-600"></span>) : (
+                                        <span className="text-gray-400">Chưa có</span>)}
                                     </td>
-                                  </tr>
-                                );
+                                  </tr>);
                               })}
                             </tbody>
                           </table>
@@ -2168,19 +1993,17 @@ export default function PredictionViewV2({}: Props) {
                       </details>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>)}
 
               <div className="space-y-6">
                 {/* Loading State */}
                 {loadingShap ? (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                    <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4"/>
                     <p className="text-gray-600 font-medium">Đang phân tích SHAP values...</p>
                     <p className="text-sm text-gray-500 mt-2">Student: {selectedStudent.student_id}</p>
                     <p className="text-sm text-gray-500 mt-2">Vui lòng đợi trong giây lát</p>
-                  </div>
-                ) : (
+                  </div>) : (
                   <>
                     {/* SHAP Chart Visualization */}
                     {/* 
@@ -2216,11 +2039,11 @@ export default function PredictionViewV2({}: Props) {
                          - TỔNG các SHAP values = Sự CHÊNH LỆCH so với điểm trung bình lớp
                       
                       PHÂN LOẠI MỨC ĐỘ ẢNH HƯỞNG:
-                      - |SHAP| ≥ 0.50: Ảnh hưởng RẤT MẠNH ⭐⭐⭐⭐⭐
-                      - |SHAP| ≥ 0.30: Ảnh hưởng MẠNH ⭐⭐⭐⭐
-                      - |SHAP| ≥ 0.15: Ảnh hưởng TRUNG BÌNH ⭐⭐⭐
-                      - |SHAP| ≥ 0.05: Ảnh hưởng NHẸ ⭐⭐
-                      - |SHAP| < 0.05: Ảnh hưởng RẤT NHẸ ⭐
+                      - |SHAP| ≥ 0.50: Ảnh hưởng RẤT MẠNH 
+                      - |SHAP| ≥ 0.30: Ảnh hưởng MẠNH 
+                      - |SHAP| ≥ 0.15: Ảnh hưởng TRUNG BÌNH 
+                      - |SHAP| ≥ 0.05: Ảnh hưởng NHẸ 
+                      - |SHAP| < 0.05: Ảnh hưởng RẤT NHẸ 
                       
                       VÍ DỤ THỰC TẾ:
                       Feature: midterm | Thanh xanh dài | +0.38
@@ -2235,8 +2058,7 @@ export default function PredictionViewV2({}: Props) {
                       
                       CÁC BƯỚC CAN THIỆP:
                       1. Nhìn vào các thanh ĐỎ DÀI (SHAP âm, giá trị tuyệt đối lớn)
-                      2. Đọc giải thích chi tiết ở cột "Giải thích"
-                      3. Áp dụng "Khuyến nghị cho giảng viên" ở phía dưới
+                      2. Đọc giải thích chi tiết ở cột "Giải thích"3. Áp dụng "Khuyến nghị cho giảng viên"ở phía dưới
                       4. Ưu tiên can thiệp features có ảnh hưởng MẠNH trước
                       
                       LƯU Ý QUAN TRỌNG:
@@ -2247,11 +2069,9 @@ export default function PredictionViewV2({}: Props) {
                     */}
                     <div className="bg-gray-50 rounded-lg p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-semibold">
-                          🎯 Top 8 Yếu tố Ảnh hưởng Điểm Sinh viên
+                        <h4 className="text-lg font-semibold">Top 8 Yếu tố Ảnh hưởng Điểm Sinh viên
                         </h4>
-                        <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">
-                          Thanh xanh = Tăng điểm | Thanh đỏ = Giảm điểm
+                        <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">Thanh xanh = Tăng điểm | Thanh đỏ = Giảm điểm
                         </span>
                       </div>
                       <div className="space-y-3">
@@ -2262,26 +2082,25 @@ export default function PredictionViewV2({}: Props) {
                           let impactIcon = '';
                           if (absValue >= 0.5) {
                             impactLevel = 'Rất mạnh';
-                            impactIcon = '⭐⭐⭐⭐⭐';
+                            impactIcon = '';
                           } else if (absValue >= 0.3) {
                             impactLevel = 'Mạnh';
-                            impactIcon = '⭐⭐⭐⭐';
+                            impactIcon = '';
                           } else if (absValue >= 0.15) {
                             impactLevel = 'Trung bình';
-                            impactIcon = '⭐⭐⭐';
+                            impactIcon = '';
                           } else if (absValue >= 0.05) {
                             impactLevel = 'Nhẹ';
-                            impactIcon = '⭐⭐';
+                            impactIcon = '';
                           } else {
                             impactLevel = 'Rất nhẹ';
-                            impactIcon = '⭐';
+                            impactIcon = '';
                           }
                           
                           return (
                             <div key={feature.feature} className="flex items-center space-x-3">
                               {/* Số thứ tự */}
-                              <div className="w-6 text-xs font-bold text-gray-400">
-                                #{index + 1}
+                              <div className="w-6 text-xs font-bold text-gray-400">#{index + 1}
                               </div>
                               
                               {/* Tên feature */}
@@ -2294,10 +2113,8 @@ export default function PredictionViewV2({}: Props) {
                                 <div className="flex-1 h-8 bg-gray-200 rounded relative overflow-hidden shadow-inner">
                                   <div 
                                     className={`h-full transition-all duration-500 ${
-                                      feature.shap_value > 0 
-                                        ? 'bg-gradient-to-r from-green-400 to-green-600' 
-                                        : 'bg-gradient-to-r from-red-400 to-red-600'
-                                    }`}
+                                      feature.shap_value >0 
+                                        ? 'bg-gradient-to-r from-green-400 to-green-600': 'bg-gradient-to-r from-red-400 to-red-600'}`}
                                     style={{ width: `${Math.min(Math.abs(feature.shap_value) * 100, 100)}%` }}
                                   />
                                 </div>
@@ -2305,35 +2122,31 @@ export default function PredictionViewV2({}: Props) {
                                 {/* Mức độ ảnh hưởng (text + icon) thay vì con số */}
                                 <div className="flex flex-col items-end min-w-[100px]">
                                   <span className={`text-xs font-bold ${
-                                    feature.shap_value > 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                    {feature.shap_value > 0 ? '↑ Tăng' : '↓ Giảm'}
+                                    feature.shap_value >0 ? 'text-green-600': 'text-red-600'}`}>
+                                    {feature.shap_value >0 ? '↑ Tăng': '↓ Giảm'}
                                   </span>
-                                  <span className="text-xs text-gray-600" title={`Mức độ: ${impactLevel}`}>
+                                  <span className="text-xs text-gray-600"title={`Mức độ: ${impactLevel}`}>
                                     {impactIcon}
                                   </span>
                                 </div>
                               </div>
-                            </div>
-                          );
+                            </div>);
                         })}
                       </div>
                       
                       {/* Giải thích nhanh ngay dưới biểu đồ */}
                       <div className="mt-4 pt-4 border-t border-gray-300">
                         <p className="text-xs text-gray-600">
-                          <strong>💡 Cách đọc:</strong> 
-                          Sinh viên này có kết quả dự đoán là <strong>{(() => {
+                          <strong>Cách đọc:</strong>Sinh viên này có kết quả dự đoán là <strong>{(() => {
                             const category = getPredictionCategory(selectedStudent.final_pred);
                             return <span className={`font-bold ${
-                              category.label === 'Pass' ? 'text-green-600' :
-                              category.label === 'Warning' ? 'text-amber-600' :
-                              'text-red-600'
-                            }`}>{category.icon} {category.label}</span>;
+                              category.label === 'Pass'? 'text-green-600':
+                              category.label === 'Warning'? 'text-amber-600':
+                              'text-red-600'}`}>{category.icon} {category.label}</span>;
                           })()}</strong>. 
-                          Các thanh <span className="text-green-600 font-semibold">xanh</span> là những điểm mạnh đang giúp sinh viên đạt kết quả tốt hơn. 
-                          Các thanh <span className="text-red-600 font-semibold">đỏ</span> là những điểm yếu đang kéo kết quả xuống. 
-                          Số sao (⭐) cho biết mức độ ảnh hưởng: càng nhiều sao = càng quan trọng.
+                          Các thanh <span className="text-green-600 font-semibold">xanh</span>là những điểm mạnh đang giúp sinh viên đạt kết quả tốt hơn. 
+                          Các thanh <span className="text-red-600 font-semibold">đỏ</span>là những điểm yếu đang kéo kết quả xuống. 
+                          Số sao () cho biết mức độ ảnh hưởng: càng nhiều sao = càng quan trọng.
                         </p>
                       </div>
                     </div>
@@ -2358,28 +2171,18 @@ export default function PredictionViewV2({}: Props) {
                       
                       HÀM explainShapValue() - GIẢI THÍCH TỰ ĐỘNG:
                       - Input: {feature: 'midterm', value: 8.5, shap_value: 0.38}
-                      - Output: "Điểm giữa kỳ (8.5) cao hơn mức trung bình, ảnh hưởng mạnh +0.38 điểm đến kết quả cuối kỳ."
-                      
-                      - Tự động phân loại mức độ: rất mạnh / mạnh / trung bình / nhẹ / rất nhẹ
+                      - Output: "Điểm giữa kỳ (8.5) cao hơn mức trung bình, ảnh hưởng mạnh +0.38 điểm đến kết quả cuối kỳ."- Tự động phân loại mức độ: rất mạnh / mạnh / trung bình / nhẹ / rất nhẹ
                       - Tự động nhận diện feature type: điểm thi / behavior / course encoding / mask
                       - Tự động tạo câu văn PHÙ HỢP với từng loại feature
                       
                       VÍ DỤ GIẢI THÍCH:
                       
                       Feature: midterm = 8.5 | SHAP: +0.38
-                      → "Điểm giữa kỳ (8.5) cao hơn mức trung bình, ảnh hưởng mạnh +0.380 điểm đến kết quả cuối kỳ."
-                      
-                      Feature: part_time_hours = 25 | SHAP: -0.15
-                      → "Sinh viên làm thêm 25 giờ/tuần. Làm thêm nhiều giờ làm giảm 0.150 điểm hiệu suất học tập."
-                      
-                      Feature: weekly_study_hours = 15 | SHAP: -0.10
-                      → "Sinh viên học 15 giờ/tuần. Thời gian học thấp làm giảm 0.100 điểm."
-                      
-                      Feature: financial_support = 1 | SHAP: -0.08
-                      → "Mức hỗ trợ tài chính (1/10). Thiếu hỗ trợ làm giảm 0.080 điểm."
-                      
-                      CÁCH SỬ DỤNG:
-                      1. Đọc cột "Giải thích" để hiểu TẠI SAO sinh viên có điểm dự đoán này
+                      → "Điểm giữa kỳ (8.5) cao hơn mức trung bình, ảnh hưởng mạnh +0.380 điểm đến kết quả cuối kỳ."Feature: part_time_hours = 25 | SHAP: -0.15
+                      → "Sinh viên làm thêm 25 giờ/tuần. Làm thêm nhiều giờ làm giảm 0.150 điểm hiệu suất học tập."Feature: weekly_study_hours = 15 | SHAP: -0.10
+                      → "Sinh viên học 15 giờ/tuần. Thời gian học thấp làm giảm 0.100 điểm."Feature: financial_support = 1 | SHAP: -0.08
+                      → "Mức hỗ trợ tài chính (1/10). Thiếu hỗ trợ làm giảm 0.080 điểm."CÁCH SỬ DỤNG:
+                      1. Đọc cột "Giải thích"để hiểu TẠI SAO sinh viên có điểm dự đoán này
                       2. Tập trung vào các dòng có SHAP Value ÂM (màu đỏ) - Đây là điểm yếu
                       3. Xem khuyến nghị ở phần dưới để biết CÁC BƯỚC CAN THIỆP cụ thể
                       4. Ưu tiên can thiệp các features có |SHAP| LỚN trước (ảnh hưởng mạnh)
@@ -2388,16 +2191,13 @@ export default function PredictionViewV2({}: Props) {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                              Feature
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Feature
                               <span className="block text-xs font-normal text-gray-500 mt-1">Yếu tố ảnh hưởng</span>
                             </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                              Mức độ ảnh hưởng
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Mức độ ảnh hưởng
                               <span className="block text-xs font-normal text-gray-500 mt-1">Tăng/Giảm & Mạnh/Yếu</span>
                             </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                              Giải thích
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Giải thích
                               <span className="block text-xs font-normal text-gray-500 mt-1">Ý nghĩa cụ thể</span>
                             </th>
                           </tr>
@@ -2418,8 +2218,8 @@ export default function PredictionViewV2({}: Props) {
                                 <td className="px-4 py-3 font-medium text-gray-900">{feature.feature}</td>
                                 <td className="px-4 py-3">
                                   <div className="flex items-center space-x-2">
-                                    <Badge className={feature.shap_value > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                                      {feature.shap_value > 0 ? '↑ Tăng' : '↓ Giảm'}
+                                    <Badge className={feature.shap_value >0 ? 'bg-green-100 text-green-800': 'bg-red-100 text-red-800'}>
+                                      {feature.shap_value >0 ? '↑ Tăng': '↓ Giảm'}
                                     </Badge>
                                     <span className="text-xs text-gray-600">({impactStrength})</span>
                                   </div>
@@ -2427,8 +2227,7 @@ export default function PredictionViewV2({}: Props) {
                                 <td className="px-4 py-3 text-xs text-gray-600 max-w-md">
                                   {explainShapValue(feature)}
                                 </td>
-                              </tr>
-                            );
+                              </tr>);
                           })}
                     </tbody>
                   </table>
@@ -2446,68 +2245,36 @@ export default function PredictionViewV2({}: Props) {
                   
                   HÀM getRecommendation() - TƯ VẤN TỰ ĐỘNG:
                   - Input: {feature: 'midterm', shap_value: -0.30}
-                  - Output: "⚠️ Cần review lại kiến thức giữa kỳ. Tổ chức buổi ôn tập bổ sung."
+                  - Output: "Cần review lại kiến thức giữa kỳ. Tổ chức buổi ôn tập bổ sung."PHÂN LOẠI KHUYẾN NGHỊ:
                   
-                  PHÂN LOẠI KHUYẾN NGHỊ:
-                  
-                  1. ĐIỂM MẠnh (SHAP dương, icon ✅):
+                  1. ĐIỂM MẠnh (SHAP dương, icon ):
                      - Ghi nhận và KHUYẾN KHÍCH tiếp tục
-                     - VD: "✅ Sinh viên chuyên cần tốt. Khuyến khích tiếp tục."
-                  
-                  2. ĐIỂM YẾU (SHAP âm, icon ⚠️):
+                     - VD: "Sinh viên chuyên cần tốt. Khuyến khích tiếp tục."2. ĐIỂM YẾU (SHAP âm, icon ):
                      - Xác định NGUYÊN NHÂN và ĐỀ XUẤT GIẢI PHÁP
-                     - VD: "⚠️ Tỷ lệ vắng mặt cao. Liên hệ sinh viên để hiểu nguyên nhân."
-                  
-                  DANH SÁCH KHUYẾN NGHỊ CHO TỪNG FEATURE:
+                     - VD: "Tỷ lệ vắng mặt cao. Liên hệ sinh viên để hiểu nguyên nhân."DANH SÁCH KHUYẾN NGHỊ CHO TỪNG FEATURE:
                   
                   A. CÁC THÀNH PHẦN ĐIỂM (midterm, attend, quiz, homework):
                   
                   midterm (Điểm giữa kỳ):
-                  - Nếu THẤP (âm): "⚠️ Cần review lại kiến thức giữa kỳ. Tổ chức buổi ôn tập bổ sung."
-                  - Nếu CAO (dương): "✅ Sinh viên có nền tảng tốt. Tiếp tục duy trì."
-                  
-                  attend (Chuyên cần):
-                  - Nếu THẤP (âm): "⚠️ Tỷ lệ vắng mặt cao. Liên hệ sinh viên để hiểu nguyên nhân."
-                  - Nếu CAO (dương): "✅ Sinh viên chuyên cần tốt. Khuyến khích tiếp tục."
-                  
-                  quiz (Bài kiểm tra nhỏ):
-                  - Nếu THẤP (âm): "⚠️ Yếu ở bài kiểm tra nhỏ. Tăng cường luyện tập thêm."
-                  - Nếu CAO (dương): "✅ Nắm vững kiến thức từng phần. Duy trì."
-                  
-                  homework (Bài tập về nhà):
-                  - Nếu THẤP (âm): "⚠️ Không hoàn thành đầy đủ bài tập. Nhắc nhở và hỗ trợ."
-                  - Nếu CAO (dương): "✅ Hoàn thành bài tập tốt. Tiếp tục động viên."
-                  
-                  B. CÁC YẾU TỐ HÀNH VI (Behavior Features):
+                  - Nếu THẤP (âm): "Cần review lại kiến thức giữa kỳ. Tổ chức buổi ôn tập bổ sung."- Nếu CAO (dương): "Sinh viên có nền tảng tốt. Tiếp tục duy trì."attend (Chuyên cần):
+                  - Nếu THẤP (âm): "Tỷ lệ vắng mặt cao. Liên hệ sinh viên để hiểu nguyên nhân."- Nếu CAO (dương): "Sinh viên chuyên cần tốt. Khuyến khích tiếp tục."quiz (Bài kiểm tra nhỏ):
+                  - Nếu THẤP (âm): "Yếu ở bài kiểm tra nhỏ. Tăng cường luyện tập thêm."- Nếu CAO (dương): "Nắm vững kiến thức từng phần. Duy trì."homework (Bài tập về nhà):
+                  - Nếu THẤP (âm): "Không hoàn thành đầy đủ bài tập. Nhắc nhở và hỗ trợ."- Nếu CAO (dương): "Hoàn thành bài tập tốt. Tiếp tục động viên."B. CÁC YẾU TỐ HÀNH VI (Behavior Features):
                   
                   weekly_study_hours (Giờ tự học/tuần):
-                  - Nếu ÍT (âm): "⚠️ Thời gian tự học ít. Tư vấn kỹ năng quản lý thời gian."
-                  - Nếu NHIỀU (dương): "✅ Thời gian tự học đủ. Hướng dẫn học hiệu quả hơn."
-                  
-                  part_time_hours (Giờ làm thêm/tuần):
-                  - Nếu QUÁ NHIỀU (âm): "⚠️ Làm thêm quá nhiều ảnh hưởng học tập. Tư vấn cân bằng."
-                  - Nếu HỢP LÝ (dương): "✅ Cân bằng tốt giữa làm thêm và học tập."
-                  
-                  emotional_support (Hỗ trợ tinh thần):
-                  - Nếu THIẾU (âm): "⚠️ Thiếu hỗ trợ tinh thần. Kết nối với tư vấn tâm lý."
-                  - Nếu TỐT (dương): "✅ Được hỗ trợ tinh thần tốt. Tiếp tục theo dõi."
-                  
-                  financial_support (Hỗ trợ tài chính):
-                  - Nếu THIẾU (âm): "⚠️ Gặp khó khăn tài chính. Giới thiệu học bổng/hỗ trợ."
-                  - Nếu ĐỦ (dương): "✅ Ổn định về tài chính. Tập trung học tập tốt."
-                  
-                  C. TRƯỜNG HỢP ĐẶC BIỆT:
+                  - Nếu ÍT (âm): "Thời gian tự học ít. Tư vấn kỹ năng quản lý thời gian."- Nếu NHIỀU (dương): "Thời gian tự học đủ. Hướng dẫn học hiệu quả hơn."part_time_hours (Giờ làm thêm/tuần):
+                  - Nếu QUÁ NHIỀU (âm): "Làm thêm quá nhiều ảnh hưởng học tập. Tư vấn cân bằng."- Nếu HỢP LÝ (dương): "Cân bằng tốt giữa làm thêm và học tập."emotional_support (Hỗ trợ tinh thần):
+                  - Nếu THIẾU (âm): "Thiếu hỗ trợ tinh thần. Kết nối với tư vấn tâm lý."- Nếu TỐT (dương): "Được hỗ trợ tinh thần tốt. Tiếp tục theo dõi."financial_support (Hỗ trợ tài chính):
+                  - Nếu THIẾU (âm): "Gặp khó khăn tài chính. Giới thiệu học bổng/hỗ trợ."- Nếu ĐỦ (dương): "Ổn định về tài chính. Tập trung học tập tốt."C. TRƯỜNG HỢP ĐẶC BIỆT:
                   
                   _mask features (Thiếu dữ liệu):
-                  - "📋 Thu thập đầy đủ dữ liệu để dự đoán chính xác hơn."
-                  
-                  course_XXX (Encoding môn học):
+                  - "Thu thập đầy đủ dữ liệu để dự đoán chính xác hơn."course_XXX (Encoding môn học):
                   - KHÔNG có khuyến nghị (do đây là đặc thù môn học, không can thiệp được)
                   
                   QUY TRÌNH CAN THIỆP ĐỀ XUẤT:
                   
                   BƯỚC 1: XÁC ĐỊNH ƯU TIÊN
-                  - Nhìn vào TOP 5 features có SHAP âm (icon ⚠️)
+                  - Nhìn vào TOP 5 features có SHAP âm (icon )
                   - Sắp xếp theo độ lớn |SHAP| (càng lớn = càng ưu tiên)
                   
                   BƯỚC 2: CAN THIỆP NGAY LẬP TỨC (SHAP < -0.20)
@@ -2520,7 +2287,7 @@ export default function PredictionViewV2({}: Props) {
                   - Theo dõi TIẾN TRIỂN hàng tuần
                   - Đánh giá lại sau 2-3 tuần
                   
-                  BƯỚC 4: QUAN SÁT (SHAP > -0.10)
+                  BƯỚC 4: QUAN SÁT (SHAP >-0.10)
                   - Ghi chú để THEO DÕI lâu dài
                   - Can thiệp nếu có DẤU HIỆU XẤU ĐI
                   
@@ -2532,14 +2299,14 @@ export default function PredictionViewV2({}: Props) {
                 */}
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-6 border border-indigo-100">
                   <div className="flex items-center space-x-2 mb-4">
-                    <Lightbulb className="w-6 h-6 text-indigo-600" />
+                    <Lightbulb className="w-6 h-6 text-indigo-600"/>
                     <h4 className="text-lg font-semibold text-gray-900">Khuyến nghị cho giảng viên</h4>
                   </div>
                   
                   <div className="space-y-3">
-                    {shapFeatures.slice(0, 5).map((feature) => (
+                    {shapFeatures.slice(0, 5).map((feature) =>(
                       <div key={feature.feature} className="flex items-start space-x-3 p-3 bg-white rounded-lg shadow-sm">
-                        <div className={`w-1 h-full rounded ${feature.shap_value > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <div className={`w-1 h-full rounded ${feature.shap_value >0 ? 'bg-green-500': 'bg-red-500'}`} />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-800 mb-1">
                             {feature.feature}
@@ -2548,8 +2315,7 @@ export default function PredictionViewV2({}: Props) {
                             {getRecommendation(feature)}
                           </p>
                         </div>
-                      </div>
-                    ))}
+                      </div>))}
                   </div>
                 </div>
 
@@ -2593,39 +2359,39 @@ export default function PredictionViewV2({}: Props) {
                   - Feature này đang giúp sinh viên ĐẠT ĐIỂM CAO HƠN trung bình
                   - VD: +0.38 = Cộng thêm 0.38 điểm vào dự đoán
                   - Màu XANH LÁ trên biểu đồ
-                  - Icon ✅ trong khuyến nghị
+                  - Icon  trong khuyến nghị
                   - Hành động: Ghi nhận, khuyến khích, phát huy
                   
                   ÂM (-) = GIẢM ĐIỂM = ĐIỂM YẾU:
                   - Feature này đang kéo điểm sinh viên XUỐNG THẤP HƠN trung bình
                   - VD: -0.15 = Trừ đi 0.15 điểm khỏi dự đoán
                   - Màu ĐỎ trên biểu đồ
-                  - Icon ⚠️ trong khuyến nghị
+                  - Icon  trong khuyến nghị
                   - Hành động: Can thiệp, hỗ trợ, cải thiện
                   
                   B. ĐỘ LỚN CỦA SHAP VALUE (Giá trị tuyệt đối):
                   
-                  |SHAP| ≥ 0.50: Ảnh hưởng RẤT MẠNH ⭐⭐⭐⭐⭐
+                  |SHAP| ≥ 0.50: Ảnh hưởng RẤT MẠNH 
                   - Feature CỰC KỲ QUAN TRỌNG, quyết định chính đến kết quả
                   - VD: midterm = +0.52 → Điểm giữa kỳ rất tốt, đóng góp lớn
                   - Hành động: ƯU TIÊN CAN THIỆP NGAY nếu âm
                   
-                  |SHAP| ≥ 0.30: Ảnh hưởng MẠNH ⭐⭐⭐⭐
+                  |SHAP| ≥ 0.30: Ảnh hưởng MẠNH 
                   - Feature QUAN TRỌNG, có tác động đáng kể
                   - VD: attend = -0.35 → Vắng mặt nhiều, ảnh hưởng lớn
                   - Hành động: CAN THIỆP TRONG TUẦN nếu âm
                   
-                  |SHAP| ≥ 0.15: Ảnh hưởng TRUNG BÌNH ⭐⭐⭐
+                  |SHAP| ≥ 0.15: Ảnh hưởng TRUNG BÌNH 
                   - Feature có ảnh hưởng rõ rệt nhưng không cực đoan
                   - VD: quiz = +0.18 → Làm quiz tốt, giúp tăng điểm
                   - Hành động: THEO DÕI và can thiệp nếu cần
                   
-                  |SHAP| ≥ 0.05: Ảnh hưởng NHẸ ⭐⭐
+                  |SHAP| ≥ 0.05: Ảnh hưởng NHẸ 
                   - Feature có ảnh hưởng nhỏ, không quyết định
                   - VD: emotional_support = -0.08 → Thiếu hỗ trợ tinh thần
                   - Hành động: GHI CHÚ để theo dõi lâu dài
                   
-                  |SHAP| < 0.05: Ảnh hưởng RẤT NHẸ ⭐
+                  |SHAP| < 0.05: Ảnh hưởng RẤT NHẸ 
                   - Feature gần như KHÔNG ảnh hưởng đến kết quả
                   - VD: course_encoding = +0.02 → Đặc thù môn học không ảnh hưởng nhiều
                   - Hành động: KHÔNG cần can thiệp
@@ -2705,9 +2471,9 @@ export default function PredictionViewV2({}: Props) {
                   - Cập nhật dữ liệu mới (điểm quiz/homework tiếp theo)
                   - Chạy lại PREDICTION để xem SHAP thay đổi
                   - Nếu SHAP features cải thiện (âm → ít âm hơn hoặc dương):
-                    ✅ Can thiệp HIỆU QUẢ, tiếp tục duy trì
+                     Can thiệp HIỆU QUẢ, tiếp tục duy trì
                   - Nếu SHAP không đổi hoặc xấu đi:
-                    ⚠️ Cần ĐIỀU CHỈNH CHIẾN LƯỢC can thiệp
+                     Cần ĐIỀU CHỈNH CHIẾN LƯỢC can thiệp
                   
                   ==========================================
                   5. GIẢI ĐÁP THẮC MẮC THƯỜNG GẶP
@@ -2748,13 +2514,13 @@ export default function PredictionViewV2({}: Props) {
                   6. LƯU Ý AN TOÀN VÀ ĐẠO ĐỨC
                   ==========================================
                   
-                  ⚠️ CẢNH BÁO:
+                   CẢNH BÁO:
                   - Model AI CÓ THỂ SAI, đặc biệt với case đặc biệt
                   - KHÔNG ĐÁNH GIÁ sinh viên CHỈ DỰA VÀO MODEL
                   - BẢO MẬT thông tin sinh viên (SHAP chứa dữ liệu nhạy cảm)
                   - MINH BẠCH với sinh viên về việc sử dụng AI
                   
-                  ✅ NGUYÊN TẮC SỬ DỤNG:
+                   NGUYÊN TẮC SỬ DỤNG:
                   - Dùng làm CÔNG CỤ HỖ TRỢ, KHÔNG THAY THẾ giảng viên
                   - Kết hợp với TÂM LÝ GIÁO DỤC và KINH NGHIỆM THỰC TẾ
                   - Ưu tiên CAN THIỆP SỚM, TƯ VẤN TÍCH CỰC
@@ -2764,55 +2530,51 @@ export default function PredictionViewV2({}: Props) {
                   TÓM TẮT CHO GIẢNG VIÊN
                   ==========================================
                   
-                  📊 SHAP giúp bạn:
+                   SHAP giúp bạn:
                   1. HIỂU RÕ tại sao sinh viên có điểm dự đoán đó
                   2. PHÁT HIỆN SỚM nguy cơ và điểm yếu
                   3. ĐỊNH HƯỚNG can thiệp có CĂN CỨ KHOA HỌC
                   4. THEO DÕI HIỆU QUẢ của các biện pháp hỗ trợ
                   
-                  🎯 Cách dùng nhanh:
+                   Cách dùng nhanh:
                   - Nhìn thanh ĐỎ DÀI NHẤT → Đây là nguyên nhân chính
-                  - Đọc cột "Giải thích" → Hiểu vấn đề cụ thể
-                  - Áp dụng "Khuyến nghị" → Hành động ngay
+                  - Đọc cột "Giải thích"→ Hiểu vấn đề cụ thể
+                  - Áp dụng "Khuyến nghị"→ Hành động ngay
                   - Theo dõi sau 2-3 tuần → Đánh giá hiệu quả
                 */}
                 {/* Giải thích tổng quan SHAP - Đơn giản hóa cho end-user */}
                 <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"/>
                   <div className="flex-1 text-sm text-gray-700">
-                    <p className="font-medium mb-2">📊 Cách đọc kết quả phân tích:</p>
+                    <p className="font-medium mb-2">Cách đọc kết quả phân tích:</p>
                     <ul className="space-y-1 list-disc list-inside text-xs">
-                      <li><strong className="text-green-600">Thanh xanh (↑ Tăng)</strong>: Feature này làm sinh viên có kết quả <strong>TỐT HƠN</strong> so với trung bình lớp → Đây là <strong>ĐIỂM MẠNH</strong>.</li>
-                      <li><strong className="text-red-600">Thanh đỏ (↓ Giảm)</strong>: Feature này làm sinh viên có kết quả <strong>YẾU HƠN</strong> so với trung bình lớp → Đây là <strong>ĐIỂM YẾU</strong> cần cải thiện.</li>
-                      <li><strong>Độ dài thanh & Số sao (⭐)</strong>: Cho biết mức độ ảnh hưởng. Càng dài + nhiều sao = càng quan trọng.</li>
+                      <li><strong className="text-green-600">Thanh xanh (↑ Tăng)</strong>: Feature này làm sinh viên có kết quả <strong>TỐT HƠN</strong>so với trung bình lớp → Đây là <strong>ĐIỂM MẠNH</strong>.</li>
+                      <li><strong className="text-red-600">Thanh đỏ (↓ Giảm)</strong>: Feature này làm sinh viên có kết quả <strong>YẾU HƠN</strong>so với trung bình lớp → Đây là <strong>ĐIỂM YẾU</strong>cần cải thiện.</li>
+                      <li><strong>Độ dài thanh & Số sao ()</strong>: Cho biết mức độ ảnh hưởng. Càng dài + nhiều sao = càng quan trọng.</li>
                       <li><strong>Kết quả dự đoán</strong>: 
-                        <span className="ml-1 text-green-600 font-semibold">Pass (≥7.0)</span> = An toàn, 
-                        <span className="ml-1 text-amber-600 font-semibold">Warning (3.5-7.0)</span> = Cần theo dõi, 
-                        <span className="ml-1 text-red-600 font-semibold">Fail (&lt;3.5)</span> = Nguy cơ cao.
+                        <span className="ml-1 text-green-600 font-semibold">Pass (≥7.0)</span>= An toàn, 
+                        <span className="ml-1 text-amber-600 font-semibold">Warning (3.5-7.0)</span>= Cần theo dõi, 
+                        <span className="ml-1 text-red-600 font-semibold">Fail (&lt;3.5)</span>= Nguy cơ cao.
                       </li>
                     </ul>
                     <p className="mt-3 text-xs font-medium text-blue-800 bg-blue-100 p-2 rounded">
-                      💡 <strong>Cách can thiệp:</strong> Tập trung vào các thanh <strong className="text-red-600">ĐỎ DÀI</strong> (điểm yếu có ảnh hưởng mạnh). 
-                      Đọc cột "Giải thích" để hiểu cụ thể, sau đó áp dụng "Khuyến nghị" bên dưới.
+                       <strong>Cách can thiệp:</strong>Tập trung vào các thanh <strong className="text-red-600">ĐỎ DÀI</strong>(điểm yếu có ảnh hưởng mạnh). 
+                      Đọc cột "Giải thích"để hiểu cụ thể, sau đó áp dụng "Khuyến nghị"bên dưới.
                     </p>
                   </div>
                 </div>
-                  </>
-                )}
+                  </>)}
               </div>
 
               <div className="mt-6 flex justify-end">
                 <Button 
-                  onClick={() => setShowShapModal(false)}
-                  variant="outline"
-                >
+                  onClick={() =>setShowShapModal(false)}
+                  variant="outline">
                   {t('common.close')}
                 </Button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </TeacherLayout>
-  );
+        </div>)}
+    </TeacherLayout>);
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import Header from '../../components/layout/Header'
 import Footer from '../../components/layout/Footer'
@@ -19,6 +19,10 @@ import {
   ArrowRight,
   Menu,
   X,
+  Headphones,
+  Eye,
+  Brain,
+  BookMarked,
 } from 'lucide-react'
 import { getSkills, getBandOption, CERTIFICATES } from './certificateData'
 import type { CertId, CertBand, SkillSection } from './certificateData'
@@ -28,6 +32,23 @@ import { ListeningPlayer } from './ListeningPlayer'
 import { LISTENING_PACKS_BY_KEY } from './certificateListeningData'
 import SpeakingPractice from './SpeakingPractice'
 import { SPEAKING_PACKS } from './certificateSpeakingData'
+import { appendToeicPracticeResult, getToeicIntakeProfile, saveToeicIntakeProfile } from './toeicIntake'
+import {
+  getToeicRepositoryDetail,
+  getToeicRepositoryOverview,
+  submitToeicRepositoryAnswers,
+  type ToeicRepositoryDetailResponse,
+  type ToeicRepositoryOverviewItem,
+} from '@/services/api/certificateService'
+import ToeicExamPracticePanel from './ToeicExamPracticePanel'
+
+function getApiMessage(error: unknown): string | null {
+  const maybe = error as { response?: { data?: { message?: string | string[] } } }
+  const message = maybe?.response?.data?.message
+  if (Array.isArray(message) && message.length > 0) return String(message[0])
+  if (typeof message === 'string' && message.trim().length > 0) return message
+  return null
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -63,6 +84,102 @@ function buildFlatTopics(skills: SkillSection[]): FlatTopic[] {
   return flat
 }
 
+function mapToeicOverviewToSkills(items: ToeicRepositoryOverviewItem[]): SkillSection[] {
+  const skillMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+    listening: {
+      label: 'Listening',
+      color: 'text-cyan-600',
+      bg: 'bg-cyan-50',
+      icon: <Headphones className="w-4 h-4" />,
+    },
+    reading: {
+      label: 'Reading',
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      icon: <Eye className="w-4 h-4" />,
+    },
+    grammar: {
+      label: 'Grammar',
+      color: 'text-violet-600',
+      bg: 'bg-violet-50',
+      icon: <Brain className="w-4 h-4" />,
+    },
+    vocabulary: {
+      label: 'Vocabulary',
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+      icon: <BookMarked className="w-4 h-4" />,
+    },
+  }
+
+  const bySkill = new Map<string, ToeicRepositoryOverviewItem[]>()
+  for (const item of items) {
+    const key = item.skill_area || 'reading'
+    const existing = bySkill.get(key) ?? []
+    existing.push(item)
+    bySkill.set(key, existing)
+  }
+
+  const orderedSkills = ['listening', 'reading', 'grammar', 'vocabulary']
+  const sections: SkillSection[] = []
+
+  for (const skillId of orderedSkills) {
+    const skillItems = bySkill.get(skillId)
+    if (!skillItems || skillItems.length === 0) continue
+    const meta = skillMeta[skillId]
+    sections.push({
+      id: skillId as SkillSection['id'],
+      label: meta.label,
+      icon: meta.icon,
+      color: meta.color,
+      bg: meta.bg,
+      topics: skillItems
+        .sort((a, b) => a.milestone_score - b.milestone_score)
+        .flatMap((item) => {
+          if (skillId === 'reading') {
+            return [
+              {
+                title: `Part 5 - ${item.title}`,
+                desc: `Mốc ${item.milestone_score} · Part 5 · Điền từ ngữ cảnh`,
+                done: false,
+                topicKey: `${item.topic_key}.part5`,
+              },
+              {
+                title: `Part 7 - ${item.title}`,
+                desc: `Mốc ${item.milestone_score} · Part 7 · Đọc hiểu đoạn văn`,
+                done: false,
+                topicKey: `${item.topic_key}.part7`,
+              },
+            ]
+          }
+
+          return [{
+            title: item.title,
+            desc: `Moc ${item.milestone_score} · ${item.question_count} cau · ${item.estimated_minutes} phut`,
+            done: false,
+            topicKey: item.topic_key,
+          }]
+        }),
+      tips: [],
+    })
+  }
+
+  return sections
+}
+
+function mapToeicScoreToBand(score: number): CertBand {
+  if (score >= 800) return '800+'
+  if (score >= 700) return '700-799'
+  if (score >= 600) return '600-699'
+  if (score >= 500) return '500-599'
+  return '350-495'
+}
+
+function normalizeToeicSkillAlias(skillPrefix: string): string {
+  if (skillPrefix === 'vocab') return 'vocabulary'
+  return skillPrefix
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function TenseCard({ tense, defaultOpen }: { tense: TenseEntry; defaultOpen?: boolean }) {
@@ -80,7 +197,7 @@ function TenseCard({ tense, defaultOpen }: { tense: TenseEntry; defaultOpen?: bo
         <div className="p-5 space-y-4">
           {/* Usage */}
           <div className="text-sm text-slate-600 bg-blue-50 rounded-lg px-4 py-2.5 border border-blue-100">
-            <span className="font-semibold text-blue-700">🎯 Dùng khi: </span>{tense.usage}
+            <span className="font-semibold text-blue-700"> Dùng khi: </span>{tense.usage}
           </div>
           {/* Signal Words */}
           <div>
@@ -96,9 +213,9 @@ function TenseCard({ tense, defaultOpen }: { tense: TenseEntry; defaultOpen?: bo
           {/* Formula */}
           <div className="bg-violet-50 rounded-xl p-4 border border-violet-100 space-y-2">
             <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-2">Công thức</p>
-            <p className="font-mono text-violet-800 text-sm">✅ {tense.formula}</p>
-            {tense.negative && <p className="font-mono text-red-700 text-sm">❌ {tense.negative}</p>}
-            {tense.question && <p className="font-mono text-blue-700 text-sm">❓ {tense.question}</p>}
+            <p className="font-mono text-violet-800 text-sm"> {tense.formula}</p>
+            {tense.negative && <p className="font-mono text-red-700 text-sm"> {tense.negative}</p>}
+            {tense.question && <p className="font-mono text-blue-700 text-sm"> {tense.question}</p>}
           </div>
           {/* Examples */}
           <div className="space-y-2.5">
@@ -128,7 +245,7 @@ function RuleBlock({ rule }: { rule: LessonRule }) {
           <div key={j} className="bg-white rounded-xl border border-slate-100 px-4 py-3">
             <p className="font-semibold text-slate-800">{ex.en}</p>
             {ex.vi !== ex.en && <p className="text-slate-500 mt-1">→ {ex.vi}</p>}
-            {ex.note && <p className="text-indigo-500 text-sm mt-1 italic">ℹ {ex.note}</p>}
+            {ex.note && <p className="text-indigo-500 text-sm mt-1 italic"> {ex.note}</p>}
           </div>
         ))}
       </div>
@@ -136,7 +253,17 @@ function RuleBlock({ rule }: { rule: LessonRule }) {
   )
 }
 
-function QuizCard({ question, index }: { question: QuizQuestion; index: number }) {
+function QuizCard({
+  question,
+  index,
+  onAnswered,
+  questionId,
+}: {
+  question: QuizQuestion
+  index: number
+  onAnswered?: (isCorrect: boolean, questionId: string) => void
+  questionId: string
+}) {
   const [selected, setSelected] = useState<number | null>(null)
   const answered = selected !== null
   return (
@@ -152,7 +279,16 @@ function QuizCard({ question, index }: { question: QuizQuestion; index: number }
           else if (i === selected) cls += 'border-red-300 bg-red-50 text-red-700 line-through'
           else cls += 'border-slate-100 bg-slate-50 text-slate-400'
           return (
-            <button key={i} className={cls} onClick={() => !answered && setSelected(i)} disabled={answered}>
+            <button
+              key={i}
+              className={cls}
+              onClick={() => {
+                if (answered) return
+                onAnswered?.(i === question.answer, questionId)
+                setSelected(i)
+              }}
+              disabled={answered}
+            >
               <span className="font-bold mr-2 text-slate-400">{String.fromCharCode(65 + i)}.</span>
               {opt}
               {answered && i === question.answer && <CheckCircle2 className="inline w-4 h-4 ml-2 text-emerald-500" />}
@@ -163,7 +299,7 @@ function QuizCard({ question, index }: { question: QuizQuestion; index: number }
       </div>
       {answered && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-800">
-          <span className="font-bold">💡 Giải thích: </span>{question.explanation}
+          <span className="font-bold"> Giải thích: </span>{question.explanation}
         </div>
       )}
     </div>
@@ -218,8 +354,8 @@ function buildFlashcards(topicKey: string): Flashcard[] {
   if (lesson.commonMistakes) {
     for (const m of lesson.commonMistakes) {
       cards.push({
-        front: `❌ ${m.wrong}`,
-        back: `✅ ${m.correct}\n\n${m.explanation}`,
+        front: ` ${m.wrong}`,
+        back: ` ${m.correct}\n\n${m.explanation}`,
         hint: 'Lỗi thường gặp',
       })
     }
@@ -288,7 +424,7 @@ function FlashcardView({ topicKey }: { topicKey: string }) {
       >
         {current.hint && (
           <span className={`absolute top-3 left-4 text-xs font-semibold px-2.5 py-1 rounded-full ${flipped ? 'bg-violet-100 text-violet-600' : 'bg-slate-100 text-slate-500'}`}>
-            {flipped ? '✅ Đáp án' : current.hint}
+            {flipped ? ' Đáp án' : current.hint}
           </span>
         )}
         {known.has(index) && !flipped && (
@@ -360,10 +496,14 @@ function Sidebar({
   skills,
   currentKey,
   onSelect,
+  availableRepoTopicKeys = new Set<string>(),
+  unlockedRepoTopicKeys = new Set<string>(),
 }: {
   skills: SkillSection[]
   currentKey: string
   onSelect: (key: string) => void
+  availableRepoTopicKeys?: Set<string>
+  unlockedRepoTopicKeys?: Set<string>
 }) {
   const [expandedSkills, setExpandedSkills] = useState<Set<string>>(
     () => new Set(skills.filter(s => s.topics.some(t => t.topicKey === currentKey)).map(s => s.id))
@@ -432,14 +572,22 @@ function Sidebar({
               {isExpanded && (
                 <div className="pb-1">
                   {visibleTopics.map((topic) => (
+                    (() => {
+                      const isRepoTopic = Boolean(topic.topicKey) && availableRepoTopicKeys.has(topic.topicKey!)
+                      const isLockedRepoTopic = isRepoTopic && !unlockedRepoTopicKeys.has(topic.topicKey!)
+                      return (
                     <button
                       key={topic.topicKey}
-                      onClick={() => onSelect(topic.topicKey!)}
+                      onClick={() => {
+                        if (isLockedRepoTopic) return
+                        onSelect(topic.topicKey!)
+                      }}
+                      disabled={isLockedRepoTopic}
                       className={`w-full text-left flex items-start gap-2.5 px-5 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer ${
                         topic.topicKey === currentKey
                           ? 'bg-purple-50 border-r-2 border-purple-500'
                           : ''
-                      }`}
+                      } ${isLockedRepoTopic ? 'opacity-55 cursor-not-allowed hover:bg-transparent' : ''}`}
                     >
                       <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
                         topic.done ? 'bg-emerald-500' : topic.topicKey === currentKey ? 'bg-purple-400' : 'bg-slate-200'
@@ -459,11 +607,20 @@ function Sidebar({
                         }`}>
                           {topic.title}
                         </p>
-                        {!TOPIC_LESSONS[topic.topicKey!] && !LISTENING_PACKS_BY_KEY[topic.topicKey!] && !SPEAKING_PACKS[topic.topicKey!] && (
+                        <p className="text-xs text-slate-400 mt-0.5">{topic.desc}</p>
+                        {!TOPIC_LESSONS[topic.topicKey!]
+                          && !LISTENING_PACKS_BY_KEY[topic.topicKey!]
+                          && !SPEAKING_PACKS[topic.topicKey!]
+                          && !availableRepoTopicKeys.has(topic.topicKey!) && (
                           <span className="text-xs text-amber-500">Sắp có</span>
+                        )}
+                        {isLockedRepoTopic && (
+                          <span className="text-xs text-slate-400">Chưa mở khóa</span>
                         )}
                       </div>
                     </button>
+                      )
+                    })()
                   ))}
                 </div>
               )}
@@ -482,29 +639,324 @@ export default function CertificateLessonPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const band = (searchParams.get('band') ?? undefined) as CertBand | undefined
+  const rawBand = (searchParams.get('band') ?? undefined) as CertBand | undefined
+  const band = certId === 'toeic' ? undefined : rawBand
   const viewMode = (searchParams.get('mode') ?? 'lesson') as 'lesson' | 'flashcard'
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [toeicOverviewItems, setToeicOverviewItems] = useState<ToeicRepositoryOverviewItem[]>([])
+  const [toeicOverviewLoading, setToeicOverviewLoading] = useState(false)
+  const [toeicOverviewError, setToeicOverviewError] = useState<string | null>(null)
+  const [toeicRepoByTopicKey, setToeicRepoByTopicKey] = useState<Record<string, string>>({})
+  const [toeicUnlockedTopicKeys, setToeicUnlockedTopicKeys] = useState<Set<string>>(new Set())
+  const [toeicRepository, setToeicRepository] = useState<ToeicRepositoryDetailResponse | null>(null)
+  const [toeicRepositoryError, setToeicRepositoryError] = useState<string | null>(null)
+  const [toeicCurrentScore, setToeicCurrentScore] = useState<number>(300)
+  const requestedTopicKey = topicKey ?? ''
 
   const cert = CERTIFICATES.find(c => c.id === (certId as CertId)) ?? CERTIFICATES[0]
-  const skills = getSkills(cert.id, band)
+  const isToeic = cert.id === 'toeic'
+  const toeicBandByScore = useMemo<CertBand>(() => mapToeicScoreToBand(toeicCurrentScore), [toeicCurrentScore])
+  const localToeicSkills = useMemo(() => {
+    return getSkills('toeic', toeicBandByScore).filter((section) => {
+      return section.id === 'listening' || section.id === 'reading' || section.id === 'grammar' || section.id === 'vocabulary'
+    })
+  }, [toeicBandByScore])
+  const skills = useMemo(() => {
+    if (isToeic) {
+      if (toeicOverviewLoading && toeicOverviewItems.length === 0) {
+        return [] as SkillSection[]
+      }
+
+      if (toeicOverviewItems.length === 0) {
+        return localToeicSkills
+      }
+
+      return mapToeicOverviewToSkills(toeicOverviewItems)
+    }
+
+    return getSkills(cert.id, band).filter((section) => {
+      if (!isToeic) return true
+      return section.id === 'listening' || section.id === 'reading'
+    })
+  }, [band, cert.id, isToeic, localToeicSkills, toeicOverviewItems, toeicOverviewLoading])
   const bandOption = band ? getBandOption(cert.id, band) : undefined
   const flatTopics = useMemo(() => buildFlatTopics(skills), [skills])
 
-  const currentKey = topicKey ?? flatTopics[0]?.topicKey ?? ''
+  const currentKey = requestedTopicKey || flatTopics[0]?.topicKey || ''
+  const currentSkillId = useMemo(
+    () => skills.find((section) => section.topics.some((topic) => topic.topicKey === currentKey))?.id,
+    [currentKey, skills],
+  )
+  const inferredSkillId = useMemo(() => {
+    const prefix = normalizeToeicSkillAlias(currentKey.split('.')[0])
+    return skills.find((section) => section.id === prefix)?.id
+  }, [currentKey, skills])
+  const activeSidebarSkillId = currentSkillId ?? inferredSkillId ?? skills[0]?.id
+  const sidebarSkills = useMemo(
+    () => (isToeic && activeSidebarSkillId ? skills.filter((section) => section.id === activeSidebarSkillId) : skills),
+    [activeSidebarSkillId, isToeic, skills],
+  )
+  const currentSkillTopics = useMemo(() => {
+    if (!activeSidebarSkillId) return flatTopics
+    const filtered = flatTopics.filter(
+      (topic) => normalizeToeicSkillAlias(topic.topicKey.split('.')[0]) === activeSidebarSkillId,
+    )
+    return filtered.length > 0 ? filtered : flatTopics
+  }, [activeSidebarSkillId, flatTopics])
+
   const currentIndex = flatTopics.findIndex(t => t.topicKey === currentKey)
+  const currentSkillIndex = currentSkillTopics.findIndex((topic) => topic.topicKey === currentKey)
   const currentTopic = flatTopics[currentIndex]
   const lesson = TOPIC_LESSONS[currentKey]
+  const currentToeicSlug = toeicRepoByTopicKey[currentKey]
+  const currentToeicPart = useMemo<'part5' | 'part7' | null>(() => {
+    if (currentKey.endsWith('.part5')) return 'part5'
+    if (currentKey.endsWith('.part7')) return 'part7'
+    return null
+  }, [currentKey])
+  const displayedToeicRepository = useMemo<ToeicRepositoryDetailResponse | null>(() => {
+    if (!toeicRepository) return null
+    if (toeicRepository.skill_area !== 'reading') return toeicRepository
+    if (!currentToeicPart) return toeicRepository
 
-  const prevTopic = currentIndex > 0 ? flatTopics[currentIndex - 1] : null
-  const nextTopic = currentIndex < flatTopics.length - 1 ? flatTopics[currentIndex + 1] : null
+    const items = toeicRepository.items.filter((item) => {
+      const title = item.title?.toLowerCase() ?? ''
+      if (currentToeicPart === 'part5') return title.includes('part 5')
+      return title.includes('part 7')
+    })
+
+    if (items.length === 0) return toeicRepository
+
+    return {
+      ...toeicRepository,
+      title: `${toeicRepository.title} - ${currentToeicPart === 'part5' ? 'Part 5' : 'Part 7'}`,
+      total_items: items.length,
+      pass_score: Math.max(1, Math.ceil(items.length * 0.7)),
+      estimated_minutes: items.length,
+      items,
+    }
+  }, [currentToeicPart, toeicRepository])
+
+  const prevTopic = currentSkillIndex > 0 ? currentSkillTopics[currentSkillIndex - 1] : null
+  const nextTopic =
+    currentSkillIndex >= 0 && currentSkillIndex < currentSkillTopics.length - 1
+      ? currentSkillTopics[currentSkillIndex + 1]
+      : null
+
+  const buildLessonPath = useCallback((key: string): string => {
+    const params = new URLSearchParams(searchParams)
+    if (isToeic) {
+      params.delete('band')
+    }
+    const query = params.toString()
+    const basePath = `/student/certificate-review/${cert.id}/lesson/${key}`
+    return query ? `${basePath}?${query}` : basePath
+  }, [cert.id, isToeic, searchParams])
+
+  useEffect(() => {
+    if (!isToeic) return
+    if (!searchParams.has('band')) return
+
+    const params = new URLSearchParams(searchParams)
+    params.delete('band')
+    setSearchParams(params, { replace: true })
+  }, [isToeic, searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!isToeic) return
+    if (viewMode === 'lesson') return
+
+    const params = new URLSearchParams(searchParams)
+    params.set('mode', 'lesson')
+    setSearchParams(params, { replace: true })
+  }, [isToeic, searchParams, setSearchParams, viewMode])
+
+  useEffect(() => {
+    if (!isToeic) return
+    let cancelled = false
+
+    const loadOverview = async () => {
+      setToeicOverviewLoading(true)
+      setToeicOverviewError(null)
+      try {
+        const data = await getToeicRepositoryOverview()
+        if (cancelled) return
+        setToeicOverviewItems(Array.isArray(data.items) ? data.items : [])
+        setToeicCurrentScore(data.projected_score ?? data.current_score ?? 300)
+
+        const mapping: Record<string, string> = {}
+        const unlocked = new Set<string>()
+        for (const item of data.items ?? []) {
+          if (item.topic_key && item.slug) {
+            mapping[item.topic_key] = item.slug
+            if (item.skill_area === 'reading') {
+              mapping[`${item.topic_key}.part5`] = item.slug
+              mapping[`${item.topic_key}.part7`] = item.slug
+            }
+          }
+          if (item.topic_key) {
+            if (item.is_unlocked) {
+              unlocked.add(item.topic_key)
+            }
+            if (item.skill_area === 'reading') {
+              unlocked.add(`${item.topic_key}.part5`)
+              unlocked.add(`${item.topic_key}.part7`)
+            }
+          }
+        }
+        setToeicRepoByTopicKey(mapping)
+        setToeicUnlockedTopicKeys(unlocked)
+      } catch {
+        if (cancelled) return
+        setToeicOverviewItems([])
+        setToeicRepoByTopicKey({})
+        setToeicUnlockedTopicKeys(new Set())
+        setToeicOverviewError('Không thể tải danh sách chủ đề TOEIC lúc này.')
+      } finally {
+        if (!cancelled) {
+          setToeicOverviewLoading(false)
+        }
+      }
+    }
+
+    loadOverview()
+    return () => {
+      cancelled = true
+    }
+  }, [isToeic])
+
+  useEffect(() => {
+    if (!isToeic || !currentToeicSlug) {
+      setToeicRepository(null)
+      setToeicRepositoryError(null)
+      return
+    }
+
+    let cancelled = false
+    const loadDetail = async () => {
+      try {
+        const data = await getToeicRepositoryDetail(currentToeicSlug)
+        if (!cancelled) {
+          setToeicRepository(data)
+          setToeicRepositoryError(null)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setToeicRepository(null)
+          setToeicRepositoryError(getApiMessage(error) ?? 'Không thể tải nội dung bài luyện này.')
+        }
+      }
+    }
+
+    loadDetail()
+    return () => {
+      cancelled = true
+    }
+  }, [currentToeicSlug, isToeic])
+
+  useEffect(() => {
+    if (!isToeic) return
+    if (!currentKey) return
+    if (toeicOverviewItems.length === 0) return
+
+    const pickClosestTopicKey = (items: ToeicRepositoryOverviewItem[]): string | undefined => {
+      return [...items]
+        .sort((a, b) => Math.abs(a.milestone_score - toeicCurrentScore) - Math.abs(b.milestone_score - toeicCurrentScore))[0]
+        ?.topic_key
+    }
+
+    const hasLocalLesson = Boolean(
+      TOPIC_LESSONS[currentKey]
+      || LISTENING_PACKS_BY_KEY[currentKey]
+      || SPEAKING_PACKS[currentKey],
+    )
+    if (hasLocalLesson) return
+
+    const isKnownTopic = Boolean(toeicRepoByTopicKey[currentKey])
+    const isUnlockedTopic = toeicUnlockedTopicKeys.has(currentKey)
+    if (isKnownTopic && isUnlockedTopic) return
+
+    const requestedSkill = normalizeToeicSkillAlias(currentKey.split('.')[0])
+    const isKnownToeicSkill =
+      requestedSkill === 'listening'
+      || requestedSkill === 'reading'
+      || requestedSkill === 'grammar'
+      || requestedSkill === 'vocabulary'
+
+    const localFallbackInRequestedSkill = flatTopics.find((topic) => {
+      const topicSkill = normalizeToeicSkillAlias(topic.topicKey.split('.')[0])
+      if (topicSkill !== requestedSkill) return false
+      return Boolean(
+        TOPIC_LESSONS[topic.topicKey]
+        || LISTENING_PACKS_BY_KEY[topic.topicKey]
+        || SPEAKING_PACKS[topic.topicKey],
+      )
+    })?.topicKey
+
+    const unlockedItems = toeicOverviewItems.filter(
+      (item) => item.is_unlocked && Boolean(item.topic_key) && Boolean(item.slug),
+    )
+    const unlockedBySkill = unlockedItems.filter((item) => item.skill_area === requestedSkill)
+    const knownBySkill = toeicOverviewItems.filter(
+      (item) => item.skill_area === requestedSkill && Boolean(item.topic_key),
+    )
+
+    // Keep the learner in the requested TOEIC skill when possible.
+    const fallbackInRequestedSkill =
+      localFallbackInRequestedSkill
+      ?? pickClosestTopicKey(unlockedBySkill)
+      ?? [...knownBySkill].sort((a, b) => a.milestone_score - b.milestone_score)[0]?.topic_key
+
+    const fallbackCrossSkill =
+      !isKnownToeicSkill
+        ? pickClosestTopicKey(unlockedItems)
+          ?? toeicOverviewItems.find((item) => Boolean(item.topic_key))?.topic_key
+        : undefined
+
+    const fallbackKey = fallbackInRequestedSkill ?? fallbackCrossSkill
+
+    if (!fallbackKey || fallbackKey === currentKey) return
+
+    navigate(buildLessonPath(fallbackKey), { replace: true })
+  }, [
+    buildLessonPath,
+    cert.id,
+    currentKey,
+    isToeic,
+    navigate,
+    toeicCurrentScore,
+    toeicOverviewItems,
+    toeicRepoByTopicKey,
+    toeicUnlockedTopicKeys,
+    flatTopics,
+  ])
 
   const goToTopic = (key: string) => {
-    const params = new URLSearchParams(searchParams)
-    navigate(`/student/certificate-review/${cert.id}/lesson/${key}?${params.toString()}`)
+    if (isToeic && toeicRepoByTopicKey[key] && !toeicUnlockedTopicKeys.has(key)) {
+      return
+    }
+    navigate(buildLessonPath(key))
     setMobileSidebarOpen(false)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
   }
+
+  useEffect(() => {
+    const reset = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      if (document.documentElement) document.documentElement.scrollTop = 0
+      if (document.body) document.body.scrollTop = 0
+    }
+
+    reset()
+    const raf = window.requestAnimationFrame(reset)
+    const timeout = window.setTimeout(reset, 0)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.clearTimeout(timeout)
+    }
+  }, [currentKey, viewMode])
 
   const setMode = (mode: 'lesson' | 'flashcard') => {
     const params = new URLSearchParams(searchParams)
@@ -512,11 +964,31 @@ export default function CertificateLessonPage() {
     setSearchParams(params)
   }
 
+  const trackToeicAnswer = (mode: 'listening' | 'reading', isCorrect: boolean, questionId: string) => {
+    if (!isToeic) return
+    const profile = getToeicIntakeProfile()
+    if (!profile) return
+
+    const next = appendToeicPracticeResult(profile, mode, isCorrect ? 1 : 0, [questionId])
+    saveToeicIntakeProfile(next)
+    setToeicCurrentScore(Math.round(next.milestoneState.currentScore + next.milestoneState.totalBoost))
+  }
+
+  const trackToeicSession = (mode: 'listening' | 'reading', correctCount: number, questionIds: string[]) => {
+    if (!isToeic) return
+    const profile = getToeicIntakeProfile()
+    if (!profile) return
+
+    const next = appendToeicPracticeResult(profile, mode, correctCount, questionIds)
+    saveToeicIntakeProfile(next)
+    setToeicCurrentScore(Math.round(next.milestoneState.currentScore + next.milestoneState.totalBoost))
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed">
         {/* ── Breadcrumb ── */}
         <nav className="flex items-center gap-2 text-sm text-slate-500 mb-5 flex-wrap">
           <button
@@ -530,7 +1002,7 @@ export default function CertificateLessonPage() {
             onClick={() => navigate(`/student/certificate-review/${cert.id}${band ? `?band=${band}` : ''}`)}
             className="hover:text-purple-600 transition-colors cursor-pointer font-medium"
           >
-            {cert.label} {bandOption ? `– ${bandOption.label}` : ''}
+            {cert.label} {cert.id !== 'toeic' && bandOption ? `– ${bandOption.label}` : ''}
           </button>
           <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
           {currentTopic && (
@@ -550,22 +1022,32 @@ export default function CertificateLessonPage() {
             <div className="sticky top-6 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden max-h-[calc(100vh-120px)]">
               {/* Sidebar header */}
               <div className={`bg-gradient-to-r ${cert.bgFrom} ${cert.bgTo} px-4 py-3.5 flex items-center gap-3`}>
-                <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                  <span className="font-black text-white text-sm">{cert.icon}</span>
+                <div
+                  className={`bg-white/20 rounded-xl flex items-center justify-center shrink-0 ${
+                    isToeic ? 'h-9 px-3 min-w-[78px]' : 'w-9 h-9'
+                  }`}
+                >
+                  <span className={`font-black text-white ${isToeic ? 'text-lg leading-none tracking-wide' : 'text-sm'}`}>{cert.icon}</span>
                 </div>
                 <div>
                   <p className="font-bold text-white text-sm">{cert.label}</p>
-                  {bandOption && (
+                  {bandOption && cert.id !== 'toeic' && (
                     <p className="text-white/70 text-xs">{bandOption.label} · {bandOption.tagline}</p>
                   )}
                 </div>
               </div>
 
-              <Sidebar
-                skills={skills}
-                currentKey={currentKey}
-                onSelect={goToTopic}
-              />
+              {isToeic && toeicOverviewLoading && sidebarSkills.length === 0 ? (
+                <div className="p-4 text-sm text-slate-500">Đang tải chủ đề TOEIC...</div>
+              ) : (
+                <Sidebar
+                  skills={sidebarSkills}
+                  currentKey={currentKey}
+                  onSelect={goToTopic}
+                  availableRepoTopicKeys={new Set(Object.keys(toeicRepoByTopicKey))}
+                  unlockedRepoTopicKeys={toeicUnlockedTopicKeys}
+                />
+              )}
             </div>
           </aside>
 
@@ -637,51 +1119,103 @@ export default function CertificateLessonPage() {
                   >
                     <BookOpen className="w-4 h-4" /> Bài học
                   </button>
-                  <button
-                    onClick={() => setMode('flashcard')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                      viewMode === 'flashcard'
-                        ? 'bg-white text-purple-700 shadow-sm'
-                        : 'bg-white/20 text-white hover:bg-white/30'
-                    }`}
-                  >
-                    <Layers className="w-4 h-4" /> Flashcard
-                  </button>
+                  {!isToeic && (
+                    <button
+                      onClick={() => setMode('flashcard')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                        viewMode === 'flashcard'
+                          ? 'bg-white text-purple-700 shadow-sm'
+                          : 'bg-white/20 text-white hover:bg-white/30'
+                      }`}
+                    >
+                      <Layers className="w-4 h-4" /> Flashcard
+                    </button>
+                  )}
                   <span className="ml-auto text-white/60 text-xs">
-                    {currentIndex + 1} / {flatTopics.length}
+                    {Math.max(1, currentSkillIndex + 1)} / {Math.max(1, currentSkillTopics.length)}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* ── Listening Practice (for listening.* topics) ── */}
-            {currentKey.startsWith('listening.') && viewMode === 'lesson' && LISTENING_PACKS_BY_KEY[currentKey] && (
+            {!isToeic && currentKey.startsWith('listening.') && viewMode === 'lesson' && LISTENING_PACKS_BY_KEY[currentKey] && (
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                 <ListeningPlayer
                   topicKey={currentKey}
                   accentColor={currentTopic?.skillColor}
                   accentBg={currentTopic?.skillBg}
+                  onQuestionAnswered={(isCorrect, questionId) => trackToeicAnswer('listening', isCorrect, questionId)}
                 />
               </div>
             )}
 
             {/* ── Speaking Practice (for speaking.* topics) ── */}
-            {currentKey.startsWith('speaking.') && viewMode === 'lesson' && SPEAKING_PACKS[currentKey] && (
+            {!isToeic && currentKey.startsWith('speaking.') && viewMode === 'lesson' && SPEAKING_PACKS[currentKey] && (
               <div className="bg-zinc-900 rounded-2xl border border-zinc-700 shadow-sm p-6">
                 <SpeakingPractice topicKey={currentKey} />
               </div>
             )}
 
+            {isToeic && toeicOverviewError && !toeicRepository && (
+              <div className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-4 text-sm text-amber-800">
+                {toeicOverviewError}
+              </div>
+            )}
+
+            {/* ── TOEIC Exam Practice (repository-driven) ── */}
+            {isToeic && viewMode === 'lesson' && displayedToeicRepository && currentToeicSlug && (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
+                <ToeicExamPracticePanel
+                  repository={displayedToeicRepository}
+                  currentScore={toeicCurrentScore}
+                  onLiveScoreChange={(delta) => {
+                    if (!Number.isFinite(delta) || delta <= 0) return
+                    setToeicCurrentScore((prev) => prev + Math.round(delta))
+                  }}
+                  onComplete={async ({ answers, elapsedSeconds }) => {
+                    const response = await submitToeicRepositoryAnswers(currentToeicSlug, {
+                      answers: answers.map((ans) => ({ item_id: ans.itemId, option_id: ans.optionId })),
+                      elapsed_seconds: elapsedSeconds,
+                    })
+
+                    if (displayedToeicRepository.skill_area === 'listening' || displayedToeicRepository.skill_area === 'reading') {
+                      const questionIds = answers.map((ans) => `${displayedToeicRepository.slug}-${ans.itemId}`)
+                      trackToeicSession(displayedToeicRepository.skill_area, response.correct_count, questionIds)
+                    }
+
+                    setToeicCurrentScore(response.projected_score)
+                    return {
+                      correctCount: response.correct_count,
+                      total: response.total_count,
+                      gainedScore: response.gained_score,
+                      projectedScore: response.projected_score,
+                      isPassed: response.is_passed,
+                      passScore: response.pass_score,
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {isToeic && viewMode === 'lesson' && currentToeicSlug && !toeicRepository && toeicRepositoryError && (
+              <div className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-6 text-amber-800">
+                <p className="font-semibold">{toeicRepositoryError}</p>
+                <p className="text-sm mt-1">Hãy chọn một chủ đề đã mở khóa trong sidebar để tiếp tục luyện tập.</p>
+              </div>
+            )}
+
             {/* ── No lesson content placeholder ── */}
-            {!lesson && viewMode === 'lesson'
+            {!isToeic && !lesson && viewMode === 'lesson'
               && !(currentKey.startsWith('listening.') && LISTENING_PACKS_BY_KEY[currentKey])
               && !(currentKey.startsWith('speaking.') && SPEAKING_PACKS[currentKey])
+              && !(isToeic && Boolean(currentToeicSlug) && Boolean(displayedToeicRepository))
               && (
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
                 <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <BookOpen className="w-8 h-8 text-amber-400" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-700 mb-2">Bài học đang được biên so᨟n</h3>
+                <h3 className="text-lg font-bold text-slate-700 mb-2">Bài học đang được biên soạn</h3>
                 <p className="text-slate-500 text-sm max-w-md mx-auto">
                   Nội dung chi tiết cho chủ đề <span className="font-semibold text-slate-700">"{currentTopic?.title}"</span> đang được chuẩn bị.
                   Hãy thử <button onClick={() => setMode('flashcard')} className="text-purple-600 font-semibold hover:underline cursor-pointer">chế độ Flashcard</button> trong khi chờ!
@@ -698,14 +1232,14 @@ export default function CertificateLessonPage() {
             )}
 
             {/* ── Flashcard mode ── */}
-            {viewMode === 'flashcard' && (
+            {!isToeic && viewMode === 'flashcard' && (
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8">
                 <FlashcardView topicKey={currentKey} />
               </div>
             )}
 
             {/* ── Lesson content ── */}
-            {lesson && viewMode === 'lesson' && (
+            {!isToeic && lesson && viewMode === 'lesson' && (
               <div className="space-y-5">
 
                 {/* Introduction */}
@@ -781,7 +1315,7 @@ export default function CertificateLessonPage() {
                     <ul className="space-y-3">
                       {lesson.studyTips.map((tip, i) => (
                         <li key={i} className="flex items-start gap-3 text-slate-700">
-                          <span className="text-blue-400 font-bold text-lg shrink-0 leading-none mt-0.5">✦</span>
+                          <span className="text-blue-400 font-bold text-lg shrink-0 leading-none mt-0.5"></span>
                           <span className="leading-relaxed">{tip}</span>
                         </li>
                       ))}
@@ -799,7 +1333,17 @@ export default function CertificateLessonPage() {
                     </div>
                     <div className="space-y-4">
                       {lesson.quiz.map((q, i) => (
-                        <QuizCard key={i} question={q} index={i} />
+                        <QuizCard
+                          key={i}
+                          question={q}
+                          index={i}
+                          questionId={`${currentKey}-quiz-${i}`}
+                          onAnswered={(isCorrect, questionId) => {
+                            if (currentKey.startsWith('reading.')) {
+                              trackToeicAnswer('reading', isCorrect, questionId)
+                            }
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
@@ -820,13 +1364,6 @@ export default function CertificateLessonPage() {
                   <p className="text-sm text-slate-700 font-semibold">{prevTopic?.title ?? ''}</p>
                 </div>
                 {!prevTopic && <span>Chủ đề trước</span>}
-              </button>
-
-              <button
-                onClick={() => navigate(`/student/certificate-review/${cert.id}${band ? `?band=${band}` : ''}`)}
-                className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer text-sm shadow-sm"
-              >
-                <ArrowLeft className="w-4 h-4" /> Về trang chứng chỉ
               </button>
 
               <button
@@ -876,9 +1413,11 @@ export default function CertificateLessonPage() {
             </div>
             <div className="flex-1 overflow-y-auto">
               <Sidebar
-                skills={skills}
+                skills={sidebarSkills}
                 currentKey={currentKey}
                 onSelect={goToTopic}
+                availableRepoTopicKeys={new Set(Object.keys(toeicRepoByTopicKey))}
+                unlockedRepoTopicKeys={toeicUnlockedTopicKeys}
               />
             </div>
           </div>

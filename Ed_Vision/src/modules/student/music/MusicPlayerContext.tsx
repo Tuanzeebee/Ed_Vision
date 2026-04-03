@@ -34,27 +34,27 @@ interface MusicPlayerState {
 
 interface MusicPlayerContextValue extends MusicPlayerState {
   // Playback controls
-  playTrack: (track: Track) => void;
-  pause: () => void;
-  resume: () => void;
-  stop: () => void;
-  seekTo: (seconds: number) => void;
-  setVolume: (volume: number) => void;
+  playTrack: (track: Track) =>void;
+  pause: () =>void;
+  resume: () =>void;
+  stop: () =>void;
+  seekTo: (seconds: number) =>void;
+  setVolume: (volume: number) =>void;
   
   // Queue management
-  addToQueue: (track: Track) => void;
-  removeFromQueue: (trackId: string) => void;
-  clearQueue: () => void;
-  playNext: () => void;
-  playPrevious: () => void;
+  addToQueue: (track: Track) =>void;
+  removeFromQueue: (trackId: string) =>void;
+  clearQueue: () =>void;
+  playNext: () =>void;
+  playPrevious: () =>void;
   
   // Liked tracks
-  toggleLike: (track: Track) => boolean;
-  isLiked: (trackId: string) => boolean;
+  toggleLike: (track: Track) =>boolean;
+  isLiked: (trackId: string) =>boolean;
   
   // Recently played
-  getRecentlyPlayed: (limit?: number) => RecentlyPlayedTrack[];
-  clearRecentlyPlayed: () => void;
+  getRecentlyPlayed: (limit?: number) =>RecentlyPlayedTrack[];
+  clearRecentlyPlayed: () =>void;
 }
 
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null);
@@ -94,7 +94,7 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
       const saved = localStorage.getItem(STORAGE_KEYS.RECENTLY_PLAYED);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return parsed.map((t: RecentlyPlayedTrack) => ({
+        return parsed.map((t: RecentlyPlayedTrack) =>({
           ...t,
           playedAt: new Date(t.playedAt),
         }));
@@ -144,7 +144,7 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
   // Add to recently played
   const addToRecentlyPlayed = useCallback((track: Track) => {
     setRecentlyPlayed(prev => {
-      const filtered = prev.filter(t => t.id !== track.id);
+      const filtered = prev.filter(t =>t.id !== track.id);
       const newTrack: RecentlyPlayedTrack = {
         ...track,
         playedAt: new Date(),
@@ -157,7 +157,7 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
   const playTrack = useCallback((track: Track) => {
     if (currentTrack) {
       playHistoryRef.current.push(currentTrack);
-      if (playHistoryRef.current.length > 50) {
+      if (playHistoryRef.current.length >50) {
         playHistoryRef.current.shift();
       }
     }
@@ -201,11 +201,11 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
 
   // Queue management
   const addToQueue = useCallback((track: Track) => {
-    setQueue(prev => [...prev, track]);
+    setQueue(prev =>[...prev, track]);
   }, []);
 
   const removeFromQueue = useCallback((trackId: string) => {
-    setQueue(prev => prev.filter(t => t.id !== trackId));
+    setQueue(prev =>prev.filter(t =>t.id !== trackId));
   }, []);
 
   const clearQueue = useCallback(() => {
@@ -213,19 +213,19 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
   }, []);
 
   const playNext = useCallback(() => {
-    if (queue.length > 0) {
+    if (queue.length >0) {
       const nextTrack = queue[0];
-      setQueue(prev => prev.slice(1));
+      setQueue(prev =>prev.slice(1));
       playTrack(nextTrack);
     }
   }, [queue, playTrack]);
 
   const playPrevious = useCallback(() => {
-    if (playHistoryRef.current.length > 0) {
+    if (playHistoryRef.current.length >0) {
       const prevTrack = playHistoryRef.current.pop();
       if (prevTrack) {
         if (currentTrack) {
-          setQueue(prev => [currentTrack, ...prev]);
+          setQueue(prev =>[currentTrack, ...prev]);
         }
         setCurrentTrack(prevTrack);
         setIsPlaying(true);
@@ -236,19 +236,19 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
 
   // Liked tracks
   const toggleLike = useCallback((track: Track) => {
-    const isCurrentlyLiked = likedTracks.some(t => t.id === track.id);
+    const isCurrentlyLiked = likedTracks.some(t =>t.id === track.id);
     
     if (isCurrentlyLiked) {
-      setLikedTracks(prev => prev.filter(t => t.id !== track.id));
+      setLikedTracks(prev =>prev.filter(t =>t.id !== track.id));
     } else {
-      setLikedTracks(prev => [track, ...prev]);
+      setLikedTracks(prev =>[track, ...prev]);
     }
     
     return !isCurrentlyLiked;
   }, [likedTracks]);
 
   const isLiked = useCallback((trackId: string) => {
-    return likedTracks.some(t => t.id === trackId);
+    return likedTracks.some(t =>t.id === trackId);
   }, [likedTracks]);
 
   // Recently played
@@ -261,7 +261,7 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
   }, []);
 
   // Player event handlers
-  const handleStateChange = useCallback((state: 'playing' | 'paused' | 'ended' | 'buffering') => {
+  const handleStateChange = useCallback((state: 'playing'| 'paused'| 'ended'| 'buffering') => {
     setIsBuffering(state === 'buffering');
     
     if (state === 'playing') {
@@ -271,7 +271,7 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     } else if (state === 'ended') {
       setIsPlaying(false);
       // Auto play next in queue
-      if (queue.length > 0) {
+      if (queue.length >0) {
         playNext();
       }
     }
@@ -318,8 +318,7 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
         onTimeUpdate={handleTimeUpdate}
         initialVolume={volume}
       />
-    </MusicPlayerContext.Provider>
-  );
+    </MusicPlayerContext.Provider>);
 }
 
 export default MusicPlayerContext;

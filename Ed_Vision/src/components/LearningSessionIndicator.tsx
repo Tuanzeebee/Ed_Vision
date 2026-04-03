@@ -59,7 +59,7 @@ export const LearningSessionIndicator = ({
       
       {isLearningSessionExpiring() && (
         <div className="mt-1 text-xs text-gray-600 bg-white bg-opacity-90 px-2 py-1 rounded text-center">
-          🎓 Phiên học sắp hết hạn
+           Phiên học sắp hết hạn
         </div>
       )}
     </div>

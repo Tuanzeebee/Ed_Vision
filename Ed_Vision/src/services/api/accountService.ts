@@ -191,14 +191,14 @@ class AccountService {
    * Lock account (set status to blocked)
    */
   async lockAccount(id: number): Promise<AccountData> {
-    return this.updateAccount(id, { status: 'blocked' });
+    return this.updateAccount(id, { status: 'blocked'});
   }
 
   /**
    * Unlock account (set status to active)
    */
   async unlockAccount(id: number): Promise<AccountData> {
-    return this.updateAccount(id, { status: 'active' });
+    return this.updateAccount(id, { status: 'active'});
   }
 }
 

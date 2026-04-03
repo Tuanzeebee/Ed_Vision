@@ -24,4 +24,3 @@ export class GpaMetricsController {
     return this.service.getStudentGpaMetrics(id);
   }
 }
-

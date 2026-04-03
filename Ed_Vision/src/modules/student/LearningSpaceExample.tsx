@@ -19,7 +19,7 @@ export function BasicExample() {
  * With Custom Styling
  */
 export function StyledExample() {
-  return <LearningSpace className="custom-learning-space" />;
+  return <LearningSpace className="custom-learning-space"/>;
 }
 
 /**
@@ -29,8 +29,7 @@ export default function LearningSpaceDemo() {
   return (
     <div className="w-full h-screen">
       <LearningSpace />
-    </div>
-  );
+    </div>);
 }
 
 /**

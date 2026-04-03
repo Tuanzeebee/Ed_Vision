@@ -1,6 +1,6 @@
 // Types cho Survey system - dùng khi load câu hỏi từ DB
 
-export type QuestionType = "single-choice" | "multiple-choice" | "likert" | "slider" | "text" | "textarea" | "yes-no" | "free-text";
+export type QuestionType = "single-choice"| "multiple-choice"| "likert"| "slider"| "text"| "textarea"| "yes-no"| "free-text";
 
 export interface QuestionOption {
   value: string;
@@ -14,7 +14,7 @@ export interface SliderConfig {
   defaultValue: number;
   step?: number;
   unit: string;
-  gradientType?: "stress" | "study" | "work" | "financial" | "default";
+  gradientType?: "stress"| "study"| "work"| "financial"| "default";
   leftLabel: string;
   rightLabel: string;
 }

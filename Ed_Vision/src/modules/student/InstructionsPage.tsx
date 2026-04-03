@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import Header from "../../components/layout/Header"
 import { useMemo } from 'react'
 import Footer from "../../components/layout/Footer"
-
 // Import image assets
 import imgUploadTranscript from "@/assets/student/imgUploadTranscript.png"
 import imgVerifyInformation from "@/assets/student/step1.png"
@@ -18,7 +17,6 @@ import iconInstructions from "@/assets/student/iconInstructions.svg"
 import iconUpload from "@/assets/student/iconUpload.svg"
 import iconAdjust from "@/assets/student/iconAdjust.svg"
 import iconStart from "@/assets/student/iconStart.svg"
-
 type Props = {
   // Add props here if needed in the future
 }
@@ -37,7 +35,7 @@ export default function InstructionsPage({}: Props) {
   const navigate = useNavigate()
   const { t } = useTranslation('student')
 
-  const steps: StepData[] = useMemo(() => ([
+  const steps: StepData[] = useMemo(() =>([
     {
       id: "step1",
       number: "1",
@@ -45,8 +43,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step1.description'),
       image: imgUploadTranscript,
       bgColor: "bg-blue-500",
-      stepColor: "text-blue-600"
-    },
+      stepColor: "text-blue-600"},
     {
       id: "step2", 
       number: "2",
@@ -54,8 +51,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step2.description'),
       image: imgVerifyInformation,
       bgColor: "bg-green-500",
-      stepColor: "text-green-600"
-    },
+      stepColor: "text-green-600"},
     {
       id: "step3",
       number: "3", 
@@ -63,8 +59,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step3.description'),
       image: imgSetGoals,
       bgColor: "bg-purple-500",
-      stepColor: "text-purple-600"
-    },
+      stepColor: "text-purple-600"},
     {
       id: "step4",
       number: "4",
@@ -72,8 +67,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step4.description'),
       image: imgConfigureSchedule,
       bgColor: "bg-orange-500",
-      stepColor: "text-orange-600"
-    },
+      stepColor: "text-orange-600"},
     {
       id: "step5",
       number: "5",
@@ -81,8 +75,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step5.description'),
       image: imgReviewRequirements,
       bgColor: "bg-red-500", 
-      stepColor: "text-red-600"
-    },
+      stepColor: "text-red-600"},
     {
       id: "step6",
       number: "6",
@@ -90,8 +83,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step6.description'),
       image: imgGeneratePlan,
       bgColor: "bg-teal-500",
-      stepColor: "text-teal-600"
-    },
+      stepColor: "text-teal-600"},
     {
       id: "step7",
       number: "7",
@@ -99,8 +91,7 @@ export default function InstructionsPage({}: Props) {
       description: t('instructions.step7.description'),
       image: imgTrackProgress,
       bgColor: "bg-indigo-500",
-      stepColor: "text-indigo-600"
-    }
+      stepColor: "text-indigo-600"}
   ]), [t])
 
   return (
@@ -116,31 +107,29 @@ export default function InstructionsPage({}: Props) {
               <div className="flex">
                 <div className="bg-blue-50 border-b-2 border-blue-500 flex-1 max-w-sm">
                   <div className="flex items-center justify-center h-14 gap-3">
-                    <img src={iconInstructions} alt="" className="w-5 h-5" />
+                    <img src={iconInstructions} alt=""className="w-5 h-5"/>
                     <span className="text-blue-600 font-medium">{t('instructions.title')}</span>
                   </div>
                 </div>
                 <button
                   onClick={() => {
                     navigate('/student/upload-transcript')
-                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                    window.scrollTo({ top: 0, behavior: 'smooth'})
                   }}
-                  className="flex-1 max-w-sm hover:bg-gray-50 transition-colors"
-                >
+                  className="flex-1 max-w-sm hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-center h-14 gap-3">
-                    <img src={iconUpload} alt="" className="w-5 h-5" />
+                    <img src={iconUpload} alt=""className="w-5 h-5"/>
                     <span className="text-gray-500 font-medium">{t('upload.title')}</span>
                   </div>
                 </button>
                 <button
                   onClick={() => {
                     navigate('/student/adjust-parameters')
-                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                    window.scrollTo({ top: 0, behavior: 'smooth'})
                   }}
-                  className="flex-1 max-w-sm hover:bg-gray-50 transition-colors"
-                >
+                  className="flex-1 max-w-sm hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-center h-14 gap-3 relative">
-                    <img src={iconAdjust} alt="" className="w-5 h-5" />
+                    <img src={iconAdjust} alt=""className="w-5 h-5"/>
                     <span className="text-gray-400 font-medium">{t('adjust.tab')}</span>
                     <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full absolute right-4 top-2.5">
                       {t('instructions.uploadRequired')}
@@ -166,7 +155,7 @@ export default function InstructionsPage({}: Props) {
               <div className="space-y-8">
                 {/* Row 1 - Steps 1, 2, 3 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {steps.slice(0, 3).map((step) => (
+                  {steps.slice(0, 3).map((step) =>(
                     <Card key={step.id} className="border border-gray-200 rounded-xl overflow-hidden">
                       <CardContent className="p-6 space-y-4">
                         {/* Image */}
@@ -174,9 +163,7 @@ export default function InstructionsPage({}: Props) {
                           <img 
                             src={step.image} 
                             alt={step.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
+                            className="w-full h-full object-cover"loading="lazy"/>
                         </div>
                         
                         {/* Step Number */}
@@ -194,13 +181,12 @@ export default function InstructionsPage({}: Props) {
                           </p>
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
+                    </Card>))}
                 </div>
 
                 {/* Row 2 - Steps 4, 5, 6 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {steps.slice(3, 6).map((step) => (
+                  {steps.slice(3, 6).map((step) =>(
                     <Card key={step.id} className="border border-gray-200 rounded-xl overflow-hidden">
                       <CardContent className="p-6 space-y-4">
                         {/* Image */}
@@ -208,9 +194,7 @@ export default function InstructionsPage({}: Props) {
                           <img 
                             src={step.image} 
                             alt={step.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
+                            className="w-full h-full object-cover"loading="lazy"/>
                         </div>
                         
                         {/* Step Number */}
@@ -228,8 +212,7 @@ export default function InstructionsPage({}: Props) {
                           </p>
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
+                    </Card>))}
                 </div>
 
                 {/* Row 3 - Step 7 (centered) */}
@@ -242,9 +225,7 @@ export default function InstructionsPage({}: Props) {
                           <img 
                             src={steps[6].image} 
                             alt={steps[6].title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
+                            className="w-full h-full object-cover"loading="lazy"/>
                         </div>
                         
                         {/* Step Number */}
@@ -272,11 +253,10 @@ export default function InstructionsPage({}: Props) {
                 <Button 
                   onClick={() => {
                     navigate('/student/upload-transcript')
-                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                    window.scrollTo({ top: 0, behavior: 'smooth'})
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg h-auto inline-flex items-center gap-3"
-                >
-                  <img src={iconStart} alt="" className="w-5 h-5" />
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg h-auto inline-flex items-center gap-3">
+                  <img src={iconStart} alt=""className="w-5 h-5"/>
                   <span className="text-lg font-bold">{t('instructions.startUpload')}</span>
                 </Button>
                 <p className="text-sm text-gray-500">
@@ -289,6 +269,5 @@ export default function InstructionsPage({}: Props) {
       </div>
       
       <Footer />
-    </div>
-  )
+    </div>)
 }

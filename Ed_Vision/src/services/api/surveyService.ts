@@ -13,7 +13,7 @@ const surveyApiClient = axios.create({
 
 // Helper to get token from multiple sources (matches other modules)
 const getAuthToken = (): string | null => {
-  // Priority: dev-token → simple 'token' key (set by TokenManager.setToken) → TokenManager
+  // Priority: dev-token → simple 'token'key (set by TokenManager.setToken) → TokenManager
   const devToken = localStorage.getItem('dev-token');
   if (devToken) return devToken;
 
@@ -40,7 +40,7 @@ surveyApiClient.interceptors.request.use(
 
 // Response interceptor - NO auto redirect, let component handle errors
 surveyApiClient.interceptors.response.use(
-  (response) => response,
+  (response) =>response,
   (error) => {
     // Don't redirect, just reject the promise
     return Promise.reject(error);

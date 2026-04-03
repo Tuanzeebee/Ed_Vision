@@ -8,10 +8,9 @@ import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { buildUrl } from '@/services/api/config'
 import { useToast } from '@/lib/useToast'
-
 type Props = {
-  onGoogleRegister?: () => void
-  onEmailRegister?: (email: string, password: string, confirmPassword: string) => void
+  onGoogleRegister?: () =>void
+  onEmailRegister?: (email: string, password: string, confirmPassword: string) =>void
 }
 
 export default function StudentRegister({ 
@@ -61,7 +60,7 @@ export default function StudentRegister({
     // Client-side: allow only DTU email domain for students, any email for parents
     if (!linkCode) {
       const domain = '@dtu.edu.vn'
-      if (!email?.toLowerCase()?.endsWith(domain)) {
+if (!email?.toLowerCase()?.endsWith(domain)) {
         showError(t('register.emailDomainError', { domain }))
         return
       }
@@ -74,18 +73,18 @@ export default function StudentRegister({
     console.debug('StudentRegister - calling backend', buildUrl('/auth/register'))
     fetch(buildUrl('/auth/register'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json'},
       body: JSON.stringify(payload),
     })
       .then(async (res) => {
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
+          const err = await res.json().catch(() =>({}))
           throw new Error(err.message || t('register.registerFailed'))
         }
         return res.json()
       })
       .then(() => {
-        // success -> navigate to OTP page and pass email + linkCode
+        // success ->navigate to OTP page and pass email + linkCode
         showSuccess(t('register.registerSuccess'), 2000)
         setTimeout(() => {
           navigate('/auth/otp-verification', { 
@@ -135,102 +134,79 @@ export default function StudentRegister({
                       <i className="fas fa-info-circle mr-2"></i>
                       {t('register.parentRegistrationInfo', { linkCode })}
                     </p>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* Hidden linkCode input */}
                 {linkCode && (
-                  <input type="hidden" name="linkCode" value={linkCode} />
-                )}
+                  <input type="hidden"name="linkCode"value={linkCode} />)}
 
                 {/* Email Input */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email"className="block text-sm font-medium text-gray-700 mb-1">
                     {t('register.emailLabel')}
                   </label>
                   <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
+                    type="email"id="email"name="email"required
                     placeholder={linkCode ? t('register.emailPlaceholder') : t('register.emailPlaceholderDTU')}
-                    className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"
-                  />
+                    className="text-sm text-gray-900 placeholder-gray-400 bg-white focus:bg-white"/>
                 </div>
 
                 {/* Password Input */}
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="password"className="block text-sm font-medium text-gray-700 mb-1">
                     {t('register.passwordLabel')}
                   </label>
                   <div className="relative">
                     <Input
-                      type={showPassword ? "text" : "password"}
-                      id="password"
-                      name="password"
-                      required
+                      type={showPassword ? "text": "password"}
+                      id="password"name="password"required
                       placeholder={t('register.passwordPlaceholder')}
-                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"
-                    />
+                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"/>
                     <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                    >
+                      type="button"onClick={() =>setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
                       {showPassword ? (
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12" />
-                        </svg>
-                      ) : (
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
+                        <svg className="h-5 w-5"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12"/>
+                        </svg>) : (
+                        <svg className="h-5 w-5"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>)}
                     </button>
                   </div>
                 </div>
 
                 {/* Confirm Password Input */}
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="confirmPassword"className="block text-sm font-medium text-gray-700 mb-1">
                     {t('register.confirmPasswordLabel')}
                   </label>
                   <div className="relative">
                     <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      required
+                      type={showConfirmPassword ? "text": "password"}
+                      id="confirmPassword"name="confirmPassword"required
                       placeholder={t('register.confirmPasswordPlaceholder')}
-                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"
-                    />
+                      className="text-sm text-gray-900 placeholder-gray-400 pr-10"/>
                     <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                    >
+                      type="button"onClick={() =>setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
                       {showConfirmPassword ? (
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12" />
-                        </svg>
-                      ) : (
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
+                        <svg className="h-5 w-5"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.5 8.5m1.378 1.378l.308-.622M12.121 14.12l.308-.622m-3.242-3.242a3 3 0 011.414-1.414M16.5 16.5L12 12"/>
+                        </svg>) : (
+                        <svg className="h-5 w-5"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>)}
                     </button>
                   </div>
                 </div>
 
                 {/* Register Button */}
                 <Button
-                  type="submit"
-                  data-debug="student-register-submit"
-                  onClick={() => console.debug('StudentRegister.button - clicked')}
-                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-[1.02] shadow-md text-sm"
-                >
+                  type="submit"data-debug="student-register-submit"onClick={() =>console.debug('StudentRegister.button - clicked')}
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-[1.02] shadow-md text-sm">
                   {t('register.registerButton')}
                 </Button>
               </form>
@@ -238,11 +214,10 @@ export default function StudentRegister({
               {/* Footer Links */}
               <div className="mt-4 text-center">
                 <p className="text-xs text-gray-600">
-                  {t('register.haveAccount')}{' '}
+                  {t('register.haveAccount')}{''}
                   <button 
                     onClick={handleLogin}
-                    className="text-purple-600 hover:text-purple-700 font-medium cursor-pointer"
-                  >
+                    className="text-purple-600 hover:text-purple-700 font-medium cursor-pointer">
                     {t('register.login')}
                   </button>
                 </p>
@@ -254,6 +229,5 @@ export default function StudentRegister({
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onClose={hideToast} />
-    </div>
-  )
+    </div>)
 }

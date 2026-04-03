@@ -779,7 +779,7 @@ export class SurveysService {
       throw new NotFoundException('Không tìm thấy khảo sát');
     }
 
-    // ✅ ONLY CHECK: Survey has responses
+    //  ONLY CHECK: Survey has responses
     // Allow deleting draft, active, or started surveys WITHOUT responses
     if (survey.surveyResponses && survey.surveyResponses.length > 0) {
       throw new BadRequestException(
@@ -788,7 +788,7 @@ export class SurveysService {
       );
     }
 
-    // ⚠️ WARNING for active surveys (but still allow)
+    //  WARNING for active surveys (but still allow)
     if (survey.is_active) {
       console.warn(
         `[SURVEY DELETE] Deleting active survey ${surveyId} by instructor ${instructorId}`,
@@ -1306,7 +1306,7 @@ export class SurveysService {
   ): Promise<Buffer> {
     const analytics = await this.getSurveyAnalytics(instructorId, surveyId);
 
-    console.log(`📊 Exporting survey ${surveyId}:`, {
+    console.log(` Exporting survey ${surveyId}:`, {
       totalResponses: analytics.responses.length,
       totalQuestions: analytics.survey.questions.length,
       surveyTitle: analytics.survey.title,
@@ -1314,13 +1314,13 @@ export class SurveysService {
 
     // Check if there are any responses
     if (!analytics.responses || analytics.responses.length === 0) {
-      console.warn(`⚠️ No responses found for survey ${surveyId}`);
+      console.warn(` No responses found for survey ${surveyId}`);
 
       // Create Excel with survey info but no responses
       const XLSX = require('xlsx');
       const infoData = [
         {
-          '📋 Thông báo': 'Chưa có sinh viên nào hoàn thành khảo sát này',
+          ' Thông báo': 'Chưa có sinh viên nào hoàn thành khảo sát này',
           'Tiêu đề khảo sát': analytics.survey.title,
           'Số câu hỏi': analytics.survey.questions.length,
           'Trạng thái': analytics.survey.status,
@@ -1351,7 +1351,7 @@ export class SurveysService {
     }
 
     console.log(
-      `✅ Found ${analytics.responses.length} responses, creating Excel...`,
+      ` Found ${analytics.responses.length} responses, creating Excel...`,
     );
 
     // Format data for Excel export
@@ -1385,7 +1385,7 @@ export class SurveysService {
       return row;
     });
 
-    console.log(`📝 Created ${exportData.length} rows of data`);
+    console.log(` Created ${exportData.length} rows of data`);
 
     // Create Excel workbook with responses
     const XLSX = require('xlsx');
@@ -1421,7 +1421,7 @@ export class SurveysService {
       bookType: 'xlsx',
     });
     console.log(
-      `✅ Excel file generated successfully (${excelBuffer.length} bytes)`,
+      ` Excel file generated successfully (${excelBuffer.length} bytes)`,
     );
 
     return excelBuffer;

@@ -126,7 +126,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
     ],
     theory: [
       {
-        title: '📌 Heading là gì?',
+        title: ' Heading là gì?',
         content: 'Heading (Tiêu đề) dùng để phân cấp nội dung tài liệu. Trong Word, có Heading 1 (lớn nhất) đến Heading 6. Heading giúp tạo Table of Contents tự động và định hướng người đọc.',
         steps: [
           'Đặt con trỏ vào dòng muốn làm tiêu đề',
@@ -136,7 +136,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
         tip: 'Trong thi MOS, Heading Style phải đúng cấp. Heading 1 cho tiêu đề chính, Heading 2 cho mục con.',
       },
       {
-        title: '📝 Bullet List & Numbered List',
+        title: ' Bullet List & Numbered List',
         content: 'Danh sách giúp trình bày thông tin rõ ràng. Bullet List (•) dùng cho các mục không có thứ tự. Numbered List (1,2,3) dùng khi thứ tự quan trọng.',
         steps: [
           'Đặt con trỏ tại vị trí muốn thêm danh sách',
@@ -147,7 +147,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
         tip: 'Trong bài thi, đọc kỹ yêu cầu: "bullet list" là danh sách chấm tròn, "numbered list" là danh sách đánh số.',
       },
       {
-        title: '✏️ Bold, Italic, Underline',
+        title: ' Bold, Italic, Underline',
         content: 'Các định dạng ký tự cơ bản nhất trong Word. Bold (đậm) nhấn mạnh nội dung. Italic (nghiêng) thường dùng cho thuật ngữ. Underline (gạch chân) dùng cho tiêu đề hoặc link.',
         steps: [
           'Bôi đen (select) đoạn văn bản muốn định dạng',
@@ -218,7 +218,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
     ],
     theory: [
       {
-        title: '📊 Bảng trong Word',
+        title: ' Bảng trong Word',
         content: 'Bảng (Table) là công cụ cơ bản để trình bày dữ liệu có cấu trúc. Bảng gồm Rows (hàng) và Columns (cột), giao nhau tạo thành Cells (ô).',
         steps: [
           'Insert → Table → chọn số hàng và cột',
@@ -230,7 +230,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
         tip: 'Trong bài thi MOS, thường yêu cầu tạo bảng với số hàng/cột cụ thể, rồi nhập data mẫu. Đọc kỹ số lượng.',
       },
       {
-        title: '🎨 Định dạng bảng',
+        title: ' Định dạng bảng',
         content: 'Sau khi tạo bảng, có thể định dạng để tăng tính chuyên nghiệp: đổi màu nền tiêu đề, thêm đường viền, căn giữa nội dung.',
         steps: [
           'Chọn hàng tiêu đề: click hàng đầu',
@@ -296,7 +296,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
     ],
     theory: [
       {
-        title: '🎨 Màu chữ (Font Color)',
+        title: ' Màu chữ (Font Color)',
         content: 'Font Color cho phép thay đổi màu sắc của văn bản để nhấn mạnh nội dung quan trọng. Trong Word: Home → Font → chữ A có gạch chân màu.',
         steps: [
           'Bôi đen (select) đoạn text muốn đổi màu',
@@ -306,7 +306,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
         tip: 'Trong bài thi MOS, thường yêu cầu màu cụ thể (VD: "Red, Accent 2"). Chọn đúng trong Theme Colors.',
       },
       {
-        title: '🖊️ Text Highlight',
+        title: ' Text Highlight',
         content: 'Highlight tô màu nền đằng sau chữ, giống bút dạ quang thật. Dùng để làm nổi bật thông tin quan trọng.',
         steps: [
           'Bôi đen text cần highlight',
@@ -316,7 +316,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
         tip: 'Highlight khác với Shading (đổi màu nền ô/đoạn). Highlight chỉ áp dụng cho text được select.',
       },
       {
-        title: '↔️ Căn lề văn bản',
+        title: ' Căn lề văn bản',
         content: 'Word có 4 kiểu căn lề: Left (trái - mặc định), Center (giữa), Right (phải), Justify (đều 2 lề). Justify làm văn bản dàn đều từ lề trái sang lề phải.',
         steps: [
           'Click vào đoạn văn muốn căn lề',
@@ -383,7 +383,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
     ],
     theory: [
       {
-        title: '🏗️ Cấu trúc tài liệu Word',
+        title: ' Cấu trúc tài liệu Word',
         content: 'Tài liệu Word chuyên nghiệp có cấu trúc phân cấp rõ ràng. Sử dụng Heading Styles để tạo outline và cho phép tự động tạo mục lục (TOC).',
         steps: [
           'H1: Tiêu đề chính của toàn bộ tài liệu',
@@ -394,7 +394,7 @@ export const MOS_WORD_TASKS_DETAIL: MosWordTask[] = [
         tip: 'Cấu trúc Heading đúng là điều kiện để "Insert Table of Contents" hoạt động. Đây là kiến thức quan trọng trong MOS Word.',
       },
       {
-        title: '🔢 Numbered List vs Bullet List',
+        title: ' Numbered List vs Bullet List',
         content: 'Numbered List (Ordered List) dùng số thứ tự 1, 2, 3... Bullet List (Unordered List) dùng dấu chấm •. Chọn loại phù hợp với nội dung.',
         steps: [
           'Numbered: dùng khi thứ tự các bước quan trọng (quy trình, hướng dẫn)',
@@ -499,7 +499,7 @@ function ScorePanel({ result, onRetry, onNext }: { result: TaskResult; onRetry: 
             <span className={`text-4xl font-black ${gradeColor}`}>{grade}</span>
           </div>
           <h2 className="text-xl font-bold text-slate-800">
-            {result.passed ? '🎉 Hoàn thành!' : '💪 Cần luyện thêm'}
+            {result.passed ? ' Hoàn thành!' : ' Cần luyện thêm'}
           </h2>
           <p className="text-slate-500 text-sm mt-1">
             {result.score} / {result.totalPoints} điểm • {result.percentage}%
@@ -528,7 +528,7 @@ function ScorePanel({ result, onRetry, onNext }: { result: TaskResult; onRetry: 
 
         {/* MOS Scale */}
         <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 text-center">
-          <p className="font-semibold text-slate-600 mb-1">📊 Thang điểm MOS</p>
+          <p className="font-semibold text-slate-600 mb-1"> Thang điểm MOS</p>
           <p>Đạt chuẩn MOS: ≥ 700/1000 điểm (~70%)</p>
           <div className="mt-2 w-full bg-slate-200 rounded-full h-2">
             <div
@@ -793,7 +793,7 @@ export default function MosWordSimulator({
 
           {/* Theory Sections */}
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">📚 Kiến thức cần biết</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3"> Kiến thức cần biết</p>
             <TheoryPanel theory={task.theory} />
           </div>
 
@@ -983,7 +983,7 @@ export default function MosWordSimulator({
             <div className="w-64 shrink-0 border-l border-slate-200 bg-white overflow-y-auto flex flex-col">
               {/* Instructions */}
               <div className="p-4 border-b border-slate-100">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">📋 Yêu cầu</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3"> Yêu cầu</p>
                 <ol className="space-y-2">
                   {task.instructions.map((ins, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
@@ -1009,7 +1009,7 @@ export default function MosWordSimulator({
                   <ul className="mt-2 space-y-1.5">
                     {task.hints.map((hint, i) => (
                       <li key={i} className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-100">
-                        💡 {hint}
+                         {hint}
                       </li>
                     ))}
                   </ul>

@@ -66,8 +66,7 @@ export default function AIPredictionResults() {
         'rgba(234, 179, 8, 0.8)',
         'rgba(34, 197, 94, 0.8)',
         'rgba(59, 130, 246, 0.8)',
-        'rgba(147, 51, 234, 0.8)'
-      ],
+        'rgba(147, 51, 234, 0.8)'],
       borderWidth: 1
     }]
   };
@@ -102,7 +101,7 @@ export default function AIPredictionResults() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top' as const
+        position: 'top'as const
       }
     },
     scales: {
@@ -115,7 +114,7 @@ export default function AIPredictionResults() {
   };
 
   const factorOptions = {
-    indexAxis: 'y' as const,
+    indexAxis: 'y'as const,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -136,7 +135,7 @@ export default function AIPredictionResults() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top' as const
+        position: 'top'as const
       }
     },
     scales: {
@@ -177,17 +176,15 @@ export default function AIPredictionResults() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <div className="flex items-center mb-4">
-                <span className="text-blue-600 text-2xl mr-3">🤖</span>
+                <span className="text-blue-600 text-2xl mr-3"></span>
                 <h1 className="text-3xl font-bold text-gray-900">Kết quả Dự đoán AI</h1>
               </div>
               <p className="text-gray-600">Kết quả dự đoán từ AI - Phân tích và đánh giá hiệu suất mô hình học máy</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center cursor-pointer">
-                ➕ Tạo dự đoán mới
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center cursor-pointer">Tạo dự đoán mới
               </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center cursor-pointer">
-                ⬇️ Xuất báo cáo
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center cursor-pointer">Xuất báo cáo
               </button>
             </div>
           </div>
@@ -200,9 +197,8 @@ export default function AIPredictionResults() {
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Phạm vi</label>
                 <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  value={scopeFilter}
-                  onChange={(e) => setScopeFilter(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"value={scopeFilter}
+                  onChange={(e) =>setScopeFilter(e.target.value)}
                 >
                   <option>Toàn trường</option>
                   <option>Khoa CNTT</option>
@@ -215,9 +211,8 @@ export default function AIPredictionResults() {
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Thời gian</label>
                 <select 
-                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  value={timeFilter}
-                  onChange={(e) => setTimeFilter(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"value={timeFilter}
+                  onChange={(e) =>setTimeFilter(e.target.value)}
                 >
                   <option>Học kỳ hiện tại (2024-1)</option>
                   <option>Học kỳ 2023-2</option>
@@ -245,12 +240,11 @@ export default function AIPredictionResults() {
                 <div>
                   <p className="text-sm font-medium text-blue-700">Độ chính xác dự đoán</p>
                   <p className="text-3xl font-bold text-blue-900">92.5%</p>
-                  <p className="text-sm text-green-600 flex items-center mt-1">
-                    ↗ +1.5% so với kỳ trước
+                  <p className="text-sm text-green-600 flex items-center mt-1">+1.5% so với kỳ trước
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">🎯</span>
+                  <span className="text-white text-2xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -262,12 +256,11 @@ export default function AIPredictionResults() {
                 <div>
                   <p className="text-sm font-medium text-green-700">Điểm trung bình dự đoán</p>
                   <p className="text-3xl font-bold text-green-900">7.6/10</p>
-                  <p className="text-sm text-green-600 flex items-center mt-1">
-                    ↗ +0.2 điểm
+                  <p className="text-sm text-green-600 flex items-center mt-1">+0.2 điểm
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">📈</span>
+                  <span className="text-white text-2xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -279,12 +272,11 @@ export default function AIPredictionResults() {
                 <div>
                   <p className="text-sm font-medium text-purple-700">Tỷ lệ SV đạt dự đoán</p>
                   <p className="text-3xl font-bold text-purple-900">83%</p>
-                  <p className="text-sm text-green-600 flex items-center mt-1">
-                    ↗ +3% so với kỳ trước
+                  <p className="text-sm text-green-600 flex items-center mt-1">+3% so với kỳ trước
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">✅</span>
+                  <span className="text-white text-2xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -296,12 +288,11 @@ export default function AIPredictionResults() {
                 <div>
                   <p className="text-sm font-medium text-red-700">Tỷ lệ SV cần hỗ trợ</p>
                   <p className="text-3xl font-bold text-red-900">12%</p>
-                  <p className="text-sm text-red-600 flex items-center mt-1">
-                    ↗ +2% so với kỳ trước
+                  <p className="text-sm text-red-600 flex items-center mt-1">+2% so với kỳ trước
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">⚠️</span>
+                  <span className="text-white text-2xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -426,8 +417,8 @@ export default function AIPredictionResults() {
                     </td>
                     <td className="border border-gray-200 px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center">
-                        <button className="text-blue-600 hover:text-blue-800 cursor-pointer">👁</button>
-                        <button className="text-green-600 hover:text-green-800 cursor-pointer">📋</button>
+                        <button className="text-blue-600 hover:text-blue-800 cursor-pointer"></button>
+                        <button className="text-green-600 hover:text-green-800 cursor-pointer"></button>
                       </div>
                     </td>
                   </tr>
@@ -445,8 +436,8 @@ export default function AIPredictionResults() {
                     </td>
                     <td className="border border-gray-200 px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center">
-                        <button className="text-blue-600 hover:text-blue-800 cursor-pointer">👁</button>
-                        <button className="text-green-600 hover:text-green-800 cursor-pointer">📋</button>
+                        <button className="text-blue-600 hover:text-blue-800 cursor-pointer"></button>
+                        <button className="text-green-600 hover:text-green-800 cursor-pointer"></button>
                       </div>
                     </td>
                   </tr>
@@ -464,8 +455,8 @@ export default function AIPredictionResults() {
                     </td>
                     <td className="border border-gray-200 px-4 py-3 text-center">
                       <div className="flex gap-2 justify-center">
-                        <button className="text-blue-600 hover:text-blue-800 cursor-pointer">👁</button>
-                        <button className="text-green-600 hover:text-green-800 cursor-pointer">📋</button>
+                        <button className="text-blue-600 hover:text-blue-800 cursor-pointer"></button>
+                        <button className="text-green-600 hover:text-green-800 cursor-pointer"></button>
                       </div>
                     </td>
                   </tr>
@@ -496,24 +487,21 @@ export default function AIPredictionResults() {
                   <thead>
                     <tr>
                       <th className="text-left p-2 text-sm font-semibold text-gray-700">Yếu tố</th>
-                      {departments.map((dept, index) => (
-                        <th key={index} className="text-center p-2 text-sm font-semibold text-gray-700">{dept}</th>
-                      ))}
+                      {departments.map((dept, index) =>(
+                        <th key={index} className="text-center p-2 text-sm font-semibold text-gray-700">{dept}</th>))}
                     </tr>
                   </thead>
                   <tbody>
-                    {factors.map((factor, factorIndex) => (
+                    {factors.map((factor, factorIndex) =>(
                       <tr key={factorIndex}>
                         <td className="text-left p-2 text-sm font-medium text-gray-800">{factor}</td>
-                        {heatmapMatrix[factorIndex].map((value, deptIndex) => (
+                        {heatmapMatrix[factorIndex].map((value, deptIndex) =>(
                           <td key={deptIndex} className="p-1">
                             <div className={`${getHeatmapColor(value)} text-center p-2 rounded text-white font-bold text-sm`}>
                               {value.toFixed(1)}
                             </div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                          </td>))}
+                      </tr>))}
                   </tbody>
                 </table>
               </div>
@@ -558,8 +546,7 @@ export default function AIPredictionResults() {
                   <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">Ưu tiên cao</span>
                 </div>
                 <p className="text-gray-600 mb-4">Xác định và hỗ trợ các sinh viên có nguy cơ học tập thấp thông qua các chương trình tư vấn và hỗ trợ học tập.</p>
-                <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
-                  Thực hiện ngay
+                <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">Thực hiện ngay
                 </button>
               </CardContent>
             </Card>
@@ -571,8 +558,7 @@ export default function AIPredictionResults() {
                   <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">Ưu tiên trung bình</span>
                 </div>
                 <p className="text-gray-600 mb-4">Cải thiện phương pháp giảng dạy và đánh giá để nâng cao hiệu quả học tập của sinh viên.</p>
-                <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
-                  Lên kế hoạch
+                <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">Lên kế hoạch
                 </button>
               </CardContent>
             </Card>
@@ -584,8 +570,7 @@ export default function AIPredictionResults() {
                   <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Ưu tiên thấp</span>
                 </div>
                 <p className="text-gray-600 mb-4">Tăng cường các buổi ôn tập và hỗ trợ sinh viên chuẩn bị tốt hơn cho các kỳ thi quan trọng.</p>
-                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">
-                  Xem xét sau
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer">Xem xét sau
                 </button>
               </CardContent>
             </Card>
@@ -659,6 +644,5 @@ export default function AIPredictionResults() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

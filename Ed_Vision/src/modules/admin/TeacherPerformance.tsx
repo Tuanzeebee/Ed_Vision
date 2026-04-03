@@ -41,7 +41,7 @@ type SubjectPerformance = {
   engagement: number;
   studentRating: number;
   trend: number;
-  trendDirection: 'up' | 'down';
+  trendDirection: 'up'| 'down';
 };
 
 type KPI = {
@@ -64,7 +64,7 @@ type Recommendation = {
 };
 
 export default function TeacherPerformance() {
-  const chartRef = useRef<ChartJS<'line'> | null>(null);
+  const chartRef = useRef<ChartJS<'line'>| null>(null);
 
   // Mock data for KPIs
   const kpis: KPI[] = [
@@ -74,24 +74,21 @@ export default function TeacherPerformance() {
       label: "Điểm hiệu suất trung bình",
       icon: "fas fa-chart-line",
       color: "text-blue-600",
-      bgColor: "bg-blue-100"
-    },
+      bgColor: "bg-blue-100"},
     {
       value: 3,
       unit: "/45",
       label: "Xếp hạng trong khoa",
       icon: "fas fa-trophy",
       color: "text-green-600",
-      bgColor: "bg-green-100"
-    },
+      bgColor: "bg-green-100"},
     {
       value: 0.3,
       unit: "",
       label: "Xu hướng hiệu suất",
       icon: "fas fa-trending-up",
       color: "text-emerald-600",
-      bgColor: "bg-emerald-100"
-    }
+      bgColor: "bg-emerald-100"}
   ];
 
   // Mock data for subject performance
@@ -107,8 +104,7 @@ export default function TeacherPerformance() {
       engagement: 92,
       studentRating: 4.25,
       trend: 2.1,
-      trendDirection: 'up'
-    },
+      trendDirection: 'up'},
     {
       id: "2",
       code: "IT102",
@@ -120,8 +116,7 @@ export default function TeacherPerformance() {
       engagement: 88,
       studentRating: 4.05,
       trend: -1.2,
-      trendDirection: 'down'
-    },
+      trendDirection: 'down'},
     {
       id: "3",
       code: "IT103",
@@ -133,8 +128,7 @@ export default function TeacherPerformance() {
       engagement: 96,
       studentRating: 4.55,
       trend: 3.8,
-      trendDirection: 'up'
-    }
+      trendDirection: 'up'}
   ];
 
   // Mock data for recommendations
@@ -146,8 +140,7 @@ export default function TeacherPerformance() {
       icon: "fas fa-users",
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      borderColor: "border-blue-200"
-    },
+      borderColor: "border-blue-200"},
     {
       id: "2",
       title: "Điều chỉnh cấu trúc bài kiểm tra",
@@ -155,8 +148,7 @@ export default function TeacherPerformance() {
       icon: "fas fa-clipboard-check",
       color: "text-green-600",
       bgColor: "bg-green-50",
-      borderColor: "border-green-200"
-    },
+      borderColor: "border-green-200"},
     {
       id: "3",
       title: "Tài liệu học trực tuyến",
@@ -164,8 +156,7 @@ export default function TeacherPerformance() {
       icon: "fas fa-play-circle",
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-      borderColor: "border-purple-200"
-    }
+      borderColor: "border-purple-200"}
   ];
 
   // Radar chart data
@@ -227,8 +218,7 @@ export default function TeacherPerformance() {
         pointRadius: 5,
         pointHoverRadius: 7,
         tension: 0.4,
-        yAxisID: 'y'
-      },
+        yAxisID: 'y'},
       {
         label: 'Tỷ lệ đạt (%)',
         data: [82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 91],
@@ -238,8 +228,7 @@ export default function TeacherPerformance() {
         pointRadius: 5,
         pointHoverRadius: 7,
         tension: 0.4,
-        yAxisID: 'y1'
-      }
+        yAxisID: 'y1'}
     ]
   };
 
@@ -249,7 +238,7 @@ export default function TeacherPerformance() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: 'top'as const,
         labels: {
           font: {
             size: 12,
@@ -263,17 +252,14 @@ export default function TeacherPerformance() {
         beginAtZero: true,
         max: 10,
         grid: {
-          color: 'rgba(0, 0, 0, 0.1)'
-        },
+          color: 'rgba(0, 0, 0, 0.1)'},
         angleLines: {
-          color: 'rgba(0, 0, 0, 0.1)'
-        },
+          color: 'rgba(0, 0, 0, 0.1)'},
         pointLabels: {
           font: {
             size: 11
           },
-          color: '#374151'
-        },
+          color: '#374151'},
         ticks: {
           font: {
             size: 10
@@ -290,7 +276,7 @@ export default function TeacherPerformance() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: 'top'as const,
         labels: {
           usePointStyle: true,
           padding: 20,
@@ -301,7 +287,7 @@ export default function TeacherPerformance() {
         }
       },
       tooltip: {
-        mode: 'index' as const,
+        mode: 'index'as const,
         intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: '#fff',
@@ -324,8 +310,7 @@ export default function TeacherPerformance() {
           font: {
             size: 12
           },
-          color: '#6b7280'
-        }
+          color: '#6b7280'}
       },
       x: {
         grid: {
@@ -336,13 +321,12 @@ export default function TeacherPerformance() {
           font: {
             size: 12
           },
-          color: '#6b7280'
-        }
+          color: '#6b7280'}
       }
     },
     interaction: {
       intersect: false,
-      mode: 'index' as const
+      mode: 'index'as const
     }
   };
 
@@ -351,7 +335,7 @@ export default function TeacherPerformance() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: 'top'as const,
         labels: {
           usePointStyle: true,
           padding: 20,
@@ -362,7 +346,7 @@ export default function TeacherPerformance() {
         }
       },
       tooltip: {
-        mode: 'index' as const,
+        mode: 'index'as const,
         intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: '#fff',
@@ -374,9 +358,9 @@ export default function TeacherPerformance() {
     },
     scales: {
       y: {
-        type: 'linear' as const,
+        type: 'linear'as const,
         display: true,
-        position: 'left' as const,
+        position: 'left'as const,
         min: 7,
         max: 10,
         grid: {
@@ -387,8 +371,7 @@ export default function TeacherPerformance() {
           font: {
             size: 12
           },
-          color: '#6b7280'
-        },
+          color: '#6b7280'},
         title: {
           display: true,
           text: 'Điểm trung bình',
@@ -400,9 +383,9 @@ export default function TeacherPerformance() {
         }
       },
       y1: {
-        type: 'linear' as const,
+        type: 'linear'as const,
         display: true,
-        position: 'right' as const,
+        position: 'right'as const,
         min: 75,
         max: 100,
         grid: {
@@ -412,8 +395,7 @@ export default function TeacherPerformance() {
           font: {
             size: 12
           },
-          color: '#6b7280'
-        },
+          color: '#6b7280'},
         title: {
           display: true,
           text: 'Tỷ lệ đạt (%)',
@@ -433,23 +415,21 @@ export default function TeacherPerformance() {
           font: {
             size: 12
           },
-          color: '#6b7280'
-        }
+          color: '#6b7280'}
       }
     },
     interaction: {
       intersect: false,
-      mode: 'index' as const
+      mode: 'index'as const
     }
   };
 
   const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, index) => (
+    return Array.from({ length: 5 }, (_, index) =>(
       <i 
         key={index}
-        className={`${index < Math.floor(rating) ? 'fas fa-star' : 'far fa-star'} text-yellow-400 text-xs`}
-      />
-    ));
+        className={`${index < Math.floor(rating) ? 'fas fa-star': 'far fa-star'} text-yellow-400 text-xs`}
+      />));
   };
 
   const getPassRateColor = (rate: number) => {
@@ -465,50 +445,44 @@ export default function TeacherPerformance() {
         <TeacherProfileHeader />
 
         {/* Tab Navigation */}
-        <TeacherTabNavigation activeTab="Hiệu suất giảng viên" />
+        <TeacherTabNavigation activeTab="Hiệu suất giảng viên"/>
 
         {/* KPI Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {kpis.map((kpi, index) => (
+          {kpis.map((kpi, index) =>(
             <div
               key={index}
               style={{
-                backgroundColor: index === 0 ? '#dbeafe' : index === 1 ? '#dcfce7' : '#f3e8ff',
-                borderColor: index === 0 ? '#93c5fd' : index === 1 ? '#86efac' : '#c4b5fd',
+                backgroundColor: index === 0 ? '#dbeafe': index === 1 ? '#dcfce7': '#f3e8ff',
+                borderColor: index === 0 ? '#93c5fd': index === 1 ? '#86efac': '#c4b5fd',
                 borderWidth: '1px',
-                borderStyle: 'solid'
-              }}
-              className="rounded-lg p-6"
-            >
+                borderStyle: 'solid'}}
+              className="rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-700">{kpi.label}</p>
                   <div className="flex items-center">
                     <p className={`text-3xl font-bold ${kpi.color}`}>
-                      {index === 2 && kpi.value > 0 ? '+' : ''}{kpi.value}
+                      {index === 2 && kpi.value >0 ? '+': ''}{kpi.value}
                       <span className="text-lg text-gray-600">{kpi.unit}</span>
                     </p>
                     {index === 2 && (
                       <span className="ml-2 flex items-center">
                         <i className="fas fa-arrow-up text-emerald-600 text-lg"></i>
-                        <span className="text-emerald-600 text-sm ml-1">↑</span>
-                      </span>
-                    )}
+                        <span className="text-emerald-600 text-sm ml-1">↑</span></span>)}
                   </div>
                   {index === 2 && (
-                    <p className="text-xs text-gray-600">so với kỳ trước</p>
-                  )}
+                    <p className="text-xs text-gray-600">so với kỳ trước</p>)}
                 </div>
                 <div className={`w-12 h-12 ${kpi.bgColor} rounded-lg flex items-center justify-center`}>
                   <i className={`${kpi.icon} ${kpi.color} text-xl`}></i>
                   {/* Fallback text for debugging */}
-                  {index === 0 && <span className="text-blue-600 text-xs">📊</span>}
-                  {index === 1 && <span className="text-green-600 text-xs">🏆</span>}
-                  {index === 2 && <span className="text-purple-600 text-xs">📈</span>}
+                  {index === 0 && <span className="text-blue-600 text-xs"></span>}
+                  {index === 1 && <span className="text-green-600 text-xs"></span>}
+                  {index === 2 && <span className="text-purple-600 text-xs"></span>}
                 </div>
               </div>
-            </div>
-          ))}
+            </div>))}
         </div>
 
         {/* Charts Section */}
@@ -552,7 +526,7 @@ export default function TeacherPerformance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {subjectPerformance.map((subject) => (
+                  {subjectPerformance.map((subject) =>(
                     <tr key={subject.id} className="hover:bg-gray-50">
                       <td className="border border-gray-200 px-4 py-3">
                         <div>
@@ -591,16 +565,12 @@ export default function TeacherPerformance() {
                       </td>
                       <td className="border border-gray-200 px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${
-                          subject.trendDirection === 'up' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
+                          subject.trendDirection === 'up'? 'bg-green-100 text-green-800': 'bg-red-100 text-red-800'}`}>
                           <i className={`fas fa-arrow-${subject.trendDirection} mr-1`}></i>
-                          {subject.trendDirection === 'up' ? '+' : ''}{subject.trend}%
+                          {subject.trendDirection === 'up'? '+': ''}{subject.trend}%
                         </span>
                       </td>
-                    </tr>
-                  ))}
+                    </tr>))}
                 </tbody>
               </table>
             </div>
@@ -642,15 +612,15 @@ export default function TeacherPerformance() {
           <CardContent>
             <h3 className="text-xl font-bold text-gray-800 mb-6">Đề xuất cải thiện</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {recommendations.map((rec) => (
+              {recommendations.map((rec) =>(
                 <div key={rec.id} className={`${rec.bgColor} rounded-lg p-6 border ${rec.borderColor}`}>
                   <div className="flex items-center mb-4">
                     <div className={`w-12 h-12 ${rec.bgColor} rounded-lg flex items-center justify-center mr-4 border ${rec.borderColor}`}>
                       <i className={`${rec.icon} ${rec.color} text-xl`}></i>
                       {/* Fallback emojis */}
-                      {rec.id === "1" && <span className="text-blue-600">👥</span>}
-                      {rec.id === "2" && <span className="text-green-600">📋</span>}
-                      {rec.id === "3" && <span className="text-purple-600">▶️</span>}
+                      {rec.id === "1"&& <span className="text-blue-600"></span>}
+                      {rec.id === "2"&& <span className="text-green-600"></span>}
+                      {rec.id === "3"&& <span className="text-purple-600"></span>}
                     </div>
                     <h4 className={`text-lg font-semibold ${rec.color.replace('text-', 'text-').replace('-600', '-800')}`}>
                       {rec.title}
@@ -659,15 +629,12 @@ export default function TeacherPerformance() {
                   <p className={`${rec.color.replace('text-', 'text-').replace('-600', '-700')} mb-4`}>
                     {rec.description}
                   </p>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-2 border-blue-600">
-                    📋 Xem chi tiết
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-2 border-blue-600">Xem chi tiết
                   </button>
-                </div>
-              ))}
+                </div>))}
             </div>
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

@@ -123,7 +123,7 @@ function readCSV(filePath) {
 
 // Import data from Excel files
 async function importFromExcel() {
-    console.log('🌱 Starting score import from Excel files...\n');
+    console.log(' Starting score import from Excel files...\n');
 
     // Get or create Program and Department first
     let department = await prisma.department.findFirst();
@@ -172,11 +172,11 @@ async function importFromExcel() {
         const filePath = path.join(baseDir, file);
 
         if (!fs.existsSync(filePath)) {
-            console.log(`⏭️  Skipping ${file} (not found)`);
+            console.log(`  Skipping ${file} (not found)`);
             continue;
         }
 
-        console.log(`📚 Processing: ${courseName} (${courseCode}) - Class: ${classCode}`);
+        console.log(` Processing: ${courseName} (${courseCode}) - Class: ${classCode}`);
 
         // Tạo ClassGroup riêng cho mỗi file Excel
         let classGroup = await prisma.classGroup.findFirst({
@@ -193,7 +193,7 @@ async function importFromExcel() {
                 }
             });
             totalClasses++;
-            console.log(`   ✅ Created class: ${classCode}`);
+            console.log(`    Created class: ${classCode}`);
         }
 
         const { weights, students } = readCSV(filePath);
@@ -314,25 +314,25 @@ async function importFromExcel() {
             }
         }
 
-        console.log(`   ✅ ${studentCount} new students, ${recordCount} records`);
-        console.log(`   📅 ${academicYear} - HK${semesterNumber}\n`);
+        console.log(`    ${studentCount} new students, ${recordCount} records`);
+        console.log(`    ${academicYear} - HK${semesterNumber}\n`);
 
         totalStudents += studentCount;
         totalRecords += recordCount;
     }
 
-    console.log('📊 Summary:');
-    console.log(`   ✅ Total classes created: ${totalClasses}`);
-    console.log(`   ✅ Total new students: ${totalStudents}`);
-    console.log(`   ✅ Total course records: ${totalRecords}`);
-    console.log('\n✅ Score import completed!');
+    console.log(' Summary:');
+    console.log(`    Total classes created: ${totalClasses}`);
+    console.log(`    Total new students: ${totalStudents}`);
+    console.log(`    Total course records: ${totalRecords}`);
+    console.log('\n Score import completed!');
 }
 
 async function main() {
     try {
         await importFromExcel();
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error(' Error:', error);
         throw error;
     }
 }

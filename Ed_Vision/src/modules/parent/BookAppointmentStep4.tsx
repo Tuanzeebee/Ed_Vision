@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/parent/Parent_button"
 import AppointmentHeader from "@/components/ui/parent/Parent_AppointmentHeader"
 import ProgressStepper from "@/components/ui/parent/Parent_ProgressStepper"
 import ConfirmButton from "@/components/ui/parent/Parent_ConfirmButton"
-
 // Import generated SVG assets for the component
 import iconCalendar from "@/assets/parent/iconCalendar1.svg"
 import iconPeople from "@/assets/parent/iconPeople1.svg"
@@ -29,10 +28,10 @@ type AppointmentData = {
 }
 
 type Props = {
-  onBack?: () => void
-  onSaveDraft?: () => void
-  onConfirm?: () => void
-  onClose?: () => void
+  onBack?: () =>void
+  onSaveDraft?: () =>void
+  onConfirm?: () =>void
+  onClose?: () =>void
   appointmentData?: AppointmentData
 }
 
@@ -53,8 +52,7 @@ export default function BookAppointmentStep4({
     phoneNumber: "+1 (555) 123-4567",
     emailAddress: "sarah.thompson@email.com",
     additionalNotes: "I would like to discuss Emma's recent math test performance and explore additional support options for homework. She seems to be struggling with algebra concepts and I want to understand how we can help her improve.",
-    communicationPreference: "Both email and SMS"
-  }
+    communicationPreference: "Both email and SMS"}
 }: Props) {
   const { t } = useTranslation(['parent', 'common'])
   const [agreedToTerms, setAgreedToTerms] = useState(false)
@@ -90,10 +88,10 @@ export default function BookAppointmentStep4({
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
-                    <img src={iconCalendar} alt="" className="w-6 h-6 mr-3" />
+                    <img src={iconCalendar} alt=""className="w-6 h-6 mr-3"/>
                     <h3 className="text-lg font-semibold text-blue-900">{t('parent:bookAppointment.step4.meetingInformation')}</h3>
                   </div>
-                  <Button variant="ghost" className="text-blue-600 text-sm">{t('parent:bookAppointment.step4.edit')}</Button>
+                  <Button variant="ghost"className="text-blue-600 text-sm">{t('parent:bookAppointment.step4.edit')}</Button>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div>
@@ -126,7 +124,7 @@ export default function BookAppointmentStep4({
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
-                    <img src={iconPeople} alt="" className="w-6 h-6 mr-3" />
+                    <img src={iconPeople} alt=""className="w-6 h-6 mr-3"/>
                     <h3 className="text-lg font-semibold text-green-900">{t('parent:bookAppointment.step4.studentInformation')}</h3>
                   </div>
                   <div className="bg-green-100 px-3 py-1 rounded-full">
@@ -149,10 +147,10 @@ export default function BookAppointmentStep4({
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
-                    <img src={iconUser} alt="" className="w-6 h-6 mr-3" />
+                    <img src={iconUser} alt=""className="w-6 h-6 mr-3"/>
                     <h3 className="text-lg font-semibold text-gray-900">{t('parent:bookAppointment.step4.parentGuardianInformation')}</h3>
                   </div>
-                  <Button variant="ghost" className="text-gray-600 text-sm">{t('parent:bookAppointment.step4.edit')}</Button>
+                  <Button variant="ghost"className="text-gray-600 text-sm">{t('parent:bookAppointment.step4.edit')}</Button>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div>
@@ -182,7 +180,7 @@ export default function BookAppointmentStep4({
             {/* Important Reminders */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start">
-                <img src={iconWarning} alt="" className="w-5 h-5 mt-0.5 mr-2" />
+                <img src={iconWarning} alt=""className="w-5 h-5 mt-0.5 mr-2"/>
                 <div>
                   <p className="font-bold text-sm text-red-800 mb-2">{t('parent:bookAppointment.step4.importantReminders')}</p>
                   <ul className="space-y-1 text-sm text-red-800">
@@ -199,16 +197,14 @@ export default function BookAppointmentStep4({
             <div className="bg-gray-50 p-6 rounded-lg">
               <label className="flex items-start space-x-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-1 w-3 h-3 rounded border border-gray-400"
-                />
+                  type="checkbox"checked={agreedToTerms}
+                  onChange={(e) =>setAgreedToTerms(e.target.checked)}
+                  className="mt-1 w-3 h-3 rounded border border-gray-400"/>
                 <div className="text-base text-gray-700 leading-6">
                   <p className="mb-2">
-                    {t('parent:bookAppointment.step4.termsAgreement')}{" "}
-                    <a href="#" className="text-blue-600 underline">{t('parent:bookAppointment.step4.meetingPolicies')}</a> {t('parent:bookAppointment.step4.and')}{" "}
-                    <a href="#" className="text-blue-600 underline">{t('parent:bookAppointment.step4.termsOfService')}</a>{t('parent:bookAppointment.step4.termsDescription')}
+                    {t('parent:bookAppointment.step4.termsAgreement')}{""}
+                    <a href="#"className="text-blue-600 underline">{t('parent:bookAppointment.step4.meetingPolicies')}</a> {t('parent:bookAppointment.step4.and')}{""}
+                    <a href="#"className="text-blue-600 underline">{t('parent:bookAppointment.step4.termsOfService')}</a>{t('parent:bookAppointment.step4.termsDescription')}
                   </p>
                 </div>
               </label>
@@ -222,19 +218,15 @@ export default function BookAppointmentStep4({
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Button 
-              variant="ghost" 
-              onClick={onBack}
-              className="text-gray-600"
-            >
-              <img src={iconArrowLeft} alt="" className="w-5 h-5 mr-2" />
+              variant="ghost"onClick={onBack}
+              className="text-gray-600">
+              <img src={iconArrowLeft} alt=""className="w-5 h-5 mr-2"/>
               {t('parent:bookAppointment.step4.backToDetails')}
             </Button>
             <div className="flex items-center space-x-4">
               <Button 
-                variant="ghost" 
-                onClick={onSaveDraft}
-                className="text-gray-600"
-              >
+                variant="ghost"onClick={onSaveDraft}
+                className="text-gray-600">
                 {t('parent:bookAppointment.step4.saveAsDraft')}
               </Button>
               <ConfirmButton 
@@ -247,6 +239,5 @@ export default function BookAppointmentStep4({
           </div>
         </div>
       </div>
-    </div>
-  )
+    </div>)
 }

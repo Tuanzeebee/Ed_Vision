@@ -314,10 +314,10 @@ async function main() {
           roleRel: { connect: { id: adminRoleRec.id } },
         },
       });
-      console.log('✓ Created admin user:', adminEmail, 'id=', acc.account_id);
+      console.log(' Created admin user:', adminEmail, 'id=', acc.account_id);
       console.log('  Password: admin123');
     } else {
-      console.log('✓ Admin user already exists:', adminEmail);
+      console.log(' Admin user already exists:', adminEmail);
     }
   }
 
@@ -342,14 +342,14 @@ async function main() {
         },
       });
       console.log(
-        '✓ Created teacher user:',
+        ' Created teacher user:',
         teacherEmail,
         'id=',
         teacherAcc.account_id,
       );
       console.log('  Password: teacher123');
     } else {
-      console.log('✓ Teacher user already exists:', teacherEmail);
+      console.log(' Teacher user already exists:', teacherEmail);
     }
 
     // Create Instructor record if not exists
@@ -367,7 +367,7 @@ async function main() {
         },
       });
       console.log(
-        '  ✓ Created instructor record, instructor_id=',
+        '   Created instructor record, instructor_id=',
         instructor.instructor_id,
       );
     }
@@ -385,7 +385,7 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('  ✓ Created teacher profile');
+      console.log('   Created teacher profile');
     }
   }
 
@@ -410,14 +410,14 @@ async function main() {
         },
       });
       console.log(
-        '✓ Created student user:',
+        ' Created student user:',
         studentEmail,
         'id=',
         studentAcc.account_id,
       );
       console.log('  Password: student123');
     } else {
-      console.log('✓ Student user already exists:', studentEmail);
+      console.log(' Student user already exists:', studentEmail);
     }
 
     // Create Student record if not exists
@@ -435,7 +435,7 @@ async function main() {
         },
       });
       console.log(
-        '  ✓ Created student record, student_id=',
+        '   Created student record, student_id=',
         student.student_id,
       );
     }
@@ -453,7 +453,7 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('  ✓ Created student profile');
+      console.log('   Created student profile');
     }
   }
 
@@ -478,14 +478,14 @@ async function main() {
         },
       });
       console.log(
-        '✓ Created parent user:',
+        ' Created parent user:',
         parentEmail,
         'id=',
         parentAcc.account_id,
       );
       console.log('  Password: parent123');
     } else {
-      console.log('✓ Parent user already exists:', parentEmail);
+      console.log(' Parent user already exists:', parentEmail);
     }
 
     // Create Parent record if not exists
@@ -500,7 +500,7 @@ async function main() {
           occupation: 'Giáo viên',
         },
       });
-      console.log('  ✓ Created parent record, parent_id=', parent.parent_id);
+      console.log('   Created parent record, parent_id=', parent.parent_id);
     }
 
     // Create Profile if not exists
@@ -516,12 +516,12 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('  ✓ Created parent profile');
+      console.log('   Created parent profile');
     }
   }
 
-  console.log('\n✅ All demo accounts created successfully!');
-  console.log('\n📋 Login Credentials:');
+  console.log('\n All demo accounts created successfully!');
+  console.log('\n Login Credentials:');
   console.log('┌─────────────────────────────────────────────────┐');
   console.log('│ Admin:   admin@dtu.edu.vn   / admin123         │');
   console.log('│ Teacher: teacher@dtu.edu.vn / teacher123       │');

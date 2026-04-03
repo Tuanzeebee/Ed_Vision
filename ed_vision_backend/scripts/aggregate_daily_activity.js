@@ -49,9 +49,9 @@ async function aggregateDailyActivity(targetDate) {
 
     console.log(`Job ${job.id} started.`);
     const [rows] = await job.getQueryResults();
-    console.log(`✅ Aggregated daily activity for ${date}. Rows affected: ${rows.length}`);
+    console.log(` Aggregated daily activity for ${date}. Rows affected: ${rows.length}`);
   } catch (err) {
-    console.error('❌ Aggregation failed:', err);
+    console.error(' Aggregation failed:', err);
     process.exit(1);
   }
 }

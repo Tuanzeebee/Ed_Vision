@@ -1,7 +1,5 @@
 import { useEffect, useCallback } from 'react'
-import { TokenManager } from '@/lib/tokenManager'
-
-/**
+import { TokenManager } from '@/lib/tokenManager'/**
  * Hook để đảm bảo sessionStorage được đánh dấu khi tab đang mở
  * Không cần track activity thường xuyên vì logic mới dựa trên tab open/close
  */

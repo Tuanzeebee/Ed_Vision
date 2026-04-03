@@ -16,6 +16,14 @@ import { CreateGradeStructureDto } from '../dto/create-grade-structure.dto';
 import { UpdateGradeStructureDto } from '../dto/update-grade-structure.dto';
 import { DevAuthGuard } from '../../../common/guards/dev-auth.guard';
 
+type GradeStructureFilters = {
+  academicYear?: string;
+  semester?: number;
+  courseCode?: string;
+  teacherId?: string;
+  isActive?: boolean;
+};
+
 @Controller('teacher/grade-structure')
 @UseGuards(DevAuthGuard)
 export class GradeStructureController {
@@ -50,7 +58,7 @@ export class GradeStructureController {
     @Query('teacherId') teacherId?: string,
     @Query('isActive') isActive?: string,
   ) {
-    const filters: any = {};
+    const filters: GradeStructureFilters = {};
 
     if (academicYear) filters.academicYear = academicYear;
     if (semester) filters.semester = parseInt(semester);

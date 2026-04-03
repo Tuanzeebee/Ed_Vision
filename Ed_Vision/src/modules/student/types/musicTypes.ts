@@ -6,7 +6,7 @@ export interface MusicTrack {
   artist: string;
   duration: string;
   albumArt?: string;
-  source: 'local' | 'spotify';
+  source: 'local'| 'spotify';
   spotifyUrl?: string;
   preview_url?: string;
   uri?: string;

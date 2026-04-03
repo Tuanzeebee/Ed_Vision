@@ -1107,7 +1107,7 @@ export default function SettingGradeTable() {
               <p className="text-gray-600 mb-2">
                 {t('settingGradeTable.deleteMessage', { columnName: deletePanel.columnName })}
               </p>
-              <p className="text-sm text-red-600 font-medium">⚠️ {t('settingGradeTable.deleteWarning')}</p>
+              <p className="text-sm text-red-600 font-medium"> {t('settingGradeTable.deleteWarning')}</p>
             </div>
 
             <div className="flex space-x-3 p-6 border-t border-gray-200 bg-gray-50">

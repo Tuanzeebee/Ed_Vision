@@ -31,7 +31,8 @@ export function generateSystemScaleChart(stats: ScopeStats): string {
         backgroundColor: [
           '#3b82f6', // blue
           '#10b981', // green
-          '#f59e0b'  // amber
+          '#f59e0b'
+// amber
         ]
       }]
     },
@@ -96,7 +97,8 @@ export function generateGPADistributionChart(stats: ScopeStats): string {
           '#3b82f6', // blue
           '#f59e0b', // amber
           '#f97316', // orange
-          '#ef4444'  // red
+          '#ef4444'
+// red
         ]
       }]
     },
@@ -155,7 +157,8 @@ export function generateHighFailSubjectsChart(): string {
           '#f97316', // orange
           '#f59e0b', // amber
           '#fbbf24', // yellow
-          '#facc15'  // light yellow
+          '#facc15'
+// light yellow
         ],
         borderRadius: 4
       }]
@@ -236,7 +239,8 @@ export function generateStudentActivityChart(stats: ScopeStats): string {
         backgroundColor: [
           '#10b981', // green
           '#f59e0b', // amber
-          '#ef4444'  // red
+          '#ef4444'
+// red
         ]
       }]
     },
@@ -253,8 +257,7 @@ export function generateStudentActivityChart(stats: ScopeStats): string {
           beginAtZero: true,
           title: {
             display: true,
-            text: 'Số sinh viên'
-          }
+            text: 'Số sinh viên'}
         }
       }
     }
@@ -304,8 +307,7 @@ export function generateLearningTrendChart(): string {
       plugins: {
         legend: {
           display: true,
-          position: 'top'
-        }
+          position: 'top'}
       },
       scales: {
         y: {
@@ -313,8 +315,7 @@ export function generateLearningTrendChart(): string {
           max: 10,
           title: {
             display: true,
-            text: 'Điểm'
-          }
+            text: 'Điểm'}
         }
       }
     }
@@ -332,7 +333,7 @@ export function generateLearningTrendChart(): string {
  * Generate charts based on report type
  */
 export function generateChartsForReportType(type: string, stats: ScopeStats): Record<string, string> {
-  const charts: Record<string, string> = {};
+  const charts: Record<string, string>= {};
   
   // Always include system scale chart
   charts.systemScale = generateSystemScaleChart(stats);

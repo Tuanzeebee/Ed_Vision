@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import type { ReactNode } from 'react'
-
 type Props = {
   children: ReactNode
 }
@@ -29,7 +28,7 @@ export default function AuthRedirectWrapper({ children }: Props) {
       const hasLinkCode = hasLinkCodeInUrl || hasLinkCodeInState
       
       // Allow access to register/otp pages if linkCode is present (parent registration)
-      if (hasLinkCode && (location.pathname === '/auth/register' || location.pathname === '/auth/otp-verification')) {
+      if (hasLinkCode && (location.pathname === '/auth/register'|| location.pathname === '/auth/otp-verification')) {
         console.log('LinkCode detected in parent registration flow, allowing access')
         return
       }
@@ -51,9 +50,7 @@ export default function AuthRedirectWrapper({ children }: Props) {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Đang kiểm tra đăng nhập...</p>
         </div>
-      </div>
-    )
+      </div>)
   }
 
-  return <>{children}</>
-}
+  return <>{children}</>}

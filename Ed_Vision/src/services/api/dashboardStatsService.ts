@@ -1,7 +1,7 @@
 import apiClient from './apiClient';
 
 export interface DashboardStatsQuery {
-  timeFilter?: 'hôm-nay' | 'tuần-này' | 'tháng-này' | 'tất-cả';
+  timeFilter?: 'hôm-nay'| 'tuần-này'| 'tháng-này'| 'tất-cả';
   school?: string;
   courseYear?: string;
   major?: string;
@@ -16,7 +16,7 @@ export interface DashboardStatsQuery {
 export interface ComparisonData {
   value: number;
   percentage: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: 'up'| 'down'| 'stable';
 }
 
 export interface DashboardStatsResponse {
@@ -107,7 +107,7 @@ export interface LearningDashboardSummaryResponse {
   previous?: { students: number; warning?: number; atRisk: number };
   comparison?: { students?: ComparisonData | null; warning?: ComparisonData | null; atRisk?: ComparisonData | null };
   gpaDistribution: { excellent: number; veryGood: number; good: number; average: number; weak: number };
-  scoreDistribution: { labels?: string[]; schools: Array<{ schoolName: string; scores: number[]; averageGpa?: number }> };
+  scoreDistribution: { labels?: string[]; schools: Array<{ schoolName: string; scores: number[]; averageGpa?: number }>};
   topStudents: Array<{ id: number; name: string; school: string; major: string; class: string; gpa: number; gpaCategory: string; rank: number }>;
   filters: { school?: string; courseYear?: string; major?: string; class?: string; academicYear: string; semester: string };
   learningContext: { currentLabel: string; previousLabel?: string };

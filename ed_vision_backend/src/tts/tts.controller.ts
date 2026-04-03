@@ -1,4 +1,10 @@
-import { Controller, Get, Query, Res, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Res,
+  BadRequestException,
+} from '@nestjs/common';
 import { TtsService } from './tts.service';
 import type { Response } from 'express';
 
@@ -28,7 +34,7 @@ export class TtsController {
     res.set({
       'Content-Type': 'audio/mpeg',
       'Content-Length': audioBuffer.length,
-      'Cache-Control': 'public, max-age=86400',  // cache 24 h in browser
+      'Cache-Control': 'public, max-age=86400', // cache 24 h in browser
     });
     res.end(audioBuffer);
   }

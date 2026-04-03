@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Injectable,
   NotFoundException,
@@ -180,19 +177,22 @@ export class BookingService {
           existingAppointment.booker_account_id !== accountId ||
           existingAppointment.booker_role !== bookerRole;
 
-				const updatedAppointment = await this.repository.reactivateCancelledAppointment(
-					existingAppointment.appointment_id,
-					status,
-					meetingType as any,
-					dto.meetingPurpose,
-					needsBookerUpdate ? accountId : undefined,
-					needsBookerUpdate ? bookerRole : undefined
-				);
+        const updatedAppointment =
+          await this.repository.reactivateCancelledAppointment(
+            existingAppointment.appointment_id,
+            status,
+            meetingType as any,
+            dto.meetingPurpose,
+            needsBookerUpdate ? accountId : undefined,
+            needsBookerUpdate ? bookerRole : undefined,
+          );
 
-				// If booker changed, delete old appointment contact
-				if (needsBookerUpdate) {
-					await this.repository.deleteAppointmentContact(updatedAppointment.appointment_id);
-				}
+        // If booker changed, delete old appointment contact
+        if (needsBookerUpdate) {
+          await this.repository.deleteAppointmentContact(
+            updatedAppointment.appointment_id,
+          );
+        }
 
         // re-fetch to include slot and related info
         const full = await this.repository.getAppointmentById(
@@ -372,8 +372,6 @@ export class BookingService {
         // Parse thành UTC
         const appointmentTimeUTC = new Date(datetimeVN);
 
-        
-
         // Tạo reminder cho người đặt lịch (student hoặc parent)
         await this.reminderScheduler.createRemindersForAppointment(
           appointment.appointment_id,
@@ -386,7 +384,7 @@ export class BookingService {
         if (instructorId) {
           const instructorAccount =
             await this.repository.getInstructorById(instructorId);
-            if (instructorAccount) {
+          if (instructorAccount) {
             await this.reminderScheduler.createRemindersForAppointment(
               appointment.appointment_id,
               instructorAccount.account_id,
@@ -435,8 +433,6 @@ export class BookingService {
               (bookerRole === 'parent' ? 'Phụ huynh' : studentName);
           }
 
-          
-
           // Format date
           const slotDate = fullWithSlot?.slot?.date?.specific_date
             ? new Date(fullWithSlot.slot.date.specific_date).toLocaleDateString(
@@ -462,7 +458,7 @@ export class BookingService {
           // Tạo notification master với tên người đặt lịch chính xác
           const master = await this.prisma.notificationMaster.create({
             data: {
-              title: '📅 Lịch hẹn mới',
+              title: ' Lịch hẹn mới',
               body: `${bookerName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
               type: 'appointment_created',
               priority: 'Cao',
@@ -486,7 +482,7 @@ export class BookingService {
           // Push real-time qua WebSocket
           const payload = {
             masterId: master.id,
-            title: '📅 Lịch hẹn mới',
+            title: ' Lịch hẹn mới',
             body: `${bookerName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
             type: 'appointment_created',
             target: 'individual',
@@ -803,7 +799,7 @@ export class BookingService {
           slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
 
-        const title = '✅ Lịch hẹn đã được xác nhận';
+        const title = ' Lịch hẹn đã được xác nhận';
         const body = `${instructorName} đã xác nhận lịch hẹn vào khung giờ ${slotTime} ngày ${slotDate}.`;
 
         // Tạo notification
@@ -919,7 +915,7 @@ export class BookingService {
           slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
 
-        const title = '❌ Lịch hẹn đã bị từ chối';
+        const title = ' Lịch hẹn đã bị từ chối';
         let body = `${instructorName} đã từ chối lịch hẹn vào khung giờ ${slotTime} ngày ${slotDate}.`;
 
         // Thêm lý do từ chối nếu có
@@ -1058,8 +1054,8 @@ export class BookingService {
 
           const title =
             status === 'confirmed'
-              ? '✅ Lịch hẹn đã được xác nhận'
-              : '❌ Lịch hẹn đã bị từ chối';
+              ? ' Lịch hẹn đã được xác nhận'
+              : ' Lịch hẹn đã bị từ chối';
 
           const body =
             status === 'confirmed'

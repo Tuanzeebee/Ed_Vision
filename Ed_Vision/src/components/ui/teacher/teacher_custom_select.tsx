@@ -119,8 +119,7 @@ export const CustomSelect = React.forwardRef<HTMLSelectElement, CustomSelectProp
               {icon && <span className="mr-2">{icon}</span>}
               {label}
               {required && <span className="text-red-500 ml-1">*</span>}
-            </label>
-          )}
+            </label>)}
 
           {/* Select Wrapper */}
           <div className="custom-select-wrapper">
@@ -130,58 +129,45 @@ export const CustomSelect = React.forwardRef<HTMLSelectElement, CustomSelectProp
                 'w-full bg-gray-50 border-2 rounded-xl px-5 py-4 text-gray-900',
                 'appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
                 'outline-none text-base font-medium transition-all hover:border-gray-400',
-                error ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300',
+                error ? 'border-red-300 focus:border-red-500 focus:ring-red-500': 'border-gray-300',
                 className
               )}
               {...props}
             >
               {/* Placeholder option */}
-              <option value="" disabled>
-                -- {placeholder} --
+              <option value=""disabled>-- {placeholder} --
               </option>
 
               {/* Options */}
-              {options.map((option) => (
+              {options.map((option) =>(
                 <option
                   key={option.value}
                   value={option.value}
                   disabled={option.disabled}
                 >
                   {option.label}
-                </option>
-              ))}
+                </option>))}
             </select>
 
             {/* Chevron Icon */}
-            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"/>
           </div>
 
           {/* Help Text or Error */}
           {helpText && !error && (
-            <p className="text-sm text-gray-500">{helpText}</p>
-          )}
+            <p className="text-sm text-gray-500">{helpText}</p>)}
           {error && (
             <p className="text-sm text-red-600 flex items-center">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4 mr-1"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
+                xmlns="http://www.w3.org/2000/svg"className="w-4 h-4 mr-1"viewBox="0 0 24 24"fill="none"stroke="currentColor"strokeWidth="2"strokeLinecap="round"strokeLinejoin="round">
+                <circle cx="12"cy="12"r="10"/>
+                <line x1="12"y1="8"x2="12"y2="12"/>
+                <line x1="12"y1="16"x2="12.01"y2="16"/>
               </svg>
               {error}
-            </p>
-          )}
+            </p>)}
         </div>
-      </>
-    );
+      </>);
   }
 );
 

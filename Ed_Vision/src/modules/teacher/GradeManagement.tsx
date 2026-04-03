@@ -329,19 +329,19 @@ export default function GradeManagement() {
             case 'pass':
                 return (
                     <Badge className="bg-green-100 text-green-800 border border-green-300 text-xs px-2 py-1 whitespace-nowrap inline-flex items-center justify-center">
-                        ✅ Pass
+                         Pass
                     </Badge>
                 )
             case 'warning':
                 return (
                     <Badge className="bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-1 whitespace-nowrap inline-flex items-center justify-center">
-                        ⚠️ Warning
+                         Warning
                     </Badge>
                 )
             case 'fail':
                 return (
                     <Badge className="bg-red-100 text-red-800 border border-red-300 text-xs px-2 py-1 whitespace-nowrap inline-flex items-center justify-center">
-                        ❌ Fail
+                         Fail
                     </Badge>
                 )
             default:
@@ -778,7 +778,7 @@ export default function GradeManagement() {
                                                     </span>
                                                     {upload.students_with_prediction > 0 && (
                                                         <Badge className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5">
-                                                            ✓
+                                                            
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -886,7 +886,7 @@ export default function GradeManagement() {
                                                                     <div className="flex items-center justify-center min-w-[80px]">
                                                                         {thresholdData.isPassing ? (
                                                                             <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1 whitespace-nowrap inline-flex items-center justify-center">
-                                                                                ✓ Đã đạt
+                                                                                 Đã đạt
                                                                             </Badge>
                                                                         ) : thresholdData.canPass ? (
                                                                             <div className="flex flex-col items-center">
@@ -903,7 +903,7 @@ export default function GradeManagement() {
                                                                             </div>
                                                                         ) : (
                                                                             <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1 whitespace-nowrap inline-flex items-center justify-center">
-                                                                                ✗ Không thể
+                                                                                 Không thể
                                                                             </Badge>
                                                                         )}
                                                                     </div>
@@ -1036,8 +1036,8 @@ export default function GradeManagement() {
                                                 : 'bg-amber-100 text-amber-800 text-xs px-2 py-0.5'
                                         }>
                                             {selectedStudent.has_survey_data
-                                                ? '✓ Đã khảo sát' 
-                                                : '⚠️ Chưa'}
+                                                ? ' Đã khảo sát' 
+                                                : ' Chưa'}
                                         </Badge>
                                     </div>
                                     {selectedStudent.has_survey_data && selectedStudent.weekly_study_hours_by_course !== null && (
@@ -1071,7 +1071,7 @@ export default function GradeManagement() {
                                         : 'bg-red-50 border-red-300'
                                 }`}>
                                     <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center">
-                                        📊 Phân tích qua môn
+                                         Phân tích qua môn
                                     </h4>
 
                                     {/* Current Score and Final Needed - Compact */}
@@ -1110,7 +1110,7 @@ export default function GradeManagement() {
                                     <div className="bg-white rounded p-2 border border-gray-200">
                                         {passThresholdData.isPassing ? (
                                             <div className="flex items-start space-x-1.5">
-                                                <span className="text-sm">✅</span>
+                                                <span className="text-sm"></span>
                                                 <div className="flex-1">
                                                     <p className="text-xs font-semibold text-green-700">
                                                         Đã đạt điểm qua môn
@@ -1122,7 +1122,7 @@ export default function GradeManagement() {
                                             </div>
                                         ) : passThresholdData.canPass ? (
                                             <div className="flex items-start space-x-1.5">
-                                                <span className="text-sm">⚠️</span>
+                                                <span className="text-sm"></span>
                                                 <div className="flex-1">
                                                     <p className="text-xs font-semibold text-amber-700">
                                                         Cần {passThresholdData.finalScoreNeeded.toFixed(2)} điểm thi cuối
@@ -1132,14 +1132,14 @@ export default function GradeManagement() {
                                                     </p>
                                                     {passThresholdData.finalScoreNeeded > 7.0 && (
                                                         <p className="text-[10px] text-amber-700 font-medium mt-1">
-                                                            🚨 Yêu cầu cao ({'>'} 7.0)
+                                                             Yêu cầu cao ({'>'} 7.0)
                                                         </p>
                                                     )}
                                                 </div>
                                             </div>
                                         ) : (
                                             <div className="flex items-start space-x-1.5">
-                                                <span className="text-sm">❌</span>
+                                                <span className="text-sm"></span>
                                                 <div className="flex-1">
                                                     <p className="text-xs font-semibold text-red-700">
                                                         Không thể qua môn

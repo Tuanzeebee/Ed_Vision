@@ -239,7 +239,7 @@ export default function MessagesNotifications() {
             
             // No need to update students/parents arrays - useMemo will handle it automatically
         } catch (error) {
-            console.error('❌ Error loading conversations:', error)
+            console.error(' Error loading conversations:', error)
         } finally {
             setLoading(false)
         }
@@ -279,7 +279,7 @@ export default function MessagesNotifications() {
     // Define stable socket callbacks
     const handleNewMessage = useCallback((message: ChatMessage) => {
         try {
-            debugLog('📩 Received newMessage event:', {
+            debugLog(' Received newMessage event:', {
                 messageId: message._id,
                 conversationId: message.conversationId,
                 content: message.content.substring(0, 50),
@@ -291,10 +291,10 @@ export default function MessagesNotifications() {
                 setMessages(prev => {
                     // Check duplicate
                     if (prev.some(m => m._id === message._id)) {
-                        debugLog('⚠️ Duplicate message detected, skipping')
+                        debugLog(' Duplicate message detected, skipping')
                         return prev
                     }
-                    debugLog('✅ Adding message to chat window')
+                    debugLog(' Adding message to chat window')
                     return [...prev, message]
                 })
             }
@@ -304,7 +304,7 @@ export default function MessagesNotifications() {
                 const updatedConvs = prev.map(conv => {
                     if (conv._id === message.conversationId) {
                         const isCurrentlyViewing = currentConversationId === message.conversationId
-                        debugLog('📝 Updating conversation in list:', conv._id)
+                        debugLog(' Updating conversation in list:', conv._id)
                         return {
                             ...conv,
                             lastMessage: {
@@ -320,26 +320,26 @@ export default function MessagesNotifications() {
                     return conv
                 })
                 
-                // 🔥 ĐẨY CONVERSATION MỚI NHẤT LÊN ĐẦU (real-time)
+                //  ĐẨY CONVERSATION MỚI NHẤT LÊN ĐẦU (real-time)
                 const sorted = updatedConvs.sort((a, b) => {
                     const aTime = a.lastMessage?.timestamp || a.updatedAt
                     const bTime = b.lastMessage?.timestamp || b.updatedAt
                     return new Date(bTime).getTime() - new Date(aTime).getTime()
                 })
-                debugLog('🔄 Conversations sorted, top 3:', sorted.slice(0, 3).map(c => ({
+                debugLog(' Conversations sorted, top 3:', sorted.slice(0, 3).map(c => ({
                     id: c._id,
                     lastMsg: c.lastMessage?.content.substring(0, 30)
                 })))
                 return sorted
             })
         } catch (error) {
-            console.error('❌ Error handling new message:', error)
+            console.error(' Error handling new message:', error)
         }
     }, [currentConversationId])
 
     const handleConversationUpdated = useCallback((data: any) => {
         try {
-            debugLog('🔔 Received conversationUpdated event:', {
+            debugLog(' Received conversationUpdated event:', {
                 conversationId: data.conversationId,
                 lastMessage: data.lastMessage?.content.substring(0, 50),
                 isCurrentConv: currentConversationId === data.conversationId
@@ -350,7 +350,7 @@ export default function MessagesNotifications() {
                 const updatedConvs = prev.map(conv => {
                     if (conv._id === data.conversationId) {
                         const isCurrentlyViewing = currentConversationId === data.conversationId
-                        debugLog('📝 Updating conversation in list from conversationUpdated:', conv._id)
+                        debugLog(' Updating conversation in list from conversationUpdated:', conv._id)
                         return {
                             ...conv,
                             lastMessage: data.lastMessage,
@@ -361,20 +361,20 @@ export default function MessagesNotifications() {
                     return conv
                 })
                 
-                // 🔥 ĐẨY CONVERSATION MỚI NHẤT LÊN ĐẦU (real-time)
+                //  ĐẨY CONVERSATION MỚI NHẤT LÊN ĐẦU (real-time)
                 const sorted = updatedConvs.sort((a, b) => {
                     const aTime = a.lastMessage?.timestamp || a.updatedAt
                     const bTime = b.lastMessage?.timestamp || b.updatedAt
                     return new Date(bTime).getTime() - new Date(aTime).getTime()
                 })
-                debugLog('🔄 Conversations sorted from conversationUpdated, top 3:', sorted.slice(0, 3).map(c => ({
+                debugLog(' Conversations sorted from conversationUpdated, top 3:', sorted.slice(0, 3).map(c => ({
                     id: c._id,
                     lastMsg: c.lastMessage?.content.substring(0, 30)
                 })))
                 return sorted
             })
         } catch (error) {
-            console.error('❌ Error handling conversation updated:', error)
+            console.error(' Error handling conversation updated:', error)
         }
     }, [currentConversationId])
 
@@ -398,13 +398,13 @@ export default function MessagesNotifications() {
             try {
                 if (!socketService.isConnected()) {
                     await socketService.connect(teacherUserId, 'teacher')
-                    debugLog('✅ Teacher socket ready:', teacherUserId)
+                    debugLog(' Teacher socket ready:', teacherUserId)
                 }
 
                 socketService.onNewMessage(handleNewMessage)
                 socketService.onConversationUpdated(handleConversationUpdated)
             } catch (error) {
-                console.error('❌ Failed to setup teacher socket:', error)
+                console.error(' Failed to setup teacher socket:', error)
             }
         }
 
@@ -476,49 +476,49 @@ export default function MessagesNotifications() {
             id: '1',
             category: 'Học tập',
             question: 'Em có gặp khó khăn gì trong việc học tập không?',
-            icon: '📚'
+            icon: ''
         },
         {
             id: '2',
             category: 'Học tập',
             question: 'Em cần hỗ trợ thêm về phần nào của môn học?',
-            icon: '📝'
+            icon: ''
         },
         {
             id: '3',
             category: 'Tâm lý',
             question: 'Em có cảm thấy áp lực trong học tập không?',
-            icon: '🧠'
+            icon: ''
         },
         {
             id: '4',
             category: 'Tâm lý',
             question: 'Em có điều gì muốn chia sẻ với thầy không?',
-            icon: '💬'
+            icon: ''
         },
         {
             id: '5',
             category: 'Tài chính',
             question: 'Em có khó khăn về tài chính không?',
-            icon: '💰'
+            icon: ''
         },
         {
             id: '6',
             category: 'Xã hội',
             question: 'Em có hòa đồng với bạn bè trong lớp không?',
-            icon: '👥'
+            icon: ''
         },
         {
             id: '7',
             category: 'Chung',
             question: 'Thầy có thể giúp gì cho em?',
-            icon: '🤝'
+            icon: ''
         },
         {
             id: '8',
             category: 'Chung',
             question: 'Em có kế hoạch gì cho học kỳ này chưa?',
-            icon: '🎯'
+            icon: ''
         }
     ]
 
@@ -529,13 +529,13 @@ export default function MessagesNotifications() {
         // Get teacher userId from conversations - find teacher participant
         const currentConv = conversations.find(c => c._id === currentConversationId)
         if (!currentConv) {
-            console.error('❌ Conversation not found:', currentConversationId)
+            console.error(' Conversation not found:', currentConversationId)
             return
         }
 
         const teacherParticipant = currentConv.participants.find(p => p.userType === 'teacher')
         if (!teacherParticipant) {
-            console.error('❌ Teacher participant not found in conversation')
+            console.error(' Teacher participant not found in conversation')
             return
         }
 
@@ -566,7 +566,7 @@ export default function MessagesNotifications() {
                     : conv
             ))
         } catch (error) {
-            console.error('❌ Error sending message:', error)
+            console.error(' Error sending message:', error)
             // Restore message input on error
             setMessageInput(messageText)
         }
@@ -666,7 +666,7 @@ export default function MessagesNotifications() {
             await loadConversations()
         } catch (error) {
             console.error('Error sending bulk message:', error)
-            alert('❌ Gửi tin nhắn thất bại. Vui lòng thử lại!')
+            alert(' Gửi tin nhắn thất bại. Vui lòng thử lại!')
         } finally {
             setLoading(false)
         }
@@ -762,7 +762,7 @@ export default function MessagesNotifications() {
         }
     }
 
-    // 🔥 MERGE students với conversations để có real-time data
+    //  MERGE students với conversations để có real-time data
     const studentsWithConversations = React.useMemo(() => {
         return students.map(student => {
             const conv = conversations.find((c: Conversation) => 
@@ -783,7 +783,7 @@ export default function MessagesNotifications() {
         })
     }, [students, conversations])
 
-    // 🔥 MERGE parents với conversations
+    //  MERGE parents với conversations
     const parentsWithConversations = React.useMemo(() => {
         return parents.map(parent => {
             const conv = conversations.find((c: Conversation) => 
@@ -915,11 +915,11 @@ export default function MessagesNotifications() {
     const getSentimentIcon = (sentiment: string) => {
         switch (sentiment) {
             case 'positive':
-                return '😊'
+                return ''
             case 'negative':
-                return '😟'
+                return ''
             default:
-                return '😐'
+                return ''
         }
     }
     return (
@@ -1235,7 +1235,7 @@ export default function MessagesNotifications() {
                                                                     {/* Risk Level Badge */}
                                                                     {student.riskLevel && student.riskLevel !== 'low' && (
                                                                         <Badge className={`text-xs mb-2 ${getRiskBadge(student.riskLevel)}`}>
-                                                                            {student.riskLevel === 'high' ? `⚠️ ${t('messagesNotifications.needAttention')}` : `⚡ ${t('messagesNotifications.monitoring')}`}
+                                                                            {student.riskLevel === 'high' ? ` ${t('messagesNotifications.needAttention')}` : ` ${t('messagesNotifications.monitoring')}`}
                                                                         </Badge>
                                                                     )}
 
@@ -1446,7 +1446,7 @@ export default function MessagesNotifications() {
                                         <div className="flex items-center gap-2">
                                             {'riskLevel' in selectedStudent && selectedStudent.riskLevel && selectedStudent.riskLevel !== 'low' && (
                                                 <Badge className={getRiskBadge(selectedStudent.riskLevel)}>
-                                                    {selectedStudent.riskLevel === 'high' ? '⚠️ Cần chú ý' : '👀 Theo dõi'}
+                                                    {selectedStudent.riskLevel === 'high' ? ' Cần chú ý' : ' Theo dõi'}
                                                 </Badge>
                                             )}
                                             <Button
@@ -1993,10 +1993,10 @@ export default function MessagesNotifications() {
                                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
                                             required
                                         >
-                                            <option value="academic">🎓 {t('messagesNotifications.urgentAlertModal.academicWarning')}</option>
-                                            <option value="attendance">📅 {t('messagesNotifications.urgentAlertModal.attendanceWarning')}</option>
-                                            <option value="behavior">⚠️ {t('messagesNotifications.urgentAlertModal.behaviorIssue')}</option>
-                                            <option value="other">❗ {t('messagesNotifications.urgentAlertModal.other')}</option>
+                                            <option value="academic"> {t('messagesNotifications.urgentAlertModal.academicWarning')}</option>
+                                            <option value="attendance"> {t('messagesNotifications.urgentAlertModal.attendanceWarning')}</option>
+                                            <option value="behavior"> {t('messagesNotifications.urgentAlertModal.behaviorIssue')}</option>
+                                            <option value="other"> {t('messagesNotifications.urgentAlertModal.other')}</option>
                                         </select>
                                     </div>
 

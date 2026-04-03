@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 type Props = {
   visible: boolean;
-  onComplete: () => void;
+  onComplete: () =>void;
 };
 
 export default function ExplosionEffect({ visible, onComplete }: Props) {
@@ -16,7 +16,7 @@ export default function ExplosionEffect({ visible, onComplete }: Props) {
         onComplete();
       }, 1000);
 
-      return () => clearTimeout(timer);
+      return () =>clearTimeout(timer);
     }
   }, [visible, onComplete]);
 
@@ -27,10 +27,9 @@ export default function ExplosionEffect({ visible, onComplete }: Props) {
       {/* Boom Text */}
       <div className="relative">
         <div className="text-[12rem] font-black text-white animate-boom-scale drop-shadow-2xl">
-          💥
+          
         </div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-black text-yellow-300 animate-boom-text drop-shadow-2xl">
-          BOOM!
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-black text-yellow-300 animate-boom-text drop-shadow-2xl">BOOM!
         </div>
       </div>
 
@@ -44,6 +43,5 @@ export default function ExplosionEffect({ visible, onComplete }: Props) {
 
       {/* Flash Effect */}
       <div className="absolute inset-0 bg-white animate-flash-boom"></div>
-    </div>
-  );
+    </div>);
 }

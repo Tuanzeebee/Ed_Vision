@@ -28,7 +28,10 @@ export class SttService {
     );
 
     // Use the project venv Python (has whisper installed), fall back to system python
-    const venvPython = path.join(__dirname, '../../../.venv/Scripts/python.exe');
+    const venvPython = path.join(
+      __dirname,
+      '../../../.venv/Scripts/python.exe',
+    );
     const pythonExe = existsSync(venvPython) ? venvPython : 'python';
 
     try {
@@ -39,7 +42,6 @@ export class SttService {
         maxBuffer: 1024 * 1024,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result: { text?: string; error?: string } = JSON.parse(
         stdout.trim(),
       );

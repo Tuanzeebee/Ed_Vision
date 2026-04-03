@@ -219,13 +219,13 @@ export default function PredictionView() {
     const getSupportLevelIcon = (level: 'low' | 'medium' | 'high') => {
         switch (level) {
             case 'low':
-                return '🔴'
+                return ''
             case 'medium':
-                return '🟡'
+                return ''
             case 'high':
-                return '🟢'
+                return ''
             default:
-                return '⚪'
+                return ''
         }
     }
 
@@ -686,7 +686,7 @@ export default function PredictionView() {
                             {/* Support Analysis */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-blue-50 p-4 rounded-lg">
-                                    <h5 className="font-semibold text-blue-900 mb-3">📚 Ủng hộ tinh thần</h5>
+                                    <h5 className="font-semibold text-blue-900 mb-3"> Ủng hộ tinh thần</h5>
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
                                             <span className="text-blue-700">Mức độ:</span>
@@ -703,7 +703,7 @@ export default function PredictionView() {
                                 </div>
 
                                 <div className="bg-green-50 p-4 rounded-lg">
-                                    <h5 className="font-semibold text-green-900 mb-3">💰 Ủng hộ vật chất</h5>
+                                    <h5 className="font-semibold text-green-900 mb-3"> Ủng hộ vật chất</h5>
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
                                             <span className="text-green-700">Mức độ:</span>
@@ -722,7 +722,7 @@ export default function PredictionView() {
 
                             {/* Recommendations */}
                             <div className="bg-yellow-50 p-4 rounded-lg">
-                                <h5 className="font-semibold text-yellow-900 mb-3">💡 Khuyến nghị</h5>
+                                <h5 className="font-semibold text-yellow-900 mb-3"> Khuyến nghị</h5>
                                 <div className="space-y-2">
                                     {selectedStudentChart.factors.map((factor, index) => (
                                         <div key={index} className="flex items-start space-x-2">

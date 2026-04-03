@@ -1,7 +1,6 @@
 import Header from "../../components/layout/Header"
 import Footer from "../../components/layout/Footer"
 import { Card, CardContent } from "../../components/ui/student/Student_card"
-
 type Props = {
   // Add props if needed
 }
@@ -44,6 +43,5 @@ export default function StudentDashboard({}: Props) {
       
       {/* Sử dụng Footer component được tái sử dụng */}
       <Footer />
-    </div>
-  )
+    </div>)
 }

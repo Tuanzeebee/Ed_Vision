@@ -34,6 +34,7 @@ import {
   ChevronLeft,
   Star,
 } from 'lucide-react'
+import ToeicIntakePanel from './ToeicIntakePanel'
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
@@ -50,7 +51,7 @@ export interface Certificate {
   bgTo: string
   icon: string
   progress: number
-  status: 'active' | 'not-started' | 'in-progress'
+  status: 'active' | 'not-started' | 'in-progress' | 'completed'
   type: 'english' | 'mos'
   coverImg: string
 }
@@ -1523,6 +1524,7 @@ export function BandSelector({
   const bands = getBands(cert.id)
   const [hovered, setHovered] = useState<CertBand | null>(null)
   const isMos = cert.type === 'mos'
+  const isToeic = cert.id === 'toeic'
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -1537,19 +1539,27 @@ export function BandSelector({
       {/* Hero */}
       <div className="text-center mt-8 mb-10">
         <div
-          className={`w-16 h-16 bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} mx-auto rounded-2xl flex items-center justify-center shadow-lg`}
+          className={`bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} mx-auto rounded-2xl flex items-center justify-center shadow-lg ${
+            isToeic ? 'h-16 min-w-[116px] px-6' : 'w-16 h-16'
+          }`}
         >
-          <span className="text-xl font-black text-white">{cert.icon}</span>
+            <span className={`font-black text-white ${isToeic ? 'text-3xl tracking-wide' : 'text-xl'}`}>{cert.icon}</span>
         </div>
         <h1 className="text-2xl font-bold text-slate-800 mt-4">
-          {isMos ? `Chọn cấp độ cho ${cert.label}` : `Chọn mục tiêu ${cert.label}`}
+          {isToeic
+            ? `Khởi động lộ trình ${cert.label}`
+            : isMos
+            ? `Chọn cấp độ cho ${cert.label}`
+            : `Chọn mục tiêu ${cert.label}`}
         </h1>
         <p className="text-slate-500 text-sm mt-2 max-w-xl mx-auto">
-          {isMos
-            ? 'Lộ trình và nội dung luyện tập sẽ được cá nhân hoá theo cấp độ bạn chọn. Điểm đạt chuẩn MOS: ≥ 700 1,000.'
+          {isToeic
+            ? 'Bước 1: xác định điểm xuất phát. Bước 2: đặt mục tiêu điểm. Bước 3: hệ thống tự tạo lộ trình theo cột mốc cá nhân hoá.'
+            : isMos
+            ? 'Lộ trình và nội dung luyện tập sẽ được cá nhân hoá theo cấp độ bạn chọn. Điểm đạt chuẩn MOS: >= 700 / 1,000.'
             : 'Lộ trình học, từ vựng và bài thi thử sẽ được cá nhân hoá theo mục tiêu. Bạn có thể đổi mục tiêu bất cứ lúc nào.'}
         </p>
-        {!isMos && (
+        {!isMos && !isToeic && (
           <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
             <span className="text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">Band 4.0 – Cơ bản</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
@@ -1560,54 +1570,58 @@ export function BandSelector({
         )}
       </div>
 
+      {isToeic && <ToeicIntakePanel onConfirmBand={onSelect} />}
+
       {/* Band cards */}
-      <div
-        className={`grid gap-4 ${
-          bands.length === 2
-            ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
-            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-        }`}
-      >
-        {bands.map((band) => (
-          <button
-            key={band.value}
-            onMouseEnter={() => setHovered(band.value)}
-            onMouseLeave={() => setHovered(null)}
-            onClick={() => onSelect(band.value)}
-            className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-              hovered === band.value ? `${band.bg} ${band.borderActive}` : `bg-white ${band.border}`
-            }`}
-          >
-            {band.recommended && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap shadow-sm">
-                <Star className="w-3 h-3 fill-white" /> Phổ biến nhất
-              </div>
-            )}
-            <div className="mb-3">
-              <div className={`text-xl font-black ${band.color}`}>{band.label}</div>
-              <div className={`text-xs font-semibold mt-0.5 ${band.color} opacity-80`}>{band.tagline}</div>
-            </div>
-            <p className="text-sm text-slate-500 mb-3 leading-relaxed">{band.description}</p>
-            <ul className="space-y-1.5 mb-4">
-              {band.requirements.map((req, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                  <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${band.color}`} />
-                  {req}
-                </li>
-              ))}
-            </ul>
-            <div
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-colors ${
-                hovered === band.value
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
-                  : `${band.bg} ${band.color} border ${band.border}`
+      {!isToeic && (
+        <div
+          className={`grid gap-4 ${
+            bands.length === 2
+              ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+              : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+          }`}
+        >
+          {bands.map((band) => (
+            <button
+              key={band.value}
+              onMouseEnter={() => setHovered(band.value)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => onSelect(band.value)}
+              className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
+                hovered === band.value ? `${band.bg} ${band.borderActive}` : `bg-white ${band.border}`
               }`}
             >
-              Chọn {isMos ? 'cấp độ' : 'mục tiêu'} này →
-            </div>
-          </button>
-        ))}
-      </div>
+              {band.recommended && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap shadow-sm">
+                  <Star className="w-3 h-3 fill-white" /> Phổ biến nhất
+                </div>
+              )}
+              <div className="mb-3">
+                <div className={`text-xl font-black ${band.color}`}>{band.label}</div>
+                <div className={`text-xs font-semibold mt-0.5 ${band.color} opacity-80`}>{band.tagline}</div>
+              </div>
+              <p className="text-sm text-slate-500 mb-3 leading-relaxed">{band.description}</p>
+              <ul className="space-y-1.5 mb-4">
+                {band.requirements.map((req, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
+                    <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${band.color}`} />
+                    {req}
+                  </li>
+                ))}
+              </ul>
+              <div
+                className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-colors ${
+                  hovered === band.value
+                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+                    : `${band.bg} ${band.color} border ${band.border}`
+                }`}
+              >
+                Chọn {isMos ? 'cấp độ' : 'mục tiêu'} này →
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Note */}
       {isMos && cert.id !== 'mos-powerpoint' && (
