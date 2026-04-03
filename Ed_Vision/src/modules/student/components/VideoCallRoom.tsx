@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 type Props = {
   visible: boolean;
-  onClose: () => void;
+  onClose: () =>void;
   roomTitle: string;
 };
 
@@ -19,7 +19,7 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState<'room' | 'participants'>('room');
+  const [sidebarTab, setSidebarTab] = useState<'room'| 'participants'>('room');
 
   const participants: Participant[] = [
     { id: 1, name: 'tothestars', isVideoOff: true, isMuted: true },
@@ -44,21 +44,19 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
             <div className="flex items-center gap-3">
               <span className="text-white/60 text-sm">{participants.length} Participants</span>
               <button
-                onClick={() => setShowSidebar(!showSidebar)}
-                className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition"
-              >
-                <i className={`fas ${showSidebar ? 'fa-chevron-right' : 'fa-users'} text-white/60`}></i>
+                onClick={() =>setShowSidebar(!showSidebar)}
+                className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition">
+                <i className={`fas ${showSidebar ? 'fa-chevron-right': 'fa-users'} text-white/60`}></i>
               </button>
             </div>
           </div>
 
           {/* Video Grid */}
           <div className="flex-1 backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-2xl p-4 grid grid-cols-2 gap-4 overflow-auto">
-            {participants.map((participant) => (
+            {participants.map((participant) =>(
               <div
                 key={participant.id}
-                className="relative bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden aspect-video flex items-center justify-center group"
-              >
+                className="relative bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden aspect-video flex items-center justify-center group">
                 {participant.isPresenting ? (
                   // Screen Share View
                   <div className="w-full h-full bg-[#0a0a0a] flex items-center justify-center p-4">
@@ -86,62 +84,55 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
                         </div>
                       </div>
                     </div>
-                  </div>
-                ) : participant.isVideoOff ? (
+                  </div>) : participant.isVideoOff ? (
                   // Video Off View
                   <div className="flex flex-col items-center justify-center">
                     <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mb-2">
                       <i className="fas fa-user text-white/40 text-2xl"></i>
                     </div>
-                  </div>
-                ) : (
+                  </div>) : (
                   // Video On View
                   <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-pink-900/20">
                     <img
-                      src={`https://i.pravatar.cc/400?u=${participant.id}`}
+                      src={`https://i.pravatar.cc/400?
+u=${participant.id}`}
                       alt={participant.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                      className="w-full h-full object-cover"/>
+                  </div>)}
 
                 {/* Participant Name - Always Visible */}
                 <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2">
-                  <i className={`fas ${participant.isMuted ? 'fa-microphone-slash text-red-400' : 'fa-microphone text-green-400'} text-xs`}></i>
+                  <i className={`fas ${participant.isMuted ? 'fa-microphone-slash text-red-400': 'fa-microphone text-green-400'} text-xs`}></i>
                   <span className="text-white text-sm font-medium">{participant.name}</span>
                   {participant.isPresenting && (
-                    <span className="text-xs text-pink-400 ml-1">(Presenting)</span>
-                  )}
+                    <span className="text-xs text-pink-400 ml-1">(Presenting)</span>)}
                 </div>
 
                 {/* Three Dots Menu */}
                 <button className="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                   <i className="fas fa-ellipsis-h text-white text-sm"></i>
                 </button>
-              </div>
-            ))}
+              </div>))}
           </div>
 
           {/* Bottom Control Bar */}
           <div className="flex-shrink-0 backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-2xl px-6 py-4 flex items-center justify-center gap-3">
             {/* Camera Toggle */}
             <button
-              onClick={() => setIsCameraOn(!isCameraOn)}
+              onClick={() =>setIsCameraOn(!isCameraOn)}
               className={`w-12 h-12 rounded-xl flex items-center justify-center transition ${
-                isCameraOn ? 'bg-white/20 hover:bg-white/30' : 'bg-red-600 hover:bg-red-700'
-              }`}
+                isCameraOn ? 'bg-white/20 hover:bg-white/30': 'bg-red-600 hover:bg-red-700'}`}
             >
-              <i className={`fas ${isCameraOn ? 'fa-video' : 'fa-video-slash'} text-white`}></i>
+              <i className={`fas ${isCameraOn ? 'fa-video': 'fa-video-slash'} text-white`}></i>
             </button>
 
             {/* Microphone Toggle */}
             <button
-              onClick={() => setIsMicOn(!isMicOn)}
+              onClick={() =>setIsMicOn(!isMicOn)}
               className={`w-12 h-12 rounded-xl flex items-center justify-center transition ${
-                isMicOn ? 'bg-white/20 hover:bg-white/30' : 'bg-red-600 hover:bg-red-700'
-              }`}
+                isMicOn ? 'bg-white/20 hover:bg-white/30': 'bg-red-600 hover:bg-red-700'}`}
             >
-              <i className={`fas ${isMicOn ? 'fa-microphone' : 'fa-microphone-slash'} text-white`}></i>
+              <i className={`fas ${isMicOn ? 'fa-microphone': 'fa-microphone-slash'} text-white`}></i>
             </button>
 
             {/* Share Screen */}
@@ -157,8 +148,7 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
             {/* End Call */}
             <button
               onClick={onClose}
-              className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-xl flex items-center justify-center transition ml-2"
-            >
+              className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-xl flex items-center justify-center transition ml-2">
               <i className="fas fa-phone-slash text-white"></i>
             </button>
           </div>
@@ -171,36 +161,27 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
             <div className="flex-shrink-0 border-b border-white/10">
               <div className="flex items-center">
                 <button
-                  onClick={() => setSidebarTab('room')}
+                  onClick={() =>setSidebarTab('room')}
                   className={`flex-1 py-4 px-4 text-sm font-semibold transition ${
-                    sidebarTab === 'room'
-                      ? 'text-white border-b-2 border-pink-500'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Phòng
+                    sidebarTab === 'room'? 'text-white border-b-2 border-pink-500': 'text-white/60 hover:text-white'}`}
+                >Phòng
                 </button>
                 <button
-                  onClick={() => setSidebarTab('participants')}
+                  onClick={() =>setSidebarTab('participants')}
                   className={`flex-1 py-4 px-4 text-sm font-semibold transition ${
-                    sidebarTab === 'participants'
-                      ? 'text-white border-b-2 border-pink-500'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Thành viên
+                    sidebarTab === 'participants'? 'text-white border-b-2 border-pink-500': 'text-white/60 hover:text-white'}`}
+                >Thành viên
                 </button>
                 <button
-                  onClick={() => setShowSidebar(false)}
-                  className="w-12 h-12 hover:bg-white/10 flex items-center justify-center transition"
-                >
+                  onClick={() =>setShowSidebar(false)}
+                  className="w-12 h-12 hover:bg-white/10 flex items-center justify-center transition">
                   <i className="fas fa-times text-white/60"></i>
                 </button>
               </div>
             </div>
 
             {/* Tab Content */}
-            {sidebarTab === 'room' ? (
+            {sidebarTab === 'room'? (
               <div className="flex-1 overflow-y-auto">
                 {/* Timer Display */}
                 <div className="p-4 border-b border-white/10">
@@ -241,10 +222,7 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
 
                   <div className="flex items-center gap-2 p-2 bg-white/5 rounded-xl">
                     <input
-                      type="text"
-                      placeholder="Youtube Video"
-                      className="flex-1 bg-transparent text-white/60 text-sm outline-none px-2"
-                    />
+                      type="text"placeholder="Youtube Video"className="flex-1 bg-transparent text-white/60 text-sm outline-none px-2"/>
                     <button className="w-8 h-8 hover:bg-white/10 rounded-full flex items-center justify-center transition">
                       <i className="fas fa-sync-alt text-white/60"></i>
                     </button>
@@ -274,8 +252,7 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
                     </button>
                   </div>
                 </div>
-              </div>
-            ) : (
+              </div>) : (
               <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Participant Count */}
                 <div className="p-4 border-b border-white/10">
@@ -290,11 +267,10 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
 
                 {/* Participants List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {participants.map((participant) => (
+                  {participants.map((participant) =>(
                     <div
                       key={participant.id}
-                      className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition group"
-                    >
+                      className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition group">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center overflow-hidden">
                           <i className="fas fa-user text-white text-sm"></i>
@@ -302,32 +278,26 @@ export default function VideoCallRoom({ visible, onClose, roomTitle }: Props) {
                         <div className="flex flex-col">
                           <span className="text-white font-medium text-sm">{participant.name}</span>
                           {participant.isPresenting && (
-                            <span className="text-pink-400 text-xs">Đang chia sẻ màn hình</span>
-                          )}
+                            <span className="text-pink-400 text-xs">Đang chia sẻ màn hình</span>)}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <i className={`fas ${participant.isMuted ? 'fa-microphone-slash text-red-400' : 'fa-microphone text-green-400'} text-sm`}></i>
+                        <i className={`fas ${participant.isMuted ? 'fa-microphone-slash text-red-400': 'fa-microphone text-green-400'} text-sm`}></i>
                         <button className="opacity-0 group-hover:opacity-100 transition">
                           <i className="fas fa-ellipsis-h text-white/60 hover:text-white"></i>
                         </button>
                       </div>
-                    </div>
-                  ))}
+                    </div>))}
                 </div>
 
                 {/* Quick Actions */}
                 <div className="p-4 border-t border-white/10">
                   <button className="w-full py-3 bg-white/5 hover:bg-white/10 text-white text-sm font-medium rounded-xl transition flex items-center justify-center gap-2">
-                    <i className="fas fa-user-plus"></i>
-                    Mời người khác
+                    <i className="fas fa-user-plus"></i>Mời người khác
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>)}
+          </div>)}
       </div>
-    </div>
-  );
+    </div>);
 }

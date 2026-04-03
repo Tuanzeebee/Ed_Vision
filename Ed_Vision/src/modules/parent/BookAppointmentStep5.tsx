@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from "react-i18next"
 import { Card, CardContent } from "@/components/ui/parent/Parent_card"
 import { Button } from "@/components/ui/parent/Parent_button"
-
 // Import generated SVG assets for the component
 import iconCheck from "@/assets/parent/iconCheckBig.svg"
 import iconClose from "@/assets/parent/iconCloseBig.svg"
@@ -29,9 +28,9 @@ type AppointmentData = {
 }
 
 type Props = {
-  onBackToDashboard?: () => void
-  onCallSupport?: () => void
-  onEmailSupport?: () => void
+  onBackToDashboard?: () =>void
+  onCallSupport?: () =>void
+  onEmailSupport?: () =>void
   appointmentData?: AppointmentData
 }
 
@@ -48,8 +47,7 @@ export default function BookAppointmentStep5({
     specialization: "General Health Consultation",
     purpose: "General Health Consultation",
     patientName: "Michael Davis",
-    confirmationNumber: "#MED-2024-0122-047"
-  }
+    confirmationNumber: "#MED-2024-0122-047"}
 }: Props) {
   const { t } = useTranslation(['parent', 'common'])
   const [copied, setCopied] = useState(false)
@@ -67,7 +65,7 @@ export default function BookAppointmentStep5({
     try {
       await navigator.clipboard.writeText(appointmentData.confirmationNumber)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() =>setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy confirmation number:', err)
     }
@@ -82,12 +80,12 @@ export default function BookAppointmentStep5({
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="bg-green-600 rounded-lg p-2 mr-3">
-                <img src={iconCheck} alt="" className="w-5 h-5" />
+                <img src={iconCheck} alt=""className="w-5 h-5"/>
               </div>
               <h1 className="text-xl font-semibold text-gray-900">{t('parent:bookAppointment.step5.title')}</h1>
             </div>
-            <Button variant="ghost" size="sm">
-              <img src={iconClose} alt="" className="w-6 h-6" />
+            <Button variant="ghost"size="sm">
+              <img src={iconClose} alt=""className="w-6 h-6"/>
             </Button>
           </div>
         </div>
@@ -102,7 +100,7 @@ export default function BookAppointmentStep5({
             {/* Success Icon */}
             <div className="flex justify-center">
               <div className="bg-green-100 rounded-full p-6">
-                <img src={iconCheckCircle} alt="" className="w-12 h-12" />
+                <img src={iconCheckCircle} alt=""className="w-12 h-12"/>
               </div>
             </div>
             
@@ -136,7 +134,7 @@ export default function BookAppointmentStep5({
                   <div className="space-y-4">
                     {/* Date & Time */}
                     <div className="flex items-start">
-                      <img src={iconCalendar} alt="" className="w-5 h-5 mt-1 mr-3" />
+                      <img src={iconCalendar} alt=""className="w-5 h-5 mt-1 mr-3"/>
                       <div>
                         <p className="font-medium text-gray-900">{appointmentData.date}</p>
                         <p className="text-gray-600">{appointmentData.time}</p>
@@ -145,7 +143,7 @@ export default function BookAppointmentStep5({
 
                     {/* Location */}
                     <div className="flex items-start">
-                      <img src={iconLocation} alt="" className="w-5 h-5 mt-1 mr-3" />
+                      <img src={iconLocation} alt=""className="w-5 h-5 mt-1 mr-3"/>
                       <div>
                         <p className="font-medium text-gray-900">{appointmentData.location}</p>
                         <p className="text-gray-600">{appointmentData.meetingType}</p>
@@ -157,7 +155,7 @@ export default function BookAppointmentStep5({
                   <div className="space-y-4">
                     {/* Doctor */}
                     <div className="flex items-start">
-                      <img src={iconUser} alt="" className="w-5 h-5 mt-1 mr-3" />
+                      <img src={iconUser} alt=""className="w-5 h-5 mt-1 mr-3"/>
                       <div>
                         <p className="font-medium text-gray-900">{appointmentData.doctor}</p>
                         <p className="text-gray-600">{appointmentData.purpose}</p>
@@ -166,7 +164,7 @@ export default function BookAppointmentStep5({
 
                     {/* Patient */}
                     <div className="flex items-start">
-                      <img src={iconPatient} alt="" className="w-5 h-5 mt-1 mr-3" />
+                      <img src={iconPatient} alt=""className="w-5 h-5 mt-1 mr-3"/>
                       <div>
                         <p className="font-medium text-gray-900">{appointmentData.patientName}</p>
                         <p className="text-gray-600">{t('parent:bookAppointment.step5.student')}</p>
@@ -184,11 +182,8 @@ export default function BookAppointmentStep5({
                         <p className="text-lg font-semibold text-gray-900">{appointmentData.confirmationNumber}</p>
                       </div>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopyConfirmation}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
+                        variant="ghost"size="sm"onClick={handleCopyConfirmation}
+                        className="text-blue-600 hover:text-blue-700">
                         {copied ? t('parent:bookAppointment.step5.copied') : t('parent:bookAppointment.step5.copy')}
                       </Button>
                     </div>
@@ -202,9 +197,8 @@ export default function BookAppointmentStep5({
           <div className="flex justify-center">
             <Button
               onClick={handleBackToDashboard}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-            >
-              <img src={iconDashboard} alt="" className="w-5 h-5 mr-2" />
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
+              <img src={iconDashboard} alt=""className="w-5 h-5 mr-2"/>
               {t('parent:bookAppointment.step5.backToDashboard')}
             </Button>
           </div>
@@ -214,25 +208,20 @@ export default function BookAppointmentStep5({
             <p className="text-gray-600">{t('parent:bookAppointment.step5.needHelpQuestion')}</p>
             <div className="flex items-center justify-center space-x-6">
               <Button
-                variant="ghost"
-                onClick={onCallSupport}
-                className="text-blue-600 hover:text-blue-700 flex items-center"
-              >
-                <img src={iconPhone} alt="" className="w-4 h-4 mr-2" />
+                variant="ghost"onClick={onCallSupport}
+                className="text-blue-600 hover:text-blue-700 flex items-center">
+                <img src={iconPhone} alt=""className="w-4 h-4 mr-2"/>
                 {t('parent:bookAppointment.step5.callSupport')}
               </Button>
               <Button
-                variant="ghost"
-                onClick={onEmailSupport}
-                className="text-blue-600 hover:text-blue-700 flex items-center"
-              >
-                <img src={iconEmail} alt="" className="w-4 h-4 mr-2" />
+                variant="ghost"onClick={onEmailSupport}
+                className="text-blue-600 hover:text-blue-700 flex items-center">
+                <img src={iconEmail} alt=""className="w-4 h-4 mr-2"/>
                 {t('parent:bookAppointment.step5.emailSupport')}
               </Button>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    </div>)
 }

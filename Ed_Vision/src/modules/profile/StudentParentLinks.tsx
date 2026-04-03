@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 type Parent = {
   id: string;
   name: string;
-  relationship: "father" | "mother" | "sibling" | "guardian";
+  relationship: "father"| "mother"| "sibling"| "guardian";
   email: string;
   phone: string;
 };
@@ -13,10 +13,10 @@ type Parent = {
 type Props = {
   linkedParents: Parent[];
   registrationCode?: string;
-  onRegisterParent?: () => void;
+  onRegisterParent?: () =>void;
 };
 
-const relationshipLabels: Record<string, string> = {
+const relationshipLabels: Record<string, string>= {
   father: "Cha",
   mother: "Mẹ",
   sibling: "Anh/Chị",
@@ -30,32 +30,32 @@ const relationshipLabels: Record<string, string> = {
   "Giám hộ": "Giám hộ",
 };
 
-const relationshipColors: Record<string, { bg: string; text: string }> = {
-  father: { bg: "bg-blue-100", text: "text-blue-800" },
-  mother: { bg: "bg-pink-100", text: "text-pink-800" },
-  sibling: { bg: "bg-purple-100", text: "text-purple-800" },
-  guardian: { bg: "bg-green-100", text: "text-green-800" },
-  parent: { bg: "bg-gray-100", text: "text-gray-800" },
+const relationshipColors: Record<string, { bg: string; text: string }>= {
+  father: { bg: "bg-blue-100", text: "text-blue-800"},
+  mother: { bg: "bg-pink-100", text: "text-pink-800"},
+  sibling: { bg: "bg-purple-100", text: "text-purple-800"},
+  guardian: { bg: "bg-green-100", text: "text-green-800"},
+  parent: { bg: "bg-gray-100", text: "text-gray-800"},
   // Support Vietnamese labels
-  "Cha": { bg: "bg-blue-100", text: "text-blue-800" },
-  "Bố": { bg: "bg-blue-100", text: "text-blue-800" },
-  "Mẹ": { bg: "bg-pink-100", text: "text-pink-800" },
-  "Anh/Chị": { bg: "bg-purple-100", text: "text-purple-800" },
-  "Giám hộ": { bg: "bg-green-100", text: "text-green-800" },
+  "Cha": { bg: "bg-blue-100", text: "text-blue-800"},
+  "Bố": { bg: "bg-blue-100", text: "text-blue-800"},
+  "Mẹ": { bg: "bg-pink-100", text: "text-pink-800"},
+  "Anh/Chị": { bg: "bg-purple-100", text: "text-purple-800"},
+  "Giám hộ": { bg: "bg-green-100", text: "text-green-800"},
 };
 
-const relationshipAvatarColors: Record<string, { bg: string; text: string }> = {
-  father: { bg: "bg-blue-100", text: "text-blue-600" },
-  mother: { bg: "bg-pink-100", text: "text-pink-600" },
-  sibling: { bg: "bg-purple-100", text: "text-purple-600" },
-  guardian: { bg: "bg-green-100", text: "text-green-600" },
-  parent: { bg: "bg-gray-100", text: "text-gray-600" },
+const relationshipAvatarColors: Record<string, { bg: string; text: string }>= {
+  father: { bg: "bg-blue-100", text: "text-blue-600"},
+  mother: { bg: "bg-pink-100", text: "text-pink-600"},
+  sibling: { bg: "bg-purple-100", text: "text-purple-600"},
+  guardian: { bg: "bg-green-100", text: "text-green-600"},
+  parent: { bg: "bg-gray-100", text: "text-gray-600"},
   // Support Vietnamese labels
-  "Cha": { bg: "bg-blue-100", text: "text-blue-600" },
-  "Bố": { bg: "bg-blue-100", text: "text-blue-600" },
-  "Mẹ": { bg: "bg-pink-100", text: "text-pink-600" },
-  "Anh/Chị": { bg: "bg-purple-100", text: "text-purple-600" },
-  "Giám hộ": { bg: "bg-green-100", text: "text-green-600" },
+  "Cha": { bg: "bg-blue-100", text: "text-blue-600"},
+  "Bố": { bg: "bg-blue-100", text: "text-blue-600"},
+  "Mẹ": { bg: "bg-pink-100", text: "text-pink-600"},
+  "Anh/Chị": { bg: "bg-purple-100", text: "text-purple-600"},
+  "Giám hộ": { bg: "bg-green-100", text: "text-green-600"},
 };
 
 export default function StudentParentLinks({
@@ -88,7 +88,7 @@ export default function StudentParentLinks({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() =>({}));
         const errorMessage = errorData.message || `HTTP ${response.status}`;
         console.error('API Error:', errorData);
         throw new Error(errorMessage);
@@ -175,8 +175,7 @@ export default function StudentParentLinks({
                       <i className="fas fa-phone text-gray-400 mr-2"></i>
                       {parent.phone}
                     </td>
-                  </tr>
-                );
+                  </tr>);
               })}
             </tbody>
           </table>
@@ -218,8 +217,7 @@ export default function StudentParentLinks({
                     {parent.phone}
                   </p>
                 </div>
-              </div>
-            );
+              </div>);
           })}
         </div>
 
@@ -228,22 +226,18 @@ export default function StudentParentLinks({
           <button
             onClick={handleRegisterParent}
             disabled={isGeneratingLink}
-            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
+            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
             {isGeneratingLink ? (
               <>
                 <i className="fas fa-spinner fa-spin mr-2"></i>
                 {t('studentParentLinks.generating')}
-              </>
-            ) : (
+              </>) : (
               <>
                 <i className="fas fa-plus-circle mr-2"></i>
                 {t('studentParentLinks.generateCode')}
-              </>
-            )}
+              </>)}
           </button>
         </div>
       </div>
-    </>
-  );
+    </>);
 }

@@ -23,7 +23,7 @@ for filename in os.listdir(input_folder):
         # Nếu không có course_code → thêm cột mới
         if "course_code" not in df.columns:
             df["course_code"] = extract_file_course_code(filename)
-            print(f"➕ Thêm course_code = '{extract_file_course_code(filename)}'")
+            print(f" Thêm course_code = '{extract_file_course_code(filename)}'")
         else:
             # Nếu có → fill xuống nhưng KHÔNG tạo dòng dư
             df["course_code"] = df["course_code"].ffill()

@@ -15,11 +15,11 @@ export type MusicWidgetState = {
   expanded: boolean;
 };
 
-export type PomoMode = 'focus' | 'short' | 'long';
+export type PomoMode = 'focus'| 'short'| 'long';
 
-export type AmbienceTab = 'sounds' | 'animations';
+export type AmbienceTab = 'sounds'| 'animations';
 
-export type SoundType = 'rain' | 'birds' | 'campfire' | 'waves' | 'thunderstorm' | 'keyboard' | 'cafe' | 'wind-chimes' | 'singing-bowl' | 'white-noise' | 'crickets' | 'forest' | 'wind' | 'river' | 'owl' | 'city' | 'clock' | 'fan' | 'train';
+export type SoundType = 'rain'| 'birds'| 'campfire'| 'waves'| 'thunderstorm'| 'keyboard'| 'cafe'| 'wind-chimes'| 'singing-bowl'| 'white-noise'| 'crickets'| 'forest'| 'wind'| 'river'| 'owl'| 'city'| 'clock'| 'fan'| 'train';
 
 export type Track = {
   id: string;

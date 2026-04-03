@@ -5,7 +5,7 @@ import type { QuestionOption } from "../types/survey.types";
 interface MultipleChoiceQuestionProps {
   options: QuestionOption[];
   value?: string[];
-  onChange: (value: string[]) => void;
+  onChange: (value: string[]) =>void;
 }
 
 export default function MultipleChoiceQuestion({
@@ -15,7 +15,7 @@ export default function MultipleChoiceQuestion({
 }: MultipleChoiceQuestionProps) {
   const handleToggle = (optionValue: string) => {
     if (value.includes(optionValue)) {
-      onChange(value.filter((v) => v !== optionValue));
+      onChange(value.filter((v) =>v !== optionValue));
     } else {
       onChange([...value, optionValue]);
     }
@@ -36,17 +36,14 @@ export default function MultipleChoiceQuestion({
             )}
           >
             <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={() => handleToggle(option.value)}
+              type="checkbox"checked={isChecked}
+              onChange={() =>handleToggle(option.value)}
               className={cn(surveyStyles.checkbox, "flex-shrink-0")}
             />
             <span className="ml-3 text-sm font-medium text-gray-700">
               {option.label}
             </span>
-          </label>
-        );
+          </label>);
       })}
-    </div>
-  );
+    </div>);
 }

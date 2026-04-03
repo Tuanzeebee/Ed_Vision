@@ -17,4 +17,3 @@ import { ConfigModule } from '@nestjs/config';
   exports: [GpaMetricsService],
 })
 export class GpaMetricsModule {}
-

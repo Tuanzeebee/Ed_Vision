@@ -136,7 +136,7 @@ export default function ChatStudent({}: Props) {
       if (!socketService.isConnected()) {
         try {
           await socketService.connect(studentParticipant.userId, 'student')
-          console.log('✅ Student socket ready')
+          console.log(' Student socket ready')
         } catch (error) {
           console.error('Failed to connect student socket:', error)
           return

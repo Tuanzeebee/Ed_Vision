@@ -167,7 +167,7 @@ export async function exportToExcel(
   
   // Sheet 2: Charts - add all available charts
   if (charts && Object.keys(charts).length > 0) {
-    console.log('📊 Excel: Adding chart sheet');
+    console.log(' Excel: Adding chart sheet');
     const chartSheet = workbook.addWorksheet('Biểu đồ');
     
     let currentRow = 1;
@@ -266,9 +266,9 @@ export async function exportToExcel(
       });
     }
     
-    console.log('✅ Excel: Charts added successfully');
+    console.log(' Excel: Charts added successfully');
   } else {
-    console.warn('⚠️ Excel: No chart data available');
+    console.warn(' Excel: No chart data available');
   }
   
   // Generate buffer
@@ -376,7 +376,7 @@ export async function exportToWord(
   
   // Add system scale chart if available
   if (charts?.systemScale) {
-    console.log('📝 Word: Adding system scale chart');
+    console.log(' Word: Adding system scale chart');
     try {
       const base64Data = charts.systemScale.replace(/^data:image\/\w+;base64,/, '');
       // Convert base64 to binary string to Uint8Array (browser-compatible)
@@ -402,9 +402,9 @@ export async function exportToWord(
           spacing: { after: 400 }
         })
       );
-      console.log('✅ Word: System scale chart added');
+      console.log(' Word: System scale chart added');
     } catch (error) {
-      console.error('❌ Word: Error adding system scale chart:', error);
+      console.error(' Word: Error adding system scale chart:', error);
     }
   }
   
@@ -444,9 +444,9 @@ export async function exportToWord(
             spacing: { after: 200 }
           })
         );
-        console.log('✅ Word: GPA chart added');
+        console.log(' Word: GPA chart added');
       } catch (error) {
-        console.error('❌ Word: Error adding GPA chart:', error);
+        console.error(' Word: Error adding GPA chart:', error);
       }
     }
     
@@ -492,9 +492,9 @@ export async function exportToWord(
             spacing: { after: 200 }
           })
         );
-        console.log('✅ Word: High fail subjects chart added');
+        console.log(' Word: High fail subjects chart added');
       } catch (error) {
-        console.error('❌ Word: Error adding high fail subjects chart:', error);
+        console.error(' Word: Error adding high fail subjects chart:', error);
       }
     }
     
@@ -542,9 +542,9 @@ export async function exportToWord(
             spacing: { after: 200 }
           })
         );
-        console.log('✅ Word: Activity chart added');
+        console.log(' Word: Activity chart added');
       } catch (error) {
-        console.error('❌ Word: Error adding activity chart:', error);
+        console.error(' Word: Error adding activity chart:', error);
       }
     }
     
@@ -590,9 +590,9 @@ export async function exportToWord(
             spacing: { after: 200 }
           })
         );
-        console.log('✅ Word: Learning trend chart added');
+        console.log(' Word: Learning trend chart added');
       } catch (error) {
-        console.error('❌ Word: Error adding learning trend chart:', error);
+        console.error(' Word: Error adding learning trend chart:', error);
       }
     }
     

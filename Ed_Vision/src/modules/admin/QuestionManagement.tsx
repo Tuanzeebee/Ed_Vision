@@ -363,7 +363,7 @@ const QuestionManagement = () => {
                     <tr>
                       <td colSpan={8} className="px-6 py-8 text-center">
                         <div className="text-gray-500">
-                          <span className="text-2xl mb-2 block">🔍</span>
+                          <span className="text-2xl mb-2 block"></span>
                           <p className="text-sm">Không tìm thấy câu hỏi phù hợp với bộ lọc</p>
                         </div>
                       </td>

@@ -967,7 +967,7 @@ export default function TeacherDashboard() {
                                     }}
                                     className="bg-gray-200 hover:bg-gray-300 text-gray-700 border border-gray-300 rounded-lg px-1.5 py-1.5 text-xs font-medium transition-colors w-20 cursor-pointer"
                                 >
-                                    🔄 {t('dashboard.reset')}
+                                     {t('dashboard.reset')}
                                 </button>
                             </div>
 
@@ -979,9 +979,9 @@ export default function TeacherDashboard() {
                                     value={chartView}
                                     onChange={(e) => setChartView(e.target.value)}
                                 >
-                                    <option value="weekly">📈 {t('dashboard.weekly')}</option>
-                                    <option value="monthly">📉 {t('dashboard.monthly')}</option>
-                                    <option value="yearly">📊 {t('dashboard.yearly')}</option>
+                                    <option value="weekly"> {t('dashboard.weekly')}</option>
+                                    <option value="monthly"> {t('dashboard.monthly')}</option>
+                                    <option value="yearly"> {t('dashboard.yearly')}</option>
                                 </select>
                             </div>
                         </div>
@@ -1041,9 +1041,9 @@ export default function TeacherDashboard() {
                                                     </div>
                                                     <p className="text-sm text-gray-600">{student.studentCode} - {student.class}</p>
                                                     <div className="flex items-center space-x-3 mt-1">
-                                                        <span className={`text-xs ${colors.text}`}>📊 GPA: {student.gpa.toFixed(2)}</span>
-                                                        <span className={`text-xs ${colors.text}`}>❌ {t('dashboard.absent')}: {student.absences}/12</span>
-                                                        <span className={`text-xs ${colors.text}`}>📚 {t('dashboard.debt')}: {student.debtCourses} {t('dashboard.courses')}</span>
+                                                        <span className={`text-xs ${colors.text}`}> GPA: {student.gpa.toFixed(2)}</span>
+                                                        <span className={`text-xs ${colors.text}`}> {t('dashboard.absent')}: {student.absences}/12</span>
+                                                        <span className={`text-xs ${colors.text}`}> {t('dashboard.debt')}: {student.debtCourses} {t('dashboard.courses')}</span>
                                                     </div>
                                                 </div>
                                             </div>

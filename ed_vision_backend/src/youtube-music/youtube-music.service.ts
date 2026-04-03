@@ -158,17 +158,19 @@ export class YouTubeMusicService {
   ): Promise<T> {
     const url = new URL(`${this.baseUrl}/${path}`);
     url.searchParams.append('key', this.apiKey);
-    
+
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {
         url.searchParams.append(key, value);
       }
     }
 
-    this.logger.debug(`Fetching: ${url.toString().replace(this.apiKey, '***')}`);
+    this.logger.debug(
+      `Fetching: ${url.toString().replace(this.apiKey, '***')}`,
+    );
 
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       this.logger.error(`YouTube API error: ${response.status} - ${errorText}`);
@@ -184,11 +186,11 @@ export class YouTubeMusicService {
   private parseIsoDuration(isoDuration: string): number {
     const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return 0;
-    
+
     const hours = parseInt(match[1] || '0', 10);
     const minutes = parseInt(match[2] || '0', 10);
     const seconds = parseInt(match[3] || '0', 10);
-    
+
     return (hours * 3600 + minutes * 60 + seconds) * 1000;
   }
 
@@ -200,7 +202,7 @@ export class YouTubeMusicService {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
@@ -210,7 +212,9 @@ export class YouTubeMusicService {
   /**
    * Get the best available thumbnail URL
    */
-  private getBestThumbnail(thumbnails: YouTubeSearchItem['snippet']['thumbnails']): string {
+  private getBestThumbnail(
+    thumbnails: YouTubeSearchItem['snippet']['thumbnails'],
+  ): string {
     return (
       thumbnails.maxres?.url ||
       thumbnails.standard?.url ||
@@ -227,9 +231,9 @@ export class YouTubeMusicService {
   private parseArtistFromTitle(title: string, channelTitle: string): string {
     // Common patterns: "Artist - Song", "Artist: Song", "Artist | Song"
     const patterns = [
-      /^(.+?)\s*[-–—]\s*.+$/,  // Artist - Song
-      /^(.+?)\s*:\s*.+$/,       // Artist: Song
-      /^(.+?)\s*\|\s*.+$/,      // Artist | Song
+      /^(.+?)\s*[-–—]\s*.+$/, // Artist - Song
+      /^(.+?)\s*:\s*.+$/, // Artist: Song
+      /^(.+?)\s*\|\s*.+$/, // Artist | Song
     ];
 
     for (const pattern of patterns) {
@@ -249,9 +253,9 @@ export class YouTubeMusicService {
   private parseSongFromTitle(title: string): string {
     // Common patterns
     const patterns = [
-      /^.+?\s*[-–—]\s*(.+)$/,  // Artist - Song
-      /^.+?\s*:\s*(.+)$/,       // Artist: Song
-      /^.+?\s*\|\s*(.+)$/,      // Artist | Song
+      /^.+?\s*[-–—]\s*(.+)$/, // Artist - Song
+      /^.+?\s*:\s*(.+)$/, // Artist: Song
+      /^.+?\s*\|\s*(.+)$/, // Artist | Song
     ];
 
     for (const pattern of patterns) {
@@ -290,7 +294,10 @@ export class YouTubeMusicService {
       id: video.id,
       provider: 'youtube',
       title: this.parseSongFromTitle(video.snippet.title),
-      artist: this.parseArtistFromTitle(video.snippet.title, video.snippet.channelTitle),
+      artist: this.parseArtistFromTitle(
+        video.snippet.title,
+        video.snippet.channelTitle,
+      ),
       durationMs,
       duration: durationMs ? this.formatDuration(durationMs) : undefined,
       imageUrl: this.getBestThumbnail(video.snippet.thumbnails),
@@ -308,12 +315,15 @@ export class YouTubeMusicService {
    */
   private mapSearchItemToTrack(item: YouTubeSearchItem): YouTubeTrackDto {
     const videoId = item.id.videoId || '';
-    
+
     return {
       id: videoId,
       provider: 'youtube',
       title: this.parseSongFromTitle(item.snippet.title),
-      artist: this.parseArtistFromTitle(item.snippet.title, item.snippet.channelTitle),
+      artist: this.parseArtistFromTitle(
+        item.snippet.title,
+        item.snippet.channelTitle,
+      ),
       imageUrl: this.getBestThumbnail(item.snippet.thumbnails),
       externalUrl: `https://www.youtube.com/watch?v=${videoId}`,
       channelId: item.snippet.channelId,
@@ -329,17 +339,16 @@ export class YouTubeMusicService {
     pageToken?: string,
     maxResults = 20,
   ): Promise<SearchTracksResponseDto> {
-    const response = await this.youtubeGet<YouTubeApiResponse<YouTubeSearchItem>>(
-      'search',
-      {
-        part: 'snippet',
-        type: 'video',
-        videoCategoryId: '10', // Music category
-        maxResults: maxResults.toString(),
-        q: query,
-        pageToken: pageToken || '',
-      },
-    );
+    const response = await this.youtubeGet<
+      YouTubeApiResponse<YouTubeSearchItem>
+    >('search', {
+      part: 'snippet',
+      type: 'video',
+      videoCategoryId: '10', // Music category
+      maxResults: maxResults.toString(),
+      q: query,
+      pageToken: pageToken || '',
+    });
 
     // Get video details for duration
     const videoIds = response.items
@@ -349,19 +358,19 @@ export class YouTubeMusicService {
 
     let videosWithDetails: YouTubeVideoItem[] = [];
     if (videoIds) {
-      const detailsResponse = await this.youtubeGet<YouTubeApiResponse<YouTubeVideoItem>>(
-        'videos',
-        {
-          part: 'snippet,contentDetails,statistics',
-          id: videoIds,
-        },
-      );
+      const detailsResponse = await this.youtubeGet<
+        YouTubeApiResponse<YouTubeVideoItem>
+      >('videos', {
+        part: 'snippet,contentDetails,statistics',
+        id: videoIds,
+      });
       videosWithDetails = detailsResponse.items;
     }
 
-    const tracks = videosWithDetails.length > 0
-      ? videosWithDetails.map((video) => this.mapVideoToTrack(video))
-      : response.items.map((item) => this.mapSearchItemToTrack(item));
+    const tracks =
+      videosWithDetails.length > 0
+        ? videosWithDetails.map((video) => this.mapVideoToTrack(video))
+        : response.items.map((item) => this.mapSearchItemToTrack(item));
 
     return {
       tracks,
@@ -378,17 +387,16 @@ export class YouTubeMusicService {
     pageToken?: string,
     maxResults = 20,
   ): Promise<TopChartsResponseDto> {
-    const response = await this.youtubeGet<YouTubeApiResponse<YouTubeVideoItem>>(
-      'videos',
-      {
-        part: 'snippet,contentDetails,statistics',
-        chart: 'mostPopular',
-        videoCategoryId: '10', // Music category
-        regionCode,
-        maxResults: maxResults.toString(),
-        pageToken: pageToken || '',
-      },
-    );
+    const response = await this.youtubeGet<
+      YouTubeApiResponse<YouTubeVideoItem>
+    >('videos', {
+      part: 'snippet,contentDetails,statistics',
+      chart: 'mostPopular',
+      videoCategoryId: '10', // Music category
+      regionCode,
+      maxResults: maxResults.toString(),
+      pageToken: pageToken || '',
+    });
 
     const tracks = response.items.map((video) => this.mapVideoToTrack(video));
 
@@ -407,13 +415,12 @@ export class YouTubeMusicService {
     maxResults = 50,
   ): Promise<PlaylistResponseDto> {
     // Get playlist info
-    const playlistResponse = await this.youtubeGet<YouTubeApiResponse<YouTubePlaylistInfo>>(
-      'playlists',
-      {
-        part: 'snippet,contentDetails',
-        id: playlistId,
-      },
-    );
+    const playlistResponse = await this.youtubeGet<
+      YouTubeApiResponse<YouTubePlaylistInfo>
+    >('playlists', {
+      part: 'snippet,contentDetails',
+      id: playlistId,
+    });
 
     if (!playlistResponse.items.length) {
       throw new Error('Playlist not found');
@@ -422,15 +429,14 @@ export class YouTubeMusicService {
     const playlistInfo = playlistResponse.items[0];
 
     // Get playlist items
-    const itemsResponse = await this.youtubeGet<YouTubeApiResponse<YouTubePlaylistItem>>(
-      'playlistItems',
-      {
-        part: 'snippet,contentDetails',
-        playlistId,
-        maxResults: maxResults.toString(),
-        pageToken: pageToken || '',
-      },
-    );
+    const itemsResponse = await this.youtubeGet<
+      YouTubeApiResponse<YouTubePlaylistItem>
+    >('playlistItems', {
+      part: 'snippet,contentDetails',
+      playlistId,
+      maxResults: maxResults.toString(),
+      pageToken: pageToken || '',
+    });
 
     // Get video details for duration
     const videoIds = itemsResponse.items
@@ -440,17 +446,18 @@ export class YouTubeMusicService {
 
     let videosWithDetails: YouTubeVideoItem[] = [];
     if (videoIds) {
-      const detailsResponse = await this.youtubeGet<YouTubeApiResponse<YouTubeVideoItem>>(
-        'videos',
-        {
-          part: 'snippet,contentDetails,statistics',
-          id: videoIds,
-        },
-      );
+      const detailsResponse = await this.youtubeGet<
+        YouTubeApiResponse<YouTubeVideoItem>
+      >('videos', {
+        part: 'snippet,contentDetails,statistics',
+        id: videoIds,
+      });
       videosWithDetails = detailsResponse.items;
     }
 
-    const tracks = videosWithDetails.map((video) => this.mapVideoToTrack(video));
+    const tracks = videosWithDetails.map((video) =>
+      this.mapVideoToTrack(video),
+    );
 
     const playlist: YouTubePlaylistDto = {
       id: playlistInfo.id,
@@ -485,18 +492,17 @@ export class YouTubeMusicService {
     );
 
     // Search for podcast episodes (videos)
-    const episodesResponse = await this.youtubeGet<YouTubeApiResponse<YouTubeSearchItem>>(
-      'search',
-      {
-        part: 'snippet',
-        type: 'video',
-        q: 'podcast music interview',
-        maxResults: maxResults.toString(),
-      },
-    );
+    const episodesResponse = await this.youtubeGet<
+      YouTubeApiResponse<YouTubeSearchItem>
+    >('search', {
+      part: 'snippet',
+      type: 'video',
+      q: 'podcast music interview',
+      maxResults: maxResults.toString(),
+    });
 
     const showsResponses = await Promise.all(showsPromises);
-    
+
     const shows: PodcastShowDto[] = [];
     const seenChannelIds = new Set<string>();
 
@@ -525,13 +531,12 @@ export class YouTubeMusicService {
 
     let videosWithDetails: YouTubeVideoItem[] = [];
     if (videoIds) {
-      const detailsResponse = await this.youtubeGet<YouTubeApiResponse<YouTubeVideoItem>>(
-        'videos',
-        {
-          part: 'snippet,contentDetails',
-          id: videoIds,
-        },
-      );
+      const detailsResponse = await this.youtubeGet<
+        YouTubeApiResponse<YouTubeVideoItem>
+      >('videos', {
+        part: 'snippet,contentDetails',
+        id: videoIds,
+      });
       videosWithDetails = detailsResponse.items;
     }
 
@@ -566,7 +571,7 @@ export class YouTubeMusicService {
   async getHomeHero(regionCode = 'US'): Promise<HomeHeroResponseDto> {
     // Get top chart to use first track as hero
     const topCharts = await this.getTopCharts(regionCode, undefined, 10);
-    
+
     if (!topCharts.tracks.length) {
       throw new Error('No tracks available for hero');
     }
@@ -574,8 +579,11 @@ export class YouTubeMusicService {
     const heroTrack = topCharts.tracks[0];
 
     // Group tracks by artist and create artist list
-    const artistMap = new Map<string, { track: YouTubeTrackDto; count: number }>();
-    
+    const artistMap = new Map<
+      string,
+      { track: YouTubeTrackDto; count: number }
+    >();
+
     for (const track of topCharts.tracks) {
       const existing = artistMap.get(track.artist);
       if (existing) {

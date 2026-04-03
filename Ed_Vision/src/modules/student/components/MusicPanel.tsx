@@ -1884,7 +1884,7 @@ export default function MusicPanel({
                   <div className="text-center max-w-md mt-6">
                     <div className="text-white/70 text-sm leading-relaxed">
                       <p className="mb-1 transition-all duration-500 ease-in-out transform">
-                        {getCurrentLyrics().current?.text || "♪ Playing music..."}
+                        {getCurrentLyrics().current?.text || " Playing music..."}
                       </p>
                       <p className="text-white/50 text-xs transition-all duration-500 ease-in-out transform opacity-60">
                         {getCurrentLyrics().next?.text || "..."}

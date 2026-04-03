@@ -22,7 +22,7 @@ type ProfileData = {
 
 type Props = {
   visible: boolean;
-  onClose: () => void;
+  onClose: () =>void;
   initialX?: number;
   initialY?: number;
   initialWidth?: number;
@@ -40,7 +40,7 @@ export default function SettingsPanel({
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
   const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 500, 400);
   
-  const [activeTab, setActiveTab] = useState<'profile' | 'general' | 'appearance' | 'notifications' | 'privacy'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile'| 'general'| 'appearance'| 'notifications'| 'privacy'>('profile');
   const [language, setLanguage] = useState('vi');
   const [autoSave, setAutoSave] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
@@ -178,7 +178,7 @@ export default function SettingsPanel({
       setSaveSuccess(true);
       
       // Hide success message after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() =>setSaveSuccess(false), 3000);
     } catch (err: any) {
       console.error('Save profile error:', err);
       setSaveError(err?.message || 'Có lỗi xảy ra khi lưu');
@@ -199,7 +199,7 @@ export default function SettingsPanel({
     }
 
     // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size >5 * 1024 * 1024) {
       setSaveError('Kích thước file không được vượt quá 5MB');
       return;
     }
@@ -284,7 +284,7 @@ export default function SettingsPanel({
       // Reload profile
       await loadProfile();
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() =>setSaveSuccess(false), 3000);
     } catch (err: any) {
       console.error('Avatar upload error:', err);
       setSaveError(err?.message || 'Có lỗi xảy ra khi upload ảnh');
@@ -328,23 +328,21 @@ export default function SettingsPanel({
   if (!visible) return null;
 
   const tabs = [
-    { id: 'profile', icon: 'fa-user', label: 'Profile' },
-    { id: 'general', icon: 'fa-sliders-h', label: 'General' },
-    { id: 'appearance', icon: 'fa-palette', label: 'Appearance' },
-    { id: 'notifications', icon: 'fa-bell', label: 'Notifications' },
-    { id: 'privacy', icon: 'fa-shield-alt', label: 'Privacy' },
+    { id: 'profile', icon: 'fa-user', label: 'Profile'},
+    { id: 'general', icon: 'fa-sliders-h', label: 'General'},
+    { id: 'appearance', icon: 'fa-palette', label: 'Appearance'},
+    { id: 'notifications', icon: 'fa-bell', label: 'Notifications'},
+    { id: 'privacy', icon: 'fa-shield-alt', label: 'Privacy'},
   ];
 
   return (
     <div
-      className="fixed z-10"
-      style={{ left: `${position.x}px`, top: `${position.y}px`, width: `${size.width}px`, height: `${size.height}px` }}
+      className="fixed z-10"style={{ left: `${position.x}px`, top: `${position.y}px`, width: `${size.width}px`, height: `${size.height}px` }}
     >
       <div className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl h-full flex flex-col relative">
         {/* Header */}
         <div
-          className="flex-shrink-0 h-10 cursor-move rounded-t-3xl flex items-center justify-between px-6"
-          onMouseDown={handleMouseDown}
+          className="flex-shrink-0 h-10 cursor-move rounded-t-3xl flex items-center justify-between px-6"onMouseDown={handleMouseDown}
         >
           <div className="flex items-center gap-3">
             <i className="fas fa-cog text-white/80 text-lg"></i>
@@ -359,25 +357,22 @@ export default function SettingsPanel({
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar Tabs */}
           <div className="w-48 bg-black/20 border-r border-white/10 p-4 space-y-2">
-            {tabs.map((tab) => (
+            {tabs.map((tab) =>(
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                onClick={() =>setActiveTab(tab.id as typeof activeTab)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
                   activeTab === tab.id
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/60 hover:bg-white/10 hover:text-white'
-                }`}
+                    ? 'bg-white/20 text-white': 'text-white/60 hover:bg-white/10 hover:text-white'}`}
               >
                 <i className={`fas ${tab.icon}`}></i>
                 <span className="text-sm font-medium">{tab.label}</span>
-              </button>
-            ))}
+              </button>))}
           </div>
 
           {/* Settings Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {activeTab === 'profile' && (
+            {activeTab === 'profile'&& (
               <>
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -385,12 +380,9 @@ export default function SettingsPanel({
                     {profileData && !isEditing && (
                       <button
                         onClick={startEditing}
-                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition flex items-center gap-2"
-                      >
-                        <i className="fas fa-pencil-alt text-xs"></i>
-                        Chỉnh sửa
-                      </button>
-                    )}
+                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition flex items-center gap-2">
+                        <i className="fas fa-pencil-alt text-xs"></i>Chỉnh sửa
+                      </button>)}
                   </div>
                   
                   {/* Success Message */}
@@ -398,51 +390,40 @@ export default function SettingsPanel({
                     <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center gap-2 text-green-400">
                       <i className="fas fa-check-circle"></i>
                       <span className="text-sm">Đã lưu thay đổi thành công!</span>
-                    </div>
-                  )}
+                    </div>)}
 
                   {/* Error Message */}
                   {saveError && (
                     <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-400">
                       <i className="fas fa-exclamation-circle"></i>
                       <span className="text-sm">{saveError}</span>
-                    </div>
-                  )}
+                    </div>)}
                   
                   {profileLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <i className="fas fa-spinner fa-spin text-white/60 text-2xl"></i>
-                    </div>
-                  ) : profileData ? (
+                    </div>) : profileData ? (
                     <div className="space-y-6">
                       {/* Hidden file input */}
                       <input
                         ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarSelect}
-                        className="hidden"
-                      />
+                        type="file"accept="image/*"onChange={handleAvatarSelect}
+                        className="hidden"/>
 
                       {/* Avatar & Basic Info */}
                       <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
                         <div className="relative group">
                           <img
                             src={profileData.avatarUrl}
-                            alt="Avatar"
-                            className="w-20 h-20 rounded-full object-cover border-2 border-white/20 transition group-hover:border-pink-500/50"
-                          />
+                            alt="Avatar"className="w-20 h-20 rounded-full object-cover border-2 border-white/20 transition group-hover:border-pink-500/50"/>
                           {/* Avatar overlay button */}
                           <button
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() =>fileInputRef.current?.click()}
                             disabled={uploadingAvatar}
-                            className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer disabled:cursor-wait"
-                          >
+                            className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer disabled:cursor-wait">
                             {uploadingAvatar ? (
-                              <i className="fas fa-spinner fa-spin text-white"></i>
-                            ) : (
-                              <i className="fas fa-camera text-white"></i>
-                            )}
+                              <i className="fas fa-spinner fa-spin text-white"></i>) : (
+                              <i className="fas fa-camera text-white"></i>)}
                           </button>
                           {/* Edit badge */}
                           <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-pink-500 rounded-full flex items-center justify-center border-2 border-gray-900 shadow-lg">
@@ -454,12 +435,11 @@ export default function SettingsPanel({
                           <div className="text-white/60 text-sm">{profileData.studentCode}</div>
                           <div className="text-white/50 text-xs mt-1">{profileData.major} • {profileData.className}</div>
                           <button
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() =>fileInputRef.current?.click()}
                             disabled={uploadingAvatar}
-                            className="mt-2 text-xs text-pink-400 hover:text-pink-300 transition flex items-center gap-1 disabled:opacity-50"
-                          >
+                            className="mt-2 text-xs text-pink-400 hover:text-pink-300 transition flex items-center gap-1 disabled:opacity-50">
                             <i className="fas fa-camera"></i>
-                            {uploadingAvatar ? 'Đang tải...' : 'Đổi ảnh đại diện'}
+                            {uploadingAvatar ? 'Đang tải...': 'Đổi ảnh đại diện'}
                           </button>
                         </div>
                       </div>
@@ -473,24 +453,18 @@ export default function SettingsPanel({
                           <div>
                             <label className="text-white/60 text-xs mb-1.5 block">Họ và tên <span className="text-pink-400">*</span></label>
                             <input
-                              type="text"
-                              value={editForm.fullName || ''}
-                              onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"
-                              placeholder="Nhập họ và tên"
-                            />
+                              type="text"value={editForm.fullName || ''}
+                              onChange={(e) =>setEditForm({ ...editForm, fullName: e.target.value })}
+                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"placeholder="Nhập họ và tên"/>
                           </div>
 
                           {/* Phone */}
                           <div>
                             <label className="text-white/60 text-xs mb-1.5 block">Số điện thoại</label>
                             <input
-                              type="tel"
-                              value={editForm.phone || ''}
-                              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"
-                              placeholder="Nhập số điện thoại"
-                            />
+                              type="tel"value={editForm.phone || ''}
+                              onChange={(e) =>setEditForm({ ...editForm, phone: e.target.value })}
+                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"placeholder="Nhập số điện thoại"/>
                           </div>
 
                           {/* Date of Birth & Gender */}
@@ -498,24 +472,21 @@ export default function SettingsPanel({
                             <div>
                               <label className="text-white/60 text-xs mb-1.5 block">Ngày sinh</label>
                               <input
-                                type="date"
-                                value={editForm.dateOfBirthRaw || ''}
-                                onChange={(e) => setEditForm({ ...editForm, dateOfBirthRaw: e.target.value })}
-                                className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"
-                                style={{ colorScheme: 'dark' }}
+                                type="date"value={editForm.dateOfBirthRaw || ''}
+                                onChange={(e) =>setEditForm({ ...editForm, dateOfBirthRaw: e.target.value })}
+                                className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"style={{ colorScheme: 'dark'}}
                               />
                             </div>
                             <div>
                               <label className="text-white/60 text-xs mb-1.5 block">Giới tính</label>
                               <select
                                 value={editForm.gender || ''}
-                                onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-                                className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"
-                              >
-                                <option value="" className="bg-gray-800">-- Chọn --</option>
-                                <option value="Nam" className="bg-gray-800">Nam</option>
-                                <option value="Nữ" className="bg-gray-800">Nữ</option>
-                                <option value="Khác" className="bg-gray-800">Khác</option>
+                                onChange={(e) =>setEditForm({ ...editForm, gender: e.target.value })}
+                                className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50">
+                                <option value=""className="bg-gray-800">-- Chọn --</option>
+                                <option value="Nam"className="bg-gray-800">Nam</option>
+                                <option value="Nữ"className="bg-gray-800">Nữ</option>
+                                <option value="Khác"className="bg-gray-800">Khác</option>
                               </select>
                             </div>
                           </div>
@@ -524,12 +495,9 @@ export default function SettingsPanel({
                           <div>
                             <label className="text-white/60 text-xs mb-1.5 block">Quốc tịch</label>
                             <input
-                              type="text"
-                              value={editForm.nationality || ''}
-                              onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })}
-                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"
-                              placeholder="Nhập quốc tịch"
-                            />
+                              type="text"value={editForm.nationality || ''}
+                              onChange={(e) =>setEditForm({ ...editForm, nationality: e.target.value })}
+                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50"placeholder="Nhập quốc tịch"/>
                           </div>
 
                           {/* Address */}
@@ -538,10 +506,8 @@ export default function SettingsPanel({
                             <textarea
                               rows={2}
                               value={editForm.address || ''}
-                              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50 resize-none"
-                              placeholder="Nhập địa chỉ"
-                            />
+                              onChange={(e) =>setEditForm({ ...editForm, address: e.target.value })}
+                              className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50 resize-none"placeholder="Nhập địa chỉ"/>
                           </div>
 
                           {/* Action Buttons */}
@@ -549,30 +515,22 @@ export default function SettingsPanel({
                             <button
                               onClick={cancelEditing}
                               disabled={saving}
-                              className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition disabled:opacity-50"
-                            >
-                              Hủy
+                              className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition disabled:opacity-50">Hủy
                             </button>
                             <button
                               onClick={saveProfile}
                               disabled={saving || !editForm.fullName}
-                              className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
+                              className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2">
                               {saving ? (
                                 <>
-                                  <i className="fas fa-spinner fa-spin"></i>
-                                  Đang lưu...
-                                </>
-                              ) : (
+                                  <i className="fas fa-spinner fa-spin"></i>Đang lưu...
+                                </>) : (
                                 <>
-                                  <i className="fas fa-save"></i>
-                                  Lưu thay đổi
-                                </>
-                              )}
+                                  <i className="fas fa-save"></i>Lưu thay đổi
+                                </>)}
                             </button>
                           </div>
-                        </div>
-                      ) : (
+                        </div>) : (
                         <>
                           {/* View Mode - Personal Information */}
                           <div className="space-y-3">
@@ -626,26 +584,20 @@ export default function SettingsPanel({
                               </div>
                             </div>
                           </div>
-                        </>
-                      )}
-                    </div>
-                  ) : (
+                        </>)}
+                    </div>) : (
                     <div className="text-center py-12 text-white/50">
                       <i className="fas fa-user-slash text-4xl mb-3"></i>
                       <p>Không thể tải thông tin profile</p>
                       <button
                         onClick={loadProfile}
-                        className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm transition"
-                      >
-                        Thử lại
+                        className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm transition">Thử lại
                       </button>
-                    </div>
-                  )}
+                    </div>)}
                 </div>
-              </>
-            )}
+              </>)}
 
-            {activeTab === 'general' && (
+            {activeTab === 'general'&& (
               <>
                 <div>
                   <h3 className="text-white text-lg font-semibold mb-4">General Settings</h3>
@@ -656,13 +608,12 @@ export default function SettingsPanel({
                       <label className="text-white/70 text-sm font-medium mb-2 block">Language</label>
                       <select
                         value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/30"
-                      >
-                        <option value="vi" className="bg-gray-800">Tiếng Việt</option>
-                        <option value="en" className="bg-gray-800">English</option>
-                        <option value="ja" className="bg-gray-800">日本語</option>
-                        <option value="ko" className="bg-gray-800">한국어</option>
+                        onChange={(e) =>setLanguage(e.target.value)}
+                        className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/30">
+                        <option value="vi"className="bg-gray-800">Tiếng Việt</option>
+                        <option value="en"className="bg-gray-800">English</option>
+                        <option value="ja"className="bg-gray-800">日本語</option>
+                        <option value="ko"className="bg-gray-800">한국어</option>
                       </select>
                     </div>
 
@@ -676,15 +627,13 @@ export default function SettingsPanel({
                         </div>
                       </div>
                       <button
-                        onClick={() => setAutoSave(!autoSave)}
+                        onClick={() =>setAutoSave(!autoSave)}
                         className={`relative w-12 h-6 rounded-full transition ${
-                          autoSave ? 'bg-pink-500' : 'bg-white/20'
-                        }`}
+                          autoSave ? 'bg-pink-500': 'bg-white/20'}`}
                       >
                         <div
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            autoSave ? 'translate-x-7' : 'translate-x-1'
-                          }`}
+                            autoSave ? 'translate-x-7': 'translate-x-1'}`}
                         />
                       </button>
                     </div>
@@ -699,24 +648,21 @@ export default function SettingsPanel({
                         </div>
                       </div>
                       <button
-                        onClick={() => setSoundEffects(!soundEffects)}
+                        onClick={() =>setSoundEffects(!soundEffects)}
                         className={`relative w-12 h-6 rounded-full transition ${
-                          soundEffects ? 'bg-pink-500' : 'bg-white/20'
-                        }`}
+                          soundEffects ? 'bg-pink-500': 'bg-white/20'}`}
                       >
                         <div
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            soundEffects ? 'translate-x-7' : 'translate-x-1'
-                          }`}
+                            soundEffects ? 'translate-x-7': 'translate-x-1'}`}
                         />
                       </button>
                     </div>
                   </div>
                 </div>
-              </>
-            )}
+              </>)}
 
-            {activeTab === 'appearance' && (
+            {activeTab === 'appearance'&& (
               <>
                 <div>
                   <h3 className="text-white text-lg font-semibold mb-4">Appearance</h3>
@@ -732,15 +678,13 @@ export default function SettingsPanel({
                         </div>
                       </div>
                       <button
-                        onClick={() => setDarkMode(!darkMode)}
+                        onClick={() =>setDarkMode(!darkMode)}
                         className={`relative w-12 h-6 rounded-full transition ${
-                          darkMode ? 'bg-pink-500' : 'bg-white/20'
-                        }`}
+                          darkMode ? 'bg-pink-500': 'bg-white/20'}`}
                       >
                         <div
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            darkMode ? 'translate-x-7' : 'translate-x-1'
-                          }`}
+                            darkMode ? 'translate-x-7': 'translate-x-1'}`}
                         />
                       </button>
                     </div>
@@ -755,15 +699,13 @@ export default function SettingsPanel({
                         </div>
                       </div>
                       <button
-                        onClick={() => setShowTimer(!showTimer)}
+                        onClick={() =>setShowTimer(!showTimer)}
                         className={`relative w-12 h-6 rounded-full transition ${
-                          showTimer ? 'bg-pink-500' : 'bg-white/20'
-                        }`}
+                          showTimer ? 'bg-pink-500': 'bg-white/20'}`}
                       >
                         <div
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            showTimer ? 'translate-x-7' : 'translate-x-1'
-                          }`}
+                            showTimer ? 'translate-x-7': 'translate-x-1'}`}
                         />
                       </button>
                     </div>
@@ -772,22 +714,19 @@ export default function SettingsPanel({
                     <div>
                       <label className="text-white/70 text-sm font-medium mb-3 block">Theme Presets</label>
                       <div className="grid grid-cols-2 gap-3">
-                        {['Minimal', 'Cozy', 'Focus', 'Nature'].map((preset) => (
+                        {['Minimal', 'Cozy', 'Focus', 'Nature'].map((preset) =>(
                           <button
                             key={preset}
-                            className="p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 hover:border-white/30 transition"
-                          >
+                            className="p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 hover:border-white/30 transition">
                             <div className="text-white text-sm font-medium">{preset}</div>
-                          </button>
-                        ))}
+                          </button>))}
                       </div>
                     </div>
                   </div>
                 </div>
-              </>
-            )}
+              </>)}
 
-            {activeTab === 'notifications' && (
+            {activeTab === 'notifications'&& (
               <>
                 <div>
                   <h3 className="text-white text-lg font-semibold mb-4">Notifications</h3>
@@ -803,15 +742,13 @@ export default function SettingsPanel({
                         </div>
                       </div>
                       <button
-                        onClick={() => setNotifications(!notifications)}
+                        onClick={() =>setNotifications(!notifications)}
                         className={`relative w-12 h-6 rounded-full transition ${
-                          notifications ? 'bg-pink-500' : 'bg-white/20'
-                        }`}
+                          notifications ? 'bg-pink-500': 'bg-white/20'}`}
                       >
                         <div
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            notifications ? 'translate-x-7' : 'translate-x-1'
-                          }`}
+                            notifications ? 'translate-x-7': 'translate-x-1'}`}
                         />
                       </button>
                     </div>
@@ -826,24 +763,21 @@ export default function SettingsPanel({
                         </div>
                       </div>
                       <button
-                        onClick={() => setPomodoroNotif(!pomodoroNotif)}
+                        onClick={() =>setPomodoroNotif(!pomodoroNotif)}
                         className={`relative w-12 h-6 rounded-full transition ${
-                          pomodoroNotif ? 'bg-pink-500' : 'bg-white/20'
-                        }`}
+                          pomodoroNotif ? 'bg-pink-500': 'bg-white/20'}`}
                       >
                         <div
                           className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            pomodoroNotif ? 'translate-x-7' : 'translate-x-1'
-                          }`}
+                            pomodoroNotif ? 'translate-x-7': 'translate-x-1'}`}
                         />
                       </button>
                     </div>
                   </div>
                 </div>
-              </>
-            )}
+              </>)}
 
-            {activeTab === 'privacy' && (
+            {activeTab === 'privacy'&& (
               <>
                 <div>
                   <h3 className="text-white text-lg font-semibold mb-4">Privacy & Security</h3>
@@ -854,11 +788,9 @@ export default function SettingsPanel({
                         <i className="fas fa-database text-white/60"></i>
                         <div className="text-white font-medium text-sm">Data Storage</div>
                       </div>
-                      <p className="text-white/50 text-xs mb-3">
-                        Your data is stored locally on your device for privacy and offline access.
+                      <p className="text-white/50 text-xs mb-3">Your data is stored locally on your device for privacy and offline access.
                       </p>
-                      <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition">
-                        Clear All Data
+                      <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition">Clear All Data
                       </button>
                     </div>
 
@@ -867,26 +799,21 @@ export default function SettingsPanel({
                         <i className="fas fa-download text-white/60"></i>
                         <div className="text-white font-medium text-sm">Export Data</div>
                       </div>
-                      <p className="text-white/50 text-xs mb-3">
-                        Download your journal entries and study logs.
+                      <p className="text-white/50 text-xs mb-3">Download your journal entries and study logs.
                       </p>
-                      <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition">
-                        Export as JSON
+                      <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition">Export as JSON
                       </button>
                     </div>
                   </div>
                 </div>
-              </>
-            )}
+              </>)}
 
             {/* Save Button */}
             <div className="pt-4 border-t border-white/10">
               <button
                 onClick={onClose}
-                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-lg transition"
-              >
-                <i className="fas fa-check mr-2"></i>
-                Save Changes
+                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-lg transition">
+                <i className="fas fa-check mr-2"></i>Save Changes
               </button>
             </div>
           </div>
@@ -894,8 +821,7 @@ export default function SettingsPanel({
 
         {/* Resize Handle */}
         <div
-          className="absolute w-3 h-3 bg-white/30 border-2 border-white/60 rounded-full cursor-nwse-resize bottom-[-6px] right-[-6px] z-10 hover:bg-white/50"
-          onMouseDown={handleResize}
+          className="absolute w-3 h-3 bg-white/30 border-2 border-white/60 rounded-full cursor-nwse-resize bottom-[-6px] right-[-6px] z-10 hover:bg-white/50"onMouseDown={handleResize}
         />
       </div>
 
@@ -906,6 +832,5 @@ export default function SettingsPanel({
         onClose={handleCropCancel}
         onCropComplete={handleCropComplete}
       />
-    </div>
-  );
+    </div>);
 }

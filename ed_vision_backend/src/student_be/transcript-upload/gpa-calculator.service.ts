@@ -11,7 +11,7 @@ export interface GPACalculationResult {
   failedCourses: number;
   previousSemesterGPA?: number; // GPA của học kỳ trước
   gpaChange?: number; // Thay đổi GPA so với học kỳ trước
-  major?: string; // ✅ Thêm major cho student
+  major?: string; //  Thêm major cho student
 }
 
 export interface PredictedGPAResult {
@@ -91,7 +91,7 @@ export class GPACalculatorService {
         where: {
           student_id: studentId,
           status: 'completed',
-          converted_numeric_score: { not: null }, // ✅ CHỈ LẤY MÔN CÓ ĐIỂM, BỎ QUA NULL
+          converted_numeric_score: { not: null }, //  CHỈ LẤY MÔN CÓ ĐIỂM, BỎ QUA NULL
           course: {
             study_format: { not: 'DEM' }, // Exclude DEM courses
           },
@@ -231,7 +231,7 @@ export class GPACalculatorService {
           course: {
             study_format: { not: 'DEM' },
           },
-          // ✅ Exclude Pass/Fail courses from total count
+          //  Exclude Pass/Fail courses from total count
           NOT: [
             { converted_score: { contains: 'P' } },
             { converted_score: { contains: 'F' } },
@@ -274,11 +274,11 @@ export class GPACalculatorService {
         },
       });
 
-      // ✅ Log tổng tín chỉ TRƯỚC KHI loại bỏ DEM và ES 100
-       const totalCreditsBeforeExclusion = auditCompleted.reduce(
-      (sum, r) => sum + (r.course?.credits_unit || 0),
-      0
-    );
+      //  Log tổng tín chỉ TRƯỚC KHI loại bỏ DEM và ES 100
+      const totalCreditsBeforeExclusion = auditCompleted.reduce(
+        (sum, r) => sum + (r.course?.credits_unit || 0),
+        0,
+      );
 
       const excludedDetails = auditCompleted
         .filter((r) => {
@@ -338,9 +338,9 @@ export class GPACalculatorService {
       return {
         currentGPA: Number(currentGPA.toFixed(2)),
         totalCredits: totalCreditsAll,
-        completedCredits: totalCompletedCredits, // ✅ Tổng tín chỉ đã hoàn thành (kể cả chưa có điểm)
+        completedCredits: totalCompletedCredits, //  Tổng tín chỉ đã hoàn thành (kể cả chưa có điểm)
         totalCourses: totalCoursesCount,
-        completedCourses: allCompletedRecords.length, // ✅ Số môn đã hoàn thành
+        completedCourses: allCompletedRecords.length, //  Số môn đã hoàn thành
         failedCourses,
         previousSemesterGPA: previousSemesterGPA
           ? Number(previousSemesterGPA.toFixed(2))
@@ -429,7 +429,7 @@ export class GPACalculatorService {
       );
 
       // Calculate total credits (completed + planned)
-      // ✅ Only count completed courses with score >= 1.7 and planned courses with predicted_gpa >= 1.7 (>= 5.0/10)
+      //  Only count completed courses with score >= 1.7 and planned courses with predicted_gpa >= 1.7 (>= 5.0/10)
       const completedCredits = completedCourses.reduce(
         (sum, r) => sum + (r.course?.credits_unit || 0),
         0,
@@ -471,7 +471,7 @@ export class GPACalculatorService {
       }
 
       // Add planned courses with predictions to GPA calculation
-      // ✅ Only count courses with predicted_gpa >= 1.7 (passing grade, equivalent to >= 5.0/10)
+      //  Only count courses with predicted_gpa >= 1.7 (passing grade, equivalent to >= 5.0/10)
       for (const record of plannedCourses) {
         const credits = record.course?.credits_unit || 0;
         if (credits === 0) continue;
@@ -485,11 +485,11 @@ export class GPACalculatorService {
             creditsWithScores += credits;
 
             this.logger.debug(
-              `Planned: ${record.course?.course_code}, Predicted GPA (10): ${predictedGpa10.toFixed(2)}, Credits: ${credits} ✓ Passing (>= 4.0/10)`,
+              `Planned: ${record.course?.course_code}, Predicted GPA (10): ${predictedGpa10.toFixed(2)}, Credits: ${credits}  Passing (>= 4.0/10)`,
             );
           } else {
             this.logger.debug(
-              `Planned: ${record.course?.course_code}, Predicted GPA (10): ${predictedGpa10.toFixed(2)} ✗ Below passing grade (< 4.0/10), not counted`,
+              `Planned: ${record.course?.course_code}, Predicted GPA (10): ${predictedGpa10.toFixed(2)}  Below passing grade (< 4.0/10), not counted`,
             );
           }
         } else {
@@ -510,12 +510,12 @@ export class GPACalculatorService {
 
       return {
         currentGPA: Number(projectedGPA.toFixed(2)),
-        totalCredits: totalCredits, // ✅ Tổng tín chỉ (completed + planned)
-        completedCredits: completedCredits, // ✅ Tín chỉ đã hoàn thành
-        totalCourses: totalCourses, // ✅ Tổng số môn
-        completedCourses: completedCourses.length, // ✅ Số môn đã hoàn thành
+        totalCredits: totalCredits, //  Tổng tín chỉ (completed + planned)
+        completedCredits: completedCredits, //  Tín chỉ đã hoàn thành
+        totalCourses: totalCourses, //  Tổng số môn
+        completedCourses: completedCourses.length, //  Số môn đã hoàn thành
         failedCourses,
-        major: student?.major || 'Unknown Major', // ✅ Thêm major
+        major: student?.major || 'Unknown Major', //  Thêm major
       };
     });
   }
@@ -571,7 +571,7 @@ export class GPACalculatorService {
         student_id: studentId,
         term_id: termId,
         status: 'completed',
-        converted_numeric_score: { not: null }, // ✅ CHỈ LẤY MÔN CÓ ĐIỂM
+        converted_numeric_score: { not: null }, //  CHỈ LẤY MÔN CÓ ĐIỂM
         course: {
           study_format: { not: 'DEM' },
         },
@@ -612,7 +612,7 @@ export class GPACalculatorService {
       where: {
         student_id: studentId,
         status: 'completed',
-        converted_numeric_score: { not: null }, // ✅ CHỈ LẤY MÔN CÓ ĐIỂM
+        converted_numeric_score: { not: null }, //  CHỈ LẤY MÔN CÓ ĐIỂM
         course: {
           study_format: { not: 'DEM' },
         },

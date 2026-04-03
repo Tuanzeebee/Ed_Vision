@@ -2,8 +2,8 @@ import { useState } from 'react';
 
 type Props = {
   visible: boolean;
-  onClose: () => void;
-  onJoinCall: () => void;
+  onClose: () =>void;
+  onJoinCall: () =>void;
   roomTitle: string;
 };
 
@@ -11,7 +11,7 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState<'room' | 'participants'>('room');
+  const [sidebarTab, setSidebarTab] = useState<'room'| 'participants'>('room');
 
   // Mock participants data
   const participants = [
@@ -41,20 +41,18 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
             <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                  <i className={`fas ${isCameraOn ? 'fa-video' : 'fa-video-slash'} text-white`}></i>
+                  <i className={`fas ${isCameraOn ? 'fa-video': 'fa-video-slash'} text-white`}></i>
                 </div>
                 <span className="text-white font-medium">Camera</span>
               </div>
               <button
-                onClick={() => setIsCameraOn(!isCameraOn)}
+                onClick={() =>setIsCameraOn(!isCameraOn)}
                 className={`relative w-12 h-6 rounded-full transition ${
-                  isCameraOn ? 'bg-pink-500' : 'bg-white/20'
-                }`}
+                  isCameraOn ? 'bg-pink-500': 'bg-white/20'}`}
               >
                 <div
                   className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    isCameraOn ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                    isCameraOn ? 'translate-x-7': 'translate-x-1'}`}
                 />
               </button>
             </div>
@@ -62,20 +60,18 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
             <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                  <i className={`fas ${isMicOn ? 'fa-microphone' : 'fa-microphone-slash'} text-white`}></i>
+                  <i className={`fas ${isMicOn ? 'fa-microphone': 'fa-microphone-slash'} text-white`}></i>
                 </div>
                 <span className="text-white font-medium">Microphone</span>
               </div>
               <button
-                onClick={() => setIsMicOn(!isMicOn)}
+                onClick={() =>setIsMicOn(!isMicOn)}
                 className={`relative w-12 h-6 rounded-full transition ${
-                  isMicOn ? 'bg-pink-500' : 'bg-white/20'
-                }`}
+                  isMicOn ? 'bg-pink-500': 'bg-white/20'}`}
               >
                 <div
                   className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    isMicOn ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                    isMicOn ? 'translate-x-7': 'translate-x-1'}`}
                 />
               </button>
             </div>
@@ -93,18 +89,14 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
           {/* Join Button */}
           <button
             onClick={onJoinCall}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-full transition text-lg shadow-lg hover:shadow-xl"
-          >
-            Tham gia cuộc gọi
+            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-full transition text-lg shadow-lg hover:shadow-xl">Tham gia cuộc gọi
           </button>
 
           {/* Cancel Button */}
           <button
             onClick={onClose}
-            className="w-full py-3 mt-3 text-white/60 hover:text-white transition text-sm flex items-center justify-center gap-2"
-          >
-            <i className="fas fa-times"></i>
-            Hủy
+            className="w-full py-3 mt-3 text-white/60 hover:text-white transition text-sm flex items-center justify-center gap-2">
+            <i className="fas fa-times"></i>Hủy
           </button>
         </div>
 
@@ -116,31 +108,27 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
                 <i className="fas fa-video text-white/40 text-6xl mb-4"></i>
                 <p className="text-white/60">Camera preview</p>
               </div>
-            </div>
-          ) : (
+            </div>) : (
             <div className="flex flex-col items-center justify-center">
               <div className="w-32 h-32 bg-[#3a3d4a] rounded-full flex items-center justify-center mb-6 border-4 border-white/10">
                 <i className="fas fa-user text-white/40 text-5xl"></i>
               </div>
               <h3 className="text-white text-xl font-semibold mb-2">Camera đã tắt</h3>
               <p className="text-white/60 text-sm">Bật camera để người khác nhìn thấy bạn</p>
-            </div>
-          )}
+            </div>)}
 
           {/* Audio Indicator */}
           {isMicOn && (
             <div className="absolute bottom-6 left-6 flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-full">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span className="text-white text-sm">Mic đang bật</span>
-            </div>
-          )}
+            </div>)}
 
           {/* Toggle Sidebar Button */}
           <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-sm hover:bg-black/60 rounded-full flex items-center justify-center transition"
-          >
-            <i className={`fas ${showSidebar ? 'fa-chevron-right' : 'fa-users'} text-white`}></i>
+            onClick={() =>setShowSidebar(!showSidebar)}
+            className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-sm hover:bg-black/60 rounded-full flex items-center justify-center transition">
+            <i className={`fas ${showSidebar ? 'fa-chevron-right': 'fa-users'} text-white`}></i>
           </button>
         </div>
 
@@ -151,36 +139,27 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
             <div className="flex-shrink-0 border-b border-white/10">
               <div className="flex items-center">
                 <button
-                  onClick={() => setSidebarTab('room')}
+                  onClick={() =>setSidebarTab('room')}
                   className={`flex-1 py-4 px-4 text-sm font-semibold transition ${
-                    sidebarTab === 'room'
-                      ? 'text-white border-b-2 border-pink-500'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Phòng
+                    sidebarTab === 'room'? 'text-white border-b-2 border-pink-500': 'text-white/60 hover:text-white'}`}
+                >Phòng
                 </button>
                 <button
-                  onClick={() => setSidebarTab('participants')}
+                  onClick={() =>setSidebarTab('participants')}
                   className={`flex-1 py-4 px-4 text-sm font-semibold transition ${
-                    sidebarTab === 'participants'
-                      ? 'text-white border-b-2 border-pink-500'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Thành viên
+                    sidebarTab === 'participants'? 'text-white border-b-2 border-pink-500': 'text-white/60 hover:text-white'}`}
+                >Thành viên
                 </button>
                 <button
-                  onClick={() => setShowSidebar(false)}
-                  className="w-12 h-12 hover:bg-white/10 flex items-center justify-center transition"
-                >
+                  onClick={() =>setShowSidebar(false)}
+                  className="w-12 h-12 hover:bg-white/10 flex items-center justify-center transition">
                   <i className="fas fa-times text-white/60"></i>
                 </button>
               </div>
             </div>
 
             {/* Tab Content */}
-            {sidebarTab === 'room' ? (
+            {sidebarTab === 'room'? (
               <div className="flex-1 overflow-y-auto">
                 {/* Room Detail Section */}
                 <div className="p-4 border-b border-white/10">
@@ -223,10 +202,7 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
                 {/* Youtube Video Input */}
                 <div className="flex items-center gap-2 p-2 bg-white/5 rounded-xl">
                   <input
-                    type="text"
-                    placeholder="Youtube Video"
-                    className="flex-1 bg-transparent text-white/60 text-sm outline-none px-2"
-                  />
+                    type="text"placeholder="Youtube Video"className="flex-1 bg-transparent text-white/60 text-sm outline-none px-2"/>
                   <button className="w-8 h-8 hover:bg-white/10 rounded-full flex items-center justify-center transition">
                     <i className="fas fa-sync-alt text-white/60"></i>
                   </button>
@@ -238,10 +214,7 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
                 {/* Youtube Video Preview */}
                 <div className="relative rounded-xl overflow-hidden bg-[#2a2d3a] aspect-video">
                   <img 
-                    src="https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=225&fit=crop" 
-                    alt="Video preview"
-                    className="w-full h-full object-cover opacity-80"
-                  />
+                    src="https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=225&fit=crop"alt="Video preview"className="w-full h-full object-cover opacity-80"/>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
                       <i className="fab fa-youtube text-white text-3xl"></i>
@@ -249,10 +222,7 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
                   </div>
                   <div className="absolute top-2 left-2 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
                     <img 
-                      src="https://via.placeholder.com/24" 
-                      alt="Channel"
-                      className="w-5 h-5 rounded-full"
-                    />
+                      src="https://via.placeholder.com/24"alt="Channel"className="w-5 h-5 rounded-full"/>
                     <span className="text-white text-xs">sometimes, it's ok...</span>
                     <button className="text-white/60 hover:text-white">
                       <i className="fas fa-ellipsis-v text-xs"></i>
@@ -271,8 +241,7 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
                 </div>
               </div>
                 </div>
-              </div>
-            ) : (
+              </div>) : (
               <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Participants Section */}
                 <div className="p-4 border-b border-white/10">
@@ -293,39 +262,31 @@ export default function WaitingRoom({ visible, onClose, onJoinCall, roomTitle }:
 
                 {/* Participants List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {participants.map((participant) => (
+                  {participants.map((participant) =>(
                     <div
                       key={participant.id}
-                      className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition group"
-                    >
+                      className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition group">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center overflow-hidden">
                           {participant.avatar ? (
-                            <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <i className="fas fa-user text-white text-sm"></i>
-                          )}
+                            <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover"/>) : (
+                            <i className="fas fa-user text-white text-sm"></i>)}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-white font-medium text-sm">{participant.name}</span>
                             {participant.isHost && (
-                              <i className="fas fa-crown text-yellow-400 text-xs"></i>
-                            )}
+                              <i className="fas fa-crown text-yellow-400 text-xs"></i>)}
                           </div>
                         </div>
                       </div>
                       <button className="opacity-0 group-hover:opacity-100 transition">
                         <i className="fas fa-ellipsis-h text-white/60 hover:text-white"></i>
                       </button>
-                    </div>
-                  ))}
+                    </div>))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>)}
+          </div>)}
       </div>
-    </div>
-  );
+    </div>);
 }

@@ -16,7 +16,7 @@ export interface CacheEntry<T> {
 }
 
 class CacheService {
-  private memoryCache: Map<string, CacheEntry<any>> = new Map();
+  private memoryCache: Map<string, CacheEntry<any>>= new Map();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -25,7 +25,7 @@ class CacheService {
   private generateKey(prefix: string, params: Record<string, any>): string {
     const sortedParams = Object.keys(params)
       .sort()
-      .map(key => `${key}=${params[key]}`)
+      .map(key =>`${key}=${params[key]}`)
       .join('&');
     return `${prefix}:${sortedParams}`;
   }
@@ -56,7 +56,7 @@ class CacheService {
    * Set data to memory cache
    */
   setMemoryCache<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
-    const entry: CacheEntry<T> = {
+    const entry: CacheEntry<T>= {
       data,
       timestamp: Date.now(),
       ttl,
@@ -72,7 +72,7 @@ class CacheService {
       const item = sessionStorage.getItem(key);
       if (!item) return null;
 
-      const entry: CacheEntry<T> = JSON.parse(item);
+      const entry: CacheEntry<T>= JSON.parse(item);
       if (this.isValid(entry)) {
         return entry.data;
       }
@@ -90,7 +90,7 @@ class CacheService {
    */
   setSessionCache<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
     try {
-      const entry: CacheEntry<T> = {
+      const entry: CacheEntry<T>= {
         data,
         timestamp: Date.now(),
         ttl,

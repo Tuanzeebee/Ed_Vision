@@ -214,13 +214,13 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
                   All Themes
                 </button>
                 {[
-                  { id: 'Custom', icon: '🖼️', label: 'Custom' },
-                  { id: 'Exclusive', icon: '🎭', label: 'Exclusive' },
-                  { id: 'Chill', icon: '🌺', label: 'Chill' },
-                  { id: 'Focus', icon: '📖', label: 'Focus' },
-                  { id: 'Anime', icon: '⚔️', label: 'Anime' },
-                  { id: 'Pets', icon: '🐾', label: 'Pets' },
-                  { id: 'Kpop', icon: '👥', label: 'Kpop' },
+                  { id: 'Custom', icon: '', label: 'Custom' },
+                  { id: 'Exclusive', icon: '', label: 'Exclusive' },
+                  { id: 'Chill', icon: '', label: 'Chill' },
+                  { id: 'Focus', icon: '', label: 'Focus' },
+                  { id: 'Anime', icon: '', label: 'Anime' },
+                  { id: 'Pets', icon: '', label: 'Pets' },
+                  { id: 'Kpop', icon: '', label: 'Kpop' },
                 ].map((category) => (
                   <button
                     key={category.id}

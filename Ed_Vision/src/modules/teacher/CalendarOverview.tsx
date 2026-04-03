@@ -7,17 +7,16 @@ import { Badge } from "@/components/ui/teacher/teacher_badge";
 import TeacherLayout from './components/TeacherLayout';
 import { buildUrl } from '@/services/api/config'
 import { useInstructorProfile } from './hooks/useInstructorProfile'
-
 // Types
 interface Booking {
   id: number;
   date: string;
   time: string;
   name: string;
-  bookerType: 'student' | 'parent';
+  bookerType: 'student'| 'parent';
   class?: string;
   studentName?: string;
-  type: 'online' | 'offline';
+  type: 'online'| 'offline';
   avatar: string;
 }
 
@@ -50,7 +49,7 @@ export default function CalendarOverview({}: Props) {
   const [selectedSlotBookings, setSelectedSlotBookings] = useState<Booking[] | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+  const [toastType, setToastType] = useState<'success'| 'error'| 'info'>('success');
 
   const defaultTimeSlots = [
     "08:00 - 09:00",
@@ -131,16 +130,16 @@ export default function CalendarOverview({}: Props) {
   };
 
   const totalBookings = bookings.length;
-  const totalStudents = bookings.filter(b => b.bookerType === 'student').length;
-  const totalParents = bookings.filter(b => b.bookerType === 'parent').length;
+  const totalStudents = bookings.filter(b =>b.bookerType === 'student').length;
+  const totalParents = bookings.filter(b =>b.bookerType === 'parent').length;
 
   const getSlotInfo = (date: string, time: string): SlotInfo | null => {
-    const hasSlot = availableSlots.some(s => s.date === date && s.time === time);
+    const hasSlot = availableSlots.some(s =>s.date === date && s.time === time);
     if (!hasSlot) return null;
     
-    const slotBookings = bookings.filter(b => b.date === date && b.time === time);
-    const studentCount = slotBookings.filter(b => b.bookerType === 'student').length;
-    const parentCount = slotBookings.filter(b => b.bookerType === 'parent').length;
+    const slotBookings = bookings.filter(b =>b.date === date && b.time === time);
+    const studentCount = slotBookings.filter(b =>b.bookerType === 'student').length;
+    const parentCount = slotBookings.filter(b =>b.bookerType === 'parent').length;
     
     return {
       totalBookings: slotBookings.length,
@@ -152,7 +151,7 @@ export default function CalendarOverview({}: Props) {
 
   const showSlotDetails = (date: string, time: string) => {
     const slotInfo = getSlotInfo(date, time);
-    if (slotInfo && slotInfo.totalBookings > 0) {
+    if (slotInfo && slotInfo.totalBookings >0) {
       const dateObj = new Date(date);
       const dayKeys = ["sundayFull", "mondayFull", "tuesdayFull", "wednesdayFull", "thursdayFull", "fridayFull", "saturdayFull"];
       const dayName = t(`appointments.calendarOverview.${dayKeys[dateObj.getDay()]}`);
@@ -164,7 +163,7 @@ export default function CalendarOverview({}: Props) {
     }
   };
 
-  const displayToast = (message: string, type: 'success' | 'error' | 'info') => {
+  const displayToast = (message: string, type: 'success'| 'error'| 'info') => {
     setToastMessage(message);
     setToastType(type);
     setShowToast(true);
@@ -185,7 +184,7 @@ export default function CalendarOverview({}: Props) {
         const data = await res.json()
         setBookings(Array.isArray(data?.bookings) ? data.bookings : [])
         setAvailableSlots(Array.isArray(data?.availableSlots) ? data.availableSlots : [])
-        const times: string[] = Array.from(new Set((data?.availableSlots ?? []).map((s: any) => s.time)))
+        const times: string[] = Array.from(new Set((data?.availableSlots ?? []).map((s: any) =>s.time)))
         times.sort((a, b) => {
           const pa = parseInt(a.slice(0, 2), 10) * 60 + parseInt(a.slice(3, 5), 10)
           const pb = parseInt(b.slice(0, 2), 10) * 60 + parseInt(b.slice(3, 5), 10)
@@ -204,7 +203,7 @@ export default function CalendarOverview({}: Props) {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 {t('appointments.calendarOverview.title')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2"> {t('appointments.calendarOverview.title')}</h1>
           <p className="text-gray-600">{t('appointments.calendarOverview.subtitle')}</p>
         </div>
 
@@ -226,7 +225,7 @@ export default function CalendarOverview({}: Props) {
                 <p className="text-3xl font-bold">{totalBookings}</p>
               </div>
               <div className="bg-white bg-opacity-20 p-3 rounded-lg">
-                <CalendarCheck className="w-8 h-8 text-blue-700" />
+                <CalendarCheck className="w-8 h-8 text-blue-700"/>
               </div>
             </div>
           </div>
@@ -238,7 +237,7 @@ export default function CalendarOverview({}: Props) {
                 <p className="text-3xl font-bold">{totalStudents}</p>
               </div>
               <div className="bg-white bg-opacity-20 p-3 rounded-lg">
-                <User className="w-8 h-8 text-green-700" />
+                <User className="w-8 h-8 text-green-700"/>
               </div>
             </div>
           </div>
@@ -250,7 +249,7 @@ export default function CalendarOverview({}: Props) {
                 <p className="text-3xl font-bold">{totalParents}</p>
               </div>
               <div className="bg-white bg-opacity-20 p-3 rounded-lg">
-                <Users2 className="w-8 h-8 text-purple-700" />
+                <Users2 className="w-8 h-8 text-purple-700"/>
               </div>
             </div>
           </div>
@@ -264,21 +263,19 @@ export default function CalendarOverview({}: Props) {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">{t('appointments.calendarOverview.timeLabel', 'Thời gian')}</th>
-                    {weekDays().map((day) => (
+                    {weekDays().map((day) =>(
                       <th key={day.date} className="px-4 py-3 text-center text-sm font-semibold text-gray-700 min-w-[140px]">
                         <div>{day.dayName}</div>
                         <div className="text-xs font-normal text-gray-500">{day.dateStr}</div>
                         {day.isToday && (
                           <div className="inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 bg-blue-600 text-white">
                             {t('appointments.calendarOverview.today', 'Hôm nay')}
-                          </div>
-                        )}
-                      </th>
-                    ))}
+                          </div>)}
+                      </th>))}
                   </tr>
                 </thead>
                 <tbody>
-                  {timeSlots.map((timeSlot) => (
+                  {timeSlots.map((timeSlot) =>(
                     <tr key={timeSlot} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">{timeSlot}</td>
                       {weekDays().map((day) => {
@@ -287,47 +284,42 @@ export default function CalendarOverview({}: Props) {
                           <td key={day.date + timeSlot} className="px-2 py-2 text-center">
                             {slotInfo ? (
                               <div
-                                onClick={() => showSlotDetails(day.date, timeSlot)}
-                                className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 hover:bg-blue-100 cursor-pointer transition-all hover:shadow-md"
-                              >
+                                onClick={() =>showSlotDetails(day.date, timeSlot)}
+                                className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 hover:bg-blue-100 cursor-pointer transition-all hover:shadow-md">
                                 <div className="flex items-center justify-center gap-1 text-blue-700 text-xs font-semibold mb-2">
-                                  <CalendarCheck className="w-3 h-3" />
+                                  <CalendarCheck className="w-3 h-3"/>
                                   <span>{t('appointments.calendarOverview.availableSlot', 'Ngày rảnh')}</span>
                                 </div>
 
                                 <div className="space-y-1">
                                   <div className="flex items-center justify-center gap-1.5 text-gray-700">
-                                    <Users className="w-4 h-4 text-blue-600" />
+                                    <Users className="w-4 h-4 text-blue-600"/>
                                     <span className="text-lg font-bold">{slotInfo.totalBookings}</span>
                                     <span className="text-xs text-gray-600">{t('appointments.calendarOverview.people', 'người')}</span>
                                   </div>
 
                                   <div className="flex items-center justify-center gap-3 text-xs">
                                     <div className="flex items-center gap-1">
-                                      <GraduationCap className="w-3 h-3 text-green-600" />
+                                      <GraduationCap className="w-3 h-3 text-green-600"/>
                                       <span className="font-semibold text-green-700">{slotInfo.studentCount}</span>
                                       <span className="text-gray-600">SV</span>
                                     </div>
 
                                     <div className="flex items-center gap-1">
-                                      <UserCheck className="w-3 h-3 text-purple-600" />
+                                      <UserCheck className="w-3 h-3 text-purple-600"/>
                                       <span className="font-semibold text-purple-700">{slotInfo.parentCount}</span>
                                       <span className="text-gray-600">PH</span>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            ) : (
+                              </div>) : (
                               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-400">
-                                <X className="w-5 h-5 mx-auto mb-1" />
+                                <X className="w-5 h-5 mx-auto mb-1"/>
                                 <div className="text-xs">{t('appointments.calendarOverview.noSlot')}</div>
-                              </div>
-                            )}
-                          </td>
-                        );
+                              </div>)}
+                          </td>);
                       })}
-                    </tr>
-                  ))}
+                    </tr>))}
                 </tbody>
               </table>
             </div>
@@ -340,15 +332,15 @@ export default function CalendarOverview({}: Props) {
             <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('appointments.calendarOverview.legendTitle')}</h3>
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600" />
+                <Users className="w-4 h-4 text-blue-600"/>
                 <span className="text-sm text-gray-700">{t('appointments.calendarOverview.legendBookings')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-green-600" />
+                <GraduationCap className="w-4 h-4 text-green-600"/>
                 <span className="text-sm text-gray-700">{t('appointments.calendarOverview.legendStudents')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-purple-600" />
+                <UserCheck className="w-4 h-4 text-purple-600"/>
                 <span className="text-sm text-gray-700">{t('appointments.calendarOverview.legendParents')}</span>
               </div>
             </div>
@@ -364,16 +356,15 @@ export default function CalendarOverview({}: Props) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50/90 to-purple-50/90 rounded-t-2xl">
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <CalendarCheck className="w-5 h-5 text-blue-600" />
+                  <CalendarCheck className="w-5 h-5 text-blue-600"/>
                   {t('appointments.calendarOverview.slotDetails')}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">{selectedSlotInfo}</p>
               </div>
               <button
-                onClick={() => setSlotDetailsModal(false)}
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
+                onClick={() =>setSlotDetailsModal(false)}
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5"/>
               </button>
             </div>
 
@@ -384,21 +375,21 @@ export default function CalendarOverview({}: Props) {
                   {/* Summary Stats */}
                   <div className="grid grid-cols-3 gap-3 mb-6">
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center border border-blue-200">
-                      <Users className="w-7 h-7 text-blue-600 mb-2 mx-auto" />
+                      <Users className="w-7 h-7 text-blue-600 mb-2 mx-auto"/>
                       <p className="text-2xl font-bold text-blue-700">{selectedSlotBookings.length}</p>
                       <p className="text-xs text-gray-600 font-medium">{t('appointments.calendarOverview.total', 'Tổng số')}</p>
                     </div>
                     <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center border border-green-200">
-                      <GraduationCap className="w-7 h-7 text-green-600 mb-2 mx-auto" />
+                      <GraduationCap className="w-7 h-7 text-green-600 mb-2 mx-auto"/>
                       <p className="text-2xl font-bold text-green-700">
-                        {selectedSlotBookings.filter(b => b.bookerType === 'student').length}
+                        {selectedSlotBookings.filter(b =>b.bookerType === 'student').length}
                       </p>
                       <p className="text-xs text-gray-600 font-medium">{t('appointments.calendarOverview.totalStudents')}</p>
                     </div>
                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center border border-purple-200">
-                      <UserCheck className="w-7 h-7 text-purple-600 mb-2 mx-auto" />
+                      <UserCheck className="w-7 h-7 text-purple-600 mb-2 mx-auto"/>
                       <p className="text-2xl font-bold text-purple-700">
-                        {selectedSlotBookings.filter(b => b.bookerType === 'parent').length}
+                        {selectedSlotBookings.filter(b =>b.bookerType === 'parent').length}
                       </p>
                       <p className="text-xs text-gray-600 font-medium">{t('appointments.calendarOverview.totalParents')}</p>
                     </div>
@@ -413,90 +404,67 @@ export default function CalendarOverview({}: Props) {
                       </span>
                     </div>
                     
-                    {selectedSlotBookings.map((booking, index) => (
+                    {selectedSlotBookings.map((booking, index) =>(
                       <div
                         key={booking.id}
-                        className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-sm transition-all"
-                      >
+                        className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-sm transition-all">
                         <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
                           {index + 1}
                         </div>
                         <img
                           src={booking.avatar}
-                          alt="Avatar"
-                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
-                        />
+                          alt="Avatar"className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"/>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 truncate">{booking.name}</p>
                           <p className="text-xs text-gray-600 truncate">
-                            {booking.bookerType === 'student'
-                              ? `${t('appointments.calendarOverview.student')} - ${booking.class}`
+                            {booking.bookerType === 'student'? `${t('appointments.calendarOverview.student')} - ${booking.class}`
                               : `${t('appointments.calendarOverview.parentOf', 'Phụ huynh của')} ${booking.studentName}`}
                           </p>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Badge
-                            variant={booking.bookerType === 'student' ? 'default' : 'secondary'}
+                            variant={booking.bookerType === 'student'? 'default': 'secondary'}
                             className={`${
-                              booking.bookerType === 'student'
-                                ? 'bg-green-100 text-green-700 border-green-300'
-                                : 'bg-purple-100 text-purple-700 border-purple-300'
-                            } border text-xs font-medium`}
+                              booking.bookerType === 'student'? 'bg-green-100 text-green-700 border-green-300': 'bg-purple-100 text-purple-700 border-purple-300'} border text-xs font-medium`}
                           >
-                            {booking.bookerType === 'student' ? (
-                              <GraduationCap className="w-3 h-3 mr-1" />
-                            ) : (
-                              <UserCheck className="w-3 h-3 mr-1" />
-                            )}
-                            {booking.bookerType === 'student' ? 'SV' : 'PH'}
+                            {booking.bookerType === 'student'? (
+                              <GraduationCap className="w-3 h-3 mr-1"/>) : (
+                              <UserCheck className="w-3 h-3 mr-1"/>)}
+                            {booking.bookerType === 'student'? 'SV': 'PH'}
                           </Badge>
                           <Badge
                             className={`${
-                              booking.type === 'online'
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-orange-500 text-white'
-                            } text-xs font-medium`}
+                              booking.type === 'online'? 'bg-blue-500 text-white': 'bg-orange-500 text-white'} text-xs font-medium`}
                           >
-                            {booking.type === 'online' ? t('appointments.calendarOverview.online') : t('appointments.calendarOverview.offline')}
+                            {booking.type === 'online'? t('appointments.calendarOverview.online') : t('appointments.calendarOverview.offline')}
                           </Badge>
                         </div>
-                      </div>
-                    ))}
+                      </div>))}
                   </div>
-                </div>
-              )}
+                </div>)}
             </div>
 
             {/* Footer */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/90 rounded-b-2xl">
               <Button 
-                onClick={() => setSlotDetailsModal(false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              >
+                onClick={() =>setSlotDetailsModal(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                 {t('appointments.calendarOverview.close')}
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        </div>)}
 
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom">
           <div
             className={`text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
-              toastType === 'success'
-                ? 'bg-green-500'
-                : toastType === 'error'
-                ? 'bg-red-500'
-                : 'bg-blue-500'
-            }`}
+              toastType === 'success'? 'bg-green-500': toastType === 'error'? 'bg-red-500': 'bg-blue-500'}`}
           >
-            <Calendar className="w-5 h-5" />
+            <Calendar className="w-5 h-5"/>
             <span>{toastMessage}</span>
           </div>
-        </div>
-      )}
-    </TeacherLayout>
-  );
+        </div>)}
+    </TeacherLayout>);
 }

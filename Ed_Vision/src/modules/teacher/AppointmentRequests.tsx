@@ -12,9 +12,9 @@ import { Button } from '@/components/ui/teacher/teacher_button';
 
 interface AppointmentRequestsProps {
   requests: AppointmentRequest[];
-  setRequests: (requests: AppointmentRequest[]) => void;
-  showToast: (message: string, type: string) => void;
-  setCurrentPage: (page: 'schedule' | 'requests' | 'confirmed') => void;
+  setRequests: (requests: AppointmentRequest[]) =>void;
+  showToast: (message: string, type: string) =>void;
+  setCurrentPage: (page: 'schedule'| 'requests'| 'confirmed') =>void;
 }
 
 // Helper function to get auth token
@@ -26,7 +26,7 @@ const getAuthToken = () => {
 
 // Helper function to format date/time from slot data
 const formatDateTime = (slot: any, t: any) => {
-  if (!slot) return { date: 'Unknown', time: 'Unknown' };
+  if (!slot) return { date: 'Unknown', time: 'Unknown'};
   
   const dayNames = [
     t('appointments.requests.sunday', 'Chủ Nhật'),
@@ -45,7 +45,7 @@ const formatDateTime = (slot: any, t: any) => {
     if (!timeStr) return '';
     
     // If it's already a formatted string (HH:MM), return it
-    if (typeof timeStr === 'string' && /^\d{2}:\d{2}$/.test(timeStr)) {
+    if (typeof timeStr === 'string'&& /^\d{2}:\d{2}$/.test(timeStr)) {
       return timeStr;
     }
     
@@ -147,13 +147,13 @@ export default function AppointmentRequests({
           parentAvatar: appt.parentAvatar || 'https://via.placeholder.com/50',
           studentName: appt.studentName || 'Unknown Student',
           studentClass: appt.studentClass || 'Unknown Class',
-          type: appt.type || (appt.meetingType === 'online' ? 'online' : 'offline'),
+          type: appt.type || (appt.meetingType === 'online'? 'online': 'offline'),
           status: appt.status || 'pending',
           desiredDate: date,
           desiredTime: time,
           reason: appt.reason || appt.meetingPurpose || 'No reason provided',
           requestedAt: formatRequestedAt(appt.requestedAt),
-          platform: appt.platform || (appt.meetingType === 'online' ? 'Google Meet' : undefined),
+          platform: appt.platform || (appt.meetingType === 'online'? 'Google Meet': undefined),
         };
       });
 
@@ -177,7 +177,7 @@ export default function AppointmentRequests({
     setRequestsPage(1);
   }, [filterType]);
 
-  const handleRequestAction = (requestId: number, action: 'accept' | 'reject') => {
+  const handleRequestAction = (requestId: number, action: 'accept'| 'reject') => {
     if (action === 'reject') {
       setRejectingRequestId(requestId);
       setRejectModalOpen(true);
@@ -206,14 +206,13 @@ export default function AppointmentRequests({
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = await response.json().catch(() =>({}));
           throw new Error(errorData.message || 'Failed to accept appointment');
         }
 
         // Update local state
         setRequests(
-          requests.map((req) =>
-            req.id === acceptingRequestId ? { ...req, status: 'accepted' } : req
+          requests.map((req) =>req.id === acceptingRequestId ? { ...req, status: 'accepted'} : req
           )
         );
         
@@ -251,7 +250,7 @@ export default function AppointmentRequests({
       return;
     }
 
-    if (rejectReason === 'custom' && !customReason.trim()) {
+    if (rejectReason === 'custom'&& !customReason.trim()) {
       showToast(t('appointments.requests.enterReason'), 'error');
       return;
     }
@@ -259,7 +258,7 @@ export default function AppointmentRequests({
     if (rejectingRequestId !== null) {
       setIsRejecting(true);
       try {
-        const reasonMessages: Record<string, string> = {
+        const reasonMessages: Record<string, string>= {
           schedule_conflict: t('appointments.requests.scheduleConflict'),
           personal_leave: t('appointments.requests.personalLeave'),
           meeting_conflict: t('appointments.requests.meetingConflict'),
@@ -281,21 +280,20 @@ export default function AppointmentRequests({
             reason: reasonText,
             suggestedDate: suggestDate || undefined,
             suggestedTime: suggestTime || undefined,
-            notes: rejectReason === 'reschedule' && suggestDate && suggestTime 
+            notes: rejectReason === 'reschedule'&& suggestDate && suggestTime 
               ? t('appointments.requests.suggestedTimeNote', 'Đề xuất thời gian: {{date}} lúc {{time}}', { date: suggestDate, time: suggestTime })
               : undefined,
           }),
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorData = await response.json().catch(() =>({}));
           throw new Error(errorData.message || 'Failed to reject appointment');
         }
 
         // Update local state
         setRequests(
-          requests.map((req) =>
-            req.id === rejectingRequestId ? { ...req, status: 'rejected' } : req
+          requests.map((req) =>req.id === rejectingRequestId ? { ...req, status: 'rejected'} : req
           )
         );
 
@@ -313,7 +311,7 @@ export default function AppointmentRequests({
     }
   };
 
-  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  const pendingCount = requests.filter((r) =>r.status === 'pending').length;
 
   // Filter requests - KHÔNG hiển thị requests đã chấp nhận (accepted)
   const filteredRequests = requests.filter((req) => {
@@ -334,7 +332,7 @@ export default function AppointmentRequests({
     <>
       <div className="p-4 md:p-6 lg:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">⏰ {t('appointments.requests.title')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2"> {t('appointments.requests.title')}</h1>
           <p className="text-gray-600">{t('appointments.requests.subtitle')}</p>
         </div>
 
@@ -346,25 +344,22 @@ export default function AppointmentRequests({
               { id: 'pending', label: `${t('appointments.requests.pending')} (${pendingCount})` },
               {
                 id: 'online',
-                label: `${t('appointments.requests.online')} (${requests.filter((r) => r.type === 'online').length})`,
+                label: `${t('appointments.requests.online')} (${requests.filter((r) =>r.type === 'online').length})`,
               },
               {
                 id: 'offline',
-                label: `${t('appointments.requests.offline')} (${requests.filter((r) => r.type === 'offline').length})`,
+                label: `${t('appointments.requests.offline')} (${requests.filter((r) =>r.type === 'offline').length})`,
               },
-            ].map((filter) => (
+            ].map((filter) =>(
               <button
                 key={filter.id}
-                onClick={() => setFilterType(filter.id as FilterType)}
+                onClick={() =>setFilterType(filter.id as FilterType)}
                 className={`px-4 py-2 rounded-lg font-medium ${
                   filterType === filter.id
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                    ? 'bg-blue-100 text-blue-700': 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
                 {filter.label}
-              </button>
-            ))}
+              </button>))}
           </div>
         </div>
 
@@ -376,81 +371,65 @@ export default function AppointmentRequests({
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 <p className="text-gray-600">{t('appointments.requests.loadingRequests')}</p>
               </div>
-            </div>
-          ) : paginatedRequests.length === 0 ? (
+            </div>) : paginatedRequests.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
               <p className="text-gray-600">{t('appointments.requests.noRequestsFound')}</p>
-            </div>
-          ) : (
+            </div>) : (
             paginatedRequests.map((request) => {
               if (request.status !== 'pending') return null;
 
             return (
               <div
                 key={request.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200"
-              >
+                className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="p-4 border-b border-gray-100">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <img
                         src={request.parentAvatar}
-                        alt="Parent"
-                        className="w-12 h-12 rounded-full"
-                      />
+                        alt="Parent"className="w-12 h-12 rounded-full"/>
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">{request.parentName}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                              request.type === 'online' ? 'bg-blue-500' : 'bg-orange-500'
-                            }`}
+                              request.type === 'online'? 'bg-blue-500': 'bg-orange-500'}`}
                           >
-                            {request.type === 'online' ? t('appointments.requests.online') : t('appointments.requests.offline')}
+                            {request.type === 'online'? t('appointments.requests.online') : t('appointments.requests.offline')}
                           </span>
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                              request.status === 'pending'
-                                ? 'bg-yellow-500'
-                                : request.status === 'accepted'
-                                ? 'bg-green-500'
-                                : 'bg-red-500'
-                            }`}
+                              request.status === 'pending'? 'bg-yellow-500': request.status === 'accepted'? 'bg-green-500': 'bg-red-500'}`}
                           >
-                            {request.status === 'pending'
-                              ? t('appointments.requests.pending')
-                              : request.status === 'accepted'
-                              ? t('appointments.requests.accepted')
+                            {request.status === 'pending'? t('appointments.requests.pending')
+                              : request.status === 'accepted'? t('appointments.requests.accepted')
                               : t('appointments.requests.rejected')}
                           </span>
                         </div>
                       </div>
                     </div>
-                    {request.status === 'pending' && (
+                    {request.status === 'pending'&& (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleRequestAction(request.id, 'reject')}
-                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                          <X className="inline w-4 h-4 mr-1" />
+                          onClick={() =>handleRequestAction(request.id, 'reject')}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium">
+                          <X className="inline w-4 h-4 mr-1"/>
                           {t('appointments.requests.reject')}
                         </button>
                         <button
-                          onClick={() => handleRequestAction(request.id, 'accept')}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                          <Check className="inline w-4 h-4 mr-1" />
+                          onClick={() =>handleRequestAction(request.id, 'accept')}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+                          <Check className="inline w-4 h-4 mr-1"/>
                           {t('appointments.requests.accept')}
                         </button>
-                      </div>
-                    )}
+                      </div>)}
                   </div>
                 </div>
 
                 <div className="p-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                     <h4 className="font-bold text-blue-900 text-lg">
-                      <GraduationCap className="inline w-5 h-5 mr-2" />
+                      <GraduationCap className="inline w-5 h-5 mr-2"/>
                       {t('appointments.requests.parentOf')}: {request.studentName} ({request.studentClass})
                     </h4>
                   </div>
@@ -475,59 +454,49 @@ export default function AppointmentRequests({
                       <div className="bg-gray-50 rounded-lg p-3">
                         <h5 className="font-medium text-gray-700 mb-1">{t('appointments.requests.platform')}</h5>
                         <p className="text-gray-800 text-sm font-medium">{request.platform}</p>
-                      </div>
-                    )}
+                      </div>)}
                   </div>
                 </div>
-              </div>
-            );
+              </div>);
           })
           )}
         </div>
 
         {/* Pagination Controls */}
-        {totalRequestsPages > 1 && (
+        {totalRequestsPages >1 && (
           <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="text-sm text-gray-700">
-              {t('appointments.requests.showing', 'Hiển thị')} <span className="font-medium">{startRequestsIndex + 1}</span> {t('appointments.requests.to', 'đến')}{' '}
+              {t('appointments.requests.showing', 'Hiển thị')} <span className="font-medium">{startRequestsIndex + 1}</span> {t('appointments.requests.to', 'đến')}{''}
               <span className="font-medium">
                 {Math.min(endRequestsIndex, filteredRequests.length)}
-              </span>{' '}
+              </span>{''}
               {t('appointments.requests.outOf', 'trong tổng số')} <span className="font-medium">{filteredRequests.length}</span> {t('appointments.requests.requests', 'yêu cầu')}
             </div>
             <div className="flex gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestsPage((prev) => Math.max(1, prev - 1))}
+                variant="outline"size="sm"onClick={() =>setRequestsPage((prev) =>Math.max(1, prev - 1))}
                 disabled={requestsPage === 1}
               >
                 {t('appointments.requests.previous')}
               </Button>
               <div className="flex gap-1">
-                {Array.from({ length: totalRequestsPages }, (_, i) => i + 1).map((page) => (
+                {Array.from({ length: totalRequestsPages }, (_, i) =>i + 1).map((page) =>(
                   <Button
                     key={page}
-                    variant={requestsPage === page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setRequestsPage(page)}
-                    className="min-w-[2.5rem]"
-                  >
+                    variant={requestsPage === page ? 'default': 'outline'}
+                    size="sm"onClick={() =>setRequestsPage(page)}
+                    className="min-w-[2.5rem]">
                     {page}
-                  </Button>
-                ))}
+                  </Button>))}
               </div>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestsPage((prev) => Math.min(totalRequestsPages, prev + 1))}
+                variant="outline"size="sm"onClick={() =>setRequestsPage((prev) =>Math.min(totalRequestsPages, prev + 1))}
                 disabled={requestsPage === totalRequestsPages}
               >
                 {t('appointments.requests.next')}
               </Button>
             </div>
-          </div>
-        )}
+          </div>)}
       </div>
 
       {/* Accept Modal */}
@@ -537,7 +506,7 @@ export default function AppointmentRequests({
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-green-100 p-3 rounded-lg">
-                  <CheckCircle className="text-green-600 text-2xl" />
+                  <CheckCircle className="text-green-600 text-2xl"/>
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">{t('appointments.requests.confirmAccept', 'Xác nhận chấp nhận lịch hẹn')}</h3>
@@ -548,7 +517,7 @@ export default function AppointmentRequests({
               {/* Thông tin lịch hẹn */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 {(() => {
-                  const request = requests.find((r) => r.id === acceptingRequestId);
+                  const request = requests.find((r) =>r.id === acceptingRequestId);
                   if (!request) return null;
 
                   return (
@@ -556,9 +525,7 @@ export default function AppointmentRequests({
                       <div className="flex items-center gap-3">
                         <img
                           src={request.parentAvatar}
-                          alt="Parent"
-                          className="w-12 h-12 rounded-full"
-                        />
+                          alt="Parent"className="w-12 h-12 rounded-full"/>
                         <div>
                           <h4 className="font-bold text-gray-900">{request.parentName}</h4>
                           <p className="text-sm text-gray-600">
@@ -579,7 +546,7 @@ export default function AppointmentRequests({
                           <div>
                             <p className="text-xs text-gray-600 mb-1">{t('appointments.requests.format', 'Hình thức')}</p>
                             <p className="font-medium text-gray-900">
-                              {request.type === 'online' ? t('appointments.requests.online') : t('appointments.requests.offline')}
+                              {request.type === 'online'? t('appointments.requests.online') : t('appointments.requests.offline')}
                             </p>
                           </div>
                         </div>
@@ -588,14 +555,13 @@ export default function AppointmentRequests({
                           <p className="text-sm text-gray-800">{request.reason}</p>
                         </div>
                       </div>
-                    </div>
-                  );
+                    </div>);
                 })()}
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
                 <div className="flex gap-2">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"/>
                   <div>
                     <p className="text-sm text-yellow-800 font-medium">{t('appointments.requests.note', 'Lưu ý')}</p>
                     <p className="text-sm text-yellow-700 mt-1">
@@ -612,32 +578,27 @@ export default function AppointmentRequests({
                     setAcceptingRequestId(null);
                   }}
                   disabled={isAccepting}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                   {t('appointments.requests.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmAccept}
                   disabled={isAccepting}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   {isAccepting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       {t('appointments.requests.processing', 'Đang xử lý...')}
-                    </>
-                  ) : (
+                    </>) : (
                     <>
-                      <Check className="w-4 h-4" />
+                      <Check className="w-4 h-4"/>
                       {t('appointments.requests.confirmAcceptButton', 'Xác nhận chấp nhận')}
-                    </>
-                  )}
+                    </>)}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>)}
 
       {/* Reject Modal */}
       {rejectModalOpen && (
@@ -646,7 +607,7 @@ export default function AppointmentRequests({
             <div className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="bg-red-100 p-2 rounded-lg">
-                  <X className="text-red-600 w-5 h-5" />
+                  <X className="text-red-600 w-5 h-5"/>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{t('appointments.requests.rejectAppointment', 'Từ chối lịch hẹn')}</h3>
@@ -660,13 +621,9 @@ export default function AppointmentRequests({
                 <div className="space-y-1.5">
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
-                      type="radio"
-                      name="rejectReason"
-                      value="schedule_conflict"
-                      checked={rejectReason === 'schedule_conflict'}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mr-2 mt-0.5"
-                    />
+                      type="radio"name="rejectReason"value="schedule_conflict"checked={rejectReason === 'schedule_conflict'}
+                      onChange={(e) =>setRejectReason(e.target.value)}
+                      className="mr-2 mt-0.5"/>
                     <div>
                       <div className="text-sm font-medium text-gray-900">{t('appointments.requests.scheduleConflictTitle')}</div>
                       <div className="text-xs text-gray-600">{t('appointments.requests.scheduleConflictDesc')}</div>
@@ -675,13 +632,9 @@ export default function AppointmentRequests({
 
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
-                      type="radio"
-                      name="rejectReason"
-                      value="personal_leave"
-                      checked={rejectReason === 'personal_leave'}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mr-2 mt-0.5"
-                    />
+                      type="radio"name="rejectReason"value="personal_leave"checked={rejectReason === 'personal_leave'}
+                      onChange={(e) =>setRejectReason(e.target.value)}
+                      className="mr-2 mt-0.5"/>
                     <div>
                       <div className="text-sm font-medium text-gray-900">{t('appointments.requests.personalLeaveTitle')}</div>
                       <div className="text-xs text-gray-600">{t('appointments.requests.personalLeaveDesc')}</div>
@@ -690,13 +643,9 @@ export default function AppointmentRequests({
 
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
-                      type="radio"
-                      name="rejectReason"
-                      value="meeting_conflict"
-                      checked={rejectReason === 'meeting_conflict'}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mr-2 mt-0.5"
-                    />
+                      type="radio"name="rejectReason"value="meeting_conflict"checked={rejectReason === 'meeting_conflict'}
+                      onChange={(e) =>setRejectReason(e.target.value)}
+                      className="mr-2 mt-0.5"/>
                     <div>
                       <div className="text-sm font-medium text-gray-900">{t('appointments.requests.meetingConflictTitle')}</div>
                       <div className="text-xs text-gray-600">{t('appointments.requests.meetingConflictDesc')}</div>
@@ -705,13 +654,9 @@ export default function AppointmentRequests({
 
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
-                      type="radio"
-                      name="rejectReason"
-                      value="health_issue"
-                      checked={rejectReason === 'health_issue'}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mr-2 mt-0.5"
-                    />
+                      type="radio"name="rejectReason"value="health_issue"checked={rejectReason === 'health_issue'}
+                      onChange={(e) =>setRejectReason(e.target.value)}
+                      className="mr-2 mt-0.5"/>
                     <div>
                       <div className="text-sm font-medium text-gray-900">{t('appointments.requests.healthIssueTitle')}</div>
                       <div className="text-xs text-gray-600">{t('appointments.requests.healthIssueDesc')}</div>
@@ -720,13 +665,9 @@ export default function AppointmentRequests({
 
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
-                      type="radio"
-                      name="rejectReason"
-                      value="reschedule"
-                      checked={rejectReason === 'reschedule'}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mr-2 mt-0.5"
-                    />
+                      type="radio"name="rejectReason"value="reschedule"checked={rejectReason === 'reschedule'}
+                      onChange={(e) =>setRejectReason(e.target.value)}
+                      className="mr-2 mt-0.5"/>
                     <div>
                       <div className="text-sm font-medium text-gray-900">{t('appointments.requests.rescheduleTitle')}</div>
                       <div className="text-xs text-gray-600">{t('appointments.requests.rescheduleDesc')}</div>
@@ -735,13 +676,9 @@ export default function AppointmentRequests({
 
                   <label className="flex items-start px-2.5 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
-                      type="radio"
-                      name="rejectReason"
-                      value="custom"
-                      checked={rejectReason === 'custom'}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="mr-2 mt-0.5"
-                    />
+                      type="radio"name="rejectReason"value="custom"checked={rejectReason === 'custom'}
+                      onChange={(e) =>setRejectReason(e.target.value)}
+                      className="mr-2 mt-0.5"/>
                     <div>
                       <div className="text-sm font-medium text-gray-900">{t('appointments.requests.customReasonTitle')}</div>
                       <div className="text-xs text-gray-600">{t('appointments.requests.customReasonDesc')}</div>
@@ -751,72 +688,58 @@ export default function AppointmentRequests({
               </div>
 
               {/* Lý do tùy chỉnh */}
-              {rejectReason === 'custom' && (
+              {rejectReason === 'custom'&& (
                 <div className="mb-3">
                   <textarea
-                    id="customReason"
-                    rows={2}
+                    id="customReason"rows={2}
                     value={customReason}
-                    onChange={(e) => setCustomReason(e.target.value)}
-                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    placeholder={t('appointments.requests.enterCustomReason')}
+                    onChange={(e) =>setCustomReason(e.target.value)}
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"placeholder={t('appointments.requests.enterCustomReason')}
                   />
-                </div>
-              )}
+                </div>)}
 
               {/* Gợi ý thời gian khác */}
-              {rejectReason === 'reschedule' && (
+              {rejectReason === 'reschedule'&& (
                 <div className="mb-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">
                     {t('appointments.requests.suggestNewTime')}:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
-                      type="date"
-                      value={suggestDate}
-                      onChange={(e) => setSuggestDate(e.target.value)}
-                      className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    />
+                      type="date"value={suggestDate}
+                      onChange={(e) =>setSuggestDate(e.target.value)}
+                      className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"/>
                     <input
-                      type="time"
-                      value={suggestTime}
-                      onChange={(e) => setSuggestTime(e.target.value)}
-                      className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    />
+                      type="time"value={suggestTime}
+                      onChange={(e) =>setSuggestTime(e.target.value)}
+                      className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"/>
                   </div>
-                </div>
-              )}
+                </div>)}
 
               <div className="flex gap-2">
                 <button
                   onClick={handleCloseRejectModal}
                   disabled={isRejecting}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                   {t('appointments.requests.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmReject}
                   disabled={isRejecting}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   {isRejecting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       {t('appointments.requests.processing', 'Đang xử lý...')}
-                    </>
-                  ) : (
+                    </>) : (
                     <>
-                      <Check className="w-4 h-4" />
+                      <Check className="w-4 h-4"/>
                       {t('appointments.requests.sendReject', 'Gửi từ chối')}
-                    </>
-                  )}
+                    </>)}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </>
-  );
+        </div>)}
+    </>);
 }

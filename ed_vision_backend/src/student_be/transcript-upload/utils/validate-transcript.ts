@@ -296,10 +296,10 @@ if (require.main === module) {
   }
 
   if (result.valid) {
-    console.log('✅ File is valid!');
+    console.log(' File is valid!');
     console.log(`Total records: ${result.records?.length}`);
   } else {
-    console.log('❌ File has errors:');
+    console.log(' File has errors:');
     if (result.parseError) {
       console.error(`Parse error: ${result.parseError}`);
     } else if (result.errors) {

@@ -3,7 +3,7 @@ import type { ResizeState } from '../types/learningSpace';
 
 type UseResizableReturn = {
   size: { width: number; height: number };
-  handleMouseDown: (e: React.MouseEvent) => void;
+  handleMouseDown: (e: React.MouseEvent) =>void;
   isResizing: boolean;
 };
 
@@ -47,7 +47,7 @@ export const useResizable = (
     };
 
     const handleMouseUp = () => {
-      setResizeState(prev => ({ ...prev, isResizing: false }));
+      setResizeState(prev =>({ ...prev, isResizing: false }));
     };
 
     document.addEventListener('mousemove', handleMouseMove);

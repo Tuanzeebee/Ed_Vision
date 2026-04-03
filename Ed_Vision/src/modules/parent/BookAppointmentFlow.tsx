@@ -2,13 +2,11 @@ import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import BookAppointmentStep1 from "./BookAppointmentStep1"
-import BookAppointmentStep2 from "./BookAppointmentStep2" 
+import BookAppointmentStep2 from "./BookAppointmentStep2"
 import BookAppointmentStep3 from "./BookAppointmentStep3"
 import BookAppointmentStep4 from "./BookAppointmentStep4"
 import BookAppointmentStep5 from "./BookAppointmentStep5"
-
-type MeetingType = "in-person" | "video-call" | "phone-call"
-
+type MeetingType = "in-person"| "video-call"| "phone-call"
 type FormData = {
   meetingPurpose: string
   parentName: string
@@ -38,8 +36,8 @@ type AppointmentFlowData = {
 }
 
 type Props = {
-  onComplete?: (data: AppointmentFlowData) => void
-  onCancel?: () => void
+  onComplete?: (data: AppointmentFlowData) =>void
+  onCancel?: () =>void
   initialStep?: number
 }
 
@@ -55,7 +53,7 @@ export default function BookAppointmentFlow({
   // Extract current step from URL if available
   const getCurrentStepFromURL = () => {
     const pathParts = location.pathname.split('/')
-    const stepIndex = pathParts.findIndex(part => part === 'step')
+    const stepIndex = pathParts.findIndex(part =>part === 'step')
     if (stepIndex !== -1 && pathParts[stepIndex + 1]) {
       const stepNumber = parseInt(pathParts[stepIndex + 1], 10)
       return !isNaN(stepNumber) ? stepNumber : initialStep
@@ -97,15 +95,13 @@ export default function BookAppointmentFlow({
       phoneNumber: "",
       emailAddress: "",
       additionalNotes: "",
-      communicationMethod: "email"
-    },
+      communicationMethod: "email"},
     confirmed: false,
-    confirmationNumber: ""
-  })
+    confirmationNumber: ""})
 
   // Step 1: Meeting Type Selection
   const handleStep1Continue = (selectedType: MeetingType) => {
-    setFlowData(prev => ({ ...prev, meetingType: selectedType }))
+    setFlowData(prev =>({ ...prev, meetingType: selectedType }))
     updateStep(2)
   }
 
@@ -117,13 +113,13 @@ export default function BookAppointmentFlow({
 
   // Step 3: Details Form
   const handleStep3Continue = (formData: FormData) => {
-    setFlowData(prev => ({ ...prev, formData }))
+    setFlowData(prev =>({ ...prev, formData }))
     updateStep(4)
   }
 
   // Step 3: Save Draft
   const handleStep3SaveDraft = (formData: FormData) => {
-    setFlowData(prev => ({ ...prev, formData }))
+    setFlowData(prev =>({ ...prev, formData }))
     // Có thể thêm logic lưu draft vào localStorage
     localStorage.setItem('appointmentDraft', JSON.stringify({
       ...flowData,
@@ -137,7 +133,7 @@ export default function BookAppointmentFlow({
     // Generate confirmation number
     const confirmationNumber = `#APT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
     
-    setFlowData(prev => ({ 
+    setFlowData(prev =>({ 
       ...prev, 
       confirmed: true,
       confirmationNumber 
@@ -153,7 +149,7 @@ export default function BookAppointmentFlow({
 
   // Navigation functions
   const goBack = () => {
-    if (currentStep > 1) {
+    if (currentStep >1) {
       updateStep(currentStep - 1)
     }
   }
@@ -183,10 +179,9 @@ export default function BookAppointmentFlow({
         return (
           <BookAppointmentStep1
             onContinue={handleStep1Continue}
-            onBack={currentStep > 1 ? goBack : undefined}
+            onBack={currentStep >1 ? goBack : undefined}
             onClose={handleClose}
-          />
-        )
+          />)
       
       case 2:
         return (
@@ -194,8 +189,7 @@ export default function BookAppointmentFlow({
             onContinue={handleStep2Continue}
             onBack={goBack}
             onClose={handleClose}
-          />
-        )
+          />)
       
       case 3:
         return (
@@ -204,8 +198,7 @@ export default function BookAppointmentFlow({
             onSaveDraft={handleStep3SaveDraft}
             onBack={goBack}
             onClose={handleClose}
-          />
-        )
+          />)
       
       case 4:
         return (
@@ -215,8 +208,8 @@ export default function BookAppointmentFlow({
             onBack={goBack}
             onClose={handleClose}
             appointmentData={{
-              meetingType: flowData.meetingType === "in-person" ? t('parent:bookAppointment.meetingTypes.inPerson') : 
-                          flowData.meetingType === "video-call" ? t('parent:bookAppointment.meetingTypes.videoCall') : t('parent:bookAppointment.meetingTypes.phoneCall'),
+              meetingType: flowData.meetingType === "in-person"? t('parent:bookAppointment.meetingTypes.inPerson') : 
+                          flowData.meetingType === "video-call"? t('parent:bookAppointment.meetingTypes.videoCall') : t('parent:bookAppointment.meetingTypes.phoneCall'),
               lecturer: "Mr. Tuan (Mathematics Adviser)",
               dateTime: `${flowData.selectedDate} at ${flowData.selectedTime}`,
               purpose: flowData.formData.meetingPurpose || "General Discussion",
@@ -227,12 +220,11 @@ export default function BookAppointmentFlow({
               phoneNumber: flowData.formData.phoneNumber,
               emailAddress: flowData.formData.emailAddress,
               additionalNotes: flowData.formData.additionalNotes,
-              communicationPreference: flowData.formData.communicationMethod === "email" ? t('parent:bookAppointment.communications.email') :
-                                      flowData.formData.communicationMethod === "sms" ? t('parent:bookAppointment.communications.sms') :
+              communicationPreference: flowData.formData.communicationMethod === "email"? t('parent:bookAppointment.communications.email') :
+                                      flowData.formData.communicationMethod === "sms"? t('parent:bookAppointment.communications.sms') :
                                       t('parent:bookAppointment.communications.both')
             }}
-          />
-        )
+          />)
       
       case 5:
         return (
@@ -243,38 +235,35 @@ export default function BookAppointmentFlow({
             appointmentData={{
               date: flowData.selectedDate,
               time: `${flowData.selectedTime} - ${getEndTime(flowData.selectedTime)}`,
-              location: flowData.meetingType === "in-person" ? t('parent:bookAppointment.locations.schoolPremises') :
-                       flowData.meetingType === "video-call" ? t('parent:bookAppointment.locations.videoCallLink') :
+              location: flowData.meetingType === "in-person"? t('parent:bookAppointment.locations.schoolPremises') :
+                       flowData.meetingType === "video-call"? t('parent:bookAppointment.locations.videoCallLink') :
                        t('parent:bookAppointment.locations.phoneCall'),
-              meetingType: flowData.meetingType === "in-person" ? t('parent:bookAppointment.meetingTypes.inPerson') : 
-                          flowData.meetingType === "video-call" ? t('parent:bookAppointment.meetingTypes.videoCall') : t('parent:bookAppointment.meetingTypes.phoneCall'),
+              meetingType: flowData.meetingType === "in-person"? t('parent:bookAppointment.meetingTypes.inPerson') : 
+                          flowData.meetingType === "video-call"? t('parent:bookAppointment.meetingTypes.videoCall') : t('parent:bookAppointment.meetingTypes.phoneCall'),
               doctor: "Mr. Tuan (Mathematics Adviser)",
               specialization: "Mathematics Department",
               purpose: flowData.formData.meetingPurpose || "General Discussion",
               patientName: "Emma Thompson",
               confirmationNumber: flowData.confirmationNumber
             }}
-          />
-        )
+          />)
       
       default:
-        return <div>{t('parent:bookAppointment.invalidStep')}</div>
-    }
+        return <div>{t('parent:bookAppointment.invalidStep')}</div>}
   }
 
   // Helper function to calculate end time
   const getEndTime = (startTime: string): string => {
-    const [time, period] = startTime.split(' ')
+    const [time, period] = startTime.split('')
     const [hours, minutes] = time.split(':').map(Number)
     
     let endHours = hours + 1 // Add 1 hour
     let endPeriod = period
     
     if (endHours === 12 && period === 'AM') {
-      endPeriod = 'PM'
-    } else if (endHours === 13 && period === 'PM') {
+      endPeriod = 'PM'} else if (endHours === 13 && period === 'PM') {
       endHours = 1
-    } else if (endHours > 12) {
+    } else if (endHours >12) {
       endHours -= 12
     }
     
@@ -284,6 +273,5 @@ export default function BookAppointmentFlow({
   return (
     <div className="appointment-flow">
       {renderCurrentStep()}
-    </div>
-  )
+    </div>)
 }

@@ -71,7 +71,7 @@ async function main() {
   await linkQuestion(inputSurvey.survey_id, qA3.question_id, 3);
   await linkQuestion(inputSurvey.survey_id, qA4.question_id, 4);
 
-  console.log(`✓ Input survey created (id=${inputSurvey.survey_id}) with ${4} questions`);
+  console.log(` Input survey created (id=${inputSurvey.survey_id}) with ${4} questions`);
 
   // Create Periodic survey
   const periodicTitle = 'Khảo sát định kỳ - Termly Check-in';
@@ -96,7 +96,7 @@ async function main() {
   await linkQuestion(periodicSurvey.survey_id, qP2.question_id, 2);
   await linkQuestion(periodicSurvey.survey_id, qP3.question_id, 3);
 
-  console.log(`✓ Periodic survey created (id=${periodicSurvey.survey_id}) with ${3} questions`);
+  console.log(` Periodic survey created (id=${periodicSurvey.survey_id}) with ${3} questions`);
 
   console.log('Seeding surveys finished.');
 }

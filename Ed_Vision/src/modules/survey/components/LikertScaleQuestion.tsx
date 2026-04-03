@@ -9,7 +9,7 @@ interface LikertOption {
 
 interface LikertScaleQuestionProps {
   value?: string;
-  onChange: (value: string) => void;
+  onChange: (value: string) =>void;
   config?: LikertConfig;
   options?: LikertOption[]; // Options from API with optionId as value
 }
@@ -24,9 +24,9 @@ export default function LikertScaleQuestion({
   const rightLabel = config?.rightLabel ?? "Đồng ý";
 
   // Use options from API if available, otherwise generate default scale
-  const scaleOptions: LikertOption[] = options && options.length > 0
+  const scaleOptions: LikertOption[] = options && options.length >0
     ? options
-    : Array.from({ length: (config?.max ?? 5) - (config?.min ?? 1) + 1 }, (_, i) => ({
+    : Array.from({ length: (config?.max ?? 5) - (config?.min ?? 1) + 1 }, (_, i) =>({
         value: String((config?.min ?? 1) + i),
         label: String((config?.min ?? 1) + i),
       }));
@@ -38,10 +38,10 @@ export default function LikertScaleQuestion({
         <span>{rightLabel}</span>
       </div>
       <div className="flex gap-2 justify-center flex-wrap">
-        {scaleOptions.map((opt, idx) => (
+        {scaleOptions.map((opt, idx) =>(
           <button
             key={opt.value}
-            onClick={() => onChange(opt.value)}
+            onClick={() =>onChange(opt.value)}
             className={cn(
               surveyStyles.likertButton.base,
               value === opt.value && surveyStyles.likertButton.selected
@@ -49,9 +49,7 @@ export default function LikertScaleQuestion({
             title={opt.label}
           >
             {idx + 1}
-          </button>
-        ))}
+          </button>))}
       </div>
-    </div>
-  );
+    </div>);
 }

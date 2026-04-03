@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GeminiService } from '../../common/services/gemini.service';
 import {
@@ -349,7 +355,9 @@ export class StudentSurveyService {
       const qaList: string[] = [];
 
       for (const ans of answers) {
-        const link = survey.surveyQuestions.find(sq => sq.question.question_id === ans.questionId);
+        const link = survey.surveyQuestions.find(
+          (sq) => sq.question.question_id === ans.questionId,
+        );
         if (!link) continue;
 
         const q = link.question;
@@ -360,7 +368,7 @@ export class StudentSurveyService {
         let answerText = '';
 
         if (ans.optionId !== undefined && ans.optionId !== null) {
-          const opt = q.surveyOptions.find(o => o.option_id === ans.optionId);
+          const opt = q.surveyOptions.find((o) => o.option_id === ans.optionId);
           if (opt) {
             answerVal = opt.option_value ?? null;
             answerText = opt.option_text ?? '';
@@ -393,7 +401,9 @@ export class StudentSurveyService {
       let mentalScore = 0;
 
       if (qaList.length > 0) {
-        const aiResult = await this.geminiService.analyzeSurvey(qaList.join('\n\n'));
+        const aiResult = await this.geminiService.analyzeSurvey(
+          qaList.join('\n\n'),
+        );
         financialScore = aiResult.financial_support_score;
         mentalScore = aiResult.mental_health_score;
       }
@@ -416,10 +426,14 @@ export class StudentSurveyService {
         },
       });
 
-      this.logger.log(`Updated survey factors for student ${student.student_id}`);
-
+      this.logger.log(
+        `Updated survey factors for student ${student.student_id}`,
+      );
     } catch (error) {
-      this.logger.error(`Error processing survey factors for student ${student.student_id}`, error);
+      this.logger.error(
+        `Error processing survey factors for student ${student.student_id}`,
+        error,
+      );
       // We do NOT throw here, so the user still gets a success response for the survey submission
     }
 

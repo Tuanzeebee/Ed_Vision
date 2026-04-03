@@ -440,7 +440,7 @@ export default function MusicBrowser({
               >
                 <Heart className="h-5 w-5" />
                 <span>Liked Songs</span>
-                <div className="ml-auto text-red-500">♥</div>
+                <div className="ml-auto text-red-500"></div>
               </button>
             </nav>
           </div>

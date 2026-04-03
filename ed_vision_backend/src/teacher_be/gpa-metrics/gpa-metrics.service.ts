@@ -29,8 +29,12 @@ export class GpaMetricsService {
 
     const results = await Promise.all(
       students.map(async (s) => {
-        const current = await this.gpaCalculator.calculateCurrentGPA(s.student_id);
-        const predicted = await this.gpaCalculator.calculatePredictedGPA(s.student_id);
+        const current = await this.gpaCalculator.calculateCurrentGPA(
+          s.student_id,
+        );
+        const predicted = await this.gpaCalculator.calculatePredictedGPA(
+          s.student_id,
+        );
         return {
           student_id: s.student_id,
           student_code: s.student_code,
@@ -80,4 +84,3 @@ export class GpaMetricsService {
     };
   }
 }
-
