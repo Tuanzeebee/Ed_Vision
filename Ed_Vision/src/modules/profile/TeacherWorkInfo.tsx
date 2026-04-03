@@ -10,7 +10,7 @@ type WorkInfo = {
 
 type Props = {
   workInfo: WorkInfo;
-  onEdit?: () => void;
+  onEdit?: () =>void;
 };
 
 export default function TeacherWorkInfo({ workInfo, onEdit }: Props) {
@@ -44,7 +44,7 @@ export default function TeacherWorkInfo({ workInfo, onEdit }: Props) {
   const translateDepartment = (dept: string) => {
     if (!dept || dept === '—') return dept;
     if (i18n.language === 'en') {
-      const deptMap: Record<string, string> = {
+      const deptMap: Record<string, string>= {
         'Trường Kinh tế và Kinh doanh': 'School of Economics and Business',
         'Trường Công nghệ': 'School of Technology',
         'Trường Công nghệ Thông tin': 'School of Information Technology',
@@ -53,8 +53,7 @@ export default function TeacherWorkInfo({ workInfo, onEdit }: Props) {
         'Trường Du lịch': 'School of Tourism',
         'Trường Khoa Học Máy Tính': 'School of Computer Science',
         'Trường Ngôn ngữ và Xã hội': 'School of Languages and Society',
-        'Trường Y - Dược': 'School of Medicine and Pharmacy'
-      };
+        'Trường Y - Dược': 'School of Medicine and Pharmacy'};
       return deptMap[dept] || dept;
     }
     return dept;
@@ -67,12 +66,10 @@ export default function TeacherWorkInfo({ workInfo, onEdit }: Props) {
         {onEdit && (
           <button
             onClick={onEdit}
-            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-          >
+            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
             <i className="fas fa-pencil-alt mr-2"></i>
             {t('common.edit')}
-          </button>
-        )}
+          </button>)}
       </div>
       <div className="px-4 sm:px-6 py-5 space-y-4">
         <div>
@@ -81,7 +78,7 @@ export default function TeacherWorkInfo({ workInfo, onEdit }: Props) {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">{t('teacherWork.academicTitle', { defaultValue: 'Academic Title' })}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">{t('teacherWork.academicTitle', { defaultValue: 'Academic Title'})}</label>
           <p className="text-sm font-medium text-gray-900">{translateAcademicTitle(workInfo.academicTitle || "—")}</p>
         </div>
 
@@ -96,13 +93,12 @@ export default function TeacherWorkInfo({ workInfo, onEdit }: Props) {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">{t('teacherWork.hireDate', { defaultValue: 'Hire Date' })}</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">{t('teacherWork.hireDate', { defaultValue: 'Hire Date'})}</label>
           <div className="flex items-center gap-2">
             <i className="fas fa-calendar text-gray-900"></i>
             <p className="text-sm font-medium text-gray-900">{workInfo.hireDate || "—"}</p>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

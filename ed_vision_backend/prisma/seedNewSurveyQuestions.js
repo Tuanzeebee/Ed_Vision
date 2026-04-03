@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Seeding 155 new survey questions from CSV data...');
+    console.log(' Seeding 155 new survey questions from CSV data...');
 
     // Helper function to create options for likert scale
     const createLikertOptions = () => [
@@ -1372,15 +1372,15 @@ async function main() {
             }
         }
 
-        console.log(`✓ Created question ${q.question_id}: ${q.question_text.substring(0, 50)}...`);
+        console.log(` Created question ${q.question_id}: ${q.question_text.substring(0, 50)}...`);
     }
 
-    console.log('✅ Successfully seeded 155 survey questions!');
+    console.log(' Successfully seeded 155 survey questions!');
 }
 
 main()
     .catch((e) => {
-        console.error('❌ Error seeding survey questions:', e);
+        console.error(' Error seeding survey questions:', e);
         process.exit(1);
     })
     .finally(async () => {

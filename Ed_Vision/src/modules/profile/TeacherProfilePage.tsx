@@ -47,7 +47,7 @@ export default function TeacherProfilePage({}: Props) {
         throw new Error(t('common.loadError', { status: res.status }));
       }
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() =>({}));
       
       console.log('API Response:', data);
       setTeacher(data ?? null);
@@ -197,8 +197,8 @@ export default function TeacherProfilePage({}: Props) {
     name: profile.fullName || teacher?.employeeCode || t('teacherWork.title'),
     age: undefined as number | undefined,
     avatar: getFullAvatarUrl(profile.avatarUrl),
-    status: (teacher?.status === "active" ? "active" : "inactive") as "active" | "inactive",
-    statusLabel: teacher?.status === "active" ? t('teacherWork.activeStatus', { defaultValue: 'Active' }) : t('teacherWork.inactiveStatus', { defaultValue: 'Inactive' }),
+    status: (teacher?.status === "active"? "active": "inactive") as "active"| "inactive",
+    statusLabel: teacher?.status === "active"? t('teacherWork.activeStatus', { defaultValue: 'Active'}) : t('teacherWork.inactiveStatus', { defaultValue: 'Inactive'}),
     personalInfo: {
       fullName: profile.fullName || "",
       dateOfBirth: formatDate(profile.dateOfBirth),
@@ -218,7 +218,7 @@ export default function TeacherProfilePage({}: Props) {
     hireDate: formatDate(teacher?.hireDate),
   };
 
-  const mappedAdvisedClasses = (teacher?.advisedClasses || []).map((cls: any) => ({
+  const mappedAdvisedClasses = (teacher?.advisedClasses || []).map((cls: any) =>({
     classId: cls.classId,
     classCode: cls.classCode,
     cohortYear: cls.cohortYear,
@@ -233,8 +233,7 @@ export default function TeacherProfilePage({}: Props) {
         <div className="flex items-center justify-center px-4 py-20 min-h-screen bg-gray-50">
           <div className="text-center text-gray-600">Đang tải hồ sơ...</div>
         </div>
-      </>
-    );
+      </>);
   }
 
   if (error) {
@@ -244,8 +243,7 @@ export default function TeacherProfilePage({}: Props) {
         <div className="flex items-center justify-center px-4 py-20 min-h-screen bg-gray-50">
           <div className="text-center text-red-600">{error}</div>
         </div>
-      </>
-    );
+      </>);
   }
 
   const profileData = teacher?.profile || {};
@@ -255,7 +253,7 @@ export default function TeacherProfilePage({}: Props) {
       <Header />
       <EditProfileModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() =>setIsEditModalOpen(false)}
         currentProfile={{
           fullName: profileData.fullName,
           phoneNumber: profileData.phoneNumber,
@@ -269,7 +267,7 @@ export default function TeacherProfilePage({}: Props) {
       />
       <EditTeacherWorkModal
         isOpen={isEditWorkModalOpen}
-        onClose={() => setIsEditWorkModalOpen(false)}
+        onClose={() =>setIsEditWorkModalOpen(false)}
         currentWork={{
           employeeCode: teacher?.employeeCode,
           academicTitle: teacher?.academicTitle,
@@ -281,7 +279,7 @@ export default function TeacherProfilePage({}: Props) {
       />
       <EditAdvisedClassesModal
         isOpen={isEditClassesModalOpen}
-        onClose={() => setIsEditClassesModalOpen(false)}
+        onClose={() =>setIsEditClassesModalOpen(false)}
         currentClasses={mappedAdvisedClasses}
         onSuccess={handleClassesUpdateSuccess}
       />
@@ -290,10 +288,9 @@ export default function TeacherProfilePage({}: Props) {
         onEditPersonalInfo={handleEditPersonalInfo}
         onEditAvatar={handleEditAvatar}
         additionalSections={[
-          <TeacherWorkInfo key="work" workInfo={mappedWorkInfo as any} onEdit={handleEditWorkInfo} />,
-          <TeacherAdvisedClasses key="classes" advisedClasses={mappedAdvisedClasses} onEdit={handleEditClasses} />,
+          <TeacherWorkInfo key="work"workInfo={mappedWorkInfo as any} onEdit={handleEditWorkInfo} />,
+          <TeacherAdvisedClasses key="classes"advisedClasses={mappedAdvisedClasses} onEdit={handleEditClasses} />,
         ]}
       />
-    </>
-  );
+    </>);
 }

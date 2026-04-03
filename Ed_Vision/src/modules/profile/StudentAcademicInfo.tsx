@@ -11,7 +11,7 @@ type AcademicInfo = {
 
 type Props = {
   academicInfo: AcademicInfo;
-  onEdit?: () => void;
+  onEdit?: () =>void;
 };
 
 export default function StudentAcademicInfo({ academicInfo, onEdit }: Props) {
@@ -24,12 +24,10 @@ export default function StudentAcademicInfo({ academicInfo, onEdit }: Props) {
         {onEdit && (
           <button
             onClick={onEdit}
-            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-          >
+            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
             <i className="fas fa-pencil-alt mr-2"></i>
             {t('common.edit')}
-          </button>
-        )}
+          </button>)}
       </div>
       <div className="px-4 sm:px-6 py-5 space-y-4">
         <div>
@@ -58,15 +56,14 @@ export default function StudentAcademicInfo({ academicInfo, onEdit }: Props) {
               <p className="text-2xl font-bold text-blue-600">
                 {academicInfo.gpa !== undefined ? academicInfo.gpa.toFixed(2) : "—"}
               </p>
-              <p className="text-xs text-gray-600 mt-1">{t('studentAcademic.currentGPA', { defaultValue: 'Current GPA' })}</p>
+              <p className="text-xs text-gray-600 mt-1">{t('studentAcademic.currentGPA', { defaultValue: 'Current GPA'})}</p>
             </div>
             <div className="bg-indigo-50 rounded-lg p-4 text-center">
               <p className="text-2xl font-bold text-indigo-600">{academicInfo.credits !== undefined ? academicInfo.credits : "—"}</p>
-              <p className="text-xs text-gray-600 mt-1">{t('studentAcademic.accumulatedCredits', { defaultValue: 'Accumulated Credits' })}</p>
+              <p className="text-xs text-gray-600 mt-1">{t('studentAcademic.accumulatedCredits', { defaultValue: 'Accumulated Credits'})}</p>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

@@ -31,7 +31,7 @@ function convertRawScoreToNumericScore(rawScore) {
 }
 
 // Generate random score based on student performance level with variance
-// Performance levels match GPA categories: excellent (>=3.65), very_good (>=3.26), good (>=2.5), average (>=2.0), poor (<2.0)
+// Mức hiệu suất map theo GPA: excellent, very_good, good, average, poor.
 function generateScoreByLevel(level) {
   let baseMin, baseMax;
   
@@ -95,7 +95,7 @@ function assignPerformanceLevel(studentIndex, totalStudents) {
 }
 
 async function main() {
-  console.log('🌱 Starting seedFinalPart2.js - Seeding StudentCourseRecord...\n');
+  console.log(' Starting seedFinalPart2.js - Seeding StudentCourseRecord...\n');
 
   // 1. Get CNPMC program
   const cnpmcProgram = await prisma.program.findUnique({
@@ -103,11 +103,11 @@ async function main() {
   });
 
   if (!cnpmcProgram) {
-    console.error('❌ CNPMC program not found');
+    console.error(' CNPMC program not found');
     return;
   }
 
-  console.log(`✅ Found CNPMC program (id: ${cnpmcProgram.program_id})`);
+  console.log(` Found CNPMC program (id: ${cnpmcProgram.program_id})`);
 
   // 2. Get all curriculum courses for CNPMC
   const curriculumCourses = await prisma.curriculumCourse.findMany({
@@ -119,7 +119,7 @@ async function main() {
     ],
   });
 
-  console.log(`✅ Found ${curriculumCourses.length} curriculum courses for CNPMC\n`);
+  console.log(` Found ${curriculumCourses.length} curriculum courses for CNPMC\n`);
 
   // 3. Get all students
   const allStudents = await prisma.student.findMany({
@@ -129,14 +129,14 @@ async function main() {
     orderBy: { student_id: 'asc' },
   });
 
-  console.log(`✅ Found ${allStudents.length} students\n`);
+  console.log(` Found ${allStudents.length} students\n`);
 
   // 4. Get all academic terms
   const academicTerms = await prisma.academicTerm.findMany({
     orderBy: { term_id: 'asc' },
   });
 
-  console.log(`✅ Found ${academicTerms.length} academic terms\n`);
+  console.log(` Found ${academicTerms.length} academic terms\n`);
 
   // Create a mapping of year + semester to term_id
   const termMap = {};
@@ -145,7 +145,7 @@ async function main() {
     termMap[key] = term.term_id;
   }
 
-  console.log('📋 Term Map:', termMap);
+  console.log(' Term Map:', termMap);
 
   // 5. Shuffle students and assign performance levels
   const studentsWithLevels = allStudents.map((student, index) => ({
@@ -153,7 +153,7 @@ async function main() {
     performanceLevel: assignPerformanceLevel(index, allStudents.length),
   }));
 
-  console.log('\n📊 Performance Distribution:');
+  console.log('\n Performance Distribution:');
   const distribution = studentsWithLevels.reduce((acc, s) => {
     acc[s.performanceLevel] = (acc[s.performanceLevel] || 0) + 1;
     return acc;
@@ -161,7 +161,7 @@ async function main() {
   console.log(distribution);
 
   // 6. Generate StudentCourseRecords
-  console.log('\n🌱 Generating StudentCourseRecords...\n');
+  console.log('\n Generating StudentCourseRecords...\n');
 
   let recordCount = 0;
   let skippedCount = 0;
@@ -170,7 +170,7 @@ async function main() {
     const cohortYear = student.classGroup?.cohort_year;
     
     if (!cohortYear) {
-      console.warn(`⚠️ Student ${student.student_code} has no cohort year, skipping...`);
+      console.warn(` Student ${student.student_code} has no cohort year, skipping...`);
       skippedCount++;
       continue;
     }
@@ -233,7 +233,7 @@ async function main() {
         const termId = termMap[termKey];
 
         if (!termId) {
-          console.warn(`⚠️ No term found for ${termKey}, skipping...`);
+          console.warn(` No term found for ${termKey}, skipping...`);
           continue;
         }
 
@@ -277,21 +277,21 @@ async function main() {
           recordCount++;
 
           if (recordCount % 1000 === 0) {
-            console.log(`✅ Created ${recordCount} course records...`);
+            console.log(` Created ${recordCount} course records...`);
           }
         } catch (e) {
-          console.warn(`⚠️ Error creating record for student ${student.student_code}, course ${currCourse.course?.course_code}: ${e.message}`);
+          console.warn(` Error creating record for student ${student.student_code}, course ${currCourse.course?.course_code}: ${e.message}`);
           skippedCount++;
         }
       }
     }
   }
 
-  console.log(`\n✅ Seeded ${recordCount} StudentCourseRecords!`);
-  console.log(`⚠️ Skipped ${skippedCount} records due to errors or missing data`);
+  console.log(`\n Seeded ${recordCount} StudentCourseRecords!`);
+  console.log(` Skipped ${skippedCount} records due to errors or missing data`);
 
   // Print some statistics
-  console.log('\n📊 Statistics:');
+  console.log('\n Statistics:');
   
   const completedRecords = await prisma.studentCourseRecord.count({
     where: { status: 'completed' },
@@ -315,7 +315,7 @@ async function main() {
     _count: true,
   });
 
-  console.log('\n📈 Grade Distribution (Completed courses):');
+  console.log('\n Grade Distribution (Completed courses):');
   gradeDistribution
     .sort((a, b) => {
       const order = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F'];
@@ -325,12 +325,12 @@ async function main() {
       console.log(`   ${g.converted_score}: ${g._count} records`);
     });
 
-  console.log('\n✨ seedFinalPart2.js completed!');
+  console.log('\n seedFinalPart2.js completed!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seeding:', e);
+    console.error(' Error during seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

@@ -19,14 +19,14 @@ interface User {
   email: string;
 }
 
-type ViewMode = 'grid' | 'list';
-type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'canceled' | 'rejected';
-type TimeFilter = 'all' | 'upcoming' | 'past' | 'this_week' | 'this_month';
+type ViewMode = 'grid'| 'list';
+type StatusFilter = 'all'| 'pending'| 'confirmed'| 'completed'| 'canceled'| 'rejected';
+type TimeFilter = 'all'| 'upcoming'| 'past'| 'this_week'| 'this_month';
 
 // Helper function to get initials from name
 const getInitials = (name: string): string => {
   if (!name) return '??';
-  const parts = name.split(' ').filter(Boolean);
+  const parts = name.split('').filter(Boolean);
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
@@ -93,7 +93,7 @@ export default function AllAppointments(_props: Props) {
       setDebouncedSearchQuery(searchQuery);
     }, 300); // 300ms delay
 
-    return () => clearTimeout(timer);
+    return () =>clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {
@@ -112,13 +112,13 @@ export default function AllAppointments(_props: Props) {
   // Listen for appointment status change notifications
   useEffect(() => {
     if (newNotification) {
-      console.log('📬 [AllAppointments] Received notification:', newNotification);
+      console.log('[AllAppointments] Received notification:', newNotification);
       
       // Reload appointments if notification is about appointment status change
-      if (newNotification.type === 'appointment_confirmed' || 
-          newNotification.type === 'appointment_rejected' ||
+      if (newNotification.type === 'appointment_confirmed'|| 
+          newNotification.type === 'appointment_rejected'||
           newNotification.type === 'appointment_canceled') {
-        console.log('🔄 [AllAppointments] Reloading appointments due to status change');
+        console.log('[AllAppointments] Reloading appointments due to status change');
         loadAppointments();
       }
     }
@@ -162,7 +162,7 @@ export default function AllAppointments(_props: Props) {
 
   const locale = useMemo(() => {
     const lang = i18n?.language;
-    if (!lang) return (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
+    if (!lang) return (typeof navigator !== 'undefined'? navigator.language : 'vi-VN');
     if (lang === 'en') return 'en-US';
     if (lang === 'vi') return 'vi-VN';
     return lang;
@@ -217,10 +217,10 @@ export default function AllAppointments(_props: Props) {
             if (aptDate >= timeRanges.now) return false;
             break;
           case 'this_week':
-            if (aptDate < timeRanges.startOfWeek || aptDate > timeRanges.endOfWeek) return false;
+            if (aptDate < timeRanges.startOfWeek || aptDate >timeRanges.endOfWeek) return false;
             break;
           case 'this_month':
-            if (aptDate < timeRanges.startOfMonth || aptDate > timeRanges.endOfMonth) return false;
+            if (aptDate < timeRanges.startOfMonth || aptDate >timeRanges.endOfMonth) return false;
             break;
         }
       }
@@ -242,7 +242,7 @@ export default function AllAppointments(_props: Props) {
 
   // Load more appointments
   const loadMore = () => {
-    setDisplayCount(prev => prev + ITEMS_PER_PAGE);
+    setDisplayCount(prev =>prev + ITEMS_PER_PAGE);
   };
 
   // Reset display count when filters change
@@ -298,7 +298,7 @@ export default function AllAppointments(_props: Props) {
   const restoreCanceledAppointment = async (appointment: Appointment) => {
     try {
       // Determine new status based on booker role
-      const newStatus = appointment.booker_role === 'student' ? 'confirmed' : 'pending';
+      const newStatus = appointment.booker_role === 'student'? 'confirmed': 'pending';
       await BookingApiService.updateAppointmentStatus(appointment.appointment_id, newStatus);
       await loadAppointments();
     } catch (err) {
@@ -329,7 +329,7 @@ export default function AllAppointments(_props: Props) {
   // Check if appointment is past
   const isPastAppointment = (appointment: Appointment) => {
     const aptDate = new Date(appointment.slot?.date?.specific_date || appointment.created_at);
-    return aptDate < new Date() || appointment.status === 'completed' || appointment.status === 'canceled' || appointment.status === 'cancelled' || appointment.status === 'rejected';
+    return aptDate < new Date() || appointment.status === 'completed'|| appointment.status === 'canceled'|| appointment.status === 'cancelled'|| appointment.status === 'rejected';
   };
 
   // Check if appointment is past but not completed (for showing complete button)
@@ -380,7 +380,7 @@ export default function AllAppointments(_props: Props) {
     let typeIconColor = 'text-gray-400';
     let typeTextColor = 'text-gray-500';
 
-    if (appointment.status === 'canceled' || appointment.status === 'cancelled' || appointment.status === 'completed') {
+    if (appointment.status === 'canceled'|| appointment.status === 'cancelled'|| appointment.status === 'completed') {
       // Gray background for canceled and completed
       cardBg = 'bg-gray-50';
       borderColor = 'border-gray-200';
@@ -389,7 +389,7 @@ export default function AllAppointments(_props: Props) {
       footerBg = 'bg-gray-50';
       typeIconColor = 'text-gray-400';
       typeTextColor = 'text-gray-500';
-    } else if (appointment.status === 'confirmed' && isOnline) {
+    } else if (appointment.status === 'confirmed'&& isOnline) {
       // Light green background for confirmed online
       cardBg = 'bg-green-50';
       borderColor = 'border-green-200';
@@ -398,7 +398,7 @@ export default function AllAppointments(_props: Props) {
       footerBg = 'bg-green-50';
       typeIconColor = 'text-green-600';
       typeTextColor = 'text-green-700';
-    } else if (appointment.status === 'confirmed' && !isOnline) {
+    } else if (appointment.status === 'confirmed'&& !isOnline) {
       // Light orange background for confirmed offline
       cardBg = 'bg-orange-50';
       borderColor = 'border-orange-200';
@@ -421,12 +421,12 @@ export default function AllAppointments(_props: Props) {
     return (
       <div 
         key={appointment.appointment_id} 
-        className={`${cardBg} rounded-xl shadow-sm border-2 ${borderColor} overflow-hidden hover:shadow-md transition-shadow ${isPast ? 'opacity-90' : ''}`}
+        className={`${cardBg} rounded-xl shadow-sm border-2 ${borderColor} overflow-hidden hover:shadow-md transition-shadow ${isPast ? 'opacity-90': ''}`}
       >
         {/* Header */}
         <div className={`px-4 py-3 ${headerBg} border-b ${headerBorder} flex items-center justify-between`}>
           <div className="flex items-center gap-2.5">
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${isPast ? 'from-gray-400 to-gray-500' : avatarColor} flex items-center justify-center text-white font-semibold text-sm`}>
+            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${isPast ? 'from-gray-400 to-gray-500': avatarColor} flex items-center justify-center text-white font-semibold text-sm`}>
               {initials}
             </div>
             <div>
@@ -436,13 +436,11 @@ export default function AllAppointments(_props: Props) {
                   <>
                     <i className={`fas fa-video ${typeIconColor} text-xs`}></i>
                     <span className={`text-xs ${typeTextColor} font-medium`}>{t('appointments.management.typeOnline')}</span>
-                  </>
-                ) : (
+                  </>) : (
                   <>
                     <i className={`fas fa-location-dot ${typeIconColor} text-xs`}></i>
                     <span className={`text-xs ${typeTextColor} font-medium`}>{t('appointments.management.typeOffline')}</span>
-                  </>
-                )}
+                  </>)}
               </div>
             </div>
           </div>
@@ -467,34 +465,27 @@ export default function AllAppointments(_props: Props) {
             <div className="flex items-start gap-2.5">
               <i className="fas fa-comment-dots text-gray-400 text-sm mt-0.5"></i>
               <p className="text-xs text-gray-600">{translatePurpose(appointment.meeting_purpose)}</p>
-            </div>
-          )}
+            </div>)}
 
           {/* Meeting Link (Online) */}
-          {isOnline && appointment.status !== 'canceled' && appointment.status !== 'cancelled' && (
+          {isOnline && appointment.status !== 'canceled'&& appointment.status !== 'cancelled'&& (
             <div className="flex items-start gap-2.5">
               <i className="fas fa-link text-gray-400 text-sm mt-0.5"></i>
               {appointment.slot?.meeting_link ? (
-                <a href={appointment.slot.meeting_link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline break-all">
+                <a href={appointment.slot.meeting_link} target="_blank"rel="noopener noreferrer"className="text-xs text-blue-600 hover:underline break-all">
                   {appointment.slot.meeting_link}
-                </a>
-              ) : (
-                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLink')}</span>
-              )}
-            </div>
-          )}
+                </a>) : (
+                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLink')}</span>)}
+            </div>)}
 
           {/* Meeting Location (Offline) */}
-          {!isOnline && appointment.status !== 'canceled' && appointment.status !== 'cancelled' && (
+          {!isOnline && appointment.status !== 'canceled'&& appointment.status !== 'cancelled'&& (
             <div className="flex items-start gap-2.5">
               <i className="fas fa-map-marker-alt text-gray-400 text-sm mt-0.5"></i>
               {appointment.slot?.meeting_location ? (
-                <p className="text-xs text-gray-600">{appointment.slot.meeting_location}</p>
-              ) : (
-                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLocation')}</span>
-              )}
-            </div>
-          )}
+                <p className="text-xs text-gray-600">{appointment.slot.meeting_location}</p>) : (
+                <span className="text-xs text-gray-500">{t('appointments.management.waitingForLocation')}</span>)}
+            </div>)}
 
           {/* Parent Contact Info */}
           {appointment.appointmentContact && (
@@ -505,62 +496,52 @@ export default function AllAppointments(_props: Props) {
                   <p className="text-xs text-gray-600">
                     <i className="fas fa-user text-gray-400 w-3.5"></i> {appointment.appointmentContact.contact_name}
                     {appointment.appointmentContact.relationship_to_student && ` (${appointment.appointmentContact.relationship_to_student})`}
-                  </p>
-                )}
+                  </p>)}
                 {appointment.appointmentContact.contact_phone && (
                   <p className="text-xs text-gray-600">
                     <i className="fas fa-phone text-gray-400 w-3.5"></i> {appointment.appointmentContact.contact_phone}
-                  </p>
-                )}
+                  </p>)}
                 {appointment.appointmentContact.contact_email && (
                   <p className="text-xs text-gray-600">
                     <i className="fas fa-envelope text-gray-400 w-3.5"></i> {appointment.appointmentContact.contact_email}
-                  </p>
-                )}
+                  </p>)}
               </div>
-            </div>
-          )}
+            </div>)}
 
           {/* Completed status */}
-          {appointment.status === 'completed' && (
+          {appointment.status === 'completed'&& (
             <div className="flex items-center gap-1.5 text-xs text-emerald-500">
               <i className="fas fa-check-circle"></i>
               <span>{t('appointments.management.statusCompleted')}</span>
-            </div>
-          )}
+            </div>)}
 
           {/* Canceled info */}
-          {appointment.status === 'canceled' || appointment.status === 'cancelled' ? (
+          {appointment.status === 'canceled'|| appointment.status === 'cancelled'? (
             <div className="bg-red-50 rounded-lg p-2.5 border border-red-100">
               <p className="text-xs text-red-500">
                 {t('appointments.management.statusCanceled')}{appointment.canceled_at ? ` ${new Date(appointment.canceled_at).toLocaleDateString(locale)}` : ''}
               </p>
               {appointment.cancel_reason && (
-                <p className="text-xs text-red-400 mt-1">{t('appointments.management.cancelReason')} {appointment.cancel_reason}</p>
-              )}
-            </div>
-          ) : null}
+                <p className="text-xs text-red-400 mt-1">{t('appointments.management.cancelReason')} {appointment.cancel_reason}</p>)}
+            </div>) : null}
 
           {/* Rejected info */}
-          {appointment.status === 'rejected' ? (
+          {appointment.status === 'rejected'? (
             <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
               <p className="text-xs text-gray-600">
                 {t('appointments.management.statusRejected')}{appointment.canceled_at ? ` ${new Date(appointment.canceled_at).toLocaleDateString(locale)}` : ''}
               </p>
               {appointment.cancel_reason && (
-                <p className="text-xs text-gray-500 mt-1">{t('appointments.management.cancelReason')} {appointment.cancel_reason}</p>
-              )}
-            </div>
-          ) : null}
+                <p className="text-xs text-gray-500 mt-1">{t('appointments.management.cancelReason')} {appointment.cancel_reason}</p>)}
+            </div>) : null}
         </div>
 
         {/* Footer with Actions */}
         <div className={`px-4 py-3 ${footerBg} flex gap-2`}>
-          {appointment.status === 'confirmed' && isOnline && (
+          {appointment.status === 'confirmed'&& isOnline && (
             <>
               <button 
-                className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"
-                onClick={() => {
+                className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 text-sm cursor-pointer"onClick={() => {
                   if (appointment.slot?.meeting_link) {
                     window.open(appointment.slot.meeting_link, '_blank');
                   }
@@ -571,24 +552,20 @@ export default function AllAppointments(_props: Props) {
               </button>
               {isPastButNotCompleted(appointment) && (
                 <button 
-                  onClick={() => markAsCompleted(appointment)} 
-                  className="px-3 py-2 border border-green-200 rounded-lg text-green-600 hover:bg-green-50 transition-colors text-sm cursor-pointer"
-                  title={t('appointments.management.markCompleted')}
+                  onClick={() =>markAsCompleted(appointment)} 
+                  className="px-3 py-2 border border-green-200 rounded-lg text-green-600 hover:bg-green-50 transition-colors text-sm cursor-pointer"title={t('appointments.management.markCompleted')}
                 >
                   <i className="fas fa-check text-xs"></i>
-                </button>
-              )}
+                </button>)}
               <button 
-                onClick={() => openDeleteModal(appointment)} 
-                className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"
-                title={t('appointments.management.cancel')}
+                onClick={() =>openDeleteModal(appointment)} 
+                className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"title={t('appointments.management.cancel')}
               >
                 <i className="fas fa-trash text-xs"></i>
               </button>
-            </>
-          )}
+            </>)}
           
-          {appointment.status === 'confirmed' && !isOnline && (
+          {appointment.status === 'confirmed'&& !isOnline && (
             <>
               <button className="flex-1 bg-gray-300 text-gray-600 px-3 py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 text-sm">
                 <i className="fas fa-map-marker-alt text-xs"></i>
@@ -596,46 +573,38 @@ export default function AllAppointments(_props: Props) {
               </button>
               {isPastButNotCompleted(appointment) && (
                 <button 
-                  onClick={() => markAsCompleted(appointment)} 
-                  className="px-3 py-2 border border-green-200 rounded-lg text-green-600 hover:bg-green-50 transition-colors text-sm cursor-pointer"
-                  title="Đánh dấu hoàn thành"
-                >
+                  onClick={() =>markAsCompleted(appointment)} 
+                  className="px-3 py-2 border border-green-200 rounded-lg text-green-600 hover:bg-green-50 transition-colors text-sm cursor-pointer"title="Đánh dấu hoàn thành">
                   <i className="fas fa-check text-xs"></i>
-                </button>
-              )}
+                </button>)}
               <button 
-                onClick={() => openDeleteModal(appointment)} 
-                className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"
-                title={t('appointments.management.cancel')}
+                onClick={() =>openDeleteModal(appointment)} 
+                className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"title={t('appointments.management.cancel')}
               >
                 <i className="fas fa-trash text-xs"></i>
               </button>
-            </>
-          )}
+            </>)}
 
-          {appointment.status === 'pending' && (
+          {appointment.status === 'pending'&& (
             <>
               <button className="flex-1 bg-gray-300 text-gray-500 px-3 py-2 rounded-lg font-medium cursor-not-allowed flex items-center justify-center gap-1.5 text-sm">
                 <i className="fas fa-clock text-xs"></i>
                 <span>{t('appointments.management.statusPending')}</span>
               </button>
               <button 
-                onClick={() => openDeleteModal(appointment)} 
-                className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"
-                title={t('appointments.management.cancel')}
+                onClick={() =>openDeleteModal(appointment)} 
+                className="px-3 py-2 border border-gray-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors text-sm cursor-pointer"title={t('appointments.management.cancel')}
               >
                 <i className="fas fa-trash text-xs"></i>
               </button>
-            </>
-          )}
+            </>)}
 
-          {appointment.status === 'completed' && (
+          {appointment.status === 'completed'&& (
             <button className="w-full bg-gray-200 text-gray-500 px-3 py-2 rounded-lg font-medium cursor-not-allowed text-sm">
               {t('appointments.management.statusCompleted')}
-            </button>
-          )}
+            </button>)}
 
-          {appointment.status === 'canceled' || appointment.status === 'cancelled' ? (
+          {appointment.status === 'canceled'|| appointment.status === 'cancelled'? (
             (() => {
               // Check if the slot time has already passed
               const slotDate = appointment.slot?.date?.specific_date;
@@ -675,26 +644,21 @@ export default function AllAppointments(_props: Props) {
                 <button 
                   className={`w-full px-3 py-2 rounded-lg font-medium text-sm ${
                     isPast 
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer'
-                  }`}
-                  onClick={isPast ? undefined : () => restoreCanceledAppointment(appointment)}
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed': 'bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer'}`}
+                  onClick={isPast ? undefined : () =>restoreCanceledAppointment(appointment)}
                   disabled={isPast}
                 >
                   {isPast ? t('appointments.management.restoreExpired') : t('appointments.management.reschedule')}
-                </button>
-              );
+                </button>);
             })()
           ) : null}
 
-          {appointment.status === 'rejected' && (
+          {appointment.status === 'rejected'&& (
             <button className="w-full bg-gray-200 text-gray-500 px-3 py-2 rounded-lg font-medium cursor-not-allowed text-sm">
               {t('appointments.management.statusRejected')}
-            </button>
-          )}
+            </button>)}
         </div>
-      </div>
-    );
+      </div>);
   };
 
   return (
@@ -711,8 +675,7 @@ export default function AllAppointments(_props: Props) {
               <p className="text-xs text-gray-500 mt-0.5">{t('appointments.subtitle')}</p>
             </div>
             <button 
-              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm"
-              onClick={() => navigate('/booking/scheduler')}
+              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm"onClick={() =>navigate('/booking/scheduler')}
             >
               <i className="fas fa-plus"></i>
               <span>{t('appointments.management.create')}</span>
@@ -729,19 +692,16 @@ export default function AllAppointments(_props: Props) {
               <div className="relative">
                 <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                 <input 
-                  type="text" 
-                  placeholder={t('appointments.searchPlaceholder')} 
-                  className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  type="text"placeholder={t('appointments.searchPlaceholder')} 
+                  className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"value={searchQuery}
+                  onChange={(e) =>setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             
             <div className="flex flex-wrap gap-2">
               <select 
-                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
-                value={statusFilter}
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"value={statusFilter}
                 onChange={(e) => {
                   const value = e.target.value as StatusFilter;
                   startTransition(() => {
@@ -758,8 +718,7 @@ export default function AllAppointments(_props: Props) {
               </select>
               
               <select 
-                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
-                value={timeFilter}
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"value={timeFilter}
                 onChange={(e) => {
                   const value = e.target.value as TimeFilter;
                   startTransition(() => {
@@ -776,14 +735,14 @@ export default function AllAppointments(_props: Props) {
               
               <div className="flex gap-1 border border-gray-200 rounded-xl p-0.5">
                 <button 
-                  className={`px-3 py-2 rounded-lg text-sm ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  onClick={() => setViewMode('grid')}
+                  className={`px-3 py-2 rounded-lg text-sm ${viewMode === 'grid'? 'bg-blue-600 text-white': 'text-gray-600 hover:bg-gray-100'}`}
+                  onClick={() =>setViewMode('grid')}
                 >
                   <i className="fas fa-th"></i>
                 </button>
                 <button 
-                  className={`px-3 py-2 rounded-lg text-sm ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-2 rounded-lg text-sm ${viewMode === 'list'? 'bg-blue-600 text-white': 'text-gray-600 hover:bg-gray-100'}`}
+                  onClick={() =>setViewMode('list')}
                 >
                   <i className="fas fa-list"></i>
                 </button>
@@ -799,20 +758,17 @@ export default function AllAppointments(_props: Props) {
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
             <span className="ml-3 text-gray-500">{isPending ? t('appointments.filtering') : t('appointments.loading')}</span>
-          </div>
-        )}
+          </div>)}
 
         {error && (
           <div className="text-center py-12">
             <div className="text-red-500 mb-4">{error}</div>
             <button 
               onClick={loadAppointments} 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-            >
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
               {t('appointments.tryAgain')}
             </button>
-          </div>
-        )}
+          </div>)}
 
         {!loading && !isPending && !error && filteredAppointments.length === 0 && (
           <div className="text-center py-12">
@@ -820,25 +776,19 @@ export default function AllAppointments(_props: Props) {
               <i className="fas fa-calendar-xmark"></i>
             </div>
             <div className="text-gray-500 mb-4">
-              {searchQuery || statusFilter !== 'all' || timeFilter !== 'all' 
-                ? t('appointments.noAppointmentsFilter')
+              {searchQuery || statusFilter !== 'all'|| timeFilter !== 'all'? t('appointments.noAppointmentsFilter')
                 : t('appointments.noAppointments')}
             </div>
             <button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium"
-              onClick={() => navigate('/booking/scheduler')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium"onClick={() =>navigate('/booking/scheduler')}
             >
               {t('appointments.management.bookFirst')}
             </button>
-          </div>
-        )}
+          </div>)}
 
-        {!loading && !isPending && !error && filteredAppointments.length > 0 && (
+        {!loading && !isPending && !error && filteredAppointments.length >0 && (
           <>
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' 
-              : 'flex flex-col gap-4'
-            }>
+            <div className={viewMode === 'grid'? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4': 'flex flex-col gap-4'}>
               {displayedAppointments.map(renderAppointmentCard)}
             </div>
             
@@ -847,25 +797,22 @@ export default function AllAppointments(_props: Props) {
               <div className="flex justify-center mt-6">
                 <button
                   onClick={loadMore}
-                  className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors font-medium shadow-sm"
-                >
+                  className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors font-medium shadow-sm">
                   <i className="fas fa-chevron-down"></i>
                   <span>{t('appointments.management.loadMore')} ({filteredAppointments.length - displayCount} {t('appointments.management.appointments')} {t('appointments.management.remaining')})</span>
                 </button>
-              </div>
-            )}
+              </div>)}
             
             {/* Showing count */}
             <div className="text-center mt-4 text-sm text-gray-500">
               {t('appointments.management.showing')} {displayedAppointments.length} / {filteredAppointments.length} {t('appointments.management.appointments')}
             </div>
-          </>
-        )}
+          </>)}
       </main>
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center p-4"style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <div className="flex items-center mb-4">
               <i className="fas fa-exclamation-triangle text-red-500 text-2xl mr-3"></i>
@@ -876,13 +823,12 @@ export default function AllAppointments(_props: Props) {
 
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                {t('appointments.management.confirmCancelBody')}{' '}
+                {t('appointments.management.confirmCancelBody')}{''}
                 <span className="font-semibold text-gray-900">
                   {selectedAppointment?.instructor?.account?.profile?.full_name || t('appointments.management.instructor')}
                 </span>?
               </p>
-              <p className="text-sm text-gray-500">
-                Hành động này không thể hoàn tác.
+              <p className="text-sm text-gray-500">Hành động này không thể hoàn tác.
               </p>
 
               <div className="mt-4">
@@ -890,11 +836,10 @@ export default function AllAppointments(_props: Props) {
                   {t('appointments.management.cancelReason')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  className="w-full px-3 py-2 text-sm border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-100 text-gray-900 placeholder-gray-500"
-                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-100 text-gray-900 placeholder-gray-500"rows={3}
                   placeholder={t('appointments.management.cancelReasonPlaceholder')}
                   value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
+                  onChange={(e) =>setCancelReason(e.target.value)}
                 />
               </div>
             </div>
@@ -902,21 +847,17 @@ export default function AllAppointments(_props: Props) {
             <div className="flex gap-3">
               <button
                 onClick={closeDeleteModal}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors cursor-pointer"
-              >
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors cursor-pointer">
                 {t('appointments.management.back')}
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
-              >
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer">
                 {t('appointments.management.confirmCancelButton')}
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>)}
       <ToastContainer toasts={toasts} onClose={hideToast} />
-    </div>
-  );
+    </div>);
 }

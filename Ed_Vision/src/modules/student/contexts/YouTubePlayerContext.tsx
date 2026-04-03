@@ -11,16 +11,16 @@ import type { YouTubeTrack } from '../types/youtubeTypes';
 interface YouTubePlayerContextValue extends UseYouTubePlayerReturn {
   // Queue management
   queue: YouTubeTrack[];
-  addToQueue: (track: YouTubeTrack) => void;
-  removeFromQueue: (trackId: string) => void;
-  clearQueue: () => void;
-  playNext: () => void;
-  playPrevious: () => void;
+  addToQueue: (track: YouTubeTrack) =>void;
+  removeFromQueue: (trackId: string) =>void;
+  clearQueue: () =>void;
+  playNext: () =>void;
+  playPrevious: () =>void;
   // Shuffle and repeat
   shuffle: boolean;
-  toggleShuffle: () => void;
-  repeat: 'none' | 'one' | 'all';
-  setRepeat: (mode: 'none' | 'one' | 'all') => void;
+  toggleShuffle: () =>void;
+  repeat: 'none'| 'one'| 'all';
+  setRepeat: (mode: 'none'| 'one'| 'all') =>void;
 }
 
 const YouTubePlayerContext = createContext<YouTubePlayerContextValue | null>(null);
@@ -33,7 +33,7 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
   const [queue, setQueue] = React.useState<YouTubeTrack[]>([]);
   const [queueIndex, setQueueIndex] = React.useState(-1);
   const [shuffle, setShuffle] = React.useState(false);
-  const [repeat, setRepeatState] = React.useState<'none' | 'one' | 'all'>('none');
+  const [repeat, setRepeatState] = React.useState<'none'| 'one'| 'all'>('none');
   const [playHistory, setPlayHistory] = React.useState<number[]>([]);
 
   const player = useYouTubePlayer({
@@ -44,7 +44,7 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
 
   // Handle track end
   const handleTrackEnd = useCallback(() => {
-    if (repeat === 'one' && player.currentTrack) {
+    if (repeat === 'one'&& player.currentTrack) {
       // Replay current track
       player.playTrack(player.currentTrack);
       return;
@@ -53,7 +53,7 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
     if (queueIndex < queue.length - 1) {
       // Play next in queue
       playNextInQueue();
-    } else if (repeat === 'all' && queue.length > 0) {
+    } else if (repeat === 'all'&& queue.length >0) {
       // Restart queue
       setQueueIndex(0);
       player.playTrack(queue[0]);
@@ -65,8 +65,8 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
     if (shuffle) {
       // Get random track that hasn't been played recently
       const unplayed = queue
-        .map((_, i) => i)
-        .filter((i) => !playHistory.includes(i) && i !== queueIndex);
+        .map((_, i) =>i)
+        .filter((i) =>!playHistory.includes(i) && i !== queueIndex);
       
       if (unplayed.length === 0) {
         // Reset history if all played
@@ -86,7 +86,7 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
 
     const nextIndex = getNextIndex();
     if (nextIndex < queue.length) {
-      setPlayHistory((prev) => [...prev, queueIndex]);
+      setPlayHistory((prev) =>[...prev, queueIndex]);
       setQueueIndex(nextIndex);
       player.playTrack(queue[nextIndex]);
     }
@@ -94,18 +94,18 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
 
   // Play previous track
   const playPrevious = useCallback(() => {
-    if (player.currentTime > 3) {
+    if (player.currentTime >3) {
       // If more than 3 seconds in, restart current track
       player.seek(0);
       return;
     }
 
-    if (playHistory.length > 0) {
+    if (playHistory.length >0) {
       const prevIndex = playHistory[playHistory.length - 1];
-      setPlayHistory((prev) => prev.slice(0, -1));
+      setPlayHistory((prev) =>prev.slice(0, -1));
       setQueueIndex(prevIndex);
       player.playTrack(queue[prevIndex]);
-    } else if (queueIndex > 0) {
+    } else if (queueIndex >0) {
       setQueueIndex(queueIndex - 1);
       player.playTrack(queue[queueIndex - 1]);
     }
@@ -113,21 +113,21 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
 
   // Add track to queue
   const addToQueue = useCallback((track: YouTubeTrack) => {
-    setQueue((prev) => [...prev, track]);
+    setQueue((prev) =>[...prev, track]);
   }, []);
 
   // Remove track from queue
   const removeFromQueue = useCallback((trackId: string) => {
     setQueue((prev) => {
-      const index = prev.findIndex((t) => t.id === trackId);
+      const index = prev.findIndex((t) =>t.id === trackId);
       if (index === -1) return prev;
       
       // Adjust queue index if needed
       if (index < queueIndex) {
-        setQueueIndex((i) => i - 1);
+        setQueueIndex((i) =>i - 1);
       }
       
-      return prev.filter((t) => t.id !== trackId);
+      return prev.filter((t) =>t.id !== trackId);
     });
   }, [queueIndex]);
 
@@ -140,22 +140,22 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
 
   // Toggle shuffle
   const toggleShuffle = useCallback(() => {
-    setShuffle((prev) => !prev);
+    setShuffle((prev) =>!prev);
   }, []);
 
   // Set repeat mode
-  const setRepeat = useCallback((mode: 'none' | 'one' | 'all') => {
+  const setRepeat = useCallback((mode: 'none'| 'one'| 'all') => {
     setRepeatState(mode);
   }, []);
 
   // Override playTrack to also add to queue
   const playTrack = useCallback((track: YouTubeTrack) => {
-    const existingIndex = queue.findIndex((t) => t.id === track.id);
+    const existingIndex = queue.findIndex((t) =>t.id === track.id);
     
     if (existingIndex !== -1) {
       setQueueIndex(existingIndex);
     } else {
-      setQueue((prev) => [...prev, track]);
+      setQueue((prev) =>[...prev, track]);
       setQueueIndex(queue.length);
     }
     
@@ -180,8 +180,7 @@ export function YouTubePlayerProvider({ children }: YouTubePlayerProviderProps) 
   return (
     <YouTubePlayerContext.Provider value={value}>
       {children}
-    </YouTubePlayerContext.Provider>
-  );
+    </YouTubePlayerContext.Provider>);
 }
 
 export function useYouTubePlayerContext(): YouTubePlayerContextValue {

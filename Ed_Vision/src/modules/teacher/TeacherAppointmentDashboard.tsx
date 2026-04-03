@@ -7,7 +7,7 @@ import TeacherLayout from './components/TeacherLayout';
 import ScheduleManagement from './ScheduleManagement';
 import TeacherAppointmentManagement from './TeacherAppointmentManagement';
 
-type Page = 'schedule' | 'management';
+type Page = 'schedule'| 'management';
 
 export default function TeacherAppointmentDashboard() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export default function TeacherAppointmentDashboard() {
   
   // Initialize currentPage based on URL path immediately
   const getInitialPage = (): Page => {
-    return location.pathname === '/teacher/schedule' ? 'schedule' : 'management';
+    return location.pathname === '/teacher/schedule'? 'schedule': 'management';
   };
   
   const [currentPage, setCurrentPage] = useState<Page>(getInitialPage);
@@ -23,7 +23,7 @@ export default function TeacherAppointmentDashboard() {
   // Update currentPage when URL changes (only if different)
   useEffect(() => {
     const pathname = location.pathname;
-    const newPage = pathname === '/teacher/schedule' ? 'schedule' : 'management';
+    const newPage = pathname === '/teacher/schedule'? 'schedule': 'management';
     if (newPage !== currentPage) {
       setCurrentPage(newPage);
     }
@@ -121,7 +121,7 @@ export default function TeacherAppointmentDashboard() {
 
   const showToast = (message: string, type: string) => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() =>setToast(null), 3000);
   };
 
   const handleNavigation = (path: string) => {
@@ -134,40 +134,29 @@ export default function TeacherAppointmentDashboard() {
       {/* Main Content */}
       <div className="min-h-screen bg-gray-50">
         {/* Render components based on current page */}
-        {currentPage === 'schedule' && (
+        {currentPage === 'schedule'&& (
           <ScheduleManagement
             availableDates={availableDates}
             setAvailableDates={setAvailableDates}
             showToast={showToast}
-          />
-        )}
+          />)}
 
-        {currentPage === 'management' && (
+        {currentPage === 'management'&& (
           <TeacherAppointmentManagement
             showToast={showToast}
-          />
-        )}
+          />)}
       </div>
 
       {/* Toast Notification */}
       {toast && (
         <div
           className={`fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white ${
-            toast.type === 'success'
-              ? 'bg-green-500'
-              : toast.type === 'error'
-              ? 'bg-red-500'
-              : toast.type === 'warning'
-              ? 'bg-yellow-500'
-              : 'bg-blue-500'
-          }`}
+            toast.type === 'success'? 'bg-green-500': toast.type === 'error'? 'bg-red-500': toast.type === 'warning'? 'bg-yellow-500': 'bg-blue-500'}`}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5" />
+            <CheckCircle className="w-5 h-5"/>
             <span>{toast.message}</span>
           </div>
-        </div>
-      )}
-    </TeacherLayout>
-  );
+        </div>)}
+    </TeacherLayout>);
 }

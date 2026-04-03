@@ -15,7 +15,6 @@ import {
     X,
     Camera
 } from 'lucide-react'
-
 interface TeacherProfile {
     id: string
     fullName: string
@@ -64,8 +63,7 @@ export default function TeacherProfile() {
                 specialization: 'Trí tuệ nhân tạo, Machine Learning',
                 yearsOfExperience: 10,
                 avatar: 'https://i.pravatar.cc/300?img=12',
-                bio: 'Giảng viên với hơn 10 năm kinh nghiệm giảng dạy và nghiên cứu trong lĩnh vực Trí tuệ nhân tạo và Machine Learning. Đã hướng dẫn hơn 50 sinh viên tốt nghiệp và xuất bản nhiều công trình nghiên cứu quốc tế.'
-            }
+                bio: 'Giảng viên với hơn 10 năm kinh nghiệm giảng dạy và nghiên cứu trong lĩnh vực Trí tuệ nhân tạo và Machine Learning. Đã hướng dẫn hơn 50 sinh viên tốt nghiệp và xuất bản nhiều công trình nghiên cứu quốc tế.'}
             
             setProfile(mockProfile)
             setEditedProfile(mockProfile)
@@ -113,8 +111,7 @@ export default function TeacherProfile() {
                         <p className="mt-4 text-gray-600">Đang tải thông tin...</p>
                     </div>
                 </div>
-            </TeacherLayout>
-        )
+            </TeacherLayout>)
     }
 
     if (!profile) {
@@ -123,8 +120,7 @@ export default function TeacherProfile() {
                 <div className="text-center py-12">
                     <p className="text-gray-600">Không tìm thấy thông tin hồ sơ</p>
                 </div>
-            </TeacherLayout>
-        )
+            </TeacherLayout>)
     }
 
     return (
@@ -138,30 +134,25 @@ export default function TeacherProfile() {
                     </div>
                     {!isEditing ? (
                         <Button
-                            onClick={() => setIsEditing(true)}
-                            className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30"
-                        >
-                            <Edit className="w-4 h-4" />
+                            onClick={() =>setIsEditing(true)}
+                            className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-all border border-white/30">
+                            <Edit className="w-4 h-4"/>
                             <span>Chỉnh sửa</span>
-                        </Button>
-                    ) : (
+                        </Button>) : (
                         <div className="flex space-x-3">
                             <Button
                                 onClick={handleSave}
-                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center space-x-2"
-                            >
-                                <Save className="w-4 h-4" />
+                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center space-x-2">
+                                <Save className="w-4 h-4"/>
                                 <span>Lưu</span>
                             </Button>
                             <Button
                                 onClick={handleCancel}
-                                className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg flex items-center space-x-2 border border-white/30"
-                            >
-                                <X className="w-4 h-4" />
+                                className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg flex items-center space-x-2 border border-white/30">
+                                <X className="w-4 h-4"/>
                                 <span>Hủy</span>
                             </Button>
-                        </div>
-                    )}
+                        </div>)}
                 </div>
             </div>
 
@@ -174,14 +165,11 @@ export default function TeacherProfile() {
                                 <div className="relative inline-block mb-4">
                                     <img
                                         src={isEditing ? editedProfile?.avatar : profile.avatar}
-                                        alt="Avatar"
-                                        className="w-32 h-32 rounded-full object-cover border-4 border-blue-500 mx-auto"
-                                    />
+                                        alt="Avatar"className="w-32 h-32 rounded-full object-cover border-4 border-blue-500 mx-auto"/>
                                     {isEditing && (
                                         <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors">
-                                            <Camera className="w-4 h-4" />
-                                        </button>
-                                    )}
+                                            <Camera className="w-4 h-4"/>
+                                        </button>)}
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                                     {isEditing ? editedProfile?.fullName : profile.fullName}
@@ -197,14 +185,14 @@ export default function TeacherProfile() {
                             <div className="mt-6 pt-6 border-t border-gray-200">
                                 <div className="space-y-3">
                                     <div className="flex items-center text-sm">
-                                        <Briefcase className="w-4 h-4 text-gray-400 mr-2" />
+                                        <Briefcase className="w-4 h-4 text-gray-400 mr-2"/>
                                         <span className="text-gray-600">Kinh nghiệm:</span>
                                         <span className="ml-auto font-semibold text-gray-900">
                                             {isEditing ? editedProfile?.yearsOfExperience : profile.yearsOfExperience} năm
                                         </span>
                                     </div>
                                     <div className="flex items-center text-sm">
-                                        <GraduationCap className="w-4 h-4 text-gray-400 mr-2" />
+                                        <GraduationCap className="w-4 h-4 text-gray-400 mr-2"/>
                                         <span className="text-gray-600">Khoa:</span>
                                         <span className="ml-auto font-semibold text-gray-900 text-right">
                                             {isEditing ? editedProfile?.department : profile.department}
@@ -222,112 +210,86 @@ export default function TeacherProfile() {
                     <Card>
                         <CardHeader className="border-b border-gray-200">
                             <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
-                                <User className="w-5 h-5 text-blue-600 mr-2" />
-                                Thông tin cá nhân
+                                <User className="w-5 h-5 text-blue-600 mr-2"/>Thông tin cá nhân
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Họ và tên
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="text"
-                                            value={editedProfile?.fullName}
-                                            onChange={(e) => handleChange('fullName', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 font-medium">{profile.fullName}</p>
-                                    )}
+                                            type="text"value={editedProfile?.fullName}
+                                            onChange={(e) =>handleChange('fullName', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
+                                        <p className="text-gray-900 font-medium">{profile.fullName}</p>)}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Ngày sinh
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="date"
-                                            value={editedProfile?.dateOfBirth}
-                                            onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
+                                            type="date"value={editedProfile?.dateOfBirth}
+                                            onChange={(e) =>handleChange('dateOfBirth', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
                                         <p className="text-gray-900 flex items-center">
-                                            <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                                            <Calendar className="w-4 h-4 text-gray-400 mr-2"/>
                                             {new Date(profile.dateOfBirth).toLocaleDateString('vi-VN')}
-                                        </p>
-                                    )}
+                                        </p>)}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Giới tính
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính
                                     </label>
                                     {isEditing ? (
                                         <select
                                             value={editedProfile?.gender}
-                                            onChange={(e) => handleChange('gender', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
+                                            onChange={(e) =>handleChange('gender', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                             <option value="Nam">Nam</option>
                                             <option value="Nữ">Nữ</option>
                                             <option value="Khác">Khác</option>
-                                        </select>
-                                    ) : (
-                                        <p className="text-gray-900">{profile.gender}</p>
-                                    )}
+                                        </select>) : (
+                                        <p className="text-gray-900">{profile.gender}</p>)}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Email
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Email
                                     </label>
                                     <p className="text-gray-900 flex items-center">
-                                        <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                                        <Mail className="w-4 h-4 text-gray-400 mr-2"/>
                                         {profile.email}
                                     </p>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Số điện thoại
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="tel"
-                                            value={editedProfile?.phone}
-                                            onChange={(e) => handleChange('phone', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
+                                            type="tel"value={editedProfile?.phone}
+                                            onChange={(e) =>handleChange('phone', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
                                         <p className="text-gray-900 flex items-center">
-                                            <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                                            <Phone className="w-4 h-4 text-gray-400 mr-2"/>
                                             {profile.phone}
-                                        </p>
-                                    )}
+                                        </p>)}
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Địa chỉ
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="text"
-                                            value={editedProfile?.address}
-                                            onChange={(e) => handleChange('address', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
+                                            type="text"value={editedProfile?.address}
+                                            onChange={(e) =>handleChange('address', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
                                         <p className="text-gray-900 flex items-center">
-                                            <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                                            <MapPin className="w-4 h-4 text-gray-400 mr-2"/>
                                             {profile.address}
-                                        </p>
-                                    )}
+                                        </p>)}
                                 </div>
                             </div>
                         </CardContent>
@@ -337,116 +299,86 @@ export default function TeacherProfile() {
                     <Card>
                         <CardHeader className="border-b border-gray-200">
                             <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
-                                <Briefcase className="w-5 h-5 text-blue-600 mr-2" />
-                                Thông tin nghề nghiệp
+                                <Briefcase className="w-5 h-5 text-blue-600 mr-2"/>Thông tin nghề nghiệp
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Khoa
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Khoa
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="text"
-                                            value={editedProfile?.department}
-                                            onChange={(e) => handleChange('department', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 font-medium">{profile.department}</p>
-                                    )}
+                                            type="text"value={editedProfile?.department}
+                                            onChange={(e) =>handleChange('department', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
+                                        <p className="text-gray-900 font-medium">{profile.department}</p>)}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Chức vụ
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Chức vụ
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="text"
-                                            value={editedProfile?.position}
-                                            onChange={(e) => handleChange('position', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 font-medium">{profile.position}</p>
-                                    )}
+                                            type="text"value={editedProfile?.position}
+                                            onChange={(e) =>handleChange('position', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
+                                        <p className="text-gray-900 font-medium">{profile.position}</p>)}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Học vị
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Học vị
                                     </label>
                                     {isEditing ? (
                                         <select
                                             value={editedProfile?.degree}
-                                            onChange={(e) => handleChange('degree', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        >
+                                            onChange={(e) =>handleChange('degree', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                             <option value="Cử nhân">Cử nhân</option>
                                             <option value="Thạc sĩ">Thạc sĩ</option>
                                             <option value="Tiến sĩ">Tiến sĩ</option>
                                             <option value="Giáo sư">Giáo sư</option>
-                                        </select>
-                                    ) : (
-                                        <p className="text-gray-900 font-medium">{profile.degree}</p>
-                                    )}
+                                        </select>) : (
+                                        <p className="text-gray-900 font-medium">{profile.degree}</p>)}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Số năm kinh nghiệm
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Số năm kinh nghiệm
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="number"
-                                            value={editedProfile?.yearsOfExperience}
-                                            onChange={(e) => handleChange('yearsOfExperience', parseInt(e.target.value))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 font-medium">{profile.yearsOfExperience} năm</p>
-                                    )}
+                                            type="number"value={editedProfile?.yearsOfExperience}
+                                            onChange={(e) =>handleChange('yearsOfExperience', parseInt(e.target.value))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
+                                        <p className="text-gray-900 font-medium">{profile.yearsOfExperience} năm</p>)}
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Chuyên môn
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Chuyên môn
                                     </label>
                                     {isEditing ? (
                                         <input
-                                            type="text"
-                                            value={editedProfile?.specialization}
-                                            onChange={(e) => handleChange('specialization', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900">{profile.specialization}</p>
-                                    )}
+                                            type="text"value={editedProfile?.specialization}
+                                            onChange={(e) =>handleChange('specialization', e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>) : (
+                                        <p className="text-gray-900">{profile.specialization}</p>)}
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Giới thiệu
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Giới thiệu
                                     </label>
                                     {isEditing ? (
                                         <textarea
                                             value={editedProfile?.bio}
-                                            onChange={(e) => handleChange('bio', e.target.value)}
+                                            onChange={(e) =>handleChange('bio', e.target.value)}
                                             rows={4}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-700 text-sm leading-relaxed">{profile.bio}</p>
-                                    )}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"/>) : (
+                                        <p className="text-gray-700 text-sm leading-relaxed">{profile.bio}</p>)}
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
             </div>
-        </TeacherLayout>
-    )
+        </TeacherLayout>)
 }

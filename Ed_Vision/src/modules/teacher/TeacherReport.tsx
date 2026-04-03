@@ -61,11 +61,11 @@ function calculateMinFinalGrade(
 
 // Hàm xác định mức độ rủi ro dựa trên điểm tối thiểu cần đạt
 function getPredictedRiskLevel(minFinalGrade: number): string {
-    if (minFinalGrade > 8.5) return "🔴 Rất cao - Gần như chắc chắn rớt"
-    if (minFinalGrade > 7.0) return "🟠 Cao - Rất khó qua môn"
-    if (minFinalGrade > 5.0) return "🟡 Trung bình - Cần cố gắng"
-    if (minFinalGrade > 3.0) return "🟢 Thấp - Có thể qua môn"
-    return "✅ An toàn - Dễ dàng qua môn"
+    if (minFinalGrade > 8.5) return " Rất cao - Gần như chắc chắn rớt"
+    if (minFinalGrade > 7.0) return " Cao - Rất khó qua môn"
+    if (minFinalGrade > 5.0) return " Trung bình - Cần cố gắng"
+    if (minFinalGrade > 3.0) return " Thấp - Có thể qua môn"
+    return " An toàn - Dễ dàng qua môn"
 }
 
 export default function TeacherReport() {
@@ -334,7 +334,7 @@ export default function TeacherReport() {
             {student.processGrade !== undefined && student.midtermGrade !== undefined && (
                 <div className="mb-3 p-2 bg-purple-50 border border-purple-200 rounded">
                     <p className="text-xs text-purple-700 font-medium mb-1">
-                        📊 {student.subject}
+                         {student.subject}
                     </p>
                     {(() => {
                         const minToPass = calculateMinFinalGrade(student.processGrade!, student.midtermGrade!, 5.0)
@@ -347,7 +347,7 @@ export default function TeacherReport() {
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-gray-600">Cần thi tối thiểu:</span>
                                 <span className={`text-sm font-bold ${riskColor}`}>
-                                    {minToPass > 10 ? '> 10 ❌' : `${minToPass.toFixed(1)} điểm`}
+                                    {minToPass > 10 ? '> 10 ' : `${minToPass.toFixed(1)} điểm`}
                                 </span>
                             </div>
                         )
@@ -926,7 +926,7 @@ export default function TeacherReport() {
 
                                     {/* Bảng dự báo */}
                                     <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-lg border-2 border-purple-200">
-                                        <p className="text-sm font-semibold text-purple-800 mb-3">📊 Điểm tối thiểu cần đạt ở kỳ thi cuối:</p>
+                                        <p className="text-sm font-semibold text-purple-800 mb-3"> Điểm tối thiểu cần đạt ở kỳ thi cuối:</p>
                                         <div className="space-y-2">
                                             {(() => {
                                                 const minToPass = calculateMinFinalGrade(selectedStudent.processGrade!, selectedStudent.midtermGrade!, 5.0)
@@ -936,19 +936,19 @@ export default function TeacherReport() {
                                                 return (
                                                     <>
                                                         <div className="flex justify-between items-center bg-white p-3 rounded shadow-sm">
-                                                            <span className="text-sm">🎯 Để <strong>ĐẠT</strong> (≥5.0):</span>
+                                                            <span className="text-sm"> Để <strong>ĐẠT</strong> (≥5.0):</span>
                                                             <span className={`font-bold text-lg ${minToPass > 8.0 ? 'text-red-600' : minToPass > 6.0 ? 'text-orange-600' : 'text-green-600'}`}>
                                                                 {minToPass.toFixed(2)}
                                                             </span>
                                                         </div>
                                                         <div className="flex justify-between items-center bg-white p-3 rounded shadow-sm">
-                                                            <span className="text-sm">🌟 Để <strong>ĐẠT KHÁ</strong> (≥7.0):</span>
+                                                            <span className="text-sm"> Để <strong>ĐẠT KHÁ</strong> (≥7.0):</span>
                                                             <span className={`font-bold text-lg ${minForGood > 10 ? 'text-red-600' : minForGood > 8.5 ? 'text-orange-600' : 'text-blue-600'}`}>
                                                                 {minForGood > 10 ? '> 10 (Không thể)' : minForGood.toFixed(2)}
                                                             </span>
                                                         </div>
                                                         <div className="flex justify-between items-center bg-white p-3 rounded shadow-sm">
-                                                            <span className="text-sm">🏆 Để <strong>ĐẠT GIỎI</strong> (≥8.5):</span>
+                                                            <span className="text-sm"> Để <strong>ĐẠT GIỎI</strong> (≥8.5):</span>
                                                             <span className={`font-bold text-lg ${minForExcellent > 10 ? 'text-red-600' : 'text-purple-600'}`}>
                                                                 {minForExcellent > 10 ? '> 10 (Không thể)' : minForExcellent.toFixed(2)}
                                                             </span>
@@ -971,7 +971,7 @@ export default function TeacherReport() {
 
                                             return (
                                                 <div className={`mt-4 p-3 rounded border-2 ${riskColor}`}>
-                                                    <p className="text-sm font-semibold">⚠️ Đánh giá rủi ro: {riskLevel}</p>
+                                                    <p className="text-sm font-semibold"> Đánh giá rủi ro: {riskLevel}</p>
                                                     {minToPass > 8.0 && (
                                                         <p className="text-xs mt-1">Khuyến nghị: Cần can thiệp khẩn cấp! Liên hệ ngay với sinh viên và phụ huynh.</p>
                                                     )}

@@ -238,7 +238,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       },
     ],
     studyTips: [
-      'Học theo cặp đối lập: Present Simple ↔ Present Continuous; Past Simple ↔ Past Perfect',
+      'Học theo cặp đối lập: Present Simple  Present Continuous; Past Simple  Past Perfect',
       'Tạo bảng tóm tắt 12 thì với ví dụ cá nhân (câu về chính bạn)',
       'Signal Words là chìa khóa: thấy "yesterday" → Past Simple; "since/for" + hiện tại → Present Perfect',
       'Luyện viết 3 câu/thì mỗi ngày cho đến khi thành phản xạ',
@@ -275,7 +275,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Mạo từ là một trong những điểm dễ nhầm lẫn nhất trong tiếng Anh. Có 3 loại: "a/an" (mạo từ không xác định), "the" (mạo từ xác định), và "∅" (không dùng). Quyết định dùng loại nào phụ thuộc vào việc người nghe/đọc đã biết cụ thể vật/người đó chưa.',
     rules: [
       {
-        title: '🔹 Dùng "a" – trước danh từ đếm được số ít bắt đầu bằng ÂM PHỤ',
+        title: ' Dùng "a" – trước danh từ đếm được số ít bắt đầu bằng ÂM PHỤ',
         examples: [
           { en: 'I have a cat.', vi: 'Tôi có một con mèo.' },
           { en: 'She is a teacher.', vi: 'Cô ấy là giáo viên.' },
@@ -283,7 +283,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔹 Dùng "an" – trước danh từ đếm được số ít bắt đầu bằng ÂM NGUYÊN ÂM (a, e, i, o, u theo phát âm)',
+        title: ' Dùng "an" – trước danh từ đếm được số ít bắt đầu bằng ÂM NGUYÊN ÂM (a, e, i, o, u theo phát âm)',
         examples: [
           { en: 'I need an umbrella.', vi: 'Tôi cần một cái ô.' },
           { en: 'She is an honest person.', vi: 'Cô ấy là người trung thực.', note: '"honest" → âm /ɒ/ (nguyên âm, h câm) → "an"' },
@@ -291,7 +291,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔹 Dùng "the" – khi đã xác định rõ, chỉ có một, hoặc đã đề cập trước',
+        title: ' Dùng "the" – khi đã xác định rõ, chỉ có một, hoặc đã đề cập trước',
         examples: [
           { en: 'The book on the table is mine.', vi: 'Cuốn sách trên bàn là của tôi.', note: 'cả hai đều biết cuốn sách nào' },
           { en: 'The sun rises in the east.', vi: 'Mặt trời mọc ở phía đông.', note: '"the sun" – chỉ có một' },
@@ -299,7 +299,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔹 Không dùng mạo từ (∅) – danh từ không đếm được, số nhiều chung chung, tên riêng',
+        title: ' Không dùng mạo từ (∅) – danh từ không đếm được, số nhiều chung chung, tên riêng',
         examples: [
           { en: 'I like music.', vi: 'Tôi thích âm nhạc.', note: '"music" là danh từ không đếm được' },
           { en: 'Dogs are loyal animals.', vi: 'Chó là động vật trung thành.', note: 'số nhiều chung chung' },
@@ -307,7 +307,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Trường hợp đặc biệt luôn dùng "the"',
+        title: ' Trường hợp đặc biệt luôn dùng "the"',
         examples: [
           { en: 'the United States, the UK, the Netherlands', vi: 'Quốc gia có "United / Kingdom / Republic" hoặc tên số nhiều' },
           { en: 'the Amazon, the Mekong River', vi: 'Tên sông' },
@@ -318,7 +318,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Trường hợp đặc biệt KHÔNG dùng mạo từ',
+        title: ' Trường hợp đặc biệt KHÔNG dùng mạo từ',
         examples: [
           { en: 'go to school / church / hospital / bed / prison (mục đích)', vi: '"go to school" = đi học (không phải tòa nhà cụ thể)' },
           { en: 'She plays tennis / football / chess.', vi: 'Môn thể thao và trò chơi không dùng mạo từ' },
@@ -335,7 +335,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         explanation: '"go to school" (mục đích học tập) không dùng "the". Dùng "the school" khi muốn chỉ cụ thể tòa nhà.',
       },
       { wrong: 'He is best student in class.', correct: 'He is the best student in class.', explanation: 'Dạng so sánh nhất luôn cần "the".' },
-      { wrong: 'a European country (đọc là /juː/)', correct: 'a European country ✓', explanation: '"European" bắt đầu bằng âm /juː/ (phụ âm) → "a", không phải "an".' },
+      { wrong: 'a European country (đọc là /juː/)', correct: 'a European country ', explanation: '"European" bắt đầu bằng âm /juː/ (phụ âm) → "a", không phải "an".' },
     ],
     studyTips: [
       'Quy tắc vàng: a/an = lần đầu đề cập, chưa xác định; the = đã biết rõ, xác định',
@@ -374,7 +374,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Subject-Verb Agreement (sự hòa hợp chủ-vị) là quy tắc: động từ phải "khớp" với chủ ngữ về số ít/số nhiều. Đây là lỗi phổ biến và bị trừ điểm trong IELTS Writing. Bí quyết: luôn xác định THẬT chủ ngữ trước khi chọn động từ.',
     rules: [
       {
-        title: '✅ Quy tắc cơ bản',
+        title: ' Quy tắc cơ bản',
         examples: [
           { en: 'She writes a letter every day.', vi: 'she (số ít) → writes (+s)', note: 'ngôi 3 số ít + V(s/es)' },
           { en: 'They write letters every day.', vi: 'they (số nhiều) → write (không +s)' },
@@ -382,7 +382,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Chủ ngữ giả: bỏ qua cụm "of / with / including…" để tìm chủ ngữ thật',
+        title: ' Chủ ngữ giả: bỏ qua cụm "of / with / including…" để tìm chủ ngữ thật',
         examples: [
           { en: 'The quality of the products is good.', vi: 'Chủ ngữ thật = "quality" (số ít) → is', note: 'bỏ qua "of the products"' },
           { en: 'A box of chocolates was delivered.', vi: 'Chủ ngữ thật = "a box" (số ít) → was' },
@@ -390,7 +390,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ each / every / everyone / someone / nobody → luôn số ít',
+        title: ' each / every / everyone / someone / nobody → luôn số ít',
         examples: [
           { en: 'Each student has a book.', vi: 'each + danh từ → động từ số ít' },
           { en: 'Everyone has finished.', vi: 'everyone → has (không phải have)' },
@@ -398,14 +398,14 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Either…or / Neither…nor → động từ theo chủ ngữ GẦN NHẤT',
+        title: ' Either…or / Neither…nor → động từ theo chủ ngữ GẦN NHẤT',
         examples: [
           { en: 'Either the teacher or the students are wrong.', vi: '"students" (số nhiều) gần nhất → are', note: 'chủ ngữ 2 số nhiều → are' },
           { en: 'Neither the students nor the teacher is wrong.', vi: '"teacher" (số ít) gần nhất → is', note: 'chủ ngữ 2 số ít → is' },
         ],
       },
       {
-        title: '💡 Danh từ trông như số nhiều nhưng luôn số ít',
+        title: ' Danh từ trông như số nhiều nhưng luôn số ít',
         examples: [
           { en: 'Mathematics is a difficult subject.', vi: 'mathematics / physics / economics / politics → số ít' },
           { en: 'The United States is a large country.', vi: 'tên nước / tổ chức (1 thực thể) → số ít' },
@@ -413,7 +413,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '💡 Danh từ luôn số nhiều',
+        title: ' Danh từ luôn số nhiều',
         examples: [
           { en: 'People are waiting outside.', vi: '"people / police" → luôn số nhiều' },
           { en: 'Scissors are on the table.', vi: '"scissors / trousers / glasses / jeans" → luôn số nhiều' },
@@ -468,7 +468,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Câu đơn (Simple Sentence) chỉ có một mệnh đề độc lập. Câu ghép (Compound Sentence) là hai câu đơn được nối với nhau bằng liên từ đẳng lập (Coordinating Conjunctions). Biết kết hợp câu linh hoạt sẽ giúp bài viết tự nhiên và mạch lạc hơn.',
     rules: [
       {
-        title: '🟢 Câu đơn (Simple Sentence) – 1 chủ ngữ + 1 động từ (+ bổ ngữ)',
+        title: ' Câu đơn (Simple Sentence) – 1 chủ ngữ + 1 động từ (+ bổ ngữ)',
         examples: [
           { en: 'She studies English.', vi: 'Cô ấy học tiếng Anh.' },
           { en: 'The weather is cold today.', vi: 'Thời tiết hôm nay lạnh.' },
@@ -476,7 +476,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔵 Câu ghép (Compound Sentence) – 2 câu đơn nối bằng FANBOYS',
+        title: ' Câu ghép (Compound Sentence) – 2 câu đơn nối bằng FANBOYS',
         examples: [
           { en: 'F – For: She was tired, for she had worked all day.', vi: 'Cô ấy mệt vì đã làm việc cả ngày.', note: '"for" = bởi vì (formal)' },
           { en: 'A – And: I like coffee, and she likes tea.', vi: 'Tôi thích cà phê và cô ấy thích trà.', note: 'thêm ý' },
@@ -488,18 +488,18 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Dấu phẩy trong câu ghép',
+        title: ' Dấu phẩy trong câu ghép',
         examples: [
-          { en: 'I was tired, but I finished the work. ✓', vi: 'Đặt dấu phẩy TRƯỚC liên từ khi nối 2 câu độc lập' },
-          { en: 'I was tired but happy. ✓ (không cần phẩy)', vi: 'Không cần phẩy khi nối 2 tính từ/cụm từ ngắn' },
+          { en: 'I was tired, but I finished the work. ', vi: 'Đặt dấu phẩy TRƯỚC liên từ khi nối 2 câu độc lập' },
+          { en: 'I was tired but happy.  (không cần phẩy)', vi: 'Không cần phẩy khi nối 2 tính từ/cụm từ ngắn' },
         ],
       },
       {
-        title: '💡 Bán câu (Run-on sentence) – lỗi phổ biến cần tránh',
+        title: ' Bán câu (Run-on sentence) – lỗi phổ biến cần tránh',
         examples: [
-          { en: '✗ I was tired I went to bed early.', vi: 'Sai: hai câu đơn không có liên từ hoặc dấu câu' },
-          { en: '✓ I was tired, so I went to bed early.', vi: 'Đúng: thêm "so" để nối' },
-          { en: '✓ I was tired. I went to bed early.', vi: 'Đúng: dùng dấu chấm để tách thành 2 câu' },
+          { en: ' I was tired I went to bed early.', vi: 'Sai: hai câu đơn không có liên từ hoặc dấu câu' },
+          { en: ' I was tired, so I went to bed early.', vi: 'Đúng: thêm "so" để nối' },
+          { en: ' I was tired. I went to bed early.', vi: 'Đúng: dùng dấu chấm để tách thành 2 câu' },
         ],
       },
     ],
@@ -551,7 +551,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Tiếng Anh có 3 dạng so sánh: bằng nhau (as…as), hơn (comparative), và nhất (superlative). Biết dùng đúng so sánh giúp bài viết và nói phong phú, tự nhiên hơn.',
     rules: [
       {
-        title: '🟢 So sánh bằng (Equality): as + adj/adv + as',
+        title: ' So sánh bằng (Equality): as + adj/adv + as',
         examples: [
           { en: 'She is as tall as her sister.', vi: 'Cô ấy cao bằng chị gái.' },
           { en: 'He runs as fast as a cheetah.', vi: 'Anh ấy chạy nhanh như báo.' },
@@ -559,7 +559,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔵 So sánh hơn (Comparative): adj-er / more + adj + than',
+        title: ' So sánh hơn (Comparative): adj-er / more + adj + than',
         examples: [
           { en: '1–2 âm tiết: tall → taller, fast → faster, big → bigger', vi: 'Tính từ ngắn: thêm -er' },
           { en: '3+ âm tiết: beautiful → more beautiful, expensive → more expensive', vi: 'Tính từ dài: dùng "more"' },
@@ -569,7 +569,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🟠 So sánh nhất (Superlative): the + adj-est / the most + adj',
+        title: ' So sánh nhất (Superlative): the + adj-est / the most + adj',
         examples: [
           { en: '1–2 âm tiết: tall → the tallest, fast → the fastest', vi: 'Tính từ ngắn: thêm -est, luôn có "the"' },
           { en: '3+ âm tiết: beautiful → the most beautiful', vi: 'Tính từ dài: "the most"' },
@@ -579,7 +579,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Quy tắc đánh vần quan trọng',
+        title: ' Quy tắc đánh vần quan trọng',
         examples: [
           { en: 'CVC (phụ âm-nguyên âm-phụ âm): big → bigger/biggest (gấp đôi phụ âm cuối)', vi: 'big, hot, thin, fat…' },
           { en: 'Kết thúc bằng -y: happy → happier/happiest (y→i)', vi: 'happy, easy, busy, pretty…' },
@@ -636,7 +636,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Câu bị động (Passive Voice) được dùng khi muốn nhấn mạnh vào đối tượng chịu tác động của hành động, hoặc khi chủ thể thực hiện không quan trọng/không biết. Câu bị động rất phổ biến trong văn học thuật (IELTS Writing Task 1, Task 2) và báo chí.',
     rules: [
       {
-        title: '🔧 Công thức chung: S (đối tượng) + be + V3/V-ed + (by + tác nhân)',
+        title: ' Công thức chung: S (đối tượng) + be + V3/V-ed + (by + tác nhân)',
         examples: [
           { en: 'Active:  People speak English here.', vi: 'Người ta nói tiếng Anh ở đây.', note: 'Câu chủ động' },
           { en: 'Passive: English is spoken here.', vi: 'Tiếng Anh được nói ở đây.', note: 'Không cần nhắc "People"' },
@@ -644,7 +644,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🕐 Bảng công thức bị động trong các thì',
+        title: ' Bảng công thức bị động trong các thì',
         examples: [
           { en: 'Present Simple:       English is spoken here.', vi: 'is/are + V3' },
           { en: 'Past Simple:          The window was broken.', vi: 'was/were + V3' },
@@ -657,7 +657,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🎯 Khi nào nên dùng câu bị động?',
+        title: ' Khi nào nên dùng câu bị động?',
         examples: [
           { en: 'Không biết ai thực hiện: My car was stolen.', vi: 'Xe tôi bị trộm. (không biết tên trộm)' },
           { en: 'Rõ ràng ai làm: The criminal was arrested.', vi: 'Tên tội phạm bị bắt. (hiểu là bị cảnh sát)' },
@@ -666,7 +666,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚡ Causative: have/get sth done (nhờ/thuê ai làm gì)',
+        title: ' Causative: have/get sth done (nhờ/thuê ai làm gì)',
         examples: [
           { en: 'I had my hair cut.', vi: 'Tôi đã cắt tóc (nhờ thợ cắt).', note: 'have + O + V3' },
           { en: 'She got her car repaired.', vi: 'Cô ấy đã sửa xe (nhờ thợ).' },
@@ -727,7 +727,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Câu điều kiện diễn tả mối quan hệ điều kiện – kết quả. Loại 1 (First Conditional) nói về điều kiện có thể xảy ra trong thực tế; Loại 2 (Second Conditional) nói về giả thuyết không có thật hoặc khó xảy ra ở hiện tại/tương lai. Đây là cấu trúc quan trọng trong cả 4 kỹ năng IELTS.',
     rules: [
       {
-        title: '🟡 Loại 0 (Zero Conditional) – Sự thật hiển nhiên, quy luật tự nhiên',
+        title: ' Loại 0 (Zero Conditional) – Sự thật hiển nhiên, quy luật tự nhiên',
         examples: [
           { en: 'If you heat water to 100°C, it boils.', vi: 'Nếu đun nước đến 100°C, nó sôi.', note: 'Luật tự nhiên' },
           { en: 'If it rains, the grass gets wet.', vi: 'Nếu trời mưa, cỏ bị ướt.' },
@@ -735,7 +735,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔵 Loại 1 (First Conditional) – Điều kiện có thể xảy ra trong tương lai (REAL)',
+        title: ' Loại 1 (First Conditional) – Điều kiện có thể xảy ra trong tương lai (REAL)',
         examples: [
           { en: 'If it rains tomorrow, I will stay at home.', vi: 'Nếu ngày mai trời mưa, tôi sẽ ở nhà.', note: 'Có thể mưa, có thể không' },
           { en: 'If you study hard, you will pass the exam.', vi: 'Nếu bạn học chăm chỉ, bạn sẽ đậu.' },
@@ -744,7 +744,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🟠 Loại 2 (Second Conditional) – Giả thuyết không có thật ở hiện tại/tương lai (UNREAL)',
+        title: ' Loại 2 (Second Conditional) – Giả thuyết không có thật ở hiện tại/tương lai (UNREAL)',
         examples: [
           { en: 'If I were rich, I would buy a house.', vi: 'Nếu tôi giàu (nhưng thực tế không giàu), tôi sẽ mua nhà.', note: '"were" dùng cho TẤT CẢ ngôi (kể cả "I")' },
           { en: 'If she had more time, she could travel the world.', vi: 'Nếu cô ấy có nhiều thời gian hơn, cô ấy có thể đi khắp thế giới.' },
@@ -753,7 +753,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔄 Đảo ngữ câu điều kiện (nâng cao)',
+        title: ' Đảo ngữ câu điều kiện (nâng cao)',
         examples: [
           { en: 'Should you need help, call me. (= If you should need help…)', vi: 'Nếu bạn cần giúp đỡ, hãy gọi tôi.' },
           { en: 'Were I in your position, I would accept. (= If I were…)', vi: 'Nếu tôi ở vị trí của bạn, tôi sẽ chấp nhận.' },
@@ -819,7 +819,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Mệnh đề quan hệ (Relative Clause) là mệnh đề phụ bổ sung thông tin cho danh từ. Mệnh đề quan hệ xác định (Defining) cần thiết để hiểu danh từ đó là ai/cái gì; nếu bỏ đi, câu sẽ mất nghĩa hoặc không rõ.',
     rules: [
       {
-        title: '📋 Đại từ quan hệ và cách dùng',
+        title: ' Đại từ quan hệ và cách dùng',
         examples: [
           { en: 'WHO – chỉ người (chủ ngữ hoặc tân ngữ)', vi: 'The woman who called you is my sister.' },
           { en: 'WHICH – chỉ vật/sự việc (chủ ngữ hoặc tân ngữ)', vi: 'The book which I bought is interesting.' },
@@ -830,7 +830,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🔹 Defining Relative Clause (Xác định) – KHÔNG có dấu phẩy',
+        title: ' Defining Relative Clause (Xác định) – KHÔNG có dấu phẩy',
         examples: [
           { en: 'The man who lives next door is a doctor.', vi: 'Người đàn ông (người sống cạnh nhà) là bác sĩ.', note: 'Mệnh đề xác định đó là người đàn ông NÀO' },
           { en: 'This is the book that changed my life.', vi: 'Đây là cuốn sách đã thay đổi cuộc sống tôi.' },
@@ -838,9 +838,9 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '⚠️ Khi nào có thể bỏ đại từ quan hệ?',
+        title: ' Khi nào có thể bỏ đại từ quan hệ?',
         examples: [
-          { en: 'The book (that) I bought is interesting. ✓', vi: 'Có thể bỏ "that/which/who" khi nó là TÂN NGỮ trong mệnh đề quan hệ' },
+          { en: 'The book (that) I bought is interesting. ', vi: 'Có thể bỏ "that/which/who" khi nó là TÂN NGỮ trong mệnh đề quan hệ' },
           { en: 'The man who called you is my friend. (KHÔNG bỏ)', vi: 'Không bỏ khi "who" là CHỦ NGỮ trong mệnh đề quan hệ' },
         ],
       },
@@ -888,7 +888,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Trong TOEIC Part 5 (Incomplete Sentences), khoảng 15–20% câu hỏi liên quan đến thì động từ. Chiến lược: nhìn vào Signal Words (trạng từ thời gian) trong câu → xác định thì → chọn đáp án đúng. Không cần nhớ tất cả 12 thì, chỉ cần nắm 5–6 thì phổ biến nhất trong TOEIC.',
     rules: [
       {
-        title: '⚡ Chiến lược 3 bước làm nhanh Part 5 (thì động từ)',
+        title: ' Chiến lược 3 bước làm nhanh Part 5 (thì động từ)',
         examples: [
           { en: 'Bước 1: Đọc câu, tìm Signal Word (trạng từ thời gian)', vi: 'Ví dụ: "yesterday", "since 2020", "by next Friday", "every day"…' },
           { en: 'Bước 2: Xác định thì cần dùng', vi: '"yesterday" → Past Simple | "since/for + hiện tại" → Present Perfect | "by + tương lai" → Future Perfect' },
@@ -896,18 +896,18 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '🗓️ Bảng Signal Words thường gặp nhất trong TOEIC',
+        title: ' Bảng Signal Words thường gặp nhất trong TOEIC',
         examples: [
-          { en: '📌 Present Simple', vi: 'every day/week/month, always, usually, often, currently (= lịch trình), generally' },
-          { en: '📌 Past Simple', vi: 'yesterday, last week/month/year, ago, in + year, when + hành động quá khứ' },
-          { en: '📌 Present Perfect', vi: 'since, for, already, yet, just, ever, recently, so far, up to now' },
-          { en: '📌 Present Perfect Continuous', vi: 'for + khoảng thời gian + since; how long + have/has been' },
-          { en: '📌 Future Simple', vi: 'tomorrow, next week/month, soon (quyết định ngay lúc nói)' },
-          { en: '📌 Future Perfect', vi: 'by the time, by + future date, before + future event' },
+          { en: ' Present Simple', vi: 'every day/week/month, always, usually, often, currently (= lịch trình), generally' },
+          { en: ' Past Simple', vi: 'yesterday, last week/month/year, ago, in + year, when + hành động quá khứ' },
+          { en: ' Present Perfect', vi: 'since, for, already, yet, just, ever, recently, so far, up to now' },
+          { en: ' Present Perfect Continuous', vi: 'for + khoảng thời gian + since; how long + have/has been' },
+          { en: ' Future Simple', vi: 'tomorrow, next week/month, soon (quyết định ngay lúc nói)' },
+          { en: ' Future Perfect', vi: 'by the time, by + future date, before + future event' },
         ],
       },
       {
-        title: '📊 Ví dụ thực tế từ đề TOEIC',
+        title: ' Ví dụ thực tế từ đề TOEIC',
         examples: [
           {
             en: 'The company _____ its new product last Monday. → (B) launched',
@@ -976,7 +976,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
       'Trong TOEIC Part 5, lỗi mạo từ (articles) và đại từ (pronouns) chiếm khoảng 10–15% câu hỏi. Phần mạo từ tương tự IELTS; phần đại từ tập trung vào việc chọn đúng dạng (chủ ngữ / tân ngữ / sở hữu / phản thân).',
     rules: [
       {
-        title: '🔹 Mạo từ trong ngữ cảnh business (TOEIC)',
+        title: ' Mạo từ trong ngữ cảnh business (TOEIC)',
         examples: [
           { en: 'Please submit a report by Friday.', vi: '"a report" – lần đầu đề cập, chưa xác định', note: 'Dùng "a"' },
           { en: 'The report was submitted on time.', vi: '"the report" – đã biết báo cáo nào', note: 'Dùng "the"' },
@@ -985,7 +985,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '📋 Đại từ nhân xưng – dạng chủ ngữ và tân ngữ',
+        title: ' Đại từ nhân xưng – dạng chủ ngữ và tân ngữ',
         examples: [
           { en: 'Subject:  I / you / he / she / it / we / they', vi: 'Dùng làm CHỦ NGỮ của câu: I am the manager.' },
           { en: 'Object:   me / you / him / her / it / us / them', vi: 'Dùng sau động từ hoặc giới từ: Please contact me / him / us.' },
@@ -995,7 +995,7 @@ export const TOPIC_LESSONS: Record<string, TopicLesson> = {
         ],
       },
       {
-        title: '📊 Ví dụ điển hình trong TOEIC Part 5',
+        title: ' Ví dụ điển hình trong TOEIC Part 5',
         examples: [
           { en: 'Please send _____ (your / yours) application by Monday.', vi: 'your application (trước danh từ → possessive adjective "your")' },
           { en: 'The manager approved the proposal _____. (herself / her)', vi: 'herself (= tự mình, không nhờ ai → reflexive pronoun)' },
@@ -1080,9 +1080,9 @@ function TenseCard({ tense, defaultOpen }: { tense: TenseEntry; defaultOpen?: bo
           {/* Formula */}
           <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 space-y-1">
             <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide mb-1">Công thức</p>
-            <p className="text-sm font-mono text-violet-800">✅ {tense.formula}</p>
-            {tense.negative && <p className="text-sm font-mono text-red-700">❌ {tense.negative}</p>}
-            {tense.question && <p className="text-sm font-mono text-blue-700">❓ {tense.question}</p>}
+            <p className="text-sm font-mono text-violet-800"> {tense.formula}</p>
+            {tense.negative && <p className="text-sm font-mono text-red-700"> {tense.negative}</p>}
+            {tense.question && <p className="text-sm font-mono text-blue-700"> {tense.question}</p>}
           </div>
           {/* Examples */}
           <div className="space-y-2">
@@ -1139,7 +1139,7 @@ function QuizCard({ question, index }: { question: QuizQuestion; index: number }
       </div>
       {answered && (
         <div className="bg-white border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800">
-          <span className="font-bold">💡 Giải thích: </span>{question.explanation}
+          <span className="font-bold"> Giải thích: </span>{question.explanation}
         </div>
       )}
     </div>
@@ -1253,7 +1253,7 @@ export function TopicLessonModal({ topicKey, accentColor, accentBg, onClose }: T
                           <p className="text-xs text-slate-500 mt-0.5">→ {ex.vi}</p>
                         )}
                         {ex.note && (
-                          <p className="text-xs text-indigo-500 mt-0.5 italic">ℹ {ex.note}</p>
+                          <p className="text-xs text-indigo-500 mt-0.5 italic"> {ex.note}</p>
                         )}
                       </div>
                     ))}
@@ -1300,7 +1300,7 @@ export function TopicLessonModal({ topicKey, accentColor, accentBg, onClose }: T
               <ul className="space-y-2">
                 {lesson.studyTips.map((tip, i) => (
                   <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                    <span className="text-blue-400 font-bold shrink-0">✦</span>
+                    <span className="text-blue-400 font-bold shrink-0"></span>
                     {tip}
                   </li>
                 ))}

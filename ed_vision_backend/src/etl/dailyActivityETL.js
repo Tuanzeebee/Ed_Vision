@@ -96,7 +96,7 @@ async function updateDailyActivity(role_code, activity_date, account_sk = null) 
   if (account_sk) {
     const alreadyCounted = await isAlreadyCounted(date, role_code, account_sk);
     if (alreadyCounted) {
-      console.log(`⏭️ Skip: ${role_code} account ${account_sk} already counted today`);
+      console.log(` Skip: ${role_code} account ${account_sk} already counted today`);
       return { ok: true, skipped: true };
     }
   }
@@ -133,7 +133,7 @@ async function updateDailyActivity(role_code, activity_date, account_sk = null) 
   if (batch.timer) clearTimeout(batch.timer);
   batch.timer = setTimeout(() => flushBatch(queueKey), BATCH_INTERVAL);
 
-  console.log(`📦 Queued: ${role_code} ${date} (+${batch.total_delta} total, +${batch.active_delta} active)`);
+  console.log(` Queued: ${role_code} ${date} (+${batch.total_delta} total, +${batch.active_delta} active)`);
   return { ok: true, batched: true };
 }
 
@@ -156,7 +156,7 @@ async function flushBatch(queueKey) {
   const { date, role_code, total_delta, active_delta } = batch;
   
   if (total_delta === 0 && active_delta === 0) {
-    console.log(`⏭️ Skip flush: no changes for ${role_code} ${date}`);
+    console.log(` Skip flush: no changes for ${role_code} ${date}`);
     return;
   }
 
@@ -237,7 +237,7 @@ async function flushBatch(queueKey) {
       }
     });
 
-    console.log(`✅ Flushed ${role_code} ${date}: +${total_delta} total, +${active_delta} active`);
+    console.log(` Flushed ${role_code} ${date}: +${total_delta} total, +${active_delta} active`);
     
   } catch (err) {
     console.error(`dailyActivityETL flush error for ${role_code} ${date}:`, err.message);
@@ -314,9 +314,9 @@ async function oldUpdateLogic(role_code, activity_date, account_sk) {
     // Mark user as counted nếu là login event (persist to Postgres)
     if (account_sk) {
       await markAsCounted(date, role_code, account_sk);
-      console.log(`✅ Incremented active_accounts for ${role_code} on ${date} (account ${account_sk})`);
+      console.log(` Incremented active_accounts for ${role_code} on ${date} (account ${account_sk})`);
     } else {
-      console.log(`✅ Updated total_accounts for ${role_code} on ${date}: ${initial_total}`);
+      console.log(` Updated total_accounts for ${role_code} on ${date}: ${initial_total}`);
     }
     
     return { ok: true };

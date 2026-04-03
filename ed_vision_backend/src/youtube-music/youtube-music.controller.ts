@@ -23,7 +23,10 @@ export class YouTubeMusicController {
     @Query('maxResults') maxResults?: string,
   ) {
     if (!query) {
-      throw new HttpException('Query parameter "q" is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Query parameter "q" is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {

@@ -9,7 +9,7 @@ interface CacheItem<T> {
 }
 
 class CacheService {
-  private cache: Map<string, CacheItem<any>> = new Map();
+  private cache: Map<string, CacheItem<any>>= new Map();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -34,7 +34,7 @@ class CacheService {
     }
 
     const now = Date.now();
-    const isExpired = now - item.timestamp > item.ttl;
+    const isExpired = now - item.timestamp >item.ttl;
 
     if (isExpired) {
       this.cache.delete(key);
@@ -81,7 +81,7 @@ class CacheService {
    */
   async getOrFetch<T>(
     key: string,
-    fetchFn: () => Promise<T>,
+    fetchFn: () =>Promise<T>,
     ttl: number = this.DEFAULT_TTL
   ): Promise<T> {
     const cached = this.get<T>(key);

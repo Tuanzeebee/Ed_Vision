@@ -10,18 +10,16 @@ interface CardContentProps {
   className?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '' }) => {
+export const Card: React.FC<CardProps>= ({ children, className = ''}) => {
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
       {children}
-    </div>
-  );
+    </div>);
 };
 
-export const CardContent: React.FC<CardContentProps> = ({ children, className = '' }) => {
+export const CardContent: React.FC<CardContentProps>= ({ children, className = ''}) => {
   return (
     <div className={className}>
       {children}
-    </div>
-  );
+    </div>);
 };

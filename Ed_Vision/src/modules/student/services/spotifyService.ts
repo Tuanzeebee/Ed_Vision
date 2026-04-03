@@ -17,7 +17,7 @@ export async function getFeaturedPlaylists(_limit = 10): Promise<any[]> {
 
 export function getTrackArtists(track: any): string {
   if (track?.artists && Array.isArray(track.artists)) {
-    return track.artists.map((a: any) => a.name).join(', ');
+    return track.artists.map((a: any) =>a.name).join(', ');
   }
   return track?.artist || 'Unknown Artist';
 }

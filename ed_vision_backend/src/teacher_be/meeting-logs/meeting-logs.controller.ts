@@ -60,7 +60,7 @@ export class MeetingLogsController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createMeetingLog(@Body() createMeetingLogDto: CreateMeetingLogDto) {
+  createMeetingLog(@Body() createMeetingLogDto: CreateMeetingLogDto) {
     return this.meetingLogsService.createMeetingLog(createMeetingLogDto);
   }
 
@@ -69,7 +69,7 @@ export class MeetingLogsController {
    * Lấy danh sách nhật ký của instructor
    */
   @Get('instructor/:instructorId/logs')
-  async getMeetingLogs(
+  getMeetingLogs(
     @Param('instructorId', ParseIntPipe) instructorId: number,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,

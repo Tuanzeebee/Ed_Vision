@@ -6,7 +6,7 @@ type Props = {
 
 function StarsEffect({ show }: Props) {
   const stars = useMemo(() => {
-    return Array.from({ length: 60 }, (_, i) => ({
+    return Array.from({ length: 60 }, (_, i) =>({
       id: i,
       left: Math.random() * 100,
       top: Math.random() * 100,
@@ -20,11 +20,10 @@ function StarsEffect({ show }: Props) {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">
-      {stars.map((star) => (
+      {stars.map((star) =>(
         <div
           key={star.id}
-          className="absolute rounded-full bg-white animate-[twinkle_ease-in-out_infinite]"
-          style={{
+          className="absolute rounded-full bg-white animate-[twinkle_ease-in-out_infinite]"style={{
             left: `${star.left}%`,
             top: `${star.top}%`,
             width: `${star.size}px`,
@@ -33,8 +32,7 @@ function StarsEffect({ show }: Props) {
             animationDuration: `${star.duration}s`,
             animationDelay: `${star.delay}s`,
           }}
-        />
-      ))}
+        />))}
       <style>{`
         @keyframes twinkle {
           0%, 100% {
@@ -47,8 +45,7 @@ function StarsEffect({ show }: Props) {
           }
         }
       `}</style>
-    </div>
-  );
+    </div>);
 }
 
 export default memo(StarsEffect);

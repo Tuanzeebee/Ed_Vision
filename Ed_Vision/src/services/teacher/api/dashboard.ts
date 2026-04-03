@@ -20,8 +20,7 @@ api.interceptors.request.use((config) => {
 
 // Cache configuration
 const CACHE_KEYS = {
-    stats: (instructorId: number = 1, filters?: string) => 
-        `dashboard:stats:${instructorId}:${filters || 'default'}`,
+    stats: (instructorId: number = 1, filters?: string) =>`dashboard:stats:${instructorId}:${filters || 'default'}`,
 };
 
 const CACHE_TTL = {
@@ -52,7 +51,7 @@ export interface AtRiskStudent {
     gpa: number;
     absences: number;
     debtCourses: number;
-    riskLevel: 'high' | 'medium' | 'low';
+    riskLevel: 'high'| 'medium'| 'low';
 }
 
 export interface DashboardResponse {
@@ -71,7 +70,7 @@ export const dashboardAPI = {
         semester?: number;
         faculty?: string;
         course?: string;
-    }): Promise<DashboardResponse> => {
+    }): Promise<DashboardResponse>=> {
         const instructorId = 1; // TODO: Get from auth context
         const filterKey = filters ? JSON.stringify(filters) : undefined;
         const cacheKey = CACHE_KEYS.stats(instructorId, filterKey);
@@ -79,7 +78,7 @@ export const dashboardAPI = {
         return cacheService.getOrFetch(
             cacheKey,
             async () => {
-                console.log('🌐 Fetching dashboard stats from API');
+                console.log('Fetching dashboard stats from API');
                 const response = await api.get('/teacher/dashboard/stats', {
                     params: filters,
                 });
@@ -93,7 +92,7 @@ export const dashboardAPI = {
      * Clear dashboard cache
      */
     clearCache: () => {
-        console.log('🗑️ Clearing dashboard cache');
+        console.log('Clearing dashboard cache');
         cacheService.clearByPrefix('dashboard:');
     },
 };

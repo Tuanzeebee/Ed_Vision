@@ -29,13 +29,13 @@ ChartJS.register(
 type SupportRequest = {
   id: string;
   requestCode: string;
-  type: 'student-contact' | 'technical' | 'academic' | 'other';
+  type: 'student-contact'| 'technical'| 'academic'| 'other';
   title: string;
   description: string;
   createdDate: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high'| 'medium'| 'low';
   assignee: string;
-  status: 'completed' | 'processing' | 'pending';
+  status: 'completed'| 'processing'| 'pending';
   completedDate?: string;
 };
 
@@ -49,15 +49,14 @@ type SupportFilter = {
 
 const TeacherSupportHistory = () => {
   console.log('TeacherSupportHistory component rendered');
-  const chartRef = useRef<ChartJS<'bar'> | null>(null);
+  const chartRef = useRef<ChartJS<'bar'>| null>(null);
 
   const [filters, setFilters] = useState<SupportFilter>({
     status: 'all',
     requestType: 'all',
     priority: 'all',
     dateRange: 'all',
-    keyword: ''
-  });
+    keyword: ''});
 
   // Mock data
   const supportRequests: SupportRequest[] = [
@@ -71,8 +70,7 @@ const TeacherSupportHistory = () => {
       priority: "high",
       assignee: "Admin System",
       status: "completed",
-      completedDate: "2024-01-16"
-    },
+      completedDate: "2024-01-16"},
     {
       id: "2",
       requestCode: "REQ-002", 
@@ -82,8 +80,7 @@ const TeacherSupportHistory = () => {
       createdDate: "2024-01-14",
       priority: "medium",
       assignee: "Technical Team",
-      status: "processing"
-    },
+      status: "processing"},
     {
       id: "3",
       requestCode: "REQ-003",
@@ -93,12 +90,11 @@ const TeacherSupportHistory = () => {
       createdDate: "2024-01-13",
       priority: "low",
       assignee: "Academic Team",
-      status: "pending"
-    }
+      status: "pending"}
   ];
 
   const handleFilterChange = (filterKey: keyof SupportFilter, value: string) => {
-    setFilters(prev => ({
+    setFilters(prev =>({
       ...prev,
       [filterKey]: value
     }));
@@ -146,7 +142,7 @@ const TeacherSupportHistory = () => {
     plugins: {
       legend: {
         display: true,
-        position: 'bottom' as const,
+        position: 'bottom'as const,
         labels: {
           padding: 20,
           usePointStyle: true,
@@ -162,36 +158,30 @@ const TeacherSupportHistory = () => {
     const badges = {
       'completed': 'bg-green-100 text-green-800',
       'processing': 'bg-yellow-100 text-yellow-800', 
-      'pending': 'bg-red-100 text-red-800'
-    };
+      'pending': 'bg-red-100 text-red-800'};
     const labels = {
       'completed': 'Đã xử lý',
       'processing': 'Đang xử lý',
-      'pending': 'Chờ xử lý'
-    };
+      'pending': 'Chờ xử lý'};
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[status as keyof typeof badges]}`}>
         {labels[status as keyof typeof labels]}
-      </span>
-    );
+      </span>);
   };
 
   const getPriorityBadge = (priority: string) => {
     const badges = {
       'high': 'bg-red-100 text-red-800',
       'medium': 'bg-yellow-100 text-yellow-800',
-      'low': 'bg-green-100 text-green-800'
-    };
+      'low': 'bg-green-100 text-green-800'};
     const labels = {
       'high': 'Cao',
       'medium': 'Trung bình', 
-      'low': 'Thấp'
-    };
+      'low': 'Thấp'};
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[priority as keyof typeof badges]}`}>
         {labels[priority as keyof typeof labels]}
-      </span>
-    );
+      </span>);
   };
 
   const getTypeBadge = (type: string) => {
@@ -199,26 +189,23 @@ const TeacherSupportHistory = () => {
       'student-contact': 'bg-blue-100 text-blue-800',
       'technical': 'bg-purple-100 text-purple-800',
       'academic': 'bg-indigo-100 text-indigo-800',
-      'other': 'bg-gray-100 text-gray-800'
-    };
+      'other': 'bg-gray-100 text-gray-800'};
     const labels = {
       'student-contact': 'Liên hệ học sinh',
       'technical': 'Kỹ thuật',
       'academic': 'Học thuật',
-      'other': 'Khác'
-    };
+      'other': 'Khác'};
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[type as keyof typeof badges]}`}>
         {labels[type as keyof typeof labels]}
-      </span>
-    );
+      </span>);
   };
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <TeacherProfileHeader />
-        <TeacherTabNavigation activeTab="Lịch sử hỗ trợ" />
+        <TeacherTabNavigation activeTab="Lịch sử hỗ trợ"/>
         
         {/* Filter Section */}
         <Card>
@@ -227,72 +214,64 @@ const TeacherSupportHistory = () => {
               <div className="flex flex-wrap gap-4 items-center">
                 <div>
                   <select 
-                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"
-                    value={filters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"value={filters.status}
+                    onChange={(e) =>handleFilterChange('status', e.target.value)}
                   >
-                    <option value="all" className="text-gray-600">Tất cả trạng thái</option>
-                    <option value="completed" className="text-gray-600">Đã xử lý</option>
-                    <option value="processing" className="text-gray-600">Đang xử lý</option>
-                    <option value="pending" className="text-gray-600">Chờ xử lý</option>
+                    <option value="all"className="text-gray-600">Tất cả trạng thái</option>
+                    <option value="completed"className="text-gray-600">Đã xử lý</option>
+                    <option value="processing"className="text-gray-600">Đang xử lý</option>
+                    <option value="pending"className="text-gray-600">Chờ xử lý</option>
                   </select>
                 </div>
                 
                 <div>
                   <select 
-                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"
-                    value={filters.requestType}
-                    onChange={(e) => handleFilterChange('requestType', e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"value={filters.requestType}
+                    onChange={(e) =>handleFilterChange('requestType', e.target.value)}
                   >
-                    <option value="all" className="text-gray-600">Tất cả loại yêu cầu</option>
-                    <option value="student-contact" className="text-gray-600">Liên hệ học sinh</option>
-                    <option value="technical" className="text-gray-600">Kỹ thuật</option>
-                    <option value="academic" className="text-gray-600">Học thuật</option>
-                    <option value="other" className="text-gray-600">Khác</option>
+                    <option value="all"className="text-gray-600">Tất cả loại yêu cầu</option>
+                    <option value="student-contact"className="text-gray-600">Liên hệ học sinh</option>
+                    <option value="technical"className="text-gray-600">Kỹ thuật</option>
+                    <option value="academic"className="text-gray-600">Học thuật</option>
+                    <option value="other"className="text-gray-600">Khác</option>
                   </select>
                 </div>
                 
                 <div>
                   <select 
-                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"
-                    value={filters.priority}
-                    onChange={(e) => handleFilterChange('priority', e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"value={filters.priority}
+                    onChange={(e) =>handleFilterChange('priority', e.target.value)}
                   >
-                    <option value="all" className="text-gray-600">Tất cả mức độ ưu tiên</option>
-                    <option value="high" className="text-gray-600">Cao</option>
-                    <option value="medium" className="text-gray-600">Trung bình</option>
-                    <option value="low" className="text-gray-600">Thấp</option>
+                    <option value="all"className="text-gray-600">Tất cả mức độ ưu tiên</option>
+                    <option value="high"className="text-gray-600">Cao</option>
+                    <option value="medium"className="text-gray-600">Trung bình</option>
+                    <option value="low"className="text-gray-600">Thấp</option>
                   </select>
                 </div>
                 
                 <div>
                   <select 
-                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"
-                    value={filters.dateRange}
-                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700 cursor-pointer"value={filters.dateRange}
+                    onChange={(e) =>handleFilterChange('dateRange', e.target.value)}
                   >
-                    <option value="all" className="text-gray-600">Tất cả thời gian</option>
-                    <option value="today" className="text-gray-600">Hôm nay</option>
-                    <option value="week" className="text-gray-600">Tuần này</option>
-                    <option value="month" className="text-gray-600">Tháng này</option>
-                    <option value="quarter" className="text-gray-600">Quý này</option>
+                    <option value="all"className="text-gray-600">Tất cả thời gian</option>
+                    <option value="today"className="text-gray-600">Hôm nay</option>
+                    <option value="week"className="text-gray-600">Tuần này</option>
+                    <option value="month"className="text-gray-600">Tháng này</option>
+                    <option value="quarter"className="text-gray-600">Quý này</option>
                   </select>
                 </div>
                 
                 <div className="flex-1 min-w-[200px]">
                   <input 
-                    type="text" 
-                    placeholder="Tìm kiếm theo từ khóa..." 
-                    className="w-full border border-gray-300 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700"
-                    value={filters.keyword}
-                    onChange={(e) => handleFilterChange('keyword', e.target.value)}
+                    type="text"placeholder="Tìm kiếm theo từ khóa..."className="w-full border border-gray-300 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs text-gray-700"value={filters.keyword}
+                    onChange={(e) =>handleFilterChange('keyword', e.target.value)}
                   />
                 </div>
               </div>
               
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center whitespace-nowrap cursor-pointer">
-                <i className="fas fa-plus mr-2"></i>
-                Tạo yêu cầu hỗ trợ mới
+                <i className="fas fa-plus mr-2"></i>Tạo yêu cầu hỗ trợ mới
               </button>
             </div>
           </CardContent>
@@ -383,8 +362,7 @@ const TeacherSupportHistory = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Danh sách yêu cầu hỗ trợ</h3>
-              <div className="text-sm text-gray-600">
-                Hiển thị {supportRequests.length} trên tổng số 25 yêu cầu
+              <div className="text-sm text-gray-600">Hiển thị {supportRequests.length} trên tổng số 25 yêu cầu
               </div>
             </div>
             
@@ -403,7 +381,7 @@ const TeacherSupportHistory = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {supportRequests.map((request) => (
+                  {supportRequests.map((request) =>(
                     <tr key={request.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 text-sm text-gray-900 font-medium">{request.requestCode}</td>
                       <td className="py-3 px-4 text-sm">{getTypeBadge(request.type)}</td>
@@ -415,49 +393,39 @@ const TeacherSupportHistory = () => {
                       <td className="py-3 px-4 text-sm">
                         <div className="flex items-center space-x-2">
                           <button className="text-blue-600 hover:text-blue-800 text-xs cursor-pointer">
-                            <i className="fas fa-eye mr-1"></i>
-                            Xem
+                            <i className="fas fa-eye mr-1"></i>Xem
                           </button>
                           <button className="text-green-600 hover:text-green-800 text-xs cursor-pointer">
-                            <i className="fas fa-edit mr-1"></i>
-                            Sửa
+                            <i className="fas fa-edit mr-1"></i>Sửa
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  ))}
+                    </tr>))}
                 </tbody>
               </table>
             </div>
             
             {/* Pagination */}
             <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-600">
-                Hiển thị 1-3 trên 25 kết quả
+              <div className="text-sm text-gray-600">Hiển thị 1-3 trên 25 kết quả
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
-                  Trước
+                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">Trước
                 </button>
-                <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm cursor-pointer">
-                  1
+                <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm cursor-pointer">1
                 </button>
-                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
-                  2
+                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">2
                 </button>
-                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
-                  3
+                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">3
                 </button>
-                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
-                  Sau
+                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">Sau
                 </button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 };
 
 export default TeacherSupportHistory;

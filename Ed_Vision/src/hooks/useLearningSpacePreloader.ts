@@ -8,7 +8,7 @@ import { preloadImages } from './useImagePreloader';
 export function useLearningSpacePreloader() {
   useEffect(() => {
     // Preload critical resources during idle time
-    if ('requestIdleCallback' in window) {
+    if ('requestIdleCallback'in window) {
       requestIdleCallback(() => {
         // Preload common theme backgrounds
         const criticalBackgrounds = [
@@ -40,7 +40,7 @@ export function usePanelPrefetcher() {
   useEffect(() => {
     // Prefetch panel components after initial render
     const prefetchDelay = setTimeout(() => {
-      if ('requestIdleCallback' in window) {
+      if ('requestIdleCallback'in window) {
         requestIdleCallback(() => {
           // These dynamic imports will trigger webpack to prefetch the chunks
           // but won't execute the modules
@@ -51,6 +51,6 @@ export function usePanelPrefetcher() {
       }
     }, 3000); // Wait 3 seconds after mount
 
-    return () => clearTimeout(prefetchDelay);
+    return () =>clearTimeout(prefetchDelay);
   }, []);
 }

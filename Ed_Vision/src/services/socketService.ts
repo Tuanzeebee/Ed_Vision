@@ -2,9 +2,9 @@ import { io, Socket } from 'socket.io-client';
 
 class SocketService {
     private socket: Socket | null = null;
-    private connectPromise: Promise<void> | null = null;
+    private connectPromise: Promise<void>| null = null;
 
-    connect(userId: string, userType: 'teacher' | 'student' | 'parent'): Promise<void> {
+    connect(userId: string, userType: 'teacher'| 'student'| 'parent'): Promise<void> {
         if (this.socket?.connected) {
             return Promise.resolve();
         }
@@ -22,7 +22,7 @@ class SocketService {
             });
 
             this.socket.on('connect', () => {
-                console.log('✅ Socket connected:', this.socket?.id);
+                console.log('Socket connected:', this.socket?.id);
                 // Register user
                 this.socket?.emit('register', { userId, userType });
                 this.connectPromise = null;
@@ -30,7 +30,7 @@ class SocketService {
             });
 
             this.socket.on('disconnect', () => {
-                console.log('❌ Socket disconnected');
+                console.log('Socket disconnected');
             });
 
             this.socket.on('connect_error', (error) => {
@@ -61,7 +61,7 @@ class SocketService {
     sendMessage(
         conversationId: string,
         senderId: string,
-        senderType: 'teacher' | 'student' | 'parent',
+        senderType: 'teacher'| 'student'| 'parent',
         content: string,
     ) {
         return new Promise((resolve, reject) => {
@@ -79,19 +79,19 @@ class SocketService {
         });
     }
 
-    onNewMessage(callback: (message: any) => void) {
+    onNewMessage(callback: (message: any) =>void) {
         this.socket?.on('newMessage', callback);
     }
 
-    onConversationUpdated(callback: (data: any) => void) {
+    onConversationUpdated(callback: (data: any) =>void) {
         this.socket?.on('conversationUpdated', callback);
     }
 
-    onUserTyping(callback: (data: any) => void) {
+    onUserTyping(callback: (data: any) =>void) {
         this.socket?.on('userTyping', callback);
     }
 
-    onMessagesRead(callback: (data: any) => void) {
+    onMessagesRead(callback: (data: any) =>void) {
         this.socket?.on('messagesRead', callback);
     }
 

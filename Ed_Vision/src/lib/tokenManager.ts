@@ -6,12 +6,13 @@ export interface TokenData {
 
 export class TokenManager {
   private static readonly TOKEN_KEY = 'auth_token_data'
-  private static readonly SESSION_TOKEN_KEY = 'session_tab_active' // For session storage - exists only when tab is open
+private static readonly SESSION_TOKEN_KEY = 'session_tab_active'
+// For session storage - exists only when tab is open
   private static readonly TAB_CLOSE_TIMEOUT_MINUTES = 5 // 5 phút sau khi đóng tất cả tab thì hết hạn
   // Removed MAX_SESSION_HOURS - no more hard time limit
 
   /**
-   * Lưu token - không có idle timeout, chỉ hết hạn khi đóng tất cả tab > 5 phút
+   * Lưu token - không có idle timeout, chỉ hết hạn khi đóng tất cả tab >5 phút
    */
   static setToken(token: string): void {
     const now = Date.now()
@@ -35,7 +36,7 @@ export class TokenManager {
   }
 
   /**
-   * Lấy token - chỉ kiểm tra nếu tất cả tab đã đóng > 5 phút
+   * Lấy token - chỉ kiểm tra nếu tất cả tab đã đóng >5 phút
    */
   static getToken(): string | null {
     const tokenDataStr = localStorage.getItem(this.TOKEN_KEY)
@@ -51,7 +52,7 @@ export class TokenManager {
       const hasActiveTab = this.hasActiveTab()
       
       if (hasActiveTab) {
-        // Có tab đang mở -> token hợp lệ, reset lastTabCloseTime về 0
+        // Có tab đang mở ->token hợp lệ, reset lastTabCloseTime về 0
         if (tokenData.lastTabCloseTime !== 0) {
           tokenData.lastTabCloseTime = 0
           localStorage.setItem(this.TOKEN_KEY, JSON.stringify(tokenData))
@@ -59,13 +60,13 @@ export class TokenManager {
         return tokenData.token
       }
       
-      // Không có tab nào mở -> kiểm tra xem đã đóng quá 5 phút chưa
+      // Không có tab nào mở ->kiểm tra xem đã đóng quá 5 phút chưa
       if (this.isTokenExpiredFromTabClose()) {
         this.clearToken()
         return null
       }
 
-      // Tab đóng nhưng chưa quá 5 phút -> vẫn hợp lệ
+      // Tab đóng nhưng chưa quá 5 phút ->vẫn hợp lệ
       return tokenData.token
     } catch (error) {
       console.error('Error parsing token data:', error)
@@ -86,7 +87,7 @@ export class TokenManager {
     
     // Kiểm tra heartbeat từ các tab khác
     const HEARTBEAT_KEY = 'auth_tab_heartbeat'
-    const lastHeartbeat = localStorage.getItem(HEARTBEAT_KEY)
+const lastHeartbeat = localStorage.getItem(HEARTBEAT_KEY)
     if (!lastHeartbeat) {
       return false
     }
@@ -94,7 +95,7 @@ export class TokenManager {
     try {
       const timestamp = parseInt(lastHeartbeat, 10)
       const now = Date.now()
-      // Nếu heartbeat mới hơn 5 giây -> có tab khác đang active
+      // Nếu heartbeat mới hơn 5 giây ->có tab khác đang active
       return (now - timestamp) < 5000
     } catch (error) {
       return false
@@ -114,10 +115,10 @@ export class TokenManager {
     // Mark this tab as active
     sessionStorage.setItem(this.SESSION_TOKEN_KEY, 'active')
     
-    // Tạo một "heartbeat" trong localStorage để các tab khác biết còn tab nào đang mở
+    // Tạo một "heartbeat"trong localStorage để các tab khác biết còn tab nào đang mở
     // Mỗi 2 giây, tab sẽ update timestamp trong localStorage
     const HEARTBEAT_KEY = 'auth_tab_heartbeat'
-    const updateHeartbeat = () => {
+const updateHeartbeat = () => {
       if (sessionStorage.getItem(this.SESSION_TOKEN_KEY) === 'active') {
         localStorage.setItem(HEARTBEAT_KEY, Date.now().toString())
       }
@@ -139,7 +140,7 @@ export class TokenManager {
       sessionStorage.removeItem(this.SESSION_TOKEN_KEY)
       
       // Đợi một chút để xem có tab nào khác còn active không
-      // Nếu không có tab nào update heartbeat trong 3 giây -> tất cả tab đã đóng
+      // Nếu không có tab nào update heartbeat trong 3 giây ->tất cả tab đã đóng
       const tokenDataStr = localStorage.getItem(this.TOKEN_KEY)
       if (tokenDataStr) {
         try {
@@ -155,7 +156,7 @@ export class TokenManager {
     // Listen to storage events để detect khi có tab khác update heartbeat
     window.addEventListener('storage', (e) => {
       if (e.key === HEARTBEAT_KEY && e.newValue) {
-        // Có tab khác còn active -> reset lastTabCloseTime
+        // Có tab khác còn active ->reset lastTabCloseTime
         const tokenDataStr = localStorage.getItem(this.TOKEN_KEY)
         if (tokenDataStr) {
           try {
@@ -184,7 +185,7 @@ export class TokenManager {
     try {
       const tokenData: TokenData = JSON.parse(tokenDataStr)
       
-      // Nếu lastTabCloseTime = 0 nghĩa là có tab đang mở -> không expired
+      // Nếu lastTabCloseTime = 0 nghĩa là có tab đang mở ->không expired
       if (tokenData.lastTabCloseTime === 0) {
         return false
       }
@@ -193,7 +194,7 @@ export class TokenManager {
       const timeSinceAllTabsClosed = now - tokenData.lastTabCloseTime
       
       // Kiểm tra xem đã đóng tất cả tab quá 5 phút chưa
-      return timeSinceAllTabsClosed > (this.TAB_CLOSE_TIMEOUT_MINUTES * 60 * 1000)
+      return timeSinceAllTabsClosed >(this.TAB_CLOSE_TIMEOUT_MINUTES * 60 * 1000)
     } catch (error) {
       console.error('Error checking token expiry:', error)
       return true
@@ -263,7 +264,7 @@ export class TokenManager {
         keysToRemove.push(key)
       }
     }
-    keysToRemove.forEach(key => localStorage.removeItem(key))
+    keysToRemove.forEach(key =>localStorage.removeItem(key))
   }
 
   /**
@@ -278,7 +279,7 @@ export class TokenManager {
     }
 
     try {
-      // Nếu có tab đang mở -> không bao giờ hết hạn
+      // Nếu có tab đang mở ->không bao giờ hết hạn
       if (this.hasActiveTab()) {
         return 999 // Số lớn để báo hiệu không có thời gian hết hạn
       }
@@ -287,7 +288,7 @@ export class TokenManager {
       const tokenData: TokenData = JSON.parse(tokenDataStr)
       
       if (tokenData.lastTabCloseTime === 0) {
-        // Chưa từng đóng tab -> không hết hạn
+        // Chưa từng đóng tab ->không hết hạn
         return 999
       }
       

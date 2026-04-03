@@ -4,10 +4,10 @@ import { loadSlim } from "@tsparticles/slim";
 import type { Container } from "@tsparticles/engine";
 
 interface SnowfallProps {
-  intensity?: "light" | "medium" | "heavy";
+  intensity?: "light"| "medium"| "heavy";
 }
 
-const Snowfall: React.FC<SnowfallProps> = ({ intensity = "medium" }) => {
+const Snowfall: React.FC<SnowfallProps>= ({ intensity = "medium"}) => {
   const [init, setInit] = useState(false);
 
   const particleCount = {
@@ -30,8 +30,7 @@ const Snowfall: React.FC<SnowfallProps> = ({ intensity = "medium" }) => {
 
   return (
     <Particles
-      id="snowfall-particles"
-      options={{
+      id="snowfall-particles"options={{
         fullScreen: {
           enable: true,
           zIndex: 1,
@@ -125,8 +124,7 @@ const Snowfall: React.FC<SnowfallProps> = ({ intensity = "medium" }) => {
         pointerEvents: "none",
         zIndex: 9999,
       }}
-    />
-  );
+    />);
 };
 
 export default Snowfall;

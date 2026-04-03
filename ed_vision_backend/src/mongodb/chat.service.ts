@@ -604,14 +604,13 @@ export class ChatService {
     const teacherId = params.instructorId.toString();
 
     const alertTypeLabels = {
-      academic: '🎓 Cảnh báo học tập',
-      attendance: '📅 Cảnh báo điểm danh',
-      behavior: '⚠️ Cảnh báo hành vi',
-      other: '❗ Cảnh báo',
+      academic: ' Cảnh báo học tập',
+      attendance: ' Cảnh báo điểm danh',
+      behavior: ' Cảnh báo hành vi',
+      other: ' Cảnh báo',
     };
 
-    const severityPrefix =
-      params.severity === 'high' ? '🚨 KHẨN CẤP - ' : '⚠️ ';
+    const severityPrefix = params.severity === 'high' ? ' KHẨN CẤP - ' : ' ';
 
     const results = {
       sentToStudents: 0,
@@ -656,7 +655,7 @@ export class ChatService {
           'teacher-student',
         );
 
-        const studentMessage = `${severityPrefix}${alertTypeLabels[params.alertType]}\n\n${params.message}${params.requireConfirmation ? '\n\n⚠️ Vui lòng xác nhận đã đọc tin nhắn này.' : ''}`;
+        const studentMessage = `${severityPrefix}${alertTypeLabels[params.alertType]}\n\n${params.message}${params.requireConfirmation ? '\n\n Vui lòng xác nhận đã đọc tin nhắn này.' : ''}`;
 
         await this.sendMessage(
           (studentConversation as any)._id.toString(),

@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-# 📁 Thư mục chứa file CSV
+#  Thư mục chứa file CSV
 root_folder = "train__1"
 
 # Các tên cột nhãn phổ biến (ưu tiên)
@@ -39,7 +39,7 @@ for root, dirs, files in os.walk(root_folder):
     for file in files:
         if file.endswith(".csv"):
             file_path = os.path.join(root, file)
-            print(f"\n📌 File: {file_path}")
+            print(f"\n File: {file_path}")
 
             try:
                 df = pd.read_csv(file_path)
@@ -47,7 +47,7 @@ for root, dirs, files in os.walk(root_folder):
                 # Tìm cột nhãn
                 label_col = detect_label_column(df)
                 if label_col is None:
-                    print("   ❌ Không tìm thấy cột nhãn.")
+                    print("    Không tìm thấy cột nhãn.")
                     continue
 
                 # Kiểm tra khoảng trắng
@@ -55,9 +55,9 @@ for root, dirs, files in os.walk(root_folder):
                 bad_labels = labels[labels.apply(has_whitespace)]
 
                 if len(bad_labels) > 0:
-                    print(f"   ⚠️ Nhãn có khoảng trắng: {bad_labels.unique()}")
+                    print(f"    Nhãn có khoảng trắng: {bad_labels.unique()}")
                 else:
-                    print("   ✔ Không có nhãn nào chứa khoảng trắng.")
+                    print("    Không có nhãn nào chứa khoảng trắng.")
 
             except Exception as e:
-                print(f"   ❌ Lỗi đọc file: {e}")
+                print(f"    Lỗi đọc file: {e}")

@@ -16,7 +16,6 @@ export { default as ChooseMascot } from './ChooseMascot'
 export { default as MusicBrowser } from './MusicBrowser'
 export { default as StudyRooms } from './StudyRooms'
 export { default as VideoRoom } from './VideoRoom'
-
 // Learning Space Module
 export { default as LearningSpace } from './LearningSpace'
 export { default as ClockDisplay } from './components/ClockDisplay'
@@ -29,11 +28,9 @@ export { default as AmbiencePanel } from './components/AmbiencePanel'
 export { default as ThemePanel } from './components/ThemePanel'
 export { default as MusicPanel } from './components/MusicPanel'
 export { default as JournalPanel } from './components/JournalPanel'
-
 // Learning Space Hooks
 export { useDraggable } from './hooks/useDraggable'
 export { useResizable } from './hooks/useResizable'
-
 // Learning Space Types
 export type {
   PanelPosition,

@@ -4,7 +4,7 @@ import type { DragState } from '../types/learningSpace';
 type UseDraggableReturn = {
   position: { x: number; y: number };
   setPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
-  handleMouseDown: (e: React.MouseEvent) => void;
+  handleMouseDown: (e: React.MouseEvent) =>void;
   isDragging: boolean;
 };
 
@@ -39,7 +39,7 @@ export const useDraggable = (initialX: number, initialY: number): UseDraggableRe
     };
 
     const handleMouseUp = () => {
-      setDragState(prev => ({ ...prev, isDragging: false }));
+      setDragState(prev =>({ ...prev, isDragging: false }));
     };
 
     document.addEventListener('mousemove', handleMouseMove);

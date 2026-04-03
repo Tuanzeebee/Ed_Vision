@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: () =>void;
   title: string;
   message: string;
-  type?: 'success' | 'error' | 'info';
+  type?: 'success'| 'error'| 'info';
 }
 
-export default function Modal({ isOpen, onClose, title, message, type = 'info' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, message, type = 'info'}: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -27,27 +27,24 @@ export default function Modal({ isOpen, onClose, title, message, type = 'info' }
       case 'success':
         return (
           <div className="flex-shrink-0 w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-green-100">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg className="h-6 w-6 text-green-600"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+              <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M5 13l4 4L19 7"/>
             </svg>
-          </div>
-        );
+          </div>);
       case 'error':
         return (
           <div className="flex-shrink-0 w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-red-100">
-            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg className="h-6 w-6 text-red-600"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+              <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
             </svg>
-          </div>
-        );
+          </div>);
       default:
         return (
           <div className="flex-shrink-0 w-12 h-12 mx-auto flex items-center justify-center rounded-full bg-blue-100">
-            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg className="h-6 w-6 text-blue-600"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+              <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-          </div>
-        );
+          </div>);
     }
   };
 
@@ -66,8 +63,7 @@ export default function Modal({ isOpen, onClose, title, message, type = 'info' }
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop with blur */}
       <div
-        className="fixed inset-0 backdrop-blur-sm transition-all"
-        onClick={onClose}
+        className="fixed inset-0 backdrop-blur-sm transition-all"onClick={onClose}
       />
       
       {/* Modal */}
@@ -93,15 +89,12 @@ export default function Modal({ isOpen, onClose, title, message, type = 'info' }
           {/* Action button */}
           <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
-              type="button"
-              onClick={onClose}
+              type="button"onClick={onClose}
               className={`inline-flex w-full justify-center rounded-md px-6 py-2.5 text-sm font-semibold text-white shadow-sm sm:w-auto transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClass()}`}
-            >
-              Đóng
+            >Đóng
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

@@ -120,14 +120,14 @@ async function createSampleData() {
       },
     });
 
-    console.log('✅ Sample data created successfully!');
-    console.log('\n📋 Login credentials:');
+    console.log(' Sample data created successfully!');
+    console.log('\n Login credentials:');
     console.log('Admin: admin@edvision.com / password123');
     console.log('Teacher: teacher@edvision.com / password123');
     console.log('Student: student@edvision.com / password123');
 
   } catch (error) {
-    console.error('❌ Error creating sample data:', error);
+    console.error(' Error creating sample data:', error);
   } finally {
     await prisma.$disconnect();
   }

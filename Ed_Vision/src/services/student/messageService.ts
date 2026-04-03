@@ -9,9 +9,9 @@ export interface MessageAttachment {
 
 export interface SendMessageRequest {
     recipientId: string;
-    recipientType: 'teacher' | 'student' | 'parent';
+    recipientType: 'teacher'| 'student'| 'parent';
     content: string;
-    messageType?: 'text' | 'file' | 'image';
+    messageType?: 'text'| 'file'| 'image';
     attachments?: MessageAttachment[];
     conversationId?: string;
 }
@@ -20,11 +20,11 @@ export interface Message {
     _id: string;
     conversationId: string;
     senderId: string;
-    senderType: 'teacher' | 'student' | 'parent';
+    senderType: 'teacher'| 'student'| 'parent';
     senderName: string;
     senderAvatar?: string;
     content: string;
-    messageType: 'text' | 'file' | 'image' | 'system';
+    messageType: 'text'| 'file'| 'image'| 'system';
     attachments?: MessageAttachment[];
     isRead: boolean;
     readAt?: Date;
@@ -38,17 +38,17 @@ export interface Message {
 
 export interface ConversationParticipant {
     userId: string;
-    userType: 'teacher' | 'student' | 'parent';
+    userType: 'teacher'| 'student'| 'parent';
     userName: string;
     userAvatar?: string;
-    role: 'owner' | 'admin' | 'member';
+    role: 'owner'| 'admin'| 'member';
     isActive: boolean;
     joinedAt: Date;
 }
 
 export interface Conversation {
     _id: string;
-    conversationType: 'teacher-student' | 'teacher-parent' | 'group';
+    conversationType: 'teacher-student'| 'teacher-parent'| 'group';
     participants: ConversationParticipant[];
     lastMessage?: {
         content: string;
@@ -104,7 +104,7 @@ export const sendMessage = async (data: SendMessageRequest) => {
 /**
  * Lấy danh sách hội thoại
  */
-export const getConversations = async (): Promise<ConversationsResponse> => {
+export const getConversations = async (): Promise<ConversationsResponse>=> {
     const response = await apiClient.get('/student/messages/conversations');
     return response.data;
 };
@@ -117,7 +117,7 @@ export const getMessages = async (
     page: number = 1,
     limit: number = 50,
     before?: string
-): Promise<GetMessagesResponse> => {
+): Promise<GetMessagesResponse>=> {
     const params: any = { page, limit };
     if (before) params.before = before;
 
@@ -197,7 +197,7 @@ export const updateConversation = async (
 /**
  * Lấy số tin nhắn chưa đọc
  */
-export const getUnreadCount = async (): Promise<UnreadCountResponse> => {
+export const getUnreadCount = async (): Promise<UnreadCountResponse>=> {
     const response = await apiClient.get('/student/messages/unread-count');
     return response.data;
 };

@@ -44,13 +44,13 @@ describe('MeetingLogsController', () => {
         email: 'nguyenvana@duytan.edu.vn',
       };
 
-      jest
+      const getInstructorInfoSpy = jest
         .spyOn(service, 'getInstructorInfo')
         .mockResolvedValue(mockInstructorInfo);
 
       const result = await controller.getInstructorInfo(accountId);
       expect(result).toEqual(mockInstructorInfo);
-      expect(service.getInstructorInfo).toHaveBeenCalledWith(accountId);
+      expect(getInstructorInfoSpy).toHaveBeenCalledWith(accountId);
     });
   });
 
@@ -89,7 +89,7 @@ describe('MeetingLogsController', () => {
         capacity: 10,
       };
 
-      jest
+      const getStudentsByTimeSlotSpy = jest
         .spyOn(service, 'getStudentsByTimeSlot')
         .mockResolvedValue(mockResponse);
 
@@ -100,7 +100,7 @@ describe('MeetingLogsController', () => {
         '10:00',
       );
       expect(result).toEqual(mockResponse);
-      expect(service.getStudentsByTimeSlot).toHaveBeenCalledWith(
+      expect(getStudentsByTimeSlotSpy).toHaveBeenCalledWith(
         1,
         '2025-11-25',
         '09:00',
@@ -133,11 +133,13 @@ describe('MeetingLogsController', () => {
         updated_at: new Date(),
       };
 
-      jest.spyOn(service, 'createMeetingLog').mockResolvedValue(mockResponse);
+      const createMeetingLogSpy = jest
+        .spyOn(service, 'createMeetingLog')
+        .mockReturnValue(mockResponse);
 
-      const result = await controller.createMeetingLog(createDto);
+      const result = controller.createMeetingLog(createDto);
       expect(result).toEqual(mockResponse);
-      expect(service.createMeetingLog).toHaveBeenCalledWith(createDto);
+      expect(createMeetingLogSpy).toHaveBeenCalledWith(createDto);
     });
   });
 });

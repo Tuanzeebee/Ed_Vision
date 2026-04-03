@@ -4,16 +4,15 @@
  * Speaking practice exercises for each speaking.* topicKey.
  *
  * Exercise types:
- *  - 'word'      → pronounce a single word
- *  - 'sentence'  → read a sentence aloud
- *  - 'qa'        → hear a question, give a spoken answer (checked against model answer)
+ *  - 'word'→ pronounce a single word
+ *  - 'sentence'→ read a sentence aloud
+ *  - 'qa'→ hear a question, give a spoken answer (checked against model answer)
  *
  * Scoring uses Levenshtein-based similarity (built into SpeakingPractice component).
  * No backend required — runs 100% in the browser via Web Speech API.
  */
 
-export type ExerciseType = 'word' | 'sentence' | 'qa'
-
+export type ExerciseType = 'word'| 'sentence'| 'qa'
 export interface SpeakingExercise {
   id: string
   type: ExerciseType
@@ -27,14 +26,13 @@ export interface SpeakingExercise {
   modelAnswer?: string
   /** IPA pronunciation guide */
   ipa?: string
-  /** Stress hint, e.g. "Stress: de-VEL-op-ment" */
+  /** Stress hint, e.g. "Stress: de-VEL-op-ment"*/
   stressHint?: string
   /** Per-syllable breakdown */
   syllables?: string[]
   /** Key sound to watch out for */
   soundTip?: string
-  difficulty: 'easy' | 'medium' | 'hard'
-}
+  difficulty: 'easy'| 'medium'| 'hard'}
 
 export interface SpeakingPack {
   topicKey: string
@@ -61,7 +59,7 @@ const PACK_PRONUNCIATION: SpeakingPack = {
       ipa: '/dɪˈveləpmənt/',
       stressHint: 'Stress: de-VEL-op-ment (âm 2)',
       syllables: ['de', 'vel', 'op', 'ment'],
-      soundTip: 'Âm /ə/ ở "op" là âm schwa – ngắn và nhẹ',
+      soundTip: 'Âm /ə/ ở "op"là âm schwa – ngắn và nhẹ',
       difficulty: 'medium',
     },
     {
@@ -79,7 +77,7 @@ const PACK_PRONUNCIATION: SpeakingPack = {
       ipa: '/ˈkʌmftəbl/',
       stressHint: 'Stress: COMF-ta-ble (âm 1) – chỉ 3 âm tiết!',
       syllables: ['comf', 'ta', 'ble'],
-      soundTip: '"comfort" thường bị đọc thành 4 âm tiết – sai!',
+      soundTip: '"comfort"thường bị đọc thành 4 âm tiết – sai!',
       difficulty: 'hard',
     },
     {
@@ -106,13 +104,13 @@ const PACK_PRONUNCIATION: SpeakingPack = {
       ipa: '/vəˈkæbjʊləri/',
       stressHint: 'Stress: vo-CAB-u-lary (âm 2)',
       syllables: ['vo', 'cab', 'u', 'la', 'ry'],
-      soundTip: 'Âm /æ/ giống "cat" – miệng mở rộng',
+      soundTip: 'Âm /æ/ giống "cat"– miệng mở rộng',
       difficulty: 'medium',
     },
     {
       id: 'pr_07', type: 'sentence', target: 'The weather in Vietnam is generally hot and humid.',
       translation: 'Thời tiết ở Việt Nam thường nóng và ẩm.',
-      soundTip: 'Nối âm: "weather_in", "is_generally" – liên kết tự nhiên',
+      soundTip: 'Nối âm: "weather_in", "is_generally"– liên kết tự nhiên',
       difficulty: 'easy',
     },
     {
@@ -147,7 +145,7 @@ const PACK_PART1: SpeakingPack = {
       target: 'In my free time, I usually listen to music or go for a walk. I also spend time with my family on weekends.',
       modelAnswer: 'In my free time I usually listen to music or go for a walk I also spend time with my family on weekends',
       translation: 'Bạn thường làm gì trong thời gian rảnh?',
-      soundTip: 'Thêm chi tiết: "usually", "often", "sometimes" – tránh câu quá ngắn',
+      soundTip: 'Thêm chi tiết: "usually", "often", "sometimes"– tránh câu quá ngắn',
       difficulty: 'easy',
     },
     {
@@ -172,7 +170,7 @@ const PACK_PART1: SpeakingPack = {
       id: 'p1_05', type: 'sentence',
       target: 'I have been studying English for about five years.',
       translation: 'Tôi đã học tiếng Anh được khoảng 5 năm.',
-      soundTip: 'Luyện "have been" – Present Perfect Continuous: /həv bɪn/',
+      soundTip: 'Luyện "have been"– Present Perfect Continuous: /həv bɪn/',
       difficulty: 'easy',
     },
   ],
@@ -206,7 +204,7 @@ const PACK_EXTEND: SpeakingPack = {
       id: 'ext_03', type: 'sentence',
       target: 'For example, many young people spend hours on their phones instead of interacting face to face.',
       translation: 'Ví dụ, nhiều bạn trẻ dành hàng giờ trên điện thoại thay vì giao tiếp trực tiếp.',
-      soundTip: 'Luyện "face to face" – ba từ nối liền, stress vào "face"',
+      soundTip: 'Luyện "face to face"– ba từ nối liền, stress vào "face"',
       difficulty: 'medium',
     },
   ],
@@ -321,14 +319,14 @@ const PACK_LEXICAL: SpeakingPack = {
       id: 'lex_01', type: 'sentence',
       target: 'The exhibition was absolutely breathtaking — the level of detail in each sculpture was remarkable.',
       translation: 'Triển lãm thật tuyệt vời — mức độ chi tiết trong từng tác phẩm thật ấn tượng.',
-      soundTip: '"Breathtaking" và "remarkable" thay cho "very good/nice". Luyện phát âm cả câu.',
+      soundTip: '"Breathtaking"và "remarkable"thay cho "very good/nice". Luyện phát âm cả câu.',
       difficulty: 'medium',
     },
     {
       id: 'lex_02', type: 'sentence',
       target: 'The traffic in Ho Chi Minh City is absolutely chaotic during rush hour.',
       translation: 'Giao thông ở TP.HCM cực kỳ hỗn loạn trong giờ cao điểm.',
-      soundTip: '"Chaotic" /keɪˈɒtɪk/ – stress âm 2. Thay cho "very busy".',
+      soundTip: '"Chaotic"/keɪˈɒtɪk/ – stress âm 2. Thay cho "very busy".',
       difficulty: 'medium',
     },
     {
@@ -337,7 +335,7 @@ const PACK_LEXICAL: SpeakingPack = {
       target: 'I grew up in a bustling coastal city. The neighbourhood was vibrant and multicultural. There were always fascinating street markets and the aroma of street food filled the air.',
       modelAnswer: 'I grew up in a bustling coastal city the neighbourhood was vibrant and multicultural there were always fascinating street markets and the aroma of street food filled the air',
       translation: 'Mô tả khu vực bạn lớn lên.',
-      soundTip: '"Bustling", "vibrant", "multicultural", "aroma" – từ Band 6+ thay cho basic vocabulary',
+      soundTip: '"Bustling", "vibrant", "multicultural", "aroma"– từ Band 6+ thay cho basic vocabulary',
       difficulty: 'hard',
     },
   ],
@@ -355,21 +353,21 @@ const PACK_COHESION: SpeakingPack = {
       id: 'coh_01', type: 'sentence',
       target: 'Furthermore, regular exercise has been shown to improve mental health significantly.',
       translation: 'Hơn nữa, tập thể dục đều đặn đã được chứng minh là cải thiện sức khỏe tâm thần đáng kể.',
-      soundTip: '"Furthermore" bắt đầu bằng /ˈfɜː/. Thêm ý mới mà không lặp lại "and also".',
+      soundTip: '"Furthermore"bắt đầu bằng /ˈfɜː/. Thêm ý mới mà không lặp lại "and also".',
       difficulty: 'easy',
     },
     {
       id: 'coh_02', type: 'sentence',
       target: 'Having said that, it is important to acknowledge that not everyone has the time or resources to exercise regularly.',
       translation: 'Tuy nhiên, điều quan trọng là phải thừa nhận rằng không phải ai cũng có thời gian hay nguồn lực để tập thể dục thường xuyên.',
-      soundTip: '"Having said that" = sophisticated way to say "However". Luyện đọc mượt cả câu dài.',
+      soundTip: '"Having said that"= sophisticated way to say "However". Luyện đọc mượt cả câu dài.',
       difficulty: 'hard',
     },
     {
       id: 'coh_03', type: 'sentence',
       target: 'To illustrate this point, consider how many students struggle to stay focused in a noisy environment.',
       translation: 'Để minh họa điểm này, hãy xem xét bao nhiêu sinh viên gặp khó khăn trong việc tập trung trong môi trường ồn ào.',
-      soundTip: '"To illustrate this point" = sophisticated "For example". Nhấn: IL-lus-trate.',
+      soundTip: '"To illustrate this point"= sophisticated "For example". Nhấn: IL-lus-trate.',
       difficulty: 'medium',
     },
   ],
@@ -394,7 +392,7 @@ const PACK_FLUENCY: SpeakingPack = {
       id: 'flu_02', type: 'sentence',
       target: 'What I mean is that the relationship between technology and education is quite complex.',
       translation: 'Ý tôi muốn nói là mối quan hệ giữa công nghệ và giáo dục khá phức tạp.',
-      soundTip: '"What I mean is…" = repair strategy khi cần nói lại rõ hơn. Tự nhiên và Band 7+.',
+      soundTip: '"What I mean is…"= repair strategy khi cần nói lại rõ hơn. Tự nhiên và Band 7+.',
       difficulty: 'medium',
     },
     {
@@ -421,7 +419,7 @@ const PACK_PRONUNCIATION_ADV: SpeakingPack = {
       id: 'padv_01', type: 'sentence',
       target: 'I would have told you if I had known about it.',
       translation: 'Tôi đã nói với bạn nếu tôi biết về điều đó.',
-      soundTip: 'Weak forms: "would have" → /wʊdəv/, "had" → /həd/. Đọc liên tục, không rời rạc.',
+      soundTip: 'Weak forms: "would have"→ /wʊdəv/, "had"→ /həd/. Đọc liên tục, không rời rạc.',
       difficulty: 'hard',
     },
     {
@@ -435,7 +433,7 @@ const PACK_PRONUNCIATION_ADV: SpeakingPack = {
       id: 'padv_03', type: 'sentence',
       target: 'She used to be an engineer before she became a teacher.',
       translation: 'Cô ấy từng là kỹ sư trước khi trở thành giáo viên.',
-      soundTip: '"Used to" → /juːst tə/. Linking: "an engineer" → /ən ɪnˈdʒɪnɪr/.',
+      soundTip: '"Used to"→ /juːst tə/. Linking: "an engineer"→ /ən ɪnˈdʒɪnɪr/.',
       difficulty: 'medium',
     },
   ],
@@ -453,14 +451,14 @@ const PACK_NATURAL: SpeakingPack = {
       id: 'nat_01', type: 'sentence',
       target: 'At the end of the day, what matters most is how you treat other people.',
       translation: 'Cuối cùng, điều quan trọng nhất là bạn đối xử với người khác như thế nào.',
-      soundTip: '"At the end of the day" = common native idiom. Đọc như một cụm, không đọc từng từ.',
+      soundTip: '"At the end of the day"= common native idiom. Đọc như một cụm, không đọc từng từ.',
       difficulty: 'medium',
     },
     {
       id: 'nat_02', type: 'sentence',
       target: 'I have to say, I am genuinely passionate about environmental conservation.',
       translation: 'Tôi phải nói rằng tôi thực sự đam mê bảo tồn môi trường.',
-      soundTip: '"I have to say" = natural spoken opener. "Genuinely" /ˈdʒenjuɪnli/ – stress âm 1.',
+      soundTip: '"I have to say"= natural spoken opener. "Genuinely"/ˈdʒenjuɪnli/ – stress âm 1.',
       difficulty: 'hard',
     },
     {
@@ -469,7 +467,7 @@ const PACK_NATURAL: SpeakingPack = {
       target: 'Honestly, I would love to be running my own business, ideally in the tech industry. I am passionate about creating products that make a real difference to people\'s lives. Beyond work, I hope to have more balance and spend quality time with my family.',
       modelAnswer: 'honestly I would love to be running my own business ideally in the tech industry I am passionate about creating products that make a real difference to peoples lives beyond work I hope to have more balance and spend quality time with my family',
       translation: 'Cuộc sống lý tưởng của bạn sẽ như thế nào sau 10 năm?',
-      soundTip: 'Dùng: "Honestly,", "Ideally,", "Beyond [X]," – native-like transitions',
+      soundTip: 'Dùng: "Honestly,", "Ideally,", "Beyond [X],"– native-like transitions',
       difficulty: 'hard',
     },
   ],
@@ -495,14 +493,14 @@ const PACK_SW_READ_ALOUD: SpeakingPack = {
       id: 'swr_02', type: 'sentence',
       target: 'The conference will be held at the Grand Riverside Hotel on the fifteenth of November.',
       translation: 'Hội nghị sẽ được tổ chức tại khách sạn Grand Riverside vào ngày 15 tháng 11.',
-      soundTip: 'Ngày tháng: "fifteenth of November" – đọc rõ từng âm tiết. Không nuốt âm cuối.',
+      soundTip: 'Ngày tháng: "fifteenth of November"– đọc rõ từng âm tiết. Không nuốt âm cuối.',
       difficulty: 'easy',
     },
     {
       id: 'swr_03', type: 'sentence',
       target: 'All employees are required to complete the annual compliance training by the end of this quarter.',
       translation: 'Tất cả nhân viên phải hoàn thành chương trình đào tạo tuân thủ hàng năm trước cuối quý này.',
-      soundTip: '"Required" /rɪˈkwaɪərd/, "compliance" /kəmˈplaɪəns/ – nhấn âm 2 cả hai từ.',
+      soundTip: '"Required"/rɪˈkwaɪərd/, "compliance"/kəmˈplaɪəns/ – nhấn âm 2 cả hai từ.',
       difficulty: 'medium',
     },
     {
@@ -533,14 +531,14 @@ const PACK_SW_DESCRIBE: SpeakingPack = {
       id: 'swd_02', type: 'sentence',
       target: 'There appears to be a large group of people gathered in what looks like a conference room.',
       translation: 'Có vẻ như có một nhóm người đông đúc tụ tập trong một thứ trông giống như phòng hội nghị.',
-      soundTip: '"There appears to be" và "what looks like" = uncertainty language – quan trọng khi không chắc chắn.',
+      soundTip: '"There appears to be"và "what looks like"= uncertainty language – quan trọng khi không chắc chắn.',
       difficulty: 'medium',
     },
     {
       id: 'swd_03', type: 'sentence',
       target: 'In the background, I can see several potted plants and a large window overlooking the city.',
       translation: 'Ở phía sau, tôi thấy một vài chậu cây và một cửa sổ lớn nhìn ra thành phố.',
-      soundTip: '"In the background" – start sentences with location phrases for Part 2.',
+      soundTip: '"In the background"– start sentences with location phrases for Part 2.',
       difficulty: 'easy',
     },
   ],
@@ -579,7 +577,7 @@ const PACK_SW_PROPOSE: SpeakingPack = {
   exercises: [
     {
       id: 'swps_01', type: 'qa',
-      question: 'You received a voicemail: "Hi, this is Mark. I ordered a laptop from your store two weeks ago and it still hasn\'t arrived. I really need it for work. Can you help?" Respond with a solution.',
+      question: 'You received a voicemail: "Hi, this is Mark. I ordered a laptop from your store two weeks ago and it still hasn\'t arrived. I really need it for work. Can you help?"Respond with a solution.',
       target: 'Hi Mark, I sincerely apologize for the delay with your order. I understand this is urgent for your work. I will personally check the status of your shipment right away and call you back within the hour. If the package is lost, we will send a replacement with express delivery at no extra cost.',
       modelAnswer: 'hi Mark I sincerely apologize for the delay with your order I understand this is urgent for your work I will personally check the status of your shipment right away and call you back within the hour if the package is lost we will send a replacement with express delivery',
       translation: 'Khách hàng phàn nàn về đơn hàng laptop chưa đến sau 2 tuần.',
@@ -607,7 +605,7 @@ const PACK_SW_OPINION: SpeakingPack = {
       id: 'swop_02', type: 'sentence',
       target: 'In my view, companies that invest in employee well-being tend to see greater long-term returns.',
       translation: 'Theo quan điểm của tôi, các công ty đầu tư vào phúc lợi nhân viên có xu hướng đạt được lợi nhuận dài hạn tốt hơn.',
-      soundTip: '"In my view," = professional opener. Stress: INVEST, WELL-BEING, GREATER.',
+      soundTip: '"In my view,"= professional opener. Stress: INVEST, WELL-BEING, GREATER.',
       difficulty: 'medium',
     },
   ],
@@ -615,7 +613,7 @@ const PACK_SW_OPINION: SpeakingPack = {
 
 // ─── Master lookup ─────────────────────────────────────────────────────────────
 
-export const SPEAKING_PACKS: Record<string, SpeakingPack> = {
+export const SPEAKING_PACKS: Record<string, SpeakingPack>= {
   'speaking.pronunciation':    PACK_PRONUNCIATION,
   'speaking.part1_basics':     PACK_PART1,
   'speaking.extend_answers':   PACK_EXTEND,
@@ -638,8 +636,7 @@ export const SPEAKING_PACKS: Record<string, SpeakingPack> = {
 
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length
-  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
-    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>Array.from({ length: n + 1 }, (_, j) =>(i === 0 ? j : j === 0 ? i : 0))
   )
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -662,14 +659,14 @@ export function scoreSimilarity(expected: string, spoken: string): number {
 
 /** Find words in expected that are missing from spoken */
 export function findMissingWords(expected: string, spoken: string): string[] {
-  const expWords = expected.toLowerCase().replace(/[^a-z ]/g, '').split(' ').filter(Boolean)
-  const spkWords = new Set(spoken.toLowerCase().replace(/[^a-z ]/g, '').split(' ').filter(Boolean))
-  return expWords.filter(w => w.length > 2 && !spkWords.has(w)).slice(0, 5)
+  const expWords = expected.toLowerCase().replace(/[^a-z ]/g, '').split('').filter(Boolean)
+  const spkWords = new Set(spoken.toLowerCase().replace(/[^a-z ]/g, '').split('').filter(Boolean))
+  return expWords.filter(w =>w.length >2 && !spkWords.has(w)).slice(0, 5)
 }
 
 /** Simple per-word accuracy breakdown */
 export function getWordAccuracy(expected: string, spoken: string): { word: string; ok: boolean }[] {
-  const expWords = expected.toLowerCase().replace(/[^a-z ']/g, '').split(' ').filter(Boolean)
-  const spkWords = new Set(spoken.toLowerCase().replace(/[^a-z ']/g, '').split(' ').filter(Boolean))
-  return expWords.map(w => ({ word: w, ok: spkWords.has(w) }))
+  const expWords = expected.toLowerCase().replace(/[^a-z ']/g, '').split('').filter(Boolean)
+  const spkWords = new Set(spoken.toLowerCase().replace(/[^a-z ']/g, '').split('').filter(Boolean))
+  return expWords.map(w =>({ word: w, ok: spkWords.has(w) }))
 }

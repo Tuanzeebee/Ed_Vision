@@ -107,8 +107,7 @@ export function getDatesInWeek(weekInfo: WeekInfo): Date[] {
 }
 
 /**
- * Format date as "dd/MM"
- */
+ * Format date as "dd/MM"*/
 export function formatDateShort(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -116,7 +115,7 @@ export function formatDateShort(date: Date): string {
 }
 
 /**
- * Format date as "YYYY-MM-DD" (for API calls)
+ * Format date as "YYYY-MM-DD"(for API calls)
  */
 export function formatDateForAPI(date: Date): string {
   const year = date.getFullYear();
@@ -156,5 +155,5 @@ export function isPastWeek(weekInfo: WeekInfo): boolean {
 export function isFutureWeek(weekInfo: WeekInfo): boolean {
   const today = new Date();
   today.setHours(23, 59, 59, 999);
-  return weekInfo.startDate > today;
+  return weekInfo.startDate >today;
 }

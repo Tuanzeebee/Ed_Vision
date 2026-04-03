@@ -1,9 +1,8 @@
 import React from "react"
 import { useTranslation } from 'react-i18next';
 import iconArrowRight from "@/assets/parent/iconArrowRight.svg"
-
 type Props = {
-  onClick?: () => void
+  onClick?: () =>void
   disabled?: boolean
   className?: string
   children?: React.ReactNode
@@ -21,9 +20,8 @@ export default function ContinueButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        backgroundColor: disabled ? '#9CA3AF' : '#1E293B',
-        color: '#FFFFFF'
-      }}
+        backgroundColor: disabled ? '#9CA3AF': '#1E293B',
+        color: '#FFFFFF'}}
       className={`
         text-white text-base font-normal
         flex items-center justify-start
@@ -31,7 +29,7 @@ export default function ContinueButton({
         transition-colors duration-200
         hover:opacity-90
         cursor-pointer
-        ${disabled ? 'cursor-not-allowed' : ''}
+        ${disabled ? 'cursor-not-allowed': ''}
         ${className}
       `}
       onMouseEnter={(e) => {
@@ -49,8 +47,7 @@ export default function ContinueButton({
         <span className="leading-6">{children || t('parent:ui.continueButton.continue')}</span>
       </div>
       <div className="flex items-center justify-center">
-        <img src={iconArrowRight} alt="" className="w-3.5 h-4" />
+        <img src={iconArrowRight} alt=""className="w-3.5 h-4"/>
       </div>
-    </button>
-  )
+    </button>)
 }

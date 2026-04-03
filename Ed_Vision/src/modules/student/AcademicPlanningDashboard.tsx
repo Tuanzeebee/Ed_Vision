@@ -18,7 +18,6 @@ import {
   CalendarIcon
 } from "@/assets/student/icons";
 import { useTranslation } from 'react-i18next'
-
 // type Props = {}; // Unused for now
 
 interface CourseCard {
@@ -27,14 +26,14 @@ interface CourseCard {
   credits: number;
   schedule: string;
   aiScore: string;
-  type: "core" | "specialization" | "elective";
-  status: "current" | "planned";
+  type: "core"| "specialization"| "elective";
+  status: "current"| "planned";
 }
 
 interface SemesterData {
   season: string;
   year: string;
-  status: "current" | "planned";
+  status: "current"| "planned";
   workingHours: number;
   totalCredits: number;
   courses: CourseCard[];
@@ -60,13 +59,13 @@ export default function AcademicPlanningDashboard() {
         setIsLoadingGPA(true)
         setIsLoadingSemesterPlan(true)
         if (!isAuthenticated || !user) {
-          toast.error(t('planning.toastLoginRequired'), { id: 'not-authenticated' })
+          toast.error(t('planning.toastLoginRequired'), { id: 'not-authenticated'})
           navigate('/login')
           return
         }
         const accountId = user.account_id || user.id
         if (!accountId) {
-          toast.error(t('planning.toastAccountIdMissing'), { id: 'account-id-missing' })
+          toast.error(t('planning.toastAccountIdMissing'), { id: 'account-id-missing'})
           return
         }
         const p1 = getStudentGPA(accountId)
@@ -82,7 +81,7 @@ export default function AcademicPlanningDashboard() {
         if (r4.status === 'fulfilled') setPhysicalEdGpaData(r4.value as PhysicalEducationGPAResult)
         if (r5.status === 'fulfilled') setSemesterPlanData(r5.value as SemesterPlanGrouped)
       } catch (error: any) {
-        toast.error(t('planning.toastGpaFetchError'), { id: 'gpa-fetch-error' })
+        toast.error(t('planning.toastGpaFetchError'), { id: 'gpa-fetch-error'})
       } finally {
         if (!active) return
         setIsLoadingGPA(false)
@@ -97,39 +96,38 @@ export default function AcademicPlanningDashboard() {
   const TOTAL_CREDITS_FOR_GRADUATION = 144;
   
   // Current GPA & Credits (completed only) - dùng currentGpaData
-  const currentProgress = useMemo(() => ({
+  const currentProgress = useMemo(() =>({
     percentage: currentGpaData ? ((currentGpaData.completedCredits / TOTAL_CREDITS_FOR_GRADUATION) * 100) : 72.5,
     creditsCompleted: currentGpaData?.completedCredits || 87,
     totalCredits: TOTAL_CREDITS_FOR_GRADUATION,
   }), [currentGpaData])
 
   // Projected Progress (completed + planned) - dùng projectedGpaData
-  const graduationProgress = useMemo(() => ({
+  const graduationProgress = useMemo(() =>({
     percentage: projectedGpaData ? ((projectedGpaData.totalCredits / TOTAL_CREDITS_FOR_GRADUATION) * 100) : 72.5,
     creditsCompleted: projectedGpaData?.totalCredits || 87,
     totalCredits: TOTAL_CREDITS_FOR_GRADUATION,
     major: projectedGpaData?.major || "Computer Science Major",
-    expectedGraduation: "Spring 2026"
-  }), [projectedGpaData])
+    expectedGraduation: "Spring 2026"}), [projectedGpaData])
 
-  const currentGPA = useMemo(() => ({
+  const currentGPA = useMemo(() =>({
     value: currentGpaData?.currentGPA || 3.67,
     change: currentGpaData?.gpaChange !== undefined
-      ? `${currentGpaData.gpaChange >= 0 ? '+' : ''}${currentGpaData.gpaChange.toFixed(2)} ${t('planning.fromLastSemester')}`
+      ? `${currentGpaData.gpaChange >= 0 ? '+': ''}${currentGpaData.gpaChange.toFixed(2)} ${t('planning.fromLastSemester')}`
       : `+0.12 ${t('planning.fromLastSemester')}`
   }), [currentGpaData, t])
 
-  const remainingCredits = useMemo(() => ({
+  const remainingCredits = useMemo(() =>({
     value: projectedGpaData ? (TOTAL_CREDITS_FOR_GRADUATION - projectedGpaData.totalCredits) : 33,
     totalCredits: TOTAL_CREDITS_FOR_GRADUATION,
   }), [projectedGpaData])
 
   // AI Score - dựa trên predicted GPA
-  const aiScore = useMemo(() => ({
+  const aiScore = useMemo(() =>({
     value: predictedGpaData ? predictedGpaData.predictedGPA.toFixed(2) : "8.40",
     description: predictedGpaData && currentGpaData
       ? t('planning.predictedDeltaText', {
-          delta: `${predictedGpaData.predictedGPA >= (currentGpaData?.currentGPA || 0) ? '+' : ''}${(predictedGpaData.predictedGPA - (currentGpaData?.currentGPA || 0)).toFixed(2)}`,
+          delta: `${predictedGpaData.predictedGPA >= (currentGpaData?.currentGPA || 0) ? '+': ''}${(predictedGpaData.predictedGPA - (currentGpaData?.currentGPA || 0)).toFixed(2)}`,
           with: predictedGpaData.plannedCoursesWithPrediction,
           total: predictedGpaData.plannedCourses
         })
@@ -144,7 +142,7 @@ export default function AcademicPlanningDashboard() {
 
 
   // Physical Education GPA - điểm trung bình các môn DEM
-  const physicalEducationGPA = useMemo(() => ({
+  const physicalEducationGPA = useMemo(() =>({
     value: physicalEdGpaData ? physicalEdGpaData.averageGPA10.toFixed(1) : "0.0",
     isPassing: physicalEdGpaData?.isPassing || false,
     totalCourses: physicalEdGpaData?.totalCourses || 0,
@@ -178,8 +176,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "MWF 10:00-10:50",
           aiScore: "8.2/9",
           type: "core",
-          status: "current"
-        },
+          status: "current"},
         {
           code: "CS 3320",
           title: "Software Engineering",
@@ -187,8 +184,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "TTh 2:00-3:50",
           aiScore: "7.8/9",
           type: "core",
-          status: "current"
-        },
+          status: "current"},
         {
           code: "MATH 3350",
           title: "Discrete Mathematics",
@@ -196,8 +192,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "MWF 1:00-1:50",
           aiScore: "7.5/9",
           type: "core",
-          status: "current"
-        },
+          status: "current"},
         {
           code: "ENGL 3010",
           title: "Technical Writing",
@@ -205,8 +200,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "TTh 11:00-12:15",
           aiScore: "8.7/9",
           type: "elective",
-          status: "current"
-        },
+          status: "current"},
         {
           code: "PHIL 2100",
           title: "Ethics in Technology",
@@ -214,8 +208,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "W 6:00-7:50",
           aiScore: "8.9/9",
           type: "elective",
-          status: "current"
-        }
+          status: "current"}
       ]
     },
     {
@@ -232,8 +225,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "",
           aiScore: "8.5/9",
           type: "core",
-          status: "planned"
-        },
+          status: "planned"},
         {
           code: "CS 4420",
           title: "Computer Networks",
@@ -241,8 +233,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "",
           aiScore: "7.9/9",
           type: "core",
-          status: "planned"
-        },
+          status: "planned"},
         {
           code: "CS 4350",
           title: "Web Development",
@@ -250,8 +241,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "",
           aiScore: "8.8/9",
           type: "specialization",
-          status: "planned"
-        },
+          status: "planned"},
         {
           code: "STAT 3100",
           title: "Statistics for CS",
@@ -259,8 +249,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "",
           aiScore: "7.6/9",
           type: "core",
-          status: "planned"
-        },
+          status: "planned"},
         {
           code: "ECON 2010",
           title: "Microeconomics",
@@ -268,8 +257,7 @@ export default function AcademicPlanningDashboard() {
           schedule: "",
           aiScore: "8.1/9",
           type: "elective",
-          status: "planned"
-        }
+          status: "planned"}
       ]
     }
   ];
@@ -287,7 +275,7 @@ export default function AcademicPlanningDashboard() {
     value: string;
     subtitle: string;
     additional?: string;
-    colorScheme: "blue" | "green" | "purple" | "orange";
+    colorScheme: "blue"| "green"| "purple"| "orange";
     isLoading?: boolean;
     tooltip?: string;
   }) => {
@@ -300,8 +288,7 @@ export default function AcademicPlanningDashboard() {
         valueText: "text-blue-600",
         titleText: "text-blue-900",
         subtitleText: "text-blue-700",
-        additionalText: "text-blue-600"
-      },
+        additionalText: "text-blue-600"},
       green: {
         border: "border-green-200",
         background: "bg-green-500",
@@ -310,8 +297,7 @@ export default function AcademicPlanningDashboard() {
         valueText: "text-green-600",
         titleText: "text-green-900",
         subtitleText: "text-green-700",
-        additionalText: "text-green-600"
-      },
+        additionalText: "text-green-600"},
       purple: {
         border: "border-purple-200",
         background: "bg-purple-500",
@@ -320,8 +306,7 @@ export default function AcademicPlanningDashboard() {
         valueText: "text-purple-600",
         titleText: "text-purple-900",
         subtitleText: "text-purple-700",
-        additionalText: "text-purple-600"
-      },
+        additionalText: "text-purple-600"},
       orange: {
         border: "border-orange-200",
         background: "bg-orange-500",
@@ -330,8 +315,7 @@ export default function AcademicPlanningDashboard() {
         valueText: "text-orange-600",
         titleText: "text-orange-900",
         subtitleText: "text-orange-700",
-        additionalText: "text-orange-600"
-      }
+        additionalText: "text-orange-600"}
     };
 
     const colors = colorClasses[colorScheme];
@@ -345,19 +329,17 @@ export default function AcademicPlanningDashboard() {
                 <div className="h-8 bg-gray-200 rounded mb-2"></div>
                 <div className="h-4 bg-gray-200 rounded"></div>
               </div>
-            </div>
-          ) : (
+            </div>) : (
             <>
               <div className="flex items-center justify-between mb-4">
                 <div className={`${colors.iconBg} p-2 rounded-lg text-white`}>
                   {icon}
                 </div>
-                {colorScheme !== "blue" && (
+                {colorScheme !== "blue"&& (
                   <div className={`${colors.badge} px-3 py-1 rounded-full text-xs font-medium`}>
-                    {colorScheme === "green" ? t('planning.badgeCurrent') : 
-                     colorScheme === "purple" ? t('planning.badgeRemaining') : t('planning.badgePredicted')}
-                  </div>
-                )}
+                    {colorScheme === "green"? t('planning.badgeCurrent') : 
+                     colorScheme === "purple"? t('planning.badgeRemaining') : t('planning.badgePredicted')}
+                  </div>)}
               </div>
               <div className={`text-3xl font-bold ${colors.valueText} mb-1`}>
                 {value}
@@ -369,10 +351,8 @@ export default function AcademicPlanningDashboard() {
                 <div className={`text-xs ${colors.additionalText} flex items-center gap-1`}>
                   <TrendUpIcon />
                   {additional}
-                </div>
-              )}
-            </>
-          )}
+                </div>)}
+            </>)}
         </CardContent>
         
         {/* Tooltip Panel */}
@@ -395,16 +375,14 @@ export default function AcademicPlanningDashboard() {
                 <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-yellow-100"></div>
               </div>
             </div>
-          </div>
-        )}
-      </Card>
-    );
+          </div>)}
+      </Card>);
   };
 
   const CourseCard = ({ course }: { course: CourseCard }) => {
     const isCurrentSemester = course.status === "current";
-    const borderColor = isCurrentSemester ? "border-blue-200" : "border-green-200";
-    const buttonColor = isCurrentSemester ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700";
+    const borderColor = isCurrentSemester ? "border-blue-200": "border-green-200";
+    const buttonColor = isCurrentSemester ? "bg-blue-600 hover:bg-blue-700": "bg-green-600 hover:bg-green-700";
     
     const handleLearnClick = () => {
       navigate(`/student/course-overview`);
@@ -421,9 +399,9 @@ export default function AcademicPlanningDashboard() {
 
     const getTypeColor = (type: string) => {
       switch (type) {
-        case "core": return isCurrentSemester ? "text-blue-600" : "text-green-600";
-        case "specialization": return isCurrentSemester ? "text-blue-600" : "text-green-600";
-        case "elective": return isCurrentSemester ? "text-blue-600" : "text-green-600";
+        case "core": return isCurrentSemester ? "text-blue-600": "text-green-600";
+        case "specialization": return isCurrentSemester ? "text-blue-600": "text-green-600";
+        case "elective": return isCurrentSemester ? "text-blue-600": "text-green-600";
         default: return "text-gray-600";
       }
     };
@@ -442,36 +420,31 @@ export default function AcademicPlanningDashboard() {
           
           <div className="flex items-center justify-between mb-3">
             {course.schedule ? (
-              <span className="text-xs text-blue-600">{course.schedule}</span>
-            ) : (
-              <span className="text-xs text-gray-500"></span>
-            )}
+              <span className="text-xs text-blue-600">{course.schedule}</span>) : (
+              <span className="text-xs text-gray-500"></span>)}
             <span className="text-xs text-orange-600">{course.aiScore}</span>
           </div>
           
           <Button 
             className={`w-full ${buttonColor} text-white text-xs h-8`}
-            size="sm"
-            onClick={handleLearnClick}
+            size="sm"onClick={handleLearnClick}
           >
             {t('planning.learnButton')}
           </Button>
         </CardContent>
-      </Card>
-    );
+      </Card>);
   };
 
   const SemesterSection = ({ semester }: { semester: SemesterData }) => {
     const isCurrentSemester = semester.status === "current";
     const gradientClass = isCurrentSemester 
-      ? "bg-gradient-to-r from-blue-50 to-blue-100" 
-      : "bg-gradient-to-r from-green-50 to-green-100";
-    const borderColor = isCurrentSemester ? "border-blue-200" : "border-green-200";
-    const iconBg = isCurrentSemester ? "bg-blue-500" : "bg-green-500";
-    const titleColor = isCurrentSemester ? "text-blue-900" : "text-green-900";
-    const subtitleColor = isCurrentSemester ? "text-blue-700" : "text-green-700";
-    const badgeColor = isCurrentSemester ? "bg-blue-200 text-blue-800" : "bg-green-200 text-green-800";
-    const creditsColor = isCurrentSemester ? "text-blue-900" : "text-green-900";
+      ? "bg-gradient-to-r from-blue-50 to-blue-100": "bg-gradient-to-r from-green-50 to-green-100";
+    const borderColor = isCurrentSemester ? "border-blue-200": "border-green-200";
+    const iconBg = isCurrentSemester ? "bg-blue-500": "bg-green-500";
+    const titleColor = isCurrentSemester ? "text-blue-900": "text-green-900";
+    const subtitleColor = isCurrentSemester ? "text-blue-700": "text-green-700";
+    const badgeColor = isCurrentSemester ? "bg-blue-200 text-blue-800": "bg-green-200 text-green-800";
+    const creditsColor = isCurrentSemester ? "text-blue-900": "text-green-900";
 
     return (
       <Card className={`${gradientClass} ${borderColor} border mb-6`}>
@@ -502,21 +475,18 @@ export default function AcademicPlanningDashboard() {
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            {semester.courses.map((course, index) => (
-              <CourseCard key={`${course.code}-${index}`} course={course} />
-            ))}
+            {semester.courses.map((course, index) =>(
+              <CourseCard key={`${course.code}-${index}`} course={course} />))}
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
   };
 
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Toast Notifications */}
       <Toaster 
-        position="top-center"
-        toastOptions={{
+        position="top-center"toastOptions={{
           duration: 4000,
           style: {
             background: '#fff',
@@ -547,9 +517,8 @@ export default function AcademicPlanningDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button 
-                onClick={() => navigate('/student/adjust-parameters')}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-5"
-              >
+                onClick={() =>navigate('/student/adjust-parameters')}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-5">
                 {t('planning.back')}
               </Button>
               <div>
@@ -581,8 +550,7 @@ export default function AcademicPlanningDashboard() {
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">{t('planning.loadingData')}</p>
-                  </div>
-                ) : (
+                  </div>) : (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-4">
@@ -610,13 +578,11 @@ export default function AcademicPlanningDashboard() {
                       
                       <div className="w-full bg-green-200 rounded-full h-3">
                         <div 
-                          className="bg-green-500 h-3 rounded-full" 
-                          style={{ width: `${currentProgress.percentage}%` }}
+                          className="bg-green-500 h-3 rounded-full"style={{ width: `${currentProgress.percentage}%` }}
                         ></div>
                       </div>
                     </div>
-                  </>
-                )}
+                  </>)}
               </CardContent>
             </Card>
 
@@ -627,8 +593,7 @@ export default function AcademicPlanningDashboard() {
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">{t('planning.loadingData')}</p>
-                  </div>
-                ) : (
+                  </div>) : (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-4">
@@ -656,13 +621,11 @@ export default function AcademicPlanningDashboard() {
                       
                       <div className="w-full bg-blue-200 rounded-full h-3">
                       <div 
-                          className="bg-blue-500 h-3 rounded-full" 
-                          style={{ width: `${graduationProgress.percentage}%` }}
+                          className="bg-blue-500 h-3 rounded-full"style={{ width: `${graduationProgress.percentage}%` }}
                         ></div>
                       </div>
                     </div>
-                  </>
-                )}
+                  </>)}
               </CardContent>
             </Card>
           </div>
@@ -674,18 +637,16 @@ export default function AcademicPlanningDashboard() {
               value={currentGPA.value.toString()}
               subtitle={t('planning.cumulativeGPA')}
               additional={currentGPA.change}
-              colorScheme="green"
-              isLoading={isLoadingGPA}
-              tooltip={`GPA hiện tại của bạn là ${currentGPA.value.toString()}! ${currentGPA.value >= 3.6 ? '🌟 Xuất sắc! Bạn đang là học sinh xuất sắc!' : currentGPA.value >= 3.2 ? 'Danh Hiệu giỏi! Tiếp tục phát huy!' : currentGPA.value >= 2.5 ? '💪 Khá! Cố gắng hơn nữa nhé!' : 'Hãy cố gắng học tập chăm chỉ hơn!'} Hãy duy trì và nâng cao thành tích học tập của mình nhé!`}
+              colorScheme="green"isLoading={isLoadingGPA}
+              tooltip={`GPA hiện tại của bạn là ${currentGPA.value.toString()}! ${currentGPA.value >= 3.6 ? 'Xuất sắc! Bạn đang là học sinh xuất sắc!': currentGPA.value >= 3.2 ? 'Danh Hiệu giỏi! Tiếp tục phát huy!': currentGPA.value >= 2.5 ? 'Khá! Cố gắng hơn nữa nhé!': 'Hãy cố gắng học tập chăm chỉ hơn!'} Hãy duy trì và nâng cao thành tích học tập của mình nhé!`}
             />
 
             <StatCard
               icon={<CreditsIcon />}
               value={`${remainingCredits.value}/${remainingCredits.totalCredits}`}
               subtitle={t('planning.creditsToGraduatePrediction')}
-              colorScheme="purple"
-              isLoading={isLoadingGPA}
-              tooltip={`Bạn còn ${remainingCredits.value} tín chỉ nữa là ra trường! 🎓 ${remainingCredits.value <= 20 ? 'Sắp đến đích rồi!' : remainingCredits.value <= 40 ? 'Đã đi được hơn nửa chặng đường!' : 'Hành trình còn dài, hãy kiên trì!'} Cố lên, thành công đang ở phía trước!`}
+              colorScheme="purple"isLoading={isLoadingGPA}
+              tooltip={`Bạn còn ${remainingCredits.value} tín chỉ nữa là ra trường!  ${remainingCredits.value <= 20 ? 'Sắp đến đích rồi!': remainingCredits.value <= 40 ? 'Đã đi được hơn nửa chặng đường!': 'Hành trình còn dài, hãy kiên trì!'} Cố lên, thành công đang ở phía trước!`}
             />
 
             <StatCard
@@ -693,13 +654,11 @@ export default function AcademicPlanningDashboard() {
               value={aiScore.value}
               subtitle={t('planning.predictedGPA')}
               additional={aiScore.description}
-              colorScheme="orange"
-              isLoading={isLoadingGPA}
-              tooltip="Dự đoán GPA chỉ là mô phỏng dựa trên dữ liệu và mô hình AI! Kết quả thực tế có thể khác nhau tùy thuộc vào nỗ lực của bạn. Cố lên học cùng mình nhé, bạn có thể làm được tốt hơn con số này! 💪"
-            />
+              colorScheme="orange"isLoading={isLoadingGPA}
+              tooltip="Dự đoán GPA chỉ là mô phỏng dựa trên dữ liệu và mô hình AI! Kết quả thực tế có thể khác nhau tùy thuộc vào nỗ lực của bạn. Cố lên học cùng mình nhé, bạn có thể làm được tốt hơn con số này! "/>
 
             {/* Physical Education GPA Card with Pass/Fail Badge */}
-            <Card className="border-blue-200 border relative group cursor-help" title="Điểm Giáo dục thể chất rất quan trọng cho sức khỏe của bạn!">
+            <Card className="border-blue-200 border relative group cursor-help"title="Điểm Giáo dục thể chất rất quan trọng cho sức khỏe của bạn!">
               <CardContent className="p-6">
                 {isLoadingGPA ? (
                   <div className="text-center py-4">
@@ -707,8 +666,7 @@ export default function AcademicPlanningDashboard() {
                       <div className="h-8 bg-gray-200 rounded mb-2"></div>
                       <div className="h-4 bg-gray-200 rounded"></div>
                     </div>
-                  </div>
-                ) : (
+                  </div>) : (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <div className="bg-blue-500 p-2 rounded-lg text-white">
@@ -716,10 +674,8 @@ export default function AcademicPlanningDashboard() {
                       </div>
                       <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                         physicalEducationGPA.isPassing 
-                          ? 'bg-green-100 text-green-800 border border-green-300' 
-                          : 'bg-red-100 text-red-800 border border-red-300'
-                      }`}>
-                        {physicalEducationGPA.isPassing ? `✓ ${t('planning.passLabel')}` : `✗ ${t('planning.failLabel')}`}
+                          ? 'bg-green-100 text-green-800 border border-green-300': 'bg-red-100 text-red-800 border border-red-300'}`}>
+                        {physicalEducationGPA.isPassing ? ` ${t('planning.passLabel')}` : ` ${t('planning.failLabel')}`}
                       </div>
                     </div>
                     <div className="flex items-baseline gap-2 mb-1">
@@ -735,10 +691,8 @@ export default function AcademicPlanningDashboard() {
                       <div className="text-xs text-blue-600 flex items-center gap-1">
                         <TrendUpIcon />
                         {physicalEducationGPA.description}
-                      </div>
-                    )}
-                  </>
-                )}
+                      </div>)}
+                  </>)}
               </CardContent>
               
               {/* Tooltip for Physical Education */}
@@ -750,7 +704,7 @@ export default function AcademicPlanningDashboard() {
                     
                     {/* Content */}
                     <div className="relative text-gray-800 text-sm leading-relaxed font-medium">
-                      {`⚽ Điểm Giáo dục thể chất của bạn là ${physicalEducationGPA.value}/10! ${physicalEducationGPA.isPassing ? 'Bạn đã đạt yêu cầu!' : '⚠️ Cần cải thiện!'} Cố lên vận động thể thao nhiều hơn nhé! 🏃‍♂️ Thể dục thể thao không chỉ giúp rèn luyện thân thể mà còn giúp tinh thần minh mẫn hơn đấy! 💪🧠`}
+                      {` Điểm Giáo dục thể chất của bạn là ${physicalEducationGPA.value}/10! ${physicalEducationGPA.isPassing ? 'Bạn đã đạt yêu cầu!': 'Cần cải thiện!'} Cố lên vận động thể thao nhiều hơn nhé!  Thể dục thể thao không chỉ giúp rèn luyện thân thể mà còn giúp tinh thần minh mẫn hơn đấy! `}
                     </div>
                     
                     {/* Decorative tape effect */}
@@ -761,8 +715,7 @@ export default function AcademicPlanningDashboard() {
                       <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-blue-100"></div>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>)}
             </Card>
           </div>
         </div>
@@ -780,50 +733,45 @@ export default function AcademicPlanningDashboard() {
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">{t('planning.loadingSemesterPlan')}</p>
-              </div>
-            ) : semesterPlanData && semesterPlanData.semesters.length > 0 ? (
+              </div>) : semesterPlanData && semesterPlanData.semesters.length >0 ? (
               <>
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('planning.recommendedSemesterPlan')}</h2>
                   <p className="text-gray-600">
-                    {t('planning.recommendedSubtitle', { hours: semesterPlanData.student_info.study_time_hours || 'N/A' })}
+                    {t('planning.recommendedSubtitle', { hours: semesterPlanData.student_info.study_time_hours || 'N/A'})}
                   </p>
                 </div>
 
                 <div className="space-y-6">
-                  {semesterPlanData.semesters.map((semester, index) => (
+                  {semesterPlanData.semesters.map((semester, index) =>(
                     <SemesterSection 
                       key={`${semester.season}-${semester.year}-${index}`} 
                       semester={{
                         season: semester.season,
                         year: semester.year,
-                        status: index === 0 ? "current" : "planned",
+                        status: index === 0 ? "current": "planned",
                         workingHours: semesterPlanData.student_info.study_time_hours || 10,
                         totalCredits: semester.total_credits,
-                        courses: semester.courses.map(course => ({
+                        courses: semester.courses.map(course =>({
                           code: course.course_code,
                           title: course.course_name,
                           credits: course.credits_unit,
                           schedule: "",
                           aiScore: `${course.predicted_gpa.toFixed(1)}/10`,
-                          type: "core" as const,
-                          status: index === 0 ? "current" as const : "planned" as const,
+                          type: "core"as const,
+                          status: index === 0 ? "current"as const : "planned"as const,
                         }))
                       }} 
-                    />
-                  ))}
+                    />))}
                 </div>
-              </>
-            ) : (
+              </>) : (
               <div className="text-center py-12">
                 <p className="text-gray-600 mb-2">{t('planning.noSemesterPlan')}</p>
                 <p className="text-sm text-gray-500">{t('planning.noSemesterPlanHint')}</p>
-              </div>
-            )}
+              </div>)}
           </CardContent>
         </Card>
       </div>
       <Footer />
-    </div>
-  );
+    </div>);
 }

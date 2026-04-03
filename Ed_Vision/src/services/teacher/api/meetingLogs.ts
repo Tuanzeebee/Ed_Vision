@@ -72,7 +72,7 @@ export interface MeetingLog {
 /**
  * Lấy thông tin instructor theo account_id
  */
-export const getInstructorInfo = async (accountId: number): Promise<InstructorInfo> => {
+export const getInstructorInfo = async (accountId: number): Promise<InstructorInfo>=> {
   const url = buildUrl(`/teacher/meeting-logs/instructor/${accountId}`);
   const response = await fetch(url);
   if (!response.ok) {
@@ -84,7 +84,7 @@ export const getInstructorInfo = async (accountId: number): Promise<InstructorIn
 /**
  * Lấy danh sách sinh viên đã đặt lịch cho slot cụ thể
  */
-export const getStudentsBySlot = async (slotId: number): Promise<SlotStudentsResponse> => {
+export const getStudentsBySlot = async (slotId: number): Promise<SlotStudentsResponse>=> {
   const url = buildUrl(`/teacher/meeting-logs/slot/${slotId}/students`);
   const response = await fetch(url);
   if (!response.ok) {
@@ -101,7 +101,7 @@ export const getStudentsByTimeSlot = async (
   date: string,
   startTime: string,
   endTime: string
-): Promise<SlotStudentsResponse> => {
+): Promise<SlotStudentsResponse>=> {
   const params = new URLSearchParams({
     instructorId: instructorId.toString(),
     date,
@@ -121,7 +121,7 @@ export const getStudentsByTimeSlot = async (
  */
 export const createMeetingLog = async (
   data: CreateMeetingLogRequest
-): Promise<MeetingLog> => {
+): Promise<MeetingLog>=> {
   const url = buildUrl(`/teacher/meeting-logs`);
   const response = await fetch(url, {
     method: 'POST',
@@ -143,7 +143,7 @@ export const getMeetingLogs = async (
   instructorId: number,
   startDate?: string,
   endDate?: string
-): Promise<MeetingLog[]> => {
+): Promise<MeetingLog[]>=> {
   const params = new URLSearchParams();
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
