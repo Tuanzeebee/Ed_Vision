@@ -11,7 +11,26 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+  Max,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
+const CERT_TYPES = [
+  'ielts',
+  'toeic',
+  'mos-word',
+  'mos-excel',
+  'mos-powerpoint',
 const CERT_TYPES = [
   'ielts',
   'toeic',
@@ -26,6 +45,11 @@ export class CreateEnrollmentDto {
   @IsIn(CERT_TYPES)
   cert_type!: string;
 
+  @IsOptional()
+  @IsInt()
+  @Min(10)
+  @Max(990)
+  target_score?: number;
   @IsOptional()
   @IsInt()
   @Min(10)

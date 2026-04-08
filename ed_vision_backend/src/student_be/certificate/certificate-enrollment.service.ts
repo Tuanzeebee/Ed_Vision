@@ -34,8 +34,11 @@ import {
   ToeicManualListeningCreateResponseDto,
   ToeicExplainAnswerDto,
   ToeicExplainAnswerResponseDto,
+<<<<<<< HEAD
   CertificateTutorAskDto,
   CertificateTutorAskResponseDto,
+=======
+>>>>>>> origin/main
 } from './dto/certificate.dto';
 import {
   OLLAMA_TIMEOUT_MS,
@@ -55,6 +58,7 @@ const TOPIC_COUNTS_BY_CERT: Record<string, number> = {
   'mos-powerpoint': 10,
 };
 
+<<<<<<< HEAD
 const CERT_TUTOR_ALLOWED_CERT_TYPES = new Set<string>([
   'ielts',
   'toeic',
@@ -71,6 +75,12 @@ function getTotalTopics(certType: string): number {
   return TOPIC_COUNTS_BY_CERT[certType] ?? 10;
 }
 
+=======
+function getTotalTopics(certType: string): number {
+  return TOPIC_COUNTS_BY_CERT[certType] ?? 10;
+}
+
+>>>>>>> origin/main
 const TOEIC_META_PREFIX = '__meta.toeic.';
 
 function isToeicMetaTopic(topicKey: string): boolean {
@@ -100,6 +110,11 @@ function toPercent(current: number, start: number, target: number): number {
   return Math.max(0, Math.min(99, Math.round((gained / total) * 100)));
 }
 
+<<<<<<< HEAD
+=======
+type ToeicSeedSkill = 'listening' | 'reading' | 'grammar' | 'vocabulary';
+
+>>>>>>> origin/main
 type EnrollmentWithTopicProgress = Prisma.CertificateEnrollmentGetPayload<{
   include: { topicProgress: { select: { topic_key: true } } };
 }>;
@@ -133,6 +148,44 @@ type ToeicEnrollmentLeaderboardRow = Prisma.CertificateEnrollmentGetPayload<{
   };
 }>;
 
+<<<<<<< HEAD
+=======
+type ToeicSeedOption = {
+  optionKey: string;
+  optionText: string;
+  isCorrect: boolean;
+  rationale: string;
+};
+
+type ToeicSeedItem = {
+  itemType: string;
+  title: string;
+  stem: string;
+  readingPassage?: string | null;
+  mediaAudioUrl?: string | null;
+  explanation: string;
+  estimatedSeconds: number;
+  options: ToeicSeedOption[];
+};
+
+const TOEIC_MILESTONES = [350, 500, 600, 700, 800] as const;
+
+function toSlugPart(skill: ToeicSeedSkill): string {
+  if (skill === 'listening') return 'listening';
+  if (skill === 'reading') return 'reading';
+  if (skill === 'grammar') return 'grammar';
+  return 'vocabulary';
+}
+
+function calcUnlockScore(milestone: number): number {
+  return Math.max(300, milestone - 50);
+}
+
+function calcRangeMax(milestone: number): number {
+  return milestone >= 800 ? 990 : milestone + 99;
+}
+
+>>>>>>> origin/main
 function getDefaultTargetScore(certType: string): number | null {
   if (certType === 'toeic') return 600;
   return null;
@@ -204,6 +257,7 @@ type FileCacheExplanation = {
   created_at: string;
 };
 
+<<<<<<< HEAD
 type FileCacheTutorAnswer = {
   answer: string;
   model: string;
@@ -216,6 +270,9 @@ const DEFAULT_READING_REQUIRED_KEYWORDS = [
   'part 6',
   'part 7',
 ];
+=======
+const DEFAULT_READING_REQUIRED_KEYWORDS = ['reading', 'part 5', 'part 6', 'part 7'];
+>>>>>>> origin/main
 const DEFAULT_READING_EXCLUDED_KEYWORDS = [
   'listening',
   'part 1',
@@ -225,18 +282,618 @@ const DEFAULT_READING_EXCLUDED_KEYWORDS = [
   'speaking',
   'writing',
 ];
+<<<<<<< HEAD
 
 const TOEIC_LOOKAHEAD_PREFETCH_COUNT = 3;
 const TOEIC_LOOKAHEAD_PREFETCH_BATCH_SIZE = 2;
+=======
+>>>>>>> origin/main
 
 @Injectable()
 export class CertificateEnrollmentService {
   constructor(private readonly prisma: PrismaService) {}
 
+<<<<<<< HEAD
   private readonly inFlightExplanationGenerations = new Map<
     string,
     Promise<string>
   >();
+=======
+  private buildReadingSeedItems(milestone: number): ToeicSeedItem[] {
+    const part5Items: ToeicSeedItem[] = [
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q1 (M${milestone})`,
+        stem: 'The new main office was housed in a bright and modern building, but its ____ was inconvenient for employees who did not have a car.',
+        explanation:
+          'Can mot danh tu chi vi tri. "location" (D) la danh tu phu hop voi ngu canh.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'locate',
+            isCorrect: false,
+            rationale: 'Dong tu nguyen mau, khong phu hop vi tri danh tu.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'to locate',
+            isCorrect: false,
+            rationale: 'Cum dong tu nguyen mau, khong phu hop vi tri danh tu.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'located',
+            isCorrect: false,
+            rationale: 'Tinh tu/phan tu, khong hop cau truc can dien danh tu.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'location',
+            isCorrect: true,
+            rationale:
+              'Danh tu dung ngu canh: "its location was inconvenient".',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q2 (M${milestone})`,
+        stem: 'Applicants are asked to submit all required documents ____ 5:00 p.m. on Friday.',
+        explanation:
+          'Gioi tu "by" dien ta han chot thoi gian, phu hop ngu nghia cau.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'by',
+            isCorrect: true,
+            rationale:
+              'Dung de chi han chot phai hoan thanh truoc moc thoi gian.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'since',
+            isCorrect: false,
+            rationale:
+              'Khong dung de chi deadline cu the trong truong hop nay.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'during',
+            isCorrect: false,
+            rationale: 'Chi khoang thoi gian, khong phai han nop.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'between',
+            isCorrect: false,
+            rationale: 'Can hai moc thoi gian, khong phu hop cau truc cau.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q3 (M${milestone})`,
+        stem: 'Ms. Ortega will lead the meeting herself ____ the project manager is out of town.',
+        explanation:
+          'Can lien tu chi ly do. "because" la lua chon dung de noi 2 menh de.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'because',
+            isCorrect: true,
+            rationale: 'Noi menh de chinh va ly do mot cach tu nhien.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'unless',
+            isCorrect: false,
+            rationale:
+              'Mang nghia dieu kien phu dinh, khong dung ngu nghia cau.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'although',
+            isCorrect: false,
+            rationale:
+              'Mang nghia tuong phan, khong phu hop voi thong tin cho truoc.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'despite',
+            isCorrect: false,
+            rationale:
+              'Can danh dong tu/danh tu theo sau, khong dung voi menh de day du.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q4 (M${milestone})`,
+        stem: 'The finance team has prepared a ____ report for the quarterly budget review.',
+        explanation:
+          'Can tinh tu bo nghia cho danh tu "report". "detailed" la tu phu hop nhat.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'detail',
+            isCorrect: false,
+            rationale: 'Danh tu, khong dung vi tri tinh tu truoc danh tu khac.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'detailing',
+            isCorrect: false,
+            rationale: 'Dang V-ing khong tu nhien trong cum danh tu nay.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'detailed',
+            isCorrect: true,
+            rationale: 'Tinh tu bo nghia cho "report" mot cach dung ngu phap.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'detailingly',
+            isCorrect: false,
+            rationale: 'Khong phai tu dung trong tieng Anh chuan.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q5 (M${milestone})`,
+        stem: 'Customers who purchased tickets online can receive a full refund ____ they cancel at least 24 hours in advance.',
+        explanation:
+          '"provided (that)"/"if" dien ta dieu kien. O day "if" la dap an dung.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'if',
+            isCorrect: true,
+            rationale: 'Lien tu dieu kien dung ngu canh cua cau.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'until',
+            isCorrect: false,
+            rationale: 'Chi moc thoi gian, khong dien ta dieu kien hoan tien.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'while',
+            isCorrect: false,
+            rationale: 'Mang nghia trong khi, khong phu hop logic cau.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'despite',
+            isCorrect: false,
+            rationale: 'Can danh tu/cum danh tu theo sau, khong dung cau truc.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q6 (M${milestone})`,
+        stem: 'Our IT department will install the software update tonight to minimize ____ during business hours.',
+        explanation:
+          'Can mot danh tu chi su gian doan. "disruption" phu hop y nghia cau.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'disrupt',
+            isCorrect: false,
+            rationale: 'Dong tu, khong phu hop vi tri danh tu sau "minimize".',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'disruptive',
+            isCorrect: false,
+            rationale: 'Tinh tu, khong dung vi tri can danh tu.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'disruption',
+            isCorrect: true,
+            rationale: 'Danh tu truu tuong, dung ngu phap va ngu nghia.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'disrupted',
+            isCorrect: false,
+            rationale: 'Tinh tu/phan tu, khong phu hop cau truc nay.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q7 (M${milestone})`,
+        stem: 'Neither the supervisor nor the assistants ____ responsible for approving overtime requests this week.',
+        explanation:
+          'Voi "neither ... nor", dong tu hoa hop voi chu ngu gan nhat "assistants" (so nhieu) => "are".',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'is',
+            isCorrect: false,
+            rationale: 'Khong hoa hop voi chu ngu gan nhat so nhieu.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'are',
+            isCorrect: true,
+            rationale:
+              'Dung quy tac hoa hop chu ngu dong tu trong cau noi ket hop.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'was',
+            isCorrect: false,
+            rationale: 'Sai thi va sai hoa hop so it/so nhieu.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'be',
+            isCorrect: false,
+            rationale: 'Dang nguyen mau, khong dung vi tri dong tu chinh.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q8 (M${milestone})`,
+        stem: 'All visitors must sign in at the security desk ____ entering the production area.',
+        explanation:
+          'Can gioi tu chi thu tu hanh dong. "before" la lua chon phu hop.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'before',
+            isCorrect: true,
+            rationale:
+              'Chi hanh dong phai xay ra truoc khi vao khu vuc san xuat.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'already',
+            isCorrect: false,
+            rationale: 'Trang tu, khong noi duoc voi V-ing nhu gioi tu.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'except',
+            isCorrect: false,
+            rationale: 'Sai nghia va khong phu hop logic noi quy.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'recently',
+            isCorrect: false,
+            rationale: 'Trang tu thoi gian khong phu hop vi tri nay.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q9 (M${milestone})`,
+        stem: 'The training workshop was postponed ____ the instructor was unexpectedly ill.',
+        explanation:
+          'Can lien tu noi menh de chi nguyen nhan. "because" la dap an dung.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'because',
+            isCorrect: true,
+            rationale: 'Noi menh de nguyen nhan day du va tu nhien.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'whereas',
+            isCorrect: false,
+            rationale: 'Mang nghia doi lap, khong hop noi dung.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'unless',
+            isCorrect: false,
+            rationale: 'Mang nghia neu khong, khong dung voi tinh huong cau.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'however',
+            isCorrect: false,
+            rationale: 'Trang tu noi, khong noi duoc 2 menh de theo cach nay.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 5 - Q10 (M${milestone})`,
+        stem: 'Please send your availability by noon so that we can finalize the interview ____ for next week.',
+        explanation:
+          'Can mot danh tu chi lich trinh. "schedule" la lua chon dung.',
+        estimatedSeconds: 55,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'scheduling',
+            isCorrect: false,
+            rationale: 'Dang V-ing khong phu hop trong cum danh tu nay.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'schedule',
+            isCorrect: true,
+            rationale:
+              'Danh tu dung ngu canh: "finalize the interview schedule".',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'scheduled',
+            isCorrect: false,
+            rationale: 'Tinh tu/phan tu, khong phu hop vi tri danh tu.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'scheduler',
+            isCorrect: false,
+            rationale: 'Chi nguoi/phan mem lap lich, khong phu hop y cau.',
+          },
+        ],
+      },
+    ];
+
+    const part7Passage =
+      'Riverview Community Arts Center announced yesterday that it will launch a six-week evening guitar program beginning May 12. The program is designed for beginners and includes one printed workbook and two instructional audio files that participants can download after registration. Tuition is $35 for the full program, and classes are scheduled every Tuesday, Wednesday, and Thursday from 7:00 p.m. to 9:00 p.m. According to the center director, both instructors have over ten years of teaching experience. Enrollment is limited to 60 students, and early registration is recommended. For additional details, interested participants can call Michael at 335-4287 or visit the information desk between 9:00 a.m. and 5:00 p.m. on weekdays.';
+
+    const part7Items: ToeicSeedItem[] = [
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 7 - Q1 (M${milestone})`,
+        stem: 'What is included in the $35 tuition fee?',
+        readingPassage: part7Passage,
+        explanation:
+          'Doan van neu ro hoc phi $35 bao gom workbook in va hai tep audio huong dan.',
+        estimatedSeconds: 75,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'One workbook and two audio files',
+            isCorrect: true,
+            rationale: 'Thong tin xuat hien truc tiep trong doan van.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'A guitar and private lessons',
+            isCorrect: false,
+            rationale:
+              'Doan van khong noi den viec tang dan guitar hay hoc rieng.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'One teacher for individual coaching',
+            isCorrect: false,
+            rationale:
+              'Chuong trinh co 2 giang vien, khong phai huan luyen ca nhan.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'A monthly transportation allowance',
+            isCorrect: false,
+            rationale: 'Khong co thong tin tro cap di lai trong doan van.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 7 - Q2 (M${milestone})`,
+        stem: 'How often are classes held each week?',
+        readingPassage: part7Passage,
+        explanation:
+          'Lich hoc ghi ro vao thu Ba, thu Tu va thu Nam, tong cong 3 buoi moi tuan.',
+        estimatedSeconds: 75,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'Twice a week',
+            isCorrect: false,
+            rationale: 'Doan van liet ke 3 ngay hoc, khong phai 2.',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'Three times a week',
+            isCorrect: true,
+            rationale: 'Dung voi thong tin Tuesday, Wednesday, Thursday.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'Four times a week',
+            isCorrect: false,
+            rationale: 'Khong co ngay hoc thu tu trong lich.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'Every weekday',
+            isCorrect: false,
+            rationale: 'Lop khong hoc du 5 ngay trong tuan.',
+          },
+        ],
+      },
+      {
+        itemType: 'single_choice',
+        title: `Reading Part 7 - Q3 (M${milestone})`,
+        stem: 'What is suggested for people who want to join?',
+        readingPassage: part7Passage,
+        explanation:
+          'Vi so luong chi gioi han 60 hoc vien, thong bao khuyen khich dang ky som.',
+        estimatedSeconds: 75,
+        options: [
+          {
+            optionKey: 'A',
+            optionText: 'Wait until the first class to register',
+            isCorrect: false,
+            rationale:
+              'Nguoc voi thong diep "early registration is recommended".',
+          },
+          {
+            optionKey: 'B',
+            optionText: 'Register early because seats are limited',
+            isCorrect: true,
+            rationale: 'Khop truc tiep voi noi dung ve gioi han 60 hoc vien.',
+          },
+          {
+            optionKey: 'C',
+            optionText: 'Contact the center only on weekends',
+            isCorrect: false,
+            rationale: 'Thong tin lien he la trong ngay thu trong tuan.',
+          },
+          {
+            optionKey: 'D',
+            optionText: 'Bring a recommendation letter',
+            isCorrect: false,
+            rationale: 'Khong co yeu cau thu gioi thieu trong thong bao.',
+          },
+        ],
+      },
+    ];
+
+    return [...part5Items, ...part7Items];
+  }
+
+  private buildToeicSeedItems(
+    skill: ToeicSeedSkill,
+    milestone: number,
+  ): ToeicSeedItem[] {
+    if (skill === 'reading') {
+      return this.buildReadingSeedItems(milestone);
+    }
+
+    const isListening = skill === 'listening';
+    const questionCount = isListening ? 3 : 5;
+
+    const grammarStems = [
+      'The marketing director requested that the final proposal ____ by all team leads before submission.',
+      'If the delivery truck arrives before 9 a.m., the warehouse staff ____ unloading immediately.',
+      'Neither the supervisors nor the coordinator ____ available to approve overtime requests this afternoon.',
+      'The invoice will be processed once the client ____ the missing purchase order number.',
+      'By the time the auditors arrive, all supporting files ____ in the shared folder.',
+    ];
+
+    const vocabularyStems = [
+      'All employees are encouraged to review the updated safety ____ before entering the laboratory.',
+      'Because of strong customer demand, the company plans to ____ its evening support service.',
+      'The HR manager scheduled a follow-up meeting to discuss staff ____ and retention strategies.',
+      'Participants should keep their name badges ____ throughout the conference for security reasons.',
+      'The board approved a new policy to improve data ____ across all departments.',
+    ];
+
+    const listeningImageUrls = [
+      'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1521791055366-0d553872125f?auto=format&fit=crop&w=900&q=80',
+    ];
+    const listeningAudioUrls = [
+      '/sounds/pomodoro/start.mp3',
+      '/sounds/pomodoro/pause.mp3',
+      '/sounds/pomodoro/stop.mp3',
+    ];
+
+    const genericOptions = [
+      'At the customer support desk near the lobby.',
+      'Before the weekly planning meeting begins.',
+      'Because the schedule changed this morning.',
+      'After confirming details with the manager.',
+    ];
+
+    const items: ToeicSeedItem[] = [];
+    for (let i = 1; i <= questionCount; i += 1) {
+      const title = `${skill.toUpperCase()} Q${i}`;
+      const item: ToeicSeedItem = {
+        itemType: 'single_choice',
+        title,
+        stem: isListening
+          ? `Question ${i}: Listen to the audio and choose the best answer.`
+          : skill === 'grammar'
+            ? grammarStems[(i - 1) % grammarStems.length]
+            : vocabularyStems[(i - 1) % vocabularyStems.length],
+        readingPassage: isListening
+          ? listeningImageUrls[(i - 1) % listeningImageUrls.length]
+          : null,
+        mediaAudioUrl: isListening
+          ? listeningAudioUrls[(i - 1) % listeningAudioUrls.length]
+          : null,
+        explanation: isListening
+          ? 'Nghe ky tu khoa va y chinh trong audio de chon dap an dung.'
+          : skill === 'grammar'
+            ? 'Xac dinh dang ngu phap phu hop voi cau truc cau va chu ngu cua cau.'
+            : 'Chon tu co nghia phu hop nhat voi ngu canh cau van phong cong viec.',
+        estimatedSeconds: 60,
+        options: [
+          {
+            optionKey: 'A',
+            optionText:
+              skill === 'grammar'
+                ? 'is reviewed'
+                : skill === 'vocabulary'
+                  ? 'guidelines'
+                  : genericOptions[0],
+            isCorrect: true,
+            rationale:
+              'Dap an dung vi phu hop truc tiep voi ngu canh va thong tin de bai.',
+          },
+          {
+            optionKey: 'B',
+            optionText:
+              skill === 'grammar'
+                ? 'reviewed'
+                : skill === 'vocabulary'
+                  ? 'implement'
+                  : genericOptions[1],
+            isCorrect: false,
+            rationale:
+              'Dap an nhieu kha nang gay nham lan do tu/cum tu gan nghia nhung khong dung voi ngu canh.',
+          },
+          {
+            optionKey: 'C',
+            optionText:
+              skill === 'grammar'
+                ? 'be reviewing'
+                : skill === 'vocabulary'
+                  ? 'engagement'
+                  : genericOptions[2],
+            isCorrect: false,
+            rationale:
+              'Dap an nhieu kha nang gay nham lan do tu/cum tu gan nghia nhung khong dung voi ngu canh.',
+          },
+          {
+            optionKey: 'D',
+            optionText:
+              skill === 'grammar'
+                ? 'has review'
+                : skill === 'vocabulary'
+                  ? 'visible'
+                  : genericOptions[3],
+            isCorrect: false,
+            rationale:
+              'Dap an nhieu kha nang gay nham lan do tu/cum tu gan nghia nhung khong dung voi ngu canh.',
+          },
+        ],
+      };
+      items.push(item);
+    }
+
+    return items;
+  }
+>>>>>>> origin/main
 
   private getEffectiveToeicScore(
     enrollment:
@@ -254,6 +911,151 @@ export class CertificateEnrollmentService {
     return Math.max(baseScore, projectedScore);
   }
 
+<<<<<<< HEAD
+=======
+  private async ensureToeicRepositorySeedData(): Promise<void> {
+    for (const milestone of TOEIC_MILESTONES) {
+      for (const skill of [
+        'listening',
+        'reading',
+        'grammar',
+        'vocabulary',
+      ] as ToeicSeedSkill[]) {
+        const seedItems = this.buildToeicSeedItems(skill, milestone);
+        const questionCount = seedItems.length;
+        const slug = `toeic-${toSlugPart(skill)}-m${milestone}`;
+        const repository = await this.prisma.learningRepository.upsert({
+          where: { slug },
+          update: {
+            is_published: true,
+            cert_type: 'toeic',
+            content_type: 'practice_set',
+            skill_area: skill,
+            topic_group: `milestone-${milestone}`,
+            title: `TOEIC ${skill.toUpperCase()} Milestone ${milestone}`,
+            description: `Bai luyen ${skill} theo cot moc ${milestone} diem TOEIC.`,
+            difficulty_level:
+              milestone >= 700
+                ? 'advanced'
+                : milestone >= 600
+                  ? 'intermediate'
+                  : 'beginner',
+            target_score_min: calcUnlockScore(milestone),
+            target_score_max: calcRangeMax(milestone),
+            estimated_minutes: questionCount,
+            pass_score: Math.max(2, Math.ceil(questionCount * 0.7)),
+            total_items: questionCount,
+            metadata: {
+              topic_key: `${skill}.toeic_m${milestone}`,
+              milestone_score: milestone,
+              unlock_score: calcUnlockScore(milestone),
+            },
+          },
+          create: {
+            cert_type: 'toeic',
+            title: `TOEIC ${skill.toUpperCase()} Milestone ${milestone}`,
+            slug,
+            description: `Bai luyen ${skill} theo cot moc ${milestone} diem TOEIC.`,
+            content_type: 'practice_set',
+            skill_area: skill,
+            topic_group: `milestone-${milestone}`,
+            difficulty_level:
+              milestone >= 700
+                ? 'advanced'
+                : milestone >= 600
+                  ? 'intermediate'
+                  : 'beginner',
+            target_score_min: calcUnlockScore(milestone),
+            target_score_max: calcRangeMax(milestone),
+            estimated_minutes: questionCount,
+            pass_score: Math.max(2, Math.ceil(questionCount * 0.7)),
+            metadata: {
+              topic_key: `${skill}.toeic_m${milestone}`,
+              milestone_score: milestone,
+              unlock_score: calcUnlockScore(milestone),
+            },
+            total_items: questionCount,
+            is_published: true,
+          },
+        });
+
+        for (let i = 0; i < seedItems.length; i += 1) {
+          const itemOrder = i + 1;
+          const seedItem = seedItems[i];
+
+          const item = await this.prisma.learningRepositoryItem.upsert({
+            where: {
+              repository_id_item_order: {
+                repository_id: repository.id,
+                item_order: itemOrder,
+              },
+            },
+            update: {
+              item_type: seedItem.itemType,
+              title: seedItem.title,
+              stem: seedItem.stem,
+              reading_passage: seedItem.readingPassage ?? null,
+              media_audio_url: seedItem.mediaAudioUrl ?? null,
+              explanation: seedItem.explanation,
+              estimated_seconds: seedItem.estimatedSeconds,
+              score_weight: 1,
+            },
+            create: {
+              repository_id: repository.id,
+              item_order: itemOrder,
+              item_type: seedItem.itemType,
+              title: seedItem.title,
+              stem: seedItem.stem,
+              reading_passage: seedItem.readingPassage ?? null,
+              media_audio_url: seedItem.mediaAudioUrl ?? null,
+              explanation: seedItem.explanation,
+              estimated_seconds: seedItem.estimatedSeconds,
+              score_weight: 1,
+            },
+          });
+
+          for (
+            let optionIndex = 0;
+            optionIndex < seedItem.options.length;
+            optionIndex += 1
+          ) {
+            const option = seedItem.options[optionIndex];
+            await this.prisma.learningRepositoryOption.upsert({
+              where: {
+                item_id_option_key: {
+                  item_id: item.id,
+                  option_key: option.optionKey,
+                },
+              },
+              update: {
+                option_text: option.optionText,
+                is_correct: option.isCorrect,
+                rationale: option.rationale,
+                sort_order: optionIndex + 1,
+              },
+              create: {
+                item_id: item.id,
+                option_key: option.optionKey,
+                option_text: option.optionText,
+                is_correct: option.isCorrect,
+                rationale: option.rationale,
+                sort_order: optionIndex + 1,
+              },
+            });
+          }
+        }
+
+        await this.prisma.learningRepositoryItem.deleteMany({
+          where: {
+            repository_id: repository.id,
+            item_order: { gt: questionCount },
+          },
+        });
+      }
+    }
+  }
+
+>>>>>>> origin/main
   private async getOrCreateActiveToeicEnrollment(
     studentId: number,
   ): Promise<EnrollmentWithTopicProgress> {
@@ -881,9 +1683,13 @@ export class CertificateEnrollmentService {
           : [];
 
       if (!Array.isArray(rows)) {
+<<<<<<< HEAD
         throw new BadRequestException(
           'File JSON khong dung dinh dang mang dong.',
         );
+=======
+        throw new BadRequestException('File JSON khong dung dinh dang mang dong.');
+>>>>>>> origin/main
       }
 
       return rows
@@ -949,6 +1755,7 @@ export class CertificateEnrollmentService {
     }
 
     if (requiredKeywords.length === 0) return true;
+<<<<<<< HEAD
     return requiredKeywords.some((keyword) =>
       normalizedSection.includes(keyword),
     );
@@ -969,6 +1776,17 @@ export class CertificateEnrollmentService {
       text: string;
       rationale: string;
     }> = [
+=======
+    return requiredKeywords.some((keyword) => normalizedSection.includes(keyword));
+  }
+
+  private buildReadingOptionsFromRow(row: ParsedImportRow): ParsedImportOption[] {
+    const correctAnswerRaw = this
+      .rowValue(row, ['correct_answer', 'correct_option', 'answer_key', 'answer'])
+      .toUpperCase();
+
+    const optionEntries: Array<{ key: string; text: string; rationale: string }> = [
+>>>>>>> origin/main
       {
         key: 'A',
         text: this.rowValue(row, ['option_a', 'a', 'choice_a']),
@@ -1026,17 +1844,25 @@ export class CertificateEnrollmentService {
     const slug = this.toSafeSlug(dto.repository_slug ?? fallbackSlug);
 
     const milestoneScore = Number(dto.milestone_score ?? 600);
+<<<<<<< HEAD
     const unlockScore = Number(
       dto.unlock_score ?? Math.max(300, milestoneScore - 50),
     );
+=======
+    const unlockScore = Number(dto.unlock_score ?? Math.max(300, milestoneScore - 50));
+>>>>>>> origin/main
 
     const repository = await this.prisma.learningRepository.upsert({
       where: { slug },
       update: {
         cert_type: 'toeic',
+<<<<<<< HEAD
         title:
           dto.repository_title ??
           `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
+=======
+        title: dto.repository_title ?? `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
+>>>>>>> origin/main
         description: dto.repository_description ?? null,
         content_type: 'practice_set',
         skill_area: skillArea,
@@ -1052,9 +1878,13 @@ export class CertificateEnrollmentService {
       },
       create: {
         cert_type: 'toeic',
+<<<<<<< HEAD
         title:
           dto.repository_title ??
           `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
+=======
+        title: dto.repository_title ?? `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
+>>>>>>> origin/main
         slug,
         description: dto.repository_description ?? null,
         content_type: 'practice_set',
@@ -1100,10 +1930,14 @@ export class CertificateEnrollmentService {
     );
     const strictFilter = Boolean(dto.strict_section_filter);
 
+<<<<<<< HEAD
     const repository = await this.getOrCreateToeicRepositoryForImport(
       dto,
       'reading',
     );
+=======
+    const repository = await this.getOrCreateToeicRepositoryForImport(dto, 'reading');
+>>>>>>> origin/main
 
     const lastItem = await this.prisma.learningRepositoryItem.findFirst({
       where: { repository_id: repository.id },
@@ -1136,12 +1970,16 @@ export class CertificateEnrollmentService {
         continue;
       }
 
+<<<<<<< HEAD
       const stem = this.rowValue(row, [
         'stem',
         'question',
         'question_text',
         'content',
       ]);
+=======
+      const stem = this.rowValue(row, ['stem', 'question', 'question_text', 'content']);
+>>>>>>> origin/main
       if (!stem) {
         skippedCount += 1;
         continue;
@@ -1161,12 +1999,18 @@ export class CertificateEnrollmentService {
           title: this.rowValue(row, ['title', 'question_title']) || null,
           stem,
           reading_passage:
+<<<<<<< HEAD
             this.rowValue(row, ['reading_passage', 'passage', 'paragraph']) ||
             null,
           explanation: this.rowValue(row, ['explanation']) || null,
           estimated_seconds: Number(
             this.rowValue(row, ['estimated_seconds']) || 60,
           ),
+=======
+            this.rowValue(row, ['reading_passage', 'passage', 'paragraph']) || null,
+          explanation: this.rowValue(row, ['explanation']) || null,
+          estimated_seconds: Number(this.rowValue(row, ['estimated_seconds']) || 60),
+>>>>>>> origin/main
           score_weight: 1,
         },
         select: { id: true },
@@ -1224,13 +2068,18 @@ export class CertificateEnrollmentService {
             Boolean(item) && typeof item === 'object' && !Array.isArray(item),
         )
         .map((item) => ({
+<<<<<<< HEAD
           optionKey: String(item.option_key ?? '')
             .toUpperCase()
             .trim(),
+=======
+          optionKey: String(item.option_key ?? '').toUpperCase().trim(),
+>>>>>>> origin/main
           optionText: String(item.option_text ?? '').trim(),
           isCorrect: Boolean(item.is_correct),
           rationale: item.rationale ? String(item.rationale) : null,
         }))
+<<<<<<< HEAD
         .filter(
           (item) => item.optionKey.length > 0 && item.optionText.length > 0,
         );
@@ -1245,6 +2094,16 @@ export class CertificateEnrollmentService {
         throw new BadRequestException(
           'options_json phai co it nhat mot dap an dung.',
         );
+=======
+        .filter((item) => item.optionKey.length > 0 && item.optionText.length > 0);
+
+      if (normalized.length === 0) {
+        throw new BadRequestException('Khong co dap an hop le trong options_json.');
+      }
+
+      if (!normalized.some((item) => item.isCorrect)) {
+        throw new BadRequestException('options_json phai co it nhat mot dap an dung.');
+>>>>>>> origin/main
       }
 
       return normalized;
@@ -1274,6 +2133,7 @@ export class CertificateEnrollmentService {
     ].filter((option) => option.optionText.length > 0);
 
     if (manualOptions.length < 2) {
+<<<<<<< HEAD
       throw new BadRequestException(
         'Can toi thieu 2 dap an cho cau hoi listening.',
       );
@@ -1282,6 +2142,12 @@ export class CertificateEnrollmentService {
       throw new BadRequestException(
         'Ban phai chi dinh correct_option_key hop le.',
       );
+=======
+      throw new BadRequestException('Can toi thieu 2 dap an cho cau hoi listening.');
+    }
+    if (!manualOptions.some((option) => option.isCorrect)) {
+      throw new BadRequestException('Ban phai chi dinh correct_option_key hop le.');
+>>>>>>> origin/main
     }
     return manualOptions;
   }
@@ -1291,10 +2157,14 @@ export class CertificateEnrollmentService {
     audioFile?: Express.Multer.File,
     imageFile?: Express.Multer.File,
   ): Promise<ToeicManualListeningCreateResponseDto> {
+<<<<<<< HEAD
     const repository = await this.getOrCreateToeicRepositoryForImport(
       dto,
       'listening',
     );
+=======
+    const repository = await this.getOrCreateToeicRepositoryForImport(dto, 'listening');
+>>>>>>> origin/main
     const options = this.parseListeningOptionsFromDto(dto);
 
     const existingLast = await this.prisma.learningRepositoryItem.findFirst({
@@ -1302,9 +2172,13 @@ export class CertificateEnrollmentService {
       orderBy: { item_order: 'desc' },
       select: { item_order: true },
     });
+<<<<<<< HEAD
     const nextOrder = Number(
       dto.item_order ?? Number(existingLast?.item_order ?? 0) + 1,
     );
+=======
+    const nextOrder = Number(dto.item_order ?? Number(existingLast?.item_order ?? 0) + 1);
+>>>>>>> origin/main
 
     const audioUrl = audioFile?.filename
       ? `/uploads/certificate/${basename(audioFile.filename)}`
@@ -1366,6 +2240,7 @@ export class CertificateEnrollmentService {
 
   private buildExplanationCachePath(cacheKey: string): string {
     const hash = createHash('sha256').update(cacheKey).digest('hex');
+<<<<<<< HEAD
     return join(
       process.cwd(),
       'uploads',
@@ -1373,6 +2248,9 @@ export class CertificateEnrollmentService {
       'ai-cache',
       `${hash}.json`,
     );
+=======
+    return join(process.cwd(), 'uploads', 'certificate', 'ai-cache', `${hash}.json`);
+>>>>>>> origin/main
   }
 
   private async readExplanationCache(
@@ -1408,12 +2286,35 @@ export class CertificateEnrollmentService {
 
   private buildFallbackExplanation(
     stem: string,
+<<<<<<< HEAD
     _selectedOptionText: string,
     correctOptionText: string,
     _isCorrect: boolean,
     baseExplanation: string | null,
   ): string {
     return buildExplanationFallback(stem, correctOptionText, baseExplanation);
+=======
+    selectedOptionText: string,
+    correctOptionText: string,
+    isCorrect: boolean,
+    baseExplanation: string | null,
+  ): string {
+    if (isCorrect) {
+      return (
+        'Ban da chon dung dap an. ' +
+        (baseExplanation && baseExplanation.trim().length > 0
+          ? baseExplanation.trim()
+          : `Dap an phu hop voi ngu canh cua cau hoi: "${stem}".`)
+      );
+    }
+
+    const explanationPart =
+      baseExplanation && baseExplanation.trim().length > 0
+        ? ` ${baseExplanation.trim()}`
+        : '';
+
+    return `Ban chon "${selectedOptionText}" nhung dap an dung la "${correctOptionText}".${explanationPart}`;
+>>>>>>> origin/main
   }
 
   private async callOllamaExplanation(
@@ -1421,6 +2322,7 @@ export class CertificateEnrollmentService {
     model: string,
   ): Promise<string> {
     const baseUrl =
+<<<<<<< HEAD
       process.env.OLLAMA_BASE_URL?.trim() ||
       'http://127.0.0.1:11434/api/generate';
 
@@ -2461,6 +3363,47 @@ export class CertificateEnrollmentService {
   }
 
   // ─── API chính: chỉ trả explanation khi user chọn đúng ───────────────────
+=======
+      process.env.OLLAMA_BASE_URL?.trim() || 'http://127.0.0.1:11434/api/generate';
+
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+        format: 'json',
+        options: {
+          temperature: 0.2,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new BadRequestException('Khong the goi Ollama. Hay kiem tra service dang chay.');
+    }
+
+    const payload = (await response.json()) as OllamaGenerateResponse;
+    const raw = typeof payload.response === 'string' ? payload.response.trim() : '';
+    if (!raw) {
+      throw new BadRequestException('Ollama khong tra ve noi dung giai thich.');
+    }
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') {
+      throw new BadRequestException('Ollama tra ve dinh dang khong hop le.');
+    }
+
+    const explanation = (parsed as Record<string, unknown>).explanation;
+    if (typeof explanation !== 'string' || explanation.trim().length === 0) {
+      throw new BadRequestException('Ollama khong tra ve truong explanation hop le.');
+    }
+
+    return explanation.trim();
+  }
+
+>>>>>>> origin/main
   async explainToeicAnswerWithOllama(
     accountId: number,
     slug: string,
@@ -2476,6 +3419,7 @@ export class CertificateEnrollmentService {
       },
     });
 
+<<<<<<< HEAD
     if (
       !item ||
       item.repository.slug !== slug ||
@@ -2484,19 +3428,28 @@ export class CertificateEnrollmentService {
       throw new NotFoundException(
         'Không tìm thấy câu hỏi TOEIC để giải thích.',
       );
+=======
+    if (!item || item.repository.slug !== slug || item.repository.cert_type !== 'toeic') {
+      throw new NotFoundException('Khong tim thay cau hoi TOEIC de giai thich.');
+>>>>>>> origin/main
     }
 
     const selectedOption = item.options.find(
       (option) => Number(option.id) === Number(dto.selected_option_id),
     );
     if (!selectedOption) {
+<<<<<<< HEAD
       throw new BadRequestException(
         'selected_option_id không thuộc câu hỏi này.',
       );
+=======
+      throw new BadRequestException('selected_option_id khong thuoc cau hoi nay.');
+>>>>>>> origin/main
     }
 
     const correctOption = item.options.find((option) => option.is_correct);
     if (!correctOption) {
+<<<<<<< HEAD
       throw new BadRequestException('Câu hỏi chưa cấu hình đáp án đúng.');
     }
 
@@ -2548,10 +3501,24 @@ export class CertificateEnrollmentService {
       slug,
       model,
     );
+=======
+      throw new BadRequestException('Cau hoi chua cau hinh dap an dung.');
+    }
+
+    const model = process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:7b-instruct';
+    const cacheKey = [
+      slug,
+      String(item.id),
+      String(selectedOption.id),
+      item.updated_at.toISOString(),
+      model,
+    ].join('|');
+>>>>>>> origin/main
     const cachePath = this.buildExplanationCachePath(cacheKey);
     const cached = await this.readExplanationCache(cachePath);
 
     if (cached) {
+<<<<<<< HEAD
       const normalized = this.normalizeExplanationForDisplay(
         cached.explanation,
       );
@@ -2562,17 +3529,25 @@ export class CertificateEnrollmentService {
           data: { ai_explanation: normalized || cached.explanation },
         })
         .catch(() => {});
+=======
+>>>>>>> origin/main
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
+<<<<<<< HEAD
         is_correct: true,
         explanation: normalized || cached.explanation,
+=======
+        is_correct: selectedOption.id === correctOption.id,
+        explanation: cached.explanation,
+>>>>>>> origin/main
         model: cached.model,
         source: 'cache',
       };
     }
 
+<<<<<<< HEAD
     // Chưa có cache → gọi Ollama
     const prompt = this.buildFullExplanationPrompt({
       stem: item.stem,
@@ -2596,34 +3571,87 @@ export class CertificateEnrollmentService {
         cachePath,
         model,
       );
+=======
+    const optionLines = item.options
+      .map((option) => `${option.option_key}. ${option.option_text}`)
+      .join('\n');
+
+    const prompt = [
+      'Ban la tro ly hoc TOEIC. Hay giai thich ngan gon, de hieu cho hoc vien.',
+      'Chi dua vao du lieu cung cap, khong duoc bịa them thong tin ben ngoai.',
+      'Tra ve DUY NHAT JSON co truong: {"explanation":"..."}.',
+      `Cau hoi: ${item.stem}`,
+      item.reading_passage ? `Doan van: ${item.reading_passage}` : '',
+      `Lua chon:\n${optionLines}`,
+      `Hoc vien chon: ${selectedOption.option_key}. ${selectedOption.option_text}`,
+      `Dap an dung: ${correctOption.option_key}. ${correctOption.option_text}`,
+      item.explanation ? `Giai thich nen tang (neu co): ${item.explanation}` : '',
+      'Yeu cau: neu hoc vien sai, noi ro vi sao dap an hoc vien sai va vi sao dap an dung chinh xac.',
+    ]
+      .filter((line) => line.length > 0)
+      .join('\n\n');
+
+    try {
+      const explanation = await this.callOllamaExplanation(prompt, model);
+      await this.writeExplanationCache(cachePath, {
+        explanation,
+        model,
+        created_at: new Date().toISOString(),
+      });
+>>>>>>> origin/main
 
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
+<<<<<<< HEAD
         is_correct: true,
+=======
+        is_correct: selectedOption.id === correctOption.id,
+>>>>>>> origin/main
         explanation,
         model,
         source: 'ollama',
       };
     } catch {
+<<<<<<< HEAD
       // Fallback khi Ollama lỗi
+=======
+>>>>>>> origin/main
       const fallback = this.buildFallbackExplanation(
         item.stem,
         selectedOption.option_text,
         correctOption.option_text,
+<<<<<<< HEAD
         true,
         item.explanation,
       );
       const normalizedFallback = this.normalizeExplanationForDisplay(fallback);
 
       // Không cache fallback để lần sau vẫn thử lại Ollama
+=======
+        selectedOption.id === correctOption.id,
+        item.explanation,
+      );
+
+      await this.writeExplanationCache(cachePath, {
+        explanation: fallback,
+        model,
+        created_at: new Date().toISOString(),
+      });
+
+>>>>>>> origin/main
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
+<<<<<<< HEAD
         is_correct: true,
         explanation: normalizedFallback || fallback,
+=======
+        is_correct: selectedOption.id === correctOption.id,
+        explanation: fallback,
+>>>>>>> origin/main
         model,
         source: 'fallback',
       };
@@ -2634,6 +3662,10 @@ export class CertificateEnrollmentService {
     accountId: number,
   ): Promise<ToeicRepositoryOverviewResponseDto> {
     const studentId = await this.getStudentId(accountId);
+<<<<<<< HEAD
+=======
+    await this.ensureToeicRepositorySeedData();
+>>>>>>> origin/main
 
     const enrollment = await this.prisma.certificateEnrollment.findFirst({
       where: { student_id: studentId, cert_type: 'toeic', status: 'active' },
@@ -2721,6 +3753,10 @@ export class CertificateEnrollmentService {
     slug: string,
   ): Promise<ToeicRepositoryDetailResponseDto> {
     await this.getStudentId(accountId);
+<<<<<<< HEAD
+=======
+    await this.ensureToeicRepositorySeedData();
+>>>>>>> origin/main
 
     const repo: ToeicRepositoryWithItems | null =
       await this.prisma.learningRepository.findUnique({
@@ -2764,7 +3800,15 @@ export class CertificateEnrollmentService {
         title: item.title ?? null,
         stem: String(item.stem),
         reading_passage: item.reading_passage ?? null,
+<<<<<<< HEAD
         media_audio_url: item.media_audio_url ?? null,
+=======
+        media_audio_url:
+          item.media_audio_url ??
+          (repo.skill_area === 'listening'
+            ? '/sounds/pomodoro/start.mp3'
+            : null),
+>>>>>>> origin/main
         estimated_seconds: item.estimated_seconds ?? null,
         score_weight: Number(item.score_weight ?? 1),
         options: (item.options ?? []).map((opt) => ({
@@ -2786,6 +3830,10 @@ export class CertificateEnrollmentService {
     dto: ToeicRepositorySubmitDto,
   ): Promise<ToeicRepositorySubmitResponseDto> {
     const studentId = await this.getStudentId(accountId);
+<<<<<<< HEAD
+=======
+    await this.ensureToeicRepositorySeedData();
+>>>>>>> origin/main
 
     const repository: ToeicRepositoryWithItemsForSubmit | null =
       await this.prisma.learningRepository.findUnique({

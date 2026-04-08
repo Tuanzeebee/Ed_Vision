@@ -14,6 +14,8 @@ import {
   Star,
   Ear,
   BookOpen,
+  Ear,
+  BookOpen,
   MessageCircle,
   PlayCircle,
   Library,
@@ -619,10 +621,10 @@ export default function CertificateDetail() {
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 {/* Tabs */}
                 <div className="flex overflow-x-auto border-b border-slate-100">
-                  {skills.map((skill) => (
+                  {skills.map((skill) =>(
                     <button
                       key={skill.id}
-                      onClick={() => setActiveSkill(skill.id)}
+                      onClick={() =>setActiveSkill(skill.id)}
                       className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 border-b-2 cursor-pointer ${
                         activeSkill === skill.id
                           ? "border-purple-500 text-purple-700 bg-purple-50"
@@ -639,8 +641,7 @@ export default function CertificateDetail() {
                         {skill.icon}
                       </span>
                       {skill.label}
-                    </button>
-                  ))}
+                    </button>))}
                 </div>
 
                 {/* Active skill content */}
@@ -659,7 +660,7 @@ export default function CertificateDetail() {
                           {activeSkillData.label}
                         </h3>
                         <p className="text-sm text-slate-400">
-                          {activeSkillData.topics.filter((t) => t.done).length}/
+                          {activeSkillData.topics.filter((t) =>t.done).length}/
                           {activeSkillData.topics.length} chủ đề đã hoàn thành
                         </p>
                       </div>
@@ -667,7 +668,7 @@ export default function CertificateDetail() {
 
                     {/* Topic grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {activeSkillData.topics.map((topic, i) => (
+                      {activeSkillData.topics.map((topic, i) =>(
                         <div
                           key={i}
                           onClick={() => {
@@ -747,8 +748,7 @@ export default function CertificateDetail() {
                               </div>
                             )}
                           </div>
-                        </div>
-                      ))}
+                        </div>))}
                     </div>
 
                     {/* Tips */}
@@ -762,7 +762,7 @@ export default function CertificateDetail() {
                         Mẹo học tập
                       </div>
                       <ul className="space-y-1.5">
-                        {activeSkillData.tips.map((tip, i) => (
+                        {activeSkillData.tips.map((tip, i) =>(
                           <li
                             key={i}
                             className="text-sm text-slate-600 flex items-start gap-2"
@@ -883,6 +883,7 @@ export default function CertificateDetail() {
                 <div className="lg:col-span-2 space-y-5">
                   {/* Roadmap */}
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                     <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2">
                       <BarChart2 className="w-4 h-4 text-purple-500" />
                       Lộ trình học
@@ -892,13 +893,13 @@ export default function CertificateDetail() {
 
                   {/* Practice Tests */}
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-slate-800 flex items-center gap-2">
                         <FileCheck className="w-4 h-4 text-purple-500" />
                         Kho đề thi thử
                       </h3>
-                      <button className="text-sm text-purple-600 font-medium hover:underline flex items-center gap-1 cursor-pointer">
-                        Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
+                      <button className="text-sm text-purple-600 font-medium hover:underline flex items-center gap-1 cursor-pointer">Xem tất cả <ChevronRight className="w-3.5 h-3.5"/>
                       </button>
                     </div>
                     <PracticeTestList tests={practiceTests} />
@@ -1005,16 +1006,16 @@ export default function CertificateDetail() {
 
                   {/* Community Discussions */}
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                       <MessageCircle className="w-4 h-4 text-purple-500" />
                       Thảo luận gần đây
                     </h3>
                     <div className="space-y-3">
-                      {discussions.map((item, i) => (
+                      {discussions.map((item, i) =>(
                         <div
                           key={i}
-                          className="pb-3 border-b border-slate-50 last:border-0 last:pb-0"
-                        >
+                          className="pb-3 border-b border-slate-50 last:border-0 last:pb-0">
                           <p className="text-sm font-medium text-slate-700 hover:text-purple-600 cursor-pointer">
                             {item.q}
                           </p>
@@ -1025,11 +1026,9 @@ export default function CertificateDetail() {
                             </span>
                             <span>• {item.time}</span>
                           </div>
-                        </div>
-                      ))}
+                        </div>))}
                     </div>
-                    <button className="w-full mt-4 text-sm text-purple-600 font-medium hover:bg-purple-50 py-2 rounded-xl transition-colors cursor-pointer">
-                      Xem cộng đồng
+                    <button className="w-full mt-4 text-sm text-purple-600 font-medium hover:bg-purple-50 py-2 rounded-xl transition-colors cursor-pointer">Xem cộng đồng
                     </button>
                   </div>
                 </div>
@@ -1045,13 +1044,11 @@ export default function CertificateDetail() {
                 </h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {skills.map((skill) => (
-                  <SkillTopicCard key={skill.id} section={skill} />
-                ))}
+                {skills.map((skill) =>(
+                  <SkillTopicCard key={skill.id} section={skill} />))}
               </div>
             </section>
-          </>
-        )}
+          </>)}
 
         {/* ══════════════════════════════════════════════════════════════════════
             MOS CERTS
@@ -1064,7 +1061,7 @@ export default function CertificateDetail() {
                 <div style={{ height: "calc(100vh - 140px)" }}>
                   <MosWordSimulator
                     onComplete={handleSimulatorComplete}
-                    onBack={() => setShowSimulator(false)}
+                    onBack={() =>setShowSimulator(false)}
                   />
                 </div>
               </section>
@@ -1195,8 +1192,7 @@ export default function CertificateDetail() {
                       </h4>
                     </div>
                     <p className="text-xs text-slate-500">{info.body}</p>
-                  </div>
-                ))}
+                  </div>))}
               </div>
             </section>
 
@@ -1212,25 +1208,22 @@ export default function CertificateDetail() {
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                 <div className="space-y-3">
-                  {discussions.map((item, i) => (
+                  {discussions.map((item, i) =>(
                     <div
                       key={i}
-                      className="pb-3 border-b border-slate-50 last:border-0 last:pb-0"
-                    >
+                      className="pb-3 border-b border-slate-50 last:border-0 last:pb-0">
                       <p className="text-sm font-medium text-slate-700 hover:text-purple-600 cursor-pointer">
                         {item.q}
                       </p>
                       <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-400">
                         <span className="flex items-center gap-1">
-                          <MessageCircle className="w-3 h-3" /> {item.replies}
+                          <MessageCircle className="w-3 h-3"/> {item.replies}
                         </span>
                         <span>• {item.time}</span>
                       </div>
-                    </div>
-                  ))}
+                    </div>))}
                 </div>
-                <button className="w-full mt-4 text-sm text-purple-600 font-medium hover:bg-purple-50 py-2 rounded-xl transition-colors cursor-pointer">
-                  Xem cộng đồng
+                <button className="w-full mt-4 text-sm text-purple-600 font-medium hover:bg-purple-50 py-2 rounded-xl transition-colors cursor-pointer">Xem cộng đồng
                 </button>
               </div>
             </section>

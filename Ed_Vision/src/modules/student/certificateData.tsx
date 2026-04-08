@@ -3595,7 +3595,7 @@ export function BandSelector({
             ? "Lộ trình và nội dung luyện tập sẽ được cá nhân hoá theo cấp độ bạn chọn. Điểm đạt chuẩn MOS: >= 700 / 1,000."
             : "Lộ trình học, từ vựng và bài thi thử sẽ được cá nhân hoá theo mục tiêu. Bạn có thể đổi mục tiêu bất cứ lúc nào."}
         </p>
-        {!isMos && (
+        {!isMos && !isToeic && (
           <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
             <span className="text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
               Band 4.0 – Cơ bản
@@ -3611,6 +3611,8 @@ export function BandSelector({
           </div>
         )}
       </div>
+
+      {isToeic && <ToeicIntakePanel onConfirmBand={onSelect} />}
 
       {/* Band cards */}
       <div
