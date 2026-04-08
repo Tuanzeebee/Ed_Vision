@@ -11,7 +11,26 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+  Max,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
+const CERT_TYPES = [
+  'ielts',
+  'toeic',
+  'mos-word',
+  'mos-excel',
+  'mos-powerpoint',
 const CERT_TYPES = [
   'ielts',
   'toeic',
@@ -24,8 +43,13 @@ export class CreateEnrollmentDto {
   @IsString()
   @IsNotEmpty()
   @IsIn(CERT_TYPES)
-  cert_type: string;
+  cert_type!: string;
 
+  @IsOptional()
+  @IsInt()
+  @Min(10)
+  @Max(990)
+  target_score?: number;
   @IsOptional()
   @IsInt()
   @Min(10)
@@ -36,20 +60,20 @@ export class CreateEnrollmentDto {
 export class CompleteTopicDto {
   @IsString()
   @IsNotEmpty()
-  topic_key: string; // e.g. 'grammar.basic_tenses'
+  topic_key!: string; // e.g. 'grammar.basic_tenses'
 }
 
 export class EnrollmentResponseDto {
-  id: number;
-  cert_type: string;
-  status: 'active' | 'completed';
-  learning_status: 'not_started' | 'in_progress' | 'completed';
-  progress_percent: number;
+  id!: number;
+  cert_type!: string;
+  status!: 'active' | 'completed';
+  learning_status!: 'not_started' | 'in_progress' | 'completed';
+  progress_percent!: number;
   current_score?: number | null;
   target_score?: number | null;
-  enrolled_at: Date;
+  enrolled_at!: Date;
   completed_at?: Date | null;
-  completed_topics: string[]; // array of topic_key strings
+  completed_topics!: string[]; // array of topic_key strings
   total_topics?: number;
 }
 
@@ -103,96 +127,96 @@ export class ToeicPlanSyncDto {
 }
 
 export class ToeicPlanSyncResponseDto {
-  current_score: number;
-  target_score: number;
-  total_boost: number;
-  listening_sessions: number;
-  reading_sessions: number;
-  foundation_completed: string[];
-  foundation_skipped: boolean;
-  first_guide_shown: boolean;
+  current_score!: number;
+  target_score!: number;
+  total_boost!: number;
+  listening_sessions!: number;
+  reading_sessions!: number;
+  foundation_completed!: string[];
+  foundation_skipped!: boolean;
+  first_guide_shown!: boolean;
 }
 
 export class ToeicLeaderboardEntryDto {
-  account_id: number;
-  name: string;
-  score: number;
-  streak: number;
-  isCurrentUser: boolean;
+  account_id!: number;
+  name!: string;
+  score!: number;
+  streak!: number;
+  isCurrentUser!: boolean;
 }
 
 export class ToeicRepositoryOverviewItemDto {
-  repository_id: number;
-  slug: string;
-  topic_key: string;
-  title: string;
+  repository_id!: number;
+  slug!: string;
+  topic_key!: string;
+  title!: string;
   description?: string | null;
-  skill_area: string;
-  milestone_score: number;
-  unlock_score: number;
-  question_count: number;
-  estimated_minutes: number;
-  is_unlocked: boolean;
+  skill_area!: string;
+  milestone_score!: number;
+  unlock_score!: number;
+  question_count!: number;
+  estimated_minutes!: number;
+  is_unlocked!: boolean;
 }
 
 export class ToeicRepositoryOverviewResponseDto {
-  current_score: number;
-  target_score: number;
-  projected_score: number;
-  items: ToeicRepositoryOverviewItemDto[];
+  current_score!: number;
+  target_score!: number;
+  projected_score!: number;
+  items!: ToeicRepositoryOverviewItemDto[];
 }
 
 export class ToeicRepositoryOptionDto {
-  id: number;
-  option_key: string;
-  option_text: string;
-  is_correct: boolean;
+  id!: number;
+  option_key!: string;
+  option_text!: string;
+  is_correct!: boolean;
   rationale?: string | null;
-  sort_order: number;
+  sort_order!: number;
 }
 
 export class ToeicRepositoryItemDto {
-  id: number;
-  item_order: number;
-  item_type: string;
+  id!: number;
+  item_order!: number;
+  item_type!: string;
   title?: string | null;
-  stem: string;
+  stem!: string;
   reading_passage?: string | null;
   media_audio_url?: string | null;
   explanation?: string | null;
   estimated_seconds?: number | null;
-  score_weight: number;
-  options: ToeicRepositoryOptionDto[];
+  score_weight!: number;
+  options!: ToeicRepositoryOptionDto[];
 }
 
 export class ToeicRepositoryDetailResponseDto {
-  repository_id: number;
-  slug: string;
-  title: string;
+  repository_id!: number;
+  slug!: string;
+  title!: string;
   description?: string | null;
   skill_area?: string | null;
-  milestone_score: number;
-  estimated_minutes: number;
-  pass_score: number;
-  total_items: number;
-  items: ToeicRepositoryItemDto[];
+  milestone_score!: number;
+  estimated_minutes!: number;
+  pass_score!: number;
+  total_items!: number;
+  items!: ToeicRepositoryItemDto[];
 }
 
 export class ToeicRepositorySubmitAnswerDto {
   @IsInt()
   @Min(1)
-  item_id: number;
+  item_id!: number;
 
   @IsInt()
   @Min(1)
-  option_id: number;
+  option_id!: number;
 }
 
 export class ToeicRepositorySubmitDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ToeicRepositorySubmitAnswerDto)
-  answers: ToeicRepositorySubmitAnswerDto[];
+  answers!: ToeicRepositorySubmitAnswerDto[];
 
   @IsOptional()
   @IsInt()
@@ -202,16 +226,16 @@ export class ToeicRepositorySubmitDto {
 }
 
 export class ToeicRepositorySubmitResponseDto {
-  repository_id: number;
-  slug: string;
+  repository_id!: number;
+  slug!: string;
   skill_area?: string | null;
-  correct_count: number;
-  total_count: number;
-  pass_score: number;
-  is_passed: boolean;
-  gained_score: number;
-  projected_score: number;
-  updated_plan: ToeicPlanSyncResponseDto;
+  correct_count!: number;
+  total_count!: number;
+  pass_score!: number;
+  is_passed!: boolean;
+  gained_score!: number;
+  projected_score!: number;
+  updated_plan!: ToeicPlanSyncResponseDto;
 }
 
 export class ToeicReadingImportDto {
@@ -253,11 +277,11 @@ export class ToeicReadingImportDto {
 }
 
 export class ToeicReadingImportResponseDto {
-  repository_id: number;
-  slug: string;
-  imported_count: number;
-  skipped_count: number;
-  total_rows: number;
+  repository_id!: number;
+  slug!: string;
+  imported_count!: number;
+  skipped_count!: number;
+  total_rows!: number;
 }
 
 export class ToeicManualListeningCreateDto {
@@ -296,7 +320,7 @@ export class ToeicManualListeningCreateDto {
 
   @IsString()
   @IsNotEmpty()
-  stem: string;
+  stem!: string;
 
   @IsOptional()
   @IsString()
@@ -338,10 +362,10 @@ export class ToeicManualListeningCreateDto {
 }
 
 export class ToeicManualListeningCreateResponseDto {
-  repository_id: number;
-  slug: string;
-  item_id: number;
-  item_order: number;
+  repository_id!: number;
+  slug!: string;
+  item_id!: number;
+  item_order!: number;
   media_audio_url?: string | null;
   media_image_url?: string | null;
 }
@@ -349,19 +373,50 @@ export class ToeicManualListeningCreateResponseDto {
 export class ToeicExplainAnswerDto {
   @IsInt()
   @Min(1)
-  item_id: number;
+  item_id!: number;
 
   @IsInt()
   @Min(1)
-  selected_option_id: number;
+  selected_option_id!: number;
 }
 
 export class ToeicExplainAnswerResponseDto {
-  item_id: number;
-  selected_option_id: number;
-  correct_option_id: number;
-  is_correct: boolean;
-  explanation: string;
-  model: string;
-  source: 'cache' | 'ollama' | 'fallback';
+  item_id!: number;
+  selected_option_id!: number;
+  correct_option_id!: number;
+  is_correct!: boolean;
+  /** null khi user chọn sai – frontend ẩn phần giải thích */
+  explanation!: string | null;
+  model!: string;
+  source!: 'cache' | 'ollama' | 'fallback' | 'skipped';
+}
+
+export class CertificateTutorAskDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(CERT_TYPES)
+  cert_type!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  question!: string;
+
+  @IsOptional()
+  @IsString()
+  topic_key?: string;
+
+  @IsOptional()
+  @IsString()
+  learning_context?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  concise?: boolean;
+}
+
+export class CertificateTutorAskResponseDto {
+  cert_type!: string;
+  answer!: string;
+  model!: string;
+  source!: 'cache' | 'ollama' | 'fallback';
 }

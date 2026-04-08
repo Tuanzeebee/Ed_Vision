@@ -14,8 +14,14 @@ import {
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
-import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -39,7 +45,30 @@ import {
   ToeicManualListeningCreateResponseDto,
   ToeicExplainAnswerDto,
   ToeicExplainAnswerResponseDto,
+  CertificateTutorAskDto,
+  CertificateTutorAskResponseDto,
 } from './dto/certificate.dto';
+
+type AuthenticatedRequest = ExpressRequest & {
+  user: {
+    account_id: number;
+  };
+};
+
+const certificateMulterStorage = diskStorage({
+  destination: (req, file, cb) => {
+    const destinationPath = './uploads/certificate';
+    if (!existsSync(destinationPath)) {
+      mkdirSync(destinationPath, { recursive: true });
+    }
+    cb(null, destinationPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = extname(file.originalname);
+    cb(null, `${uniqueSuffix}${ext}`);
+  },
+});
 
 type AuthenticatedRequest = ExpressRequest & {
   user: {
@@ -74,6 +103,7 @@ export class CertificateEnrollmentController {
   @Get('enrollment')
   async getEnrollment(
     @Request() req: AuthenticatedRequest,
+    @Request() req: AuthenticatedRequest,
     @Query('certType') certType: string,
   ): Promise<EnrollmentResponseDto | null> {
     return this.service.getEnrollment(req.user.account_id, certType);
@@ -84,6 +114,9 @@ export class CertificateEnrollmentController {
    * Returns ALL enrollments (active + completed) for the student.
    */
   @Get('enrollments')
+  async getAllEnrollments(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<EnrollmentResponseDto[]> {
   async getAllEnrollments(
     @Request() req: AuthenticatedRequest,
   ): Promise<EnrollmentResponseDto[]> {
@@ -98,6 +131,7 @@ export class CertificateEnrollmentController {
   @HttpCode(HttpStatus.CREATED)
   async createEnrollment(
     @Request() req: AuthenticatedRequest,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: CreateEnrollmentDto,
   ): Promise<EnrollmentResponseDto> {
     return this.service.createEnrollment(req.user.account_id, dto);
@@ -109,6 +143,7 @@ export class CertificateEnrollmentController {
    */
   @Patch('enrollment/:id/complete-topic')
   async completeTopic(
+    @Request() req: AuthenticatedRequest,
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) enrollmentId: number,
     @Body() dto: CompleteTopicDto,
@@ -122,6 +157,7 @@ export class CertificateEnrollmentController {
    */
   @Patch('enrollment/:id/complete')
   async completeBand(
+    @Request() req: AuthenticatedRequest,
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) enrollmentId: number,
   ): Promise<EnrollmentResponseDto> {
@@ -250,7 +286,11 @@ export class CertificateEnrollmentController {
   ): Promise<ToeicManualListeningCreateResponseDto> {
     const audioFile = files.audio?.[0];
     const imageFile = files.image?.[0];
-    return this.service.createToeicListeningManualItem(dto, audioFile, imageFile);
+    return this.service.createToeicListeningManualItem(
+      dto,
+      audioFile,
+      imageFile,
+    );
   }
 
   /**
@@ -268,5 +308,17 @@ export class CertificateEnrollmentController {
       slug,
       dto,
     );
+  }
+
+  /**
+   * POST /student/certificate/ai-tutor/ask
+   * Shared AI tutor endpoint for all certificate types.
+   */
+  @Post('ai-tutor/ask')
+  async askCertificateTutor(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CertificateTutorAskDto,
+  ): Promise<CertificateTutorAskResponseDto> {
+    return this.service.askCertificateTutor(req.user.account_id, dto);
   }
 }

@@ -643,12 +643,12 @@ model PredictionResult {
   term_id                 Int?      // Liên kết với AcademicTerm để biết học kỳ
   created_at              DateTime  @default(now()) @db.Timestamptz(6)
   updated_at              DateTime  @updatedAt @db.Timestamptz(6)
-  
+
   student                 Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   course                  Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
   instructor              Instructor? @relation(fields: [instructor_id], references: [instructor_id])
   academicTerm            AcademicTerm? @relation(fields: [term_id], references: [term_id])
-  
+
   // Unique constraint: Một sinh viên chỉ có một dự đoán cho một môn từ một mô hình tại một thời điểm
   @@unique([student_id, course_id, model_type, model_version])
   @@map("PredictionResult")
@@ -662,9 +662,9 @@ model StudentSurveyFactors {
   financial_support_score Float?   // Hỗ trợ tài chính (score từ AI, 0-100)
   mental_health_score    Float?    // Tinh thần (score từ AI, 0-100)
   updated_at             DateTime  @updatedAt @db.Timestamptz(6)
-  
+
   student                Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  
+
   // Unique: Một sinh viên chỉ có một bộ yếu tố (có thể update nếu survey lại)
   @@unique([student_id])
   @@map("StudentSurveyFactors")
@@ -816,6 +816,14 @@ model CertificateEnrollment {
   toeic_plan_state Json?  // JSON state for TOEIC roadmap (current/target/sessions/foundation)
   started_at    DateTime? @db.Timestamptz(6)
   last_activity_at DateTime? @db.Timestamptz(6)
+  status        String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
+  learning_status String  @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
+  progress_percent Int    @default(0) @db.SmallInt // 0..100
+  current_score Int?      // current TOEIC score used for roadmap realtime UI
+  target_score  Int?      // target TOEIC score learner is pursuing
+  toeic_plan_state Json?  // JSON state for TOEIC roadmap (current/target/sessions/foundation)
+  started_at    DateTime? @db.Timestamptz(6)
+  last_activity_at DateTime? @db.Timestamptz(6)
   completed_at  DateTime? @db.Timestamptz(6)
   enrolled_at   DateTime  @default(now()) @db.Timestamptz(6)
   updated_at    DateTime  @updatedAt @db.Timestamptz(6)
@@ -869,7 +877,8 @@ model LearningRepositoryItem {
   stem               String   // question/content body
   reading_passage    String?  // optional shared/inline passage
   hint               String?
-  explanation        String?
+  explanation        String?  // Giải thích nền tảng (thủ công / nhập liệu)
+  ai_explanation     String?  // Giải thích AI (Ollama) — sinh tự động, tái sử dụng
   difficulty_level   String?  @db.VarChar(20)
   score_weight       Int      @default(1)
   estimated_seconds  Int?
@@ -903,6 +912,21 @@ model LearningRepositoryOption {
   @@unique([item_id, option_key])
   @@index([item_id, sort_order])
   @@map("LearningRepositoryOption")
+}
+
+/// DB cache for AI-generated explanations of hardcoded TOEIC practice questions.
+/// Keyed by topic_key (e.g. "toeic.listening.node_0.q_1.full") — survives server restarts.
+model ToeicNodeQuestionCache {
+  id         Int      @id @default(autoincrement())
+  topic_key  String   @unique @db.VarChar(220) // stable key from frontend: toeic.<skill>.node_<n>.q_<m>.<mode>
+  cert_type  String   @db.VarChar(30)          // toeic | ielts | ...
+  ai_answer  String                            // full explanation text from Ollama
+  model      String   @db.VarChar(100)         // e.g. qwen2.5:3b
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([cert_type])
+  @@map("ToeicNodeQuestionCache")
 }
 
 /// Tracks which individual topics a student has completed within an enrollment.
