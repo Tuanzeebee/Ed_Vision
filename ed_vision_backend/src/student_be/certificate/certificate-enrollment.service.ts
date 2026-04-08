@@ -34,7 +34,18 @@ import {
   ToeicManualListeningCreateResponseDto,
   ToeicExplainAnswerDto,
   ToeicExplainAnswerResponseDto,
+  CertificateTutorAskDto,
+  CertificateTutorAskResponseDto,
 } from './dto/certificate.dto';
+import {
+  OLLAMA_TIMEOUT_MS,
+  OLLAMA_EXPLANATION_OPTIONS,
+  OLLAMA_TUTOR_OPTIONS,
+  buildExplanationPrompt,
+  buildTutorPrompt as buildTutorPromptFromFile,
+  buildTutorFallback,
+  buildExplanationFallback,
+} from './certificate-prompts';
 
 const TOPIC_COUNTS_BY_CERT: Record<string, number> = {
   ielts: 18,
@@ -43,6 +54,18 @@ const TOPIC_COUNTS_BY_CERT: Record<string, number> = {
   'mos-excel': 12,
   'mos-powerpoint': 10,
 };
+
+const CERT_TUTOR_ALLOWED_CERT_TYPES = new Set<string>([
+  'ielts',
+  'toeic',
+  'mos-word',
+  'mos-excel',
+  'mos-powerpoint',
+]);
+
+const CERT_TUTOR_PROMPT_VERSION = 'v8';
+
+// CERT_TUTOR_SYSTEM_PROMPTS đã được chuyển sang certificate-prompts.ts (CERT_PERSONA)
 
 function getTotalTopics(certType: string): number {
   return TOPIC_COUNTS_BY_CERT[certType] ?? 10;
@@ -77,8 +100,6 @@ function toPercent(current: number, start: number, target: number): number {
   return Math.max(0, Math.min(99, Math.round((gained / total) * 100)));
 }
 
-type ToeicSeedSkill = 'listening' | 'reading' | 'grammar' | 'vocabulary';
-
 type EnrollmentWithTopicProgress = Prisma.CertificateEnrollmentGetPayload<{
   include: { topicProgress: { select: { topic_key: true } } };
 }>;
@@ -111,41 +132,6 @@ type ToeicEnrollmentLeaderboardRow = Prisma.CertificateEnrollmentGetPayload<{
     };
   };
 }>;
-
-type ToeicSeedOption = {
-  optionKey: string;
-  optionText: string;
-  isCorrect: boolean;
-  rationale: string;
-};
-
-type ToeicSeedItem = {
-  itemType: string;
-  title: string;
-  stem: string;
-  readingPassage?: string | null;
-  mediaAudioUrl?: string | null;
-  explanation: string;
-  estimatedSeconds: number;
-  options: ToeicSeedOption[];
-};
-
-const TOEIC_MILESTONES = [350, 500, 600, 700, 800] as const;
-
-function toSlugPart(skill: ToeicSeedSkill): string {
-  if (skill === 'listening') return 'listening';
-  if (skill === 'reading') return 'reading';
-  if (skill === 'grammar') return 'grammar';
-  return 'vocabulary';
-}
-
-function calcUnlockScore(milestone: number): number {
-  return Math.max(300, milestone - 50);
-}
-
-function calcRangeMax(milestone: number): number {
-  return milestone >= 800 ? 990 : milestone + 99;
-}
 
 function getDefaultTargetScore(certType: string): number | null {
   if (certType === 'toeic') return 600;
@@ -218,7 +204,18 @@ type FileCacheExplanation = {
   created_at: string;
 };
 
-const DEFAULT_READING_REQUIRED_KEYWORDS = ['reading', 'part 5', 'part 6', 'part 7'];
+type FileCacheTutorAnswer = {
+  answer: string;
+  model: string;
+  created_at: string;
+};
+
+const DEFAULT_READING_REQUIRED_KEYWORDS = [
+  'reading',
+  'part 5',
+  'part 6',
+  'part 7',
+];
 const DEFAULT_READING_EXCLUDED_KEYWORDS = [
   'listening',
   'part 1',
@@ -229,604 +226,17 @@ const DEFAULT_READING_EXCLUDED_KEYWORDS = [
   'writing',
 ];
 
+const TOEIC_LOOKAHEAD_PREFETCH_COUNT = 3;
+const TOEIC_LOOKAHEAD_PREFETCH_BATCH_SIZE = 2;
+
 @Injectable()
 export class CertificateEnrollmentService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private buildReadingSeedItems(milestone: number): ToeicSeedItem[] {
-    const part5Items: ToeicSeedItem[] = [
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q1 (M${milestone})`,
-        stem: 'The new main office was housed in a bright and modern building, but its ____ was inconvenient for employees who did not have a car.',
-        explanation:
-          'Can mot danh tu chi vi tri. "location" (D) la danh tu phu hop voi ngu canh.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'locate',
-            isCorrect: false,
-            rationale: 'Dong tu nguyen mau, khong phu hop vi tri danh tu.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'to locate',
-            isCorrect: false,
-            rationale: 'Cum dong tu nguyen mau, khong phu hop vi tri danh tu.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'located',
-            isCorrect: false,
-            rationale: 'Tinh tu/phan tu, khong hop cau truc can dien danh tu.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'location',
-            isCorrect: true,
-            rationale:
-              'Danh tu dung ngu canh: "its location was inconvenient".',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q2 (M${milestone})`,
-        stem: 'Applicants are asked to submit all required documents ____ 5:00 p.m. on Friday.',
-        explanation:
-          'Gioi tu "by" dien ta han chot thoi gian, phu hop ngu nghia cau.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'by',
-            isCorrect: true,
-            rationale:
-              'Dung de chi han chot phai hoan thanh truoc moc thoi gian.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'since',
-            isCorrect: false,
-            rationale:
-              'Khong dung de chi deadline cu the trong truong hop nay.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'during',
-            isCorrect: false,
-            rationale: 'Chi khoang thoi gian, khong phai han nop.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'between',
-            isCorrect: false,
-            rationale: 'Can hai moc thoi gian, khong phu hop cau truc cau.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q3 (M${milestone})`,
-        stem: 'Ms. Ortega will lead the meeting herself ____ the project manager is out of town.',
-        explanation:
-          'Can lien tu chi ly do. "because" la lua chon dung de noi 2 menh de.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'because',
-            isCorrect: true,
-            rationale: 'Noi menh de chinh va ly do mot cach tu nhien.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'unless',
-            isCorrect: false,
-            rationale:
-              'Mang nghia dieu kien phu dinh, khong dung ngu nghia cau.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'although',
-            isCorrect: false,
-            rationale:
-              'Mang nghia tuong phan, khong phu hop voi thong tin cho truoc.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'despite',
-            isCorrect: false,
-            rationale:
-              'Can danh dong tu/danh tu theo sau, khong dung voi menh de day du.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q4 (M${milestone})`,
-        stem: 'The finance team has prepared a ____ report for the quarterly budget review.',
-        explanation:
-          'Can tinh tu bo nghia cho danh tu "report". "detailed" la tu phu hop nhat.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'detail',
-            isCorrect: false,
-            rationale: 'Danh tu, khong dung vi tri tinh tu truoc danh tu khac.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'detailing',
-            isCorrect: false,
-            rationale: 'Dang V-ing khong tu nhien trong cum danh tu nay.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'detailed',
-            isCorrect: true,
-            rationale: 'Tinh tu bo nghia cho "report" mot cach dung ngu phap.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'detailingly',
-            isCorrect: false,
-            rationale: 'Khong phai tu dung trong tieng Anh chuan.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q5 (M${milestone})`,
-        stem: 'Customers who purchased tickets online can receive a full refund ____ they cancel at least 24 hours in advance.',
-        explanation:
-          '"provided (that)"/"if" dien ta dieu kien. O day "if" la dap an dung.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'if',
-            isCorrect: true,
-            rationale: 'Lien tu dieu kien dung ngu canh cua cau.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'until',
-            isCorrect: false,
-            rationale: 'Chi moc thoi gian, khong dien ta dieu kien hoan tien.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'while',
-            isCorrect: false,
-            rationale: 'Mang nghia trong khi, khong phu hop logic cau.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'despite',
-            isCorrect: false,
-            rationale: 'Can danh tu/cum danh tu theo sau, khong dung cau truc.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q6 (M${milestone})`,
-        stem: 'Our IT department will install the software update tonight to minimize ____ during business hours.',
-        explanation:
-          'Can mot danh tu chi su gian doan. "disruption" phu hop y nghia cau.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'disrupt',
-            isCorrect: false,
-            rationale: 'Dong tu, khong phu hop vi tri danh tu sau "minimize".',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'disruptive',
-            isCorrect: false,
-            rationale: 'Tinh tu, khong dung vi tri can danh tu.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'disruption',
-            isCorrect: true,
-            rationale: 'Danh tu truu tuong, dung ngu phap va ngu nghia.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'disrupted',
-            isCorrect: false,
-            rationale: 'Tinh tu/phan tu, khong phu hop cau truc nay.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q7 (M${milestone})`,
-        stem: 'Neither the supervisor nor the assistants ____ responsible for approving overtime requests this week.',
-        explanation:
-          'Voi "neither ... nor", dong tu hoa hop voi chu ngu gan nhat "assistants" (so nhieu) => "are".',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'is',
-            isCorrect: false,
-            rationale: 'Khong hoa hop voi chu ngu gan nhat so nhieu.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'are',
-            isCorrect: true,
-            rationale:
-              'Dung quy tac hoa hop chu ngu dong tu trong cau noi ket hop.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'was',
-            isCorrect: false,
-            rationale: 'Sai thi va sai hoa hop so it/so nhieu.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'be',
-            isCorrect: false,
-            rationale: 'Dang nguyen mau, khong dung vi tri dong tu chinh.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q8 (M${milestone})`,
-        stem: 'All visitors must sign in at the security desk ____ entering the production area.',
-        explanation:
-          'Can gioi tu chi thu tu hanh dong. "before" la lua chon phu hop.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'before',
-            isCorrect: true,
-            rationale:
-              'Chi hanh dong phai xay ra truoc khi vao khu vuc san xuat.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'already',
-            isCorrect: false,
-            rationale: 'Trang tu, khong noi duoc voi V-ing nhu gioi tu.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'except',
-            isCorrect: false,
-            rationale: 'Sai nghia va khong phu hop logic noi quy.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'recently',
-            isCorrect: false,
-            rationale: 'Trang tu thoi gian khong phu hop vi tri nay.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q9 (M${milestone})`,
-        stem: 'The training workshop was postponed ____ the instructor was unexpectedly ill.',
-        explanation:
-          'Can lien tu noi menh de chi nguyen nhan. "because" la dap an dung.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'because',
-            isCorrect: true,
-            rationale: 'Noi menh de nguyen nhan day du va tu nhien.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'whereas',
-            isCorrect: false,
-            rationale: 'Mang nghia doi lap, khong hop noi dung.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'unless',
-            isCorrect: false,
-            rationale: 'Mang nghia neu khong, khong dung voi tinh huong cau.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'however',
-            isCorrect: false,
-            rationale: 'Trang tu noi, khong noi duoc 2 menh de theo cach nay.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 5 - Q10 (M${milestone})`,
-        stem: 'Please send your availability by noon so that we can finalize the interview ____ for next week.',
-        explanation:
-          'Can mot danh tu chi lich trinh. "schedule" la lua chon dung.',
-        estimatedSeconds: 55,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'scheduling',
-            isCorrect: false,
-            rationale: 'Dang V-ing khong phu hop trong cum danh tu nay.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'schedule',
-            isCorrect: true,
-            rationale:
-              'Danh tu dung ngu canh: "finalize the interview schedule".',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'scheduled',
-            isCorrect: false,
-            rationale: 'Tinh tu/phan tu, khong phu hop vi tri danh tu.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'scheduler',
-            isCorrect: false,
-            rationale: 'Chi nguoi/phan mem lap lich, khong phu hop y cau.',
-          },
-        ],
-      },
-    ];
-
-    const part7Passage =
-      'Riverview Community Arts Center announced yesterday that it will launch a six-week evening guitar program beginning May 12. The program is designed for beginners and includes one printed workbook and two instructional audio files that participants can download after registration. Tuition is $35 for the full program, and classes are scheduled every Tuesday, Wednesday, and Thursday from 7:00 p.m. to 9:00 p.m. According to the center director, both instructors have over ten years of teaching experience. Enrollment is limited to 60 students, and early registration is recommended. For additional details, interested participants can call Michael at 335-4287 or visit the information desk between 9:00 a.m. and 5:00 p.m. on weekdays.';
-
-    const part7Items: ToeicSeedItem[] = [
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 7 - Q1 (M${milestone})`,
-        stem: 'What is included in the $35 tuition fee?',
-        readingPassage: part7Passage,
-        explanation:
-          'Doan van neu ro hoc phi $35 bao gom workbook in va hai tep audio huong dan.',
-        estimatedSeconds: 75,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'One workbook and two audio files',
-            isCorrect: true,
-            rationale: 'Thong tin xuat hien truc tiep trong doan van.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'A guitar and private lessons',
-            isCorrect: false,
-            rationale:
-              'Doan van khong noi den viec tang dan guitar hay hoc rieng.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'One teacher for individual coaching',
-            isCorrect: false,
-            rationale:
-              'Chuong trinh co 2 giang vien, khong phai huan luyen ca nhan.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'A monthly transportation allowance',
-            isCorrect: false,
-            rationale: 'Khong co thong tin tro cap di lai trong doan van.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 7 - Q2 (M${milestone})`,
-        stem: 'How often are classes held each week?',
-        readingPassage: part7Passage,
-        explanation:
-          'Lich hoc ghi ro vao thu Ba, thu Tu va thu Nam, tong cong 3 buoi moi tuan.',
-        estimatedSeconds: 75,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'Twice a week',
-            isCorrect: false,
-            rationale: 'Doan van liet ke 3 ngay hoc, khong phai 2.',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'Three times a week',
-            isCorrect: true,
-            rationale: 'Dung voi thong tin Tuesday, Wednesday, Thursday.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'Four times a week',
-            isCorrect: false,
-            rationale: 'Khong co ngay hoc thu tu trong lich.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'Every weekday',
-            isCorrect: false,
-            rationale: 'Lop khong hoc du 5 ngay trong tuan.',
-          },
-        ],
-      },
-      {
-        itemType: 'single_choice',
-        title: `Reading Part 7 - Q3 (M${milestone})`,
-        stem: 'What is suggested for people who want to join?',
-        readingPassage: part7Passage,
-        explanation:
-          'Vi so luong chi gioi han 60 hoc vien, thong bao khuyen khich dang ky som.',
-        estimatedSeconds: 75,
-        options: [
-          {
-            optionKey: 'A',
-            optionText: 'Wait until the first class to register',
-            isCorrect: false,
-            rationale:
-              'Nguoc voi thong diep "early registration is recommended".',
-          },
-          {
-            optionKey: 'B',
-            optionText: 'Register early because seats are limited',
-            isCorrect: true,
-            rationale: 'Khop truc tiep voi noi dung ve gioi han 60 hoc vien.',
-          },
-          {
-            optionKey: 'C',
-            optionText: 'Contact the center only on weekends',
-            isCorrect: false,
-            rationale: 'Thong tin lien he la trong ngay thu trong tuan.',
-          },
-          {
-            optionKey: 'D',
-            optionText: 'Bring a recommendation letter',
-            isCorrect: false,
-            rationale: 'Khong co yeu cau thu gioi thieu trong thong bao.',
-          },
-        ],
-      },
-    ];
-
-    return [...part5Items, ...part7Items];
-  }
-
-  private buildToeicSeedItems(
-    skill: ToeicSeedSkill,
-    milestone: number,
-  ): ToeicSeedItem[] {
-    if (skill === 'reading') {
-      return this.buildReadingSeedItems(milestone);
-    }
-
-    const isListening = skill === 'listening';
-    const questionCount = isListening ? 3 : 5;
-
-    const grammarStems = [
-      'The marketing director requested that the final proposal ____ by all team leads before submission.',
-      'If the delivery truck arrives before 9 a.m., the warehouse staff ____ unloading immediately.',
-      'Neither the supervisors nor the coordinator ____ available to approve overtime requests this afternoon.',
-      'The invoice will be processed once the client ____ the missing purchase order number.',
-      'By the time the auditors arrive, all supporting files ____ in the shared folder.',
-    ];
-
-    const vocabularyStems = [
-      'All employees are encouraged to review the updated safety ____ before entering the laboratory.',
-      'Because of strong customer demand, the company plans to ____ its evening support service.',
-      'The HR manager scheduled a follow-up meeting to discuss staff ____ and retention strategies.',
-      'Participants should keep their name badges ____ throughout the conference for security reasons.',
-      'The board approved a new policy to improve data ____ across all departments.',
-    ];
-
-    const listeningImageUrls = [
-      'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1521791055366-0d553872125f?auto=format&fit=crop&w=900&q=80',
-    ];
-    const listeningAudioUrls = [
-      '/sounds/pomodoro/start.mp3',
-      '/sounds/pomodoro/pause.mp3',
-      '/sounds/pomodoro/stop.mp3',
-    ];
-
-    const genericOptions = [
-      'At the customer support desk near the lobby.',
-      'Before the weekly planning meeting begins.',
-      'Because the schedule changed this morning.',
-      'After confirming details with the manager.',
-    ];
-
-    const items: ToeicSeedItem[] = [];
-    for (let i = 1; i <= questionCount; i += 1) {
-      const title = `${skill.toUpperCase()} Q${i}`;
-      const item: ToeicSeedItem = {
-        itemType: 'single_choice',
-        title,
-        stem: isListening
-          ? `Question ${i}: Listen to the audio and choose the best answer.`
-          : skill === 'grammar'
-            ? grammarStems[(i - 1) % grammarStems.length]
-            : vocabularyStems[(i - 1) % vocabularyStems.length],
-        readingPassage: isListening
-          ? listeningImageUrls[(i - 1) % listeningImageUrls.length]
-          : null,
-        mediaAudioUrl: isListening
-          ? listeningAudioUrls[(i - 1) % listeningAudioUrls.length]
-          : null,
-        explanation: isListening
-          ? 'Nghe ky tu khoa va y chinh trong audio de chon dap an dung.'
-          : skill === 'grammar'
-            ? 'Xac dinh dang ngu phap phu hop voi cau truc cau va chu ngu cua cau.'
-            : 'Chon tu co nghia phu hop nhat voi ngu canh cau van phong cong viec.',
-        estimatedSeconds: 60,
-        options: [
-          {
-            optionKey: 'A',
-            optionText:
-              skill === 'grammar'
-                ? 'is reviewed'
-                : skill === 'vocabulary'
-                  ? 'guidelines'
-                  : genericOptions[0],
-            isCorrect: true,
-            rationale:
-              'Dap an dung vi phu hop truc tiep voi ngu canh va thong tin de bai.',
-          },
-          {
-            optionKey: 'B',
-            optionText:
-              skill === 'grammar'
-                ? 'reviewed'
-                : skill === 'vocabulary'
-                  ? 'implement'
-                  : genericOptions[1],
-            isCorrect: false,
-            rationale:
-              'Dap an nhieu kha nang gay nham lan do tu/cum tu gan nghia nhung khong dung voi ngu canh.',
-          },
-          {
-            optionKey: 'C',
-            optionText:
-              skill === 'grammar'
-                ? 'be reviewing'
-                : skill === 'vocabulary'
-                  ? 'engagement'
-                  : genericOptions[2],
-            isCorrect: false,
-            rationale:
-              'Dap an nhieu kha nang gay nham lan do tu/cum tu gan nghia nhung khong dung voi ngu canh.',
-          },
-          {
-            optionKey: 'D',
-            optionText:
-              skill === 'grammar'
-                ? 'has review'
-                : skill === 'vocabulary'
-                  ? 'visible'
-                  : genericOptions[3],
-            isCorrect: false,
-            rationale:
-              'Dap an nhieu kha nang gay nham lan do tu/cum tu gan nghia nhung khong dung voi ngu canh.',
-          },
-        ],
-      };
-      items.push(item);
-    }
-
-    return items;
-  }
+  private readonly inFlightExplanationGenerations = new Map<
+    string,
+    Promise<string>
+  >();
 
   private getEffectiveToeicScore(
     enrollment:
@@ -842,148 +252,6 @@ export class CertificateEnrollmentService {
       planState.current_score + planState.total_boost,
     );
     return Math.max(baseScore, projectedScore);
-  }
-
-  private async ensureToeicRepositorySeedData(): Promise<void> {
-    for (const milestone of TOEIC_MILESTONES) {
-      for (const skill of [
-        'listening',
-        'reading',
-        'grammar',
-        'vocabulary',
-      ] as ToeicSeedSkill[]) {
-        const seedItems = this.buildToeicSeedItems(skill, milestone);
-        const questionCount = seedItems.length;
-        const slug = `toeic-${toSlugPart(skill)}-m${milestone}`;
-        const repository = await this.prisma.learningRepository.upsert({
-          where: { slug },
-          update: {
-            is_published: true,
-            cert_type: 'toeic',
-            content_type: 'practice_set',
-            skill_area: skill,
-            topic_group: `milestone-${milestone}`,
-            title: `TOEIC ${skill.toUpperCase()} Milestone ${milestone}`,
-            description: `Bai luyen ${skill} theo cot moc ${milestone} diem TOEIC.`,
-            difficulty_level:
-              milestone >= 700
-                ? 'advanced'
-                : milestone >= 600
-                  ? 'intermediate'
-                  : 'beginner',
-            target_score_min: calcUnlockScore(milestone),
-            target_score_max: calcRangeMax(milestone),
-            estimated_minutes: questionCount,
-            pass_score: Math.max(2, Math.ceil(questionCount * 0.7)),
-            total_items: questionCount,
-            metadata: {
-              topic_key: `${skill}.toeic_m${milestone}`,
-              milestone_score: milestone,
-              unlock_score: calcUnlockScore(milestone),
-            },
-          },
-          create: {
-            cert_type: 'toeic',
-            title: `TOEIC ${skill.toUpperCase()} Milestone ${milestone}`,
-            slug,
-            description: `Bai luyen ${skill} theo cot moc ${milestone} diem TOEIC.`,
-            content_type: 'practice_set',
-            skill_area: skill,
-            topic_group: `milestone-${milestone}`,
-            difficulty_level:
-              milestone >= 700
-                ? 'advanced'
-                : milestone >= 600
-                  ? 'intermediate'
-                  : 'beginner',
-            target_score_min: calcUnlockScore(milestone),
-            target_score_max: calcRangeMax(milestone),
-            estimated_minutes: questionCount,
-            pass_score: Math.max(2, Math.ceil(questionCount * 0.7)),
-            metadata: {
-              topic_key: `${skill}.toeic_m${milestone}`,
-              milestone_score: milestone,
-              unlock_score: calcUnlockScore(milestone),
-            },
-            total_items: questionCount,
-            is_published: true,
-          },
-        });
-
-        for (let i = 0; i < seedItems.length; i += 1) {
-          const itemOrder = i + 1;
-          const seedItem = seedItems[i];
-
-          const item = await this.prisma.learningRepositoryItem.upsert({
-            where: {
-              repository_id_item_order: {
-                repository_id: repository.id,
-                item_order: itemOrder,
-              },
-            },
-            update: {
-              item_type: seedItem.itemType,
-              title: seedItem.title,
-              stem: seedItem.stem,
-              reading_passage: seedItem.readingPassage ?? null,
-              media_audio_url: seedItem.mediaAudioUrl ?? null,
-              explanation: seedItem.explanation,
-              estimated_seconds: seedItem.estimatedSeconds,
-              score_weight: 1,
-            },
-            create: {
-              repository_id: repository.id,
-              item_order: itemOrder,
-              item_type: seedItem.itemType,
-              title: seedItem.title,
-              stem: seedItem.stem,
-              reading_passage: seedItem.readingPassage ?? null,
-              media_audio_url: seedItem.mediaAudioUrl ?? null,
-              explanation: seedItem.explanation,
-              estimated_seconds: seedItem.estimatedSeconds,
-              score_weight: 1,
-            },
-          });
-
-          for (
-            let optionIndex = 0;
-            optionIndex < seedItem.options.length;
-            optionIndex += 1
-          ) {
-            const option = seedItem.options[optionIndex];
-            await this.prisma.learningRepositoryOption.upsert({
-              where: {
-                item_id_option_key: {
-                  item_id: item.id,
-                  option_key: option.optionKey,
-                },
-              },
-              update: {
-                option_text: option.optionText,
-                is_correct: option.isCorrect,
-                rationale: option.rationale,
-                sort_order: optionIndex + 1,
-              },
-              create: {
-                item_id: item.id,
-                option_key: option.optionKey,
-                option_text: option.optionText,
-                is_correct: option.isCorrect,
-                rationale: option.rationale,
-                sort_order: optionIndex + 1,
-              },
-            });
-          }
-        }
-
-        await this.prisma.learningRepositoryItem.deleteMany({
-          where: {
-            repository_id: repository.id,
-            item_order: { gt: questionCount },
-          },
-        });
-      }
-    }
   }
 
   private async getOrCreateActiveToeicEnrollment(
@@ -1613,7 +881,9 @@ export class CertificateEnrollmentService {
           : [];
 
       if (!Array.isArray(rows)) {
-        throw new BadRequestException('File JSON khong dung dinh dang mang dong.');
+        throw new BadRequestException(
+          'File JSON khong dung dinh dang mang dong.',
+        );
       }
 
       return rows
@@ -1679,15 +949,26 @@ export class CertificateEnrollmentService {
     }
 
     if (requiredKeywords.length === 0) return true;
-    return requiredKeywords.some((keyword) => normalizedSection.includes(keyword));
+    return requiredKeywords.some((keyword) =>
+      normalizedSection.includes(keyword),
+    );
   }
 
-  private buildReadingOptionsFromRow(row: ParsedImportRow): ParsedImportOption[] {
-    const correctAnswerRaw = this
-      .rowValue(row, ['correct_answer', 'correct_option', 'answer_key', 'answer'])
-      .toUpperCase();
+  private buildReadingOptionsFromRow(
+    row: ParsedImportRow,
+  ): ParsedImportOption[] {
+    const correctAnswerRaw = this.rowValue(row, [
+      'correct_answer',
+      'correct_option',
+      'answer_key',
+      'answer',
+    ]).toUpperCase();
 
-    const optionEntries: Array<{ key: string; text: string; rationale: string }> = [
+    const optionEntries: Array<{
+      key: string;
+      text: string;
+      rationale: string;
+    }> = [
       {
         key: 'A',
         text: this.rowValue(row, ['option_a', 'a', 'choice_a']),
@@ -1745,13 +1026,17 @@ export class CertificateEnrollmentService {
     const slug = this.toSafeSlug(dto.repository_slug ?? fallbackSlug);
 
     const milestoneScore = Number(dto.milestone_score ?? 600);
-    const unlockScore = Number(dto.unlock_score ?? Math.max(300, milestoneScore - 50));
+    const unlockScore = Number(
+      dto.unlock_score ?? Math.max(300, milestoneScore - 50),
+    );
 
     const repository = await this.prisma.learningRepository.upsert({
       where: { slug },
       update: {
         cert_type: 'toeic',
-        title: dto.repository_title ?? `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
+        title:
+          dto.repository_title ??
+          `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
         description: dto.repository_description ?? null,
         content_type: 'practice_set',
         skill_area: skillArea,
@@ -1767,7 +1052,9 @@ export class CertificateEnrollmentService {
       },
       create: {
         cert_type: 'toeic',
-        title: dto.repository_title ?? `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
+        title:
+          dto.repository_title ??
+          `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
         slug,
         description: dto.repository_description ?? null,
         content_type: 'practice_set',
@@ -1813,7 +1100,10 @@ export class CertificateEnrollmentService {
     );
     const strictFilter = Boolean(dto.strict_section_filter);
 
-    const repository = await this.getOrCreateToeicRepositoryForImport(dto, 'reading');
+    const repository = await this.getOrCreateToeicRepositoryForImport(
+      dto,
+      'reading',
+    );
 
     const lastItem = await this.prisma.learningRepositoryItem.findFirst({
       where: { repository_id: repository.id },
@@ -1846,7 +1136,12 @@ export class CertificateEnrollmentService {
         continue;
       }
 
-      const stem = this.rowValue(row, ['stem', 'question', 'question_text', 'content']);
+      const stem = this.rowValue(row, [
+        'stem',
+        'question',
+        'question_text',
+        'content',
+      ]);
       if (!stem) {
         skippedCount += 1;
         continue;
@@ -1866,9 +1161,12 @@ export class CertificateEnrollmentService {
           title: this.rowValue(row, ['title', 'question_title']) || null,
           stem,
           reading_passage:
-            this.rowValue(row, ['reading_passage', 'passage', 'paragraph']) || null,
+            this.rowValue(row, ['reading_passage', 'passage', 'paragraph']) ||
+            null,
           explanation: this.rowValue(row, ['explanation']) || null,
-          estimated_seconds: Number(this.rowValue(row, ['estimated_seconds']) || 60),
+          estimated_seconds: Number(
+            this.rowValue(row, ['estimated_seconds']) || 60,
+          ),
           score_weight: 1,
         },
         select: { id: true },
@@ -1926,19 +1224,27 @@ export class CertificateEnrollmentService {
             Boolean(item) && typeof item === 'object' && !Array.isArray(item),
         )
         .map((item) => ({
-          optionKey: String(item.option_key ?? '').toUpperCase().trim(),
+          optionKey: String(item.option_key ?? '')
+            .toUpperCase()
+            .trim(),
           optionText: String(item.option_text ?? '').trim(),
           isCorrect: Boolean(item.is_correct),
           rationale: item.rationale ? String(item.rationale) : null,
         }))
-        .filter((item) => item.optionKey.length > 0 && item.optionText.length > 0);
+        .filter(
+          (item) => item.optionKey.length > 0 && item.optionText.length > 0,
+        );
 
       if (normalized.length === 0) {
-        throw new BadRequestException('Khong co dap an hop le trong options_json.');
+        throw new BadRequestException(
+          'Khong co dap an hop le trong options_json.',
+        );
       }
 
       if (!normalized.some((item) => item.isCorrect)) {
-        throw new BadRequestException('options_json phai co it nhat mot dap an dung.');
+        throw new BadRequestException(
+          'options_json phai co it nhat mot dap an dung.',
+        );
       }
 
       return normalized;
@@ -1968,10 +1274,14 @@ export class CertificateEnrollmentService {
     ].filter((option) => option.optionText.length > 0);
 
     if (manualOptions.length < 2) {
-      throw new BadRequestException('Can toi thieu 2 dap an cho cau hoi listening.');
+      throw new BadRequestException(
+        'Can toi thieu 2 dap an cho cau hoi listening.',
+      );
     }
     if (!manualOptions.some((option) => option.isCorrect)) {
-      throw new BadRequestException('Ban phai chi dinh correct_option_key hop le.');
+      throw new BadRequestException(
+        'Ban phai chi dinh correct_option_key hop le.',
+      );
     }
     return manualOptions;
   }
@@ -1981,7 +1291,10 @@ export class CertificateEnrollmentService {
     audioFile?: Express.Multer.File,
     imageFile?: Express.Multer.File,
   ): Promise<ToeicManualListeningCreateResponseDto> {
-    const repository = await this.getOrCreateToeicRepositoryForImport(dto, 'listening');
+    const repository = await this.getOrCreateToeicRepositoryForImport(
+      dto,
+      'listening',
+    );
     const options = this.parseListeningOptionsFromDto(dto);
 
     const existingLast = await this.prisma.learningRepositoryItem.findFirst({
@@ -1989,7 +1302,9 @@ export class CertificateEnrollmentService {
       orderBy: { item_order: 'desc' },
       select: { item_order: true },
     });
-    const nextOrder = Number(dto.item_order ?? Number(existingLast?.item_order ?? 0) + 1);
+    const nextOrder = Number(
+      dto.item_order ?? Number(existingLast?.item_order ?? 0) + 1,
+    );
 
     const audioUrl = audioFile?.filename
       ? `/uploads/certificate/${basename(audioFile.filename)}`
@@ -2051,7 +1366,13 @@ export class CertificateEnrollmentService {
 
   private buildExplanationCachePath(cacheKey: string): string {
     const hash = createHash('sha256').update(cacheKey).digest('hex');
-    return join(process.cwd(), 'uploads', 'certificate', 'ai-cache', `${hash}.json`);
+    return join(
+      process.cwd(),
+      'uploads',
+      'certificate',
+      'ai-cache',
+      `${hash}.json`,
+    );
   }
 
   private async readExplanationCache(
@@ -2087,26 +1408,12 @@ export class CertificateEnrollmentService {
 
   private buildFallbackExplanation(
     stem: string,
-    selectedOptionText: string,
+    _selectedOptionText: string,
     correctOptionText: string,
-    isCorrect: boolean,
+    _isCorrect: boolean,
     baseExplanation: string | null,
   ): string {
-    if (isCorrect) {
-      return (
-        'Ban da chon dung dap an. ' +
-        (baseExplanation && baseExplanation.trim().length > 0
-          ? baseExplanation.trim()
-          : `Dap an phu hop voi ngu canh cua cau hoi: "${stem}".`)
-      );
-    }
-
-    const explanationPart =
-      baseExplanation && baseExplanation.trim().length > 0
-        ? ` ${baseExplanation.trim()}`
-        : '';
-
-    return `Ban chon "${selectedOptionText}" nhung dap an dung la "${correctOptionText}".${explanationPart}`;
+    return buildExplanationFallback(stem, correctOptionText, baseExplanation);
   }
 
   private async callOllamaExplanation(
@@ -2114,45 +1421,1046 @@ export class CertificateEnrollmentService {
     model: string,
   ): Promise<string> {
     const baseUrl =
-      process.env.OLLAMA_BASE_URL?.trim() || 'http://127.0.0.1:11434/api/generate';
+      process.env.OLLAMA_BASE_URL?.trim() ||
+      'http://127.0.0.1:11434/api/generate';
 
-    const response = await fetch(baseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        prompt,
-        stream: false,
-        format: 'json',
-        options: {
-          temperature: 0.2,
-        },
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          prompt,
+          stream: false,
+          options: OLLAMA_EXPLANATION_OPTIONS,
+        }),
+      });
+    } catch (err: unknown) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      throw new BadRequestException(
+        isAbort
+          ? 'Ollama timeout — model phản hồi quá chậm. Thử lại sau.'
+          : 'Không thể kết nối Ollama. Hãy kiểm tra service đang chạy.',
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
-      throw new BadRequestException('Khong the goi Ollama. Hay kiem tra service dang chay.');
+      throw new BadRequestException(
+        `Ollama trả về lỗi HTTP ${response.status}.`,
+      );
     }
 
     const payload = (await response.json()) as OllamaGenerateResponse;
-    const raw = typeof payload.response === 'string' ? payload.response.trim() : '';
-    if (!raw) {
-      throw new BadRequestException('Ollama khong tra ve noi dung giai thich.');
+    const raw =
+      typeof payload.response === 'string' ? payload.response.trim() : '';
+    if (!raw || raw.length < 10) {
+      throw new BadRequestException('Ollama không trả về nội dung giải thích.');
     }
 
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') {
-      throw new BadRequestException('Ollama tra ve dinh dang khong hop le.');
-    }
-
-    const explanation = (parsed as Record<string, unknown>).explanation;
-    if (typeof explanation !== 'string' || explanation.trim().length === 0) {
-      throw new BadRequestException('Ollama khong tra ve truong explanation hop le.');
-    }
-
-    return explanation.trim();
+    // Plain text response (no JSON parsing needed since format: json was removed)
+    return this.normalizeExplanationForDisplay(raw);
   }
 
+  private resolveOllamaModel(certType: string): string {
+    const envKey = `OLLAMA_MODEL_${certType.toUpperCase().replace(/-/g, '_')}`;
+    const certSpecificModel = process.env[envKey]?.trim();
+    if (certSpecificModel && certSpecificModel.length > 0) {
+      return certSpecificModel;
+    }
+    return process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:3b';
+  }
+
+  private extractTutorAnswerFromRaw(raw: string): string {
+    const trimmed = raw.trim();
+    if (!trimmed) return '';
+
+    const decodeAnswer = (value: string): string =>
+      value.replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
+
+    const parseJsonCandidate = (candidate: string): string | null => {
+      try {
+        const parsed = JSON.parse(candidate) as unknown;
+        if (!parsed || typeof parsed !== 'object') return null;
+        const answer = (parsed as Record<string, unknown>).answer;
+        if (typeof answer !== 'string') return null;
+        const normalized = answer.trim();
+        return normalized.length > 0 ? normalized : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const directParsed = parseJsonCandidate(trimmed);
+    if (directParsed) return directParsed;
+
+    const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fencedMatch?.[1]) {
+      const fencedParsed = parseJsonCandidate(fencedMatch[1].trim());
+      if (fencedParsed) return fencedParsed;
+    }
+
+    const inlineAnswerMatch = trimmed.match(/"answer"\s*:\s*"([\s\S]*?)"/i);
+    if (inlineAnswerMatch?.[1]) {
+      return decodeAnswer(inlineAnswerMatch[1]);
+    }
+
+    // Fallback to plain text if model did not follow JSON format strictly.
+    return trimmed;
+  }
+
+  private buildTutorCachePath(cacheKey: string): string {
+    const hash = createHash('sha256').update(cacheKey).digest('hex');
+    return join(
+      process.cwd(),
+      'uploads',
+      'certificate',
+      'ai-cache',
+      'tutor',
+      `${hash}.json`,
+    );
+  }
+
+  private async readTutorCache(
+    cachePath: string,
+  ): Promise<FileCacheTutorAnswer | null> {
+    try {
+      await access(cachePath, fsConstants.F_OK);
+      const raw = await readFile(cachePath, 'utf8');
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object') return null;
+      const record = parsed as Record<string, unknown>;
+      const answer =
+        typeof record.answer === 'string' ? record.answer : undefined;
+      const model = typeof record.model === 'string' ? record.model : undefined;
+      const createdAt =
+        typeof record.created_at === 'string' ? record.created_at : undefined;
+      if (!answer || !model || !createdAt) return null;
+      return { answer, model, created_at: createdAt };
+    } catch {
+      return null;
+    }
+  }
+
+  private async writeTutorCache(
+    cachePath: string,
+    payload: FileCacheTutorAnswer,
+  ): Promise<void> {
+    await mkdir(
+      join(process.cwd(), 'uploads', 'certificate', 'ai-cache', 'tutor'),
+      {
+        recursive: true,
+      },
+    );
+    await writeFile(cachePath, JSON.stringify(payload), 'utf8');
+  }
+
+  private buildTutorPrompt(
+    certType: string,
+    dto: CertificateTutorAskDto,
+    enrollmentSummary: string,
+  ): string {
+    const hintOnly =
+      dto.question.includes('[HINT_ONLY]') ||
+      dto.learning_context?.includes('[HINT_ONLY]') === true;
+    const fullExplanation =
+      dto.question.includes('[FULL_EXPLANATION]') ||
+      dto.learning_context?.includes('[FULL_EXPLANATION]') === true;
+
+    // Strip internal tags before sending to model
+    const cleanQuestion = dto.question
+      .trim()
+      .replace(/^\[FULL_EXPLANATION\]\s*/i, '')
+      .replace(/^\[HINT_ONLY\]\s*/i, '')
+      .trim();
+
+    return buildTutorPromptFromFile({
+      certType,
+      questionText: cleanQuestion,
+      learningContext: dto.learning_context,
+      enrollmentSummary,
+      topicKey: dto.topic_key,
+      hintOnly,
+      fullExplanation,
+      concise: dto.concise,
+    });
+  }
+
+  private normalizeHintOnlyQuestionInput(dto: CertificateTutorAskDto): string {
+    const rawQuestion = dto.question.trim();
+    const sentenceMatch = rawQuestion.match(/Câu\s*hỏi:\s*([^\n\r]+)/i);
+    const selectedMatch = rawQuestion.match(
+      /Học\s*viên\s*chọn:\s*[A-D][.):-]?\s*([^\n\r]+)/i,
+    );
+
+    const sentence = sentenceMatch?.[1]?.trim() ?? '';
+    const selectedText = selectedMatch?.[1]?.trim() ?? '';
+
+    const optionMatches = Array.from(
+      (dto.learning_context ?? '').matchAll(
+        /(?:^|\n)\s*[A-D][.):-]\s*([^\n\r]+)/gi,
+      ),
+    )
+      .map((match) => match[1]?.trim() ?? '')
+      .filter((value) => value.length > 0);
+
+    const uniqueOptions = Array.from(new Set(optionMatches));
+    const alternatives = selectedText
+      ? uniqueOptions.filter(
+          (option) => option.toLowerCase() !== selectedText.toLowerCase(),
+        )
+      : uniqueOptions;
+
+    const normalizedParts: string[] = [];
+    if (sentence) {
+      normalizedParts.push(`Câu gốc: ${sentence}`);
+    }
+    if (selectedText) {
+      normalizedParts.push(`Lựa chọn học viên vừa chọn: ${selectedText}`);
+    }
+    if (alternatives.length > 0) {
+      normalizedParts.push(
+        `Các phương án còn lại (không gán chữ cái): ${alternatives.join(' | ')}`,
+      );
+    }
+
+    normalizedParts.push(
+      'Mục tiêu: giải thích vì sao lựa chọn học viên vừa chọn chưa phù hợp và gợi ý cách tự kiểm tra.',
+    );
+
+    return normalizedParts.join('\n');
+  }
+
+  private sanitizeHintOnlyLearningContext(context?: string): string {
+    if (!context) return '';
+    return context
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*[A-D][.):-]\s+/.test(line))
+      .join('\n')
+      .trim();
+  }
+
+  private extractHintQuestionSentence(dto: CertificateTutorAskDto): string {
+    const sentenceMatch = dto.question.match(/Câu\s*hỏi:\s*([^\n\r]+)/i);
+    return sentenceMatch?.[1]?.trim() ?? '';
+  }
+
+  private extractHintQuestionEvidence(sentence: string): string {
+    if (!sentence) return '';
+    const normalized = sentence.replace(/\s+/g, ' ').trim();
+    if (!normalized) return '';
+
+    const blankSnippetMatch = normalized.match(
+      /[^.!?\n\r]{0,32}_{2,}[^.!?\n\r]{0,32}/,
+    );
+    if (blankSnippetMatch?.[0]) {
+      return `"${blankSnippetMatch[0].trim()}"`;
+    }
+
+    const fallback = normalized.slice(0, 90).trim();
+    return fallback.length > 0 ? `"${fallback}"` : '';
+  }
+
+  private inferHintOnlyGrammarSignal(sentence: string): string {
+    const lowered = sentence.toLowerCase();
+
+    if (
+      /\busually\b|\boften\b|\balways\b|\bgenerally\b|\btypically\b/.test(
+        lowered,
+      )
+    ) {
+      return 'Dấu hiệu tần suất (usually/often/always) thường yêu cầu dạng động từ hiện tại đơn hoặc dạng từ phù hợp theo cấu trúc câu.';
+    }
+
+    if (/\bwill\b/.test(lowered)) {
+      return 'Sau modal "will" thường cần động từ nguyên mẫu (bare infinitive), nên cần kiểm tra dạng từ của lựa chọn.';
+    }
+
+    if (/\bsince\b|\bfor\b|\balready\b|\byet\b|\bjust\b/.test(lowered)) {
+      return 'Các dấu hiệu since/for/already/yet/just thường gắn với thì hoàn thành; hãy đối chiếu lại dạng động từ.';
+    }
+
+    if (/\bdespite\b|\bin spite of\b/.test(lowered)) {
+      return 'Sau despite/in spite of thường đi với danh từ hoặc V-ing, không đi trực tiếp với mệnh đề đầy đủ nếu thiếu liên từ phù hợp.';
+    }
+
+    if (/\beffect\b/.test(lowered)) {
+      return 'Câu có tín hiệu collocation với từ "effect"; cần kiểm tra cụm động từ đi kèm danh từ này thay vì chọn theo nghĩa rời rạc.';
+    }
+
+    if (/\bfrom\b\s+\bnext\b|\btomorrow\b|\bsoon\b/.test(lowered)) {
+      return 'Dấu hiệu thời gian tương lai (from next/tomorrow/soon) cho thấy phải đối chiếu lại thì và dạng động từ cần dùng.';
+    }
+
+    return 'Hãy soi từ đứng trước/sau chỗ trống để xác định đúng loại từ cần điền (động từ/danh từ/tính từ/trạng từ) và quan hệ ngữ nghĩa trong câu.';
+  }
+
+  private escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private redactAlternativeOptionMentions(
+    sentence: string,
+    alternativeTexts: string[],
+  ): string {
+    let redacted = sentence;
+    for (const optionText of alternativeTexts) {
+      if (optionText.length < 2) continue;
+      const pattern = new RegExp(
+        `\\b${this.escapeRegExp(optionText)}\\b`,
+        'gi',
+      );
+      redacted = redacted.replace(pattern, 'một phương án khác');
+    }
+
+    return redacted.replace(/\s{2,}/g, ' ').trim();
+  }
+
+  private buildHintOnlyFallbackAnswer(
+    dto: CertificateTutorAskDto,
+    selectedText: string,
+  ): string {
+    const sentence = this.extractHintQuestionSentence(dto);
+    const evidence = this.extractHintQuestionEvidence(sentence);
+    const grammarSignal = this.inferHintOnlyGrammarSignal(sentence);
+
+    const summary = selectedText
+      ? `Kết luận nhanh: lựa chọn "${selectedText}" hiện chưa khớp với yêu cầu của chỗ trống.`
+      : 'Kết luận nhanh: lựa chọn hiện tại chưa khớp với yêu cầu của chỗ trống.';
+
+    const evidenceLine = evidence
+      ? `Dấu hiệu trong câu: ${evidence}.`
+      : 'Hãy nhìn vào cụm từ đứng trước/sau chỗ trống để tìm dạng từ cần điền.';
+
+    return this.limitAnswerSentences(
+      [
+        summary,
+        evidenceLine,
+        grammarSignal,
+        'Đối chiếu lại vai trò ngữ pháp của từ bạn chọn trước khi thử đáp án khác.',
+      ].join(' '),
+      4,
+    );
+  }
+
+  private extractHintOptionTexts(dto: CertificateTutorAskDto): {
+    selectedText: string;
+    alternativeTexts: string[];
+  } {
+    const selectedMatch = dto.question.match(
+      /Học\s*viên\s*chọn:\s*[A-D][.):-]?\s*([^\n\r]+)/i,
+    );
+    const selectedText = selectedMatch?.[1]?.trim().toLowerCase() ?? '';
+
+    const optionMatches = Array.from(
+      (dto.learning_context ?? '').matchAll(
+        /(?:^|\n)\s*[A-D][.):-]\s*([^\n\r]+)/gi,
+      ),
+    )
+      .map((match) => (match[1] ?? '').trim().toLowerCase())
+      .filter((value) => value.length > 0);
+
+    const uniqueOptions = Array.from(new Set(optionMatches));
+    const alternativeTexts = selectedText
+      ? uniqueOptions.filter((option) => option !== selectedText)
+      : uniqueOptions;
+
+    return { selectedText, alternativeTexts };
+  }
+
+  private isHintAnswerMentioningAlternativeOption(
+    answer: string,
+    dto: CertificateTutorAskDto,
+  ): boolean {
+    const loweredAnswer = answer.toLowerCase();
+    const { alternativeTexts } = this.extractHintOptionTexts(dto);
+    return alternativeTexts.some(
+      (optionText) =>
+        optionText.length >= 2 && loweredAnswer.includes(optionText),
+    );
+  }
+
+  private limitAnswerSentences(answer: string, maxSentences: number): string {
+    if (maxSentences <= 0) return answer.trim();
+    const normalized = answer.replace(/\s+/g, ' ').trim();
+    if (!normalized) return '';
+
+    const sentences = normalized
+      .split(/(?<=[.!?])\s+/)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    if (sentences.length <= maxSentences) return normalized;
+    return sentences.slice(0, maxSentences).join(' ').trim();
+  }
+
+  private stripCjkCharacters(answer: string): string {
+    return answer
+      .replace(/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  private sanitizeTutorDisplayAnswer(answer: string): string {
+    return answer
+      .replace(/\bB[1-9]\s*[.):-]\s*/gi, '')
+      .replace(/(?:^|\n)\s*Step\s*[1-9]\s*[.):-]\s*/gi, '\n')
+      .replace(/Kết luận ngay\s*/gi, '')
+      .replace(
+        /(lựa chọn học viên hiện tại là|lựa chọn hiện tại của học viên là)\s*(đúng|sai|chưa phù hợp)\b[^.\n]*\.?/gi,
+        '',
+      )
+      .replace(
+        /Phân tích lần lượt từng phương án/gi,
+        'Phân tích từng phương án',
+      )
+      .replace(/^[ \t]+|[ \t]+$/gm, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  private sanitizeHintOnlyAnswer(
+    answer: string,
+    dto: CertificateTutorAskDto,
+  ): string {
+    const normalized = this.stripCjkCharacters(answer);
+    const { selectedText, alternativeTexts } = this.extractHintOptionTexts(dto);
+
+    const rawSentences = normalized
+      .split(/(?<=[.!?])\s+/)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    const keptSentences = rawSentences
+      .map((sentence) => {
+        const loweredSentence = sentence.toLowerCase();
+        if (this.isHintSuggestingAlternativeAnswer(loweredSentence)) {
+          return '';
+        }
+
+        const mentionsAlternative = alternativeTexts.some(
+          (optionText) =>
+            optionText.length >= 2 && loweredSentence.includes(optionText),
+        );
+
+        const rewritten = mentionsAlternative
+          ? this.redactAlternativeOptionMentions(sentence, alternativeTexts)
+          : sentence;
+
+        if (!rewritten) return '';
+        if (this.isHintOnlyLeak(rewritten)) return '';
+
+        return rewritten;
+      })
+      .filter((sentence) => sentence.length > 0);
+
+    const sanitized = this.limitAnswerSentences(keptSentences.join(' '), 3);
+    if (sanitized.length > 0) return sanitized;
+
+    return this.buildHintOnlyFallbackAnswer(dto, selectedText);
+  }
+
+  private isOverGenericHintOnlyAnswer(answer: string): boolean {
+    const lowered = answer.toLowerCase();
+    return (
+      lowered.includes('chưa phù hợp với ngữ pháp/ngữ nghĩa của chỗ trống') &&
+      lowered.includes('kiểm tra lại dạng từ')
+    );
+  }
+
+  private isLowQualityTutorAnswer(answer: string): boolean {
+    const trimmed = answer.trim();
+    // Quá ngắn (dưới 20 ký tự)
+    if (trimmed.length < 20) return true;
+    // Chỉ là một chữ cái đáp án: "A", "B.", "C:", "D -" — không có text đi kèm
+    if (/^[A-D][.):-]?\s*$/i.test(trimmed)) return true;
+    // Chỉ 1-2 từ
+    if (trimmed.split(/\s+/).filter((w) => w.length > 0).length <= 2)
+      return true;
+    return false;
+  }
+
+  private isHintOnlyLeak(answer: string): boolean {
+    const lowered = answer.toLowerCase();
+    return (
+      lowered.includes('đáp án đúng') ||
+      lowered.includes('dap an dung') ||
+      lowered.includes('đáp án là') ||
+      lowered.includes('dap an la') ||
+      lowered.includes('correct answer') ||
+      lowered.includes('the answer is') ||
+      lowered.includes('correct form') ||
+      lowered.includes('should be') ||
+      /(?:^|\s)[A-D][.):-](?:\s|$)/.test(answer)
+    );
+  }
+
+  private isHintSuggestingAlternativeAnswer(answer: string): boolean {
+    const lowered = answer.toLowerCase();
+    return (
+      lowered.includes('hãy chọn') ||
+      lowered.includes('nên chọn') ||
+      lowered.includes('chọn đáp án') ||
+      lowered.includes('chọn phương án') ||
+      lowered.includes('phương án còn lại') ||
+      lowered.includes('đổi sang') ||
+      lowered.includes('thử đáp án')
+    );
+  }
+
+  private isFallbackStyleTutorAnswer(answer: string): boolean {
+    const lowered = answer.toLowerCase();
+    return (
+      lowered.includes('fallback') ||
+      lowered.includes('chưa gọi được ai model') ||
+      lowered.includes('hệ thống ai tạm thời') ||
+      lowered.includes('chưa kết nối được ollama')
+    );
+  }
+
+  private isLikelyEnglishTutorAnswer(answer: string): boolean {
+    // Nếu có dấu tiếng Việt → chắc chắn là tiếng Việt, không reject
+    const hasVietnameseDiacritics =
+      /[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(
+        answer,
+      );
+    if (hasVietnameseDiacritics) return false;
+
+    // Không có dấu → kiểm tra xem có phải HOÀN TOÀN tiếng Anh không
+    // (tỷ lệ từ tiếng Anh > 40% mới reject, tránh reject giải thích TOEIC có chứa từ tiếng Anh)
+    const words = answer
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 0);
+    if (words.length === 0) return false;
+    const englishWords = words.filter((w) =>
+      /^[a-zA-Z''-]+$/.test(w.replace(/[.,!?;:()[\]{}""'']/g, '')),
+    );
+    return englishWords.length / words.length > 0.65;
+  }
+
+  private isFullExplanationTutorRequest(dto: CertificateTutorAskDto): boolean {
+    return (
+      dto.question.includes('[FULL_EXPLANATION]') ||
+      dto.learning_context?.includes('[FULL_EXPLANATION]') === true
+    );
+  }
+
+  private isLowQualityFullExplanationAnswer(answer: string): boolean {
+    const trimmed = answer.trim();
+    // Quá ngắn
+    if (trimmed.length < 60) return true;
+    // Kết thúc đột ngột bằng liên từ (câu bị cắt ngang)
+    const endsAbruptly = /(vì|because|do|nên|since|as)\s*$/i.test(trimmed);
+    if (endsAbruptly) return true;
+    // Phải có ít nhất thảo luận về đáp án (dùng nhiều pattern khác nhau để bắt 3b/7b)
+    const hasAnswerDiscussion =
+      /đáp\s*án/i.test(trimmed) ||
+      /câu\s*trả\s*lời/i.test(trimmed) ||
+      /correct/i.test(trimmed) ||
+      /chính\s*xác/i.test(trimmed) ||
+      /[A-D][.):-]\s/i.test(trimmed) ||
+      /phương\s*án/i.test(trimmed) ||
+      /lựa\s*chọn/i.test(trimmed);
+    return !hasAnswerDiscussion;
+  }
+
+  private isHintOnlyTutorRequest(dto: CertificateTutorAskDto): boolean {
+    return (
+      dto.question.includes('[HINT_ONLY]') ||
+      dto.learning_context?.includes('[HINT_ONLY]') === true
+    );
+  }
+
+  private shouldRejectCachedTutorAnswer(
+    answer: string,
+    dto: CertificateTutorAskDto,
+  ): boolean {
+    if (this.isLowQualityTutorAnswer(answer)) return true;
+    if (this.isFallbackStyleTutorAnswer(answer)) return true;
+    if (this.isLikelyEnglishTutorAnswer(answer)) return true;
+    if (
+      this.isFullExplanationTutorRequest(dto) &&
+      !dto.concise &&
+      this.isLowQualityFullExplanationAnswer(answer)
+    ) {
+      return true;
+    }
+    if (
+      this.isHintOnlyTutorRequest(dto) &&
+      (this.isHintOnlyLeak(answer) ||
+        this.isHintSuggestingAlternativeAnswer(answer) ||
+        this.isHintAnswerMentioningAlternativeOption(answer, dto) ||
+        this.isOverGenericHintOnlyAnswer(answer))
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  private async callOllamaTutorAnswer(
+    prompt: string,
+    model: string,
+  ): Promise<string> {
+    const baseUrl =
+      process.env.OLLAMA_BASE_URL?.trim() ||
+      'http://127.0.0.1:11434/api/generate';
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          prompt,
+          stream: false,
+          options: OLLAMA_TUTOR_OPTIONS,
+        }),
+      });
+    } catch (err: unknown) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      throw new BadRequestException(
+        isAbort
+          ? 'Ollama timeout — model phản hồi quá chậm. Thử lại sau.'
+          : 'Không thể kết nối Ollama cho trợ lý AI. Hãy kiểm tra service đang chạy.',
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+      throw new BadRequestException(
+        `Ollama trả về lỗi HTTP ${response.status}.`,
+      );
+    }
+
+    const payload = (await response.json()) as OllamaGenerateResponse;
+    const raw =
+      typeof payload.response === 'string' ? payload.response.trim() : '';
+    if (!raw) {
+      throw new BadRequestException('Ollama không trả về nội dung tư vấn.');
+    }
+
+    // Try JSON extraction first (backward compat), then fall back to plain text
+    const normalizedAnswer = this.extractTutorAnswerFromRaw(raw);
+    const finalAnswer = normalizedAnswer.length > 0 ? normalizedAnswer : raw;
+
+    // Chỉ reject khi hoàn toàn rỗng — không reject dựa trên quality/ngôn ngữ
+    // (các check này đã từng gây reject nhầm với qwen2.5:3b)
+    if (finalAnswer.trim().length < 5) {
+      throw new BadRequestException('Ollama trả về nội dung rỗng.');
+    }
+
+    return finalAnswer.trim();
+  }
+
+  private buildTutorFallbackAnswer(dto: CertificateTutorAskDto): string {
+    const hintOnly =
+      dto.question.includes('[HINT_ONLY]') ||
+      dto.learning_context?.includes('[HINT_ONLY]') === true;
+    return buildTutorFallback(hintOnly, dto.concise ?? false);
+  }
+
+  async askCertificateTutor(
+    accountId: number,
+    dto: CertificateTutorAskDto,
+  ): Promise<CertificateTutorAskResponseDto> {
+    const certType = dto.cert_type.trim().toLowerCase();
+    if (!CERT_TUTOR_ALLOWED_CERT_TYPES.has(certType)) {
+      throw new BadRequestException(
+        'cert_type không được hỗ trợ cho trợ lý AI.',
+      );
+    }
+
+    const studentId = await this.getStudentId(accountId);
+    const enrollment = await this.prisma.certificateEnrollment.findFirst({
+      where: {
+        student_id: studentId,
+        cert_type: certType,
+        status: 'active',
+      },
+      select: {
+        current_score: true,
+        target_score: true,
+        progress_percent: true,
+      },
+      orderBy: { enrolled_at: 'desc' },
+    });
+
+    const enrollmentSummary = enrollment
+      ? `Tiến độ hiện tại: progress=${enrollment.progress_percent}%, current_score=${enrollment.current_score ?? 0}, target_score=${enrollment.target_score ?? 0}.`
+      : 'Học viên chưa có enrollment active cho chứng chỉ này.';
+
+    const model = this.resolveOllamaModel(certType);
+    const basePrompt = this.buildTutorPrompt(certType, dto, enrollmentSummary);
+    const hintOnlyMode = this.isHintOnlyTutorRequest(dto);
+
+    const cacheKey = [
+      CERT_TUTOR_PROMPT_VERSION,
+      certType,
+      dto.topic_key?.trim() ?? '',
+      dto.learning_context?.trim() ?? '',
+      dto.question.trim(),
+      String(Boolean(dto.concise)),
+      `hint_only=${String(hintOnlyMode)}`,
+      model,
+    ].join('|');
+    const cachePath = this.buildTutorCachePath(cacheKey);
+
+    // ── 1. DB cache (ToeicNodeQuestionCache) — nhanh nhất, persist qua restart ──
+    const dbTopicKey = dto.topic_key?.trim() ?? '';
+    if (dbTopicKey.length > 0) {
+      const dbCached = await this.prisma.toeicNodeQuestionCache.findUnique({
+        where: { topic_key: dbTopicKey },
+      });
+      if (dbCached && dbCached.ai_answer.trim().length > 24) {
+        const cleaned = this.sanitizeTutorDisplayAnswer(dbCached.ai_answer);
+        const dbAnswer = cleaned.length > 0 ? cleaned : dbCached.ai_answer;
+        if (!this.shouldRejectCachedTutorAnswer(dbAnswer, dto)) {
+          return {
+            cert_type: certType,
+            answer: dbAnswer,
+            model: dbCached.model,
+            source: 'cache',
+          };
+        }
+
+        // Cache cũ chất lượng thấp/stale -> xoá để lần gọi hiện tại regenerate.
+        void this.prisma.toeicNodeQuestionCache
+          .delete({ where: { topic_key: dbTopicKey } })
+          .catch(() => {});
+      }
+    }
+
+    // ── 2. File cache — secondary (backward-compatible) ─────────────────────
+    const cached = await this.readTutorCache(cachePath);
+
+    if (cached) {
+      const cleanedCachedAnswer = this.sanitizeTutorDisplayAnswer(
+        cached.answer,
+      );
+      const cachedAnswer =
+        cleanedCachedAnswer.length > 0 ? cleanedCachedAnswer : cached.answer;
+
+      if (this.shouldRejectCachedTutorAnswer(cachedAnswer, dto)) {
+        // Bỏ qua file cache kém chất lượng để thử sinh lại từ model.
+      } else {
+        // Đưa file-cache lên DB để lần sau dùng DB (nếu có topic_key)
+        if (dbTopicKey.length > 0) {
+          void this.prisma.toeicNodeQuestionCache
+            .upsert({
+              where: { topic_key: dbTopicKey },
+              update: { ai_answer: cachedAnswer, model: cached.model },
+              create: {
+                topic_key: dbTopicKey,
+                cert_type: certType,
+                ai_answer: cachedAnswer,
+                model: cached.model,
+              },
+            })
+            .catch(() => {});
+        }
+        return {
+          cert_type: certType,
+          answer: cachedAnswer,
+          model: cached.model,
+          source: 'cache',
+        };
+      }
+    }
+
+    // Attempt to get answer from Ollama — single attempt, no quality-based retry
+    // (quality retries caused 15-24s waits; cache handles deduplication)
+    try {
+      let answer = await this.callOllamaTutorAnswer(basePrompt, model);
+      answer = this.sanitizeTutorDisplayAnswer(answer);
+
+      if (
+        answer.length === 0 ||
+        this.isFallbackStyleTutorAnswer(answer) ||
+        this.shouldRejectCachedTutorAnswer(answer, dto)
+      ) {
+        throw new Error('Empty, fallback-style, or low-quality answer');
+      }
+
+      // Persist to file cache and DB
+      await this.writeTutorCache(cachePath, {
+        answer,
+        model,
+        created_at: new Date().toISOString(),
+      });
+
+      if (dbTopicKey.length > 0) {
+        void this.prisma.toeicNodeQuestionCache
+          .upsert({
+            where: { topic_key: dbTopicKey },
+            update: { ai_answer: answer, model },
+            create: {
+              topic_key: dbTopicKey,
+              cert_type: certType,
+              ai_answer: answer,
+              model,
+            },
+          })
+          .catch(() => {});
+      }
+
+      return {
+        cert_type: certType,
+        answer,
+        model,
+        source: 'ollama',
+      };
+    } catch {
+      // Ollama failed or returned unusable content → return fallback
+    }
+
+    const fallback = this.buildTutorFallbackAnswer(dto);
+    return {
+      cert_type: certType,
+      answer: fallback,
+      model,
+      source: 'fallback',
+    };
+  }
+
+  // ─── Item-level cache key (không phụ thuộc vào option được chọn) ──────────
+  private buildItemLevelCacheKey(
+    itemId: number,
+    updatedAt: Date,
+    slug: string,
+    model: string,
+  ): string {
+    return [
+      'explain',
+      slug,
+      String(itemId),
+      updatedAt.toISOString(),
+      model,
+    ].join('|');
+  }
+
+  // ─── Prompt giải thích đủ 4 đáp án, tối ưu cho tốc độ ────────────────────
+  private buildFullExplanationPrompt(item: {
+    stem: string;
+    reading_passage: string | null;
+    explanation: string | null;
+    options: Array<{
+      option_key: string;
+      option_text: string;
+      is_correct: boolean;
+    }>;
+  }): string {
+    return buildExplanationPrompt({
+      stem: item.stem,
+      readingPassage: item.reading_passage,
+      options: item.options,
+      baseExplanation: item.explanation,
+    });
+  }
+
+  private normalizeExplanationForDisplay(raw: string): string {
+    const compact = raw
+      .replace(/\r\n/g, '\n')
+      .replace(/\u00A0/g, ' ')
+      .trim();
+    if (!compact) return '';
+
+    let formatted = compact
+      .replace(/\s*(Đáp án đúng\s*[:：-])/gi, '\n\n$1')
+      .replace(
+        /\s*((?:Phương án|Lựa chọn|Đáp án)\s*[A-D]\s*[:：-])/gi,
+        '\n\n$1',
+      )
+      .replace(/\s*([A-D][).:-]\s)/g, '\n\n$1')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/^\n+/, '')
+      .trim();
+
+    if (!formatted.includes('\n\n')) {
+      const sentences = formatted
+        .replace(/([.!?])\s+/g, '$1\n\n')
+        .split('\n\n')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (sentences.length >= 4) {
+        formatted = sentences.join('\n\n');
+      }
+    }
+
+    return formatted;
+  }
+
+  private getOrCreateInFlightExplanation(
+    cacheKey: string,
+    factory: () => Promise<string>,
+  ): Promise<string> {
+    const existing = this.inFlightExplanationGenerations.get(cacheKey);
+    if (existing) return existing;
+
+    const task = (async () => {
+      try {
+        return await factory();
+      } finally {
+        this.inFlightExplanationGenerations.delete(cacheKey);
+      }
+    })();
+
+    this.inFlightExplanationGenerations.set(cacheKey, task);
+    return task;
+  }
+
+  private async persistGeneratedExplanation(
+    itemId: number,
+    explanation: string,
+    cachePath: string,
+    model: string,
+  ): Promise<void> {
+    await Promise.all([
+      this.prisma.learningRepositoryItem
+        .update({
+          where: { id: itemId },
+          data: { ai_explanation: explanation },
+        })
+        .catch(() => {}),
+      this.writeExplanationCache(cachePath, {
+        explanation,
+        model,
+        created_at: new Date().toISOString(),
+      }),
+    ]);
+  }
+
+  private triggerToeicLookaheadPrefetch(
+    repositoryId: number,
+    currentItemOrder: number,
+    slug: string,
+  ): void {
+    void (async () => {
+      const nextItems = await this.prisma.learningRepositoryItem.findMany({
+        where: {
+          repository_id: repositoryId,
+          item_order: { gt: currentItemOrder },
+        },
+        orderBy: { item_order: 'asc' },
+        take: TOEIC_LOOKAHEAD_PREFETCH_COUNT,
+        select: {
+          id: true,
+          updated_at: true,
+          stem: true,
+          reading_passage: true,
+          explanation: true,
+          ai_explanation: true,
+          options: {
+            orderBy: { sort_order: 'asc' },
+            select: {
+              option_key: true,
+              option_text: true,
+              is_correct: true,
+            },
+          },
+        },
+      });
+
+      for (
+        let i = 0;
+        i < nextItems.length;
+        i += TOEIC_LOOKAHEAD_PREFETCH_BATCH_SIZE
+      ) {
+        const batch = nextItems.slice(
+          i,
+          i + TOEIC_LOOKAHEAD_PREFETCH_BATCH_SIZE,
+        );
+        await Promise.all(
+          batch.map((nextItem) => this.prefetchItemExplanation(nextItem, slug)),
+        );
+      }
+    })().catch(() => {});
+  }
+
+  // ─── Prefetch: được gọi bởi ToeicExplanationPrefetchService ───────────────
+  async prefetchItemExplanation(
+    item: {
+      id: number;
+      updated_at: Date;
+      stem: string;
+      reading_passage: string | null;
+      explanation: string | null;
+      ai_explanation?: string | null; // DB cache field — optional (Prisma client may not yet have this field)
+      options: Array<{
+        option_key: string;
+        option_text: string;
+        is_correct: boolean;
+      }>;
+    },
+    slug: string,
+  ): Promise<void> {
+    // Bỏ qua câu hỏi chưa có đáp án đúng
+    if (!item.options.some((o) => o.is_correct)) return;
+
+    // ── 1. Đã có DB cache → bỏ qua hoàn toàn ────────────────────────────
+    const dbExisting = (item as { ai_explanation?: string | null })
+      .ai_explanation;
+    if (dbExisting && dbExisting.trim().length > 20) return;
+
+    const model = this.resolveOllamaModel('toeic');
+    const cacheKey = this.buildItemLevelCacheKey(
+      item.id,
+      item.updated_at,
+      slug,
+      model,
+    );
+    const cachePath = this.buildExplanationCachePath(cacheKey);
+
+    // ── 2. Đã có file cache → đưa lên DB rồi bỏ qua ─────────────────────
+    const fileCached = await this.readExplanationCache(cachePath);
+    if (fileCached) {
+      const normalized = this.normalizeExplanationForDisplay(
+        fileCached.explanation,
+      );
+      void this.prisma.learningRepositoryItem
+        .update({
+          where: { id: item.id },
+          data: { ai_explanation: normalized || fileCached.explanation },
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // ── 3. Chưa có cache → gọi Ollama → lưu cả DB lẫn file ──────────────
+    const prompt = this.buildFullExplanationPrompt(item);
+    try {
+      const explanation = await this.getOrCreateInFlightExplanation(
+        cacheKey,
+        async () => {
+          const generated = await this.callOllamaExplanation(prompt, model);
+          return this.normalizeExplanationForDisplay(generated);
+        },
+      );
+      await this.persistGeneratedExplanation(
+        item.id,
+        explanation,
+        cachePath,
+        model,
+      );
+    } catch {
+      // Lỗi prefetch → im lặng, để request thật sẽ tạo lại sau
+    }
+  }
+
+  // ─── API chính: chỉ trả explanation khi user chọn đúng ───────────────────
   async explainToeicAnswerWithOllama(
     accountId: number,
     slug: string,
@@ -2168,102 +2476,154 @@ export class CertificateEnrollmentService {
       },
     });
 
-    if (!item || item.repository.slug !== slug || item.repository.cert_type !== 'toeic') {
-      throw new NotFoundException('Khong tim thay cau hoi TOEIC de giai thich.');
+    if (
+      !item ||
+      item.repository.slug !== slug ||
+      item.repository.cert_type !== 'toeic'
+    ) {
+      throw new NotFoundException(
+        'Không tìm thấy câu hỏi TOEIC để giải thích.',
+      );
     }
 
     const selectedOption = item.options.find(
       (option) => Number(option.id) === Number(dto.selected_option_id),
     );
     if (!selectedOption) {
-      throw new BadRequestException('selected_option_id khong thuoc cau hoi nay.');
+      throw new BadRequestException(
+        'selected_option_id không thuộc câu hỏi này.',
+      );
     }
 
     const correctOption = item.options.find((option) => option.is_correct);
     if (!correctOption) {
-      throw new BadRequestException('Cau hoi chua cau hinh dap an dung.');
+      throw new BadRequestException('Câu hỏi chưa cấu hình đáp án đúng.');
     }
 
-    const model = process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:7b-instruct';
-    const cacheKey = [
+    // Ưu tiên prefetch vài câu kế tiếp theo ngữ cảnh người dùng, không chặn response.
+    this.triggerToeicLookaheadPrefetch(
+      item.repository_id,
+      item.item_order,
       slug,
-      String(item.id),
-      String(selectedOption.id),
-      item.updated_at.toISOString(),
-      model,
-    ].join('|');
-    const cachePath = this.buildExplanationCachePath(cacheKey);
-    const cached = await this.readExplanationCache(cachePath);
+    );
 
-    if (cached) {
+    const isCorrect = Number(selectedOption.id) === Number(correctOption.id);
+
+    // ── Nếu chọn sai → không trả explanation, tiết kiệm hoàn toàn Ollama ──
+    if (!isCorrect) {
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
-        is_correct: selectedOption.id === correctOption.id,
-        explanation: cached.explanation,
+        is_correct: false,
+        explanation: null,
+        model: this.resolveOllamaModel('toeic'),
+        source: 'skipped',
+      };
+    }
+
+    // ── User chọn đúng → trả explanation đủ 4 đáp án ──────────────────────
+    const model = this.resolveOllamaModel('toeic');
+
+    // ── 1. DB cache (ai_explanation trên item) — nhanh nhất ──────────────
+    if (item.ai_explanation && item.ai_explanation.trim().length > 20) {
+      const normalized = this.normalizeExplanationForDisplay(
+        item.ai_explanation,
+      );
+      return {
+        item_id: item.id,
+        selected_option_id: selectedOption.id,
+        correct_option_id: correctOption.id,
+        is_correct: true,
+        explanation: normalized || item.ai_explanation,
+        model,
+        source: 'cache',
+      };
+    }
+
+    // ── 2. File cache — secondary ─────────────────────────────────────────
+    const cacheKey = this.buildItemLevelCacheKey(
+      item.id,
+      item.updated_at,
+      slug,
+      model,
+    );
+    const cachePath = this.buildExplanationCachePath(cacheKey);
+    const cached = await this.readExplanationCache(cachePath);
+
+    if (cached) {
+      const normalized = this.normalizeExplanationForDisplay(
+        cached.explanation,
+      );
+      // Đưa file-cache lên DB để lần sau dùng DB
+      void this.prisma.learningRepositoryItem
+        .update({
+          where: { id: item.id },
+          data: { ai_explanation: normalized || cached.explanation },
+        })
+        .catch(() => {});
+      return {
+        item_id: item.id,
+        selected_option_id: selectedOption.id,
+        correct_option_id: correctOption.id,
+        is_correct: true,
+        explanation: normalized || cached.explanation,
         model: cached.model,
         source: 'cache',
       };
     }
 
-    const optionLines = item.options
-      .map((option) => `${option.option_key}. ${option.option_text}`)
-      .join('\n');
-
-    const prompt = [
-      'Ban la tro ly hoc TOEIC. Hay giai thich ngan gon, de hieu cho hoc vien.',
-      'Chi dua vao du lieu cung cap, khong duoc bịa them thong tin ben ngoai.',
-      'Tra ve DUY NHAT JSON co truong: {"explanation":"..."}.',
-      `Cau hoi: ${item.stem}`,
-      item.reading_passage ? `Doan van: ${item.reading_passage}` : '',
-      `Lua chon:\n${optionLines}`,
-      `Hoc vien chon: ${selectedOption.option_key}. ${selectedOption.option_text}`,
-      `Dap an dung: ${correctOption.option_key}. ${correctOption.option_text}`,
-      item.explanation ? `Giai thich nen tang (neu co): ${item.explanation}` : '',
-      'Yeu cau: neu hoc vien sai, noi ro vi sao dap an hoc vien sai va vi sao dap an dung chinh xac.',
-    ]
-      .filter((line) => line.length > 0)
-      .join('\n\n');
+    // Chưa có cache → gọi Ollama
+    const prompt = this.buildFullExplanationPrompt({
+      stem: item.stem,
+      reading_passage: item.reading_passage,
+      explanation: item.explanation,
+      options: item.options,
+    });
 
     try {
-      const explanation = await this.callOllamaExplanation(prompt, model);
-      await this.writeExplanationCache(cachePath, {
+      const explanation = await this.getOrCreateInFlightExplanation(
+        cacheKey,
+        async () => {
+          const generated = await this.callOllamaExplanation(prompt, model);
+          return this.normalizeExplanationForDisplay(generated);
+        },
+      );
+
+      await this.persistGeneratedExplanation(
+        item.id,
         explanation,
+        cachePath,
         model,
-        created_at: new Date().toISOString(),
-      });
+      );
 
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
-        is_correct: selectedOption.id === correctOption.id,
+        is_correct: true,
         explanation,
         model,
         source: 'ollama',
       };
     } catch {
+      // Fallback khi Ollama lỗi
       const fallback = this.buildFallbackExplanation(
         item.stem,
         selectedOption.option_text,
         correctOption.option_text,
-        selectedOption.id === correctOption.id,
+        true,
         item.explanation,
       );
+      const normalizedFallback = this.normalizeExplanationForDisplay(fallback);
 
-      await this.writeExplanationCache(cachePath, {
-        explanation: fallback,
-        model,
-        created_at: new Date().toISOString(),
-      });
-
+      // Không cache fallback để lần sau vẫn thử lại Ollama
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
-        is_correct: selectedOption.id === correctOption.id,
-        explanation: fallback,
+        is_correct: true,
+        explanation: normalizedFallback || fallback,
         model,
         source: 'fallback',
       };
@@ -2274,7 +2634,6 @@ export class CertificateEnrollmentService {
     accountId: number,
   ): Promise<ToeicRepositoryOverviewResponseDto> {
     const studentId = await this.getStudentId(accountId);
-    await this.ensureToeicRepositorySeedData();
 
     const enrollment = await this.prisma.certificateEnrollment.findFirst({
       where: { student_id: studentId, cert_type: 'toeic', status: 'active' },
@@ -2362,7 +2721,6 @@ export class CertificateEnrollmentService {
     slug: string,
   ): Promise<ToeicRepositoryDetailResponseDto> {
     await this.getStudentId(accountId);
-    await this.ensureToeicRepositorySeedData();
 
     const repo: ToeicRepositoryWithItems | null =
       await this.prisma.learningRepository.findUnique({
@@ -2406,11 +2764,7 @@ export class CertificateEnrollmentService {
         title: item.title ?? null,
         stem: String(item.stem),
         reading_passage: item.reading_passage ?? null,
-        media_audio_url:
-          item.media_audio_url ??
-          (repo.skill_area === 'listening'
-            ? '/sounds/pomodoro/start.mp3'
-            : null),
+        media_audio_url: item.media_audio_url ?? null,
         estimated_seconds: item.estimated_seconds ?? null,
         score_weight: Number(item.score_weight ?? 1),
         options: (item.options ?? []).map((opt) => ({
@@ -2432,7 +2786,6 @@ export class CertificateEnrollmentService {
     dto: ToeicRepositorySubmitDto,
   ): Promise<ToeicRepositorySubmitResponseDto> {
     const studentId = await this.getStudentId(accountId);
-    await this.ensureToeicRepositorySeedData();
 
     const repository: ToeicRepositoryWithItemsForSubmit | null =
       await this.prisma.learningRepository.findUnique({

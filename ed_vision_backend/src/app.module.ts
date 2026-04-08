@@ -28,9 +28,20 @@ import { ChatModule } from './mongodb/chat.module';
 import { ReminderSchedulerService } from './admin_be/notification/reminder-scheduler.service';
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
+import { existsSync } from 'fs';
 import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
 import { TtsModule } from './tts/tts.module';
 import { SttModule } from './stt/stt.module';
+
+function resolveI18nPath(): string {
+  const candidatePaths = [
+    path.join(process.cwd(), 'src', 'i18n'),
+    path.join(__dirname, 'i18n'),
+  ];
+
+  const found = candidatePaths.find((candidatePath) => existsSync(candidatePath));
+  return found ?? path.join(process.cwd(), 'src', 'i18n');
+}
 
 @Module({
   imports: [
@@ -40,7 +51,7 @@ import { SttModule } from './stt/stt.module';
     I18nModule.forRoot({
       fallbackLanguage: 'vi',
       loaderOptions: {
-        path: path.join(__dirname, '/i18n/'),
+        path: resolveI18nPath(),
         watch: true,
       },
       resolvers: [AcceptLanguageResolver],

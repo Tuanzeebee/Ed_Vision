@@ -15,7 +15,10 @@ import {
   UploadedFile,
   UploadedFiles,
 } from '@nestjs/common';
-import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -39,6 +42,8 @@ import {
   ToeicManualListeningCreateResponseDto,
   ToeicExplainAnswerDto,
   ToeicExplainAnswerResponseDto,
+  CertificateTutorAskDto,
+  CertificateTutorAskResponseDto,
 } from './dto/certificate.dto';
 
 type AuthenticatedRequest = ExpressRequest & {
@@ -250,7 +255,11 @@ export class CertificateEnrollmentController {
   ): Promise<ToeicManualListeningCreateResponseDto> {
     const audioFile = files.audio?.[0];
     const imageFile = files.image?.[0];
-    return this.service.createToeicListeningManualItem(dto, audioFile, imageFile);
+    return this.service.createToeicListeningManualItem(
+      dto,
+      audioFile,
+      imageFile,
+    );
   }
 
   /**
@@ -268,5 +277,17 @@ export class CertificateEnrollmentController {
       slug,
       dto,
     );
+  }
+
+  /**
+   * POST /student/certificate/ai-tutor/ask
+   * Shared AI tutor endpoint for all certificate types.
+   */
+  @Post('ai-tutor/ask')
+  async askCertificateTutor(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CertificateTutorAskDto,
+  ): Promise<CertificateTutorAskResponseDto> {
+    return this.service.askCertificateTutor(req.user.account_id, dto);
   }
 }
