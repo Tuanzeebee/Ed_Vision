@@ -14,8 +14,6 @@ import {
   Star,
   Ear,
   BookOpen,
-  Ear,
-  BookOpen,
   MessageCircle,
   PlayCircle,
   Library,
@@ -883,7 +881,6 @@ export default function CertificateDetail() {
                 <div className="lg:col-span-2 space-y-5">
                   {/* Roadmap */}
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                     <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2">
                       <BarChart2 className="w-4 h-4 text-purple-500" />
                       Lộ trình học
@@ -892,7 +889,6 @@ export default function CertificateDetail() {
                   </div>
 
                   {/* Practice Tests */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -1005,7 +1001,6 @@ export default function CertificateDetail() {
                   )}
 
                   {/* Community Discussions */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                       <MessageCircle className="w-4 h-4 text-purple-500" />

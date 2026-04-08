@@ -89,6 +89,7 @@ import ToeicNodePracticePage from "./modules/student/ToeicNodePracticePage";
 import ToeicFoundationStudyPage from "./modules/student/ToeicFoundationStudyPage";
 import ToeicExamSimulationPage from "./modules/student/ToeicExamSimulationPage";
 
+
 function App() {
   // Initialize permissions on app startup
   useEffect(() => {
@@ -145,7 +146,10 @@ function App() {
                                                 <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
                                                 <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
                                                 <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
-                                                <Route path="certificate-review/:certId/lesson/:topicKey" element={<ProtectedRoute permission="student_course_overview"><CertificateLessonPage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/foundation/:tab" element={<ProtectedRoute permission="student_course_overview"><ToeicFoundationStudyPage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/exam/:examType" element={<ProtectedRoute permission="student_course_overview"><ToeicExamSimulationPage /></ProtectedRoute>} />
                                         </Route>
 
                                         {/* Route cho parent */}
@@ -226,6 +230,9 @@ function App() {
                                         <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><RequireInputSurvey><StudentProfilePage /></RequireInputSurvey></ProtectedRoute>} />
                                         <Route path="/parent/profile" element={<ProtectedRoute permission="parent_profile"><ParentProfilePage /></ProtectedRoute>} />
                                         <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_profile"><TeacherProfilePage /></ProtectedRoute>} />
+
+                                        {/* Global fallback */}
+                                        <Route path="*" element={<Navigate to="/student/landing" replace />} />
 
                                 </Routes>
                         </Router>

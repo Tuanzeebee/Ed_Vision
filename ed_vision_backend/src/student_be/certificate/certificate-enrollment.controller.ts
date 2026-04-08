@@ -14,9 +14,6 @@ import {
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
-  UseInterceptors,
-  UploadedFile,
-  UploadedFiles,
 } from '@nestjs/common';
 import {
   FileFieldsInterceptor,
@@ -70,27 +67,6 @@ const certificateMulterStorage = diskStorage({
   },
 });
 
-type AuthenticatedRequest = ExpressRequest & {
-  user: {
-    account_id: number;
-  };
-};
-
-const certificateMulterStorage = diskStorage({
-  destination: (req, file, cb) => {
-    const destinationPath = './uploads/certificate';
-    if (!existsSync(destinationPath)) {
-      mkdirSync(destinationPath, { recursive: true });
-    }
-    cb(null, destinationPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
-  },
-});
-
 @Controller('student/certificate')
 @UseGuards(DevAuthGuard)
 export class CertificateEnrollmentController {
@@ -102,7 +78,6 @@ export class CertificateEnrollmentController {
    */
   @Get('enrollment')
   async getEnrollment(
-    @Request() req: AuthenticatedRequest,
     @Request() req: AuthenticatedRequest,
     @Query('certType') certType: string,
   ): Promise<EnrollmentResponseDto | null> {
@@ -117,9 +92,6 @@ export class CertificateEnrollmentController {
   async getAllEnrollments(
     @Request() req: AuthenticatedRequest,
   ): Promise<EnrollmentResponseDto[]> {
-  async getAllEnrollments(
-    @Request() req: AuthenticatedRequest,
-  ): Promise<EnrollmentResponseDto[]> {
     return this.service.getAllEnrollments(req.user.account_id);
   }
 
@@ -130,7 +102,6 @@ export class CertificateEnrollmentController {
   @Post('enroll')
   @HttpCode(HttpStatus.CREATED)
   async createEnrollment(
-    @Request() req: AuthenticatedRequest,
     @Request() req: AuthenticatedRequest,
     @Body() dto: CreateEnrollmentDto,
   ): Promise<EnrollmentResponseDto> {
@@ -144,7 +115,6 @@ export class CertificateEnrollmentController {
   @Patch('enrollment/:id/complete-topic')
   async completeTopic(
     @Request() req: AuthenticatedRequest,
-    @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) enrollmentId: number,
     @Body() dto: CompleteTopicDto,
   ): Promise<EnrollmentResponseDto> {
@@ -157,7 +127,6 @@ export class CertificateEnrollmentController {
    */
   @Patch('enrollment/:id/complete')
   async completeBand(
-    @Request() req: AuthenticatedRequest,
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) enrollmentId: number,
   ): Promise<EnrollmentResponseDto> {
