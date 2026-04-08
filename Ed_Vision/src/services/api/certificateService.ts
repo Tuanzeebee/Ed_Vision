@@ -7,7 +7,6 @@ import apiClient from "./apiClient";
 export interface CreateEnrollmentDto {
   cert_type: string;
   target_score?: number;
-  target_score?: number;
 }
 
 export interface CompleteTopicDto {
@@ -57,6 +56,50 @@ export interface ToeicLeaderboardEntry {
   score: number;
   streak: number;
   isCurrentUser: boolean;
+}
+
+export interface ToeicRepositoryOptionResponse {
+  id: number;
+  option_key: "A" | "B" | "C" | "D";
+  option_text: string;
+  is_correct: boolean;
+  rationale?: string | null;
+}
+
+export interface ToeicRepositoryDetailResponse {
+  repository_id: number;
+  slug: string;
+  title: string;
+  description?: string | null;
+  skill_area: "listening" | "reading";
+  total_items: number;
+  pass_score: number;
+  items: Array<{
+    id: number;
+    title?: string | null;
+    stem?: string | null;
+    reading_passage?: string | null;
+    media_audio_url?: string | null;
+    explanation?: string | null;
+    score_weight?: number | null;
+    estimated_seconds?: number | null;
+    options: ToeicRepositoryOptionResponse[];
+  }>;
+}
+
+export interface ToeicExplainAnswerPayload {
+  item_id: number;
+  selected_option_id: number;
+}
+
+export interface ToeicExplainAnswerResponse {
+  item_id: number;
+  selected_option_id: number;
+  correct_option_id: number;
+  is_correct: boolean;
+  explanation: string;
+  model: string;
+  source: "cache" | "ollama" | "fallback";
 }
 
 export interface CertificateTutorAskPayload {
@@ -153,6 +196,17 @@ export async function getToeicLeaderboard(
     `/student/certificate/toeic-leaderboard?limit=${limit}`,
   );
   return Array.isArray(res.data) ? res.data : [];
+}
+
+export async function explainToeicAnswer(
+  slug: string,
+  payload: ToeicExplainAnswerPayload,
+): Promise<ToeicExplainAnswerResponse> {
+  const res = await apiClient.post<ToeicExplainAnswerResponse>(
+    `/student/certificate/toeic-repository/${encodeURIComponent(slug)}/explain-answer`,
+    payload,
+  );
+  return res.data;
 }
 
 export async function askCertificateTutor(
