@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { buildSocketUrl } from '@/services/api/config';
 
 class SocketService {
     private socket: Socket | null = null;
@@ -14,7 +15,7 @@ class SocketService {
         }
 
         this.connectPromise = new Promise((resolve, reject) => {
-            this.socket = io('http://localhost:3000', {
+            this.socket = io(buildSocketUrl(), {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionDelay: 1000,

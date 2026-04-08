@@ -5,7 +5,7 @@ import EditProfileModal from "./EditProfileModal";
 import EditAcademicInfoModal from "./EditAcademicInfoModal";
 import Header from "@/components/layout/Header";
 import { useEffect, useState } from "react";
-import { buildUrl } from "@/services/api/config";
+import { buildAssetUrl, buildUrl } from "@/services/api/config";
 import { TokenManager } from "@/lib/tokenManager";
 import { useTranslation } from 'react-i18next';
 
@@ -216,7 +216,7 @@ export default function StudentProfilePage({}: Props) {
   const getFullAvatarUrl = (url: string | null | undefined): string => {
     if (!url) return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop";
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `http://localhost:3000${url}`;
+    return buildAssetUrl(url);
   };
   
   const mappedUser = {

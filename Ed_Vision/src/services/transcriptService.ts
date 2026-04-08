@@ -1,8 +1,8 @@
 import axios from 'axios';
 import cacheService from '@/services/cacheService'
 import { TokenManager } from '@/lib/tokenManager'
+import { API_BASE_URL } from '@/services/api/config'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 const CACHE_TTL = {
   GPA: 3 * 60 * 1000,
   PROJECTED_GPA: 3 * 60 * 1000,

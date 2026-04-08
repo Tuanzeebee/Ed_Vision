@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Minus, Plus, Copy, Image as ImageIcon, Users } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import toast from 'react-hot-toast'
+import {
+  getStudyRoomErrorMessage,
+  studyRoomService,
+  type StudyRoomMode,
+  type StudyRoomSummary,
+} from '@/services/student/studyRoomService'
 
 export default function CreateRoomView() {
   const [roomTitle, setRoomTitle] = useState('Computer Science 101')
@@ -8,8 +15,14 @@ export default function CreateRoomView() {
   const [roomDescription, setRoomDescription] = useState('Learn the fundamentals of programming with hands-on exercises.')
   const [coverUrl, setCoverUrl] = useState('https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=400&h=225&fit=crop')
   const [maxParticipants, setMaxParticipants] = useState(30)
+  const [roomMode, setRoomMode] = useState<StudyRoomMode>('video')
+  const [isPublic, setIsPublic] = useState(true)
+  const [roomPassword, setRoomPassword] = useState('')
   const [selectedGradient, setSelectedGradient] = useState('gradient-overlay')
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [createdRoom, setCreatedRoom] = useState<StudyRoomSummary | null>(null)
 
   const gradients = [
     { value: 'gradient-overlay', class: 'bg-gradient-to-br from-blue-500/80 to-purple-600/80' },
@@ -37,6 +50,77 @@ export default function CreateRoomView() {
   const getGradientClass = (gradientValue: string) => {
     const gradient = gradients.find(g => g.value === gradientValue)
     return gradient ? gradient.class : gradients[0].class
+  }
+
+  const handleCreateRoom = async () => {
+    const normalizedTitle = roomTitle.trim()
+    const normalizedCoverUrl = coverUrl.trim()
+    const normalizedPassword = roomPassword.trim()
+
+    if (!normalizedTitle) {
+      setSubmitError('Room title is required')
+      return
+    }
+
+    if (normalizedTitle.length > 255) {
+      setSubmitError('Room title exceeds 255 characters')
+      return
+    }
+
+    if (normalizedCoverUrl.length > 500) {
+      setSubmitError('Cover URL exceeds 500 characters')
+      return
+    }
+
+    if (normalizedPassword.length > 120) {
+      setSubmitError('Password exceeds 120 characters')
+      return
+    }
+
+    if (maxParticipants < 2 || maxParticipants > 100) {
+      setSubmitError('Max participants must be between 2 and 100')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      setSubmitError(null)
+
+      const response = await studyRoomService.createStudyRoom({
+        title: normalizedTitle,
+        roomMode,
+        maxParticipants,
+        password: normalizedPassword || undefined,
+        coverType: 'image',
+        coverUrl: normalizedCoverUrl || undefined,
+        isPublic,
+      })
+
+      setCreatedRoom(response)
+      toast.success(`Room created: ${response.title}`)
+    } catch (error) {
+      const message = getStudyRoomErrorMessage(error, 'Failed to create room')
+      setSubmitError(message)
+      toast.error(message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSaveDraft = () => {
+    toast.success('Draft saved locally')
+  }
+
+  const handleCancel = () => {
+    setRoomTitle('Computer Science 101')
+    setRoomSubtitle('Programming Basics · Prof. Lee')
+    setRoomDescription('Learn the fundamentals of programming with hands-on exercises.')
+    setCoverUrl('https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=400&h=225&fit=crop')
+    setMaxParticipants(30)
+    setRoomMode('video')
+    setIsPublic(true)
+    setRoomPassword('')
+    setSubmitError(null)
   }
 
   return (
@@ -95,6 +179,20 @@ export default function CreateRoomView() {
                 <option value="other">Other</option>
               </select>
             </div>
+
+            {/* Room Mode */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Room Mode</label>
+              <select
+                value={roomMode}
+                onChange={(event) => setRoomMode(event.target.value as StudyRoomMode)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+                <option value="focus">Focus</option>
+              </select>
+            </div>
             
             {/* Cover Image */}
             <div>
@@ -142,17 +240,36 @@ export default function CreateRoomView() {
               <div className="flex bg-gray-100 rounded-2xl p-1">
                 <button 
                   type="button"
-                  className="flex-1 px-4 py-2 text-sm font-medium bg-white text-gray-900 rounded-xl shadow-sm"
+                  onClick={() => setIsPublic(true)}
+                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
+                    isPublic ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
                 >
                   Public
                 </button>
                 <button 
                   type="button"
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 rounded-xl hover:bg-gray-50"
+                  onClick={() => setIsPublic(false)}
+                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
+                    !isPublic ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
                 >
                   Private
                 </button>
               </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password (optional)</label>
+              <input
+                type="password"
+                value={roomPassword}
+                onChange={(event) => setRoomPassword(event.target.value)}
+                maxLength={120}
+                placeholder="Leave empty for no password"
+                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
             </div>
             
             {/* Max Participants */}
@@ -257,23 +374,53 @@ export default function CreateRoomView() {
             <div className="flex gap-3 pt-6">
               <button 
                 type="button"
+                onClick={() => void handleCreateRoom()}
+                disabled={isSubmitting}
                 className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-2xl font-medium hover:bg-purple-700 transition-colors"
               >
-                Create Room
+                {isSubmitting ? 'Creating...' : 'Create Room'}
               </button>
               <button 
                 type="button"
+                onClick={handleSaveDraft}
                 className="px-6 py-3 border border-gray-200 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 transition-colors"
               >
                 Save as Draft
               </button>
               <button 
                 type="button"
+                onClick={handleCancel}
                 className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
               >
                 Cancel
               </button>
             </div>
+
+            {submitError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
+
+            {createdRoom && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                <p className="font-semibold">Room created successfully</p>
+                <p className="mt-1">roomId: {createdRoom.roomId}</p>
+                <p>title: {createdRoom.title}</p>
+                <p>roomMode: {createdRoom.roomMode}</p>
+                <p>isPublic: {String(createdRoom.isPublic)}</p>
+                <p>maxParticipants: {createdRoom.maxParticipants}</p>
+                <p>requiresPassword: {String(createdRoom.requiresPassword)}</p>
+                <p>onlineCount: {createdRoom.onlineCount}</p>
+                <p>availableSlots: {createdRoom.availableSlots}</p>
+                <p>coverType: {createdRoom.coverType ?? 'none'}</p>
+                <p>coverUrl: {createdRoom.coverUrl ?? 'none'}</p>
+                <p>createdAt: {new Date(createdRoom.createdAt).toLocaleString()}</p>
+                <p>
+                  host: {createdRoom.host?.fullName ?? createdRoom.host?.accountId ?? 'none'}
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Live Preview */}

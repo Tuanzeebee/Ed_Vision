@@ -33,7 +33,7 @@ class SimpleCache:
     """Simple in-memory cache với TTL"""
     def __init__(self):
         self.cache: Dict[str, tuple[Any, datetime]] = {}
-        self.ttl_minutes = 15  # Cache 15 phút
+        self.ttl_minutes = int(os.getenv("SHAP_CACHE_TTL_MINUTES", "15"))
     
     def get(self, key: str) -> Optional[Any]:
         if key in self.cache:
@@ -72,16 +72,32 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")  # nơi chứa weights_used.csv (backup)
 OUTPUT_DIR = os.path.join(BASE_DIR, "output_final_v2")  # nơi chứa model_artifacts_gb_rf_add_feature.joblib
 
-ARTIFACTS_PATH = os.path.join(OUTPUT_DIR, "model_artifacts_gb_rf_add_feature1.joblib")
-WEIGHTS_FILE = os.path.join(DATA_DIR, "weights_used.csv")  # Giữ lại làm fallback
+ARTIFACTS_PATH = os.getenv(
+    "MODEL_ARTIFACTS_PATH",
+    os.path.join(OUTPUT_DIR, "model_artifacts_gb_rf_add_feature1.joblib"),
+)
+WEIGHTS_FILE = os.getenv(
+    "WEIGHTS_FILE_PATH",
+    os.path.join(DATA_DIR, "weights_used.csv"),
+)  # Giữ lại làm fallback
 BEHAVIOR_FILE = os.path.join(DATA_DIR, "clean_student_data_v2.csv")  # hiện tại KHÔNG dùng, để dành tương lai
 
-COURSE_METRICS_PATH = os.path.join(OUTPUT_DIR, "course_metrics_gradient_boosting.csv")
+COURSE_METRICS_PATH = os.getenv(
+    "COURSE_METRICS_PATH",
+    os.path.join(OUTPUT_DIR, "course_metrics_gradient_boosting.csv"),
+)
 
 # MongoDB Configuration
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/ed_vision")
+MONGODB_URI = (
+    os.getenv("MONGODB_URI")
+    or os.getenv("MONGO_URI")
+    or "mongodb://localhost:27017/ed_vision"
+)
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "ed_vision")
 MONGODB_COLLECTION = "gradestructures"  # Collection name trong MongoDB
+APP_HOST = os.getenv("HOST", "0.0.0.0")
+APP_PORT = int(os.getenv("PORT", "8000"))
+ML_WORKERS = int(os.getenv("ML_WORKERS", "1"))
 
 # Ngưỡng fallback giống notebook
 HIGH_R2 = 0.60   # tin model
@@ -648,7 +664,7 @@ def load_resources():
 
     # Kết nối MongoDB
     try:
-        MONGO_CLIENT = MongoClient(MONGODB_URI)
+        MONGO_CLIENT = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
         # Test connection
         MONGO_CLIENT.server_info()
         print(f"[INFO] Đã kết nối MongoDB: {MONGODB_URI}")
@@ -992,4 +1008,10 @@ def clear_cache():
 
 if __name__ == "__main__":
     # Chạy: python predictscoreforteacheraddfeature.py
-    uvicorn.run("predictscoreforteacheraddfeature:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "predictscoreforteacheraddfeature:app",
+        host=APP_HOST,
+        port=APP_PORT,
+        workers=ML_WORKERS,
+        reload=False,
+    )

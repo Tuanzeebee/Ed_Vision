@@ -6,12 +6,10 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { InstructorOnlineStats } from './models/instructor-stats.type';
+import { buildSocketCorsOptions } from '../../common/config/network.config';
 
 @WebSocketGateway({
-  cors: {
-    origin: '*', // Allow all origins for development, restrict in production
-    credentials: true,
-  },
+  cors: buildSocketCorsOptions(),
   namespace: '/instructor-stats', // Namespace for instructor stats
 })
 export class InstructorStatsGateway

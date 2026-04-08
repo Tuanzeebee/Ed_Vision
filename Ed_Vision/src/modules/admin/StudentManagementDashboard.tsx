@@ -5,6 +5,7 @@ import { studentService, type StudentOnlineStats } from "@/services/api/studentS
 import dashboardStatsService, { type LearningDashboardSummaryResponse } from "@/services/api/dashboardStatsService";
 import { useToast } from "@/lib/useToast";
 import { io, Socket } from "socket.io-client";
+import { buildSocketUrl } from "@/services/api/config";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -86,7 +87,7 @@ export default function StudentManagementDashboard() {
         setIsLoadingStats(false);
 
         // Setup WebSocket connection for real-time updates
-        socket = io('http://localhost:3000/student-stats', {
+        socket = io(buildSocketUrl('/student-stats'), {
           transports: ['websocket', 'polling'],
         });
 

@@ -48,6 +48,67 @@
     "seasonSpring": "Xuân",
     "seasonSummer": "Hè",
     "seasonWinter": "Đông",
+    "defaultMajorName": "Ngành Khoa học máy tính",
+    "majorFallback": "Ngành",
+    "simulated": "Mô phỏng",
+    "notAvailable": "N/A",
+    "tbd": "Chưa xếp lịch",
+    "aiScoreLabel": "Điểm AI: {{score}}",
+    "projectedRiskLabel": "Rủi ro dự báo:",
+    "riskTag": {
+      "high": "RỦI RO CAO",
+      "medium": "RỦI RO TRUNG BÌNH",
+      "safe": "AN TOÀN"
+    },
+    "riskIndicator": {
+      "high": "Rủi ro cao",
+      "medium": "Rủi ro trung bình",
+      "low": "Rủi ro thấp",
+      "critical": "Nghiêm trọng"
+    },
+    "semesterTitle": {
+      "current": "Phân tích rủi ro môn học",
+      "planned": "Rủi ro dự kiến"
+    },
+    "riskBanner": {
+      "highTitle": "Cảnh báo rủi ro cao: Dự đoán GPA giảm",
+      "highBody": "Bạn có nguy cơ tụt dưới mức GPA mục tiêu. Chuyên cần, khối lượng công việc và kết quả các môn cốt lõi cần được can thiệp ngay.",
+      "mediumTitle": "Cảnh báo rủi ro trung bình: Cần chú ý hiệu suất",
+      "mediumBody": "Kế hoạch hiện tại ở mức chấp nhận được nhưng vẫn dễ bị ảnh hưởng ở các môn cốt lõi nặng. Một vài điều chỉnh nhỏ có thể cải thiện đáng kể kết quả.",
+      "lowTitle": "Đang đúng lộ trình: Hãy duy trì đà hiện tại",
+      "lowBody": "Kế hoạch học tập của bạn đang ổn định. Hãy tiếp tục duy trì tính nhất quán để bảo đảm tiến độ tốt nghiệp."
+    },
+    "strategy": {
+      "title": "Kế hoạch hành động & chiến lược AI",
+      "subtitle": "Các can thiệp được AI tối ưu dựa trên {{hours}} giờ học/tuần của bạn",
+      "predictionConfidence": "Độ tin cậy dự đoán:",
+      "riskTimeline": "Dòng thời gian rủi ro",
+      "currentStatus": "Trạng thái hiện tại",
+      "next4Weeks": "4 tuần tới",
+      "midtermProjection": "Dự báo giữa kỳ",
+      "whyTitle": "Vì sao điều này xảy ra?",
+      "whyLowCoreScores": "Điểm dự đoán thấp ở các môn cốt lõi",
+      "whyHeavyCoreLoad": "Khối lượng môn cốt lõi vẫn còn nặng",
+      "whyStudyTime": "Thời gian học hiện tại {{hours}} giờ/tuần",
+      "whyRemainingCredits": "Tín chỉ còn lại: {{credits}}",
+      "suggestedActions": "Hành động đề xuất",
+      "actionPrioritizeCore": "Ưu tiên 1-2 môn cốt lõi có GPA dự đoán thấp nhất",
+      "actionIncreaseStudy": "Tăng thời lượng học tập trung ít nhất 2 giờ/tuần",
+      "actionBalanceCourses": "Cân bằng môn khó và môn nhẹ trong mỗi học kỳ"
+    },
+    "scenario": {
+      "title": "Mô phỏng kịch bản",
+      "studyIncrease": "Nếu: +2 giờ học/tuần",
+      "workDecrease": "Nếu: -4 giờ làm/tuần",
+      "optimizeCore": "Nếu: Tối ưu 1 môn cốt lõi",
+      "gpaUp": "GPA {{gpa}} ↗"
+    },
+    "courseAction": {
+      "urgent": "Cần hành động khẩn cấp",
+      "intervention": "Xem kế hoạch can thiệp",
+      "maintain": "Duy trì tiến độ",
+      "simulate": "Mô phỏng thay đổi"
+    },
     "toastLoginRequired": "Vui lòng đăng nhập trước",
     "toastGpaFetchError": "Tải dữ liệu GPA thất bại",
     "toastAccountIdMissing": "Không tìm thấy Account ID trong hồ sơ"

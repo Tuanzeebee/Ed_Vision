@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { TokenManager } from '@/lib/tokenManager';
 import { fetchNotifications } from '@/stores/notificationStore';
+import { buildSocketUrl } from '@/services/api/config';
 
 interface NotificationPayload {
   title: string;
@@ -37,7 +38,7 @@ export function useNotificationSocket() {
     }
 
     // Kết nối WebSocket
-    const socket = io('http://localhost:3000/notifications', {
+    const socket = io(buildSocketUrl('/notifications'), {
       transports: ['websocket', 'polling'],
       query: {
         accountId: accountId.toString(),

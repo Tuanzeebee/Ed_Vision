@@ -45,6 +45,14 @@ model Account {
   deviceFingerprints DeviceFingerprint[] // Device fingerprints for attendance verification
   approvedAttempts   AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
   verificationAttempts AttendanceVerificationAttempt[] // All verification attempts by this account
+  hostedRooms       Room[]             @relation("RoomHost")
+  roomParticipants  RoomParticipant[]
+  roomActions       RoomAction[]       @relation("RoomActionTarget")
+  roomBans          RoomBan[]
+  studySessions     StudySession[]
+  dailyStreak       DailyStreak?
+  studyStat         StudyStat?
+  leaderboard       Leaderboard?
   @@map("Account")
 }
 
@@ -837,4 +845,150 @@ model CertificateTopicProgress {
   @@unique([enrollment_id, topic_key])
   @@index([enrollment_id])
   @@map("CertificateTopicProgress")
+}
+
+model Room {
+  room_id          Int       @id @default(autoincrement())
+  host_id          Int?
+  title            String    @db.VarChar(255)
+
+  room_mode        String    @db.VarChar(20) // audio | video | focus
+  password_hash    String?   @db.VarChar(255)
+
+  cover_type       String?   @db.VarChar(20) // image | youtube
+  cover_url        String?   @db.VarChar(500)
+
+  is_public        Boolean   @default(true)
+  max_participants Int       @default(6)
+
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+
+  // relations
+  host             Account?  @relation("RoomHost", fields: [host_id], references: [account_id])
+  participants     RoomParticipant[]
+  actions          RoomAction[]
+  bans             RoomBan[]
+  studySessions    StudySession[]
+
+  @@index([room_mode])
+  @@index([is_public])
+  @@map("Room")
+}
+
+model RoomParticipant {
+  id          Int      @id @default(autoincrement())
+
+  room_id     Int
+  account_id  Int
+
+  is_host     Boolean  @default(false)
+
+  camera_on   Boolean  @default(false)
+  mic_on      Boolean  @default(false)
+
+  joined_at   DateTime @default(now()) @db.Timestamptz(6)
+  left_at     DateTime? @db.Timestamptz(6)
+
+  // relations
+  room        Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  account     Account  @relation(fields: [account_id], references: [account_id])
+
+  @@index([room_id])
+  @@index([account_id])
+  @@index([room_id, left_at])
+  @@map("RoomParticipant")
+}
+
+model RoomAction {
+  id                 Int      @id @default(autoincrement())
+
+  room_id            Int
+  target_account_id  Int
+
+  action_type        String   @db.VarChar(20) // kick | mute
+
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  // relations
+  room               Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  targetAccount      Account  @relation("RoomActionTarget", fields: [target_account_id], references: [account_id])
+
+  @@map("RoomAction")
+}
+
+model RoomBan {
+  id          Int      @id @default(autoincrement())
+
+  room_id     Int
+  account_id  Int
+
+  banned_until DateTime? @db.Timestamptz(6)
+
+  // relations
+  room        Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  account     Account  @relation(fields: [account_id], references: [account_id])
+
+  @@map("RoomBan")
+}
+
+model StudySession {
+  id               Int      @id @default(autoincrement())
+
+  account_id       Int
+  room_id          Int?
+
+  started_at       DateTime @db.Timestamptz(6)
+  ended_at         DateTime? @db.Timestamptz(6)
+
+  duration_minutes Int?
+
+  // relations
+  account          Account  @relation(fields: [account_id], references: [account_id])
+  room             Room?    @relation(fields: [room_id], references: [room_id], onDelete: SetNull)
+
+  @@index([account_id])
+  @@index([started_at])
+  @@map("StudySession")
+}
+
+model DailyStreak {
+  account_id     Int   @id
+
+  current_streak Int   @default(0)
+  longest_streak Int   @default(0)
+
+  last_study_date DateTime? @db.Date
+
+  // relation
+  account        Account @relation(fields: [account_id], references: [account_id])
+
+  @@map("DailyStreak")
+}
+
+model StudyStat {
+  account_id     Int   @id
+
+  total_minutes  Int   @default(0)
+  total_sessions Int   @default(0)
+
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  // relation
+  account        Account @relation(fields: [account_id], references: [account_id])
+
+  @@map("StudyStat")
+}
+
+model Leaderboard {
+  account_id Int   @id
+
+  score      Int?
+  rank       Int?
+
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // relation
+  account    Account @relation(fields: [account_id], references: [account_id])
+
+  @@map("Leaderboard")
 }

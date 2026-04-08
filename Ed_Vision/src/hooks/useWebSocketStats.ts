@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { buildSocketUrl } from "@/services/api/config";
 
 /**
  * Hook to initialize shared WebSocket listeners for student/instructor stats.
@@ -15,7 +16,7 @@ export default function useWebSocketStats(): number {
     const initializeWebSockets = () => {
       // Student socket
       try {
-        studentSocket = io("http://localhost:3000/student-stats", {
+        studentSocket = io(buildSocketUrl("/student-stats"), {
           transports: ["websocket", "polling"],
         });
         studentSocket.on("connect", () => {
@@ -36,7 +37,7 @@ export default function useWebSocketStats(): number {
 
       // Instructor socket
       try {
-        instructorSocket = io("http://localhost:3000/instructor-stats", {
+        instructorSocket = io(buildSocketUrl("/instructor-stats"), {
           transports: ["websocket", "polling"],
         });
         instructorSocket.on("connect", () => {

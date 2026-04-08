@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { TokenManager } from '@/lib/tokenManager';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { API_BASE_URL } from './config';
 
 // Create a separate axios instance for survey that doesn't auto-redirect on 401
 const surveyApiClient = axios.create({

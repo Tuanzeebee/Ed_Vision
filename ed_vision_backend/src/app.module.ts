@@ -31,6 +31,8 @@ import * as path from 'path';
 import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
 import { TtsModule } from './tts/tts.module';
 import { SttModule } from './stt/stt.module';
+import { RedisModule } from './redis/redis.module';
+import { StudyRoomModule } from './study-room/study-room.module';
 
 @Module({
   imports: [
@@ -63,10 +65,12 @@ import { SttModule } from './stt/stt.module';
     TeacherBeModule,
     StudentBeModule,
     DatabaseModule,
+    RedisModule,
     ChatModule,
     TeacherChatModule,
     StudentChatModule,
     AttendanceModule,
+    StudyRoomModule,
     YouTubeMusicModule,
     TtsModule,
     SttModule,

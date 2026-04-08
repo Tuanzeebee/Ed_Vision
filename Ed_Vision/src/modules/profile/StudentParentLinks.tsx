@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TokenManager } from "@/lib/tokenManager";
 import { useTranslation } from 'react-i18next';
+import { buildUrl } from "@/services/api/config";
 
 type Parent = {
   id: string;
@@ -78,7 +79,7 @@ export default function StudentParentLinks({
         return;
       }
 
-      const response = await fetch('http://localhost:3000/profile/generate-parent-link', {
+      const response = await fetch(buildUrl('/profile/generate-parent-link'), {
         method: 'POST',
         credentials: 'include',
         headers: {
