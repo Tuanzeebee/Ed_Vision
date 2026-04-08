@@ -1,0 +1,336 @@
+{
+  "app": {
+    "name": "EdVision",
+    "tagline": "Education Management System"
+  },
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "view": "View",
+    "search": "Search",
+    "filter": "Filter"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "select": "Select",
+    "selected": "Selected",
+    "date": "Date",
+    "time": "Time",
+    "status": "Status",
+    "actions": "Actions",
+    "details": "Details",
+    "description": "Description",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This week",
+    "lastWeek": "Last week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "weeks": "weeks",
+    "months": "months",
+    "years": "years"
+  },
+  "messages": {
+    "noData": "No data available",
+    "saveSuccess": "Saved successfully",
+    "saveError": "Failed to save",
+    "deleteSuccess": "Deleted successfully",
+    "deleteError": "Failed to delete",
+    "updateSuccess": "Updated successfully",
+    "updateError": "Failed to update"
+  },
+  "header": {
+    "navigation": {
+      "ourFeatures": "Our Features",
+      "research": "Research",
+      "forEducators": "For Educators",
+      "forEnterprise": "For Enterprise",
+      "learn": "Learn",
+      "predict": "Predict",
+      "plan": "Plan",
+      "communicate": "Communicate",
+      "survey": "Survey",
+      "dashboard": "Dashboard",
+      "bookAppointment": "Book Appointment",
+      "studentDetails": "Student Details",
+      "chat": "Chat"
+    },
+    "features": {
+      "gradeForecasting": {
+        "title": "Grade Forecasting",
+        "description": "AI-powered grade predictions"
+      },
+      "performanceAnalytics": {
+        "title": "Performance Analytics",
+        "description": "Detailed learning insights"
+      },
+      "studyOptimization": {
+        "title": "Study Optimization",
+        "description": "Personalized study plans"
+      }
+    },
+    "menu": {
+      "learn": {
+        "courseOverview": {
+          "title": "Course Overview",
+          "description": "View all your enrolled subjects"
+        },
+        "uploadTranscript": {
+          "title": "Upload Transcript",
+          "description": "Update your academic records"
+        },
+        "courseDetail": {
+          "title": "Course Detail",
+          "description": "Detailed course information"
+        },
+        "learningSpace": {
+          "title": "Learning Space",
+          "description": "Learning resources and materials"
+        },
+        "certificateReview": {
+          "title": "Certificate Review",
+          "description": "IELTS, TOEIC, MOS – practice & mock tests"
+        }
+      },
+      "predict": {
+        "gradeForecast": {
+          "title": "Grade Forecast",
+          "description": "Predict next-semester scores"
+        },
+        "predictionHistory": {
+          "title": "Prediction History",
+          "description": "View past predictions"
+        }
+      },
+      "plan": {
+        "academicPlanning": {
+          "title": "Academic Planning",
+          "description": "Plan your semester schedule"
+        },
+        "adjustParameters": {
+          "title": "Adjust Parameters",
+          "description": "Fine-tune prediction settings"
+        }
+      },
+      "communicate": {
+        "chatWithTeachers": {
+          "title": "Chat with Teachers",
+          "description": "Real-time messaging"
+        },
+        "messages": {
+          "title": "Messages",
+          "description": "View all messages"
+        },
+        "appointments": {
+          "title": "Appointments",
+          "description": "Schedule meetings"
+        }
+      },
+      "survey": {
+        "takeSurvey": {
+          "title": "Take Survey",
+          "description": "Complete surveys and questionnaires"
+        },
+        "surveyHistory": {
+          "title": "Survey History",
+          "description": "View your past survey responses"
+        }
+      }
+    },
+    "educators": {
+      "bookingScheduler": "Booking Scheduler",
+      "classManagement": "Class Management",
+      "studentProgressTracking": "Student Progress Tracking",
+      "parentCommunication": "Parent Communication"
+    },
+    "auth": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "user": {
+      "administrator": "Administrator",
+      "student": "Student"
+    }
+  },
+  "footer": {
+    "slogan": "Empowering students with AI-driven grade predictions",
+    "sections": {
+      "product": {
+        "title": "Product",
+        "features": "Features",
+        "pricing": "Pricing",
+        "api": "API",
+        "integrations": "Integrations"
+      },
+      "company": {
+        "title": "Company",
+        "aboutUs": "About Us",
+        "careers": "Careers",
+        "blog": "Blog",
+        "press": "Press"
+      },
+      "support": {
+        "title": "Support",
+        "helpCenter": "Help Center",
+        "contactUs": "Contact Us",
+        "privacyPolicy": "Privacy Policy",
+        "termsOfService": "Terms of Service"
+      },
+      "social": {
+        "title": "Follow Us"
+      }
+    },
+    "copyright": "© {{year}} GradeForecast. All rights reserved."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "newCount": "{{count}} new",
+    "markAllAsRead": "Mark all as read",
+    "noNotifications": "No new notifications",
+    "viewAllNotifications": "View all notifications",
+    "filters": {
+      "allTypes": "All types",
+      "allPriorities": "All priorities",
+      "allStatuses": "All statuses",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "types": {
+      "examSchedule": "Exam Schedule",
+      "systemUpdate": "System Update",
+      "academicWarning": "Academic Warning",
+      "organizationEvent": "Organization Event",
+      "personalRecognition": "Personal Recognition",
+      "generalInfo": "General Information"
+    },
+    "priorities": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "page": {
+      "unreadSubtitle": "You have {{count}} unread notifications",
+      "allReadSubtitle": "All notifications are read"
+    },
+    "empty": {
+      "noneTitle": "No notifications",
+      "noneSubtitle": "New notifications will appear here"
+    },
+    "detail": {
+      "attachments": "Attachments",
+      "sentDate": "Sent on",
+      "selectPrompt": "Select a notification to view details"
+    }
+  },
+  "error": {
+    "user": {
+      "notFound": "User not found",
+      "alreadyExists": "User already exists",
+      "invalidCredentials": "Invalid credentials",
+      "unauthorized": "Unauthorized access",
+      "forbidden": "Forbidden"
+    },
+    "auth": {
+      "invalidPassword": "Invalid password",
+      "invalidToken": "Invalid token",
+      "tokenExpired": "Token expired",
+      "invalidOtp": "Invalid OTP",
+      "otpExpired": "OTP expired"
+    },
+    "validation": {
+      "required": "This field is required",
+      "invalidEmail": "Invalid email format",
+      "invalidPhone": "Invalid phone number"
+    },
+    "server": {
+      "internalError": "Internal server error",
+      "serviceUnavailable": "Service unavailable",
+      "badRequest": "Bad request"
+    },
+    "booking": {
+      "notFound": "Booking not found",
+      "slotUnavailable": "Time slot is unavailable",
+      "alreadyBooked": "Already booked for this slot"
+    },
+    "student": {
+      "notFound": "Student not found",
+      "invalidStatus": "Invalid student status"
+    },
+    "teacher": {
+      "notFound": "Teacher not found",
+      "notAvailable": "Teacher not available"
+    }
+  },
+  "student": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "graduated": "Graduated"
+    },
+    "grade": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "average": "Average",
+      "belowAverage": "Below Average",
+      "poor": "Poor"
+    }
+  },
+  "teacher": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "onLeave": "On Leave"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "canceled": "Canceled",
+      "rejected": "Rejected"
+    },
+    "type": {
+      "consultation": "Consultation",
+      "appointment": "Appointment",
+      "meeting": "Meeting"
+    }
+  },
+  "role": {
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "student": "Student",
+    "parent": "Parent"
+  }
+}

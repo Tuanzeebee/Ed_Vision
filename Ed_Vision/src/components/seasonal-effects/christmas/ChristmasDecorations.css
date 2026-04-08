@@ -1,0 +1,283 @@
+/* ===== Christmas Decorations - Redesigned ===== */
+
+/* Vị trí các góc - tránh logo, sidebar, buttons */
+.xmas-deco {
+  position: fixed;
+  z-index: 9990;
+  pointer-events: none;
+}
+
+/* Góc trái dưới - người tuyết sát góc - TĂNG KÍCH THƯỚC */
+.xmas-deco--bottom-left {
+  bottom: 80px; /* Để chỗ cho button toggle */
+  left: 10px;
+}
+
+.xmas-snowman {
+  width: 120px; /* Tăng từ 50px */
+  height: 168px; /* Tăng từ 70px */
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  animation: snowmanBob 3s ease-in-out infinite;
+}
+
+@keyframes snowmanBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Góc phải dưới - cây thông với quà - TĂNG KÍCH THƯỚC */
+.xmas-deco--bottom-right {
+  bottom: 10px;
+  right: 10px;
+}
+
+.xmas-tree-gifts {
+  width: 120px; /* Tăng từ 50px */
+  height: 150px; /* Tăng từ 65px */
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+}
+
+/* Hiệu ứng ngôi sao sáng */
+.tree-star-glow {
+  animation: starTwinkle 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px #ffd700);
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px #ffd700); }
+  50% { opacity: 0.7; filter: drop-shadow(0 0 8px #ffd700); }
+}
+
+/* Animation cho bóng đèn nhấp nháy */
+.xmas-tree-gifts circle {
+  animation: lightsFlicker 1.5s ease-in-out infinite;
+}
+
+/* Mỗi bóng đèn delay khác nhau */
+.xmas-tree-gifts circle:nth-child(8) { animation-delay: 0s; }
+.xmas-tree-gifts circle:nth-child(9) { animation-delay: 0.2s; }
+.xmas-tree-gifts circle:nth-child(10) { animation-delay: 0.4s; }
+.xmas-tree-gifts circle:nth-child(11) { animation-delay: 0.6s; }
+.xmas-tree-gifts circle:nth-child(12) { animation-delay: 0.8s; }
+.xmas-tree-gifts circle:nth-child(13) { animation-delay: 1s; }
+.xmas-tree-gifts circle:nth-child(14) { animation-delay: 1.2s; }
+
+@keyframes lightsFlicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.4; filter: brightness(0.6); }
+}
+
+/* Animation cho hộp quà nhún nhảy */
+@keyframes giftBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Hộp quà 1 */
+.xmas-tree-gifts rect[x="6"],
+.xmas-tree-gifts rect[x="16"],
+.xmas-tree-gifts ellipse[cx="20"] {
+  animation: giftBounce 2s ease-in-out infinite;
+}
+
+/* Hộp quà 2 - delay khác */
+.xmas-tree-gifts rect[x="86"],
+.xmas-tree-gifts rect[x="94"],
+.xmas-tree-gifts ellipse[cx="98"] {
+  animation: giftBounce 2s ease-in-out infinite 0.5s;
+  transform-origin: center;
+}
+
+/* Quả bóng trang trí */
+.xmas-ball-red {
+  fill: #c41e3a;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+.xmas-ball-gold {
+  fill: #ffd700;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+/* ===== Ông già Noel chạy ngang ===== */
+.santa-sleigh-container {
+  position: fixed;
+  bottom: 25px;
+  left: 0;
+  z-index: 9991;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.santa-sleigh-svg {
+  width: 160px;
+  height: 50px;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+}
+
+/* Animation chân tuần lộc */
+.reindeer-legs line:nth-child(1),
+.reindeer-legs line:nth-child(3) {
+  animation: legRun1 0.3s ease-in-out infinite;
+  transform-origin: top;
+}
+
+.reindeer-legs line:nth-child(2),
+.reindeer-legs line:nth-child(4) {
+  animation: legRun2 0.3s ease-in-out infinite;
+  transform-origin: top;
+}
+
+@keyframes legRun1 {
+  0%, 100% { transform: rotate(-15deg); }
+  50% { transform: rotate(15deg); }
+}
+
+@keyframes legRun2 {
+  0%, 100% { transform: rotate(15deg); }
+  50% { transform: rotate(-15deg); }
+}
+
+/* Mũi Rudolph phát sáng */
+.rudolph-nose-glow {
+  animation: noseGlow 0.8s ease-in-out infinite;
+}
+
+@keyframes noseGlow {
+  0%, 100% { 
+    opacity: 0.6;
+    filter: drop-shadow(0 0 3px #ff0000);
+  }
+  50% { 
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #ff0000) drop-shadow(0 0 12px #ff6666);
+  }
+}
+
+/* Tay ông già Noel vẫy */
+.santa-arm-wave {
+  animation: armWave 0.6s ease-in-out infinite;
+  transform-origin: 26px 28px;
+}
+
+@keyframes armWave {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(15deg); }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1200px) {
+  .xmas-deco--top-left {
+    left: 10px;
+  }
+  
+  .xmas-deco--top-right {
+    right: 10px;
+  }
+  
+  .xmas-deco--bottom-left {
+    left: 15px;
+    bottom: 15px;
+  }
+}
+
+@media (max-width: 992px) {
+  .xmas-deco--top-left {
+    top: 50px;
+    left: 5px;
+  }
+  
+  .xmas-garland-left {
+    width: 70px;
+    height: 55px;
+  }
+  
+  .xmas-deco--top-right {
+    right: 5px;
+    top: 50px;
+  }
+  
+  .xmas-bells {
+    width: 55px;
+    height: 65px;
+  }
+  
+  .xmas-deco--bottom-left {
+    left: 10px;
+    bottom: 15px;
+  }
+  
+  .xmas-snowman {
+    width: 35px;
+    height: 50px;
+  }
+  
+  .xmas-deco--bottom-right {
+    right: 10px;
+    bottom: 15px;
+  }
+  
+  .xmas-tree-gifts {
+    width: 45px;
+    height: 58px;
+  }
+  
+  .santa-sleigh-svg {
+    width: 130px;
+    height: 42px;
+  }
+}
+
+@media (max-width: 768px) {
+  .xmas-deco--top-left {
+    display: none;
+  }
+  
+  .xmas-deco--top-right {
+    right: 5px;
+    top: 45px;
+  }
+  
+  .xmas-bells {
+    width: 45px;
+    height: 55px;
+  }
+  
+  .xmas-deco--bottom-left {
+    display: none;
+  }
+  
+  .xmas-deco--bottom-right {
+    right: 8px;
+    bottom: 8px;
+  }
+  
+  .xmas-tree-gifts {
+    width: 38px;
+    height: 50px;
+  }
+  
+  .santa-sleigh-container {
+    bottom: 15px;
+  }
+  
+  .santa-sleigh-svg {
+    width: 100px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .xmas-deco--top-right {
+    display: none;
+  }
+  
+  .xmas-deco--bottom-right {
+    display: none;
+  }
+  
+  .santa-sleigh-svg {
+    width: 80px;
+    height: 26px;
+  }
+}

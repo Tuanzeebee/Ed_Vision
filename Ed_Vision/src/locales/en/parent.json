@@ -1,0 +1,467 @@
+{
+  "dashboard": {
+    "title": "Parent Dashboard",
+    "welcome": "Welcome back",
+    "overview": "Overview"
+  },
+  "students": {
+    "title": "My Children",
+    "details": "Student Details",
+    "year": "Year",
+    "subjects": "Subjects",
+    "gpa": "GPA",
+    "attendance": "Attendance",
+    "viewDetails": "View Details",
+    "academicPerformance": "Academic Performance",
+    "behaviorAndAttendance": "Behavior & Attendance"
+  },
+  "appointments": {
+    "title": "Appointments",
+    "allAppointments": "All Appointments",
+    "subtitle": "Manage your child's meetings and consultations",
+    "upcoming": "Upcoming Appointments",
+    "past": "Past Appointments",
+    "viewAll": "View All Appointments",
+    "book": "Book Appointment",
+    "bookNew": "Book New Appointment",
+    "date": "Date",
+    "time": "Time",
+    "type": "Type",
+    "online": "Online",
+    "inPerson": "In-Person",
+    "phoneCall": "Phone Call",
+    "videoCall": "Video Call",
+    "teacher": "Teacher",
+    "subject": "Subject",
+    "status": "Status",
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "childInfo": "Year {{year}} • {{subjects}}",
+    "searchPlaceholder": "Search appointments...",
+    "allStatus": "All Status",
+    "allTime": "All Time",
+    "appointmentsFound": "{{count}} appointments found",
+    "upcomingCount": "Upcoming Appointments ({{count}})",
+    "pastCount": "Past Appointments ({{count}})",
+    "meetingWith": "Meeting with {{teacher}}",
+    "parentTeacherConference": "Parent-Teacher Conference",
+    "meetingTypes": {
+      "onlineMeeting": "Online Meeting",
+      "inPersonMeeting": "In-Person"
+    },
+    "departments": {
+      "mathematics": "Mathematics Department",
+      "science": "Science Department",
+      "general": "General Discussion"
+    },
+    "purposes": {
+      "academicProgress": "Academic Progress Discussion",
+      "homeworkSupport": "Homework Support",
+      "multipleTeachers": "Multiple Teachers"
+    },
+    "meetingInfo": {
+      "meetingLink": "Meeting Link:",
+      "reminderEmail": "You will receive a reminder email 1 hour before the meeting",
+      "locationLabel": "Location:",
+      "arriveEarly": "Please arrive 10 minutes early for check-in",
+      "meetingSummary": "Meeting Summary:",
+      "conferenceRoom": "Main Building, Conference Room A"
+    },
+    "actions": {
+      "joinMeeting": "Join Meeting",
+      "reschedule": "Reschedule",
+      "cancel": "Cancel",
+      "viewDetails": "View Details",
+      "viewSummary": "View Summary",
+      "bookFollowUp": "Book Follow-up"
+    },
+    "showMore": "Show {{count}} More Past Appointments"
+  },
+  "bookAppointment": {
+    "step1": {
+      "title": "Select Meeting Type",
+      "subtitle": "Choose how you'd like to meet with the lecturer",
+      "inPersonTitle": "In-Person Meeting",
+      "inPersonDescription": "Meet face-to-face in the lecturer's office or designated meeting room",
+      "inPersonDuration": "30-60 minutes",
+      "inPersonLocation": "School premises",
+      "videoCallTitle": "Video Call",
+      "videoCallDescription": "Connect via Zoom, Teams, or Google Meet from anywhere",
+      "videoCallDuration": "30-45 minutes",
+      "videoCallLocation": "Stable internet required",
+      "phoneCallTitle": "Phone Call",
+      "phoneCallDescription": "Traditional phone conversation for quick discussions",
+      "phoneCallDuration": "15-30 minutes",
+      "phoneCallLocation": "No special software needed"
+    },
+    "step2": {
+      "title": "Select Date & Time",
+      "subtitle": "Choose your preferred date and available time slot",
+      "meetingConfirmation": "In-Person Meeting",
+      "meetingDetails": "{{duration}} • {{location}} • {{adviser}}",
+      "chooseDate": "Choose Date",
+      "availableTimes": "Available Times",
+      "dateDisplay": "{{dayOfWeek}}, {{month}} {{day}}, {{year}}",
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "selected": "Selected",
+      "booked": "Booked",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "selectedTime": "Selected Time",
+      "selectedTimeDisplay": "{{dayOfWeek}}, {{month}} {{day}}, {{year}} at {{time}}",
+      "bookingInstructions": "Booking Instructions",
+      "instructionSelectDate": "• Select your preferred date from the calendar",
+      "instructionSelectTime": "• Choose an available time slot on the right",
+      "instructionLegend": "• Blue = Selected, Gray = Unavailable",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "daysOfWeek": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      }
+    },
+    "step3": {
+      "title": "Meeting Details",
+      "subtitle": "Please provide additional information about your meeting",
+      "selectionSummary": "Your Selection Summary",
+      "meetingType": "Meeting Type:",
+      "dateTime": "Date & Time:",
+      "studentInformation": "Student Information",
+      "studentName": "Student Name",
+      "studentGrade": "Student Grade/Class",
+      "verifiedFromRecords": "✓ Verified from student records",
+      "enrollmentVerified": "✓ Current enrollment verified",
+      "parentGuardianInfo": "Parent/Guardian Information",
+      "yourName": "Your Name",
+      "yourNamePlaceholder": "Enter your full name",
+      "relationshipToStudent": "Relationship to Student",
+      "selectRelationship": "Select relationship",
+      "mother": "Mother",
+      "father": "Father",
+      "guardian": "Guardian",
+      "other": "Other",
+      "contactInformation": "Contact Information",
+      "phoneNumber": "Phone Number",
+      "phoneNumberPlaceholder": "Enter your phone number",
+      "emailAddress": "Email Address",
+      "emailAddressPlaceholder": "Enter your email address",
+      "backToDateTime": "Back to Date & Time",
+      "saveAsDraft": "Save as Draft",
+      "continueToReview": "Continue to Review",
+      "required": "*"
+    },
+    "step4": {
+      "title": "Confirm Your Appointment",
+      "subtitle": "Please review all details before confirming your meeting",
+      "edit": "Edit",
+      "meetingInformation": "Meeting Information",
+      "meetingType": "Meeting Type",
+      "duration": "30-60 minutes",
+      "location": "School premises",
+      "dateTime": "Date & Time",
+      "timeSlot": "10:00 AM - 11:00 AM",
+      "lecturer": "Lecturer",
+      "room": "Room 204, Mathematics Department",
+      "meetingPurpose": "Meeting Purpose",
+      "studentInformation": "Student Information",
+      "verified": "Verified",
+      "studentName": "Student Name",
+      "gradeClass": "Grade/Class",
+      "parentGuardianInformation": "Parent/Guardian Information",
+      "name": "Name",
+      "relationship": "Relationship",
+      "phoneNumber": "Phone Number",
+      "emailAddress": "Email Address",
+      "importantReminders": "Important Reminders:",
+      "reminder1": "Please arrive 5 minutes early to allow time for check-in",
+      "reminder2": "Bring any relevant documents or homework samples",
+      "reminder3": "Cancellations must be made at least 24 hours in advance",
+      "reminder4": "You will receive confirmation and reminder notifications",
+      "termsAgreement": "I confirm that all the information above is correct and I agree to the",
+      "meetingPolicies": "meeting policies",
+      "and": "and",
+      "termsOfService": "terms of service",
+      "termsDescription": ". I understand the cancellation policy and will arrive on time for my scheduled appointment.",
+      "backToDetails": "Back to Details",
+      "saveAsDraft": "Save as Draft",
+      "confirmAppointment": "Confirm Appointment"
+    },
+    "step5": {
+      "title": "Appointment Confirmed",
+      "subtitle": "Review and confirm your appointment",
+      "successTitle": "Appointment Successfully Confirmed!",
+      "successMessage1": "Your consultation with {{doctor}} has been scheduled and confirmed.",
+      "successMessage2": "You will receive confirmation details via email and SMS shortly.",
+      "appointmentDetails": "Appointment Details",
+      "confirmed": "Confirmed",
+      "dateTime": "Date & Time",
+      "location": "Location",
+      "meetingType": "Meeting Type",
+      "doctor": "Doctor",
+      "lecturer": "Lecturer",
+      "purpose": "Purpose",
+      "patient": "Patient",
+      "student": "Student",
+      "confirmationNumber": "Confirmation Number",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "backToDashboard": "Back to Dashboard",
+      "needHelpQuestion": "Need help or have questions about your appointment?",
+      "callSupport": "Call (555) 987-6543",
+      "emailSupport": "Email Support"
+    },
+    "continue": "Continue",
+    "back": "Back",
+    "confirm": "Confirm Appointment",
+    "progress": "Step {{current}} of {{total}}",
+    "needHelp": "Need help?",
+    "contactSupport": "Contact Support",
+    "secureBooking": "Secure booking powered by University Portal",
+    "draftSaved": "Draft saved successfully!",
+    "invalidStep": "Invalid step",
+    "meetingTypes": {
+      "inPerson": "In-Person Meeting",
+      "videoCall": "Video Call Meeting",
+      "phoneCall": "Phone Call Meeting"
+    },
+    "locations": {
+      "schoolPremises": "School premises, Room 204",
+      "videoCallLink": "Video Call (Link will be sent)",
+      "phoneCall": "Phone Call"
+    },
+    "communications": {
+      "email": "Email notifications",
+      "sms": "SMS text messages",
+      "both": "Both email and SMS"
+    },
+    "supportEmail": {
+      "subject": "Appointment Support"
+    },
+    "consoleMessages": {
+      "appointmentCompleted": "Appointment completed:",
+      "appointmentCancelled": "Appointment cancelled"
+    }
+  },
+  "alerts": {
+    "title": "Important Alerts",
+    "new": "New",
+    "viewAll": "View All"
+  },
+  "chat": {
+    "title": "Chat with Teachers",
+    "subtitle": "Stay connected with your child's educators",
+    "sendMessage": "Send Message",
+    "typeMessage": "Type your message...",
+    "searchTeachers": "Search teachers...",
+    "online": "Online",
+    "offline": "Offline",
+    "away": "Away",
+    "today": "Today",
+    "typing": "Typing...",
+    "teacherRoles": {
+      "mathematics": "Mathematics Teacher",
+      "science": "Science Teacher",
+      "classTeacher": "Class Teacher",
+      "english": "English Teacher",
+      "physicalEducation": "Physical Education"
+    },
+    "sampleMessages": {
+      "progress": "Regarding John's progress...",
+      "improvement": "Great improvement in class!",
+      "meetingScheduled": "Meeting scheduled for next week",
+      "feedback": "Reading assignment feedback",
+      "sportsDay": "Sports day preparation",
+      "discussProgress": "Hello Sarah! I wanted to discuss John's recent progress in mathematics. He's been doing exceptionally well with algebra concepts.",
+      "wonderfulToHear": "That's wonderful to hear! I've noticed he's been more confident with his homework lately. Are there any specific areas where he could improve?",
+      "progressReport": "I've prepared a detailed progress report for you. Please take a look when you have time.",
+      "thankYou": "Thank you so much! I'll review it tonight and get back to you if I have any questions.",
+      "autoResponse": "Thank you for your message. I'll get back to you shortly with more details."
+    },
+    "timeAgo": {
+      "min": "{{count}} min",
+      "hour": "{{count}}h",
+      "day": "{{count}}d"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAsRead": "Mark as read",
+    "markAllAsRead": "Mark all as read",
+    "noNotifications": "No notifications",
+    "appointmentNotifications": "Appointment Notifications",
+    "recentUpdates": "Recent updates on your appointments",
+    "viewAllNotifications": "View All Notifications"
+  },
+  "parentDashboard": {
+    "welcomeBack": "Welcome back",
+    "studentInformation": "Student Information",
+    "studentId": "Student ID",
+    "currentGpa": "Current GPA",
+    "upcomingAppointments": "Upcoming Appointments",
+    "newCount": "{{count}} New",
+    "onlineMeeting": "Online Meeting",
+    "meetingWith": "Meeting with {{name}}",
+    "parentTeacherConference": "Parent-Teacher Conference",
+    "chat": "Chat",
+    "recentMessages": "Recent Messages",
+    "newMessage": "New message",
+    "startNewChat": "Start New Chat",
+    "alertsAndRecognition": "Alerts & Recognition",
+    "academicWarning": "Academic Warning",
+    "lowAttendance": "Low attendance in {{subject}} ({{percent}}%)",
+    "actionRequired": "Action required by {{date}}",
+    "excellenceAward": "Excellence Award",
+    "outstandingGpa": "Outstanding GPA this semester ({{gpa}})",
+    "awarded": "Awarded on {{date}}",
+    "improvementNotice": "Improvement Notice",
+    "positiveGrades": "{{subject}} grades showing positive trend",
+    "keepGoodWork": "Keep up the good work!",
+    "discussWithTeacher": "💬 Discuss with teacher",
+    "quickChat": "Quick Chat",
+    "chooseTeacher": "Choose a teacher to chat with:",
+    "viewAllChats": "View All Chats",
+    "calendar": {
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December",
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "notificationTypes": {
+      "meetingConfirmed": "Meeting Confirmed",
+      "meetingDeclined": "Meeting Declined",
+      "meetingRescheduled": "Meeting Rescheduled",
+      "meetingPending": "Meeting Pending",
+      "accepted": "{{name}} accepted your meeting request",
+      "declined": "{{name}} declined your meeting request",
+      "rescheduled": "{{name}} moved meeting to new time",
+      "pending": "Waiting for {{name}}'s response",
+      "requestNewTime": "Request new time",
+      "statusAccepted": "Accepted",
+      "statusDeclined": "Declined",
+      "statusRescheduled": "Rescheduled",
+      "statusPending": "Pending",
+      "timeAgo": {
+        "minutesAgo": "{{count}} minutes ago",
+        "hourAgo": "{{count}} hour ago",
+        "hoursAgo": "{{count}} hours ago",
+        "yesterday": "Yesterday"
+      }
+    }
+  },
+  "studentDetails": {
+    "title": "Student Information",
+    "subtitle": "Academic profile and progress overview",
+    "back": "Back",
+    "profile": {
+      "studentId": "Student ID",
+      "year": "Year",
+      "program": "Mathematics & Science Program",
+      "currentGpa": "Current GPA",
+      "attendance": "Attendance",
+      "courses": "Courses",
+      "credits": "Credits"
+    },
+    "courseProgress": {
+      "title": "Course Progress",
+      "semester": "Semester",
+      "allCourses": "All Courses",
+      "showing": "Showing {{start}}-{{end}} of {{total}} courses",
+      "show": "Show",
+      "perPage": "per page",
+      "courseName": "Course Name",
+      "credits": "Credits",
+      "attendance": "Attendance",
+      "grade": "Grade",
+      "points": "Points",
+      "status": "Status",
+      "passed": "Passed",
+      "inProgress": "In Progress",
+      "failed": "Failed",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "academicHistory": {
+      "title": "Academic History by Semester",
+      "gpa": "GPA",
+      "credits": "Credits",
+      "points": "Points",
+      "semesterLabel": "Semester {{number}}, {{year}}"
+    },
+    "gpaStatus": {
+      "title": "GPA Status",
+      "currentSemester": "Current Semester",
+      "excellent": "Excellent",
+      "veryGood": "Very Good",
+      "good": "Good",
+      "current": "Current",
+      "range": "{{min}} – {{max}}"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "failedSubject": {
+        "title": "Failed Subject Alert",
+        "description": "{{courseName}} ({{courseCode}}) - Grade: {{grade}}",
+        "note": "Retake required for graduation. Contact academic advisor."
+      },
+      "achievement": {
+        "title": "Achievement Unlocked",
+        "deansList": "Dean's List - Excellent Academic Performance",
+        "congratulations": "Congratulations on maintaining high GPA!"
+      },
+      "upcomingExam": {
+        "title": "Upcoming Exam",
+        "description": "{{courseName}} - Final Exam",
+        "dateTime": "{{date}} at {{time}}"
+      }
+    },
+    "emergencyContacts": {
+      "title": "Emergency Contacts",
+      "academicAdvisor": "Academic Advisor",
+      "studentSupport": "Student Support",
+      "helpline": "24/7 Helpline"
+    }
+  },
+  "ui": {
+    "appointmentHeader": {
+      "defaultTitle": "Book Appointment"
+    },
+    "continueButton": {
+      "continue": "Continue"
+    },
+    "confirmButton": {
+      "confirmAppointment": "Confirm Appointment"
+    },
+    "progressStepper": {
+      "steps": {
+        "meetingType": "Meeting Type",
+        "dateTime": "Date & Time",
+        "details": "Details",
+        "confirmation": "Confirmation"
+      }
+    }
+  }
+}

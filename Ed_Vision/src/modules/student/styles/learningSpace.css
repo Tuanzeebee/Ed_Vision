@@ -1,0 +1,186 @@
+/* Learning Space Custom Styles */
+
+/* Hide scrollbar for the entire Learning Space page */
+.learning-space-container {
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.learning-space-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Also hide scrollbar on html/body when Learning Space is active */
+.learning-space-active {
+  overflow: hidden !important;
+}
+
+.learning-space-active::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom z-index for panels */
+.z-35 {
+  z-index: 35;
+}
+
+/* Dock item hover effects */
+.dock-item {
+  position: relative;
+}
+
+.dock-item .label {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.dock-item:hover .label {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Additional utility classes if needed */
+.hover\:brightness-120:hover {
+  filter: brightness(1.2);
+}
+
+.hover\:scale-115:hover {
+  transform: scale(1.15);
+}
+
+/* Explosion and Confetti Animations */
+@keyframes boom-scale {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes boom-text {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes explosion-ring {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(8);
+    opacity: 0;
+  }
+}
+
+@keyframes explosion-ring-delayed {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(6);
+    opacity: 0;
+  }
+}
+
+@keyframes flash-boom {
+  0% {
+    opacity: 0.8;
+  }
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-boom-scale {
+  animation: boom-scale 1s ease-out forwards;
+}
+
+.animate-boom-text {
+  animation: boom-text 1s ease-out forwards;
+}
+
+.animate-explosion-ring {
+  animation: explosion-ring 0.8s ease-out forwards;
+}
+
+.animate-explosion-ring-delayed {
+  animation: explosion-ring-delayed 0.8s ease-out 0.2s forwards;
+}
+
+.animate-flash-boom {
+  animation: flash-boom 0.5s ease-out forwards;
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall 3s ease-in forwards;
+}

@@ -1,0 +1,44 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "classManagement": "Class Management",
+    "gradeManagement": "Grade Management",
+    "gradeTable": "Grade Table",
+    "viewPredictions": "View Predictions",
+    "predictionV2": "Prediction v2",
+    "progressTracking": "Progress Tracking",
+    "surveyManagement": "Student Survey",
+    "reportsAlerts": "Reports & Alerts",
+    "messages": "Messages/Notifications",
+    "appointmentManagement": "Appointment Management",
+    "calendarOverview": "Calendar Overview",
+    "scheduleSetup": "Setup Availability",
+    "appointmentList": "Manage Appointments",
+    "accountSettings": "Account Settings"
+  },
+  "classes": {
+    "title": "Classes",
+    "viewClass": "View Class",
+    "students": "Students"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "viewSchedule": "View Schedule"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "noData": "No data",
+    "error": "Error",
+    "success": "Success"
+  }
+}
