@@ -75,6 +75,7 @@ import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
 import StudentSurvey from "./modules/survey/StudentSurvey";
 import SettingGradeTable from "./modules/teacher/SettingGradeTable";
+import IELTSAssessment from "@/modules/student/IELTSAssessment";
 import CertificateReview from "./modules/student/CertificateReview";
 import CertificateDetail from "./modules/student/CertificateDetail";
 import CertificateLessonPage from "./modules/student/CertificateLessonPage";
@@ -109,6 +110,7 @@ function App() {
 
                                         {/* Student routes */}
                                         <Route path="/student/landing" element={<GradeForecastLanding />} />
+                                        <Route path="/student/ielts-assessment" element={<IELTSAssessment />} />
 
 
                                         {/* Auth routes (used by updated components) */}
