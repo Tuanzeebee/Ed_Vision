@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Header from '../../components/layout/Header'
@@ -13,6 +13,7 @@ export default function CertificateReview() {
   const navigate = useNavigate()
   const { user } = useAuth()
   // no IELTS onboarding gating — allow navigation directly to certificate
+  const IELTS_SURVEY_KEY = 'ieltsSurveyCompleted'
 
   // ── Load dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
@@ -45,7 +46,19 @@ export default function CertificateReview() {
 
   const displayName = user?.fullName || user?.full_name || user?.name || 'Sinh viên'
 
+  const hasCompletedIeltsSurvey = useMemo(() => {
+    const enrollment = enrollments.find((e) => e.cert_type === 'ielts')
+    const localFlag = typeof window !== 'undefined'
+      ? window.localStorage.getItem(IELTS_SURVEY_KEY) === 'true'
+      : false
+    return Boolean(enrollment?.target_band) || localFlag
+  }, [enrollments])
+
   const handleCertClick = (id: CertId) => {
+    if (id === 'ielts' && !hasCompletedIeltsSurvey) {
+      navigate('/student/ielts-assessment?next=/student/certificate-review/ielts')
+      return
+    }
     navigate(`/student/certificate-review/${id}`)
   }
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ChevronRight, ChevronLeft, Sparkles, BookOpen, Target } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 type ViewType = "intro" | "test";
+const IELTS_SURVEY_KEY = "ieltsSurveyCompleted";
 
 interface Question {
   id: number;
@@ -227,8 +228,8 @@ const IELTSIntroView: React.FC<{
 
 // Test View Component
 const IELTSTestView: React.FC<{
-  onBack: () => void;
-}> = ({ onBack }) => {
+  nextPath: string;
+}> = ({ nextPath }) => {
   const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -282,9 +283,16 @@ const IELTSTestView: React.FC<{
     if (currentQuestionIndex < MOCK_QUESTIONS.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setTimeLeft(60);
-    } else {
-      navigate("/student/ielts-result");
+      return;
     }
+
+    try {
+      window.localStorage.setItem(IELTS_SURVEY_KEY, "true");
+    } catch {
+      // ignore storage errors
+    }
+
+    navigate(nextPath);
   };
 
   const handlePrevious = () => {
@@ -459,8 +467,14 @@ const IELTSTestView: React.FC<{
 
 // Main Component
 const IELTSAssessment: React.FC = () => {
+  const location = useLocation();
   const [currentView, setCurrentView] = useState<ViewType>("intro");
   const [isLoading, setIsLoading] = useState(false);
+
+  const nextPath = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("next") || "/student/certificate-review/ielts";
+  }, [location.search]);
 
   const handleStartTest = () => {
     setIsLoading(true);
@@ -470,15 +484,11 @@ const IELTSAssessment: React.FC = () => {
     }, 300);
   };
 
-  const handleBackToIntro = () => {
-    setCurrentView("intro");
-  };
-
   if (currentView === "intro") {
     return <IELTSIntroView onStart={handleStartTest} isLoading={isLoading} />;
   }
 
-  return <IELTSTestView onBack={handleBackToIntro} />;
+  return <IELTSTestView nextPath={nextPath} />;
 };
 
 export default IELTSAssessment;
