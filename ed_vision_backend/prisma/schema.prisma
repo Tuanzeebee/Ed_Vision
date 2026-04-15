@@ -651,12 +651,12 @@ model PredictionResult {
   term_id                 Int?      // Liên kết với AcademicTerm để biết học kỳ
   created_at              DateTime  @default(now()) @db.Timestamptz(6)
   updated_at              DateTime  @updatedAt @db.Timestamptz(6)
-  
+
   student                 Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   course                  Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
   instructor              Instructor? @relation(fields: [instructor_id], references: [instructor_id])
   academicTerm            AcademicTerm? @relation(fields: [term_id], references: [term_id])
-  
+
   // Unique constraint: Một sinh viên chỉ có một dự đoán cho một môn từ một mô hình tại một thời điểm
   @@unique([student_id, course_id, model_type, model_version])
   @@map("PredictionResult")
@@ -670,9 +670,9 @@ model StudentSurveyFactors {
   financial_support_score Float?   // Hỗ trợ tài chính (score từ AI, 0-100)
   mental_health_score    Float?    // Tinh thần (score từ AI, 0-100)
   updated_at             DateTime  @updatedAt @db.Timestamptz(6)
-  
+
   student                Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  
+
   // Unique: Một sinh viên chỉ có một bộ yếu tố (có thể update nếu survey lại)
   @@unique([student_id])
   @@map("StudentSurveyFactors")
@@ -816,8 +816,22 @@ model CertificateEnrollment {
   id            Int       @id @default(autoincrement())
   student_id    Int
   cert_type     String    @db.VarChar(30)   // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
-  target_band   String    @db.VarChar(20)   // '4.0' | '5.0' | '6.0' | '6.5' | '7.0' | '7.5+' | '350-495' | '500-599' | '600-699' | '700-799' | '800+' | 'associate' | 'expert'
-  status        String    @default("active") @db.VarChar(20) // 'active' | 'completed'
+  status        String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
+  learning_status String  @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
+  progress_percent Int    @default(0) @db.SmallInt // 0..100
+  current_score Int?      // current TOEIC score used for roadmap realtime UI
+  target_score  Int?      // target TOEIC score learner is pursuing
+  toeic_plan_state Json?  // JSON state for TOEIC roadmap (current/target/sessions/foundation)
+  started_at    DateTime? @db.Timestamptz(6)
+  last_activity_at DateTime? @db.Timestamptz(6)
+  status        String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
+  learning_status String  @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
+  progress_percent Int    @default(0) @db.SmallInt // 0..100
+  current_score Int?      // current TOEIC score used for roadmap realtime UI
+  target_score  Int?      // target TOEIC score learner is pursuing
+  toeic_plan_state Json?  // JSON state for TOEIC roadmap (current/target/sessions/foundation)
+  started_at    DateTime? @db.Timestamptz(6)
+  last_activity_at DateTime? @db.Timestamptz(6)
   completed_at  DateTime? @db.Timestamptz(6)
   enrolled_at   DateTime  @default(now()) @db.Timestamptz(6)
   updated_at    DateTime  @updatedAt @db.Timestamptz(6)
@@ -826,10 +840,101 @@ model CertificateEnrollment {
   topicProgress CertificateTopicProgress[]
 
   // A student may only have one active enrollment per cert at a time (enforced in service layer).
-  // The unique key includes target_band so historical completed rows are preserved.
-  @@unique([student_id, cert_type, target_band])
   @@index([student_id, cert_type, status])
   @@map("CertificateEnrollment")
+}
+
+/// Detailed content repository for certificate learning materials (question-bank style).
+model LearningRepository {
+  id                Int      @id @default(autoincrement())
+  cert_type         String   @db.VarChar(30) // ielts | toeic | mos-word | mos-excel | mos-powerpoint
+  title             String   @db.VarChar(255)
+  slug              String   @unique @db.VarChar(120)
+  description       String?
+  content_type      String   @default("practice_set") @db.VarChar(30) // lesson | practice_set | mini_test | mock_test
+  skill_area        String?  @db.VarChar(50) // listening | reading | grammar | vocabulary | writing | speaking
+  topic_group       String?  @db.VarChar(100)
+  difficulty_level  String?  @db.VarChar(20) // beginner | intermediate | advanced
+  target_score_min  Int?
+  target_score_max  Int?
+  estimated_minutes Int?
+  pass_score        Int?     // normalized pass threshold for this repository
+  tags              Json?    // string[] for flexible filtering
+  metadata          Json?    // flexible payload: source, authoring notes, etc.
+  total_items       Int      @default(0)
+  is_published      Boolean  @default(false)
+  version           Int      @default(1)
+  created_by        Int?
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt @db.Timestamptz(6)
+
+  items             LearningRepositoryItem[]
+
+  @@index([cert_type, content_type, is_published])
+  @@index([skill_area, topic_group])
+  @@map("LearningRepository")
+}
+
+/// Individual learning item/question in a repository.
+model LearningRepositoryItem {
+  id                 Int      @id @default(autoincrement())
+  repository_id      Int
+  item_order         Int      @default(1)
+  item_type          String   @default("single_choice") @db.VarChar(30) // single_choice | multi_choice | fill_blank | short_answer
+  title              String?  @db.VarChar(255)
+  stem               String   // question/content body
+  reading_passage    String?  // optional shared/inline passage
+  hint               String?
+  explanation        String?  // Giải thích nền tảng (thủ công / nhập liệu)
+  ai_explanation     String?  // Giải thích AI (Ollama) — sinh tự động, tái sử dụng
+  difficulty_level   String?  @db.VarChar(20)
+  score_weight       Int      @default(1)
+  estimated_seconds  Int?
+  media_audio_url    String?
+  media_image_url    String?
+  metadata           Json?
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @updatedAt @db.Timestamptz(6)
+
+  repository         LearningRepository @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  options            LearningRepositoryOption[]
+
+  @@unique([repository_id, item_order])
+  @@index([repository_id])
+  @@map("LearningRepositoryItem")
+}
+
+/// Options/answers for objective learning items.
+model LearningRepositoryOption {
+  id             Int      @id @default(autoincrement())
+  item_id        Int
+  option_key     String   @db.VarChar(10) // A/B/C/D...
+  option_text    String
+  is_correct     Boolean  @default(false)
+  rationale      String?
+  sort_order     Int      @default(1)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  item           LearningRepositoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_id, option_key])
+  @@index([item_id, sort_order])
+  @@map("LearningRepositoryOption")
+}
+
+/// DB cache for AI-generated explanations of hardcoded TOEIC practice questions.
+/// Keyed by topic_key (e.g. "toeic.listening.node_0.q_1.full") — survives server restarts.
+model ToeicNodeQuestionCache {
+  id         Int      @id @default(autoincrement())
+  topic_key  String   @unique @db.VarChar(220) // stable key from frontend: toeic.<skill>.node_<n>.q_<m>.<mode>
+  cert_type  String   @db.VarChar(30)          // toeic | ielts | ...
+  ai_answer  String                            // full explanation text from Ollama
+  model      String   @db.VarChar(100)         // e.g. qwen2.5:3b
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([cert_type])
+  @@map("ToeicNodeQuestionCache")
 }
 
 /// Tracks which individual topics a student has completed within an enrollment.

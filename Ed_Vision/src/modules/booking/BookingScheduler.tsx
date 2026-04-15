@@ -949,7 +949,7 @@ export default function BookingScheduler({ instructorId: propInstructorId, instr
                       currentStep === 1 ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' : 'bg-gray-200 text-gray-500'
                     }`}
                   >
-                    {currentStep === 1 ? '1' : '✓'}
+                    {currentStep === 1 ? '1' : ''}
                   </div>
                   <span className={`font-semibold text-xs transition-colors ${currentStep === 1 ? 'text-blue-600' : 'text-gray-500'}`}>
                     {t('bookingSchedules.step.chooseTime')}

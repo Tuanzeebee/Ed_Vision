@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🚀 Starting full permissions seeding...');
+  console.log(' Starting full permissions seeding...');
 
   // ========== ROLES ==========
   const roles = [
@@ -103,18 +103,18 @@ async function main() {
   ];
 
   // ========== UPSERT ROLES ==========
-  console.log('📝 Creating/updating roles...');
+  console.log(' Creating/updating roles...');
   for (const r of roles) {
     await prisma.role.upsert({
       where: { code: r.code },
       update: { name: r.name },
       create: r,
     });
-    console.log(`  ✓ Role: ${r.code}`);
+    console.log(`   Role: ${r.code}`);
   }
 
   // ========== UPSERT PERMISSIONS ==========
-  console.log('\n📝 Creating/updating permissions...');
+  console.log('\n Creating/updating permissions...');
   for (const p of permissionDefs) {
     await prisma.permission.upsert({
       where: { key: p.key },
@@ -126,11 +126,11 @@ async function main() {
       },
       create: p,
     });
-    console.log(`  ✓ Permission: ${p.key}`);
+    console.log(`   Permission: ${p.key}`);
   }
 
   // ========== ROLE-PERMISSION MAPPINGS ==========
-  console.log('\n🔗 Setting up role-permission mappings...');
+  console.log('\n Setting up role-permission mappings...');
   
   const allPerms = await prisma.permission.findMany();
   
@@ -144,7 +144,7 @@ async function main() {
       enabled: true,
     }));
     await prisma.rolePermission.createMany({ data: adminData });
-    console.log(`  ✓ Admin: ${adminData.length} permissions (all enabled)`);
+    console.log(`   Admin: ${adminData.length} permissions (all enabled)`);
   }
 
   // TEACHER: Enable teacher-specific permissions
@@ -174,7 +174,7 @@ async function main() {
     }));
     await prisma.rolePermission.createMany({ data: teacherData });
     const enabledCount = teacherData.filter(d => d.enabled).length;
-    console.log(`  ✓ Teacher: ${enabledCount}/${teacherData.length} permissions enabled`);
+    console.log(`   Teacher: ${enabledCount}/${teacherData.length} permissions enabled`);
   }
 
   // STUDENT: Enable student-specific permissions
@@ -206,7 +206,7 @@ async function main() {
     }));
     await prisma.rolePermission.createMany({ data: studentData });
     const enabledCount = studentData.filter(d => d.enabled).length;
-    console.log(`  ✓ Student: ${enabledCount}/${studentData.length} permissions enabled`);
+    console.log(`   Student: ${enabledCount}/${studentData.length} permissions enabled`);
   }
 
   // PARENT: Enable parent-specific permissions
@@ -228,7 +228,7 @@ async function main() {
     }));
     await prisma.rolePermission.createMany({ data: parentData });
     const enabledCount = parentData.filter(d => d.enabled).length;
-    console.log(`  ✓ Parent: ${enabledCount}/${parentData.length} permissions enabled`);
+    console.log(`   Parent: ${enabledCount}/${parentData.length} permissions enabled`);
   }
 
   // LEADER: Enable leadership/reporting permissions
@@ -253,11 +253,11 @@ async function main() {
     }));
     await prisma.rolePermission.createMany({ data: leaderData });
     const enabledCount = leaderData.filter(d => d.enabled).length;
-    console.log(`  ✓ Leader: ${enabledCount}/${leaderData.length} permissions enabled`);
+    console.log(`   Leader: ${enabledCount}/${leaderData.length} permissions enabled`);
   }
 
   // ========== CREATE DEMO ACCOUNTS ==========
-  console.log('\n👤 Creating demo accounts...');
+  console.log('\n Creating demo accounts...');
 
   // 1. Admin account
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@dtu.edu.vn';
@@ -275,9 +275,9 @@ async function main() {
           roleRel: { connect: { id: adminRoleRec.id } },
         },
       });
-      console.log(`  ✓ Admin: ${adminEmail} (password: admin123)`);
+      console.log(`   Admin: ${adminEmail} (password: admin123)`);
     } else {
-      console.log(`  ✓ Admin exists: ${adminEmail}`);
+      console.log(`   Admin exists: ${adminEmail}`);
     }
 
     // Create profile for admin if not exists
@@ -291,7 +291,7 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('    ✓ Admin profile created');
+      console.log('     Admin profile created');
     }
   }
 
@@ -311,9 +311,9 @@ async function main() {
           roleRel: { connect: { id: teacherRoleRec.id } },
         },
       });
-      console.log(`  ✓ Teacher: ${teacherEmail} (password: teacher123)`);
+      console.log(`   Teacher: ${teacherEmail} (password: teacher123)`);
     } else {
-      console.log(`  ✓ Teacher exists: ${teacherEmail}`);
+      console.log(`   Teacher exists: ${teacherEmail}`);
     }
 
     // Create Instructor record
@@ -336,7 +336,7 @@ async function main() {
           status: 'active',
         },
       });
-      console.log(`    ✓ Instructor record created (${employeeCode})`);
+      console.log(`     Instructor record created (${employeeCode})`);
     }
 
     // Create Profile
@@ -350,7 +350,7 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('    ✓ Teacher profile created');
+      console.log('     Teacher profile created');
     }
   }
 
@@ -370,9 +370,9 @@ async function main() {
           roleRel: { connect: { id: studentRoleRec.id } },
         },
       });
-      console.log(`  ✓ Student: ${studentEmail} (password: student123)`);
+      console.log(`   Student: ${studentEmail} (password: student123)`);
     } else {
-      console.log(`  ✓ Student exists: ${studentEmail}`);
+      console.log(`   Student exists: ${studentEmail}`);
     }
 
     // Create Student record
@@ -395,7 +395,7 @@ async function main() {
           status: 'active',
         },
       });
-      console.log(`    ✓ Student record created (${studentCode})`);
+      console.log(`     Student record created (${studentCode})`);
     }
 
     // Create Profile
@@ -409,7 +409,7 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('    ✓ Student profile created');
+      console.log('     Student profile created');
     }
   }
 
@@ -429,9 +429,9 @@ async function main() {
           roleRel: { connect: { id: parentRoleRec.id } },
         },
       });
-      console.log(`  ✓ Parent: ${parentEmail} (password: parent123)`);
+      console.log(`   Parent: ${parentEmail} (password: parent123)`);
     } else {
-      console.log(`  ✓ Parent exists: ${parentEmail}`);
+      console.log(`   Parent exists: ${parentEmail}`);
     }
 
     // Create Parent record
@@ -444,7 +444,7 @@ async function main() {
           occupation: 'Giáo viên',
         },
       });
-      console.log('    ✓ Parent record created');
+      console.log('     Parent record created');
     }
 
     // Create Profile
@@ -458,12 +458,12 @@ async function main() {
           nationality: 'Vietnam',
         },
       });
-      console.log('    ✓ Parent profile created');
+      console.log('     Parent profile created');
     }
   }
 
-  console.log('\n✅ Full permissions seeding completed successfully!');
-  console.log('\n📋 Demo Account Credentials:');
+  console.log('\n Full permissions seeding completed successfully!');
+  console.log('\n Demo Account Credentials:');
   console.log('┌─────────────────────────────────────────────────┐');
   console.log('│ Admin:   admin@dtu.edu.vn   / admin123         │');
   console.log('│ Teacher: teacher@dtu.edu.vn / teacher123       │');
@@ -471,7 +471,7 @@ async function main() {
   console.log('│ Parent:  parent@dtu.edu.vn  / parent123        │');
   console.log('└─────────────────────────────────────────────────┘');
   
-  console.log('\n📊 Summary:');
+  console.log('\n Summary:');
   console.log(`  • ${roles.length} roles created`);
   console.log(`  • ${permissionDefs.length} permissions created`);
   console.log(`  • Role-permission mappings configured`);
@@ -480,7 +480,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seeding:', e);
+    console.error(' Error during seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

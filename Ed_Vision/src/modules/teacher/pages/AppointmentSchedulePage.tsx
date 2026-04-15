@@ -9,10 +9,10 @@ import { cn } from '@/lib/Teacher_utils';
 
 interface AppointmentSchedulePageProps {
   availableDates: AvailableDate[];
-  onAddDate: (date: string) => void;
-  onRemoveDate: (index: number) => void;
-  onAddTimeSlot: (date: string) => void;
-  onRemoveTimeSlot: (dateIndex: number, slotIndex: number) => void;
+  onAddDate: (date: string) =>void;
+  onRemoveDate: (index: number) =>void;
+  onAddTimeSlot: (date: string) =>void;
+  onRemoveTimeSlot: (dateIndex: number, slotIndex: number) =>void;
 }
 
 export default function AppointmentSchedulePage({
@@ -23,13 +23,13 @@ export default function AppointmentSchedulePage({
   onRemoveTimeSlot,
 }: AppointmentSchedulePageProps) {
   const { t, i18n } = useTranslation('teacher');
-  const LOCALE_MAP: Record<string, string> = { en: 'en-US', vi: 'vi-VN' };
-  const locale = LOCALE_MAP[i18n?.language] || i18n?.language || (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
+  const LOCALE_MAP: Record<string, string>= { en: 'en-US', vi: 'vi-VN'};
+  const locale = LOCALE_MAP[i18n?.language] || i18n?.language || (typeof navigator !== 'undefined'? navigator.language : 'vi-VN');
   const today = getTodayString();
   const maxDate = getMaxDateString(6);
 
   const totalDates = availableDates.length;
-  const totalTimeSlots = availableDates.reduce((sum, date) => sum + date.timeSlots.length, 0);
+  const totalTimeSlots = availableDates.reduce((sum, date) =>sum + date.timeSlots.length, 0);
   const totalHours = availableDates.reduce((sum, date) => {
     return (
       sum +
@@ -41,7 +41,7 @@ export default function AppointmentSchedulePage({
     );
   }, 0);
 
-  const upcomingDates = availableDates.filter((date) => new Date(date.date) >= new Date()).length;
+  const upcomingDates = availableDates.filter((date) =>new Date(date.date) >= new Date()).length;
 
   // Generate quick date selection for next 7 days
   const quickDates = Array.from({ length: 7 }, (_, i) => {
@@ -56,7 +56,7 @@ export default function AppointmentSchedulePage({
     <div className="p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">📅 Thiết lập lịch rảnh</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Thiết lập lịch rảnh</h1>
         <p className="text-gray-600">Thiết lập ngày và giờ rảnh để sinh viên có thể đặt lịch hẹn</p>
       </div>
 
@@ -92,8 +92,7 @@ export default function AppointmentSchedulePage({
 
           {/* Quick Date Selection */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Chọn nhanh ngày trong tuần
+            <label className="block text-sm font-medium text-gray-700 mb-3">Chọn nhanh ngày trong tuần
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
               {quickDates.map((date, i) => {
@@ -101,28 +100,22 @@ export default function AppointmentSchedulePage({
                 const dayName = weekDays[date.getDay()];
                 const dayNumber = date.getDate();
                 const isToday = i === 0;
-                const isSelected = availableDates.find((d) => d.date === dateString);
+                const isSelected = availableDates.find((d) =>d.date === dateString);
 
                 return (
                   <Button
                     key={i}
-                    type="button"
-                    variant="outline"
-                    onClick={() => !isSelected && onAddDate(dateString)}
+                    type="button"variant="outline"onClick={() =>!isSelected && onAddDate(dateString)}
                     className={cn(
                       'p-3 h-auto flex-col',
                       isSelected
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : isToday
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                    )}
+                        ? 'border-green-500 bg-green-50 text-green-700': isToday
+                        ? 'border-blue-500 bg-blue-50 text-blue-700': 'border-gray-200 hover:border-blue-300 hover:bg-blue-50')}
                   >
                     <div className="text-xs font-medium">{dayName}</div>
                     <div className="text-lg font-bold">{dayNumber}</div>
-                    {isSelected && <div className="text-xs text-green-600">✓</div>}
-                  </Button>
-                );
+                    {isSelected && <div className="text-xs text-green-600"></div>}
+                  </Button>);
               })}
             </div>
           </div>
@@ -130,15 +123,12 @@ export default function AppointmentSchedulePage({
           {/* Manual Date Input */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <label htmlFor="dateInput" className="block text-sm font-medium text-gray-700 mb-2">
-                Hoặc chọn ngày cụ thể
+              <label htmlFor="dateInput"className="block text-sm font-medium text-gray-700 mb-2">Hoặc chọn ngày cụ thể
               </label>
               <Input
-                type="date"
-                id="dateInput"
-                min={today}
+                type="date"id="dateInput"min={today}
                 max={maxDate}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => e.target.value && onAddDate(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>e.target.value && onAddDate(e.target.value)}
               />
             </div>
           </div>
@@ -149,14 +139,12 @@ export default function AppointmentSchedulePage({
       {availableDates.length === 0 ? (
         <Card className="p-8 text-center">
           <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CalendarPlus className="h-8 w-8 text-gray-400" />
+            <CalendarPlus className="h-8 w-8 text-gray-400"/>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có ngày rảnh nào</h3>
-          <p className="text-gray-600">
-            Hãy thêm ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn
+          <p className="text-gray-600">Hãy thêm ngày rảnh đầu tiên để sinh viên có thể đặt lịch hẹn với bạn
           </p>
-        </Card>
-      ) : (
+        </Card>) : (
         <div className="space-y-4">
           {availableDates.map((dateObj, index) => {
             const isUpcoming = new Date(dateObj.date) >= new Date();
@@ -169,79 +157,63 @@ export default function AppointmentSchedulePage({
                       <div
                         className={cn(
                           'p-3 rounded-lg',
-                          isUpcoming ? 'bg-blue-100' : 'bg-gray-100'
-                        )}
+                          isUpcoming ? 'bg-blue-100': 'bg-gray-100')}
                       >
                         <Clock
                           className={cn(
                             'w-6 h-6',
-                            isUpcoming ? 'text-blue-600' : 'text-gray-500'
-                          )}
+                            isUpcoming ? 'text-blue-600': 'text-gray-500')}
                         />
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
                           {formatDate(dateObj.date, locale)}
                           {!isUpcoming && (
-                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full ml-2">
-                              Đã qua
-                            </span>
-                          )}
+                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full ml-2">Đã qua
+                            </span>)}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          <Clock className="inline w-4 h-4 mr-1" />
+                          <Clock className="inline w-4 h-4 mr-1"/>
                           {dateObj.timeSlots.length} khung giờ
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
-                        onClick={() => onAddTimeSlot(dateObj.date)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Thêm giờ
+                        onClick={() =>onAddTimeSlot(dateObj.date)}
+                        className="bg-green-600 hover:bg-green-700">
+                        <Plus className="w-4 h-4 mr-1"/>Thêm giờ
                       </Button>
                       <Button
-                        onClick={() => onRemoveDate(index)}
-                        variant="destructive"
-                        size="icon"
-                      >
-                        <X className="w-4 h-4" />
+                        onClick={() =>onRemoveDate(index)}
+                        variant="destructive"size="icon">
+                        <X className="w-4 h-4"/>
                       </Button>
                     </div>
                   </div>
 
-                  {dateObj.timeSlots.length > 0 ? (
+                  {dateObj.timeSlots.length >0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {dateObj.timeSlots.map((slot, slotIndex) => (
+                      {dateObj.timeSlots.map((slot, slotIndex) =>(
                         <div
                           key={slotIndex}
-                          className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                        >
-                          <Clock className="w-3 h-3 mr-2" />
+                          className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                          <Clock className="w-3 h-3 mr-2"/>
                           {slot.start} - {slot.end}
                           <button
-                            onClick={() => onRemoveTimeSlot(index, slotIndex)}
-                            className="ml-2 text-blue-600 hover:text-red-600"
-                          >
-                            <X className="w-3 h-3" />
+                            onClick={() =>onRemoveTimeSlot(index, slotIndex)}
+                            className="ml-2 text-blue-600 hover:text-red-600">
+                            <X className="w-3 h-3"/>
                           </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
+                        </div>))}
+                    </div>) : (
                     <div className="text-gray-500 text-center py-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
                       <p className="font-medium">Chưa có khung giờ nào</p>
                       <p className="text-sm">Hãy thêm khung giờ rảnh cho ngày này!</p>
-                    </div>
-                  )}
+                    </div>)}
                 </CardContent>
-              </Card>
-            );
+              </Card>);
           })}
-        </div>
-      )}
-    </div>
-  );
+        </div>)}
+    </div>);
 }

@@ -7,7 +7,7 @@ import { cacheService } from '../../../services/cache';
  */
 export function useCachedData<T>(
   cacheKey: string,
-  fetcher: () => Promise<T>,
+  fetcher: () =>Promise<T>,
   options?: {
     ttl?: number;
     enableCache?: boolean;
@@ -94,7 +94,7 @@ export function useCachedData<T>(
       const interval = setInterval(() => {
         loadData(true);
       }, options.refreshInterval);
-      return () => clearInterval(interval);
+      return () =>clearInterval(interval);
     }
   }, [options?.autoRefresh, options?.refreshInterval, loadData]);
 
@@ -105,6 +105,6 @@ export function useCachedData<T>(
     loadData,
     invalidate,
     updateCache,
-    refresh: () => loadData(true),
+    refresh: () =>loadData(true),
   };
 }

@@ -148,7 +148,7 @@ export default function ClassManagement() {
     const handleRefresh = async () => {
         try {
             setLoading(true)
-            console.log('🔄 Refreshing data...')
+            console.log(' Refreshing data...')
             
             // Clear cache
             classManagementAPI.clearCache()
@@ -225,10 +225,10 @@ export default function ClassManagement() {
 
     // Mẫu tin nhắn nhanh
     const messageTemplates = [
-        { id: 'concern', label: '😟 Quan tâm', message: 'Thầy nhận thấy em đang gặp khó khăn. Em có thể chia sẻ với thầy không?' },
-        { id: 'encourage', label: '💪 Động viên', message: 'Thầy tin em có thể vượt qua! Cố gắng lên nhé!' },
-        { id: 'appointment', label: '📅 Mời gặp', message: 'Thầy muốn gặp em để trao đổi về học tập. Em sắp xếp được không?' },
-        { id: 'support', label: '🤝 Hỗ trợ', message: 'Nếu cần hỗ trợ, đừng ngại liên hệ thầy nhé!' }
+        { id: 'concern', label: ' Quan tâm', message: 'Thầy nhận thấy em đang gặp khó khăn. Em có thể chia sẻ với thầy không?' },
+        { id: 'encourage', label: ' Động viên', message: 'Thầy tin em có thể vượt qua! Cố gắng lên nhé!' },
+        { id: 'appointment', label: ' Mời gặp', message: 'Thầy muốn gặp em để trao đổi về học tập. Em sắp xếp được không?' },
+        { id: 'support', label: ' Hỗ trợ', message: 'Nếu cần hỗ trợ, đừng ngại liên hệ thầy nhé!' }
     ]
 
     // Utility function để filter students
@@ -582,14 +582,14 @@ export default function ClassManagement() {
                                                                                     'bg-green-100 text-green-700 border-green-300'
                                                                             }`}
                                                                     >
-                                                                        {student.riskLevel === 'High' ? '🔴 Nguy cơ cao' :
-                                                                            student.riskLevel === 'Medium' ? '🟠 Nguy cơ TB' :
-                                                                                student.riskLevel === 'Monitor' ? '🟡 Cần theo dõi' :
-                                                                                    '🟢 Không rủi ro'}
+                                                                        {student.riskLevel === 'High' ? ' Nguy cơ cao' :
+                                                                            student.riskLevel === 'Medium' ? ' Nguy cơ TB' :
+                                                                                student.riskLevel === 'Monitor' ? ' Cần theo dõi' :
+                                                                                    ' Không rủi ro'}
                                                                     </Badge>
                                                                 ) : (
                                                                     <Badge className="text-xs font-medium bg-gray-100 text-gray-600 border-gray-300">
-                                                                        ⚪ Chưa có dữ liệu
+                                                                         Chưa có dữ liệu
                                                                     </Badge>
                                                                 )}
                                                             </TableCell>
@@ -861,7 +861,7 @@ export default function ClassManagement() {
                                 <button
                                     onClick={() => {
                                         if (quickMessage.trim()) {
-                                            alert(`✅ Đã gửi tin nhắn đến ${selectedStudentDetail.name}:\n\n"${quickMessage}"`)
+                                            alert(` Đã gửi tin nhắn đến ${selectedStudentDetail.name}:\n\n"${quickMessage}"`)
                                             setQuickMessage('')
                                             setSelectedTemplate('')
                                         }

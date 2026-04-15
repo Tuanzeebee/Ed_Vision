@@ -24,15 +24,15 @@ export const useFilterOptions = () => {
 
     useEffect(() => {
         const loadFilterOptions = async () => {
-            console.log('🔄 Loading filter options...');
+            console.log('Loading filter options...');
             setLoading(true);
             setError(null);
             try {
                 const options = await classManagementAPI.getFilterOptions();
-                console.log('✅ Filter options loaded:', options);
+                console.log('Filter options loaded:', options);
                 setFilterOptions(options);
             } catch (err: any) {
-                console.error('❌ Error loading filter options:', err);
+                console.error('Error loading filter options:', err);
                 setError(err.message || 'Failed to load filter options');
             } finally {
                 setLoading(false);

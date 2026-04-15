@@ -5,7 +5,8 @@ import axios from 'axios';
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private readonly apiKey = process.env.GEMINI_API_KEY;
-  private readonly apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  private readonly apiUrl =
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
   async analyzeSurvey(
     questionsAndAnswers: string,
@@ -67,37 +68,50 @@ Output example:
         );
 
         const result = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
+
         if (!result) {
           throw new Error('Empty response from Gemini');
         }
 
         // Clean markdown code blocks if present
-        const cleanedResult = result.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleanedResult = result
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
 
         const parsed = JSON.parse(cleanedResult);
-        
+
         // Validate output
-        const financial = Math.min(Math.max(Math.round(Number(parsed.financial_support_score) || 0), 0), 3);
-        const mental = Math.min(Math.max(Math.round(Number(parsed.mental_health_score) || 0), 0), 3);
+        const financial = Math.min(
+          Math.max(Math.round(Number(parsed.financial_support_score) || 0), 0),
+          3,
+        );
+        const mental = Math.min(
+          Math.max(Math.round(Number(parsed.mental_health_score) || 0), 0),
+          3,
+        );
 
         return {
           financial_support_score: financial,
           mental_health_score: mental,
         };
-
       } catch (error) {
         attempt++;
         const status = error.response?.status;
-        
+
         if (status === 429 && attempt < maxRetries) {
           const delay = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
-          this.logger.warn(`Gemini API 429 Too Many Requests. Retrying attempt ${attempt}/${maxRetries} after ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          this.logger.warn(
+            `Gemini API 429 Too Many Requests. Retrying attempt ${attempt}/${maxRetries} after ${delay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 
-        this.logger.error('Error calling Gemini API', error.response?.data || error.message);
+        this.logger.error(
+          'Error calling Gemini API',
+          error.response?.data || error.message,
+        );
         // Fallback to default values in case of error
         return { financial_support_score: 0, mental_health_score: 0 };
       }

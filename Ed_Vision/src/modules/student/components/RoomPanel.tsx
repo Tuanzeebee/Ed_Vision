@@ -756,7 +756,7 @@ export default function RoomPanel({
                         <div className="mb-6">
                           <div className="flex items-center gap-2 mb-3">
                             <h3 className="text-white font-bold text-lg">Summer Special</h3>
-                            <span className="text-xl">☀️</span>
+                            <span className="text-xl"></span>
                           </div>
                           <div className="grid grid-cols-3 gap-3">
                             {summerSpecialThemes.map((theme, index) => (
@@ -849,7 +849,7 @@ export default function RoomPanel({
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <h3 className="text-white font-bold text-lg">Featuring</h3>
-                            <span className="text-xl">✨</span>
+                            <span className="text-xl"></span>
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-3">
@@ -869,7 +869,7 @@ export default function RoomPanel({
                                   <div className="text-white/70 text-[10px]">by {theme.author}</div>
                                 </div>
                                 <div className="absolute top-2 left-2 bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <span>✨</span> Featured
+                                  <span></span> Featured
                                 </div>
                               </div>
                               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">

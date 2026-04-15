@@ -4,8 +4,8 @@ import cacheService from './cacheService';
 interface QueueItem {
   uploadId: string;
   topK: number;
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  resolve: (value: any) =>void;
+  reject: (error: any) =>void;
   timestamp: number;
 }
 
@@ -20,11 +20,11 @@ interface QueueItem {
  */
 class ShapService {
   private queue: QueueItem[] = [];
-  private processing: Set<string> = new Set();
-  private pendingRequests: Map<string, Promise<any>> = new Map();
+  private processing: Set<string>= new Set();
+  private pendingRequests: Map<string, Promise<any>>= new Map();
   private readonly MAX_CONCURRENT = 3; // Max 3 concurrent SHAP requests
   private readonly DEBOUNCE_MS = 500; // 500ms debounce
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private debounceTimers: Map<string, NodeJS.Timeout>= new Map();
 
   /**
    * Get SHAP explanation với deduplication và queueing
@@ -137,8 +137,8 @@ class ShapService {
       console.log(`[SHAP] Completed: ${cacheKey} (${this.processing.size}/${this.MAX_CONCURRENT})`);
       
       // Process next item in queue
-      if (this.queue.length > 0) {
-        setTimeout(() => this.processQueue(), 100); // Small delay between requests
+      if (this.queue.length >0) {
+        setTimeout(() =>this.processQueue(), 100); // Small delay between requests
       }
     }
   }
@@ -175,7 +175,7 @@ class ShapService {
       item.reject(new Error('Queue cleared'));
     });
     this.queue = [];
-    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.forEach(timer =>clearTimeout(timer));
     this.debounceTimers.clear();
   }
 }

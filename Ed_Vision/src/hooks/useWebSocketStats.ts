@@ -10,8 +10,8 @@ export default function useWebSocketStats(): number {
   const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
-    let studentSocket: ReturnType<typeof io> | null = null;
-    let instructorSocket: ReturnType<typeof io> | null = null;
+    let studentSocket: ReturnType<typeof io>| null = null;
+    let instructorSocket: ReturnType<typeof io>| null = null;
 
     const initializeWebSockets = () => {
       // Student socket
@@ -23,7 +23,7 @@ export default function useWebSocketStats(): number {
           // connected
         });
         studentSocket.on("studentOnlineStatsUpdated", () => {
-          setTrigger((p) => p + 1);
+          setTrigger((p) =>p + 1);
         });
         studentSocket.on("disconnect", () => {
           // disconnected
@@ -44,7 +44,7 @@ export default function useWebSocketStats(): number {
           // connected
         });
         instructorSocket.on("instructorOnlineStatsUpdated", () => {
-          setTrigger((p) => p + 1);
+          setTrigger((p) =>p + 1);
         });
         instructorSocket.on("disconnect", () => {
           // disconnected

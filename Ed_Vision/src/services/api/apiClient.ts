@@ -28,7 +28,7 @@ apiClient.interceptors.request.use(
 
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) =>response,
   (error) => {
     // Chỉ redirect khi 401 và không phải development
     if (error.response?.status === 401 && !import.meta.env.DEV) {

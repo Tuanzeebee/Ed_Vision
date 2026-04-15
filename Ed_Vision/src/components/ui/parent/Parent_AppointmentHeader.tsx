@@ -2,10 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/parent/Parent_button"
 import iconBooking from "@/assets/parent/iconBooking.svg"
 import iconClose from "@/assets/parent/iconCloseBig.svg"
-
 type Props = {
   title?: string
-  onClose?: () => void
+  onClose?: () =>void
 }
 
 export default function AppointmentHeader({
@@ -19,15 +18,14 @@ export default function AppointmentHeader({
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <div className="bg-blue-600 rounded-lg p-2 mr-3">
-              <img src={iconBooking} alt="" className="w-5 h-5" />
+              <img src={iconBooking} alt=""className="w-5 h-5"/>
             </div>
             <h1 className="text-xl font-semibold text-gray-900">{title || t('parent:ui.appointmentHeader.defaultTitle')}</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <img src={iconClose} alt="" className="w-6 h-6" />
+          <Button variant="ghost"size="sm"onClick={onClose}>
+            <img src={iconClose} alt=""className="w-6 h-6"/>
           </Button>
         </div>
       </div>
-    </div>
-  )
+    </div>)
 }

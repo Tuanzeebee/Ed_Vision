@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function updateAccountCreatedDates() {
-  console.log('🔄 Updating account created_at dates based on student cohort_year...\n');
+  console.log(' Updating account created_at dates based on student cohort_year...\n');
 
   // Lấy tất cả students với cohort_year
   const students = await prisma.student.findMany({
@@ -47,12 +47,12 @@ async function updateAccountCreatedDates() {
     }
   }
 
-  console.log(`\n✅ Update complete!`);
+  console.log(`\n Update complete!`);
   console.log(`   Updated: ${updated}`);
   console.log(`   Skipped: ${skipped}`);
 
   // Hiển thị một vài ví dụ
-  console.log('\n📊 Sample results:');
+  console.log('\n Sample results:');
   const samples = await prisma.student.findMany({
     take: 5,
     where: { cohort_year: { not: null } },
@@ -74,7 +74,7 @@ async function updateAccountCreatedDates() {
 }
 
 updateAccountCreatedDates().catch(err => {
-  console.error('❌ Error:', err);
+  console.error(' Error:', err);
   prisma.$disconnect();
   process.exit(1);
 });

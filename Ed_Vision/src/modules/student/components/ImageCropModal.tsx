@@ -3,8 +3,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 type Props = {
   isOpen: boolean;
   imageSrc: string;
-  onClose: () => void;
-  onCropComplete: (croppedBlob: Blob) => void;
+  onClose: () =>void;
+  onCropComplete: (croppedBlob: Blob) =>void;
 };
 
 export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComplete }: Props) {
@@ -159,8 +159,7 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComple
           <h3 className="text-white text-lg font-semibold">Chỉnh sửa ảnh đại diện</h3>
           <button
             onClick={onClose}
-            className="text-white/60 hover:text-white transition p-1"
-          >
+            className="text-white/60 hover:text-white transition p-1">
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -168,8 +167,7 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComple
         {/* Preview Container */}
         <div
           ref={containerRef}
-          className="relative mx-auto mb-4 rounded-xl overflow-hidden bg-gray-800"
-          style={{ width: 300, height: 300 }}
+          className="relative mx-auto mb-4 rounded-xl overflow-hidden bg-gray-800"style={{ width: 300, height: 300 }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -178,41 +176,35 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComple
           {/* Background layer with full image for reference */}
           {image && (
             <div
-              className="absolute inset-0 flex items-center justify-center opacity-30"
-              style={{ pointerEvents: 'none' }}
+              className="absolute inset-0 flex items-center justify-center opacity-30"style={{ pointerEvents: 'none'}}
             >
               <img
                 src={imageSrc}
-                alt="preview"
-                style={{
+                alt="preview"style={{
                   width: image.width * scale,
                   height: image.height * scale,
                   transform: `translate(${position.x}px, ${position.y}px)`,
                 }}
                 draggable={false}
               />
-            </div>
-          )}
+            </div>)}
 
           {/* Cropped canvas */}
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 cursor-move"
-            style={{ pointerEvents: 'none' }}
+            className="absolute inset-0 cursor-move"style={{ pointerEvents: 'none'}}
           />
 
           {/* Crop circle overlay */}
           <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
+            className="absolute inset-0 pointer-events-none"style={{
               background: `radial-gradient(circle ${CROP_SIZE / 2}px at center, transparent 100%, rgba(0,0,0,0.6) 100%)`,
             }}
           />
 
           {/* Circle border */}
           <div
-            className="absolute border-2 border-white/50 rounded-full pointer-events-none"
-            style={{
+            className="absolute border-2 border-white/50 rounded-full pointer-events-none"style={{
               width: CROP_SIZE,
               height: CROP_SIZE,
               left: '50%',
@@ -222,17 +214,15 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComple
           />
 
           {/* Drag hint */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/60 text-xs bg-black/50 px-2 py-1 rounded">
-            Kéo để di chuyển
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/60 text-xs bg-black/50 px-2 py-1 rounded">Kéo để di chuyển
           </div>
         </div>
 
         {/* Zoom Controls */}
         <div className="flex items-center justify-center gap-4 mb-6">
           <button
-            onClick={() => handleZoom(-0.1)}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
-          >
+            onClick={() =>handleZoom(-0.1)}
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
             <i className="fas fa-minus"></i>
           </button>
           <div className="flex items-center gap-2 text-white/60 text-sm">
@@ -240,9 +230,8 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComple
             <span>{Math.round(scale * 100)}%</span>
           </div>
           <button
-            onClick={() => handleZoom(0.1)}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
-          >
+            onClick={() =>handleZoom(0.1)}
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
             <i className="fas fa-plus"></i>
           </button>
         </div>
@@ -251,19 +240,14 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onCropComple
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition"
-          >
-            Hủy
+            className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition">Hủy
           </button>
           <button
             onClick={handleCrop}
-            className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2"
-          >
-            <i className="fas fa-check"></i>
-            Áp dụng
+            className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium rounded-xl transition flex items-center justify-center gap-2">
+            <i className="fas fa-check"></i>Áp dụng
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

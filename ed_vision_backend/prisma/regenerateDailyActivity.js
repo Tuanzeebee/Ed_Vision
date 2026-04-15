@@ -6,17 +6,17 @@ async function regenerateDailyActivity() {
   const dataset = process.env.BIGQUERY_DATASET || 'edvision_dw';
   const project = process.env.BIGQUERY_PROJECT_ID;
 
-  console.log('🔄 Regenerating fact_daily_account_activity...\n');
+  console.log(' Regenerating fact_daily_account_activity...\n');
 
   // Step 1: Delete old data
-  console.log('🗑️  Step 1: Deleting old data...');
+  console.log('  Step 1: Deleting old data...');
   await bigquery.query({
     query: `DELETE FROM \`${project}.${dataset}.fact_daily_account_activity\` WHERE 1=1`
   });
-  console.log('   ✅ Deleted old data\n');
+  console.log('    Deleted old data\n');
 
   // Step 2: Insert from sessions
-  console.log('📊 Step 2: Calculating daily activity from sessions...');
+  console.log(' Step 2: Calculating daily activity from sessions...');
   const insertQuery = `
     INSERT INTO \`${project}.${dataset}.fact_daily_account_activity\` (
       activity_date,
@@ -79,10 +79,10 @@ async function regenerateDailyActivity() {
   `;
 
   await bigquery.query({ query: insertQuery });
-  console.log('   ✅ Inserted daily activity data\n');
+  console.log('    Inserted daily activity data\n');
 
   // Step 3: Verify
-  console.log('🔍 Step 3: Verifying results...');
+  console.log(' Step 3: Verifying results...');
   const [rows] = await bigquery.query({
     query: `
       SELECT 
@@ -106,7 +106,7 @@ async function regenerateDailyActivity() {
   console.log('└─────────────────────────────────────────────────────────────┘');
 
   // Sample data
-  console.log('\n📊 Sample data (latest 10 rows):');
+  console.log('\n Sample data (latest 10 rows):');
   const [samples] = await bigquery.query({
     query: `
       SELECT activity_date, role_code, total_accounts, active_accounts, performance_rate
@@ -120,10 +120,10 @@ async function regenerateDailyActivity() {
     console.log(`   ${s.activity_date.value} | ${s.role_code.padEnd(10)} | Total: ${String(s.total_accounts).padStart(4)} | Active: ${String(s.active_accounts).padStart(4)} | Rate: ${s.performance_rate}`);
   });
 
-  console.log('\n✅ Done!');
+  console.log('\n Done!');
 }
 
 regenerateDailyActivity().catch(err => {
-  console.error('❌ Error:', err.message);
+  console.error(' Error:', err.message);
   process.exit(1);
 });

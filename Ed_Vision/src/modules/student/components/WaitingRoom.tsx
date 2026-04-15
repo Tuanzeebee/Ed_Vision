@@ -667,8 +667,7 @@ export default function WaitingRoom({
                 <p className="font-medium">Xem trước máy ảnh</p>
                 <p className="text-white/70">{isMicOn ? 'Micrô bật' : 'Micrô tắt'}</p>
               </div>
-            </div>
-          ) : (
+            </div>) : (
             <div className="flex flex-col items-center justify-center">
               <div className="mb-6 flex h-32 w-32 items-center justify-center rounded-full border-4 border-white/10 bg-[#3a3d4a]">
                 <i className="fas fa-user text-5xl text-white/40"></i>
@@ -781,11 +780,8 @@ export default function WaitingRoom({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>)}
+          </div>)}
       </div>
-    </div>
-  );
+    </div>);
 }

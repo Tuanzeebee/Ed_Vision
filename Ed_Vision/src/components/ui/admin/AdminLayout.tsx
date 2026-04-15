@@ -8,7 +8,6 @@ import AutoBreadcrumb from './AutoBreadcrumb'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import NotificationDropdown from '@/components/layout/NotificationDropdown'
 import { STUDENT_ASSETS } from '@/assets/student'
-
 interface AdminLayoutProps {
   children: React.ReactNode
 }
@@ -64,7 +63,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       setUser(null)
     }
     function onStorage(e: StorageEvent) {
-      if (e.key === 'user' || e.key === 'token') {
+      if (e.key === 'user'|| e.key === 'token') {
         try { setUser(e.newValue ? JSON.parse(e.newValue) : null) } catch { setUser(null) }
       }
     }
@@ -81,10 +80,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   // prefer any avatar from the user; fall back to the shared STUDENT_ASSETS default (remote URL)
   const avatar = user?.avatar || STUDENT_ASSETS.defaultAvatar
   const displayName = user?.fullName || user?.name || user?.email || 'Admin'
-  const roleCode = (user?.roleRel?.code || user?.role || '').toString().toLowerCase()
+const roleCode = (user?.roleRel?.code || user?.role || '').toString().toLowerCase()
   const roleLabel = roleCode ? roleCode : t('common:header.user.administrator')
 
-  const handleLogoClick = () => navigate('/admin/dashboard')
+  const handleLogoClick = () =>navigate('/admin/dashboard')
 
   const { logout } = useAuth()
 
@@ -95,7 +94,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       if (email) {
         await fetch(buildUrl('/auth/logout'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json'},
           body: JSON.stringify({ email })
         })
       }
@@ -110,8 +109,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         localStorage.removeItem('rolePermissions')
-        window.location.href = '/student/landing'
-      }
+        window.location.href = '/student/landing'}
     }
   }
 
@@ -123,16 +121,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div
-              className="flex items-center cursor-pointer"
-              onClick={handleLogoClick}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick() }}
+              className="flex items-center cursor-pointer"onClick={handleLogoClick}
+              role="button"tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter'|| e.key === '') handleLogoClick() }}
             >
 
               {
-                <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
-              }
+                <img src="/src/assets/shared/logo_predica.jpg"alt="Predica Logo"className="h-13 w-auto object-contain"/>}
             </div>
 
             {/* Right: LanguageSwitcher + Chuông + Avatar + Dropdown (chỉ có Logout) */}
@@ -142,24 +137,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <NotificationDropdown isAdminMode={true} />
 
               {/* Avatar + tên + vai trò + caret giống style cũ */}
-              <div className="relative" ref={menuRef}>
+              <div className="relative"ref={menuRef}>
                 <button
-                  onClick={() => setMenuOpen(s => !s)}
-                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"
-                  aria-expanded={menuOpen}
+                  onClick={() =>setMenuOpen(s =>!s)}
+                  className="flex items-center space-x-3 bg-white hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"aria-expanded={menuOpen}
                 >
                   <img src={avatar}
                     alt={displayName}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500" />
+                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500"/>
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-semibold text-gray-900">{displayName}</p>
                     <p className="text-xs text-gray-500">{roleLabel}</p>
                   </div>
                   <svg
-                    className={`w-4 h-4 text-gray-400 transform transition-transform ${menuOpen ? 'rotate-180' : ''}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    className={`w-4 h-4 text-gray-400 transform transition-transform ${menuOpen ? 'rotate-180': ''}`}
+                    fill="none"stroke="currentColor"viewBox="0 0 24 24">
+                    <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M19 9l-7 7-7-7"></path>
                   </svg>
                 </button>
 
@@ -177,13 +170,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           setMenuOpen(false)
                           navigate('/admin/settings')
                         }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg w-full"
-                      >
-                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Settings
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg w-full">
+                        <svg className="w-4 h-4 text-slate-400"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>Settings
                       </button>
                       
                       <div className="h-px bg-slate-100 my-1"></div>
@@ -191,16 +182,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       {/* Logout */}
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg w-full"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Logout
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg w-full">
+                        <svg className="w-4 h-4"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                          <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>Logout
                       </button>
                     </div>
-                  </div>
-                )}
+                  </div>)}
               </div>
             </div>
           </div>
@@ -220,6 +208,5 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </div>
       </div>
-    </div>
-  )
+    </div>)
 }

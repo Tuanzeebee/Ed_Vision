@@ -30,7 +30,7 @@ ChartJS.register(
   Legend
 );
 
-// ✅ Chart với props động theo timeFilter
+//  Chart với props động theo timeFilter
 const ApprovalChart = memo(function ApprovalChart({ timeFilter }: { timeFilter: string }) {
   // Generate chart data based on timeFilter
   const getChartData = useMemo(() => {
@@ -323,7 +323,7 @@ export default function ContentApproval() {
       description: "Chương 1-5, Giải tích và Đại số",
       type: "Tài liệu học tập",
       typeColor: "blue",
-      icon: "📄",
+      icon: "",
       author: "Nguyễn Văn A",
       avatar: "/src/assets/admin/user1.jpg",
       department: "Khoa học Máy tính",
@@ -339,7 +339,7 @@ export default function ContentApproval() {
       description: "Chương 3: Kế thừa và Đa hình",
       type: "Bài giảng",
       typeColor: "green",
-      icon: "📊",
+      icon: "",
       author: "Trần Thị B",
       avatar: "/src/assets/admin/user2.jpg",
       department: "Công nghệ Phần mềm",
@@ -355,7 +355,7 @@ export default function ContentApproval() {
       description: "Kỳ thi cuối kỳ - Học kỳ 1",
       type: "Đề thi",
       typeColor: "purple",
-      icon: "📝",
+      icon: "",
       author: "Lê Văn C",
       avatar: "/src/assets/admin/user3.jpg",
       department: "Kinh tế Quốc tế",
@@ -371,7 +371,7 @@ export default function ContentApproval() {
       description: "Thiết kế ERD và SQL queries",
       type: "Bài tập",
       typeColor: "orange",
-      icon: "📋",
+      icon: "",
       author: "Phạm Thị D",
       avatar: "/src/assets/admin/user4.jpg",
       department: "An toàn Thông tin",
@@ -387,7 +387,7 @@ export default function ContentApproval() {
       description: "Unit 5: Business Communication",
       type: "Video bài giảng",
       typeColor: "red",
-      icon: "🎥",
+      icon: "",
       author: "Hoàng Văn E",
       avatar: "/src/assets/admin/user5.jpg",
       department: "Tiếng Anh Thương mại",
@@ -650,7 +650,7 @@ export default function ContentApproval() {
                   }
                 `}
               >
-                <span className="text-lg">📊</span>
+                <span className="text-lg"></span>
                 <span>Tổng quan</span>
               </button>
               
@@ -664,7 +664,7 @@ export default function ContentApproval() {
                   }
                 `}
               >
-                <span className="text-lg">📜</span>
+                <span className="text-lg"></span>
                 <span>Lịch sử phê duyệt</span>
                 {approvalHistory.length > 0 && (
                   <span className="ml-2 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs font-medium">
@@ -690,12 +690,12 @@ export default function ContentApproval() {
                   <p className="text-2xl font-bold text-yellow-900">{statistics.pending}</p>
                   <div className="flex items-center mt-1">
                     <span className={`text-xs font-medium ${statistics.diff.pending >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                      {statistics.diff.pending >= 0 ? '↗' : '↓'} {statistics.diff.pending >= 0 ? `+${statistics.diff.pending}` : statistics.diff.pending} {getTimePeriodLabel()}
+                      {statistics.diff.pending >= 0 ? '' : '↓'} {statistics.diff.pending >= 0 ? `+${statistics.diff.pending}` : statistics.diff.pending} {getTimePeriodLabel()}
                     </span>
                   </div>
                 </div>
                 <div className="w-10 h-10 bg-yellow-200 rounded-lg flex items-center justify-center">
-                  <span className="text-yellow-700 text-xl">🕐</span>
+                  <span className="text-yellow-700 text-xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -710,12 +710,12 @@ export default function ContentApproval() {
                   <p className="text-2xl font-bold text-green-900">{statistics.approved}</p>
                   <div className="flex items-center mt-1">
                     <span className={`text-xs font-medium ${statistics.diff.approved >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {statistics.diff.approved >= 0 ? '↗' : '↘'} {statistics.diff.approved >= 0 ? `+${statistics.diff.approved}` : statistics.diff.approved} {getTimePeriodLabel()}
+                      {statistics.diff.approved >= 0 ? '' : ''} {statistics.diff.approved >= 0 ? `+${statistics.diff.approved}` : statistics.diff.approved} {getTimePeriodLabel()}
                     </span>
                   </div>
                 </div>
                 <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
-                  <span className="text-green-700 text-xl">✅</span>
+                  <span className="text-green-700 text-xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -730,12 +730,12 @@ export default function ContentApproval() {
                   <p className="text-2xl font-bold text-red-900">{statistics.rejected}</p>
                   <div className="flex items-center mt-1">
                     <span className={`text-xs font-medium ${statistics.diff.rejected >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {statistics.diff.rejected >= 0 ? '↗' : '↓'} {statistics.diff.rejected >= 0 ? `+${statistics.diff.rejected}` : statistics.diff.rejected} {getTimePeriodLabel()}
+                      {statistics.diff.rejected >= 0 ? '' : '↓'} {statistics.diff.rejected >= 0 ? `+${statistics.diff.rejected}` : statistics.diff.rejected} {getTimePeriodLabel()}
                     </span>
                   </div>
                 </div>
                 <div className="w-10 h-10 bg-red-200 rounded-lg flex items-center justify-center">
-                  <span className="text-red-700 text-xl">❌</span>
+                  <span className="text-red-700 text-xl"></span>
                 </div>
               </div>
             </CardContent>
@@ -853,7 +853,7 @@ export default function ContentApproval() {
                   onClick={handleReset}
                   className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1.5 rounded-md font-medium transition-colors cursor-pointer text-xs whitespace-nowrap"
                 >
-                  🔄 Đặt lại
+                   Đặt lại
                 </button>
               </div>
             </div>
@@ -896,7 +896,7 @@ export default function ContentApproval() {
                   <tr>
                     <td colSpan={8} className="px-3 py-8 text-center">
                       <div className="text-gray-500">
-                        <span className="text-2xl mb-2 block">🔍</span>
+                        <span className="text-2xl mb-2 block"></span>
                         <p className="text-sm">Không tìm thấy nội dung phù hợp với bộ lọc</p>
                       </div>
                     </td>
@@ -941,14 +941,14 @@ export default function ContentApproval() {
                           className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded shadow-sm hover:shadow transition-all duration-150 cursor-pointer"
                           title="Phê duyệt"
                         >
-                          ✓
+                          
                         </button>
                         <button 
                           onClick={() => handleReject(content.id)}
                           className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded shadow-sm hover:shadow transition-all duration-150 cursor-pointer"
                           title="Từ chối"
                         >
-                          ✕
+                          
                         </button>
                         <button 
                           onClick={() => handleViewDetails(content.id)}
@@ -1013,7 +1013,7 @@ export default function ContentApproval() {
 
               {approvalHistory.length === 0 ? (
                 <div className="text-center py-12">
-                  <span className="text-5xl">📜</span>
+                  <span className="text-5xl"></span>
                   <p className="mt-4 text-gray-500">Chưa có lịch sử phê duyệt nào</p>
                   <p className="text-sm text-gray-400 mt-2">Các hành động phê duyệt/từ chối sẽ được lưu lại ở đây</p>
                 </div>
@@ -1057,7 +1057,7 @@ export default function ContentApproval() {
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-red-100 text-red-800'
                             }`}>
-                              {item.action === 'approved' ? '✓ Phê duyệt' : '✕ Từ chối'}
+                              {item.action === 'approved' ? ' Phê duyệt' : ' Từ chối'}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900">

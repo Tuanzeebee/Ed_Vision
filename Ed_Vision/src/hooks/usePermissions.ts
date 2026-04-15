@@ -1,7 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { hasRoutePermission, getPermissionKeyForRoute } from '@/lib/permissionMapper'
-
-/**
+import { hasRoutePermission, getPermissionKeyForRoute } from '@/lib/permissionMapper'/**
  * Hook to check user permissions for routes and specific permission keys
  */
 export function usePermissions() {
@@ -18,7 +16,7 @@ export function usePermissions() {
     }
   }
 
-  const getUserPermissions = (): Record<string, boolean> => {
+  const getUserPermissions = (): Record<string, boolean>=> {
     const user = getUserData()
     return user?.permissions || {}
   }
@@ -50,7 +48,7 @@ export function usePermissions() {
   const hasRole = (roles: string | string[]): boolean => {
     const userRole = getUserRole()
     if (Array.isArray(roles)) {
-      return roles.map(r => r.toLowerCase()).includes(userRole)
+      return roles.map(r =>r.toLowerCase()).includes(userRole)
     }
     return roles.toLowerCase() === userRole
   }
@@ -84,13 +82,13 @@ export function usePermissions() {
 export function useAdminPermissions() {
   const permissions = usePermissions()
 
-  const canManageUsers = () => permissions.hasPermission('admin_users')
-  const canManageRoles = () => permissions.hasPermission('admin_role_permissions')
-  const canViewReports = () => permissions.hasPermission('admin_reports')
-  const canManageContent = () => permissions.hasPermission('admin_content_approval')
-  const canViewOverview = () => permissions.hasPermission('admin_overview')
+  const canManageUsers = () =>permissions.hasPermission('admin_users')
+  const canManageRoles = () =>permissions.hasPermission('admin_role_permissions')
+  const canViewReports = () =>permissions.hasPermission('admin_reports')
+  const canManageContent = () =>permissions.hasPermission('admin_content_approval')
+  const canViewOverview = () =>permissions.hasPermission('admin_overview')
   
-  const isAdmin = () => permissions.hasRole('admin')
+  const isAdmin = () =>permissions.hasRole('admin')
 
   return {
     ...permissions,
@@ -109,13 +107,13 @@ export function useAdminPermissions() {
 export function useTeacherPermissions() {
   const permissions = usePermissions()
 
-  const canManageClasses = () => permissions.hasPermission('teacher_class_management')
-  const canManageGrades = () => permissions.hasPermission('teacher_grade_management')
-  const canViewPredictions = () => permissions.hasPermission('teacher_prediction_view')
-  const canTrackProgress = () => permissions.hasPermission('teacher_progress_tracking')
-  const canAccessReports = () => permissions.hasPermission('teacher_reports_alerts')
+  const canManageClasses = () =>permissions.hasPermission('teacher_class_management')
+  const canManageGrades = () =>permissions.hasPermission('teacher_grade_management')
+  const canViewPredictions = () =>permissions.hasPermission('teacher_prediction_view')
+  const canTrackProgress = () =>permissions.hasPermission('teacher_progress_tracking')
+  const canAccessReports = () =>permissions.hasPermission('teacher_reports_alerts')
   
-  const isTeacher = () => permissions.hasRole('teacher')
+  const isTeacher = () =>permissions.hasRole('teacher')
 
   return {
     ...permissions,
@@ -134,12 +132,12 @@ export function useTeacherPermissions() {
 export function useStudentPermissions() {
   const permissions = usePermissions()
 
-  const canViewCourseOverview = () => permissions.hasPermission('student_course_overview')
-  const canUploadTranscript = () => permissions.hasPermission('student_upload_transcript')
-  const canAdjustParameters = () => permissions.hasPermission('student_adjust_parameters')
-  const canAccessAcademicPlanning = () => permissions.hasPermission('student_academic_planning')
+  const canViewCourseOverview = () =>permissions.hasPermission('student_course_overview')
+  const canUploadTranscript = () =>permissions.hasPermission('student_upload_transcript')
+  const canAdjustParameters = () =>permissions.hasPermission('student_adjust_parameters')
+  const canAccessAcademicPlanning = () =>permissions.hasPermission('student_academic_planning')
   
-  const isStudent = () => permissions.hasRole('student')
+  const isStudent = () =>permissions.hasRole('student')
 
   return {
     ...permissions,

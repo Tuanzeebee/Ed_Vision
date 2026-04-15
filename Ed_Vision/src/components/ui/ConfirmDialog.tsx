@@ -6,9 +6,9 @@ interface ConfirmDialogProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  variant?: 'danger' | 'warning' | 'info';
+  onConfirm: () =>void;
+  onCancel: () =>void;
+  variant?: 'danger'| 'warning'| 'info';
 }
 
 const ConfirmDialog = ({
@@ -19,11 +19,10 @@ const ConfirmDialog = ({
   cancelText = 'Hủy',
   onConfirm,
   onCancel,
-  variant = 'warning'
-}: ConfirmDialogProps) => {
+  variant = 'warning'}: ConfirmDialogProps) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) {
+      if (e.key === 'Escape'&& open) {
         onCancel();
       }
     };
@@ -68,15 +67,13 @@ const ConfirmDialog = ({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm z-50 transition-opacity"
-        onClick={onCancel}
+        className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm z-50 transition-opacity"onClick={onCancel}
       />
       
       {/* Dialog */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div 
-          className="bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all"
-          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all"onClick={(e) =>e.stopPropagation()}
         >
           <div className="p-6">
             {/* Icon and Title */}
@@ -98,15 +95,12 @@ const ConfirmDialog = ({
             {/* Actions */}
             <div className="flex gap-3 mt-6 justify-end">
               <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
+                type="button"onClick={onCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                 {cancelText}
               </button>
               <button
-                type="button"
-                onClick={onConfirm}
+                type="button"onClick={onConfirm}
                 className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${style.confirmBg}`}
               >
                 {confirmText}
@@ -115,8 +109,7 @@ const ConfirmDialog = ({
           </div>
         </div>
       </div>
-    </>
-  );
+    </>);
 };
 
 export default ConfirmDialog;

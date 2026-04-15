@@ -614,7 +614,7 @@ const StudentSurveyManagement = () => {
             return
         }
 
-        // ✅ VALIDATE: Check for duplicate questions BEFORE submitting
+        //  VALIDATE: Check for duplicate questions BEFORE submitting
         const normalize = (str: string) => str.toLowerCase().trim().replace(/\s+/g, ' ')
         const questionTexts = new Map<string, number>() // normalized text -> count
         
@@ -1383,10 +1383,10 @@ const StudentSurveyManagement = () => {
                                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateQuestion(question.id, "category", e.target.value)}
                                                 className="w-full px-3 py-2 border rounded-lg"
                                             >
-                                                <option value="financial">💰 Tài chính - Tình hình kinh tế và chi tiêu</option>
-                                                <option value="mental">🧠 Tâm lý - Tinh thần và sức khỏe</option>
-                                                <option value="academic">📚 Học tập - Thành tích và khó khăn</option>
-                                                <option value="social">👥 Xã hội - Quan hệ và hoạt động</option>
+                                                <option value="financial"> Tài chính - Tình hình kinh tế và chi tiêu</option>
+                                                <option value="mental"> Tâm lý - Tinh thần và sức khỏe</option>
+                                                <option value="academic"> Học tập - Thành tích và khó khăn</option>
+                                                <option value="social"> Xã hội - Quan hệ và hoạt động</option>
                                             </select>
                                         </div>
 
@@ -1496,10 +1496,10 @@ const StudentSurveyManagement = () => {
                                             <p className="font-medium text-base">{question.question || t('surveyManagement.noQuestions')}</p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className="text-sm text-gray-600">
-                                                    {question.category === "financial" && "💰 Tài chính"}
-                                                    {question.category === "mental" && "🧠 Tâm lý"}
-                                                    {question.category === "academic" && "📚 Học tập"}
-                                                    {question.category === "social" && "👥 Xã hội"}
+                                                    {question.category === "financial" && " Tài chính"}
+                                                    {question.category === "mental" && " Tâm lý"}
+                                                    {question.category === "academic" && " Học tập"}
+                                                    {question.category === "social" && " Xã hội"}
                                                 </span>
                                                 <span className="text-xs text-gray-400">•</span>
                                                 <Badge variant="outline" className="text-xs">Trọng số: {question.weight}</Badge>
@@ -1691,14 +1691,14 @@ const StudentSurveyManagement = () => {
                                     className="w-full md:w-64 px-3 py-2 border rounded-lg bg-white"
                                 >
                                     <option value="all">{t('surveyManagement.allCategories')}</option>
-                                    <option value="financial">💰 {t('surveyManagement.financial')}</option>
-                                    <option value="mental">🧠 {t('surveyManagement.mental')}</option>
-                                    <option value="academic">📚 {t('surveyManagement.academic')}</option>
-                                    <option value="social">👥 {t('surveyManagement.social')}</option>
-                                    <option value="teaching_quality">👨‍🏫 {t('surveyManagement.teachingQuality')}</option>
-                                    <option value="facilities">🏢 {t('surveyManagement.facilities')}</option>
-                                    <option value="extracurricular">🎭 {t('surveyManagement.extracurricular')}</option>
-                                    <option value="academic_advising">📋 {t('surveyManagement.academicAdvising')}</option>
+                                    <option value="financial"> {t('surveyManagement.financial')}</option>
+                                    <option value="mental"> {t('surveyManagement.mental')}</option>
+                                    <option value="academic"> {t('surveyManagement.academic')}</option>
+                                    <option value="social"> {t('surveyManagement.social')}</option>
+                                    <option value="teaching_quality"> {t('surveyManagement.teachingQuality')}</option>
+                                    <option value="facilities"> {t('surveyManagement.facilities')}</option>
+                                    <option value="extracurricular"> {t('surveyManagement.extracurricular')}</option>
+                                    <option value="academic_advising"> {t('surveyManagement.academicAdvising')}</option>
                                 </select>
                                 <Badge variant="secondary">
                                     {availableQuestions
@@ -1729,14 +1729,14 @@ const StudentSurveyManagement = () => {
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <Badge variant="outline" className="text-xs">
-                                                                {q.category === 'financial' && '💰 Tài chính'}
-                                                                {q.category === 'mental' && '🧠 Tâm lý'}
-                                                                {q.category === 'academic' && '📚 Học tập'}
-                                                                {q.category === 'social' && '👥 Xã hội'}
-                                                                {q.category === 'teaching_quality' && '👨‍🏫 Chất lượng GD'}
-                                                                {q.category === 'facilities' && '🏢 Cơ sở vật chất'}
-                                                                {q.category === 'extracurricular' && '🎭 Ngoại khóa'}
-                                                                {q.category === 'academic_advising' && '📋 Tư vấn'}
+                                                                {q.category === 'financial' && ' Tài chính'}
+                                                                {q.category === 'mental' && ' Tâm lý'}
+                                                                {q.category === 'academic' && ' Học tập'}
+                                                                {q.category === 'social' && ' Xã hội'}
+                                                                {q.category === 'teaching_quality' && ' Chất lượng GD'}
+                                                                {q.category === 'facilities' && ' Cơ sở vật chất'}
+                                                                {q.category === 'extracurricular' && ' Ngoại khóa'}
+                                                                {q.category === 'academic_advising' && ' Tư vấn'}
                                                             </Badge>
                                                             <Badge variant="secondary" className="text-xs">
                                                                 {q.type === 'multiple-choice' && 'Trắc nghiệm'}
@@ -1966,9 +1966,9 @@ const StudentSurveyManagement = () => {
                                                                 <p className="font-medium">{question.question}</p>
                                                                 <div className="flex items-center gap-2 mt-1">
                                                                     <Badge variant="outline" className="text-xs">
-                                                                        {question.category === "financial" ? `💰 ${t('surveyManagement.financial')}` :
-                                                                            question.category === "mental" ? `🧠 ${t('surveyManagement.mental')}` :
-                                                                                question.category === "academic" ? `📚 ${t('surveyManagement.academic')}` : `👥 ${t('surveyManagement.social')}`}
+                                                                        {question.category === "financial" ? ` ${t('surveyManagement.financial')}` :
+                                                                            question.category === "mental" ? ` ${t('surveyManagement.mental')}` :
+                                                                                question.category === "academic" ? ` ${t('surveyManagement.academic')}` : ` ${t('surveyManagement.social')}`}
                                                                     </Badge>
                                                                     <Badge variant="outline" className="text-xs">
                                                                         {question.type === "scale" ? t('surveyManagement.rating') : question.type === "choice" ? t('surveyManagement.multipleChoice') : t('surveyManagement.textType')}
@@ -2071,7 +2071,7 @@ const StudentSurveyManagement = () => {
                                 onClick={() => toast.hideToast(t.id)}
                                 className="text-white hover:opacity-75 transition-opacity"
                             >
-                                ✕
+                                
                             </button>
                         </div>
                     </div>

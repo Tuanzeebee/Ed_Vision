@@ -13,9 +13,9 @@ type AdvisedClass = {
 
 type Props = {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: () =>void;
   currentClasses: AdvisedClass[];
-  onSuccess: () => void;
+  onSuccess: () =>void;
 };
 
 export default function EditAdvisedClassesModal({
@@ -59,7 +59,7 @@ export default function EditAdvisedClassesModal({
     if (isOpen) {
       // Map current classes to selected format
       setSelectedClasses(
-        currentClasses.map((c) => ({
+        currentClasses.map((c) =>({
           classId: c.classId,
           assignedDate: formatDateToInput(c.assignedDate),
         }))
@@ -100,7 +100,7 @@ export default function EditAdvisedClassesModal({
   };
 
   const handleRemoveClass = (index: number) => {
-    setSelectedClasses(selectedClasses.filter((_, i) => i !== index));
+    setSelectedClasses(selectedClasses.filter((_, i) =>i !== index));
   };
 
   const handleClassChange = (index: number, classId: number) => {
@@ -118,11 +118,11 @@ export default function EditAdvisedClassesModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Filter only valid classes (classId > 0)
-    const validClasses = selectedClasses.filter((c) => c.classId > 0);
+    // Filter only valid classes (classId >0)
+    const validClasses = selectedClasses.filter((c) =>c.classId >0);
 
     const payload = {
-      classes: validClasses.map((c) => ({
+      classes: validClasses.map((c) =>({
         classId: c.classId,
         assignedDate: c.assignedDate,
       })),
@@ -151,7 +151,7 @@ export default function EditAdvisedClassesModal({
       console.log("Response status:", res.status);
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
+        const errData = await res.json().catch(() =>({}));
         throw new Error(errData?.message || t('teacherAdvisedClasses.updateError'));
       }
 
@@ -171,16 +171,13 @@ export default function EditAdvisedClassesModal({
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+        className="fixed inset-0 bg-black/50 transition-opacity"onClick={onClose}
+        aria-hidden="true"/>
 
       {/* Modal container */}
       <div className="flex min-h-screen items-center justify-center p-4">
         <div 
-          className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"onClick={(e) =>e.stopPropagation()}
         >
           {/* Header với gradient xanh lá */}
           <div className="bg-gradient-to-r from-green-600 to-green-800 px-6 py-5 text-white rounded-t-2xl">
@@ -198,8 +195,7 @@ export default function EditAdvisedClassesModal({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors">
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
@@ -208,11 +204,10 @@ export default function EditAdvisedClassesModal({
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              {selectedClasses.map((selected, index) => (
+              {selectedClasses.map((selected, index) =>(
                 <div
                   key={index}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                >
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                   <div className="flex items-start gap-3">
                     <div className="flex-1 space-y-4">
                       <div>
@@ -221,18 +216,15 @@ export default function EditAdvisedClassesModal({
                         </label>
                         <select
                           value={selected.classId}
-                          onChange={(e) =>
-                            handleClassChange(index, parseInt(e.target.value))
+                          onChange={(e) =>handleClassChange(index, parseInt(e.target.value))
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
-                          required
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"required
                         >
-                          <option value={0}>-- {t('teacherWork.selectDepartment', { defaultValue: 'Select' })} --</option>
-                          {availableClasses.map((cls) => (
+                          <option value={0}>-- {t('teacherWork.selectDepartment', { defaultValue: 'Select'})} --</option>
+                          {availableClasses.map((cls) =>(
                             <option key={cls.classId} value={cls.classId}>
                               {cls.classCode} - {t('teacherAdvisedClasses.cohortYear')} {cls.cohortYear}
-                            </option>
-                          ))}
+                            </option>))}
                         </select>
                       </div>
 
@@ -241,71 +233,57 @@ export default function EditAdvisedClassesModal({
                           {t('teacherAdvisedClasses.startDate')} <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="date"
-                          value={selected.assignedDate}
-                          onChange={(e) => handleDateChange(index, e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
-                          style={{ colorScheme: 'light' }}
+                          type="date"value={selected.assignedDate}
+                          onChange={(e) =>handleDateChange(index, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"style={{ colorScheme: 'light'}}
                           required
                         />
                       </div>
                     </div>
 
                     <button
-                      type="button"
-                      onClick={() => handleRemoveClass(index)}
-                      className="mt-7 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title={t('teacherAdvisedClasses.removeTitle')}
+                      type="button"onClick={() =>handleRemoveClass(index)}
+                      className="mt-7 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"title={t('teacherAdvisedClasses.removeTitle')}
                     >
                       <i className="fas fa-trash"></i>
                     </button>
                   </div>
-                </div>
-              ))}
+                </div>))}
             </div>
 
             <button
-              type="button"
-              onClick={handleAddClass}
-              className="mt-4 w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-all"
-            >
+              type="button"onClick={handleAddClass}
+              className="mt-4 w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-all">
               <i className="fas fa-plus mr-2"></i>
-              {t('studentParentLinks.generateCode', { defaultValue: 'Add' })}
+              {t('studentParentLinks.generateCode', { defaultValue: 'Add'})}
             </button>
 
             {/* Footer buttons */}
             <div className="flex gap-3 justify-end mt-6 pt-6 border-t border-gray-200">
               <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-                disabled={loading}
+                type="button"onClick={onClose}
+                className="px-6 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"disabled={loading}
               >
                 {t('common.cancel')}
               </button>
               <button
-                type="submit"
-                className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
+                type="submit"className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"disabled={loading}
               >
                 {loading ? (
                   <>
                     <i className="fas fa-spinner fa-spin mr-2"></i>
                     {t('common.saving')}
-                  </>
-                ) : (
+                  </>) : (
                   <>
                     <i className="fas fa-save mr-2"></i>
                     {t('common.save')}
-                  </>
-                )}
+                  </>)}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 
   return createPortal(modalContent, document.body);
 }

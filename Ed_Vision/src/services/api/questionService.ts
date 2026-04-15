@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { API_BASE_URL } from './config';
 
-export type QuestionCategory = 'psychology' | 'finance' | 'general' | 'academic' | 'health';
-export type QuestionType = 'single-choice' | 'multiple-choice' | 'text' | 'scale';
+export type QuestionCategory = 'psychology'| 'finance'| 'general'| 'academic'| 'health';
+export type QuestionType = 'single-choice'| 'multiple-choice'| 'text'| 'scale';
 
 export interface Question {
   questionId: number;

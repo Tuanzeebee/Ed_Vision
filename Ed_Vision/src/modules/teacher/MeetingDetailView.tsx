@@ -750,7 +750,7 @@ function MeetingDetailViewContent({
                               className="text-xs text-gray-500 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-600 transition-colors"
                               title={t('scheduleManagement.detail.editLink')}
                             >
-                              ✏️
+                              
                             </button>
                           </div>
                         ) : (
@@ -781,7 +781,7 @@ function MeetingDetailViewContent({
                               className="text-xs text-gray-500 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-600 transition-colors"
                               title={t('scheduleManagement.detail.editLink')}
                             >
-                              ✏️
+                              
                             </button>
                           </div>
                         ) : (

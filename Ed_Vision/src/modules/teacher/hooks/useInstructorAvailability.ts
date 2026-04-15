@@ -31,15 +31,15 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const convertToFrontendFormat = useCallback(
     (response: AvailabilityResponse): AvailableDate[] => {
-      return response.availabilities.map((avail: AvailabilityDateResponse) => ({
+      return response.availabilities.map((avail: AvailabilityDateResponse) =>({
         date: avail.date,
         weekId: avail.weekId,
         isAvailable: avail.isAvailable,
-        timeSlots: avail.timeSlots.map((slot: TimeSlotResponse) => ({
+        timeSlots: avail.timeSlots.map((slot: TimeSlotResponse) =>({
           slotId: slot.slotId,
           start: slot.startTime,
           end: slot.endTime,
-          meetingType: slot.meetingType as 'online' | 'offline' | 'both',
+          meetingType: slot.meetingType as 'online'| 'offline'| 'both',
           capacity: slot.capacity,
         })),
       }));
@@ -52,9 +52,9 @@ export function useInstructorAvailability(instructorId: number) {
    */
   const convertToBackendFormat = useCallback(
     (dates: AvailableDate[]): AddAvailabilityDateDto[] => {
-      return dates.map((date) => ({
+      return dates.map((date) =>({
         date: date.date,
-        timeSlots: date.timeSlots.map((slot) => ({
+        timeSlots: date.timeSlots.map((slot) =>({
           startTime: slot.start,
           endTime: slot.end,
           meetingType: slot.meetingType || 'both',
@@ -71,10 +71,10 @@ export function useInstructorAvailability(instructorId: number) {
    * Implements debouncing and prevents duplicate requests
    */
   const fetchAvailability = useCallback(
-    async (startDate?: string, endDate?: string, forceRefresh: boolean = false, autoCreate: boolean = true): Promise<AvailableDate[]> => {
+    async (startDate?: string, endDate?: string, forceRefresh: boolean = false, autoCreate: boolean = true): Promise<AvailableDate[]>=> {
       // Validate instructorId
       if (!instructorId || instructorId <= 0) {
-        console.warn('⚠ Invalid instructorId, skipping fetch');
+        console.warn('Invalid instructorId, skipping fetch');
         return [];
       }
 
@@ -124,7 +124,7 @@ export function useInstructorAvailability(instructorId: number) {
    * @param forceRefresh - Force skip cache and fetch fresh data (default: true for consistency)
    */
   const fetchWeeklyAvailability = useCallback(
-    async (weekStartDate: string, weekEndDate: string, autoCreateWeek: boolean = false, forceRefresh: boolean = true): Promise<AvailableDate[]> => {
+    async (weekStartDate: string, weekEndDate: string, autoCreateWeek: boolean = false, forceRefresh: boolean = true): Promise<AvailableDate[]>=> {
       // autoCreateWeek = false nghĩa là không tự động tạo tuần mới nếu chưa có
       // forceRefresh = true by default to always get fresh data
       const backendData = await fetchAvailability(weekStartDate, weekEndDate, forceRefresh, autoCreateWeek);
@@ -137,7 +137,7 @@ export function useInstructorAvailability(instructorId: number) {
    * Fetch statistics
    * Utilizes caching for improved performance
    */
-  const fetchStatistics = useCallback(async (forceRefresh: boolean = false): Promise<AvailabilityStatistics> => {
+  const fetchStatistics = useCallback(async (forceRefresh: boolean = false): Promise<AvailabilityStatistics>=> {
     // Validate instructorId
     if (!instructorId || instructorId <= 0) {
       throw new Error('Invalid instructorId');
@@ -161,7 +161,7 @@ export function useInstructorAvailability(instructorId: number) {
    * Add a single availability date with time slots
    */
   const addAvailabilityDate = useCallback(
-    async (date: string, timeSlots?: AvailableDate['timeSlots']): Promise<void> => {
+    async (date: string, timeSlots?: AvailableDate['timeSlots']): Promise<void>=> {
       // Validate instructorId
       if (!instructorId || instructorId <= 0) {
         throw new Error('Invalid instructorId');
@@ -172,7 +172,7 @@ export function useInstructorAvailability(instructorId: number) {
       try {
         const dto: AddAvailabilityDateDto = {
           date,
-          timeSlots: timeSlots?.map((slot) => ({
+          timeSlots: timeSlots?.map((slot) =>({
             startTime: slot.start,
             endTime: slot.end,
             meetingType: slot.meetingType || 'both',
@@ -195,7 +195,7 @@ export function useInstructorAvailability(instructorId: number) {
    * Bulk create availability dates
    */
   const bulkCreateAvailability = useCallback(
-    async (dates: AvailableDate[]): Promise<void> => {
+    async (dates: AvailableDate[]): Promise<void>=> {
       // Validate instructorId
       if (!instructorId || instructorId <= 0) {
         throw new Error('Invalid instructorId');
@@ -223,10 +223,10 @@ export function useInstructorAvailability(instructorId: number) {
    * Delete availability date
    */
   const deleteAvailabilityDate = useCallback(
-    async (date: string): Promise<void> => {
+    async (date: string): Promise<void>=> {
       // Validate instructorId
       if (!instructorId || instructorId <= 0) {
-        console.error('❌ Invalid instructorId:', instructorId);
+        console.error('Invalid instructorId:', instructorId);
         throw new Error('Invalid instructorId');
       }
 
@@ -235,7 +235,7 @@ export function useInstructorAvailability(instructorId: number) {
       try {
         await instructorAvailabilityApi.deleteAvailabilityDate(instructorId, date);
       } catch (err) {
-        console.error('❌ API deleteAvailabilityDate failed:', err);
+        console.error('API deleteAvailabilityDate failed:', err);
         const errorMessage =
           err instanceof Error ? err.message : 'Không thể xóa ngày có thể dạy';
         setError(errorMessage);
@@ -256,10 +256,10 @@ export function useInstructorAvailability(instructorId: number) {
       slotData: {
         startTime: string;
         endTime: string;
-        meetingType: 'online' | 'offline' | 'both';
+        meetingType: 'online'| 'offline'| 'both';
         capacity: number;
       }
-    ): Promise<void> => {
+    ): Promise<void>=> {
       // Validate instructorId
       if (!instructorId || instructorId <= 0) {
         throw new Error('Invalid instructorId');

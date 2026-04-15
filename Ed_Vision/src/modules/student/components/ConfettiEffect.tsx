@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 type Props = {
   visible: boolean;
-  onComplete: () => void;
+  onComplete: () =>void;
 };
 
 export default function ConfettiEffect({ visible, onComplete }: Props) {
@@ -11,7 +11,7 @@ export default function ConfettiEffect({ visible, onComplete }: Props) {
   useEffect(() => {
     if (visible) {
       // Generate confetti particles
-      const newParticles = Array.from({ length: 50 }, (_, i) => ({
+      const newParticles = Array.from({ length: 50 }, (_, i) =>({
         id: i,
         x: Math.random() * 100,
         y: -10,
@@ -27,7 +27,7 @@ export default function ConfettiEffect({ visible, onComplete }: Props) {
         onComplete();
       }, 3000);
 
-      return () => clearTimeout(timer);
+      return () =>clearTimeout(timer);
     }
   }, [visible, onComplete]);
 
@@ -35,19 +35,16 @@ export default function ConfettiEffect({ visible, onComplete }: Props) {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
-      {particles.map((particle) => (
+      {particles.map((particle) =>(
         <div
           key={particle.id}
-          className="absolute w-3 h-3 animate-confetti-fall"
-          style={{
+          className="absolute w-3 h-3 animate-confetti-fall"style={{
             left: `${particle.x}%`,
             top: `${particle.y}%`,
             backgroundColor: particle.color,
             transform: `rotate(${particle.rotation}deg)`,
             animationDelay: `${particle.delay}s`,
           }}
-        />
-      ))}
-    </div>
-  );
+        />))}
+    </div>);
 }

@@ -7,8 +7,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Khoa học Máy tính",
     "Trí tuệ Nhân tạo",
     "Khoa học Dữ liệu",
-    "Mạng Máy tính & Truyền thông"
-  ],
+    "Mạng Máy tính & Truyền thông"],
   "Trường Công nghệ": [
     "Điện tử-Viễn thông",
     "Điện-Điện tử chuẩn PNJ",
@@ -25,8 +24,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Xây dựng Cầu đường",
     "Công nghệ Quản lý Xây dựng",
     "Công nghệ Kỹ thuật Môi trường",
-    "Công nghệ Thực phẩm"
-  ],
+    "Công nghệ Thực phẩm"],
   "Trường Kinh tế và Kinh doanh": [
     "Quản trị Kinh doanh Tổng hợp",
     "Quản trị Kinh doanh Bất động sản",
@@ -46,8 +44,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Kế toán Doanh nghiệp",
     "Kế toán Quản trị",
     "Kiểm toán",
-    "Công nghệ Tài chính"
-  ],
+    "Công nghệ Tài chính"],
   "Trường Ngôn ngữ và Xã hội nhân văn": [
     "Tiếng Anh Biên-Phiên dịch",
     "Tiếng Anh Du lịch",
@@ -68,8 +65,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Quản lý Công chúng",
     "Luật Kinh tế",
     "Luật Kinh doanh",
-    "Luật học"
-  ],
+    "Luật học"],
   "Trường Du lịch": [
     "Quản trị Khách sạn",
     "Quản trị Khách sạn Quốc tế (PSU)",
@@ -79,8 +75,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Quản trị Nhà hàng Quốc tế (PSU)",
     "Du lịch",
     "Quản trị Sự kiện & Giải trí",
-    "Quản trị Du lịch & Lữ hành chuẩn PSU"
-  ],
+    "Quản trị Du lịch & Lữ hành chuẩn PSU"],
   "Trường Y-Dược": [
     "Y Khoa",
     "Răng Hàm Mặt",
@@ -88,8 +83,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Dược sĩ",
     "Công nghệ Sinh học",
     "Kỹ thuật Y sinh",
-    "Kỹ thuật Xét nghiệm Y học"
-  ],
+    "Kỹ thuật Xét nghiệm Y học"],
   "Trường Đào tạo quốc tế": [
     "Công nghệ Phần mềm chuẩn CMU",
     "An toàn Mạng chuẩn CMU",
@@ -98,14 +92,12 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Tài chính-Ngân hàng chuẩn PSU",
     "Quản trị Kế toán chuẩn PSU",
     "Xây dựng Dân dụng & Công nghiệp chuẩn CSU",
-    "Kiến trúc Công trình chuẩn CSU"
-  ],
+    "Kiến trúc Công trình chuẩn CSU"],
   "Viện Quản lý Nam Khuê": [
     "Quản trị Kinh doanh (HP)",
     "Marketing (HP)",
     "Tài chính-Ngân hàng (HP)",
-    "Logistics & Quản lý Chuỗi cung ứng (HP)"
-  ],
+    "Logistics & Quản lý Chuỗi cung ứng (HP)"],
   "Viện Việt-Nhật": [
     "Công nghệ Phần mềm (VJJ)",
     "Điện tử-Viễn thông (VJJ)",
@@ -115,8 +107,7 @@ export const majorsBySchool: { [key: string]: string[] } = {
     "Kiến trúc Công trình (VJJ)",
     "Thiết kế Đồ họa (VJJ)",
     "Công nghệ Thực phẩm (VJJ)",
-    "Điều dưỡng Đa khoa (VJJ)"
-  ]
+    "Điều dưỡng Đa khoa (VJJ)"]
 };
 
 // Classes data by major (simplified mapping)
@@ -200,15 +191,13 @@ export const classesBySchoolAndMajor: { [key: string]: { [key: string]: string[]
 export const REPORT_TYPES = [
   "Báo cáo điểm số",
   "Báo cáo hiệu suất",
-  "Báo cáo tổng hợp"
-];
+  "Báo cáo tổng hợp"];
 
 // Export formats
 export const EXPORT_FORMATS = [
   "PDF",
   "Excel",
-  "Word"
-];
+  "Word"];
 
 // Time ranges
 export const TIME_RANGES = [
@@ -216,8 +205,7 @@ export const TIME_RANGES = [
   "Tháng này",
   "Quý này",
   "Năm học này",
-  "Tùy chỉnh tuần"
-];
+  "Tùy chỉnh tuần"];
 
 // Schools list
 export const SCHOOLS = Object.keys(majorsBySchool);
@@ -228,16 +216,14 @@ export const CHART_COLORS = {
   success: '#10b981',
   warning: '#f59e0b',
   purple: '#8b5cf6',
-  danger: '#ef4444'
-};
+  danger: '#ef4444'};
 
 // Status colors
 export const STATUS_COLORS: { [key: string]: string } = {
   green: 'bg-green-100 text-green-800',
   yellow: 'bg-yellow-100 text-yellow-800',
   red: 'bg-red-100 text-red-800',
-  blue: 'bg-blue-100 text-blue-800'
-};
+  blue: 'bg-blue-100 text-blue-800'};
 
 // PDF Configuration
 export const PDF_CONFIG = {

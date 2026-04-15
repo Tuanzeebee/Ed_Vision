@@ -57,7 +57,7 @@ export const useMessages = () => {
                 const response = await getMessages(conversationId, page);
                 if (response.success) {
                     if (append) {
-                        setMessages((prev) => [...prev, ...response.data.messages]);
+                        setMessages((prev) =>[...prev, ...response.data.messages]);
                     } else {
                         setMessages(response.data.messages);
                     }
@@ -254,7 +254,7 @@ export const useMessages = () => {
         // Poll unread count every 30 seconds
         const interval = setInterval(loadUnreadCount, 30000);
 
-        return () => clearInterval(interval);
+        return () =>clearInterval(interval);
     }, [loadConversations, loadUnreadCount]);
 
     return {

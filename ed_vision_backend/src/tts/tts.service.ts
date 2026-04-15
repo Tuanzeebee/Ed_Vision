@@ -30,14 +30,23 @@ export class TtsService {
     return audioBuffer;
   }
 
-  private async generateWithEdgeTts(text: string, voice: string): Promise<Buffer> {
+  private async generateWithEdgeTts(
+    text: string,
+    voice: string,
+  ): Promise<Buffer> {
     const tmpFile = path.join(os.tmpdir(), `edvision_tts_.mp3`);
     try {
-      await execFileAsync('edge-tts', ['--voice', voice, '--text', text, '--write-media', tmpFile], { timeout: 20000 });
+      await execFileAsync(
+        'edge-tts',
+        ['--voice', voice, '--text', text, '--write-media', tmpFile],
+        { timeout: 20000 },
+      );
       return await fs.readFile(tmpFile);
     } catch (err) {
       this.logger.error('edge-tts failed:', err);
-      throw new InternalServerErrorException('TTS generation failed. Run: pip install edge-tts');
+      throw new InternalServerErrorException(
+        'TTS generation failed. Run: pip install edge-tts',
+      );
     } finally {
       fs.unlink(tmpFile).catch(() => undefined);
     }

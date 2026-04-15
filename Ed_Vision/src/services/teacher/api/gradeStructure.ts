@@ -60,8 +60,7 @@ const gradeStructureService = {
     } catch (error: any) {
       console.error('Error creating grade structure:', error);
       throw new Error(
-        error.response?.data?.message || 'Không thể tạo cấu trúc bảng điểm'
-      );
+        error.response?.data?.message || 'Không thể tạo cấu trúc bảng điểm');
     }
   },
 
@@ -149,8 +148,7 @@ const gradeStructureService = {
    */
   async updateGradeStructure(
     id: string,
-    payload: Partial<CreateGradeStructurePayload>
-  ): Promise<{ success: boolean; data: GradeStructureResponse; message: string }> {
+    payload: Partial<CreateGradeStructurePayload>): Promise<{ success: boolean; data: GradeStructureResponse; message: string }> {
     try {
       const response = await axios.patch(
         `${API_BASE_URL}/teacher/grade-structure/${id}`,
@@ -166,8 +164,7 @@ const gradeStructureService = {
     } catch (error: any) {
       console.error('Error updating grade structure:', error);
       throw new Error(
-        error.response?.data?.message || 'Không thể cập nhật cấu trúc bảng điểm'
-      );
+        error.response?.data?.message || 'Không thể cập nhật cấu trúc bảng điểm');
     }
   },
 
@@ -188,8 +185,7 @@ const gradeStructureService = {
     } catch (error: any) {
       console.error('Error deleting grade structure:', error);
       throw new Error(
-        error.response?.data?.message || 'Không thể xóa cấu trúc bảng điểm'
-      );
+        error.response?.data?.message || 'Không thể xóa cấu trúc bảng điểm');
     }
   },
 

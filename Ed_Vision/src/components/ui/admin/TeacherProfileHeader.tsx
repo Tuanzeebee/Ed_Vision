@@ -3,17 +3,15 @@ import { useParams } from "react-router-dom";
 import instructorService, { type Instructor } from "@/services/api/instructorService";
 
 // Simple Card components
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
-const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const CardContent = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={className}>
     {children}
-  </div>
-);
+  </div>);
 
 // Teacher data interface (derived from API Instructor data)
 export interface TeacherData {
@@ -90,7 +88,7 @@ const mapInstructorToTeacherData = (instructor: Instructor): TeacherData => {
 type Props = {
   teacherData?: TeacherData;
   showActionButtons?: boolean;
-  onTeacherDataChange?: (data: TeacherData) => void;
+  onTeacherDataChange?: (data: TeacherData) =>void;
 }
 
 export default function TeacherProfileHeader({ 
@@ -136,12 +134,10 @@ export default function TeacherProfileHeader({
   }, [propTeacherData, teacherId]);
 
   const renderStars = () => {
-    return Array.from({ length: 5 }, (_, i) => (
+    return Array.from({ length: 5 }, (_, i) =>(
       <i 
         key={i} 
-        className="fas fa-star text-yellow-400"
-      />
-    ));
+        className="fas fa-star text-yellow-400"/>));
   };
 
   const handleActionClick = (action: string) => {
@@ -159,8 +155,7 @@ export default function TeacherProfileHeader({
             <span className="ml-3 text-gray-600">Đang tải thông tin giảng viên...</span>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
   }
 
   // Error state
@@ -173,8 +168,7 @@ export default function TeacherProfileHeader({
             <span>{error}</span>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
   }
 
   // No data state
@@ -186,8 +180,7 @@ export default function TeacherProfileHeader({
             <span>Không tìm thấy thông tin giảng viên</span>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
   }
 
   return (
@@ -199,8 +192,7 @@ export default function TeacherProfileHeader({
             <img 
               src={teacherData.avatar} 
               alt={teacherData.name} 
-              className="w-32 h-32 rounded-lg border-4 border-gray-200 object-cover"
-            />
+              className="w-32 h-32 rounded-lg border-4 border-gray-200 object-cover"/>
           </div>
           
           {/* Teacher Info */}
@@ -215,8 +207,7 @@ export default function TeacherProfileHeader({
                     {teacherData.position}
                   </span>
                 </div>
-                <p className="text-gray-600 mb-2">
-                  Mã GV: <span className="font-medium">{teacherData.employeeCode}</span> – {teacherData.department}
+                <p className="text-gray-600 mb-2">Mã GV: <span className="font-medium">{teacherData.employeeCode}</span>– {teacherData.department}
                 </p>
                 <div className="flex items-center gap-4 mb-3">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -229,13 +220,10 @@ export default function TeacherProfileHeader({
                     </div>
                     <span className="text-sm font-medium text-gray-700">{teacherData.rating}/5.0</span>
                     {teacherData.totalReviews && (
-                      <span className="ml-2 text-sm text-gray-500">
-                        (dựa trên {teacherData.totalReviews} đánh giá)
-                      </span>
-                    )}
+                      <span className="ml-2 text-sm text-gray-500">(dựa trên {teacherData.totalReviews} đánh giá)
+                      </span>)}
                     {teacherData.qualityLevel && (
-                      <span className="ml-2 text-sm font-medium text-green-600">({teacherData.qualityLevel})</span>
-                    )}
+                      <span className="ml-2 text-sm font-medium text-green-600">({teacherData.qualityLevel})</span>)}
                   </div>
                 </div>
               </div>
@@ -244,41 +232,31 @@ export default function TeacherProfileHeader({
               {showActionButtons && (
                 <div className="flex flex-wrap gap-1.5">
                   <button 
-                    onClick={() => handleActionClick('message')}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer"
-                  >
-                    <i className="fas fa-comment mr-1.5 text-xs"></i>
-                    Nhắn tin
+                    onClick={() =>handleActionClick('message')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer">
+                    <i className="fas fa-comment mr-1.5 text-xs"></i>Nhắn tin
                   </button>
                   <button 
-                    onClick={() => handleActionClick('call')}
-                    className="bg-green-600 hover:bg-green-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer"
-                  >
-                    <i className="fas fa-phone mr-1.5 text-xs"></i>
-                    Gọi điện
+                    onClick={() =>handleActionClick('call')}
+                    className="bg-green-600 hover:bg-green-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer">
+                    <i className="fas fa-phone mr-1.5 text-xs"></i>Gọi điện
                   </button>
                   <button 
-                    onClick={() => handleActionClick('email')}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer"
-                  >
-                    <i className="fas fa-envelope mr-1.5 text-xs"></i>
-                    Email
+                    onClick={() =>handleActionClick('email')}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer">
+                    <i className="fas fa-envelope mr-1.5 text-xs"></i>Email
                   </button>
                   <button 
-                    onClick={() => handleActionClick('edit')}
-                    className="bg-orange-600 hover:bg-orange-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer"
-                  >
-                    <i className="fas fa-edit mr-1.5 text-xs"></i>
-                    Chỉnh sửa
+                    onClick={() =>handleActionClick('edit')}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center cursor-pointer">
+                    <i className="fas fa-edit mr-1.5 text-xs"></i>Chỉnh sửa
                   </button>
-                </div>
-              )}
+                </div>)}
             </div>
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>);
 }
 
 // The TeacherData interface is already exported above

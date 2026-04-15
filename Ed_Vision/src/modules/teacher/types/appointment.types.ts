@@ -2,7 +2,7 @@ export interface TimeSlot {
   slotId?: number; // Optional slot ID from backend
   start: string;
   end: string;
-  meetingType?: 'online' | 'offline' | 'both';
+  meetingType?: 'online'| 'offline'| 'both';
   capacity?: number;
 }
 
@@ -25,7 +25,7 @@ export interface BackendTimeSlot {
   is_open: boolean;
   note?: string;
   auto_accept: boolean;
-  meeting_type: 'online' | 'offline' | 'both';
+  meeting_type: 'online'| 'offline'| 'both';
 }
 
 export interface BackendAvailabilityDate {
@@ -53,8 +53,8 @@ export interface AppointmentRequest {
   parentAvatar: string;
   studentName: string;
   studentClass: string;
-  type: 'online' | 'offline';
-  status: 'pending' | 'accepted' | 'rejected';
+  type: 'online'| 'offline';
+  status: 'pending'| 'accepted'| 'rejected';
   desiredDate: string;
   desiredTime: string;
   reason: string;
@@ -62,15 +62,10 @@ export interface AppointmentRequest {
   platform?: string;
 }
 
-export type FilterType = 'all' | 'pending' | 'online' | 'offline';
+export type FilterType = 'all'| 'pending'| 'online'| 'offline';
 
 export type RejectReason =
-  | 'schedule_conflict'
-  | 'personal_leave'
-  | 'meeting_conflict'
-  | 'health_issue'
-  | 'reschedule'
-  | 'custom';
+  | 'schedule_conflict'| 'personal_leave'| 'meeting_conflict'| 'health_issue'| 'reschedule'| 'custom';
 
 export interface RejectFormData {
   reason: RejectReason;

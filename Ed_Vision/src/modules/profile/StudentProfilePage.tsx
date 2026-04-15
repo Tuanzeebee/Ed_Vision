@@ -69,7 +69,7 @@ export default function StudentProfilePage({}: Props) {
         throw new Error(t('common.loadError', { status: res.status }));
       }
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() =>({}));
       
       setStudent(data ?? null);
       setParentLinks(data?.parentLinks ?? []);
@@ -220,14 +220,12 @@ export default function StudentProfilePage({}: Props) {
   };
   
   const mappedUser = {
-    name: profile.fullName || (student as any)?.studentCode || t('common.user', { defaultValue: 'User' }),
+    name: profile.fullName || (student as any)?.studentCode || t('common.user', { defaultValue: 'User'}),
     age: undefined as number | undefined,
     avatar: getFullAvatarUrl(profile.avatarUrl),
-    status: ((student as any)?.status as "active" | "inactive") || "active",
-    statusLabel: (student as any)?.status === "active" 
-      ? t('studentAcademic.active') 
-      : (student as any)?.status === "inactive" 
-      ? t('studentAcademic.inactive') 
+    status: ((student as any)?.status as "active"| "inactive") || "active",
+    statusLabel: (student as any)?.status === "active"? t('studentAcademic.active') 
+      : (student as any)?.status === "inactive"? t('studentAcademic.inactive') 
       : t('studentAcademic.active'),
     personalInfo: {
       fullName: profile.fullName || "",
@@ -270,10 +268,10 @@ export default function StudentProfilePage({}: Props) {
       console.error('Error mapping parent link:', l, e);
       return null;
     }
-  }).filter((p): p is NonNullable<typeof p> => p !== null);
+  }).filter((p): p is NonNullable<typeof p>=>p !== null);
 
   // Use first link_code as default registration code if available
-  const registrationCode = parentLinks.length > 0 ? (parentLinks[0] as any).linkCode ?? undefined : undefined;
+  const registrationCode = parentLinks.length >0 ? (parentLinks[0] as any).linkCode ?? undefined : undefined;
 
   if (loading) {
     return (
@@ -282,8 +280,7 @@ export default function StudentProfilePage({}: Props) {
         <div className="flex items-center justify-center px-4 py-20 min-h-screen bg-gray-50">
           <div className="text-center text-gray-600">Đang tải hồ sơ...</div>
         </div>
-      </>
-    );
+      </>);
   }
 
   if (error) {
@@ -293,8 +290,7 @@ export default function StudentProfilePage({}: Props) {
         <div className="flex items-center justify-center px-4 py-20 min-h-screen bg-gray-50">
           <div className="text-center text-red-600">{error}</div>
         </div>
-      </>
-    );
+      </>);
   }
 
   const profileData = (student as any)?.profile || {};
@@ -304,7 +300,7 @@ export default function StudentProfilePage({}: Props) {
       <Header />
       <EditProfileModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() =>setIsEditModalOpen(false)}
         currentProfile={{
           fullName: profileData.fullName,
           phoneNumber: profileData.phoneNumber,
@@ -318,7 +314,7 @@ export default function StudentProfilePage({}: Props) {
       />
       <EditAcademicInfoModal
         isOpen={isEditAcademicModalOpen}
-        onClose={() => setIsEditAcademicModalOpen(false)}
+        onClose={() =>setIsEditAcademicModalOpen(false)}
         currentAcademic={{
           studentCode: (student as any)?.studentCode,
           major: (student as any)?.major,
@@ -332,10 +328,9 @@ export default function StudentProfilePage({}: Props) {
         onEditPersonalInfo={handleEditPersonalInfo}
         onEditAvatar={handleEditAvatar}
         additionalSections={[
-          <StudentAcademicInfo key="academic" academicInfo={mappedAcademic as any} onEdit={handleEditAcademicInfo} />,
-          <StudentParentLinks key="parents" linkedParents={mappedParents} registrationCode={registrationCode} onRegisterParent={handleRegisterParent} />,
+          <StudentAcademicInfo key="academic"academicInfo={mappedAcademic as any} onEdit={handleEditAcademicInfo} />,
+          <StudentParentLinks key="parents"linkedParents={mappedParents} registrationCode={registrationCode} onRegisterParent={handleRegisterParent} />,
         ]}
       />
-    </>
-  );
+    </>);
 }

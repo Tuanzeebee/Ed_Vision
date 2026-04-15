@@ -36,14 +36,14 @@ interface SemesterCourse {
   credits: number;
   schedule: string;
   aiScore: string;
-  type: "core" | "specialization" | "elective";
-  status: "current" | "planned";
+  type: "core"| "specialization"| "elective";
+  status: "current"| "planned";
 }
 
 interface SemesterData {
   season: string;
   year: string;
-  status: "current" | "planned";
+  status: "current"| "planned";
   workingHours: number;
   totalCredits: number;
   courses: SemesterCourse[];
@@ -352,7 +352,7 @@ export default function AcademicPlanningDashboard() {
     value: string;
     subtitle: string;
     additional?: string;
-    colorScheme: "blue" | "green" | "purple" | "orange";
+    colorScheme: "blue"| "green"| "purple"| "orange";
     isLoading?: boolean;
     tooltip?: string;
   }) => {
@@ -402,8 +402,7 @@ export default function AcademicPlanningDashboard() {
                 <div className="h-8 bg-gray-200 rounded mb-2"></div>
                 <div className="h-4 bg-gray-200 rounded"></div>
               </div>
-            </div>
-          ) : (
+            </div>) : (
             <>
               <div className="flex items-center justify-between mb-4">
                 <div className={`${colors.iconBg} p-2 rounded-lg text-white`}>{icon}</div>
@@ -425,10 +424,8 @@ export default function AcademicPlanningDashboard() {
                 <div className={`text-xs ${colors.additionalText} flex items-center gap-1`}>
                   <TrendUpIcon />
                   {additional}
-                </div>
-              )}
-            </>
-          )}
+                </div>)}
+            </>)}
         </CardContent>
 
         {tooltip && (
@@ -444,10 +441,8 @@ export default function AcademicPlanningDashboard() {
                 <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-yellow-100"></div>
               </div>
             </div>
-          </div>
-        )}
-      </Card>
-    );
+          </div>)}
+      </Card>);
   };
 
   const SemesterCourseCard = ({ course }: { course: SemesterCourse }) => {
@@ -558,8 +553,7 @@ export default function AcademicPlanningDashboard() {
             </Button>
           )}
         </CardContent>
-      </Card>
-    );
+      </Card>);
   };
 
   const SemesterSection = ({ semester }: { semester: SemesterData }) => {
@@ -603,8 +597,7 @@ export default function AcademicPlanningDashboard() {
             ))}
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>);
   };
 
   return (
@@ -706,8 +699,7 @@ export default function AcademicPlanningDashboard() {
                         ></div>
                       </div>
                     </div>
-                  </>
-                )}
+                  </>)}
               </CardContent>
             </Card>
 
@@ -751,8 +743,7 @@ export default function AcademicPlanningDashboard() {
                         ></div>
                       </div>
                     </div>
-                  </>
-                )}
+                  </>)}
               </CardContent>
             </Card>
           </div>
@@ -796,10 +787,8 @@ export default function AcademicPlanningDashboard() {
               value={aiScore.value}
               subtitle={t("planning.predictedGPA")}
               additional={aiScore.description}
-              colorScheme="orange"
-              isLoading={isLoadingGPA}
-              tooltip="Dự đoán GPA chỉ là mô phỏng dựa trên dữ liệu và mô hình AI! Kết quả thực tế có thể khác nhau tùy thuộc vào nỗ lực của bạn. Cố lên học cùng mình nhé, bạn có thể làm được tốt hơn con số này! 💪"
-            />
+              colorScheme="orange"isLoading={isLoadingGPA}
+              tooltip="Dự đoán GPA chỉ là mô phỏng dựa trên dữ liệu và mô hình AI! Kết quả thực tế có thể khác nhau tùy thuộc vào nỗ lực của bạn. Cố lên học cùng mình nhé, bạn có thể làm được tốt hơn con số này! "/>
 
             <Card
               className="border-blue-200 border relative group cursor-help rounded-xl shadow-sm"
@@ -812,8 +801,7 @@ export default function AcademicPlanningDashboard() {
                       <div className="h-8 bg-gray-200 rounded mb-2"></div>
                       <div className="h-4 bg-gray-200 rounded"></div>
                     </div>
-                  </div>
-                ) : (
+                  </div>) : (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <div className="bg-blue-500 p-2 rounded-lg text-white">
@@ -840,10 +828,8 @@ export default function AcademicPlanningDashboard() {
                       <div className="text-xs text-blue-600 flex items-center gap-1">
                         <TrendUpIcon />
                         {physicalEducationGPA.description}
-                      </div>
-                    )}
-                  </>
-                )}
+                      </div>)}
+                  </>)}
               </CardContent>
 
               {!isLoadingGPA && (
@@ -863,8 +849,7 @@ export default function AcademicPlanningDashboard() {
                       <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-blue-100"></div>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>)}
             </Card>
           </div>
         </div>
@@ -1015,7 +1000,7 @@ export default function AcademicPlanningDashboard() {
                       semester={{
                         season: semester.season,
                         year: semester.year,
-                        status: index === 0 ? "current" : "planned",
+                        status: index === 0 ? "current": "planned",
                         workingHours: semesterPlanData.student_info.study_time_hours || 10,
                         totalCredits: semester.total_credits,
                         courses: semester.courses.map((course) => ({
@@ -1031,8 +1016,7 @@ export default function AcademicPlanningDashboard() {
                     />
                   ))}
                 </div>
-              </>
-            ) : (
+              </>) : (
               <div className="text-center py-12">
                 <p className="text-gray-600 mb-2">{t("planning.noSemesterPlan")}</p>
                 <p className="text-sm text-gray-500">{t("planning.noSemesterPlanHint")}</p>

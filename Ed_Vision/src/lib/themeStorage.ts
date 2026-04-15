@@ -113,7 +113,7 @@ export type ThemeState = {
  */
 export const saveThemeState = (state: ThemeState): void => {
   // Use batch set for better performance
-  const updates: Record<string, any> = {};
+  const updates: Record<string, any>= {};
   
   if (state.activeLiveThemeId !== null) {
     updates[STORAGE_KEYS.ACTIVE_LIVE_THEME_ID] = state.activeLiveThemeId;

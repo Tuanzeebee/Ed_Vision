@@ -3,7 +3,7 @@
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Seeding survey questions (Vietnamese categories)...');
+    console.log(' Seeding survey questions (Vietnamese categories)...');
 
     // Danh sách 97 câu hỏi khảo sát mẫu - với category tiếng Việt
     const surveyQuestions = [
@@ -1683,7 +1683,7 @@ async function main() {
         },
     ];
 
-    console.log(`📝 Creating ${surveyQuestions.length} survey questions...`);
+    console.log(` Creating ${surveyQuestions.length} survey questions...`);
 
     let createdCount = 0;
     let skippedCount = 0;
@@ -1698,7 +1698,7 @@ async function main() {
             });
 
             if (existing) {
-                console.log(`⏭️  Skipping: "${qData.question_text.substring(0, 50)}..." (already exists)`);
+                console.log(`  Skipping: "${qData.question_text.substring(0, 50)}..." (already exists)`);
                 skippedCount++;
                 continue;
             }
@@ -1725,35 +1725,35 @@ async function main() {
             }
 
             createdCount++;
-            console.log(`✅ Created: "${qData.question_text.substring(0, 60)}..."`);
+            console.log(` Created: "${qData.question_text.substring(0, 60)}..."`);
         } catch (error) {
             console.error(
-                `❌ Error creating question: "${qData.question_text.substring(0, 50)}..."`,
+                ` Error creating question: "${qData.question_text.substring(0, 50)}..."`,
                 error.message,
             );
         }
     }
 
-    console.log('\n📊 Summary:');
-    console.log(`  ✅ Created: ${createdCount} questions`);
-    console.log(`  ⏭️  Skipped: ${skippedCount} questions (already exist)`);
-    console.log(`  📝 Total: ${surveyQuestions.length} questions`);
+    console.log('\n Summary:');
+    console.log(`   Created: ${createdCount} questions`);
+    console.log(`    Skipped: ${skippedCount} questions (already exist)`);
+    console.log(`   Total: ${surveyQuestions.length} questions`);
 
     // Show categories
     const categories = [...new Set(surveyQuestions.map((q) => q.category))];
-    console.log('\n📂 Categories created (Vietnamese):');
+    console.log('\n Categories created (Vietnamese):');
     categories.forEach((cat) => {
         const count = surveyQuestions.filter((q) => q.category === cat).length;
         console.log(`  - ${cat}: ${count} questions`);
     });
 
-    console.log('\n✅ Survey questions seeding completed (Vietnamese categories)!');
-    console.log('\n💡 Bạn có thể sử dụng các câu hỏi này để tạo khảo sát mới.');
+    console.log('\n Survey questions seeding completed (Vietnamese categories)!');
+    console.log('\n Bạn có thể sử dụng các câu hỏi này để tạo khảo sát mới.');
 }
 
 main()
     .catch((e) => {
-        console.error('❌ Error:', e);
+        console.error(' Error:', e);
         process.exit(1);
     })
     .finally(async () => {

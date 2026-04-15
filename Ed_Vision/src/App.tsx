@@ -1,7 +1,16 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
 import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
-import { SeasonalEffectProvider, SeasonalToggleButton } from "@/components/seasonal-effects";
+import {
+  SeasonalEffectProvider,
+  SeasonalToggleButton,
+} from "@/components/seasonal-effects";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/booking/AllAppointments";
 import StudentDetails from "./modules/parent/Parent_StudentDetails";
@@ -42,7 +51,6 @@ import AuthResetPassword from "@/modules/auth/ResetPassword";
 import TeacherDashboard from "@/modules/teacher/TeacherDashboard";
 import ClassManagement from "@/modules/teacher/ClassManagement";
 import GradeManagement from "@/modules/teacher/GradeManagement";
-import PredictionView from "@/modules/teacher/PredictionView";
 import PredictionViewV2 from "@/modules/teacher/pages/PredictionViewV2";
 import ProgressTracking from "@/modules/teacher/ProgressTracking";
 import TeacherReport from "@/modules/teacher/TeacherReport";
@@ -57,12 +65,11 @@ import LearningAdventure from "./modules/student/LearningAdventure";
 import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
 import MessagesNotifications from "./modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
-import ProtectedRoute from '@/components/ProtectedRoute'
-import RequireInputSurvey from '@/components/RequireInputSurvey'
-import { Outlet } from 'react-router-dom'
+import ProtectedRoute from "@/components/ProtectedRoute";
+import RequireInputSurvey from "@/components/RequireInputSurvey";
 import ParentDashboard from "./modules/parent/ParentDashboard";
 import { StudentSurveyManagement } from "./modules/teacher";
-import AuthRedirectWrapper from '@/components/AuthRedirectWrapper'
+import AuthRedirectWrapper from "@/components/AuthRedirectWrapper";
 import ChatStudent from "./modules/student/ChatStudent";
 import BookingScheduler from "./modules/booking/BookingScheduler";
 import LearningSpace from "./modules/student/LearningSpace";
@@ -77,24 +84,28 @@ import StudentSurvey from "./modules/survey/StudentSurvey";
 import SettingGradeTable from "./modules/teacher/SettingGradeTable";
 import CertificateReview from "./modules/student/CertificateReview";
 import CertificateDetail from "./modules/student/CertificateDetail";
-import CertificateLessonPage from "./modules/student/CertificateLessonPage";
+import ToeicLearningMapPage from "./modules/student/ToeicLearningMapPage";
+import ToeicNodePracticePage from "./modules/student/ToeicNodePracticePage";
+import ToeicFoundationStudyPage from "./modules/student/ToeicFoundationStudyPage";
+import ToeicExamSimulationPage from "./modules/student/ToeicExamSimulationPage";
+
 
 function App() {
-        // Initialize permissions on app startup
-        useEffect(() => {
-                initializePermissions()
+  // Initialize permissions on app startup
+  useEffect(() => {
+    initializePermissions();
 
-                // Sync permissions when user logs in
-                const handleAuthLogin = () => {
-                        initializePermissions()
-                }
+    // Sync permissions when user logs in
+    const handleAuthLogin = () => {
+      initializePermissions();
+    };
 
-                window.addEventListener('auth:login', handleAuthLogin)
+    window.addEventListener("auth:login", handleAuthLogin);
 
-                return () => {
-                        window.removeEventListener('auth:login', handleAuthLogin)
-                }
-        }, [])
+    return () => {
+      window.removeEventListener("auth:login", handleAuthLogin);
+    };
+  }, []);
 
         return (
                 <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
@@ -135,7 +146,10 @@ function App() {
                                                 <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
                                                 <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
                                                 <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
-                                                <Route path="certificate-review/:certId/lesson/:topicKey" element={<ProtectedRoute permission="student_course_overview"><CertificateLessonPage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/foundation/:tab" element={<ProtectedRoute permission="student_course_overview"><ToeicFoundationStudyPage /></ProtectedRoute>} />
+                                                <Route path="certificate-review/toeic/exam/:examType" element={<ProtectedRoute permission="student_course_overview"><ToeicExamSimulationPage /></ProtectedRoute>} />
                                         </Route>
 
                                         {/* Route cho parent */}
@@ -216,6 +230,9 @@ function App() {
                                         <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><RequireInputSurvey><StudentProfilePage /></RequireInputSurvey></ProtectedRoute>} />
                                         <Route path="/parent/profile" element={<ProtectedRoute permission="parent_profile"><ParentProfilePage /></ProtectedRoute>} />
                                         <Route path="/teacher/profile" element={<ProtectedRoute permission="teacher_profile"><TeacherProfilePage /></ProtectedRoute>} />
+
+                                        {/* Global fallback */}
+                                        <Route path="*" element={<Navigate to="/student/landing" replace />} />
 
                                 </Routes>
                         </Router>
