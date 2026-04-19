@@ -6,7 +6,7 @@ type Props = {
 
 function FirefliesEffect({ show }: Props) {
   const fireflies = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => ({
+    return Array.from({ length: 30 }, (_, i) =>({
       id: i,
       left: Math.random() * 100,
       top: Math.random() * 100,
@@ -21,11 +21,10 @@ function FirefliesEffect({ show }: Props) {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden">
-      {fireflies.map((fly) => (
+      {fireflies.map((fly) =>(
         <div
           key={fly.id}
-          className="absolute rounded-full animate-[firefly-move_ease-in-out_infinite_alternate]"
-          style={{
+          className="absolute rounded-full animate-[firefly-move_ease-in-out_infinite_alternate]"style={{
             left: `${fly.left}%`,
             top: `${fly.top}%`,
             width: `${fly.size}px`,
@@ -37,14 +36,12 @@ function FirefliesEffect({ show }: Props) {
           }}
         >
           <div
-            className="w-full h-full rounded-full animate-[firefly-glow_ease-in-out_infinite]"
-            style={{
+            className="w-full h-full rounded-full animate-[firefly-glow_ease-in-out_infinite]"style={{
               animationDuration: `${fly.duration}s`,
               animationDelay: `${fly.delay}s`,
             }}
           />
-        </div>
-      ))}
+        </div>))}
       <style>{`
         @keyframes firefly-glow {
           0%, 100% {
@@ -74,8 +71,7 @@ function FirefliesEffect({ show }: Props) {
           }
         }
       `}</style>
-    </div>
-  );
+    </div>);
 }
 
 export default memo(FirefliesEffect);

@@ -24,7 +24,7 @@ export interface Report {
  */
 export const getScopeStats = (scope: string): ScopeStats => {
   // Stats for all schools combined
-  if (scope === "Tất cả các trường" || scope === "Toàn trường") {
+  if (scope === "Tất cả các trường"|| scope === "Toàn trường") {
     return {
       students: 18450,
       teachers: 685,
@@ -150,8 +150,7 @@ export const getScoreDistributionBySchool = (scope: string): ScoreDistribution[]
     "Trường Y-Dược",
     "Trường Đào tạo quốc tế",
     "Viện Quản lý Nam Khuê",
-    "Viện Việt-Nhật"
-  ];
+    "Viện Việt-Nhật"];
   
   // Mock data for score distribution (0-10 scale)
   const schoolDistributions: { [key: string]: number[] } = {
@@ -168,7 +167,7 @@ export const getScoreDistributionBySchool = (scope: string): ScoreDistribution[]
   
   if (scope === "Tất cả các trường") {
     // Return all schools for comparison
-    return allSchools.map(school => ({
+    return allSchools.map(school =>({
       schoolName: school,
       scores: schoolDistributions[school]
     }));
@@ -210,8 +209,7 @@ export const getTopStudentsBySchool = (scope: string, limit: number = 5): TopStu
     "Trường Y-Dược",
     "Trường Đào tạo quốc tế",
     "Viện Quản lý Nam Khuê",
-    "Viện Việt-Nhật"
-  ];
+    "Viện Việt-Nhật"];
   
   // Sample students data by school
   const studentsBySchool: { [key: string]: TopStudent[] } = {
@@ -253,11 +251,11 @@ export const getTopStudentsBySchool = (scope: string, limit: number = 5): TopStu
   
   if (scope === "Tất cả các trường") {
     // Combine top students from all schools and re-rank
-    const allStudents = allSchools.flatMap(school => studentsBySchool[school]);
+    const allStudents = allSchools.flatMap(school =>studentsBySchool[school]);
     return allStudents
-      .sort((a, b) => b.gpa - a.gpa)
+      .sort((a, b) =>b.gpa - a.gpa)
       .slice(0, limit)
-      .map((student, index) => ({ ...student, rank: index + 1 }));
+      .map((student, index) =>({ ...student, rank: index + 1 }));
   } else if (studentsBySchool[scope]) {
     return studentsBySchool[scope].slice(0, limit);
   } else {

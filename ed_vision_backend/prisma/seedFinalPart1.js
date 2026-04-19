@@ -3,7 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting seedFinalPart1.js - Seeding Role table...');
+  console.log(' Starting seedFinalPart1.js - Seeding Role table...');
 
   // Seed Role table with data from the image
   const roles = [
@@ -35,11 +35,11 @@ async function main() {
       update: { name: role.name },
       create: role,
     });
-    console.log(`✅ Role created/updated: ${createdRole.code} (id: ${createdRole.id})`);
+    console.log(` Role created/updated: ${createdRole.code} (id: ${createdRole.id})`);
   }
 
   // Seed Permission table with data extracted from App.tsx
-  console.log('\n🌱 Seeding Permission table...');
+  console.log('\n Seeding Permission table...');
   
   const permissions = [
     // ========== SHARED PERMISSIONS (Cross-role) ==========
@@ -113,11 +113,11 @@ async function main() {
       update: { name: permission.name, category: permission.category },
       create: permission,
     });
-    console.log(`✅ Permission created/updated: ${createdPermission.key} (id: ${createdPermission.id})`);
+    console.log(` Permission created/updated: ${createdPermission.key} (id: ${createdPermission.id})`);
   }
 
   // Seed Department table
-  console.log('\n🌱 Seeding Department table...');
+  console.log('\n Seeding Department table...');
 
   const departments = [
     { code: 'SET', name: 'Trường Công nghệ & Kỹ thuật' },
@@ -138,13 +138,13 @@ async function main() {
       create: { code: dept.code, name: dept.name, status: 'active' },
     });
     deptMap[dept.code] = createdDept.department_id;
-    console.log(`✅ Department created/updated: ${createdDept.code} - ${createdDept.name} (id: ${createdDept.department_id})`);
+    console.log(` Department created/updated: ${createdDept.code} - ${createdDept.name} (id: ${createdDept.department_id})`);
   }
 
-  console.log('\n📋 Department Map:', deptMap);
+  console.log('\n Department Map:', deptMap);
 
   // Seed Program table
-  console.log('\n🌱 Seeding Program table...');
+  console.log('\n Seeding Program table...');
 
   const programs = [
     // SET – Trường Công nghệ & Kỹ thuật
@@ -200,7 +200,7 @@ async function main() {
   for (const prog of programs) {
     const deptId = deptMap[prog.deptCode];
     if (!deptId) {
-      console.warn(`⚠️ Department ${prog.deptCode} not found for program ${prog.code}`);
+      console.warn(` Department ${prog.deptCode} not found for program ${prog.code}`);
       continue;
     }
 
@@ -218,11 +218,11 @@ async function main() {
         department_id: deptId,
       },
     });
-    console.log(`✅ Program created/updated: ${createdProg.program_code} - ${createdProg.program_name} (id: ${createdProg.program_id})`);
+    console.log(` Program created/updated: ${createdProg.program_code} - ${createdProg.program_name} (id: ${createdProg.program_id})`);
   }
 
   // Seed RolePermission - Enable appropriate permissions for each role
-  console.log('\n🌱 Seeding RolePermission table...');
+  console.log('\n Seeding RolePermission table...');
 
   // Get all roles and permissions from DB
   const allRoles = await prisma.role.findMany();
@@ -311,15 +311,15 @@ async function main() {
       
       if (isEnabled) {
         rolePermissionCount++;
-        console.log(`✅ Enabled: ${role.code} → ${permission.key}`);
+        console.log(` Enabled: ${role.code} → ${permission.key}`);
       }
     }
   }
 
-  console.log(`\n✨ Created ${rolePermissionCount} enabled role-permission mappings!`);
+  console.log(`\n Created ${rolePermissionCount} enabled role-permission mappings!`);
 
   // Seed Course table
-  console.log('\n🌱 Seeding Course table...');
+  console.log('\n Seeding Course table...');
 
   const csvData = `1,CHE 101,Hóa Học Đại Cương,1,LAB
 2,CMU-SE 100,Introduction to Software Engineering,3,LEC
@@ -426,20 +426,20 @@ async function main() {
       courseCount++;
     } catch (e) {
       // Handle potential constraint issues
-      console.warn(`⚠️ Could not upsert course ${course.course_code}: ${e.message}`);
+      console.warn(` Could not upsert course ${course.course_code}: ${e.message}`);
     }
   }
 
-  console.log(`✅ Seeded ${courseCount} courses successfully!`);
+  console.log(` Seeded ${courseCount} courses successfully!`);
 
   // Seed CurriculumCourse table for CNPMC program
-  console.log('\n🌱 Seeding CurriculumCourse table for CNPMC...');
+  console.log('\n Seeding CurriculumCourse table for CNPMC...');
 
   // Debug: list all programs to find the correct code
   const allPrograms = await prisma.program.findMany({
     select: { program_id: true, program_code: true, program_name: true },
   });
-  console.log('📋 Available programs:', allPrograms.map(p => p.program_code).join(', '));
+  console.log(' Available programs:', allPrograms.map(p => p.program_code).join(', '));
 
   // Get CNPMC program (CMU Software Engineering standard program)
   const cnpmcProgram = await prisma.program.findUnique({
@@ -447,9 +447,9 @@ async function main() {
   });
 
   if (!cnpmcProgram) {
-    console.warn('⚠️ CNPMC program not found. Available codes:', allPrograms.map(p => p.program_code));
+    console.warn(' CNPMC program not found. Available codes:', allPrograms.map(p => p.program_code));
   } else {
-    console.log(`✅ Found CNPMC program (id: ${cnpmcProgram.program_id})`);
+    console.log(` Found CNPMC program (id: ${cnpmcProgram.program_id})`);
     // Curriculum structure for CNPM program
     const curriculumData = [
       // Học Kỳ 1 - Năm 1
@@ -533,7 +533,7 @@ async function main() {
         });
 
         if (courseVariants.length === 0) {
-          console.warn(`⚠️ No course variants found for: ${item.courseCode}`);
+          console.warn(` No course variants found for: ${item.courseCode}`);
           continue;
         }
 
@@ -561,18 +561,18 @@ async function main() {
           });
 
           curriculumCount++;
-          console.log(`✅ ${item.courseCode} (${course.study_format}) → Year ${item.year}, Term ${item.term}`);
+          console.log(` ${item.courseCode} (${course.study_format}) → Year ${item.year}, Term ${item.term}`);
         }
       } catch (e) {
-        console.warn(`⚠️ Error: ${item.courseCode} - ${e.message}`);
+        console.warn(` Error: ${item.courseCode} - ${e.message}`);
       }
     }
 
-    console.log(`\n✅ Seeded ${curriculumCount} curriculum course variants for CNPMC!`);
+    console.log(`\n Seeded ${curriculumCount} curriculum course variants for CNPMC!`);
   }
 
   // Seed AcademicTerm table
-  console.log('\n🌱 Seeding AcademicTerm table...');
+  console.log('\n Seeding AcademicTerm table...');
 
   const academicTerms = [
     // 2021-2022
@@ -615,17 +615,17 @@ async function main() {
         },
       });
       const termType = term.is_summer ? 'Summer' : (term.semester_number === 1 ? 'Fall' : 'Spring');
-      console.log(`✅ ${term.academic_year} - Semester ${term.semester_number} (${termType})`);
+      console.log(` ${term.academic_year} - Semester ${term.semester_number} (${termType})`);
       termCount++;
     } catch (e) {
-      console.warn(`⚠️ Error: ${term.academic_year} Semester ${term.semester_number} - ${e.message}`);
+      console.warn(` Error: ${term.academic_year} Semester ${term.semester_number} - ${e.message}`);
     }
   }
 
-  console.log(`\n✅ Seeded ${termCount} academic terms!`);
+  console.log(`\n Seeded ${termCount} academic terms!`);
 
   // Seed Account and Profile tables
-  console.log('\n🌱 Seeding Account and Profile tables...');
+  console.log('\n Seeding Account and Profile tables...');
 
   // Vietnamese male names - expanded list to minimize duplicates
   const vietnameseMaleNames = [
@@ -745,7 +745,7 @@ async function main() {
   const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
 
   // Create 1 Admin account (no profile)
-  console.log('\n📝 Creating Admin accounts...');
+  console.log('\n Creating Admin accounts...');
   const adminAccount = await prisma.account.upsert({
     where: { email: 'admin@dtu.edu.vn' },
     update: { status: 'active' },
@@ -757,10 +757,10 @@ async function main() {
     },
   });
   accountCount++;
-  console.log(`✅ Admin: admin@dtu.edu.vn`);
+  console.log(` Admin: admin@dtu.edu.vn`);
 
   // Create 3 Leader accounts (no profiles)
-  console.log('\n📝 Creating Leader accounts...');
+  console.log('\n Creating Leader accounts...');
   const leaderNames = shuffle([...vietnameseMaleNames.slice(0, 10)]);
   for (let i = 0; i < 3; i++) {
     const email = `leader${i + 1}@dtu.edu.vn`;
@@ -775,11 +775,11 @@ async function main() {
       },
     });
     accountCount++;
-    console.log(`✅ Leader ${i + 1}: ${email}`);
+    console.log(` Leader ${i + 1}: ${email}`);
   }
 
   // Create 15 Teacher accounts + profiles
-  console.log('\n📝 Creating Teacher accounts and profiles...');
+  console.log('\n Creating Teacher accounts and profiles...');
   const teacherNames = shuffle([...vietnameseMaleNames.slice(10, 35)]);
   for (let i = 0; i < 15; i++) {
     const email = `teacher${i + 1}@dtu.edu.vn`;
@@ -808,11 +808,11 @@ async function main() {
 
     accountCount++;
     profileCount++;
-    console.log(`✅ Teacher ${i + 1}: ${email} - ${teacherNames[i]}`);
+    console.log(` Teacher ${i + 1}: ${email} - ${teacherNames[i]}`);
   }
 
   // Create 1000 Student accounts + profiles
-  console.log('\n📝 Creating Student accounts and profiles...');
+  console.log('\n Creating Student accounts and profiles...');
   const studentNamesMale = shuffle([...vietnameseMaleNames]);
   const studentNamesFemale = shuffle([...vietnameseFemaleNames]);
   
@@ -849,12 +849,12 @@ async function main() {
     profileCount++;
 
     if ((i + 1) % 100 === 0) {
-      console.log(`✅ Created ${i + 1} students...`);
+      console.log(` Created ${i + 1} students...`);
     }
   }
 
   // Create 1000 Parent accounts + profiles
-  console.log('\n📝 Creating Parent accounts and profiles...');
+  console.log('\n Creating Parent accounts and profiles...');
   const parentNamesMale = shuffle([...vietnameseMaleNames]);
   const parentNamesFemale = shuffle([...vietnameseFemaleNames]);
   
@@ -891,17 +891,17 @@ async function main() {
     profileCount++;
 
     if ((i + 1) % 100 === 0) {
-      console.log(`✅ Created ${i + 1} parents...`);
+      console.log(` Created ${i + 1} parents...`);
     }
   }
 
-  console.log(`\n✅ Seeded ${accountCount} accounts and ${profileCount} profiles!`);
+  console.log(`\n Seeded ${accountCount} accounts and ${profileCount} profiles!`);
 
   // Seed ClassGroup table for CNPMC program
-  console.log('\n🌱 Seeding ClassGroup table for CNPMC...');
+  console.log('\n Seeding ClassGroup table for CNPMC...');
 
   if (!cnpmcProgram) {
-    console.warn('⚠️ CNPMC program not found');
+    console.warn(' CNPMC program not found');
   } else {
     // Class structure: K27-K31 with TPM1-TPM11
     // K27 → 2021, K28 → 2022, K29 → 2023, K30 → 2024, K31 → 2025
@@ -934,17 +934,17 @@ async function main() {
           },
         });
         classCount++;
-        console.log(`✅ ${classGroup.class_code} (Cohort: ${classGroup.cohort_year})`);
+        console.log(` ${classGroup.class_code} (Cohort: ${classGroup.cohort_year})`);
       } catch (e) {
-        console.warn(`⚠️ Error: ${classGroup.class_code} - ${e.message}`);
+        console.warn(` Error: ${classGroup.class_code} - ${e.message}`);
       }
     }
 
-    console.log(`\n✅ Seeded ${classCount} class groups for CNPMC!`);
+    console.log(`\n Seeded ${classCount} class groups for CNPMC!`);
   }
 
   // Seed Student, Parent, and Instructor tables
-  console.log('\n🌱 Seeding Student table...');
+  console.log('\n Seeding Student table...');
 
   // Get all student accounts
   const studentAccounts = await prisma.account.findMany({
@@ -964,7 +964,7 @@ async function main() {
     orderBy: { class_code: 'asc' },
   });
 
-  console.log(`📚 Found ${classGroups.length} class groups for CNPMC program`);
+  console.log(` Found ${classGroups.length} class groups for CNPMC program`);
 
   // Organize classes by cohort year
   const classesByYear = {};
@@ -981,7 +981,7 @@ async function main() {
     }
   });
 
-  console.log(`📚 Classes by cohort year:`, Object.keys(classesByYear).map(year => `${year}: ${classesByYear[year].length} classes`).join(', '));
+  console.log(` Classes by cohort year:`, Object.keys(classesByYear).map(year => `${year}: ${classesByYear[year].length} classes`).join(', '));
 
   // Group students by cohort year (K27-K31: 2021-2025)
   // Distribute 1000 students across 5 cohorts (200 per cohort)
@@ -1039,16 +1039,16 @@ async function main() {
       });
       studentCount++;
       if ((i + 1) % 100 === 0) {
-        console.log(`✅ Created ${i + 1} students...`);
+        console.log(` Created ${i + 1} students...`);
       }
     } catch (e) {
-      console.warn(`⚠️ Error creating student for ${account.email}: ${e.message}`);
+      console.warn(` Error creating student for ${account.email}: ${e.message}`);
     }
   }
-  console.log(`✅ Seeded ${studentCount} students!`);
+  console.log(` Seeded ${studentCount} students!`);
 
   // Seed Parent table
-  console.log('\n🌱 Seeding Parent table...');
+  console.log('\n Seeding Parent table...');
 
   const parentRelationships = ['Cha', 'Mẹ', 'Ông', 'Bà', 'Chú', 'Cô', 'Dì', 'Mợ'];
   const parentOccupations = [
@@ -1087,16 +1087,16 @@ async function main() {
       });
       parentCount++;
       if ((i + 1) % 100 === 0) {
-        console.log(`✅ Created ${i + 1} parents...`);
+        console.log(` Created ${i + 1} parents...`);
       }
     } catch (e) {
-      console.warn(`⚠️ Error creating parent for ${account.email}: ${e.message}`);
+      console.warn(` Error creating parent for ${account.email}: ${e.message}`);
     }
   }
-  console.log(`✅ Seeded ${parentCount} parents!`);
+  console.log(` Seeded ${parentCount} parents!`);
 
   // Seed Instructor table
-  console.log('\n🌱 Seeding Instructor table...');
+  console.log('\n Seeding Instructor table...');
 
   const academicTitles = ['Tiến sĩ', 'Thạc sĩ', 'Cử nhân', 'Phó giáo sư', 'Giáo sư', 'Thầy giáo'];
   const positions = [
@@ -1154,17 +1154,17 @@ async function main() {
         });
       }
       instructorCount++;
-      console.log(`✅ Teacher ${i + 1}: ${academicTitle}${position ? ` - ${position}` : ''}`);
+      console.log(` Teacher ${i + 1}: ${academicTitle}${position ? ` - ${position}` : ''}`);
     } catch (e) {
-      console.warn(`⚠️ Error creating instructor for ${account.email}: ${e.message}`);
+      console.warn(` Error creating instructor for ${account.email}: ${e.message}`);
     }
   }
-  console.log(`✅ Seeded ${instructorCount} instructors!`);
+  console.log(` Seeded ${instructorCount} instructors!`);
 
   // ====================================================================
   // 14. Seed ParentStudentLink (1:1 mapping)
   // ====================================================================
-  console.log('\n📋 Seeding ParentStudentLink...');
+  console.log('\n Seeding ParentStudentLink...');
   
   // Get all parents and students ordered by account_id
   const allParents = await prisma.parent.findMany({
@@ -1198,18 +1198,18 @@ async function main() {
       linkCount++;
       
       if ((i + 1) % 100 === 0) {
-        console.log(`✅ Linked ${i + 1} parent-student pairs`);
+        console.log(` Linked ${i + 1} parent-student pairs`);
       }
     } catch (e) {
-      console.warn(`⚠️ Error linking parent ${allParents[i].parent_id} to student ${allStudents[i].student_id}: ${e.message}`);
+      console.warn(` Error linking parent ${allParents[i].parent_id} to student ${allStudents[i].student_id}: ${e.message}`);
     }
   }
-  console.log(`✅ Seeded ${linkCount} ParentStudentLinks!`);
+  console.log(` Seeded ${linkCount} ParentStudentLinks!`);
 
   // ====================================================================
   // 15. Seed AdviserAssignment (Instructors to Classes with dates)
   // ====================================================================
-  console.log('\n📋 Seeding AdviserAssignment...');
+  console.log('\n Seeding AdviserAssignment...');
   
   // Get all instructors and CNPMC classes
   const allInstructors = await prisma.instructor.findMany({
@@ -1259,20 +1259,20 @@ async function main() {
       assignmentCount++;
       
       if ((i + 1) % 10 === 0) {
-        console.log(`✅ Assigned ${i + 1} adviser assignments`);
+        console.log(` Assigned ${i + 1} adviser assignments`);
       }
     } catch (e) {
-      console.warn(`⚠️ Error assigning instructor ${instructor.instructor_id} to class ${classGroup.class_id}: ${e.message}`);
+      console.warn(` Error assigning instructor ${instructor.instructor_id} to class ${classGroup.class_id}: ${e.message}`);
     }
   }
-  console.log(`✅ Seeded ${assignmentCount} AdviserAssignments!`);
+  console.log(` Seeded ${assignmentCount} AdviserAssignments!`);
 
-  console.log('\n✨ seedFinalPart1.js completed!');
+  console.log('\n seedFinalPart1.js completed!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seeding:', e);
+    console.error(' Error during seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

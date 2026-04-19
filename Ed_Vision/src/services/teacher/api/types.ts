@@ -2,7 +2,7 @@
 export interface TimeSlotDto {
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
-  meetingType: 'online' | 'offline' | 'both';
+  meetingType: 'online'| 'offline'| 'both';
   capacity: number;
   note?: string;
 }

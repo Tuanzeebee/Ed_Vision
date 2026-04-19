@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useMusicPlayer } from '../music/MusicPlayerContext';
 
-const MusicWidget = lazy(() => import('./MusicWidget'));
+const MusicWidget = lazy(() =>import('./MusicWidget'));
 
 type Props = {
   musicPanelVisible: boolean;
@@ -31,6 +31,5 @@ export default function MusicWidgetWrapper({ musicPanelVisible }: Props) {
         visible={true}
         onClose={handleClose}
       />
-    </Suspense>
-  );
+    </Suspense>);
 }

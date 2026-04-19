@@ -7,7 +7,6 @@ import {
   getStudentsByTimeSlot, 
   type StudentInSlot 
 } from "@/services/teacher/api/meetingLogs"
-
 export type Student = {
   id: string
   name: string
@@ -19,9 +18,9 @@ export type Student = {
 
 type Props = {
   isOpen: boolean
-  onClose: () => void
+  onClose: () =>void
   timeSlot: string
-  onConfirm: (students: Student[]) => void
+  onConfirm: (students: Student[]) =>void
   students?: Student[]
   // Thông tin để auto-load students từ API
   instructorId?: number
@@ -63,7 +62,7 @@ export default function StudentSelectionModal({
       setLoadError(null)
 
       try {
-        console.log('🔍 Fetching students from API:', {
+        console.log('Fetching students from API:', {
           instructorId,
           date,
           startTime,
@@ -77,10 +76,10 @@ export default function StudentSelectionModal({
           endTime
         )
 
-        console.log('✅ Students loaded from API:', response)
+        console.log('Students loaded from API:', response)
 
         // Convert API response sang Student type
-        const apiStudents: Student[] = response.students.map((s: StudentInSlot) => ({
+        const apiStudents: Student[] = response.students.map((s: StudentInSlot) =>({
           id: s.student_code,           // Dùng student_code làm ID cho UI
           name: s.name,
           studentCode: s.student_code,
@@ -90,14 +89,14 @@ export default function StudentSelectionModal({
         }))
 
         setStudentsList(apiStudents)
-        console.log(`✅ Loaded ${apiStudents.length} students from database`)
+        console.log(` Loaded ${apiStudents.length} students from database`)
 
         if (apiStudents.length === 0) {
           setLoadError('Không có sinh viên nào đăng ký trong khung giờ này')
         }
 
       } catch (error) {
-        console.error('❌ Error loading students:', error)
+        console.error('Error loading students:', error)
         setLoadError('Không thể tải danh sách sinh viên. Vui lòng thử lại.')
         setStudentsList([]) // Clear list on error
       } finally {
@@ -111,8 +110,7 @@ export default function StudentSelectionModal({
   // Filter students dựa trên search term
   useEffect(() => {
     const filtered = studentsList.filter(
-      (student) =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student) =>student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.className.toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -130,8 +128,8 @@ export default function StudentSelectionModal({
   }
 
   const handleConfirm = () => {
-    const selected = studentsList.filter((s) => selectedStudents.has(s.id))
-    console.log('✅ Selected students with IDs:', selected.map(s => ({
+    const selected = studentsList.filter((s) =>selectedStudents.has(s.id))
+    console.log('Selected students with IDs:', selected.map(s =>({
       name: s.name,
       studentId: s.studentId,
       accountId: s.accountId
@@ -153,18 +151,15 @@ export default function StudentSelectionModal({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Chọn sinh viên tham gia
+              <DialogTitle className="text-lg font-semibold text-gray-900">Chọn sinh viên tham gia
               </DialogTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                Khung giờ: <span className="font-medium">{timeSlot}</span>
+              <p className="text-sm text-gray-600 mt-1">Khung giờ: <span className="font-medium">{timeSlot}</span>
               </p>
             </div>
             <button
               onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-6 w-6" />
+              className="text-gray-400 hover:text-gray-600">
+              <X className="h-6 w-6"/>
             </button>
           </div>
         </DialogHeader>
@@ -173,94 +168,71 @@ export default function StudentSelectionModal({
           {/* Search Box */}
           <div className="relative">
             <Input
-              type="text"
-              placeholder="Tìm kiếm sinh viên..."
-              value={searchTerm}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              disabled={isLoading}
+              type="text"placeholder="Tìm kiếm sinh viên..."value={searchTerm}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>setSearchTerm(e.target.value)}
+              className="pl-10"disabled={isLoading}
             />
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400"/>
           </div>
 
           {/* Loading State */}
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12 space-y-3">
-              <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+              <Loader2 className="h-8 w-8 text-blue-600 animate-spin"/>
               <p className="text-sm text-gray-600">Đang tải danh sách sinh viên...</p>
-            </div>
-          )}
+            </div>)}
 
           {/* Error State */}
           {!isLoading && loadError && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-sm text-yellow-800">{loadError}</p>
-            </div>
-          )}
+            </div>)}
 
           {/* Student List */}
           {!isLoading && !loadError && (
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {filteredStudents.map((student) => (
+            {filteredStudents.map((student) =>(
               <label
                 key={student.id}
-                className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-              >
+                className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                 <input
-                  type="checkbox"
-                  className="mr-3 h-4 w-4 rounded border-gray-300"
-                  checked={selectedStudents.has(student.id)}
-                  onChange={() => handleToggleStudent(student.id)}
+                  type="checkbox"className="mr-3 h-4 w-4 rounded border-gray-300"checked={selectedStudents.has(student.id)}
+                  onChange={() =>handleToggleStudent(student.id)}
                 />
                 <div className="flex-1">
                   <div className="font-medium text-gray-900">{student.name}</div>
-                  <div className="text-sm text-gray-600">
-                    MSSV: {student.studentCode} - Lớp {student.className}
+                  <div className="text-sm text-gray-600">MSSV: {student.studentCode} - Lớp {student.className}
                   </div>
                   {/* Debug info - có thể xóa sau */}
                   {student.studentId && (
-                    <div className="text-xs text-gray-400 mt-1">
-                      ID: {student.studentId} | Account: {student.accountId}
-                    </div>
-                  )}
+                    <div className="text-xs text-gray-400 mt-1">ID: {student.studentId} | Account: {student.accountId}
+                    </div>)}
                 </div>
-              </label>
-            ))}
+              </label>))}
 
             {filteredStudents.length === 0 && !isLoading && (
-              <div className="text-center py-8 text-gray-500">
-                Không tìm thấy sinh viên nào
-              </div>
-            )}
-            </div>
-          )}
+              <div className="text-center py-8 text-gray-500">Không tìm thấy sinh viên nào
+              </div>)}
+            </div>)}
 
           {/* Selected Count */}
           {!isLoading && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                Đã chọn: <span className="font-medium">{selectedStudents.size}</span> sinh viên
+              <p className="text-sm text-blue-800">Đã chọn: <span className="font-medium">{selectedStudents.size}</span>sinh viên
               </p>
-            </div>
-          )}
+            </div>)}
         </div>
 
         <div className="flex gap-3 pt-4 border-t">
           <Button
             onClick={handleClose}
-            variant="outline"
-            className="flex-1 !text-gray-700"
-          >
-            Hủy
+            variant="outline"className="flex-1 !text-gray-700">Hủy
           </Button>
           <Button
             onClick={handleConfirm}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 !text-white"
-          >
-            Xác nhận
+            className="flex-1 bg-blue-600 hover:bg-blue-700 !text-white">Xác nhận
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
-  )
+    </Dialog>)
 }

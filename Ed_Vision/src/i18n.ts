@@ -110,8 +110,8 @@ i18n
       escapeValue: false, // React đã tự escape
     },
     
-    // Debug mode (tắt trong production)
-    debug: process.env.NODE_ENV === 'development',
+    // Keep i18n logging quiet unless explicitly instrumenting localization issues.
+    debug: false,
   });
 
 export default i18n;

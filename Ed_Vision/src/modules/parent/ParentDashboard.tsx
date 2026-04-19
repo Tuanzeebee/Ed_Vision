@@ -28,7 +28,7 @@ type Appointment = {
   title: string;
   date: string;
   time: string;
-  type: 'online' | 'in-person';
+  type: 'online'| 'in-person';
   bgColor: string;
   borderColor: string;
   textColor: string;
@@ -39,7 +39,7 @@ type Appointment = {
 
 type Alert = {
   id: string;
-  type: 'warning' | 'success' | 'info';
+  type: 'warning'| 'success'| 'info';
   title: string;
   description: string;
   date?: string;
@@ -75,7 +75,7 @@ type Props = {
 
 type Notification = {
   id: string;
-  type: 'accepted' | 'declined' | 'rescheduled' | 'pending';
+  type: 'accepted'| 'declined'| 'rescheduled'| 'pending';
   title: string;
   description: string;
   date: string;
@@ -93,8 +93,7 @@ export default function ParentDashboard({
     year: 'Year 3',
     subjects: 'Mathematics & Science',
     gpa: '3.7',
-    attendance: '94%'
-  },
+    attendance: '94%'},
   appointments = [
     {
       id: '1',
@@ -107,8 +106,7 @@ export default function ParentDashboard({
       textColor: 'text-orange-900',
       tagColor: 'bg-orange-100 text-orange-800',
       icon: iconVideoCall,
-      teacherName: 'Dr. Brown'
-    },
+      teacherName: 'Dr. Brown'},
     {
       id: '2',
       title: 'Parent-Teacher Conference',
@@ -120,8 +118,7 @@ export default function ParentDashboard({
       textColor: 'text-blue-900',
       tagColor: 'bg-blue-100 text-blue-800',
       icon: iconMeeting,
-      teacherName: 'Ms. Johnson'
-    }
+      teacherName: 'Ms. Johnson'}
   ],
   alerts = [],
   messages = [
@@ -154,42 +151,39 @@ export default function ParentDashboard({
       id: '1',
       type: 'warning',
       title: t('parent:parentDashboard.academicWarning'),
-      description: t('parent:parentDashboard.lowAttendance', { subject: 'Mathematics', percent: '78' }),
-      date: t('parent:parentDashboard.actionRequired', { date: 'September 20, 2024' }),
+      description: t('parent:parentDashboard.lowAttendance', { subject: 'Mathematics', percent: '78'}),
+      date: t('parent:parentDashboard.actionRequired', { date: 'September 20, 2024'}),
       icon: iconWarning,
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
-      textColor: 'text-red-900'
-    },
+      textColor: 'text-red-900'},
     {
       id: '2',
       type: 'success',
       title: t('parent:parentDashboard.excellenceAward'),
-      description: t('parent:parentDashboard.outstandingGpa', { gpa: '3.7' }),
-      date: t('parent:parentDashboard.awarded', { date: 'September 1, 2024' }),
+      description: t('parent:parentDashboard.outstandingGpa', { gpa: '3.7'}),
+      date: t('parent:parentDashboard.awarded', { date: 'September 1, 2024'}),
       icon: iconTrophy,
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
-      textColor: 'text-green-900'
-    },
+      textColor: 'text-green-900'},
     {
       id: '3',
       type: 'info',
       title: t('parent:parentDashboard.improvementNotice'),
-      description: t('parent:parentDashboard.positiveGrades', { subject: 'Science' }),
+      description: t('parent:parentDashboard.positiveGrades', { subject: 'Science'}),
       date: t('parent:parentDashboard.keepGoodWork'),
       icon: iconTrendUp,
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
-      textColor: 'text-blue-900'
-    }
+      textColor: 'text-blue-900'}
   ] : alerts;
 
   const openChatPage = () => {
     navigate('/parent/chat');
   };
 
-  const newMessagesCount = messages.filter(m => m.isNew).length;
+  const newMessagesCount = messages.filter(m =>m.isNew).length;
 
   // Calendar data for September 2024
   const calendarDays = [
@@ -207,14 +201,14 @@ export default function ParentDashboard({
     { day: '12', isCurrentMonth: true },
     { day: '13', isCurrentMonth: true },
     { day: '14', isCurrentMonth: true },
-    { day: '15', isCurrentMonth: true, hasEvent: 'online' },
+    { day: '15', isCurrentMonth: true, hasEvent: 'online'},
     { day: '16', isCurrentMonth: true },
     { day: '17', isCurrentMonth: true },
     { day: '18', isCurrentMonth: true },
     { day: '19', isCurrentMonth: true },
     { day: '20', isCurrentMonth: true },
     { day: '21', isCurrentMonth: true },
-    { day: '22', isCurrentMonth: true, hasEvent: 'in-person' },
+    { day: '22', isCurrentMonth: true, hasEvent: 'in-person'},
     { day: '23', isCurrentMonth: true },
     { day: '24', isCurrentMonth: true },
     { day: '25', isCurrentMonth: true },
@@ -249,7 +243,7 @@ export default function ParentDashboard({
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="bg-blue-600 rounded-lg p-2 mr-3">
-                <img src={iconEducation} alt="" className="w-6 h-6" />
+                <img src={iconEducation} alt=""className="w-6 h-6"/>
               </div>
               <div>
                 <h1 className="text-lg md:text-xl font-semibold text-gray-900">{t('parent:dashboard.title')}</h1>
@@ -270,15 +264,14 @@ export default function ParentDashboard({
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">{t('parent:parentDashboard.studentInformation')}</h2>
                   <button className="p-1 text-gray-400 hover:text-gray-600">
-                    <img src={iconMoreHoriz} alt="" className="w-5 h-5" />
+                    <img src={iconMoreHoriz} alt=""className="w-5 h-5"/>
                   </button>
                 </div>
                 
                 <div className="space-y-4">
                   {/* Student Profile */}
                   <div 
-                    className="bg-blue-50 border border-blue-100 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors"
-                    onClick={() => navigate('/parent/student-details')}
+                    className="bg-blue-50 border border-blue-100 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors"onClick={() =>navigate('/parent/student-details')}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
@@ -286,8 +279,7 @@ export default function ParentDashboard({
                           <img 
                             src={studentData.avatar} 
                             alt={studentData.name}
-                            className="w-12 h-12 rounded-full border-2 border-blue-200 object-cover"
-                          />
+                            className="w-12 h-12 rounded-full border-2 border-blue-200 object-cover"/>
                         </div>
                         <div className="ml-3">
                           <h3 className="font-semibold text-blue-900">{studentData.name}</h3>
@@ -295,8 +287,8 @@ export default function ParentDashboard({
                           <p className="text-xs text-blue-600 mt-1">{t('parent:parentDashboard.studentId')}: {studentData.id}</p>
                         </div>
                       </div>
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                      <svg className="w-5 h-5 text-blue-600"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+                        <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M9 5l7 7-7 7"></path>
                       </svg>
                     </div>
                   </div>
@@ -319,7 +311,7 @@ export default function ParentDashboard({
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric'})}
                   </h2>
                   <div className="flex items-center space-x-2">
                   </div>
@@ -328,32 +320,24 @@ export default function ParentDashboard({
                 <div className="space-y-4">
                   {/* Week headers */}
                   <div className="grid grid-cols-7 gap-1">
-                    {weekDays.map((day) => (
+                    {weekDays.map((day) =>(
                       <div key={day} className="text-center py-2">
                         <span className="text-xs font-medium text-gray-500">{day}</span>
-                      </div>
-                    ))}
+                      </div>))}
                   </div>
 
                   {/* Calendar grid */}
                   <div className="grid grid-cols-7 gap-1">
-                    {calendarDays.map((dayData, index) => (
+                    {calendarDays.map((dayData, index) =>(
                       <div key={index} className="text-center py-2">
                         <span 
                           className={`text-sm ${
                             !dayData.isCurrentMonth 
-                              ? 'text-gray-400' 
-                              : dayData.hasEvent === 'online'
-                              ? 'bg-orange-100 text-orange-800 font-medium rounded px-2 py-1'
-                              : dayData.hasEvent === 'in-person'
-                              ? 'bg-blue-100 text-blue-800 font-medium rounded px-2 py-1'
-                              : 'text-gray-900'
-                          }`}
+                              ? 'text-gray-400': dayData.hasEvent === 'online'? 'bg-orange-100 text-orange-800 font-medium rounded px-2 py-1': dayData.hasEvent === 'in-person'? 'bg-blue-100 text-blue-800 font-medium rounded px-2 py-1': 'text-gray-900'}`}
                         >
                           {dayData.day}
                         </span>
-                      </div>
-                    ))}
+                      </div>))}
                   </div>
 
                   {/* Legend */}
@@ -379,12 +363,12 @@ export default function ParentDashboard({
                   <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
                     {t('parent:parentDashboard.newCount', { count: 2 })}
                   </span>
-                  <img src={iconCalendar} alt="" className="w-5 h-5" />
+                  <img src={iconCalendar} alt=""className="w-5 h-5"/>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {appointments.map((appointment) => (
+                {appointments.map((appointment) =>(
                   <div key={appointment.id} className={`${appointment.bgColor} border ${appointment.borderColor} rounded-lg p-4`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -394,24 +378,22 @@ export default function ParentDashboard({
                         </p>
                         <div className="mt-2 flex items-center space-x-2">
                           <span className={`${appointment.tagColor} text-xs font-medium px-2 py-1 rounded-full`}>
-                            {appointment.type === 'online' ? t('parent:parentDashboard.onlineMeeting') : t('parent:appointments.inPerson')}
+                            {appointment.type === 'online'? t('parent:parentDashboard.onlineMeeting') : t('parent:appointments.inPerson')}
                           </span>
                           <button 
                             className={`${appointment.textColor.replace('900', '600')} hover:${appointment.textColor.replace('900', '700')} text-xs font-medium`}
-                            onClick={() => openChatPage()}
+                            onClick={() =>openChatPage()}
                           >
-                            💬 {t('parent:parentDashboard.chat')}
+                             {t('parent:parentDashboard.chat')}
                           </button>
                         </div>
                       </div>
-                      <img src={appointment.icon} alt="" className="w-5 h-5 mt-1" />
+                      <img src={appointment.icon} alt=""className="w-5 h-5 mt-1"/>
                     </div>
-                  </div>
-                ))}
+                  </div>))}
 
                 <button 
-                  className="w-full text-center py-3 text-blue-600 hover:text-blue-700 font-medium text-sm cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
-                  onClick={() => navigate('/parent/appointments')}
+                  className="w-full text-center py-3 text-blue-600 hover:text-blue-700 font-medium text-sm cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"onClick={() =>navigate('/parent/appointments')}
                 >
                   {t('parent:appointments.viewAll')}
                 </button>
@@ -429,23 +411,22 @@ export default function ParentDashboard({
                   <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
                     {t('parent:parentDashboard.newCount', { count: newMessagesCount })}
                   </span>
-                  <button className="text-blue-600 hover:text-blue-700" onClick={openChatPage}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                  <button className="text-blue-600 hover:text-blue-700"onClick={openChatPage}>
+                    <svg className="w-5 h-5"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+                      <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                     </svg>
                   </button>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {messages.map((message) => (
+                {messages.map((message) =>(
                   <div 
                     key={message.id}
-                    className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => openChatPage()}
+                    className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"onClick={() =>openChatPage()}
                   >
                     <div className="flex items-start space-x-3">
-                      <img src={message.teacherAvatar} alt={message.teacherName} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={message.teacherAvatar} alt={message.teacherName} className="w-10 h-10 rounded-full object-cover"/>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-medium text-gray-900">{message.teacherName}</h4>
@@ -453,23 +434,21 @@ export default function ParentDashboard({
                         </div>
                         <p className="text-sm text-gray-600 truncate">{message.message}</p>
                         <div className="flex items-center mt-1">
-                          <span className={`w-2 h-2 ${message.isNew ? 'bg-blue-500' : 'bg-green-500'} rounded-full mr-2`}></span>
-                          <span className={`text-xs ${message.isNew ? 'text-blue-600' : 'text-green-600'} font-medium`}>
+                          <span className={`w-2 h-2 ${message.isNew ? 'bg-blue-500': 'bg-green-500'} rounded-full mr-2`}></span>
+                          <span className={`text-xs ${message.isNew ? 'text-blue-600': 'text-green-600'} font-medium`}>
                             {message.isNew ? t('parent:parentDashboard.newMessage') : ''}
                           </span>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>))}
 
                 {/* Quick Chat Button */}
                 <button 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
-                  onClick={openChatPage}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"onClick={openChatPage}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                  <svg className="w-5 h-5"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+                    <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                   </svg>
                   <span>{t('parent:parentDashboard.startNewChat')}</span>
                 </button>
@@ -480,14 +459,14 @@ export default function ParentDashboard({
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">{t('parent:parentDashboard.alertsAndRecognition')}</h2>
-                <img src={iconInfo} alt="" className="w-5 h-5" />
+                <img src={iconInfo} alt=""className="w-5 h-5"/>
               </div>
 
               <div className="space-y-4">
-                {defaultAlerts.map((alert) => (
+                {defaultAlerts.map((alert) =>(
                   <div key={alert.id} className={`${alert.bgColor} border ${alert.borderColor} rounded-lg p-4`}>
                     <div className="flex items-start">
-                      <img src={alert.icon} alt="" className="w-5 h-5 mt-0.5" />
+                      <img src={alert.icon} alt=""className="w-5 h-5 mt-0.5"/>
                       <div className="ml-3 flex-1">
                         <h3 className={`font-medium ${alert.textColor}`}>{alert.title}</h3>
                         <p className={`text-sm mt-1 ${alert.textColor.replace('900', '700')}`}>
@@ -496,20 +475,17 @@ export default function ParentDashboard({
                         {alert.date && (
                           <p className={`text-xs mt-1 ${alert.textColor.replace('900', '600')}`}>
                             {alert.date}
-                          </p>
-                        )}
-                        {alert.type === 'warning' && (
+                          </p>)}
+                        {alert.type === 'warning'&& (
                           <button 
                             className={`${alert.textColor.replace('900', '600')} hover:${alert.textColor.replace('900', '700')} text-xs font-medium mt-2`}
-                            onClick={() => openChatPage()}
+                            onClick={() =>openChatPage()}
                           >
                             {t('parent:parentDashboard.discussWithTeacher')}
-                          </button>
-                        )}
+                          </button>)}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>))}
               </div>
             </div>
           </div>
@@ -517,6 +493,5 @@ export default function ParentDashboard({
       </div>
 
       <Footer />
-    </div>
-  );
+    </div>);
 }

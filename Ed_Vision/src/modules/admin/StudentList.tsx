@@ -17,17 +17,15 @@ const hideScrollbarStyle = `
 `;
 
 // Simple Card components
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
-const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const CardContent = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={className}>
     {children}
-  </div>
-);
+  </div>);
 
 export default function StudentList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,7 +94,7 @@ export default function StudentList() {
       fetchStudents();
     }, 300);
 
-    return () => clearTimeout(timeoutId);
+    return () =>clearTimeout(timeoutId);
   }, [searchTerm, selectedDepartment, selectedProgram, selectedCohort, selectedStatus, currentPage, limit, showToast]);
 
   const handleViewStudent = (e: React.MouseEvent, studentId: number) => {
@@ -129,13 +127,13 @@ export default function StudentList() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth'});
   };
 
-  // Convert cohort year to K format (e.g., 2022 -> K28, 2023 -> K29)
+  // Convert cohort year to K format (e.g., 2022 ->K28, 2023 ->K29)
   const getCohortLabel = (cohortYear: number | undefined): string => {
     if (!cohortYear) return 'N/A';
-    const kNumber = cohortYear - 2000 + 6; // 2022 -> 28, 2023 -> 29, etc.
+    const kNumber = cohortYear - 2000 + 6; // 2022 ->28, 2023 ->29, etc.
     return `K${kNumber}`;
   };
 
@@ -196,7 +194,7 @@ export default function StudentList() {
 
   // Get available programs based on selected department
   const availablePrograms = selectedDepartment
-    ? filterOptions.programs.filter(p => p.department === selectedDepartment)
+    ? filterOptions.programs.filter(p =>p.department === selectedDepartment)
     : filterOptions.programs;
 
   // Generate cohort options based on current date
@@ -262,13 +260,9 @@ export default function StudentList() {
               <div className="relative">
                 <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input 
-                  type="text" 
-                  placeholder="Tìm kiếm theo tên, mã sinh viên..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg w-64 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  autoComplete="off"
-                />
+                  type="text"placeholder="Tìm kiếm theo tên, mã sinh viên..."value={searchTerm}
+                  onChange={(e) =>setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg w-64 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"autoComplete="off"/>
               </div>
 
               {/* Filter Dropdowns */}
@@ -281,12 +275,10 @@ export default function StudentList() {
                     setSelectedProgram(""); // Reset program when department changes
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-48 truncate"
-                >
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-48 truncate">
                   <option value="">Tất cả trường</option>
-                  {filterOptions.departments.map((dept) => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
+                  {filterOptions.departments.map((dept) =>(
+                    <option key={dept} value={dept}>{dept}</option>))}
                 </select>
 
                 {/* Program Filter */}
@@ -296,13 +288,11 @@ export default function StudentList() {
                     setSelectedProgram(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-48 truncate"
-                  disabled={!selectedDepartment && filterOptions.programs.length > 20}
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-48 truncate"disabled={!selectedDepartment && filterOptions.programs.length >20}
                 >
                   <option value="">Tất cả ngành</option>
-                  {availablePrograms.map((prog) => (
-                    <option key={prog.name} value={prog.name}>{prog.name}</option>
-                  ))}
+                  {availablePrograms.map((prog) =>(
+                    <option key={prog.name} value={prog.name}>{prog.name}</option>))}
                 </select>
 
                 {/* Cohort Year Filter */}
@@ -312,12 +302,10 @@ export default function StudentList() {
                     setSelectedCohort(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-32 truncate"
-                >
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-32 truncate">
                   <option value="">Tất cả khóa</option>
-                  {cohortOptions.map((cohort) => (
-                    <option key={cohort.year} value={cohort.year}>{cohort.label}</option>
-                  ))}
+                  {cohortOptions.map((cohort) =>(
+                    <option key={cohort.year} value={cohort.year}>{cohort.label}</option>))}
                 </select>
 
                 {/* Status Filter */}
@@ -327,12 +315,10 @@ export default function StudentList() {
                     setSelectedStatus(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-36 truncate"
-                >
+                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-xs cursor-pointer w-36 truncate">
                   <option value="">Tất cả trạng thái</option>
-                  {filterOptions.statuses.map((status) => (
-                    <option key={status.code} value={status.code}>{status.name}</option>
-                  ))}
+                  {filterOptions.statuses.map((status) =>(
+                    <option key={status.code} value={status.code}>{status.name}</option>))}
                 </select>
               </div>
 
@@ -340,10 +326,8 @@ export default function StudentList() {
               <div className="flex gap-3">
                 <button 
                   onClick={handleResetFilters}
-                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
-                >
-                  <i className="fas fa-undo mr-2"></i>
-                  Reset bộ lọc
+                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer">
+                  <i className="fas fa-undo mr-2"></i>Reset bộ lọc
                 </button>
               </div>
             </div>
@@ -364,25 +348,21 @@ export default function StudentList() {
 
           {/* Table Content */}
           <div className="max-w-full hide-scrollbar">
-            <div className="overflow-y-auto hide-scrollbar relative" style={{maxHeight: `${Math.min(students.length, 10) * 80 + 60}px`, minHeight: isLoading ? '200px' : 'auto'}}>
+            <div className="overflow-y-auto hide-scrollbar relative"style={{maxHeight: `${Math.min(students.length, 10) * 80 + 60}px`, minHeight: isLoading ? '200px': 'auto'}}>
               {isLoading && (
                 <LoadingSpinner 
-                  text="Đang tải dữ liệu..." 
-                  size="md" 
-                  position="top" 
-                />
-              )}
+                  text="Đang tải dữ liệu..."size="md"position="top"/>)}
               <table className="w-full min-w-[1200px] table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '60px'}}>STT</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '280px'}}>Sinh viên</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '120px'}}>Mã SV</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '150px'}}>Trường</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '150px'}}>Ngành</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '80px'}}>Khóa</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>Trạng thái</th>
-                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '200px'}}>Hành động</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '60px'}}>STT</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '280px'}}>Sinh viên</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '120px'}}>Mã SV</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '150px'}}>Trường</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '150px'}}>Ngành</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '80px'}}>Khóa</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '100px'}}>Trạng thái</th>
+                    <th className="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"style={{width: '200px'}}>Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -395,23 +375,19 @@ export default function StudentList() {
                         <p className="text-gray-500">Thử thay đổi tiêu chí tìm kiếm hoặc bộ lọc</p>
                       </div>
                     </td>
-                  </tr>
-                ) : !isLoading ? (
-                  students.map((student, index) => (
+                  </tr>) : !isLoading ? (
+                  students.map((student, index) =>(
                     <tr 
                       key={student.studentId} 
-                      className="hover:bg-gray-50"
-                    >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium" style={{width: '60px'}}>
+                      className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium"style={{width: '60px'}}>
                       {(currentPage - 1) * limit + index + 1}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{width: '280px'}}>
+                    <td className="px-4 py-4 whitespace-nowrap"style={{width: '280px'}}>
                       <div className="flex items-center">
                         <img 
                           src={student.profile?.avatarUrl || "/src/assets/parent/avatarJohnSmith.png"} 
-                          alt="Student" 
-                          className="w-10 h-10 rounded-full mr-3 object-cover flex-shrink-0"
-                          onError={(e) => {
+                          alt="Student"className="w-10 h-10 rounded-full mr-3 object-cover flex-shrink-0"onError={(e) => {
                             e.currentTarget.src = "/src/assets/parent/avatarJohnSmith.png";
                           }}
                         />
@@ -421,48 +397,41 @@ export default function StudentList() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{width: '120px'}}>{student.studentCode}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate" style={{width: '150px'}}>{student.department?.name || 'N/A'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate" style={{width: '150px'}}>{student.program?.programName || 'N/A'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900" style={{width: '80px'}}>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900"style={{width: '120px'}}>{student.studentCode}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate"style={{width: '150px'}}>{student.department?.name || 'N/A'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate"style={{width: '150px'}}>{student.program?.programName || 'N/A'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900"style={{width: '80px'}}>
                       {student.cohortYear 
                         ? getCohortLabel(student.cohortYear)
                         : getCohortFromCode(student.studentCode)
                       }
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap" style={{width: '100px'}}>
+                    <td className="px-4 py-4 whitespace-nowrap"style={{width: '100px'}}>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(student.status)}`}>
                         <i className={`fas fa-circle ${getStatusIcon(student.status)} mr-1 text-xs`}></i>
                         {getStatusLabel(student.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium" style={{width: '200px'}}>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium"style={{width: '200px'}}>
                       <div className="flex space-x-2">
                         <button 
-                          onClick={(e) => handleViewStudent(e, student.studentId)}
-                          className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                          title="Xem chi tiết"
-                        >
+                          onClick={(e) =>handleViewStudent(e, student.studentId)}
+                          className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"title="Xem chi tiết">
                           <i className="fas fa-eye text-blue-600"></i>
                         </button>
                         <button 
-                          onClick={(e) => handleWarningClick(e, student.studentId)}
-                          className="p-1.5 hover:bg-orange-50 rounded-md transition-colors cursor-pointer"
-                          title="Cảnh báo"
-                        >
+                          onClick={(e) =>handleWarningClick(e, student.studentId)}
+                          className="p-1.5 hover:bg-orange-50 rounded-md transition-colors cursor-pointer"title="Cảnh báo">
                           <i className="fas fa-exclamation-triangle text-orange-600"></i>
                         </button>
                         <button 
-                          onClick={(e) => handleAdvisorClick(e, student.studentId)}
-                          className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
-                          title="Liên hệ cố vấn"
-                        >
+                          onClick={(e) =>handleAdvisorClick(e, student.studentId)}
+                          className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer"title="Liên hệ cố vấn">
                           <i className="fas fa-user-tie text-green-600"></i>
                         </button>
                       </div>
                     </td>
-                    </tr>
-                  ))
+                    </tr>))
                 ) : null}
                 </tbody>
               </table>
@@ -472,43 +441,34 @@ export default function StudentList() {
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">{(currentPage - 1) * limit + 1}</span> đến <span className="font-medium">{Math.min(currentPage * limit, totalStudents)}</span> trong tổng số <span className="font-medium">{totalStudents}</span> kết quả
+              <div className="text-sm text-gray-700">Hiển thị <span className="font-medium">{(currentPage - 1) * limit + 1}</span>đến <span className="font-medium">{Math.min(currentPage * limit, totalStudents)}</span>trong tổng số <span className="font-medium">{totalStudents}</span>kết quả
               </div>
               <div className="flex items-center space-x-2">
                 <button 
-                  onClick={() => handlePageChange(currentPage - 1)}
+                  onClick={() =>handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <i className="fas fa-chevron-left mr-1"></i>
-                  Trước
+                  className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                  <i className="fas fa-chevron-left mr-1"></i>Trước
                 </button>
                 
-                {renderPageNumbers().map((page, idx) => (
-                  page === '...' ? (
-                    <span key={`ellipsis-${idx}`} className="px-3 py-1.5 text-xs font-medium text-gray-500">...</span>
-                  ) : (
+                {renderPageNumbers().map((page, idx) =>(
+                  page === '...'? (
+                    <span key={`ellipsis-${idx}`} className="px-3 py-1.5 text-xs font-medium text-gray-500">...</span>) : (
                     <button
                       key={page}
-                      onClick={() => handlePageChange(page as number)}
+                      onClick={() =>handlePageChange(page as number)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-md cursor-pointer ${
                         currentPage === page
-                          ? 'text-white bg-blue-600 border border-blue-600 hover:bg-blue-700'
-                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                      }`}
+                          ? 'text-white bg-blue-600 border border-blue-600 hover:bg-blue-700': 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
                     >
                       {page}
-                    </button>
-                  )
+                    </button>)
                 ))}
                 
                 <button 
-                  onClick={() => handlePageChange(currentPage + 1)}
+                  onClick={() =>handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Sau
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">Sau
                   <i className="fas fa-chevron-right ml-1"></i>
                 </button>
               </div>
@@ -516,6 +476,5 @@ export default function StudentList() {
           </div>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

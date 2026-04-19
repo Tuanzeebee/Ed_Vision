@@ -44,7 +44,7 @@ export default function ParentProfilePage({}: Props) {
         throw new Error(t('common.loadError', { status: res.status }));
       }
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() =>({}));
       
       console.log('API Response:', data);
       setParent(data ?? null);
@@ -195,7 +195,7 @@ export default function ParentProfilePage({}: Props) {
     name: profile.fullName || "Phụ huynh",
     age: undefined as number | undefined,
     avatar: getFullAvatarUrl(profile.avatarUrl),
-    status: ("active" as "active" | "inactive"),
+    status: ("active"as "active"| "inactive"),
     statusLabel: "Hoạt động",
     personalInfo: {
       fullName: profile.fullName || "",
@@ -221,8 +221,7 @@ export default function ParentProfilePage({}: Props) {
         <div className="flex items-center justify-center px-4 py-20 min-h-screen bg-gray-50">
           <div className="text-center text-gray-600">Đang tải hồ sơ...</div>
         </div>
-      </>
-    );
+      </>);
   }
 
   if (error) {
@@ -232,8 +231,7 @@ export default function ParentProfilePage({}: Props) {
         <div className="flex items-center justify-center px-4 py-20 min-h-screen bg-gray-50">
           <div className="text-center text-red-600">{error}</div>
         </div>
-      </>
-    );
+      </>);
   }
 
   const profileData = parent?.profile || {};
@@ -243,7 +241,7 @@ export default function ParentProfilePage({}: Props) {
       <Header />
       <EditProfileModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() =>setIsEditModalOpen(false)}
         currentProfile={{
           fullName: profileData.fullName,
           phoneNumber: profileData.phoneNumber,
@@ -257,7 +255,7 @@ export default function ParentProfilePage({}: Props) {
       />
       <EditParentOccupationModal
         isOpen={isEditOccupationModalOpen}
-        onClose={() => setIsEditOccupationModalOpen(false)}
+        onClose={() =>setIsEditOccupationModalOpen(false)}
         currentOccupation={{
           relationshipType: parent?.relationshipType,
           occupation: parent?.occupation,
@@ -270,9 +268,8 @@ export default function ParentProfilePage({}: Props) {
         onEditPersonalInfo={handleEditPersonalInfo}
         onEditAvatar={handleEditAvatar}
         additionalSections={[
-          <ParentOccupationInfo key="occupation" occupationInfo={mappedOccupation as any} onEdit={handleEditOccupationInfo} />,
+          <ParentOccupationInfo key="occupation"occupationInfo={mappedOccupation as any} onEdit={handleEditOccupationInfo} />,
         ]}
       />
-    </>
-  );
+    </>);
 }

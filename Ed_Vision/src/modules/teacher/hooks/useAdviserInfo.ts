@@ -55,7 +55,7 @@ export function useAdviserInfo(instructorId: number | null) {
         setAdviserClasses(classes);
 
         // Auto-select first class if available
-        if (classes.length > 0 && !selectedClassId) {
+        if (classes.length >0 && !selectedClassId) {
           setSelectedClassId(classes[0].classId);
         }
       }

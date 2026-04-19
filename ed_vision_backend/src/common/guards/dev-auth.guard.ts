@@ -22,7 +22,7 @@ export class DevAuthGuard implements CanActivate {
 
     const account = await this.prisma.account.findUnique({
       where: { account_id: accountId },
-      include: { 
+      include: {
         roleRel: true,
         instructor: true, // Include instructor info
       },

@@ -21,7 +21,7 @@ export interface StudentGrade {
   financial_support_by_course?: number | null;
   emotional_support_by_course?: number | null;
   final_pred?: number | null;
-  confidence?: 'high' | 'medium' | 'low' | null;
+  confidence?: 'high'| 'medium'| 'low'| null;
 }
 
 export interface UploadResponse {

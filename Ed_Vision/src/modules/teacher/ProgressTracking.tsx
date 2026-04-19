@@ -514,7 +514,7 @@ export default function ProgressTracking() {
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                                 >
-                                    📊 Tổng quan
+                                     Tổng quan
                                 </button>
 
                                 <div className="text-gray-400 text-lg">hoặc</div>
@@ -534,7 +534,7 @@ export default function ProgressTracking() {
                                     <option value="">-- Chọn lớp để xem chi tiết --</option>
                                     {filterOptions.classes.map((className) => (
                                         <option key={className} value={className}>
-                                            📚 {className}
+                                             {className}
                                         </option>
                                     ))}
                                 </select>
@@ -767,7 +767,7 @@ export default function ProgressTracking() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <CardTitle className="text-2xl mb-1">
-                                            📊 {classInfo?.name} - {milestone.title}
+                                             {classInfo?.name} - {milestone.title}
                                         </CardTitle>
                                         <p className="text-purple-100">
                                             {classInfo?.department} • {classInfo?.totalStudents} sinh viên
@@ -858,7 +858,7 @@ export default function ProgressTracking() {
                                             <div className="grid grid-cols-2 gap-6">
                                                 {/* GPA Trend */}
                                                 <div className="bg-white rounded-lg p-4">
-                                                    <p className="text-sm font-semibold text-gray-700 mb-3">📈 GPA qua các mốc:</p>
+                                                    <p className="text-sm font-semibold text-gray-700 mb-3"> GPA qua các mốc:</p>
                                                     <div className="space-y-2">
                                                         {previousMilestones.map((pm, idx) => pm.metric && (
                                                             <div key={idx} className="flex items-center justify-between text-sm">
@@ -894,7 +894,7 @@ export default function ProgressTracking() {
 
                                                 {/* Attendance Trend */}
                                                 <div className="bg-white rounded-lg p-4">
-                                                    <p className="text-sm font-semibold text-gray-700 mb-3">📊 Điểm danh qua các mốc:</p>
+                                                    <p className="text-sm font-semibold text-gray-700 mb-3"> Điểm danh qua các mốc:</p>
                                                     <div className="space-y-2">
                                                         {previousMilestones.map((pm, idx) => pm.metric && (
                                                             <div key={idx} className="flex items-center justify-between text-sm">
@@ -1069,10 +1069,10 @@ export default function ProgressTracking() {
                                                             paginatedStudents.map((student) => {
                                                                 const isExpanded = expandedStudents.has(student.id)
                                                                 const statusConfig = {
-                                                                    good: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700', icon: '✅', label: 'Tốt' },
-                                                                    'needs-attention': { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700', icon: '👀', label: 'Cần theo dõi' },
-                                                                    'medium-risk': { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700', icon: '⚠️', label: 'Nguy cơ TB' },
-                                                                    'high-risk': { bg: 'bg-red-50 border-red-200', text: 'text-red-700', icon: '🚨', label: 'Nguy cơ cao' }
+                                                                    good: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700', icon: '', label: 'Tốt' },
+                                                                    'needs-attention': { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700', icon: '', label: 'Cần theo dõi' },
+                                                                    'medium-risk': { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700', icon: '', label: 'Nguy cơ TB' },
+                                                                    'high-risk': { bg: 'bg-red-50 border-red-200', text: 'text-red-700', icon: '', label: 'Nguy cơ cao' }
                                                                 }
                                                                 const config = statusConfig[student.status as keyof typeof statusConfig]
                                                                 
@@ -1085,7 +1085,7 @@ export default function ProgressTracking() {
                                                         >
                                                             <div className="flex items-center gap-4 flex-1">
                                                                 <div className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                                                                    ▶
+                                                                    
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <div className="flex items-center gap-3">
@@ -1125,7 +1125,7 @@ export default function ProgressTracking() {
                                                             <div className={`px-16 pb-6 border-t ${config.bg}`}>
                                                                 <div className="pt-4 space-y-4">
                                                                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                                        📊 Chi tiết:
+                                                                         Chi tiết:
                                                                     </h4>
                                                                     
                                                                     {/* Details */}
@@ -1193,9 +1193,9 @@ export default function ProgressTracking() {
                                                                                     student.status === 'medium-risk' ? 'text-orange-900' : 
                                                                                     'text-yellow-900'
                                                                                 }`}>
-                                                                                    {student.status === 'high-risk' ? '🚨 Khuyến nghị: Cần gặp gỡ và hỗ trợ KHẨN CẤP - Nguy cơ rất cao' : 
-                                                                                     student.status === 'medium-risk' ? '⚠️ Khuyến nghị: Cần gặp gỡ và lập kế hoạch hỗ trợ - Nguy cơ trung bình' : 
-                                                                                     '👀 Khuyến nghị: Theo dõi sát hơn, khuyến khích và động viên'}
+                                                                                    {student.status === 'high-risk' ? ' Khuyến nghị: Cần gặp gỡ và hỗ trợ KHẨN CẤP - Nguy cơ rất cao' : 
+                                                                                     student.status === 'medium-risk' ? ' Khuyến nghị: Cần gặp gỡ và lập kế hoạch hỗ trợ - Nguy cơ trung bình' : 
+                                                                                     ' Khuyến nghị: Theo dõi sát hơn, khuyến khích và động viên'}
                                                                                 </p>
                                                                             </div>
                                                                         )}

@@ -12,23 +12,20 @@ const ChevronLeftIcon = () => <i className="fas fa-chevron-left text-gray-500"><
 const ChevronRightIcon = () => <i className="fas fa-chevron-right text-gray-400"></i>;
 
 // Status badge component
-const StatusBadge = ({ status, children }: { status: 'active' | 'inactive' | 'blocked'; children: React.ReactNode }) => {
+const StatusBadge = ({ status, children }: { status: 'active'| 'inactive'| 'blocked'; children: React.ReactNode }) => {
   const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap";
   const statusClasses = {
     active: "bg-green-100 text-green-800",
     inactive: "bg-yellow-100 text-yellow-800", 
-    blocked: "bg-red-100 text-red-800"
-  };
+    blocked: "bg-red-100 text-red-800"};
   
   return (
     <span className={`${baseClasses} ${statusClasses[status]}`}>
       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-        status === 'active' ? 'bg-green-500' : 
-        status === 'inactive' ? 'bg-yellow-500' : 'bg-red-500'
-      }`}></span>
+        status === 'active'? 'bg-green-500': 
+        status === 'inactive'? 'bg-yellow-500': 'bg-red-500'}`}></span>
       {children}
-    </span>
-  );
+    </span>);
 };
 
 // Role badge component
@@ -37,23 +34,21 @@ const RoleBadge = ({ role }: { role: string }) => {
   
   // Determine if role should be bold
   const isBold = role === 'Lãnh đạo';
-  const fontWeight = isBold ? 'font-bold' : 'font-medium';
+  const fontWeight = isBold ? 'font-bold': 'font-medium';
   
   // Color mapping for each role
   const roleClasses: { [key: string]: string } = {
     'Lãnh đạo': 'bg-red-100 text-red-800',
     'Giảng viên': 'bg-green-100 text-green-800',
     'Sinh viên': 'bg-orange-100 text-orange-800',
-    'Phụ huynh': 'bg-pink-100 text-pink-800'
-  };
+    'Phụ huynh': 'bg-pink-100 text-pink-800'};
   
   const colorClass = roleClasses[role] || 'bg-gray-100 text-gray-800';
   
   return (
     <span className={`${baseClasses} ${colorClass} ${fontWeight}`}>
       {role}
-    </span>
-  );
+    </span>);
 };
 
 // Helper functions
@@ -64,8 +59,7 @@ const getRoleDisplayName = (roleCode?: string, roleName?: string): string => {
     'leader': 'Lãnh đạo',
     'teacher': 'Giảng viên',
     'student': 'Sinh viên',
-    'parent': 'Phụ huynh'
-  };
+    'parent': 'Phụ huynh'};
   return roleCode ? roleMap[roleCode] || roleCode : 'N/A';
 };
 
@@ -99,16 +93,15 @@ const getUserCode = (account: AccountData): string => {
 };
 
 // Simple Card components
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
 const Button = ({ children, variant = "primary", size = "md", className = "", ...props }: { 
   children: React.ReactNode; 
-  variant?: "primary" | "secondary" | "ghost";
-  size?: "sm" | "md" | "lg";
+  variant?: "primary"| "secondary"| "ghost";
+  size?: "sm"| "md"| "lg";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   const baseClasses = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer";
@@ -116,14 +109,12 @@ const Button = ({ children, variant = "primary", size = "md", className = "", ..
   const variants = {
     primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
     secondary: "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 focus:ring-blue-500",
-    ghost: "hover:bg-gray-100 text-gray-600"
-  };
+    ghost: "hover:bg-gray-100 text-gray-600"};
   
   const sizes = {
     sm: "px-3 py-2 text-xs",
     md: "px-4 py-1.5 text-xs", 
-    lg: "px-6 py-3 text-base"
-  };
+    lg: "px-6 py-3 text-base"};
   
   return (
     <button 
@@ -131,8 +122,7 @@ const Button = ({ children, variant = "primary", size = "md", className = "", ..
       {...props}
     >
       {children}
-    </button>
-  );
+    </button>);
 };
 
 export default function AccountManagement() {
@@ -238,7 +228,7 @@ export default function AccountManagement() {
 
   // Get available majors for selected school
   const availableMajors = selectedSchool 
-    ? filterOptions.majors.filter(m => m.school === selectedSchool)
+    ? filterOptions.majors.filter(m =>m.school === selectedSchool)
     : filterOptions.majors;
 
   // Handle lock/unlock account
@@ -290,16 +280,12 @@ export default function AccountManagement() {
                   <SearchIcon />
                 </div>
                 <input 
-                  type="text"
-                  placeholder="Tìm kiếm tài khoản..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg w-64 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                  type="text"placeholder="Tìm kiếm tài khoản..."value={searchTerm}
+                  onChange={(e) =>setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg w-64 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
               </div>
               <Button 
-                className="cursor-pointer px-3 py-2"
-                onClick={() => navigate('/admin/accounts/add')}
+                className="cursor-pointer px-3 py-2"onClick={() =>navigate('/admin/accounts/add')}
               >
                 <PlusIcon />
                 <span className="ml-2">Thêm mới</span>
@@ -310,26 +296,22 @@ export default function AccountManagement() {
             <div className="flex items-center space-x-2">
               <select 
                 value={selectedSchool}
-                onChange={(e) => setSelectedSchool(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-48 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
-              >
+                onChange={(e) =>setSelectedSchool(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-48 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate">
                 <option value="">Tất cả các trường</option>
-                {filterOptions.schools.map((school) => (
-                  <option key={school} value={school}>{school}</option>
-                ))}
+                {filterOptions.schools.map((school) =>(
+                  <option key={school} value={school}>{school}</option>))}
               </select>
               <select 
                 value={selectedMajor}
-                onChange={(e) => setSelectedMajor(e.target.value)}
+                onChange={(e) =>setSelectedMajor(e.target.value)}
                 disabled={!selectedSchool}
                 className={`px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-40 focus:outline-none focus:ring-2 focus:ring-blue-500 truncate ${
-                  !selectedSchool ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
+                  !selectedSchool ? 'opacity-50 cursor-not-allowed': 'cursor-pointer'}`}
               >
                 <option value="">Tất cả ngành</option>
-                {availableMajors.map((major) => (
-                  <option key={major.name} value={major.name}>{major.name}</option>
-                ))}
+                {availableMajors.map((major) =>(
+                  <option key={major.name} value={major.name}>{major.name}</option>))}
               </select>
               <select 
                 value={selectedRole}
@@ -338,29 +320,23 @@ export default function AccountManagement() {
                   console.log('Role changed to:', newRole);
                   setSelectedRole(newRole);
                 }}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
-              >
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate">
                 <option value="">Tất cả vai trò</option>
-                {filterOptions.roles.map((role) => (
-                  <option key={role.code} value={role.code}>{role.name}</option>
-                ))}
+                {filterOptions.roles.map((role) =>(
+                  <option key={role.code} value={role.code}>{role.name}</option>))}
               </select>
               <select 
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
-              >
+                onChange={(e) =>setSelectedStatus(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate">
                 <option value="">Tất cả trạng thái</option>
-                {filterOptions.statuses.map((status) => (
-                  <option key={status.code} value={status.code}>{status.name}</option>
-                ))}
+                {filterOptions.statuses.map((status) =>(
+                  <option key={status.code} value={status.code}>{status.name}</option>))}
               </select>
               <button 
                 onClick={handleResetFilters}
-                className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
-              >
-                <i className="fas fa-undo mr-2"></i>
-                Reset bộ lọc
+                className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer">
+                <i className="fas fa-undo mr-2"></i>Reset bộ lọc
               </button>
             </div>
           </div>
@@ -369,14 +345,10 @@ export default function AccountManagement() {
         {/* Users Table */}
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <div className="relative" style={{ minHeight: isLoading ? '200px' : 'auto', minWidth: '1200px' }}>
+            <div className="relative"style={{ minHeight: isLoading ? '200px': 'auto', minWidth: '1200px'}}>
               {isLoading && (
                 <LoadingSpinner 
-                  text="Đang tải dữ liệu..." 
-                  size="md" 
-                  position="top" 
-                />
-              )}
+                  text="Đang tải dữ liệu..."size="md"position="top"/>)}
               {/* Table Header */}
               <div className="bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-12 gap-3 px-6 py-3 text-sm font-semibold text-gray-700">
@@ -396,12 +368,11 @@ export default function AccountManagement() {
             {!isLoading && accountsData.length === 0 ? (
               <div className="px-6 py-8 text-center">
                 <div className="text-gray-500">
-                  <span className="text-2xl mb-2 block">🔍</span>
+                  <span className="text-2xl mb-2 block"></span>
                   <p className="text-sm">Không tìm thấy người dùng phù hợp với bộ lọc</p>
                 </div>
-              </div>
-            ) : !isLoading ? (
-              accountsData.map((account) => (
+              </div>) : !isLoading ? (
+              accountsData.map((account) =>(
               <div key={account.accountId} className="grid grid-cols-12 gap-3 px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="col-span-1 flex items-center">
                   <span className="text-sm text-gray-800">{getUserCode(account)}</span>
@@ -413,13 +384,10 @@ export default function AccountManagement() {
                       <img 
                         src={account.profile.avatarUrl} 
                         alt={account.profile.fullName}
-                        className="w-10 h-10 rounded-full border border-gray-200"
-                      />
-                    ) : (
+                        className="w-10 h-10 rounded-full border border-gray-200"/>) : (
                       <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-200 flex items-center justify-center">
                         <i className="fas fa-user text-gray-400"></i>
-                      </div>
-                    )}
+                      </div>)}
                     <div className="ml-3">
                       <div className="text-sm font-medium text-gray-800">{account.profile?.fullName || 'N/A'}</div>
                       <div className="text-xs text-gray-500">
@@ -446,43 +414,34 @@ export default function AccountManagement() {
                 </div>
                 
                 <div className="col-span-1 flex items-center pl-4">
-                  <StatusBadge status={account.status as 'active' | 'inactive' | 'blocked'}>
-                    {account.status === 'active' ? 'Hoạt động' : 
-                     account.status === 'inactive' ? 'Vắng mặt' : 'Đã khóa'}
+                  <StatusBadge status={account.status as 'active'| 'inactive'| 'blocked'}>
+                    {account.status === 'active'? 'Hoạt động': 
+                     account.status === 'inactive'? 'Vắng mặt': 'Đã khóa'}
                   </StatusBadge>
                 </div>
                 
                 <div className="col-span-2 flex items-center space-x-2 pl-20">
                   {/* View Account Button - Icon only with tooltip */}
                   <button 
-                    onClick={() => navigate(`/admin/accounts/${account.accountId}`)}
-                    title="Xem tài khoản"
-                    className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                  >
+                    onClick={() =>navigate(`/admin/accounts/${account.accountId}`)}
+                    title="Xem tài khoản"className="p-1.5 hover:bg-blue-50 rounded-md transition-colors cursor-pointer">
                     <i className="fas fa-eye text-blue-600"></i>
                   </button>
 
                   {/* Lock/Unlock Button */}
-                  {account.status === 'blocked' ? (
+                  {account.status === 'blocked'? (
                     <button 
-                      onClick={() => handleUnlockAccount(account.accountId)}
-                      title="Mở khóa"
-                      className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
-                    >
-                      <span style={{ filter: 'sepia(1) hue-rotate(50deg) saturate(3) brightness(1.2)' }}>🔓</span>
-                    </button>
-                  ) : (
+                      onClick={() =>handleUnlockAccount(account.accountId)}
+                      title="Mở khóa"className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer">
+                      <span style={{ filter: 'sepia(1) hue-rotate(50deg) saturate(3) brightness(1.2)'}}></span>
+                    </button>) : (
                     <button 
-                      onClick={() => handleLockAccount(account.accountId)}
-                      title="Khóa tài khoản"
-                      className="p-1.5 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                    >
-                      <span style={{ filter: 'hue-rotate(-30deg) saturate(2) brightness(0.9)' }}>🔒</span>
-                    </button>
-                  )}
+                      onClick={() =>handleLockAccount(account.accountId)}
+                      title="Khóa tài khoản"className="p-1.5 hover:bg-red-50 rounded-md transition-colors cursor-pointer">
+                      <span style={{ filter: 'hue-rotate(-30deg) saturate(2) brightness(0.9)'}}></span>
+                    </button>)}
                 </div>
-              </div>
-              ))
+              </div>))
             ) : null}
           </div>
           </div>
@@ -490,16 +449,13 @@ export default function AccountManagement() {
           {/* Pagination */}
           <div className="bg-white border-t border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Hiển thị {indexOfFirstUser} đến {indexOfLastUser} của {totalRecords} kết quả
+              <div className="text-sm text-gray-700">Hiển thị {indexOfFirstUser} đến {indexOfLastUser} của {totalRecords} kết quả
               </div>
               <div className="flex items-center space-x-2">
                 <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  disabled={currentPage === 1}
-                  className={currentPage === 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  variant="secondary"size="sm"disabled={currentPage === 1}
+                  className={currentPage === 1 ? "opacity-50 cursor-not-allowed": "cursor-pointer"}
+                  onClick={() =>setCurrentPage(prev =>Math.max(1, prev - 1))}
                 >
                   <ChevronLeftIcon />
                   <span className="ml-1">Trước</span>
@@ -523,37 +479,29 @@ export default function AccountManagement() {
                     return (
                       <Button
                         key={pageNum}
-                        size="sm"
-                        variant={currentPage === pageNum ? "primary" : "secondary"}
-                        className={currentPage === pageNum ? "bg-blue-600 text-white" : "cursor-pointer"}
-                        onClick={() => setCurrentPage(pageNum)}
+                        size="sm"variant={currentPage === pageNum ? "primary": "secondary"}
+                        className={currentPage === pageNum ? "bg-blue-600 text-white": "cursor-pointer"}
+                        onClick={() =>setCurrentPage(pageNum)}
                       >
                         {pageNum}
-                      </Button>
-                    );
+                      </Button>);
                   })}
                   
-                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                  {totalPages >5 && currentPage < totalPages - 2 && (
                     <>
                       <span className="px-2 text-gray-500">...</span>
                       <Button 
-                        variant="secondary" 
-                        size="sm"
-                        className="cursor-pointer"
-                        onClick={() => setCurrentPage(totalPages)}
+                        variant="secondary"size="sm"className="cursor-pointer"onClick={() =>setCurrentPage(totalPages)}
                       >
                         {totalPages}
                       </Button>
-                    </>
-                  )}
+                    </>)}
                 </div>
                 
                 <Button 
-                  variant="secondary" 
-                  size="sm"
-                  disabled={currentPage === totalPages}
-                  className={currentPage === totalPages ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  variant="secondary"size="sm"disabled={currentPage === totalPages}
+                  className={currentPage === totalPages ? "opacity-50 cursor-not-allowed": "cursor-pointer"}
+                  onClick={() =>setCurrentPage(prev =>Math.min(totalPages, prev + 1))}
                 >
                   <span className="mr-1">Sau</span>
                   <ChevronRightIcon />
@@ -565,6 +513,5 @@ export default function AccountManagement() {
         </Card>
       </div>
 
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

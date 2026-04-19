@@ -18,12 +18,12 @@ declare global {
           videoId?: string;
           playerVars?: Record<string, number | string>;
           events?: {
-            onReady?: (event: { target: YTPlayer }) => void;
-            onStateChange?: (event: { data: number; target: YTPlayer }) => void;
-            onError?: (event: { data: number }) => void;
+            onReady?: (event: { target: YTPlayer }) =>void;
+            onStateChange?: (event: { data: number; target: YTPlayer }) =>void;
+            onError?: (event: { data: number }) =>void;
           };
         }
-      ) => YTPlayer;
+      ) =>YTPlayer;
       PlayerState: {
         UNSTARTED: number;
         ENDED: number;
@@ -33,42 +33,42 @@ declare global {
         CUED: number;
       };
     };
-    onYouTubeIframeAPIReady: () => void;
+    onYouTubeIframeAPIReady: () =>void;
   }
 }
 
 interface YTPlayer {
-  playVideo: () => void;
-  pauseVideo: () => void;
-  stopVideo: () => void;
-  loadVideoById: (videoId: string, startSeconds?: number) => void;
-  cueVideoById: (videoId: string) => void;
-  getCurrentTime: () => number;
-  getDuration: () => number;
-  getVolume: () => number;
-  setVolume: (volume: number) => void;
-  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
-  getPlayerState: () => number;
-  destroy: () => void;
+  playVideo: () =>void;
+  pauseVideo: () =>void;
+  stopVideo: () =>void;
+  loadVideoById: (videoId: string, startSeconds?: number) =>void;
+  cueVideoById: (videoId: string) =>void;
+  getCurrentTime: () =>number;
+  getDuration: () =>number;
+  getVolume: () =>number;
+  setVolume: (volume: number) =>void;
+  seekTo: (seconds: number, allowSeekAhead?: boolean) =>void;
+  getPlayerState: () =>number;
+  destroy: () =>void;
 }
 
 export interface YouTubeMusicPlayerRef {
-  play: (videoId: string) => void;
-  pause: () => void;
-  resume: () => void;
-  stop: () => void;
-  seekTo: (seconds: number) => void;
-  setVolume: (volume: number) => void;
-  getCurrentTime: () => number;
-  getDuration: () => number;
-  isPlaying: () => boolean;
+  play: (videoId: string) =>void;
+  pause: () =>void;
+  resume: () =>void;
+  stop: () =>void;
+  seekTo: (seconds: number) =>void;
+  setVolume: (volume: number) =>void;
+  getCurrentTime: () =>number;
+  getDuration: () =>number;
+  isPlaying: () =>boolean;
 }
 
 interface Props {
-  onStateChange?: (state: 'playing' | 'paused' | 'ended' | 'buffering') => void;
-  onTimeUpdate?: (currentTime: number, duration: number) => void;
-  onError?: (errorCode: number) => void;
-  onReady?: () => void;
+  onStateChange?: (state: 'playing'| 'paused'| 'ended'| 'buffering') =>void;
+  onTimeUpdate?: (currentTime: number, duration: number) =>void;
+  onError?: (errorCode: number) =>void;
+  onReady?: () =>void;
   initialVolume?: number;
 }
 
@@ -155,7 +155,7 @@ const YouTubeMusicPlayer = forwardRef<YouTubeMusicPlayerRef, Props>(
         if (playerRef.current) {
           const currentTime = playerRef.current.getCurrentTime();
           const duration = playerRef.current.getDuration();
-          if (duration > 0) {
+          if (duration >0) {
             onTimeUpdate?.(currentTime, duration);
           }
         }
@@ -163,7 +163,7 @@ const YouTubeMusicPlayer = forwardRef<YouTubeMusicPlayerRef, Props>(
     }, [initialVolume, onReady, onTimeUpdate]);
 
     const handleStateChange = useCallback((event: { data: number }) => {
-      const stateMap: Record<number, 'playing' | 'paused' | 'ended' | 'buffering'> = {
+      const stateMap: Record<number, 'playing'| 'paused'| 'ended'| 'buffering'>= {
         [window.YT?.PlayerState?.PLAYING ?? 1]: 'playing',
         [window.YT?.PlayerState?.PAUSED ?? 2]: 'paused',
         [window.YT?.PlayerState?.ENDED ?? 0]: 'ended',
@@ -181,7 +181,7 @@ const YouTubeMusicPlayer = forwardRef<YouTubeMusicPlayerRef, Props>(
     }, [onError]);
 
     // Expose player methods via ref
-    useImperativeHandle(ref, () => ({
+    useImperativeHandle(ref, () =>({
       play: (videoId: string) => {
         if (playerRef.current && isReadyRef.current) {
           playerRef.current.loadVideoById(videoId);
@@ -226,9 +226,7 @@ const YouTubeMusicPlayer = forwardRef<YouTubeMusicPlayerRef, Props>(
           opacity: 0,
           pointerEvents: 'none',
         }}
-        aria-hidden="true"
-      />
-    );
+        aria-hidden="true"/>);
   }
 );
 

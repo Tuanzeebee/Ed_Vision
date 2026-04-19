@@ -3,6 +3,10 @@ import { io, Socket } from 'socket.io-client';
 import { TokenManager } from '@/lib/tokenManager';
 import { fetchNotifications } from '@/stores/notificationStore';
 
+const SOCKET_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  'http://localhost:3000';
+
 interface NotificationPayload {
   title: string;
   body: string;
@@ -37,8 +41,9 @@ export function useNotificationSocket() {
     }
 
     // Kết nối WebSocket
-    const socket = io('http://localhost:3000/notifications', {
-      transports: ['websocket', 'polling'],
+    const socket = io(`${SOCKET_BASE_URL}/notifications`, {
+      transports: ['polling'],
+      upgrade: false,
       query: {
         accountId: accountId.toString(),
         role: role,
@@ -54,7 +59,7 @@ export function useNotificationSocket() {
     });
 
     socket.on('newNotification', (notification: NotificationPayload) => {
-      console.log('🔔 [WebSocket] Received new notification:', notification);
+      console.log('[WebSocket] Received new notification:', notification);
       setNewNotification(notification);
       
       // Phát âm thanh thông báo - với fallback
@@ -64,10 +69,10 @@ export function useNotificationSocket() {
         
         audio.play()
           .then(() => {
-            console.log('✅ [Audio] Notification sound played successfully');
+            console.log('[Audio] Notification sound played successfully');
           })
           .catch(err => {
-            console.warn('⚠️ [Audio] MP3 play failed, trying beep sound:', err);
+            console.warn('[Audio] MP3 play failed, trying beep sound:', err);
             // Fallback: Tạo beep sound bằng Web Audio API nếu file không tồn tại
             try {
               const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -87,18 +92,18 @@ export function useNotificationSocket() {
               oscillator.start(audioContext.currentTime);
               oscillator.stop(audioContext.currentTime + 0.3);
               
-              console.log('✅ [Audio] Fallback beep sound played');
+              console.log('[Audio] Fallback beep sound played');
             } catch (beepError) {
-              console.error('❌ [Audio] Both notification sound and beep failed:', beepError);
+              console.error('[Audio] Both notification sound and beep failed:', beepError);
             }
           });
       } catch (error) {
-        console.error('❌ [Audio] Failed to initialize notification sound:', error);
+        console.error('[Audio] Failed to initialize notification sound:', error);
       }
       
       // Fetch lại notifications từ API để cập nhật cache
       fetchNotifications().then(() => {
-        console.log('✅ [Notification] Cache refreshed');
+        console.log('[Notification] Cache refreshed');
         // Dispatch event để các component khác cập nhật UI
         window.dispatchEvent(new CustomEvent('notificationChange'));
       });

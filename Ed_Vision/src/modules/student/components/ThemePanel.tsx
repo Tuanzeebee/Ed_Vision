@@ -63,13 +63,13 @@ export default function ThemePanel({
   };
 
   const categories = [
-    { id: 'Custom' as ThemeCategory, icon: '🖼️', label: 'Custom' },
-    { id: 'Exclusive' as ThemeCategory, icon: '🎭', label: 'Exclusive' },
-    { id: 'Chill' as ThemeCategory, icon: '🌺', label: 'Chill' },
-    { id: 'Focus' as ThemeCategory, icon: '📖', label: 'Focus' },
-    { id: 'Anime' as ThemeCategory, icon: '⚔️', label: 'Anime' },
-    { id: 'Pets' as ThemeCategory, icon: '🐾', label: 'Pets' },
-    { id: 'Kpop' as ThemeCategory, icon: '👥', label: 'Kpop' },
+    { id: 'Custom' as ThemeCategory, icon: '', label: 'Custom' },
+    { id: 'Exclusive' as ThemeCategory, icon: '', label: 'Exclusive' },
+    { id: 'Chill' as ThemeCategory, icon: '', label: 'Chill' },
+    { id: 'Focus' as ThemeCategory, icon: '', label: 'Focus' },
+    { id: 'Anime' as ThemeCategory, icon: '', label: 'Anime' },
+    { id: 'Pets' as ThemeCategory, icon: '', label: 'Pets' },
+    { id: 'Kpop' as ThemeCategory, icon: '', label: 'Kpop' },
   ];
 
   const handleCategoryClick = (category: ThemeCategory) => {
@@ -251,7 +251,7 @@ export default function ThemePanel({
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-white font-bold text-lg">Summer Special</h3>
-                  <span className="text-xl">☀️</span>
+                  <span className="text-xl"></span>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   {summerSpecialThemes.map((theme, index) => (
@@ -307,7 +307,7 @@ export default function ThemePanel({
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <h3 className="text-white font-bold text-lg">Featuring</h3>
-                      <span className="text-xl">✨</span>
+                      <span className="text-xl"></span>
                     </div>
                     <button className="text-white/60 hover:text-white text-sm flex items-center gap-1">
                       <i className="fas fa-share"></i>
@@ -325,7 +325,7 @@ export default function ThemePanel({
                           <div className="text-white/70 text-[10px]">by {featuredTheme.attribution || 'Unknown'}</div>
                         </div>
                         <div className="absolute top-2 left-2 bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <span>✨</span> Featuring
+                          <span></span> Featuring
                         </div>
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">

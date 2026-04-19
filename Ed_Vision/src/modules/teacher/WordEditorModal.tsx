@@ -77,7 +77,7 @@ export default function WordEditorModal({
       // Get user from localStorage (already logged in)
       const userDataStr = localStorage.getItem('user')
       if (!userDataStr) {
-        console.error('⚠️ User not found in localStorage')
+        console.error(' User not found in localStorage')
         alert('Vui lòng đăng nhập để tiếp tục')
         return
       }
@@ -87,20 +87,20 @@ export default function WordEditorModal({
         const accountId = userData.account_id
         
         if (!accountId) {
-          console.error('⚠️ account_id not found in user data:', userData)
+          console.error(' account_id not found in user data:', userData)
           alert('Không tìm thấy thông tin tài khoản. Vui lòng đăng nhập lại.')
           return
         }
 
-        console.log('🔍 Fetching instructor info for account_id:', accountId)
+        console.log(' Fetching instructor info for account_id:', accountId)
         setIsLoadingInstructor(true)
         
         const info = await getInstructorInfo(accountId)
         setInstructorInfo(info)
-        console.log('✅ Instructor info loaded from database:', info)
+        console.log(' Instructor info loaded from database:', info)
         
       } catch (error) {
-        console.error('❌ Error fetching instructor info:', error)
+        console.error(' Error fetching instructor info:', error)
         alert('Không thể tải thông tin giảng viên. Vui lòng kiểm tra kết nối.')
       } finally {
         setIsLoadingInstructor(false)
@@ -117,7 +117,7 @@ export default function WordEditorModal({
       
       setIsLoadingStudents(true)
       try {
-        console.log('🔍 Fetching students with:', {
+        console.log(' Fetching students with:', {
           instructor_id: instructorInfo.instructor_id,
           date,
           startTime: timeSlot.startTime,
@@ -141,13 +141,13 @@ export default function WordEditorModal({
         }))
         
         setAutoLoadedStudents(students)
-        console.log('✅ Auto-loaded students from API:', students)
+        console.log(' Auto-loaded students from API:', students)
         
         if (students.length === 0) {
-          console.log('⚠️ No students found for this time slot')
+          console.log(' No students found for this time slot')
         }
       } catch (error) {
-        console.error('❌ Error fetching students:', error)
+        console.error(' Error fetching students:', error)
         setAutoLoadedStudents([])
       } finally {
         setIsLoadingStudents(false)
@@ -342,7 +342,7 @@ export default function WordEditorModal({
               )}
               {!isLoadingInstructor && !instructorInfo && (
                 <p className="text-xs text-red-600 mt-1">
-                  ⚠️ Không thể tải thông tin giảng viên. Vui lòng kiểm tra kết nối.
+                   Không thể tải thông tin giảng viên. Vui lòng kiểm tra kết nối.
                 </p>
               )}
             </div>

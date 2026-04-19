@@ -17,7 +17,7 @@ export class ClassManagementService {
    */
   async getInstructorClasses(instructorId: number) {
     const now = new Date();
-    
+
     // Get all classes where this instructor is the adviser (active assignment)
     const classGroups = await this.prisma.classGroup.findMany({
       where: {
@@ -25,10 +25,7 @@ export class ClassManagementService {
         adviserAssignments: {
           some: {
             instructor_id: instructorId,
-            OR: [
-              { ended_date: null },
-              { ended_date: { gte: now } },
-            ],
+            OR: [{ ended_date: null }, { ended_date: { gte: now } }],
           },
         },
       },
@@ -53,10 +50,7 @@ export class ClassManagementService {
         adviserAssignments: {
           where: {
             instructor_id: instructorId,
-            OR: [
-              { ended_date: null },
-              { ended_date: { gte: now } },
-            ],
+            OR: [{ ended_date: null }, { ended_date: { gte: now } }],
           },
           include: {
             instructor: {
@@ -299,10 +293,7 @@ export class ClassManagementService {
           where: {
             class_id: classGroup.class_id,
             instructor_id: instructorId,
-            OR: [
-              { ended_date: null },
-              { ended_date: { gte: now } },
-            ],
+            OR: [{ ended_date: null }, { ended_date: { gte: now } }],
           },
         });
         if (!isAdviser)
@@ -437,7 +428,7 @@ export class ClassManagementService {
     if (!rawData.length) throw new BadRequestException('File is empty');
 
     const columns = Object.keys(rawData[0]);
-    console.log('📄 File info:', {
+    console.log(' File info:', {
       rows: rawData.length,
       columns: columns,
       firstRow: rawData[0],
@@ -528,9 +519,9 @@ export class ClassManagementService {
       });
     }
 
-    console.log(`✅ Parsed ${students.length} valid students`);
+    console.log(` Parsed ${students.length} valid students`);
     if (errors.length > 0) {
-      console.warn(`⚠️ ${errors.length} rows skipped due to errors:`);
+      console.warn(` ${errors.length} rows skipped due to errors:`);
       errors.slice(0, 5).forEach((err) => console.warn(`   ${err}`));
       if (errors.length > 5)
         console.warn(`   ... and ${errors.length - 5} more errors`);

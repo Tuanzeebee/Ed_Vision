@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 interface UseImagePreloaderOptions {
   enabled?: boolean;
-  priority?: 'high' | 'low';
+  priority?: 'high'| 'low';
 }
 
 /**
@@ -13,7 +13,7 @@ export function useImagePreloader(
   imageUrls: string[],
   options: UseImagePreloaderOptions = {}
 ) {
-  const { enabled = true, priority = 'low' } = options;
+  const { enabled = true, priority = 'low'} = options;
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +24,7 @@ export function useImagePreloader(
     const loaded = new Set<string>();
     const imagePromises: Promise<void>[] = [];
 
-    const preloadImage = (url: string): Promise<void> => {
+    const preloadImage = (url: string): Promise<void>=> {
       return new Promise((resolve, reject) => {
         const img = new Image();
         
@@ -61,8 +61,8 @@ export function useImagePreloader(
 
     if (priority === 'low') {
       // Use requestIdleCallback for non-critical preloading
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => startPreloading(), { timeout: 2000 });
+      if ('requestIdleCallback'in window) {
+        requestIdleCallback(() =>startPreloading(), { timeout: 2000 });
       } else {
         setTimeout(startPreloading, 1000);
       }
@@ -80,8 +80,8 @@ export function useImagePreloader(
   return {
     loadedImages,
     isLoading,
-    isImageLoaded: (url: string) => loadedImages.has(url),
-    progress: imageUrls.length > 0 ? (loadedImages.size / imageUrls.length) * 100 : 0,
+    isImageLoaded: (url: string) =>loadedImages.has(url),
+    progress: imageUrls.length >0 ? (loadedImages.size / imageUrls.length) * 100 : 0,
   };
 }
 
@@ -91,8 +91,8 @@ export function useImagePreloader(
 export function preloadImage(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error(`Failed to load ${url}`));
+    img.onload = () =>resolve();
+    img.onerror = () =>reject(new Error(`Failed to load ${url}`));
     img.src = url;
   });
 }

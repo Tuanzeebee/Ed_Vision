@@ -22,22 +22,22 @@ import {
   createSuccessResponse,
 } from '../common/i18n.helper';
 
-// ❌ WRONG: Returning hard-coded text
+//  WRONG: Returning hard-coded text
 class WrongExampleController {
   @Get('student/:id')
   async getStudentWrong(@Param('id') id: string) {
-    const student = { id, name: 'John', status: 'Đang học' }; // ❌ Hard-coded Vietnamese
+    const student = { id, name: 'John', status: 'Đang học' }; //  Hard-coded Vietnamese
     return student;
   }
 }
 
-// ✅ CORRECT: Returning keys for frontend to translate
+//  CORRECT: Returning keys for frontend to translate
 @Controller('example')
 export class CorrectExampleController {
   constructor(private readonly i18n: I18nService) {}
 
   /**
-   * ✅ Example 1: Return status as KEY
+   *  Example 1: Return status as KEY
    * Frontend will translate using: t('student.status.active')
    */
   @Get('student/:id')
@@ -45,13 +45,13 @@ export class CorrectExampleController {
     return {
       id,
       name: 'John Doe',
-      status: 'student.status.active', // ✅ Return KEY, not text
-      grade: 'student.grade.excellent', // ✅ Return KEY
+      status: 'student.status.active', //  Return KEY, not text
+      grade: 'student.grade.excellent', //  Return KEY
     };
   }
 
   /**
-   * ✅ Example 2: Error responses with keys
+   *  Example 2: Error responses with keys
    * Frontend will translate the errorKey
    */
   @Get('student/invalid/:id')
@@ -62,7 +62,7 @@ export class CorrectExampleController {
   }
 
   /**
-   * ✅ Example 3: Success response with optional message key
+   *  Example 3: Success response with optional message key
    */
   @Post('student')
   async createStudent(@Body() data: any) {
@@ -71,7 +71,7 @@ export class CorrectExampleController {
   }
 
   /**
-   * ✅ Example 4: Backend translates for EMAIL
+   *  Example 4: Backend translates for EMAIL
    * This is when backend SHOULD translate
    */
   @Post('send-welcome-email')
@@ -91,7 +91,7 @@ export class CorrectExampleController {
   }
 
   /**
-   * ✅ Example 5: List with status keys
+   *  Example 5: List with status keys
    */
   @Get('bookings')
   async getBookings() {
@@ -99,20 +99,20 @@ export class CorrectExampleController {
       data: [
         {
           id: '1',
-          status: 'booking.status.pending', // ✅ KEY
-          type: 'booking.type.consultation', // ✅ KEY
+          status: 'booking.status.pending', //  KEY
+          type: 'booking.type.consultation', //  KEY
         },
         {
           id: '2',
-          status: 'booking.status.confirmed', // ✅ KEY
-          type: 'booking.type.appointment', // ✅ KEY
+          status: 'booking.status.confirmed', //  KEY
+          type: 'booking.type.appointment', //  KEY
         },
       ],
     };
   }
 
   /**
-   * ✅ Example 6: Export file - Backend translates
+   *  Example 6: Export file - Backend translates
    */
   @Get('export/students')
   async exportStudents() {
@@ -130,17 +130,17 @@ export class CorrectExampleController {
 }
 
 /**
- * 🎯 KEY POINTS:
+ *  KEY POINTS:
  *
  * 1. API Response Structure:
  *    {
- *      "status": "student.status.active"  // ✅ KEY for FE to translate
+ *      "status": "student.status.active"  //  KEY for FE to translate
  *    }
  *
  * 2. Error Response Structure:
  *    {
  *      "statusCode": 404,
- *      "errorKey": "error.student.notFound",  // ✅ KEY for FE
+ *      "errorKey": "error.student.notFound",  //  KEY for FE
  *      "timestamp": "2024-..."
  *    }
  *

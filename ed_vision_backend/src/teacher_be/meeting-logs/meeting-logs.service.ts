@@ -282,12 +282,14 @@ export class MeetingLogsService {
         total_students: students.length,
         capacity: slot.capacity,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof BadRequestException) {
         throw error;
       }
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException(
-        `Lỗi khi lấy danh sách sinh viên: ${error.message}`,
+        `Lỗi khi lấy danh sách sinh viên: ${errorMessage}`,
       );
     }
   }
@@ -296,9 +298,9 @@ export class MeetingLogsService {
    * Lưu nhật ký cuộc họp (Tạm thời lưu vào JSON field hoặc tạo bảng mới)
    * TODO: Có thể tạo bảng MeetingLog riêng nếu cần
    */
-  async createMeetingLog(
+  createMeetingLog(
     createMeetingLogDto: CreateMeetingLogDto,
-  ): Promise<MeetingLogResponse> {
+  ): MeetingLogResponse {
     // Tạm thời trả về mock response
     // Trong thực tế, bạn có thể tạo bảng MeetingLog mới trong schema.prisma
     return {
@@ -319,11 +321,14 @@ export class MeetingLogsService {
   /**
    * Lấy danh sách nhật ký của instructor
    */
-  async getMeetingLogs(
+  getMeetingLogs(
     instructorId: number,
     startDate?: string,
     endDate?: string,
-  ): Promise<MeetingLogResponse[]> {
+  ): MeetingLogResponse[] {
+    void instructorId;
+    void startDate;
+    void endDate;
     // TODO: Implement khi có bảng MeetingLog
     return [];
   }

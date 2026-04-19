@@ -20,7 +20,7 @@ interface ContentDetail {
 interface ContentDetailModalProps {
   isOpen: boolean;
   content: ContentDetail | null;
-  onClose: () => void;
+  onClose: () =>void;
 }
 
 export default function ContentDetailModal({
@@ -31,13 +31,13 @@ export default function ContentDetailModal({
   // Handle ESC key to close
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape'&& isOpen) {
         onClose();
       }
     };
     
     window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+    return () =>window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
   // Prevent body scroll when modal is open
@@ -79,15 +79,13 @@ export default function ContentDetailModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm transition-all"
-        onClick={onClose}
+        className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm transition-all"onClick={onClose}
       />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div 
-          className="relative bg-white rounded-lg shadow-2xl w-full max-w-3xl transform transition-all"
-          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white rounded-lg shadow-2xl w-full max-w-3xl transform transition-all"onClick={(e) =>e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -97,10 +95,9 @@ export default function ContentDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              className="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg className="h-6 w-6"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
           </div>
@@ -137,7 +134,7 @@ export default function ContentDetailModal({
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-gray-600">
-                      {content.author.split(' ').map(n => n[0]).join('')}
+                      {content.author.split('').map(n =>n[0]).join('')}
                     </span>
                   </div>
                   <span className="text-base text-gray-900">{content.author}</span>
@@ -164,13 +161,12 @@ export default function ContentDetailModal({
             {/* Additional Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start space-x-2">
-                <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg className="w-5 h-5 text-blue-600 mt-0.5"fill="none"viewBox="0 0 24 24"stroke="currentColor">
+                  <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-blue-900">Thông tin thêm</p>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Nội dung này đang chờ phê duyệt. Vui lòng kiểm tra kỹ trước khi phê duyệt hoặc từ chối.
+                  <p className="text-sm text-blue-700 mt-1">Nội dung này đang chờ phê duyệt. Vui lòng kiểm tra kỹ trước khi phê duyệt hoặc từ chối.
                   </p>
                 </div>
               </div>
@@ -181,13 +177,10 @@ export default function ContentDetailModal({
           <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              Đóng
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">Đóng
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

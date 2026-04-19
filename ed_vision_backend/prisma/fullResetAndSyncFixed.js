@@ -5,38 +5,38 @@ const prisma = new PrismaClient();
 const bigquery = new BigQuery();
 
 async function fullResetAndSync() {
-  console.log('🔄 FULL RESET AND SYNC BigQuery from Postgres\n');
-  console.log('⚠️  This will DELETE ALL data and rebuild from scratch!\n');
+  console.log(' FULL RESET AND SYNC BigQuery from Postgres\n');
+  console.log('  This will DELETE ALL data and rebuild from scratch!\n');
 
   const dataset = process.env.BIGQUERY_DATASET || 'edvision_dw';
   const project = process.env.BIGQUERY_PROJECT_ID;
 
   // ========== STEP 1: Clear all tables ==========
-  console.log('🗑️  Step 1: Clearing all BigQuery tables (using TRUNCATE)...');
+  console.log('  Step 1: Clearing all BigQuery tables (using TRUNCATE)...');
   
   await bigquery.query({ 
     query: `TRUNCATE TABLE \`${project}.${dataset}.fact_student_course_performance\`` 
   });
-  console.log('   ✅ Truncated fact_student_course_performance');
+  console.log('    Truncated fact_student_course_performance');
 
   await bigquery.query({ 
     query: `TRUNCATE TABLE \`${project}.${dataset}.dim_student\`` 
   });
-  console.log('   ✅ Truncated dim_student');
+  console.log('    Truncated dim_student');
 
   await bigquery.query({ 
     query: `TRUNCATE TABLE \`${project}.${dataset}.dim_instructor\`` 
   });
-  console.log('   ✅ Truncated dim_instructor');
+  console.log('    Truncated dim_instructor');
 
   await bigquery.query({ 
     query: `TRUNCATE TABLE \`${project}.${dataset}.dim_account\`` 
   });
-  console.log('   ✅ Truncated dim_account');
+  console.log('    Truncated dim_account');
 
   // ========== STEP 2: Insert dim_account ==========
   // Schema: account_sk, email, role_code, status, created_at, updated_at
-  console.log('\n👤 Step 2: Inserting dim_account...');
+  console.log('\n Step 2: Inserting dim_account...');
   const accounts = await prisma.account.findMany({
     include: { roleRel: true }
   });
@@ -65,11 +65,11 @@ async function fullResetAndSync() {
   `;
 
   await bigquery.query({ query: accountSql });
-  console.log(`   ✅ Inserted ${accounts.length} accounts`);
+  console.log(`    Inserted ${accounts.length} accounts`);
 
   // ========== STEP 3: Insert dim_student ==========
-  // Schema: student_sk, account_id, student_code, full_name, major, department_name, cohort_year, class_code, status, created_at
-  console.log('\n👥 Step 3: Inserting dim_student...');
+  // Schema dim_student: khóa, thông tin cá nhân, lớp/ngành, trạng thái, thời gian tạo.
+  console.log('\n Step 3: Inserting dim_student...');
   const students = await prisma.student.findMany({
     include: { 
       account: { include: { profile: true } },
@@ -105,11 +105,11 @@ async function fullResetAndSync() {
   `;
 
   await bigquery.query({ query: studentSql });
-  console.log(`   ✅ Inserted ${students.length} students`);
+  console.log(`    Inserted ${students.length} students`);
 
   // ========== STEP 4: Insert dim_instructor ==========
   // Schema: instructor_sk, account_id, employee_code, full_name, department_name, position, status, created_at
-  console.log('\n👨‍🏫 Step 4: Inserting dim_instructor...');
+  console.log('\n Step 4: Inserting dim_instructor...');
   const instructors = await prisma.instructor.findMany({
     include: { account: { include: { profile: true } } }
   });
@@ -139,11 +139,11 @@ async function fullResetAndSync() {
     `;
 
     await bigquery.query({ query: instructorSql });
-    console.log(`   ✅ Inserted ${instructors.length} instructors`);
+    console.log(`    Inserted ${instructors.length} instructors`);
   }
 
   // ========== STEP 5: Insert fact_student_course_performance ==========
-  console.log('\n📊 Step 5: Inserting fact_student_course_performance...');
+  console.log('\n Step 5: Inserting fact_student_course_performance...');
   
   const courseData = await prisma.$queryRaw`
     SELECT 
@@ -192,10 +192,10 @@ async function fullResetAndSync() {
   `;
 
   await bigquery.query({ query: factSql });
-  console.log(`   ✅ Inserted ${courseData.length} fact rows`);
+  console.log(`    Inserted ${courseData.length} fact rows`);
 
   // ========== STEP 6: Verify ==========
-  console.log('\n🔍 Step 6: Verifying...');
+  console.log('\n Step 6: Verifying...');
   
   const [bqAccounts] = await bigquery.query({ 
     query: `SELECT COUNT(*) as count FROM \`${project}.${dataset}.dim_account\`` 
@@ -210,30 +210,30 @@ async function fullResetAndSync() {
     query: `SELECT COUNT(*) as count FROM \`${project}.${dataset}.fact_student_course_performance\`` 
   });
 
-  console.log('\n✅ SYNC COMPLETE!');
+  console.log('\n SYNC COMPLETE!');
   console.log('┌─────────────────────────────────────────────┐');
   console.log('│              FINAL RESULTS                  │');
   console.log('├─────────────────────────────────────────────┤');
-  console.log(`│ Accounts:    ${accounts.length.toString().padStart(6)} → ${String(bqAccounts[0].count).padStart(6)} ✅        │`);
-  console.log(`│ Students:    ${students.length.toString().padStart(6)} → ${String(bqStudents[0].count).padStart(6)} ✅        │`);
-  console.log(`│ Instructors: ${instructors.length.toString().padStart(6)} → ${String(bqInstructors[0].count).padStart(6)} ✅        │`);
-  console.log(`│ Fact rows:   ${courseData.length.toString().padStart(6)} → ${String(bqFacts[0].count).padStart(6)} ✅        │`);
+  console.log(`│ Accounts:    ${accounts.length.toString().padStart(6)} → ${String(bqAccounts[0].count).padStart(6)}         │`);
+  console.log(`│ Students:    ${students.length.toString().padStart(6)} → ${String(bqStudents[0].count).padStart(6)}         │`);
+  console.log(`│ Instructors: ${instructors.length.toString().padStart(6)} → ${String(bqInstructors[0].count).padStart(6)}         │`);
+  console.log(`│ Fact rows:   ${courseData.length.toString().padStart(6)} → ${String(bqFacts[0].count).padStart(6)}         │`);
   console.log('└─────────────────────────────────────────────┘');
 
   if (Number(bqAccounts[0].count) === accounts.length &&
       Number(bqStudents[0].count) === students.length &&
       Number(bqInstructors[0].count) === instructors.length &&
       Number(bqFacts[0].count) === courseData.length) {
-    console.log('\n🎉 Perfect sync! All data matched!');
+    console.log('\n Perfect sync! All data matched!');
   } else {
-    console.log('\n⚠️  Some counts mismatch - please review');
+    console.log('\n  Some counts mismatch - please review');
   }
 
   await prisma.$disconnect();
 }
 
 fullResetAndSync().catch(err => {
-  console.error('❌ Error:', err);
+  console.error(' Error:', err);
   prisma.$disconnect();
   process.exit(1);
 });

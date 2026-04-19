@@ -2,7 +2,7 @@
  * Enhanced localStorage utility with async operations and caching
  */
 
-type CacheItem<T> = {
+type CacheItem<T>= {
   value: T;
   timestamp: number;
   expiry?: number;
@@ -37,7 +37,7 @@ export function getCachedItem<T>(
     const item = localStorage.getItem(key);
     if (!item) return defaultValue ?? null;
 
-    const parsed: CacheItem<T> = JSON.parse(item);
+    const parsed: CacheItem<T>= JSON.parse(item);
     const now = Date.now();
 
     // Check expiry
@@ -63,7 +63,7 @@ export function setCachedItem<T>(
   value: T,
   expiryMs?: number
 ): void {
-  const cacheItem: CacheItem<T> = {
+  const cacheItem: CacheItem<T>= {
     value,
     timestamp: Date.now(),
     expiry: expiryMs ? Date.now() + expiryMs : undefined,
@@ -73,7 +73,7 @@ export function setCachedItem<T>(
   memoryCache.set(key, cacheItem);
 
   // Schedule localStorage update using requestIdleCallback
-  if ('requestIdleCallback' in window) {
+  if ('requestIdleCallback'in window) {
     requestIdleCallback(() => {
       try {
         localStorage.setItem(key, JSON.stringify(cacheItem));
@@ -101,7 +101,7 @@ export async function setCachedItemAsync<T>(
   value: T,
   expiryMs?: number
 ): Promise<void> {
-  const cacheItem: CacheItem<T> = {
+  const cacheItem: CacheItem<T>= {
     value,
     timestamp: Date.now(),
     expiry: expiryMs ? Date.now() + expiryMs : undefined,
@@ -112,7 +112,7 @@ export async function setCachedItemAsync<T>(
 
   // Use requestIdleCallback for async localStorage update
   return new Promise((resolve) => {
-    if ('requestIdleCallback' in window) {
+    if ('requestIdleCallback'in window) {
       requestIdleCallback(() => {
         try {
           localStorage.setItem(key, JSON.stringify(cacheItem));
@@ -142,7 +142,7 @@ export async function setCachedItemAsync<T>(
 export function removeCachedItem(key: string): void {
   memoryCache.delete(key);
   
-  if ('requestIdleCallback' in window) {
+  if ('requestIdleCallback'in window) {
     requestIdleCallback(() => {
       localStorage.removeItem(key);
     });
@@ -203,7 +203,7 @@ export function batchSetCached<T extends Record<string, any>>(
   
   // Update memory cache immediately for all items
   updates.forEach(([key, value]) => {
-    const cacheItem: CacheItem<any> = {
+    const cacheItem: CacheItem<any>= {
       value,
       timestamp: Date.now(),
       expiry: expiryMs ? Date.now() + expiryMs : undefined,
@@ -212,11 +212,11 @@ export function batchSetCached<T extends Record<string, any>>(
   });
 
   // Batch update localStorage
-  if ('requestIdleCallback' in window) {
+  if ('requestIdleCallback'in window) {
     requestIdleCallback(() => {
       updates.forEach(([key, value]) => {
         try {
-          const cacheItem: CacheItem<any> = {
+          const cacheItem: CacheItem<any>= {
             value,
             timestamp: Date.now(),
             expiry: expiryMs ? Date.now() + expiryMs : undefined,
@@ -231,7 +231,7 @@ export function batchSetCached<T extends Record<string, any>>(
     setTimeout(() => {
       updates.forEach(([key, value]) => {
         try {
-          const cacheItem: CacheItem<any> = {
+          const cacheItem: CacheItem<any>= {
             value,
             timestamp: Date.now(),
             expiry: expiryMs ? Date.now() + expiryMs : undefined,

@@ -7,17 +7,15 @@ import { useToast } from "@/lib/useToast";
 import useWebSocketStats from "@/hooks/useWebSocketStats";
 
 // Simple Card components
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
-const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const CardContent = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={className}>
     {children}
-  </div>
-);
+  </div>);
 
 export default function TeacherManagementDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,10 +46,10 @@ export default function TeacherManagementDashboard() {
 
   // Calculate quality based on advising class count
   const getQualityRating = (advisingClassCount: number = 0) => {
-    if (advisingClassCount === 0) return { stars: 3, label: "Trung bình", color: "text-yellow-600" };
-    if (advisingClassCount === 1) return { stars: 4, label: "Khá", color: "text-blue-600" };
-    if (advisingClassCount >= 2) return { stars: 5, label: "Tốt", color: "text-green-600" };
-    return { stars: 3, label: "Trung bình", color: "text-yellow-600" };
+    if (advisingClassCount === 0) return { stars: 3, label: "Trung bình", color: "text-yellow-600"};
+    if (advisingClassCount === 1) return { stars: 4, label: "Khá", color: "text-blue-600"};
+    if (advisingClassCount >= 2) return { stars: 5, label: "Tốt", color: "text-green-600"};
+    return { stars: 3, label: "Trung bình", color: "text-yellow-600"};
   };
 
   // Fetch online stats - triggered by WebSocket updates
@@ -82,13 +80,12 @@ export default function TeacherManagementDashboard() {
         const statusMap: { [key: string]: string } = {
           "Đang hoạt động": "active",
           "Không hoạt động": "inactive",
-          "Nghỉ phép": "on_leave"
-        };
+          "Nghỉ phép": "on_leave"};
 
         // Fetch all instructors for client-side filtering
         const params = {
           search: searchTerm || undefined,
-          status: statusFilter !== "Tất cả trạng thái" ? statusMap[statusFilter] : undefined,
+          status: statusFilter !== "Tất cả trạng thái"? statusMap[statusFilter] : undefined,
           page: 1,
           limit: 1000, // Get all to filter by role on client side
         };
@@ -98,16 +95,16 @@ export default function TeacherManagementDashboard() {
         // Filter by role on client side
         let filteredData = response.data;
         if (roleFilter === "Giảng viên") {
-          filteredData = filteredData.filter(instructor => (instructor.advisingClassCount || 0) === 0);
+          filteredData = filteredData.filter(instructor =>(instructor.advisingClassCount || 0) === 0);
         } else if (roleFilter === "Cố vấn") {
-          filteredData = filteredData.filter(instructor => (instructor.advisingClassCount || 0) > 0);
+          filteredData = filteredData.filter(instructor =>(instructor.advisingClassCount || 0) >0);
         }
 
         // Filter by quality on client side
         if (qualityFilter !== "Tất cả chất lượng") {
           filteredData = filteredData.filter(instructor => {
             const quality = getQualityRating(instructor.advisingClassCount || 0);
-            return quality.label === qualityFilter.split(' (')[0];
+            return quality.label === qualityFilter.split('(')[0];
           });
         }
 
@@ -183,12 +180,11 @@ export default function TeacherManagementDashboard() {
   };
 
   const renderStars = (count: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
+    return Array.from({ length: 5 }, (_, i) =>(
       <i
         key={i}
-        className={`${i < count ? 'fas' : 'far'} fa-star text-yellow-400 text-xs`}
-      />
-    ));
+        className={`${i < count ? 'fas': 'far'} fa-star text-yellow-400 text-xs`}
+      />));
   };
 
   return (
@@ -211,15 +207,13 @@ export default function TeacherManagementDashboard() {
                   {isLoadingStats ? (
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-blue-600"></div>
-                    </div>
-                  ) : (
+                    </div>) : (
                     <>
                       <p className="text-2xl md:text-3xl font-bold text-blue-600">
                         {onlineStats.totalCount.toLocaleString()}
                       </p>
                       <p className="text-xs md:text-sm text-blue-600 mt-1 truncate">giảng viên trong hệ thống</p>
-                    </>
-                  )}
+                    </>)}
                 </div>
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-chalkboard-teacher text-blue-600 text-lg md:text-xl"></i>
@@ -237,17 +231,15 @@ export default function TeacherManagementDashboard() {
                   {isLoadingStats ? (
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-green-600"></div>
-                    </div>
-                  ) : (
+                    </div>) : (
                     <>
                       <p className="text-2xl md:text-3xl font-bold text-green-600">{onlineStats.onlineCount}</p>
                       <p className="text-xs md:text-sm text-green-600 mt-1 truncate">
-                        {onlineStats.totalCount > 0 
+                        {onlineStats.totalCount >0 
                           ? `${((onlineStats.onlineCount / onlineStats.totalCount) * 100).toFixed(1)}% đang hoạt động`
                           : 'chưa có dữ liệu'}
                       </p>
-                    </>
-                  )}
+                    </>)}
                 </div>
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-circle text-green-600 text-lg md:text-xl animate-pulse"></i>
@@ -263,9 +255,9 @@ export default function TeacherManagementDashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs md:text-sm font-medium text-purple-700 mb-1 truncate">Chất lượng cao</p>
                   <p className="text-2xl md:text-3xl font-bold text-purple-600">
-                    {allInstructors.filter(i => getQualityRating(i.advisingClassCount || 0).stars === 5).length}
+                    {allInstructors.filter(i =>getQualityRating(i.advisingClassCount || 0).stars === 5).length}
                   </p>
-                  <p className="text-xs md:text-sm text-purple-600 mt-1 truncate">giảng viên xuất sắc (5⭐)</p>
+                  <p className="text-xs md:text-sm text-purple-600 mt-1 truncate">giảng viên xuất sắc (5)</p>
                 </div>
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-star text-purple-600 text-lg md:text-xl"></i>
@@ -282,8 +274,7 @@ export default function TeacherManagementDashboard() {
                   <p className="text-xs md:text-sm font-medium text-orange-700 mb-1 truncate">Cần hỗ trợ</p>
                   <p className="text-2xl md:text-3xl font-bold text-orange-600">12</p>
                   <p className="text-xs md:text-sm text-orange-600 mt-1 truncate">
-                    <i className="fas fa-arrow-up text-xs mr-1"></i>
-                    +3 so với tháng trước
+                    <i className="fas fa-arrow-up text-xs mr-1"></i>+3 so với tháng trước
                   </p>
                 </div>
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -303,30 +294,25 @@ export default function TeacherManagementDashboard() {
                 <div className="relative flex-1 max-w-xs">
                   <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                   <input
-                    type="text"
-                    placeholder="Nhập tên giảng viên..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
-                  />
+                    type="text"placeholder="Nhập tên giảng viên..."value={searchTerm}
+                    onChange={(e) =>setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"/>
                 </div>
 
                 {/* Filters */}
                 <div className="flex flex-wrap gap-2">
                   <select
                     value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
-                  >
+                    onChange={(e) =>setRoleFilter(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer">
                     <option>Tất cả vai trò</option>
                     <option>Giảng viên</option>
                     <option>Cố vấn</option>
                   </select>
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
-                  >
+                    onChange={(e) =>setStatusFilter(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer">
                     <option>Tất cả trạng thái</option>
                     <option>Đang hoạt động</option>
                     <option>Nghỉ phép</option>
@@ -334,13 +320,12 @@ export default function TeacherManagementDashboard() {
                   </select>
                   <select
                     value={qualityFilter}
-                    onChange={(e) => setQualityFilter(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer"
-                  >
+                    onChange={(e) =>setQualityFilter(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 cursor-pointer">
                     <option>Tất cả chất lượng</option>
-                    <option>Tốt (5⭐)</option>
-                    <option>Khá (4⭐)</option>
-                    <option>Trung bình (3⭐)</option>
+                    <option>Tốt (5)</option>
+                    <option>Khá (4)</option>
+                    <option>Trung bình (3)</option>
                   </select>
                 </div>
               </div>
@@ -354,10 +339,8 @@ export default function TeacherManagementDashboard() {
                     setStatusFilter("Tất cả trạng thái");
                     setQualityFilter("Tất cả chất lượng");
                   }}
-                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer"
-                >
-                  <i className="fas fa-undo mr-2"></i>
-                  Reset bộ lọc
+                  className="px-4 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-medium cursor-pointer">
+                  <i className="fas fa-undo mr-2"></i>Reset bộ lọc
                 </button>
               </div>
             </div>
@@ -366,14 +349,10 @@ export default function TeacherManagementDashboard() {
 
         {/* Teachers Table */}
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto relative" style={{ minHeight: isLoading ? '200px' : 'auto' }}>
+          <div className="overflow-x-auto relative"style={{ minHeight: isLoading ? '200px': 'auto'}}>
             {isLoading && (
               <LoadingSpinner
-                text="Đang tải dữ liệu..."
-                size="md"
-                position="top"
-              />
-            )}
+                text="Đang tải dữ liệu..."size="md"position="top"/>)}
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -391,25 +370,22 @@ export default function TeacherManagementDashboard() {
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center">
                       <div className="text-gray-500">
-                        <span className="text-2xl mb-2 block">🔍</span>
+                        <span className="text-2xl mb-2 block"></span>
                         <p className="text-sm">Không tìm thấy giảng viên phù hợp với bộ lọc</p>
                       </div>
                     </td>
-                  </tr>
-                ) : !isLoading ? (
-                  instructors.map((instructor) => (
+                  </tr>) : !isLoading ? (
+                  instructors.map((instructor) =>(
                     <tr
                       key={instructor.instructorId}
-                      className="hover:bg-gray-50"
-                    >
+                      className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{instructor.employeeCode}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <img
                             src={instructor.profile?.avatarUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"}
                             alt={instructor.profile?.fullName || 'Avatar'}
-                            className="w-10 h-10 rounded-full mr-3"
-                          />
+                            className="w-10 h-10 rounded-full mr-3"/>
                           <div>
                             <div className="text-sm font-medium text-gray-900">{instructor.profile?.fullName || 'N/A'}</div>
                             <div className="text-sm text-gray-500">{instructor.email}</div>
@@ -438,8 +414,7 @@ export default function TeacherManagementDashboard() {
                               <span className={`ml-2 text-xs font-medium ${quality.color}`}>
                                 {quality.label}
                               </span>
-                            </div>
-                          );
+                            </div>);
                         })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -452,14 +427,11 @@ export default function TeacherManagementDashboard() {
                             e.stopPropagation();
                             handleViewTeacher(instructor.instructorId);
                           }}
-                          title="Xem chi tiết"
-                          className="p-2 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                        >
+                          title="Xem chi tiết"className="p-2 hover:bg-blue-50 rounded-md transition-colors cursor-pointer">
                           <i className="fas fa-eye text-blue-600 hover:text-blue-900"></i>
                         </button>
                       </td>
-                    </tr>
-                  ))
+                    </tr>))
                 ) : null}
               </tbody>
             </table>
@@ -468,20 +440,19 @@ export default function TeacherManagementDashboard() {
           {/* Pagination */}
           <div className="bg-white px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between">
-              <div className="text-sm text-gray-700 mb-4 sm:mb-0">
-                Hiển thị <span className="font-medium">{(currentPage - 1) * teachersPerPage + 1}</span> đến <span className="font-medium">{Math.min(currentPage * teachersPerPage, totalInstructors)}</span> trong tổng số <span className="font-medium">{totalInstructors}</span> kết quả
+              <div className="text-sm text-gray-700 mb-4 sm:mb-0">Hiển thị <span className="font-medium">{(currentPage - 1) * teachersPerPage + 1}</span>đến <span className="font-medium">{Math.min(currentPage * teachersPerPage, totalInstructors)}</span>trong tổng số <span className="font-medium">{totalInstructors}</span>kết quả
               </div>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() =>setCurrentPage(prev =>Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed': 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
                 >
                   <i className="fas fa-chevron-left"></i>
                 </button>
 
                 {/* Page numbers */}
-                {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {totalPages >0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum: number;
 
                   if (totalPages <= 5) {
@@ -497,33 +468,28 @@ export default function TeacherManagementDashboard() {
                   return (
                     <button
                       key={i}
-                      onClick={() => setCurrentPage(pageNum)}
+                      onClick={() =>setCurrentPage(pageNum)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer ${currentPage === pageNum
-                          ? 'text-white bg-blue-600 border border-blue-600'
-                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
+                          ? 'text-white bg-blue-600 border border-blue-600': 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
                     >
                       {pageNum}
-                    </button>
-                  );
+                    </button>);
                 })}
 
-                {totalPages > 5 && currentPage < totalPages - 2 && (
+                {totalPages >5 && currentPage < totalPages - 2 && (
                   <>
                     <span className="px-2 text-gray-500">...</span>
                     <button
-                      onClick={() => setCurrentPage(totalPages)}
-                      className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    >
+                      onClick={() =>setCurrentPage(totalPages)}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                       {totalPages}
                     </button>
-                  </>
-                )}
+                  </>)}
 
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  onClick={() =>setCurrentPage(prev =>Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || totalPages === 0}
-                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === totalPages || totalPages === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+                  className={`px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg ${currentPage === totalPages || totalPages === 0 ? 'text-gray-400 cursor-not-allowed': 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
                 >
                   <i className="fas fa-chevron-right"></i>
                 </button>
@@ -532,6 +498,5 @@ export default function TeacherManagementDashboard() {
           </div>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

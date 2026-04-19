@@ -53,7 +53,7 @@ export const useSurveys = () => {
                 setLoading(true);
                 setError(null);
                 const newSurvey = await surveyService.createSurvey(data);
-                setSurveys((prev) => [newSurvey, ...prev]);
+                setSurveys((prev) =>[newSurvey, ...prev]);
                 return newSurvey;
             } catch (err: any) {
                 console.error('Error creating survey:', err);
@@ -73,13 +73,12 @@ export const useSurveys = () => {
                 setLoading(true);
                 setError(null);
                 const newSurvey = await surveyService.createSurveyFromQuestions(data);
-                setSurveys((prev) => [newSurvey, ...prev]);
+                setSurveys((prev) =>[newSurvey, ...prev]);
                 return newSurvey;
             } catch (err: any) {
                 console.error('Error creating survey from questions:', err);
                 setError(
-                    err.response?.data?.message || 'Không thể tạo khảo sát từ câu hỏi có sẵn'
-                );
+                    err.response?.data?.message || 'Không thể tạo khảo sát từ câu hỏi có sẵn');
                 throw err;
             } finally {
                 setLoading(false);
@@ -95,7 +94,7 @@ export const useSurveys = () => {
                 setLoading(true);
                 setError(null);
                 const updated = await surveyService.updateSurvey(id, data);
-                setSurveys((prev) => prev.map((s) => (s.id === id ? updated : s)));
+                setSurveys((prev) =>prev.map((s) =>(s.id === id ? updated : s)));
                 return updated;
             } catch (err: any) {
                 console.error('Error updating survey:', err);
@@ -114,7 +113,7 @@ export const useSurveys = () => {
             setLoading(true);
             setError(null);
             await surveyService.deleteSurvey(id);
-            setSurveys((prev) => prev.filter((s) => s.id !== id));
+            setSurveys((prev) =>prev.filter((s) =>s.id !== id));
             return true;
         } catch (err: any) {
             console.error('Error deleting survey:', err);

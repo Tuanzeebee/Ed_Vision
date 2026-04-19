@@ -8,7 +8,7 @@ import student from './locales/en/student.json';
 import teacher from './locales/en/teacher.json';
 import admin from './locales/en/admin.json';
 
-declare module 'react-i18next' {
+declare module 'react-i18next'{
   interface CustomTypeOptions {
     defaultNS: 'common';
     resources: {

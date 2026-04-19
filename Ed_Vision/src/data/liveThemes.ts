@@ -1,7 +1,7 @@
 export type LiveTheme = {
   id: string;
   title: string;
-  category: "Custom" | "Exclusive" | "Chill" | "Focus" | "Anime" | "Pets" | "Kpop";
+  category: "Custom"| "Exclusive"| "Chill"| "Focus"| "Anime"| "Pets"| "Kpop";
   youtubeVideoId: string;
   start?: number;
   end?: number;
@@ -144,14 +144,14 @@ export const LIVE_THEMES: LiveTheme[] = [
 
 // Utility functions
 export const getLiveThemesByCategory = (category: LiveTheme['category']) => {
-  return LIVE_THEMES.filter(theme => theme.category === category);
+  return LIVE_THEMES.filter(theme =>theme.category === category);
 };
 
 export const getFeaturedLiveTheme = () => {
   // Return first Chill theme as featured
-  return LIVE_THEMES.find(theme => theme.category === 'Chill') || LIVE_THEMES[0];
+  return LIVE_THEMES.find(theme =>theme.category === 'Chill') || LIVE_THEMES[0];
 };
 
 export const getLiveThemeById = (id: string) => {
-  return LIVE_THEMES.find(theme => theme.id === id);
+  return LIVE_THEMES.find(theme =>theme.id === id);
 };

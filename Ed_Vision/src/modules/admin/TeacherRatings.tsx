@@ -37,8 +37,7 @@ export default function TeacherRatings() {
     semester: 'all',
     hasComments: false,
     hasImages: false,
-    keyword: ''
-  });
+    keyword: ''});
 
   // Mock data for reviews
   const reviews: Review[] = [
@@ -69,8 +68,7 @@ export default function TeacherRatings() {
       hasImages: true,
       images: [
         "https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=100&h=80&fit=crop",
-        "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=100&h=80&fit=crop"
-      ]
+        "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=100&h=80&fit=crop"]
     },
     {
       id: "3",
@@ -108,16 +106,15 @@ export default function TeacherRatings() {
   ];
 
   const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, index) => (
+    return Array.from({ length: 5 }, (_, index) =>(
       <i 
         key={index}
-        className={`fas fa-star ${index < rating ? 'text-yellow-400' : 'far fa-star text-yellow-400'}`}
-      />
-    ));
+        className={`fas fa-star ${index < rating ? 'text-yellow-400': 'far fa-star text-yellow-400'}`}
+      />));
   };
 
   const handleFilterChange = (key: keyof RatingFilter, value: string | boolean) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev =>({ ...prev, [key]: value }));
   };
 
   return (
@@ -127,7 +124,7 @@ export default function TeacherRatings() {
         <TeacherProfileHeader />
 
         {/* Tab Navigation */}
-        <TeacherTabNavigation activeTab="Đánh giá giảng dạy" />
+        <TeacherTabNavigation activeTab="Đánh giá giảng dạy"/>
 
         {/* Rating Statistics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -137,12 +134,12 @@ export default function TeacherRatings() {
               <h3 className="text-xl font-bold text-gray-800 mb-6">Phân bố đánh giá theo sao</h3>
               <div className="space-y-4">
                 {[
-                  { stars: 5, percentage: 68, color: 'bg-green-500' },
-                  { stars: 4, percentage: 22, color: 'bg-blue-500' },
-                  { stars: 3, percentage: 3, color: 'bg-yellow-500' },
-                  { stars: 2, percentage: 2, color: 'bg-orange-500' },
-                  { stars: 1, percentage: 5, color: 'bg-red-500' }
-                ].map(({ stars, percentage, color }) => (
+                  { stars: 5, percentage: 68, color: 'bg-green-500'},
+                  { stars: 4, percentage: 22, color: 'bg-blue-500'},
+                  { stars: 3, percentage: 3, color: 'bg-yellow-500'},
+                  { stars: 2, percentage: 2, color: 'bg-orange-500'},
+                  { stars: 1, percentage: 5, color: 'bg-red-500'}
+                ].map(({ stars, percentage, color }) =>(
                   <div key={stars} className="flex items-center">
                     <div className="flex items-center w-16">
                       <span className="text-sm font-medium text-gray-700 mr-2">{stars}</span>
@@ -157,8 +154,7 @@ export default function TeacherRatings() {
                       </div>
                     </div>
                     <span className="text-sm font-medium text-gray-700 w-12 text-right">{percentage}%</span>
-                  </div>
-                ))}
+                  </div>))}
               </div>
             </CardContent>
           </Card>
@@ -169,11 +165,11 @@ export default function TeacherRatings() {
               <h3 className="text-xl font-bold text-gray-800 mb-6">Tiêu chí đánh giá chi tiết</h3>
               <div className="space-y-6">
                 {[
-                  { name: "Nội dung giảng dạy", score: 4.75, percentage: 95, color: 'bg-blue-500' },
-                  { name: "Phương pháp giảng dạy", score: 4.82, percentage: 96.4, color: 'bg-green-500' },
-                  { name: "Thái độ", score: 4.91, percentage: 98.2, color: 'bg-emerald-500' },
-                  { name: "Hỗ trợ sinh viên", score: 4.68, percentage: 93.6, color: 'bg-purple-500' }
-                ].map(({ name, score, percentage, color }) => (
+                  { name: "Nội dung giảng dạy", score: 4.75, percentage: 95, color: 'bg-blue-500'},
+                  { name: "Phương pháp giảng dạy", score: 4.82, percentage: 96.4, color: 'bg-green-500'},
+                  { name: "Thái độ", score: 4.91, percentage: 98.2, color: 'bg-emerald-500'},
+                  { name: "Hỗ trợ sinh viên", score: 4.68, percentage: 93.6, color: 'bg-purple-500'}
+                ].map(({ name, score, percentage, color }) =>(
                   <div key={name}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-gray-700">{name}</span>
@@ -185,8 +181,7 @@ export default function TeacherRatings() {
                         style={{ width: `${percentage}%` }}
                       ></div>
                     </div>
-                  </div>
-                ))}
+                  </div>))}
               </div>
             </CardContent>
           </Card>
@@ -201,9 +196,8 @@ export default function TeacherRatings() {
                 <label className="block text-sm font-medium text-gray-600 mb-2">Số sao</label>
                 <select 
                   value={filters.stars}
-                  onChange={(e) => handleFilterChange('stars', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs"
-                >
+                  onChange={(e) =>handleFilterChange('stars', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs">
                   <option value="all">Tất cả</option>
                   <option value="5">5 sao</option>
                   <option value="4">4 sao</option>
@@ -216,9 +210,8 @@ export default function TeacherRatings() {
                 <label className="block text-sm font-medium text-gray-600 mb-2">Môn học</label>
                 <select 
                   value={filters.subject}
-                  onChange={(e) => handleFilterChange('subject', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs"
-                >
+                  onChange={(e) =>handleFilterChange('subject', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs">
                   <option value="all">Tất cả môn học</option>
                   <option value="java">Lập trình Java</option>
                   <option value="database">Cơ sở dữ liệu</option>
@@ -230,9 +223,8 @@ export default function TeacherRatings() {
                 <label className="block text-sm font-medium text-gray-600 mb-2">Học kỳ</label>
                 <select 
                   value={filters.semester}
-                  onChange={(e) => handleFilterChange('semester', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs"
-                >
+                  onChange={(e) =>handleFilterChange('semester', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer text-xs">
                   <option value="all">Tất cả học kỳ</option>
                   <option value="hk1-2024">HK1 2024</option>
                   <option value="hk2-2023">HK2 2023</option>
@@ -244,20 +236,16 @@ export default function TeacherRatings() {
                 <div className="space-y-2">
                   <label className="flex items-center">
                     <input 
-                      type="checkbox" 
-                      checked={filters.hasComments}
-                      onChange={(e) => handleFilterChange('hasComments', e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+                      type="checkbox"checked={filters.hasComments}
+                      onChange={(e) =>handleFilterChange('hasComments', e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
                     <span className="ml-2 text-sm text-gray-700">Có bình luận</span>
                   </label>
                   <label className="flex items-center">
                     <input 
-                      type="checkbox" 
-                      checked={filters.hasImages}
-                      onChange={(e) => handleFilterChange('hasImages', e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+                      type="checkbox"checked={filters.hasImages}
+                      onChange={(e) =>handleFilterChange('hasImages', e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
                     <span className="ml-2 text-sm text-gray-700">Có hình ảnh</span>
                   </label>
                 </div>
@@ -265,12 +253,9 @@ export default function TeacherRatings() {
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Tìm kiếm</label>
                 <input 
-                  type="text" 
-                  placeholder="Nhập từ khóa..." 
-                  value={filters.keyword}
-                  onChange={(e) => handleFilterChange('keyword', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
-                />
+                  type="text"placeholder="Nhập từ khóa..."value={filters.keyword}
+                  onChange={(e) =>handleFilterChange('keyword', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"/>
               </div>
             </div>
           </CardContent>
@@ -282,14 +267,13 @@ export default function TeacherRatings() {
             <h3 className="text-xl font-bold text-gray-800 mb-6">Danh sách đánh giá chi tiết</h3>
             
             <div className="space-y-6">
-              {reviews.map((review) => (
+              {reviews.map((review) =>(
                 <div key={review.id} className="border border-gray-200 rounded-lg p-6">
                   <div className="flex items-start gap-4">
                     <img 
                       src={review.studentAvatar} 
                       alt={review.studentName} 
-                      className="w-12 h-12 rounded-full"
-                    />
+                      className="w-12 h-12 rounded-full"/>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <div>
@@ -312,22 +296,18 @@ export default function TeacherRatings() {
                             <span className="font-medium text-blue-800">Phản hồi từ giảng viên</span>
                           </div>
                           <p className="text-blue-700">{review.teacherReply}</p>
-                        </div>
-                      )}
+                        </div>)}
                       
                       {/* Images */}
                       {review.hasImages && review.images && (
                         <div className="flex gap-2 mb-4">
-                          {review.images.map((image, index) => (
+                          {review.images.map((image, index) =>(
                             <img 
                               key={index}
                               src={image} 
                               alt={`Class photo ${index + 1}`} 
-                              className="w-20 h-16 rounded-lg object-cover"
-                            />
-                          ))}
-                        </div>
-                      )}
+                              className="w-20 h-16 rounded-lg object-cover"/>))}
+                        </div>)}
                       
                       <div className="flex items-center gap-4">
                         <button className="flex items-center text-gray-600 hover:text-blue-600 cursor-pointer">
@@ -341,30 +321,25 @@ export default function TeacherRatings() {
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                </div>))}
             </div>
 
             {/* Pagination */}
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-              <div className="text-sm text-gray-600">
-                Hiển thị <span className="font-medium">1–5</span> trong tổng số <span className="font-medium">245</span> đánh giá
+              <div className="text-sm text-gray-600">Hiển thị <span className="font-medium">1–5</span>trong tổng số <span className="font-medium">245</span>đánh giá
               </div>
               <div className="flex items-center space-x-2">
                 <button 
-                  className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer" 
-                  disabled
+                  className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"disabled
                 >
-                  <i className="fas fa-chevron-left mr-1"></i>
-                  Trước
+                  <i className="fas fa-chevron-left mr-1"></i>Trước
                 </button>
                 <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-pointer">1</button>
                 <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">2</button>
                 <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">3</button>
                 <span className="px-3 py-1.5 text-xs font-medium text-gray-500">...</span>
                 <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">49</button>
-                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  Sau
+                <button className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">Sau
                   <i className="fas fa-chevron-right ml-1"></i>
                 </button>
               </div>
@@ -372,6 +347,5 @@ export default function TeacherRatings() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

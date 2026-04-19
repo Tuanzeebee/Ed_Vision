@@ -26,6 +26,5 @@ export default function BookAppointmentStepWrapper() {
       onComplete={handleAppointmentComplete}
       onCancel={handleAppointmentCancel}
       initialStep={step}
-    />
-  );
+    />);
 }

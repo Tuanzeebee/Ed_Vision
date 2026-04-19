@@ -3801,8 +3801,7 @@ export default function LearningModulePanel({
           <div className="flex items-center gap-4">
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors text-white/80 hover:text-white"
-            >
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors text-white/80 hover:text-white">
               <i className="fas fa-times"></i>
             </button>
             <div>

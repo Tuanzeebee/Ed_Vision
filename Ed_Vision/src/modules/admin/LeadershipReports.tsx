@@ -280,7 +280,7 @@ export default function LeadershipReports() {
     if (confirmed) {
       setReports(prev => prev.filter(report => !selectedReports.includes(report.id)));
       setSelectedReports([]);
-      showModal('Thành công', `🗑️ Đã xóa ${selectedReports.length} báo cáo thành công!`, 'success');
+      showModal('Thành công', ` Đã xóa ${selectedReports.length} báo cáo thành công!`, 'success');
     }
   };
 
@@ -409,7 +409,7 @@ export default function LeadershipReports() {
       // Generate charts programmatically based on report type and data
       console.log('� Generating charts for report type:', normalizedType);
       const charts = generateChartsForReportType(normalizedType, stats);
-      console.log('✅ Generated charts:', Object.keys(charts));
+      console.log(' Generated charts:', Object.keys(charts));
       
       let blob: Blob;
       let fileExtension: string;
@@ -499,8 +499,8 @@ export default function LeadershipReports() {
     // Create completely new array to ensure React detects change
     setReports(prev => {
       const newReports = [newReport, ...prev];
-      console.log('🆕 Created new report:', newReport);
-      console.log('📋 New reports list:', newReports);
+      console.log(' Created new report:', newReport);
+      console.log(' New reports list:', newReports);
       return newReports;
     });
     
@@ -550,7 +550,7 @@ export default function LeadershipReports() {
       )
     );
     
-    showModal('Thành công', `📥 Đã tải xuống báo cáo định dạng ${format}: ${report.name}`, 'success');
+    showModal('Thành công', ` Đã tải xuống báo cáo định dạng ${format}: ${report.name}`, 'success');
   };
 
   // Handler to delete report
@@ -566,11 +566,11 @@ export default function LeadershipReports() {
     if (confirmed) {
       setReports(prev => {
         const newReports = prev.filter(r => r.id !== reportId);
-        console.log('🗑️ Deleted report ID:', reportId);
-        console.log('📋 Remaining reports:', newReports);
+        console.log(' Deleted report ID:', reportId);
+        console.log(' Remaining reports:', newReports);
         return newReports;
       });
-      showModal('Thành công', '🗑️ Đã xóa báo cáo thành công!', 'success');
+      showModal('Thành công', ' Đã xóa báo cáo thành công!', 'success');
     }
   };
 
@@ -583,7 +583,7 @@ export default function LeadershipReports() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
-              <span className="text-blue-600 text-2xl mr-3">📊</span>
+              <span className="text-blue-600 text-2xl mr-3"></span>
               <h1 className="text-3xl font-bold text-gray-900">Báo cáo Lãnh đạo</h1>
             </div>
             
@@ -617,7 +617,7 @@ export default function LeadershipReports() {
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">📄</span>
+                    <span className="text-white text-2xl"></span>
                   </div>
                 </div>
               </CardContent>
@@ -639,7 +639,7 @@ export default function LeadershipReports() {
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">📊</span>
+                    <span className="text-white text-2xl"></span>
                   </div>
                 </div>
               </CardContent>
@@ -661,7 +661,7 @@ export default function LeadershipReports() {
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">📈</span>
+                    <span className="text-white text-2xl"></span>
                   </div>
                 </div>
               </CardContent>
@@ -683,7 +683,7 @@ export default function LeadershipReports() {
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">🔮</span>
+                    <span className="text-white text-2xl"></span>
                   </div>
                 </div>
               </CardContent>
@@ -705,7 +705,7 @@ export default function LeadershipReports() {
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl">📋</span>
+                    <span className="text-white text-2xl"></span>
                   </div>
                 </div>
               </CardContent>
@@ -842,9 +842,9 @@ export default function LeadershipReports() {
                   onChange={(e) => setExportFormat(e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="PDF">📄 PDF</option>
-                  <option value="Excel">📊 Excel (.xlsx)</option>
-                  <option value="Word">📝 Word (.docx)</option>
+                  <option value="PDF"> PDF</option>
+                  <option value="Excel"> Excel (.xlsx)</option>
+                  <option value="Word"> Word (.docx)</option>
                 </select>
               </div>
               
@@ -853,7 +853,7 @@ export default function LeadershipReports() {
                   onClick={handleCreateReport}
                   className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-md hover:bg-blue-700 transition-colors cursor-pointer font-medium"
                 >
-                  ➕ Tạo báo cáo
+                   Tạo báo cáo
                 </button>
               </div>
             </div>
@@ -953,7 +953,7 @@ export default function LeadershipReports() {
                         type="checkbox"
                         checked={isAllSelected}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="w-4 h-4 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-gray-500 checked:bg-white checked:border-gray-800 cursor-pointer appearance-none checked:after:content-['✓'] checked:after:text-gray-900 checked:after:text-xs checked:after:flex checked:after:items-center checked:after:justify-center"
+                        className="w-4 h-4 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-gray-500 checked:bg-white checked:border-gray-800 cursor-pointer appearance-none checked:after:content-[''] checked:after:text-gray-900 checked:after:text-xs checked:after:flex checked:after:items-center checked:after:justify-center"
                         style={{
                           backgroundImage: 'none'
                         }}
@@ -984,7 +984,7 @@ export default function LeadershipReports() {
                             type="checkbox"
                             checked={selectedReports.includes(report.id)}
                             onChange={(e) => handleSelectReport(report.id, e.target.checked)}
-                            className="w-4 h-4 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-gray-500 checked:bg-white checked:border-gray-800 cursor-pointer appearance-none checked:after:content-['✓'] checked:after:text-gray-900 checked:after:text-xs checked:after:flex checked:after:items-center checked:after:justify-center"
+                            className="w-4 h-4 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-gray-500 checked:bg-white checked:border-gray-800 cursor-pointer appearance-none checked:after:content-[''] checked:after:text-gray-900 checked:after:text-xs checked:after:flex checked:after:items-center checked:after:justify-center"
                             style={{
                               backgroundImage: 'none'
                             }}
@@ -999,7 +999,7 @@ export default function LeadershipReports() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           report.statusColor === 'green' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {report.statusColor === 'green' ? '✅' : '📝'} {report.status}
+                          {report.statusColor === 'green' ? '' : ''} {report.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

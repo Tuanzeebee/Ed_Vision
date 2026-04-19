@@ -21,7 +21,7 @@ export const formatDate = (
   language: string,
   options?: Intl.DateTimeFormatOptions
 ): string => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const dateObj = typeof date === 'string'? new Date(date) : date;
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',
@@ -39,7 +39,7 @@ export const formatTime = (
   language: string,
   options?: Intl.DateTimeFormatOptions
 ): string => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const dateObj = typeof date === 'string'? new Date(date) : date;
   const defaultOptions: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
@@ -54,8 +54,7 @@ export const formatTime = (
 export const formatCurrency = (
   amount: number,
   language: string,
-  currency = 'VND'
-): string => {
+  currency = 'VND'): string => {
   return new Intl.NumberFormat(language, {
     style: 'currency',
     currency,
@@ -66,7 +65,7 @@ export const formatCurrency = (
  * Lấy tên ngôn ngữ hiển thị
  */
 export const getLanguageName = (langCode: string): string => {
-  const languageNames: Record<string, string> = {
+  const languageNames: Record<string, string>= {
     en: 'English',
     vi: 'Tiếng Việt',
   };
@@ -77,11 +76,11 @@ export const getLanguageName = (langCode: string): string => {
  * Lấy flag emoji cho ngôn ngữ
  */
 export const getLanguageFlag = (langCode: string): string => {
-  const flags: Record<string, string> = {
+  const flags: Record<string, string>= {
     en: '🇺🇸',
     vi: '🇻🇳',
   };
-  return flags[langCode] || '🌐';
+  return flags[langCode] || '';
 };
 
 /**
@@ -110,7 +109,7 @@ export const getTranslatedArray = (
   baseKey: string,
   length: number
 ): string[] => {
-  return Array.from({ length }, (_, i) => t(`${baseKey}.${i}`));
+  return Array.from({ length }, (_, i) =>t(`${baseKey}.${i}`));
 };
 
 /**
@@ -147,11 +146,7 @@ export const td = (t: TFunction, key: string, namespace = 'common'): string => {
  * Type definitions cho translation namespaces
  */
 export type TranslationNamespace =
-  | 'common'
-  | 'parent'
-  | 'student'
-  | 'teacher'
-  | 'admin';
+  | 'common'| 'parent'| 'student'| 'teacher'| 'admin';
 
 /**
  * Hook wrapper với namespace mặc định
@@ -159,7 +154,7 @@ export type TranslationNamespace =
 export const useTypedTranslation = () => {
   // This is just a type helper, actual implementation uses useTranslation from react-i18next
   return {
-    t: (key: string) => key,
+    t: (key: string) =>key,
     i18n: {} as any,
   };
 };

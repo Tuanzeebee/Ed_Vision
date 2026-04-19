@@ -18,7 +18,7 @@ export function useBreadcrumbs() {
       label: string;
       href?: string;
       icon?: React.ReactNode;
-    }> = [];
+    }>= [];
     
     const currentConfig = getBreadcrumbConfig(pathname);
     if (!currentConfig) {
@@ -27,8 +27,7 @@ export function useBreadcrumbs() {
         { 
           label: t('admin:breadcrumb.home'), 
           href: '/admin/dashboard',
-          icon: <i className="fas fa-home text-blue-600"></i>
-        }
+          icon: <i className="fas fa-home text-blue-600"></i>}
       ];
     }
     

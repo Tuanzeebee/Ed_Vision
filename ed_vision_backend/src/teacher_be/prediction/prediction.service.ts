@@ -676,7 +676,7 @@ export class PredictionService {
       const notificationMaster =
         await this.prismaService.notificationMaster.create({
           data: {
-            title: '📋 Khảo sát Behavior - Dự đoán Kết quả Học tập',
+            title: ' Khảo sát Behavior - Dự đoán Kết quả Học tập',
             body: `Chào bạn! Giảng viên đã yêu cầu bạn hoàn tất khảo sát hành vi học tập cho môn ${upload.course_code} - ${upload.class_code}. Khảo sát này giúp hệ thống dự đoán chính xác hơn kết quả học tập của bạn. Vui lòng hoàn tất khảo sát trong mục "Khảo sát" trên hệ thống.`,
             type: 'Khảo Sát',
             priority: 'Cao',

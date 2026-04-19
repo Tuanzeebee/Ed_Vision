@@ -1,6 +1,6 @@
 import { formatFullDate } from './dateFormatter';
 
-type ToastType = 'success' | 'error' | 'warning' | 'info';
+type ToastType = 'success'| 'error'| 'warning'| 'info';
 
 export function showToast(message: string, type: ToastType = 'success') {
   // This will be handled by a toast component in the main component
@@ -44,8 +44,8 @@ export function formatDate(input: string | Date | null | undefined, locale?: str
 
   if (!date || isNaN(date.getTime())) {
     // Invalid/unparseable date — fail-safe empty string
-    // Avoid returning 'NaN/NaN/NaN' in UI
-    // Caller components can choose to render a localized 'undetermined' label instead
+    // Avoid returning 'NaN/NaN/NaN'in UI
+    // Caller components can choose to render a localized 'undetermined'label instead
     // Keep a console warning to aid debugging in dev
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
@@ -54,7 +54,7 @@ export function formatDate(input: string | Date | null | undefined, locale?: str
     return '';
   }
 
-  const resolvedLocale = locale || (typeof navigator !== 'undefined' ? navigator.language : 'vi-VN');
+  const resolvedLocale = locale || (typeof navigator !== 'undefined'? navigator.language : 'vi-VN');
   return formatFullDate(date, resolvedLocale || 'vi-VN');
 }
 
@@ -84,9 +84,8 @@ export function isTimeSlotOverlapping(
   existingSlots: { start: string; end: string }[]
 ): boolean {
   return existingSlots.some(
-    (slot) =>
-      (newStart >= slot.start && newStart < slot.end) ||
-      (newEnd > slot.start && newEnd <= slot.end) ||
+    (slot) =>(newStart >= slot.start && newStart < slot.end) ||
+      (newEnd >slot.start && newEnd <= slot.end) ||
       (newStart <= slot.start && newEnd >= slot.end)
   );
 }

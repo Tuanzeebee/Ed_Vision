@@ -18,28 +18,28 @@ import { MusicPlayerProvider } from './music/MusicPlayerContext';
 import MusicWidgetWrapper from './components/MusicWidgetWrapper';
 
 // Lazy load heavy components
-const PomodoroPanel = lazy(() => import('./components/PomodoroPanel'));
-const PomodoroOverlay = lazy(() => import('./components/PomodoroOverlay'));
-const PomodoroCompactWidget = lazy(() => import('./components/PomodoroCompactWidget'));
-const ExplosionEffect = lazy(() => import('./components/ExplosionEffect'));
-const ConfettiEffect = lazy(() => import('./components/ConfettiEffect'));
-const AmbiencePanel = lazy(() => import('./components/AmbiencePanel'));
-const ThemePanel = lazy(() => import('./components/ThemePanel'));
-const MusicPanel = lazy(() => import('./components/MusicPanel'));
-const JournalPanel = lazy(() => import('./components/JournalPanel'));
-const RoomPanel = lazy(() => import('./components/RoomPanel'));
-const SettingsPanel = lazy(() => import('./components/SettingsPanel'));
-const LearningMapPanel = lazy(() => import('./components/LearningMapPanel'));
-const VideoCallRoom = lazy(() => import('./components/VideoCallRoom'));
-const LearningModulePanel = lazy(() => import('./components/LearningModulePanel'));
-const YouTubeBackground = lazy(() => import('./components/YouTubeBackground'));
+const PomodoroPanel = lazy(() =>import('./components/PomodoroPanel'));
+const PomodoroOverlay = lazy(() =>import('./components/PomodoroOverlay'));
+const PomodoroCompactWidget = lazy(() =>import('./components/PomodoroCompactWidget'));
+const ExplosionEffect = lazy(() =>import('./components/ExplosionEffect'));
+const ConfettiEffect = lazy(() =>import('./components/ConfettiEffect'));
+const AmbiencePanel = lazy(() =>import('./components/AmbiencePanel'));
+const ThemePanel = lazy(() =>import('./components/ThemePanel'));
+const MusicPanel = lazy(() =>import('./components/MusicPanel'));
+const JournalPanel = lazy(() =>import('./components/JournalPanel'));
+const RoomPanel = lazy(() =>import('./components/RoomPanel'));
+const SettingsPanel = lazy(() =>import('./components/SettingsPanel'));
+const LearningMapPanel = lazy(() =>import('./components/LearningMapPanel'));
+const VideoCallRoom = lazy(() =>import('./components/VideoCallRoom'));
+const LearningModulePanel = lazy(() =>import('./components/LearningModulePanel'));
+const YouTubeBackground = lazy(() =>import('./components/YouTubeBackground'));
 
 type Props = {
   className?: string;
 };
 
 // Sound URLs mapping
-const SOUND_URLS: Record<SoundType, string> = {
+const SOUND_URLS: Record<SoundType, string>= {
   rain: 'https://static.wixstatic.com/mp3/3d08de_0c9159454b04482c8032ac56dc427314.mp3',
   birds: 'https://static.wixstatic.com/mp3/3d08de_24a228e2b84f4afaade5486edd484d90.mp3',
   campfire: 'https://static.wixstatic.com/mp3/3d08de_0948c4b3598f413294d31676194a3149.mp3',
@@ -196,7 +196,7 @@ export default function LearningSpace({ className = '' }: Props) {
   const [pomoVisible, setPomoVisible] = useState(false);
   const [pomoOverlayVisible, setPomoOverlayVisible] = useState(false);
   const [pomoCompactVisible, setPomoCompactVisible] = useState(false);
-  const [pomoViewMode, setPomoViewMode] = useState<'spotlight' | 'minimalist'>('spotlight');
+  const [pomoViewMode, setPomoViewMode] = useState<'spotlight'| 'minimalist'>('spotlight');
   const prevRunningRef = useRef(false);
   const [pomoFocusTitle, setPomoFocusTitle] = useState('');
   const [pomoTimeLeft, setPomoTimeLeft] = useState(0);
@@ -255,9 +255,9 @@ export default function LearningSpace({ className = '' }: Props) {
     return cached.backgroundImage || 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&h=1080&fit=crop';
   });
   const [activeLiveTheme, setActiveLiveTheme] = useState<LiveTheme | null>(null);
-  const [liveEnabled, setLiveEnabled] = useState(() => loadThemeState().liveEnabled);
-  const [videoMuted, setVideoMuted] = useState(() => loadThemeState().videoMuted ?? true);
-  const [videoVolume, setVideoVolume] = useState(() => loadThemeState().videoVolume ?? 70);
+  const [liveEnabled, setLiveEnabled] = useState(() =>loadThemeState().liveEnabled);
+  const [videoMuted, setVideoMuted] = useState(() =>loadThemeState().videoMuted ?? true);
+  const [videoVolume, setVideoVolume] = useState(() =>loadThemeState().videoVolume ?? 70);
 
   // Handle Ambience Sounds
   useEffect(() => {
@@ -276,9 +276,9 @@ export default function LearningSpace({ className = '' }: Props) {
       audio.volume = volume / 100;
 
       // Play or pause based on volume
-      if (volume > 0) {
+      if (volume >0) {
         if (audio.paused) {
-          audio.play().catch(e => console.log(`Audio playback failed for ${soundType}:`, e));
+          audio.play().catch(e =>console.log(`Audio playback failed for ${soundType}:`, e));
         }
       } else {
         if (!audio.paused) {
@@ -290,7 +290,7 @@ export default function LearningSpace({ className = '' }: Props) {
   }, [soundVolumes]);
 
   const handleSoundVolumeChange = useCallback((sound: SoundType, volume: number) => {
-    setSoundVolumes(prev => ({
+    setSoundVolumes(prev =>({
       ...prev,
       [sound]: volume
     }));
@@ -395,10 +395,10 @@ export default function LearningSpace({ className = '' }: Props) {
       try {
         // Simulate async loading with requestIdleCallback for better performance
         await new Promise<void>((resolve) => {
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => resolve());
+          if ('requestIdleCallback'in window) {
+            requestIdleCallback(() =>resolve());
           } else {
-            setTimeout(() => resolve(), 0);
+            setTimeout(() =>resolve(), 0);
           }
         });
 
@@ -444,7 +444,7 @@ export default function LearningSpace({ className = '' }: Props) {
       });
     }, 300); // Debounce 300ms
 
-    return () => clearTimeout(saveTimeout);
+    return () =>clearTimeout(saveTimeout);
   }, [activeLiveTheme, liveEnabled, backgroundImage, videoMuted, videoVolume, isInitialLoading]);
 
   // Journal entries - lazy load from localStorage
@@ -616,7 +616,7 @@ export default function LearningSpace({ className = '' }: Props) {
   useEffect(() => {
     if (pomoJustStopped) return;
     // Only consider active if running OR if paused but time has elapsed (not at start/reset state)
-    const isActive = pomoRunning || (pomoTotalTime > 0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft > 0);
+    const isActive = pomoRunning || (pomoTotalTime >0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft >0);
     if (!isActive) return;
     if (pomoViewMode === 'spotlight') {
       setPomoOverlayVisible(true);
@@ -632,7 +632,7 @@ export default function LearningSpace({ className = '' }: Props) {
       setPomoJustStopped(false);
       return;
     }
-    const isActive = pomoRunning || (pomoTotalTime > 0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft > 0);
+    const isActive = pomoRunning || (pomoTotalTime >0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft >0);
     if (!isActive && pomoJustStopped) {
       setPomoJustStopped(false);
     }
@@ -714,8 +714,8 @@ export default function LearningSpace({ className = '' }: Props) {
   }, []);
 
   // Memoize background style for performance
-  const backgroundStyle = useMemo(() => ({
-    backgroundImage: liveEnabled && activeLiveTheme ? 'none' : `url('${backgroundImage}')`,
+  const backgroundStyle = useMemo(() =>({
+    backgroundImage: liveEnabled && activeLiveTheme ? 'none': `url('${backgroundImage}')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   }), [liveEnabled, activeLiveTheme, backgroundImage]);
@@ -733,8 +733,7 @@ export default function LearningSpace({ className = '' }: Props) {
       style={backgroundStyle}
     >
       <Toaster 
-        position="top-center"
-        toastOptions={{
+        position="top-center"toastOptions={{
           duration: 2000,
           style: {
             background: '#333',
@@ -746,7 +745,7 @@ export default function LearningSpace({ className = '' }: Props) {
       />
       {/* YouTube Live Background - Lazy loaded */}
       {liveEnabled && activeLiveTheme && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/20 animate-pulse" />}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/20 animate-pulse"/>}>
           <YouTubeBackground
             videoId={activeLiveTheme.youtubeVideoId}
             start={activeLiveTheme.start}
@@ -754,8 +753,7 @@ export default function LearningSpace({ className = '' }: Props) {
             volume={videoVolume}
             end={activeLiveTheme.end}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Weather Effects - Lightweight, no Suspense needed */}
       <SnowEffect show={showSnow} />
@@ -774,8 +772,8 @@ export default function LearningSpace({ className = '' }: Props) {
             timeLeft={pomoTimeLeft}
             totalTime={pomoTotalTime}
             isRunning={pomoRunning}
-            onClose={() => setPomoOverlayVisible(false)}
-            onOpenPanel={() => setPomoVisible(true)}
+            onClose={() =>setPomoOverlayVisible(false)}
+            onOpenPanel={() =>setPomoVisible(true)}
             onPause={() => {
               // Handle pause/resume
               if ((window as any).__pomoToggleHandler) {
@@ -800,8 +798,7 @@ export default function LearningSpace({ className = '' }: Props) {
               
               if (amount < 0 && (pomoTimeLeft + amount) <= 0) {
                 toast.error("Không thể giảm thời gian về 0 hoặc thấp hơn!", {
-                  id: 'pomo-min-limit'
-                });
+                  id: 'pomo-min-limit'});
                 return;
               }
 
@@ -812,8 +809,7 @@ export default function LearningSpace({ className = '' }: Props) {
               }
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Pomodoro Compact Widget */}
       {pomoCompactVisible && (
@@ -837,8 +833,7 @@ export default function LearningSpace({ className = '' }: Props) {
               }
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Explosion Effect */}
       {showExplosion && (
@@ -850,8 +845,7 @@ export default function LearningSpace({ className = '' }: Props) {
               setShowConfetti(true);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Confetti Effect */}
       {showConfetti && (
@@ -862,8 +856,7 @@ export default function LearningSpace({ className = '' }: Props) {
               setShowConfetti(false);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Clock Display - Lightweight, always visible */}
       <ClockDisplay />
@@ -878,14 +871,14 @@ export default function LearningSpace({ className = '' }: Props) {
       <Suspense fallback={null}>
         <PomodoroPanel
           visible={pomoVisible}
-          onClose={() => setPomoVisible(false)}
+          onClose={() =>setPomoVisible(false)}
           onStartTimer={handlePomoStart}
           onStopTimer={() => {
             setPomoOverlayVisible(false);
             setPomoCompactVisible(false);
             setPomoVisible(true);
           }}
-          onViewModeChange={(m) => setPomoViewMode(m)}
+          onViewModeChange={(m) =>setPomoViewMode(m)}
         />
       </Suspense>
 
@@ -894,7 +887,7 @@ export default function LearningSpace({ className = '' }: Props) {
         <Suspense fallback={null}>
           <AmbiencePanel
             visible={ambienceVisible}
-            onClose={() => setAmbienceVisible(false)}
+            onClose={() =>setAmbienceVisible(false)}
             soundVolumes={soundVolumes}
             onSoundVolumeChange={handleSoundVolumeChange}
             showRain={showRain}
@@ -903,40 +896,38 @@ export default function LearningSpace({ className = '' }: Props) {
             showLeaves={showLeaves}
             showStars={showStars}
             showClouds={showClouds}
-            onToggleRain={() => setShowRain(!showRain)}
-            onToggleSnow={() => setShowSnow(!showSnow)}
-            onToggleFireflies={() => setShowFireflies(!showFireflies)}
-            onToggleLeaves={() => setShowLeaves(!showLeaves)}
-            onToggleStars={() => setShowStars(!showStars)}
-            onToggleClouds={() => setShowClouds(!showClouds)}
+            onToggleRain={() =>setShowRain(!showRain)}
+            onToggleSnow={() =>setShowSnow(!showSnow)}
+            onToggleFireflies={() =>setShowFireflies(!showFireflies)}
+            onToggleLeaves={() =>setShowLeaves(!showLeaves)}
+            onToggleStars={() =>setShowStars(!showStars)}
+            onToggleClouds={() =>setShowClouds(!showClouds)}
             onResetAnimations={handleResetAnimations}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Theme Panel */}
       {themeVisible && (
         <Suspense fallback={null}>
           <ThemePanel
             visible={themeVisible}
-            onClose={() => setThemeVisible(false)}
+            onClose={() =>setThemeVisible(false)}
             onChangeBackground={handleChangeBackground}
             onUploadBackground={handleUploadBackground}
             onSelectLiveTheme={handleSelectLiveTheme}
             videoMuted={videoMuted}
-            onToggleVideoMute={() => setVideoMuted(!videoMuted)}
+            onToggleVideoMute={() =>setVideoMuted(!videoMuted)}
             videoVolume={videoVolume}
             onVolumeChange={setVideoVolume}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Room Panel */}
       {roomVisible && (
         <Suspense fallback={null}>
           <RoomPanel
             visible={roomVisible}
-            onClose={() => setRoomVisible(false)}
+            onClose={() =>setRoomVisible(false)}
             onSelectRoom={(url) => {
               setBackgroundImage(url);
               setRoomVisible(false);
@@ -946,8 +937,7 @@ export default function LearningSpace({ className = '' }: Props) {
               setVideoCallVisible(true);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Music Panel */}
       {musicPanelVisible && (
@@ -959,26 +949,23 @@ export default function LearningSpace({ className = '' }: Props) {
                 <span className="text-white/80 text-sm">Loading Music Panel...</span>
               </div>
             </div>
-          </div>
-        }>
+          </div>}>
           <MusicPanel
             visible={musicPanelVisible}
-            onClose={() => setMusicPanelVisible(false)}
+            onClose={() =>setMusicPanelVisible(false)}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Journal Panel */}
       {journalVisible && (
         <Suspense fallback={null}>
           <JournalPanel
             visible={journalVisible}
-            onClose={() => setJournalVisible(false)}
+            onClose={() =>setJournalVisible(false)}
             onSaveEntry={handleSaveJournalEntry}
             recentEntries={journalEntries}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Settings Panel */}
       {settingsVisible && (
@@ -1011,15 +998,14 @@ export default function LearningSpace({ className = '' }: Props) {
             initialWidth={MUSIC_MATCHED_PANEL_WIDTH}
             initialHeight={MUSIC_MATCHED_PANEL_HEIGHT}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Learning Map Panel */}
       {learningMapVisible && (
         <Suspense fallback={null}>
           <LearningMapPanel
             visible={learningMapVisible}
-            onClose={() => setLearningMapVisible(false)}
+            onClose={() =>setLearningMapVisible(false)}
             onModuleClick={handleModuleClick}
             selectedCourseId={selectedCourseId}
             initialX={learningMapInitialX}
@@ -1027,8 +1013,7 @@ export default function LearningSpace({ className = '' }: Props) {
             initialWidth={MAP_PANEL_WIDTH}
             initialHeight={MAP_PANEL_HEIGHT}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Learning Module Panel */}
       {learningModuleVisible && (
@@ -1044,19 +1029,17 @@ export default function LearningSpace({ className = '' }: Props) {
               setLearningMapVisible(true);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Video Call Room */}
       {videoCallVisible && (
         <Suspense fallback={null}>
           <VideoCallRoom
             visible={videoCallVisible}
-            onClose={() => setVideoCallVisible(false)}
+            onClose={() =>setVideoCallVisible(false)}
             roomTitle={currentRoomTitle}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {showDailyMissionCelebration && (
         <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
@@ -1125,19 +1108,15 @@ export default function LearningSpace({ className = '' }: Props) {
 
       {/* Font Awesome CDN - Required for icons */}
       <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-      />
+        rel="stylesheet"href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
       {/* Fullscreen Toggle Button */}
       <button
         onClick={toggleFullscreen}
-        className="fixed bottom-4 left-4 z-50 w-10 h-10 rounded-full backdrop-blur-md bg-black/30 border border-white/20 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/50 hover:scale-110 transition-all duration-200 shadow-lg"
-        title={isFullscreen ? 'Thoát chế độ toàn màn hình (F11)' : 'Phóng to toàn màn hình (F11)'}
+        className="fixed bottom-4 left-4 z-50 w-10 h-10 rounded-full backdrop-blur-md bg-black/30 border border-white/20 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/50 hover:scale-110 transition-all duration-200 shadow-lg"title={isFullscreen ? 'Thoát chế độ toàn màn hình (F11)': 'Phóng to toàn màn hình (F11)'}
       >
-        <i className={`fas ${isFullscreen ? 'fa-compress' : 'fa-expand'} text-sm`}></i>
+        <i className={`fas ${isFullscreen ? 'fa-compress': 'fa-expand'} text-sm`}></i>
       </button>
     </div>
-    </MusicPlayerProvider>
-  );
+    </MusicPlayerProvider>);
 }

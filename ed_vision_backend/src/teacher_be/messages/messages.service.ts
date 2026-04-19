@@ -73,7 +73,7 @@ export class MessagesService {
         sentCount,
         failedCount,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         message: 'Lỗi khi gửi tin nhắn',
@@ -90,7 +90,7 @@ export class MessagesService {
     instructorId: number,
     dto: SendTemplateMessageDto,
   ): Promise<SendMessageResponse> {
-    const template = await this.getTemplateById(dto.templateId);
+    const template = this.getTemplateById(dto.templateId);
 
     if (!template) {
       return {
@@ -114,7 +114,7 @@ export class MessagesService {
   /**
    * Lấy danh sách templates
    */
-  async getTemplates(): Promise<MessageTemplate[]> {
+  getTemplates(): MessageTemplate[] {
     // Mock data - trong thực tế sẽ lưu trong DB
     return [
       {
@@ -163,15 +163,15 @@ export class MessagesService {
   /**
    * Lấy template theo ID
    */
-  async getTemplateById(templateId: string): Promise<MessageTemplate | null> {
-    const templates = await this.getTemplates();
+  getTemplateById(templateId: string): MessageTemplate | null {
+    const templates = this.getTemplates();
     return templates.find((t) => t.id === templateId) || null;
   }
 
   /**
    * Tạo template mới
    */
-  async createTemplate(dto: CreateTemplateDto): Promise<MessageTemplate> {
+  createTemplate(dto: CreateTemplateDto): MessageTemplate {
     // Mock - trong thực tế sẽ lưu vào DB
     return {
       id: Date.now().toString(),
@@ -185,7 +185,8 @@ export class MessagesService {
   /**
    * Lấy lịch sử tin nhắn
    */
-  async getMessageHistory(instructorId: number): Promise<MessageHistory> {
+  getMessageHistory(instructorId: number): MessageHistory {
+    void instructorId;
     // Mock data - trong thực tế sẽ query từ DB
     const messages = [
       {
@@ -229,7 +230,8 @@ export class MessagesService {
   /**
    * Lấy thống kê tin nhắn
    */
-  async getMessageStats(instructorId: number) {
+  getMessageStats(instructorId: number) {
+    void instructorId;
     return {
       totalSent: 45,
       thisWeek: 12,

@@ -7,25 +7,25 @@ interface SeasonalToggleButtonProps {
   className?: string;
 }
 
-const SeasonalToggleButton: React.FC<SeasonalToggleButtonProps> = ({ className = "" }) => {
+const SeasonalToggleButton: React.FC<SeasonalToggleButtonProps>= ({ className = ""}) => {
   const { currentEvent, isEnabled, toggleEffects } = useSeasonalEffect();
   const { isAuthenticated } = useAuth();
 
   // Không hiển thị nếu không có event nào đang active HOẶC đã login
-  if (currentEvent === "NONE" || isAuthenticated) return null;
+  if (currentEvent === "NONE"|| isAuthenticated) return null;
 
   const getIcon = () => {
     switch (currentEvent) {
       case "CHRISTMAS":
-        return "❄️";
+        return "";
       case "LUNAR_NEW_YEAR":
-        return "🧧";
+        return "";
       case "HALLOWEEN":
-        return "🎃";
+        return "";
       case "TEACHER_DAY":
-        return "🎓";
+        return "";
       default:
-        return "✨";
+        return "";
     }
   };
 
@@ -42,10 +42,10 @@ const SeasonalToggleButton: React.FC<SeasonalToggleButtonProps> = ({ className =
 
   return (
     <button
-      className={`seasonal-toggle-btn ${isEnabled ? "active" : ""} ${className}`}
+      className={`seasonal-toggle-btn ${isEnabled ? "active": ""} ${className}`}
       onClick={handleToggle}
-      title={isEnabled ? "Tắt hiệu ứng mùa lễ" : "Bật hiệu ứng mùa lễ"}
-      aria-label={isEnabled ? "Disable seasonal effects" : "Enable seasonal effects"}
+      title={isEnabled ? "Tắt hiệu ứng mùa lễ": "Bật hiệu ứng mùa lễ"}
+      aria-label={isEnabled ? "Disable seasonal effects": "Enable seasonal effects"}
     >
       {/* Khi ACTIVE (ON): chữ ON ở bên trái, icon ở phải */}
       {/* Khi INACTIVE (OFF): icon ở trái, chữ OFF ở phải */}
@@ -53,15 +53,12 @@ const SeasonalToggleButton: React.FC<SeasonalToggleButtonProps> = ({ className =
         <>
           <span className="seasonal-status">ON</span>
           <span className="seasonal-icon">{getIcon()}</span>
-        </>
-      ) : (
+        </>) : (
         <>
           <span className="seasonal-icon">{getIcon()}</span>
           <span className="seasonal-status">OFF</span>
-        </>
-      )}
-    </button>
-  );
+        </>)}
+    </button>);
 };
 
 export default SeasonalToggleButton;

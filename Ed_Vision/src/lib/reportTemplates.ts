@@ -11,7 +11,7 @@ export const generateReportHeader = (reportName: string, type: string, scope: st
 ║                  HỆ THỐNG HỌC TẬP ED_VISION                    ║
 ╚════════════════════════════════════════════════════════════════╝
 
-📋 THÔNG TIN BÁO CÁO
+ THÔNG TIN BÁO CÁO
 ────────────────────────────────────────────────────────────────
 • Tên báo cáo: ${reportName}
 • Loại báo cáo: ${type}
@@ -26,15 +26,15 @@ export const generateReportHeader = (reportName: string, type: string, scope: st
 export const generateReportFooter = (): string => {
   return `
 ════════════════════════════════════════════════════════════════
-✅ Báo cáo được tạo tự động bởi hệ thống Ed_Vision
-📧 Liên hệ: admin@edvision.edu.vn | Hotline: 1900-xxxx
+ Báo cáo được tạo tự động bởi hệ thống Ed_Vision
+ Liên hệ: admin@edvision.edu.vn | Hotline: 1900-xxxx
 ════════════════════════════════════════════════════════════════
 `;
 };
 
 export const generateBasicInfo = (stats: ScopeStats): string => {
   return `
-📊 QUY MÔ HỆ THỐNG
+ QUY MÔ HỆ THỐNG
 ────────────────────────────────────────────────────────────────
 • Tổng số sinh viên: ${stats.students.toLocaleString()} sinh viên
 • Tổng số giảng viên: ${stats.teachers} giảng viên
@@ -44,7 +44,7 @@ export const generateBasicInfo = (stats: ScopeStats): string => {
 
 export const generateGradeSection = (stats: ScopeStats): string => {
   return `
-🎓 PHÂN BỐ ĐIỂM GPA
+ PHÂN BỐ ĐIỂM GPA
 ────────────────────────────────────────────────────────────────
 • GPA xuất sắc (3.6-4.0): ${Math.round(stats.students * 0.15).toLocaleString()} SV (15%)
 • GPA giỏi (3.2-3.59): ${Math.round(stats.students * 0.28).toLocaleString()} SV (28%)
@@ -52,7 +52,7 @@ export const generateGradeSection = (stats: ScopeStats): string => {
 • GPA trung bình (2.0-2.49): ${Math.round(stats.students * 0.18).toLocaleString()} SV (18%)
 • GPA yếu (<2.0): ${Math.round(stats.students * 0.04).toLocaleString()} SV (4%)
 
-📊 PHÂN BỐ CHI TIẾT THEO THANG ĐIỂM CHỮ
+ PHÂN BỐ CHI TIẾT THEO THANG ĐIỂM CHỮ
 ────────────────────────────────────────────────────────────────
 • A+ (90-100%): ${Math.round(stats.students * 0.12).toLocaleString()} SV (12%)
 • A  (85-89%): ${Math.round(stats.students * 0.18).toLocaleString()} SV (18%)
@@ -65,12 +65,12 @@ export const generateGradeSection = (stats: ScopeStats): string => {
 • D  (50-54%): ${Math.round(stats.students * 0.01).toLocaleString()} SV (1%)
 • F  (<50%): ${Math.round(stats.students * 0.002).toLocaleString()} SV (0.2%)
 
-📝 ĐIỂM TRUNG BÌNH
+ ĐIỂM TRUNG BÌNH
 ────────────────────────────────────────────────────────────────
 • Điểm trung bình chung: 7.2/10
 • Điểm trung bình bài tập: 7.8/10
 
-⚠️ MÔN CÓ TỶ LỆ FAIL CAO
+ MÔN CÓ TỶ LỆ FAIL CAO
 ────────────────────────────────────────────────────────────────
 • Toán cao cấp 1: 28%
 • Vật lý đại cương: 23%
@@ -82,14 +82,14 @@ export const generateGradeSection = (stats: ScopeStats): string => {
 
 export const generatePerformanceSection = (stats: ScopeStats, timeRange: string): string => {
   return `
-👥 HOẠT ĐỘNG SINH VIÊN
+ HOẠT ĐỘNG SINH VIÊN
 ────────────────────────────────────────────────────────────────
 • Tỷ lệ hoạt động: ${stats.activeRate}%
 • Đăng nhập đều đặn: ${Math.round(stats.students * 0.73).toLocaleString()} SV (73%)
 • Đăng nhập thỉnh thoảng: ${Math.round(stats.students * 0.18).toLocaleString()} SV (18%)
 • Không hoạt động: ${Math.round(stats.students * 0.09).toLocaleString()} SV (9%)
 
-🎯 MỤC ĐÍCH SỬ DỤNG HỆ THỐNG - SINH VIÊN
+ MỤC ĐÍCH SỬ DỤNG HỆ THỐNG - SINH VIÊN
 ────────────────────────────────────────────────────────────────
 • Nộp bài tập: ${Math.round(stats.students * 0.82).toLocaleString()} SV (82%)
 • Xem tài liệu học tập: ${Math.round(stats.students * 0.75).toLocaleString()} SV (75%)
@@ -97,7 +97,7 @@ export const generatePerformanceSection = (stats: ScopeStats, timeRange: string)
 • Xem điểm và lịch học: ${Math.round(stats.students * 0.91).toLocaleString()} SV (91%)
 • Tham gia diễn đàn thảo luận: ${Math.round(stats.students * 0.38).toLocaleString()} SV (38%)
 
-🎯 MỤC ĐÍCH SỬ DỤNG HỆ THỐNG - GIẢNG VIÊN
+ MỤC ĐÍCH SỬ DỤNG HỆ THỐNG - GIẢNG VIÊN
 ────────────────────────────────────────────────────────────────
 • Cố vấn sinh viên: ${Math.round(stats.teachers * 0.95).toLocaleString()} GV (95%)
 • Chấm bài và nhập điểm: ${Math.round(stats.teachers * 0.88).toLocaleString()} GV (88%)
@@ -105,21 +105,21 @@ export const generatePerformanceSection = (stats: ScopeStats, timeRange: string)
 • Theo dõi tiến độ sinh viên: ${Math.round(stats.teachers * 0.65).toLocaleString()} GV (65%)
 • Trao đổi với sinh viên: ${Math.round(stats.teachers * 0.58).toLocaleString()} GV (58%)
 
-📝 THỐNG KÊ LÀM BÀI TẬP
+ THỐNG KÊ LÀM BÀI TẬP
 ────────────────────────────────────────────────────────────────
 • Tỷ lệ nộp cao (>90%): ${Math.round(stats.students * 0.42).toLocaleString()} SV (42%) - Xuất sắc
 • Tỷ lệ nộp trung bình (60-90%): ${Math.round(stats.students * 0.35).toLocaleString()} SV (35%) - Khá
 • Tỷ lệ nộp thấp (<60%): ${Math.round(stats.students * 0.23).toLocaleString()} SV (23%) - Cần cải thiện
 • Tỷ lệ nộp bài đúng hạn: 78.3%
 
-⏱️ THỜI GIAN SỬ DỤNG HỆ THỐNG
+ THỜI GIAN SỬ DỤNG HỆ THỐNG
 ────────────────────────────────────────────────────────────────
 • Thời gian trung bình/ngày: 2.5 giờ/sinh viên
 • Khung giờ cao điểm: 19:00-22:00 (45% người dùng)
 • Khung giờ sáng: 08:00-12:00 (25% người dùng)
 • Khung giờ chiều: 13:00-17:00 (30% người dùng)
 
-👨‍🏫 HOẠT ĐỘNG CỐ VẤN GIẢNG VIÊN
+ HOẠT ĐỘNG CỐ VẤN GIẢNG VIÊN
 ────────────────────────────────────────────────────────────────
 • Tổng số buổi cố vấn: ${stats.teachers * 12} buổi
 • Trung bình/giảng viên: 12 buổi/${timeRange}
@@ -133,7 +133,7 @@ export const generatePerformanceSection = (stats: ScopeStats, timeRange: string)
 
 export const generatePredictionSection = (stats: ScopeStats): string => {
   return `
-📈 XU HƯỚNG HỌC TẬP
+ XU HƯỚNG HỌC TẬP
 ────────────────────────────────────────────────────────────────
 • Tỷ lệ cải thiện điểm: +5.8% so với kỳ trước
 • Tỷ lệ nộp bài đúng hạn: 78.3%
@@ -142,12 +142,12 @@ export const generatePredictionSection = (stats: ScopeStats): string => {
 • Tỷ lệ sinh viên tham gia học nhóm: 54% (tăng 8%)
 • Tỷ lệ sinh viên sử dụng AI dự đoán: 68%
 
-⚠️ CẢNH BÁO HỌC VỤ
+ CẢNH BÁO HỌC VỤ
 ────────────────────────────────────────────────────────────────
 • Sinh viên có nguy cơ học vụ: ${Math.round(stats.students * 0.08).toLocaleString()} SV (8%)
 • Sinh viên cần hỗ trợ: ${Math.round(stats.students * 0.15).toLocaleString()} SV (15%)
 
-💡 KHUYẾN NGHỊ CẢI THIỆN
+ KHUYẾN NGHỊ CẢI THIỆN
 ────────────────────────────────────────────────────────────────
 • Tăng cường hoạt động cố vấn cho nhóm sinh viên yếu kém (GPA < 2.0)
 • Tổ chức thêm các buổi hỗ trợ học tập vào khung giờ cao điểm 19:00-22:00
@@ -156,7 +156,7 @@ export const generatePredictionSection = (stats: ScopeStats): string => {
 • Tăng cường sử dụng tính năng dự đoán điểm AI để hỗ trợ sinh viên
 • Tổ chức thêm các nhóm học tập online cho các môn có tỷ lệ fail cao
 
-✨ ĐIỂM NỔI BẬT
+ ĐIỂM NỔI BẬT
 ────────────────────────────────────────────────────────────────
 • Tỷ lệ sinh viên xem lịch học & lịch thi cao (91%)
 • Tỷ lệ sinh viên làm bài tập trực tuyến tốt (82%)

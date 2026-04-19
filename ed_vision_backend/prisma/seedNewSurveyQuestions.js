@@ -3,7 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Seeding NEW survey questions (97 questions from JSON data)...');
+    console.log('🌱 Seeding 155 new survey questions from CSV data...');
 
     // Helper function to create question
     async function createQuestion(data) {
@@ -916,30 +916,40 @@ async function main() {
         }
     ];
 
-    // Process all questions
-    let successCount = 0;
-    let skipCount = 0;
-    let errorCount = 0;
+    // Insert all questions
+    console.log('Creating survey questions...');
+    for (const q of surveyQuestions) {
+        const question = await prisma.surveyQuestion.create({
+            data: {
+                question_text: q.question_text,
+                question_type: q.question_type,
+                category: q.category,
+                is_active: true,
+            },
+        });
 
-    for (const questionData of surveyQuestions) {
-        const result = await createQuestion(questionData);
-        if (result) {
-            successCount++;
-        } else {
-            errorCount++;
+        // Create options if exist
+        if (q.options && q.options.length > 0) {
+            for (const opt of q.options) {
+                await prisma.surveyOption.create({
+                    data: {
+                        question_id: question.question_id,
+                        option_text: opt.text,
+                        option_value: opt.value,
+                    },
+                });
+            }
         }
+
+        console.log(`✓ Created question ${q.question_id}: ${q.question_text.substring(0, 50)}...`);
     }
 
-    console.log('\n✅ Seeding completed!');
-    console.log(`   ✓ Created: ${successCount}`);
-    console.log(`   ⏭️  Skipped: ${skipCount}`);
-    console.log(`   ❌ Errors: ${errorCount}`);
-    console.log(`   📊 Total: ${surveyQuestions.length} questions\n`);
+    console.log('✅ Successfully seeded 155 survey questions!');
 }
 
 main()
     .catch((e) => {
-        console.error('❌ Seed failed:', e);
+        console.error('❌ Error seeding survey questions:', e);
         process.exit(1);
     })
     .finally(async () => {

@@ -6,17 +6,29 @@ import {
   CreateTemplateDto,
 } from './dto/message.dto';
 
+type AuthRequest = {
+  user?: {
+    instructorId?: number | string;
+  };
+};
+
 @Controller('teacher/messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
+
+  private resolveInstructorId(req: AuthRequest): number {
+    const raw = req.user?.instructorId;
+    const parsed = typeof raw === 'string' ? Number(raw) : raw;
+    return Number.isFinite(parsed) && typeof parsed === 'number' ? parsed : 1;
+  }
 
   /**
    * POST /teacher/messages/send
    * Gửi tin nhắn cho sinh viên/phụ huynh
    */
   @Post('send')
-  async sendMessage(@Req() req: any, @Body() dto: SendMessageDto) {
-    const instructorId = req.user?.instructorId || 1;
+  async sendMessage(@Req() req: AuthRequest, @Body() dto: SendMessageDto) {
+    const instructorId = this.resolveInstructorId(req);
     return this.messagesService.sendMessage(instructorId, dto);
   }
 
@@ -26,10 +38,10 @@ export class MessagesController {
    */
   @Post('send-template')
   async sendTemplateMessage(
-    @Req() req: any,
+    @Req() req: AuthRequest,
     @Body() dto: SendTemplateMessageDto,
   ) {
-    const instructorId = req.user?.instructorId || 1;
+    const instructorId = this.resolveInstructorId(req);
     return this.messagesService.sendTemplateMessage(instructorId, dto);
   }
 
@@ -38,7 +50,7 @@ export class MessagesController {
    * Lấy danh sách templates
    */
   @Get('templates')
-  async getTemplates() {
+  getTemplates() {
     return this.messagesService.getTemplates();
   }
 
@@ -47,7 +59,7 @@ export class MessagesController {
    * Tạo template mới
    */
   @Post('templates')
-  async createTemplate(@Body() dto: CreateTemplateDto) {
+  createTemplate(@Body() dto: CreateTemplateDto) {
     return this.messagesService.createTemplate(dto);
   }
 
@@ -56,8 +68,8 @@ export class MessagesController {
    * Lấy lịch sử tin nhắn
    */
   @Get('history')
-  async getMessageHistory(@Req() req: any) {
-    const instructorId = req.user?.instructorId || 1;
+  getMessageHistory(@Req() req: AuthRequest) {
+    const instructorId = this.resolveInstructorId(req);
     return this.messagesService.getMessageHistory(instructorId);
   }
 
@@ -66,8 +78,8 @@ export class MessagesController {
    * Lấy thống kê tin nhắn
    */
   @Get('stats')
-  async getMessageStats(@Req() req: any) {
-    const instructorId = req.user?.instructorId || 1;
+  getMessageStats(@Req() req: AuthRequest) {
+    const instructorId = this.resolveInstructorId(req);
     return this.messagesService.getMessageStats(instructorId);
   }
 }

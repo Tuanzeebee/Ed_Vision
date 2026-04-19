@@ -8,7 +8,7 @@ type OccupationInfo = {
 
 type Props = {
   occupationInfo: OccupationInfo;
-  onEdit?: () => void;
+  onEdit?: () =>void;
 };
 
 export default function ParentOccupationInfo({ occupationInfo, onEdit }: Props) {
@@ -21,12 +21,10 @@ export default function ParentOccupationInfo({ occupationInfo, onEdit }: Props) 
         {onEdit && (
           <button
             onClick={onEdit}
-            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-          >
+            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
             <i className="fas fa-pencil-alt mr-2"></i>
             {t('common.edit')}
-          </button>
-        )}
+          </button>)}
       </div>
       <div className="px-4 sm:px-6 py-5 space-y-4">
         <div>
@@ -44,6 +42,5 @@ export default function ParentOccupationInfo({ occupationInfo, onEdit }: Props) 
           <p className="text-sm font-medium text-gray-900">{occupationInfo.workplace || "—"}</p>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

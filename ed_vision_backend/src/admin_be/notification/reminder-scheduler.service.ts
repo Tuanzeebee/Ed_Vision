@@ -79,7 +79,7 @@ export class ReminderSchedulerService implements OnModuleInit {
 
   onModuleInit() {
     this.logger.log(
-      '[ReminderScheduler] ✅ Service initialized - @Cron job registered',
+      '[ReminderScheduler]  Service initialized - @Cron job registered',
     );
     this.logger.log(
       '[ReminderScheduler] Cron will run every minute to check reminders',
@@ -104,13 +104,13 @@ export class ReminderSchedulerService implements OnModuleInit {
       // 1. Lấy các reminder đến giờ gửi mà chưa gửi và chưa bị hủy
       const dueReminders = (await this.prisma.reminderSchedule.findMany({
         where: {
-            sent_at: null,
-            canceled: false,
-            remind_at: {
-              gte: windowStart,
-              lte: now,
-            },
+          sent_at: null,
+          canceled: false,
+          remind_at: {
+            gte: windowStart,
+            lte: now,
           },
+        },
         include: {
           appointment: {
             include: {
@@ -252,9 +252,13 @@ export class ReminderSchedulerService implements OnModuleInit {
       attachments: null,
       createdAt: new Date().toISOString(),
     };
-    this.notificationGateway.broadcastNotification(payload, [reminder.account_id]);
+    this.notificationGateway.broadcastNotification(payload, [
+      reminder.account_id,
+    ]);
 
-    this.logger.log(`Sent reminder ${reminder.reminder_id} to account ${reminder.account_id}`);
+    this.logger.log(
+      `Sent reminder ${reminder.reminder_id} to account ${reminder.account_id}`,
+    );
   }
 
   /**
@@ -279,19 +283,26 @@ export class ReminderSchedulerService implements OnModuleInit {
     const meetingPurpose =
       reminder.appointment?.meeting_purpose || 'Cuộc hẹn tư vấn';
 
-    // Nếu là parent đặt lịch, lấy tên parent ưu tiên theo thứ tự: appointment.booker.profile, appointmentContact.contact_name, recipient account profile
+    // Nếu parent đặt lịch: ưu tiên tên từ booker, rồi contact_name, rồi profile recipient.
     const bookerRole = reminder.appointment?.booker_role;
     const bookerName = ((): string => {
       if (bookerRole === 'parent') {
-        const bookerProfileName = reminder.appointment?.booker?.profile?.full_name;
-        if (bookerProfileName && String(bookerProfileName).trim().length > 0) return bookerProfileName;
+        const bookerProfileName =
+          reminder.appointment?.booker?.profile?.full_name;
+        if (bookerProfileName && String(bookerProfileName).trim().length > 0)
+          return bookerProfileName;
 
-        const contactName = reminder.appointment?.appointmentContact?.contact_name;
-        if (contactName && String(contactName).trim().length > 0) return contactName;
+        const contactName =
+          reminder.appointment?.appointmentContact?.contact_name;
+        if (contactName && String(contactName).trim().length > 0)
+          return contactName;
 
         // Fall back to account profile of the recipient/booker if available
         const bookerAccountProfile = reminder.account?.profile?.full_name;
-        if (bookerAccountProfile && String(bookerAccountProfile).trim().length > 0)
+        if (
+          bookerAccountProfile &&
+          String(bookerAccountProfile).trim().length > 0
+        )
           return bookerAccountProfile;
         return 'Phụ huynh';
       }
@@ -372,13 +383,13 @@ export class ReminderSchedulerService implements OnModuleInit {
     // Default content nếu không có template
     if (isTeacher) {
       return {
-        title: '⏰ Nhắc nhở lịch hẹn',
+        title: ' Nhắc nhở lịch hẹn',
         body: `Bạn có lịch hẹn "${meetingPurpose}" với ${otherPartyName} lúc ${timeStr} ${dateStr}. Cuộc hẹn sẽ bắt đầu trong ${timeRemainingStr}.`,
       };
     }
 
     return {
-      title: '⏰ Nhắc nhở lịch hẹn',
+      title: ' Nhắc nhở lịch hẹn',
       body: `${recipientName}, bạn có lịch hẹn "${meetingPurpose}" với ${otherPartyName} lúc ${timeStr} ${dateStr}. Cuộc hẹn sẽ bắt đầu trong ${timeRemainingStr}.`,
     };
   }
@@ -401,7 +412,8 @@ export class ReminderSchedulerService implements OnModuleInit {
       return {
         appointment_id: appointmentId,
         account_id: accountId,
-        recipient_role: options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
+        recipient_role:
+          options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
         template_code: 'appointment.reminder',
         remind_at: remindAt,
         channel: 'in_app',
@@ -412,12 +424,16 @@ export class ReminderSchedulerService implements OnModuleInit {
     // Fetch appointment to inspect instructor account and for logging
     const appointmentRecord = await this.prisma.appointment.findUnique({
       where: { appointment_id: appointmentId },
-      include: { instructor: { include: { account: true } }, appointmentContact: true },
+      include: {
+        instructor: { include: { account: true } },
+        appointmentContact: true,
+      },
     });
 
     // Guard: if we're asked to create a reminder for the instructor using the instructor's own account
     // when this call was intended for booker, skip to avoid creating cross-account reminders.
-    const instructorAccountId = appointmentRecord?.instructor?.account?.account_id ?? null;
+    const instructorAccountId =
+      appointmentRecord?.instructor?.account?.account_id ?? null;
 
     // Chỉ tạo reminder nếu thời gian nhắc nhở còn trong tương lai
     const now = new Date();
@@ -443,13 +459,18 @@ export class ReminderSchedulerService implements OnModuleInit {
         appointment_id: appointmentId,
         account_id: accountId,
         remind_at: { in: remindAtTimes },
-        recipient_role: options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
+        recipient_role:
+          options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
       },
       select: { remind_at: true },
     });
 
-    const existingTimes = new Set(existing.map((e) => new Date(e.remind_at).getTime()));
-    const toCreate = validReminders.filter((r) => !existingTimes.has(new Date(r.remind_at).getTime()));
+    const existingTimes = new Set(
+      existing.map((e) => new Date(e.remind_at).getTime()),
+    );
+    const toCreate = validReminders.filter(
+      (r) => !existingTimes.has(new Date(r.remind_at).getTime()),
+    );
 
     // debug info suppressed
 
@@ -459,8 +480,10 @@ export class ReminderSchedulerService implements OnModuleInit {
 
     // Cast to any so TypeScript accepts the enum values from runtime; ensure you run
     // `npx prisma migrate dev` and `npx prisma generate` so @prisma/client types are up-to-date.
-    await this.prisma.reminderSchedule.createMany({ data: toCreate as any, skipDuplicates: true });
-    
+    await this.prisma.reminderSchedule.createMany({
+      data: toCreate as any,
+      skipDuplicates: true,
+    });
 
     return toCreate.length;
   }
