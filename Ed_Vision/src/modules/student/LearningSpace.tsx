@@ -219,6 +219,15 @@ export default function LearningSpace({ className = '' }: Props) {
   const [learningMapVisible, setLearningMapVisible] = useState(false);
   const [videoCallVisible, setVideoCallVisible] = useState(false);
   const [currentRoomTitle, setCurrentRoomTitle] = useState('');
+  const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
+  const [currentRoomPassword, setCurrentRoomPassword] = useState<string | undefined>(undefined);
+  const [currentRoomMicOn, setCurrentRoomMicOn] = useState(false);
+  const [currentRoomCameraOn, setCurrentRoomCameraOn] = useState(false);
+  const [currentRoomMicDeviceId, setCurrentRoomMicDeviceId] = useState<string | undefined>(undefined);
+  const [currentRoomCameraDeviceId, setCurrentRoomCameraDeviceId] = useState<string | undefined>(undefined);
+  const [currentRoomParticipantId, setCurrentRoomParticipantId] = useState<number | null>(null);
+  const [currentRoomLivekitToken, setCurrentRoomLivekitToken] = useState<string | null>(null);
+  const [currentRoomLivekitUrl, setCurrentRoomLivekitUrl] = useState<string | null>(null);
   const [learningModuleVisible, setLearningModuleVisible] = useState(false);
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -933,7 +942,16 @@ export default function LearningSpace({ className = '' }: Props) {
               setRoomVisible(false);
             }}
             onJoinCall={(roomTitle) => {
-              setCurrentRoomTitle(roomTitle);
+              setCurrentRoomTitle(roomTitle.roomTitle);
+              setCurrentRoomId(roomTitle.roomId);
+              setCurrentRoomPassword(roomTitle.password);
+              setCurrentRoomMicOn(roomTitle.micOn);
+              setCurrentRoomCameraOn(roomTitle.cameraOn);
+              setCurrentRoomMicDeviceId(roomTitle.micDeviceId);
+              setCurrentRoomCameraDeviceId(roomTitle.cameraDeviceId);
+              setCurrentRoomParticipantId(roomTitle.participantId);
+              setCurrentRoomLivekitToken(roomTitle.livekitToken);
+              setCurrentRoomLivekitUrl(roomTitle.livekitUrl ?? null);
               setVideoCallVisible(true);
             }}
           />
@@ -1038,6 +1056,15 @@ export default function LearningSpace({ className = '' }: Props) {
             visible={videoCallVisible}
             onClose={() =>setVideoCallVisible(false)}
             roomTitle={currentRoomTitle}
+            roomId={currentRoomId}
+            roomPassword={currentRoomPassword}
+            initialMicOn={currentRoomMicOn}
+            initialCameraOn={currentRoomCameraOn}
+            initialMicDeviceId={currentRoomMicDeviceId}
+            initialCameraDeviceId={currentRoomCameraDeviceId}
+            participantId={currentRoomParticipantId}
+            livekitToken={currentRoomLivekitToken}
+            livekitUrl={currentRoomLivekitUrl}
           />
         </Suspense>)}
 

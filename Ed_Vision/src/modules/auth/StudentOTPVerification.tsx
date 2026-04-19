@@ -4,6 +4,8 @@ import { ToastContainer } from "../../components/ui/Toast"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import { useToast } from '../../lib/useToast'
+import { buildUrl } from "@/services/api/config"
+
 type Props = {
   onVerifyOTP?: (otp: string) =>void
   onResendCode?: () =>void
@@ -86,7 +88,7 @@ const linkCode = location.state?.linkCode || null // Get linkCode from navigatio
         return
       }
 
-      fetch('http://localhost:3000/auth/otp/verify', {
+      fetch(buildUrl('/auth/otp/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ 
@@ -126,7 +128,7 @@ const linkCode = location.state?.linkCode || null // Get linkCode from navigatio
         return
       }
 
-      fetch('http://localhost:3000/auth/otp/resend', {
+      fetch(buildUrl('/auth/otp/resend'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ email }),
@@ -239,5 +241,6 @@ const linkCode = location.state?.linkCode || null // Get linkCode from navigatio
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onClose={hideToast} />
-    </div>)
+    </div>
+  )
 }

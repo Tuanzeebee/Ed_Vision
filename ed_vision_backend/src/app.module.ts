@@ -32,6 +32,8 @@ import { existsSync } from 'fs';
 import { YouTubeMusicModule } from './youtube-music/youtube-music.module';
 import { TtsModule } from './tts/tts.module';
 import { SttModule } from './stt/stt.module';
+import { RedisModule } from './redis/redis.module';
+import { StudyRoomModule } from './study-room/study-room.module';
 
 function resolveI18nPath(): string {
   const candidatePaths = [
@@ -74,10 +76,12 @@ function resolveI18nPath(): string {
     TeacherBeModule,
     StudentBeModule,
     DatabaseModule,
+    RedisModule,
     ChatModule,
     TeacherChatModule,
     StudentChatModule,
     AttendanceModule,
+    StudyRoomModule,
     YouTubeMusicModule,
     TtsModule,
     SttModule,

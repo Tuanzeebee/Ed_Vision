@@ -141,6 +141,41 @@ npm run start:dev
 
 Backend API will be available at `http://localhost:3000`
 
+#### 3.5 One-Click Local LiveKit + Backend (Windows, No Docker)
+
+If you cannot use Docker/WSL, run the local stack directly on Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-local-livekit-backend.ps1
+```
+
+Stop everything:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\stop-local-livekit-backend.ps1
+```
+
+Check current status:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\local-livekit-backend.ps1 -Action status
+```
+
+Notes:
+- LiveKit server binary path: `tools/livekit/livekit-server.exe`
+- Logs and PID state are stored in `tools/runtime/`
+- Backend is started with local defaults: `LIVEKIT_API_KEY=devkey`, `LIVEKIT_API_SECRET=secret`, `LIVEKIT_URL=ws://localhost:7880`, `LIVEKIT_TOKEN_TTL=2h`
+
+Quick launcher (backend + livekit + frontend):
+
+```bat
+start-local-dev.bat
+```
+
+This batch file will:
+- Start LiveKit + backend via `scripts/start-local-livekit-backend.ps1`
+- Open a separate terminal and run frontend `npm run dev`
+
 #### 4. Setup ML Service (FastAPI)
 
 ```bash

@@ -17,9 +17,7 @@ import type {
   RecentlyPlayedTrack,
   MUSIC_STORAGE_KEYS,
 } from '../types/youtubeTypes';
-
-// API base URL - adjust based on your environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '@/services/api/config';
 
 /**
  * Generic fetch helper with error handling

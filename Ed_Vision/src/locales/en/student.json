@@ -48,6 +48,67 @@
     "seasonSpring": "Spring",
     "seasonSummer": "Summer",
     "seasonWinter": "Winter",
+    "defaultMajorName": "Computer Science Major",
+    "majorFallback": "Major",
+    "simulated": "Simulated",
+    "notAvailable": "N/A",
+    "tbd": "TBD",
+    "aiScoreLabel": "AI Score: {{score}}",
+    "projectedRiskLabel": "Proj. Risk:",
+    "riskTag": {
+      "high": "HIGH RISK",
+      "medium": "MEDIUM RISK",
+      "safe": "SAFE"
+    },
+    "riskIndicator": {
+      "high": "High Risk",
+      "medium": "Medium Risk",
+      "low": "Low Risk",
+      "critical": "Critical"
+    },
+    "semesterTitle": {
+      "current": "Course Risk Analysis",
+      "planned": "Future Risk"
+    },
+    "riskBanner": {
+      "highTitle": "High Risk Alert: GPA Drop Predicted",
+      "highBody": "You are at risk of dropping below target GPA. Attendance, workload, and core-course performance need immediate intervention.",
+      "mediumTitle": "Moderate Risk Alert: Performance Needs Attention",
+      "mediumBody": "Your current plan is acceptable but still vulnerable in heavy core subjects. Small adjustments can significantly improve outcomes.",
+      "lowTitle": "On Track: Keep Your Current Momentum",
+      "lowBody": "Your current academic plan is stable. Continue maintaining study consistency to secure graduation progress."
+    },
+    "strategy": {
+      "title": "AI Action & Strategy Plan",
+      "subtitle": "AI-optimized interventions based on your {{hours}} study hours/week",
+      "predictionConfidence": "Prediction Confidence:",
+      "riskTimeline": "Risk Timeline",
+      "currentStatus": "Current Status",
+      "next4Weeks": "Next 4 Weeks",
+      "midtermProjection": "Midterm Projection",
+      "whyTitle": "Why is this happening?",
+      "whyLowCoreScores": "Lower predicted scores in core courses",
+      "whyHeavyCoreLoad": "Core-course load is still heavy",
+      "whyStudyTime": "Study time currently {{hours}} hrs/week",
+      "whyRemainingCredits": "Remaining credits: {{credits}}",
+      "suggestedActions": "Suggested Actions",
+      "actionPrioritizeCore": "Prioritize 1-2 core courses with lowest predicted GPA",
+      "actionIncreaseStudy": "Increase focused study blocks by at least 2 hours/week",
+      "actionBalanceCourses": "Balance difficult and lighter subjects each semester"
+    },
+    "scenario": {
+      "title": "Scenario Simulator",
+      "studyIncrease": "If: +2 study hours/wk",
+      "workDecrease": "If: -4 work hours/wk",
+      "optimizeCore": "If: Optimize 1 core course",
+      "gpaUp": "GPA {{gpa}} ↗"
+    },
+    "courseAction": {
+      "urgent": "Urgent Action Required",
+      "intervention": "View Intervention Plan",
+      "maintain": "Maintain Progress",
+      "simulate": "Simulate Changes"
+    },
     "toastLoginRequired": "Please login first",
     "toastGpaFetchError": "Failed to load GPA data",
     "toastAccountIdMissing": "Account ID not found in user profile"

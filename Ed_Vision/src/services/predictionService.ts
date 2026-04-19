@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { TokenManager } from '../lib/tokenManager';
 import cacheService from './cacheService';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '@/services/api/config';
 
 // Cache TTL constants (in milliseconds)
 const CACHE_TTL = {

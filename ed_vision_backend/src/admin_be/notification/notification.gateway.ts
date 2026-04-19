@@ -7,6 +7,7 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { buildSocketCorsOptions } from '../../common/config/network.config';
 
 interface NotificationPayload {
   title: string;
@@ -23,10 +24,7 @@ interface ConnectedClient {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  cors: buildSocketCorsOptions(),
   namespace: '/notifications',
 })
 export class NotificationGateway
@@ -37,11 +35,21 @@ export class NotificationGateway
 
   private connectedClients: Map<string, ConnectedClient> = new Map();
 
+  private getAccountRoom(accountId: number): string {
+    return `account:${accountId}`;
+  }
+
+  private getRoleRoom(role: string): string {
+    return `role:${role}`;
+  }
+
   handleConnection(client: Socket) {
     const accountId = parseInt(client.handshake.query.accountId as string) || 0;
     const role = (client.handshake.query.role as string) || 'student';
 
     if (accountId) {
+      client.join(this.getAccountRoom(accountId));
+      client.join(this.getRoleRoom(role));
       this.connectedClients.set(client.id, {
         socket: client,
         accountId,
@@ -61,33 +69,29 @@ export class NotificationGateway
     notification: NotificationPayload,
     recipientAccountIds: number[],
   ) {
-    let sentCount = 0;
-
-    this.connectedClients.forEach((client) => {
-      // Kiểm tra xem client có trong danh sách người nhận không
-      if (recipientAccountIds.includes(client.accountId)) {
-        client.socket.emit('newNotification', notification);
-        sentCount++;
-      }
+    recipientAccountIds.forEach((accountId) => {
+      this.server
+        .to(this.getAccountRoom(accountId))
+        .emit('newNotification', notification);
     });
 
-    return sentCount;
+    return recipientAccountIds.length;
   }
 
   /**
    * Broadcast thông báo đến tất cả client theo role
    */
   broadcastToRole(notification: NotificationPayload, targetRoles: string[]) {
-    let sentCount = 0;
+    if (targetRoles.includes('all')) {
+      this.server.emit('newNotification', notification);
+      return this.connectedClients.size;
+    }
 
-    this.connectedClients.forEach((client) => {
-      if (targetRoles.includes('all') || targetRoles.includes(client.role)) {
-        client.socket.emit('newNotification', notification);
-        sentCount++;
-      }
+    targetRoles.forEach((role) => {
+      this.server.to(this.getRoleRoom(role)).emit('newNotification', notification);
     });
 
-    return sentCount;
+    return targetRoles.length;
   }
 
   @SubscribeMessage('ping')

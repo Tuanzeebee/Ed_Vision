@@ -5,6 +5,11 @@ import { AppService } from './app.service';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Get('health')
+  async health() {
+    return this.appService.getHealthStatus();
+  }
+
   @Get('mongo-status')
   async mongoStatus() {
     return this.appService.getMongoStatus();

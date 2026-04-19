@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { buildUrl } from '@/services/api/config';
 
-const API_URL = 'http://localhost:5173/api'; //  Go through Vite proxy
+const API_URL = buildUrl();
 
 export interface ChatMessage {
     _id: string;

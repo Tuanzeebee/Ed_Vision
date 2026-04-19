@@ -1,6 +1,16 @@
 ﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/student/Student_button"
+import { TokenManager } from '@/lib/tokenManager'
+import { studyRoomRealtime } from '@/services/student/studyRoomRealtime'
+import {
+  getStudyRoomErrorMessage,
+  studyRoomService,
+  type StudyRoomDetail,
+  type StudyRoomParticipantPresence,
+} from '@/services/student/studyRoomService'
 import {
   ArrowLeft,
   Users,
@@ -32,6 +42,14 @@ interface VideoRoomProps {
   onLeaveRoom?: () => void
 }
 
+interface VideoRoomRouteState {
+  roomId?: number
+  participantId?: number
+  livekitToken?: string
+  password?: string
+  roomData?: VideoRoomProps['roomData']
+}
+
 interface ChatMessage {
   id: string
   user: string
@@ -51,11 +69,41 @@ interface FileItem {
 }
 
 interface Participant {
+  accountId: number
   name: string
   avatar: string
   isCurrentUser: boolean
   isMuted: boolean
   isSpeaking?: boolean
+  isVideoOff: boolean
+  isHost: boolean
+}
+
+function resolveCurrentAccountId(): number | null {
+  try {
+    const rawUser = localStorage.getItem('user')
+    if (!rawUser) {
+      return null
+    }
+
+    const parsed = JSON.parse(rawUser) as Record<string, unknown>
+    const id = parsed.account_id ?? parsed.accountId ?? parsed.id
+
+    if (typeof id === 'number' && Number.isFinite(id) && id > 0) {
+      return Math.trunc(id)
+    }
+
+    if (typeof id === 'string') {
+      const parsedId = Number.parseInt(id, 10)
+      if (!Number.isNaN(parsedId) && parsedId > 0) {
+        return parsedId
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
 }
 
 const TabButton = ({
@@ -118,6 +166,19 @@ const IconToggleButton = ({
 }
 
 export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
+  const location = useLocation()
+  const routeState = (location.state ?? {}) as VideoRoomRouteState
+  const routeRoomData = routeState.roomData
+
+  const parsedPropRoomId = roomData?.id ? Number.parseInt(roomData.id, 10) : Number.NaN
+  const effectiveRoomId =
+    typeof routeState.roomId === 'number' && Number.isFinite(routeState.roomId)
+      ? routeState.roomId
+      : Number.isFinite(parsedPropRoomId)
+        ? parsedPropRoomId
+        : null
+  const currentAccountId = useMemo(() => resolveCurrentAccountId(), [])
+
   const [isMicOn, setIsMicOn] = useState(true)
   const [isCameraOn, setIsCameraOn] = useState(true)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
@@ -126,6 +187,12 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
   const [showReactions, setShowReactions] = useState(false)
   const [chatInput, setChatInput] = useState('')
   const [notes, setNotes] = useState('')
+  const [roomDetail, setRoomDetail] = useState<StudyRoomDetail | null>(null)
+  const [roomError, setRoomError] = useState<string | null>(null)
+  const [mediaError, setMediaError] = useState<string | null>(null)
+  const [roomLoading, setRoomLoading] = useState(false)
+  const [participants, setParticipants] = useState<Participant[]>([])
+  const localMediaStreamRef = useRef<MediaStream | null>(null)
 
   const [chatMessages] = useState<ChatMessage[]>([
     {
@@ -165,35 +232,262 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
     }
   ], [])
 
-  const participants: Participant[] = useMemo(() => [
-    {
-      name: 'You',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      isCurrentUser: true,
-      isMuted: false
-    },
-    {
-      name: 'Sarah M.',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-      isCurrentUser: false,
-      isMuted: false,
-      isSpeaking: true
-    },
-    {
-      name: 'Mike R.',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      isCurrentUser: false,
-      isMuted: true
+  const mapPresenceToParticipant = useCallback((presence: StudyRoomParticipantPresence): Participant => {
+    return {
+      accountId: presence.accountId,
+      name: presence.fullName ?? presence.email ?? `User #${presence.accountId}`,
+      avatar:
+        presence.avatarUrl ||
+        `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&u=${presence.accountId}`,
+      isCurrentUser: currentAccountId === presence.accountId,
+      isMuted: !presence.micOn,
+      isSpeaking: presence.micOn,
+      isVideoOff: !presence.cameraOn,
+      isHost: presence.isHost,
     }
-  ], [])
+  }, [currentAccountId])
 
   const chatMessagesRef = useRef<HTMLDivElement>(null)
+
+  const stopLocalMediaTracks = useCallback(() => {
+    if (!localMediaStreamRef.current) {
+      return
+    }
+
+    localMediaStreamRef.current.getTracks().forEach((track) => {
+      track.stop()
+    })
+    localMediaStreamRef.current = null
+  }, [])
+
+  const ensureMediaPermissions = useCallback(async (
+    options: { audio?: boolean; video?: boolean },
+    silent = false,
+  ): Promise<boolean> => {
+    const wantsAudio = Boolean(options.audio)
+    const wantsVideo = Boolean(options.video)
+
+    if (!wantsAudio && !wantsVideo) {
+      return true
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      const message = 'Your browser does not support camera/microphone permissions'
+      setMediaError(message)
+      if (!silent) {
+        toast.error(message)
+      }
+      return false
+    }
+
+    const activeStream = localMediaStreamRef.current
+    const hasAudio = Boolean(activeStream?.getAudioTracks().length)
+    const hasVideo = Boolean(activeStream?.getVideoTracks().length)
+    const needsAudio = wantsAudio && !hasAudio
+    const needsVideo = wantsVideo && !hasVideo
+
+    if (!needsAudio && !needsVideo) {
+      setMediaError(null)
+      return true
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: wantsAudio || hasAudio,
+        video: wantsVideo || hasVideo,
+      })
+
+      stopLocalMediaTracks()
+      localMediaStreamRef.current = stream
+      setMediaError(null)
+      return true
+    } catch {
+      const message = 'Please allow camera and microphone to use this room'
+      setMediaError(message)
+      if (!silent) {
+        toast.error(message)
+      }
+      return false
+    }
+  }, [stopLocalMediaTracks])
 
   useEffect(() => {
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight
     }
   }, [chatMessages])
+
+  useEffect(() => {
+    let active = true
+
+    const requestMediaPermissions = async () => {
+      const granted = await ensureMediaPermissions({ audio: true, video: true }, true)
+      if (active && !granted) {
+        setIsMicOn(false)
+        setIsCameraOn(false)
+      }
+    }
+
+    void requestMediaPermissions()
+
+    return () => {
+      active = false
+      stopLocalMediaTracks()
+    }
+  }, [ensureMediaPermissions, stopLocalMediaTracks])
+
+  const upsertParticipant = useCallback((presence: StudyRoomParticipantPresence) => {
+    const mapped = mapPresenceToParticipant(presence)
+    setParticipants((previous) => {
+      const index = previous.findIndex((participant) => participant.accountId === mapped.accountId)
+      if (index < 0) {
+        return [...previous, mapped]
+      }
+
+      const next = [...previous]
+      next[index] = mapped
+      return next
+    })
+  }, [mapPresenceToParticipant])
+
+  useEffect(() => {
+    if (!effectiveRoomId) {
+      return
+    }
+
+    let active = true
+
+    const loadRoomDetail = async () => {
+      try {
+        setRoomLoading(true)
+        setRoomError(null)
+        const detail = await studyRoomService.getRoomById(effectiveRoomId)
+
+        if (!active) {
+          return
+        }
+
+        setRoomDetail(detail)
+        setParticipants(detail.participants.map(mapPresenceToParticipant))
+      } catch (error) {
+        if (active) {
+          setRoomError(getStudyRoomErrorMessage(error, 'Failed to load room details'))
+        }
+      } finally {
+        if (active) {
+          setRoomLoading(false)
+        }
+      }
+    }
+
+    void loadRoomDetail()
+
+    return () => {
+      active = false
+    }
+  }, [effectiveRoomId, mapPresenceToParticipant])
+
+  useEffect(() => {
+    if (!effectiveRoomId) {
+      return
+    }
+
+    let active = true
+
+    const onParticipantJoined = (payload: { roomId: number; participant: StudyRoomParticipantPresence }) => {
+      if (payload.roomId !== effectiveRoomId) {
+        return
+      }
+
+      upsertParticipant(payload.participant)
+    }
+
+    const onParticipantUpdated = (payload: { roomId: number; participant: StudyRoomParticipantPresence }) => {
+      if (payload.roomId !== effectiveRoomId) {
+        return
+      }
+
+      upsertParticipant(payload.participant)
+    }
+
+    const onParticipantLeft = (payload: { roomId: number; participant: StudyRoomParticipantPresence }) => {
+      if (payload.roomId !== effectiveRoomId) {
+        return
+      }
+
+      setParticipants((previous) =>
+        previous.filter((participant) => participant.accountId !== payload.participant.accountId),
+      )
+    }
+
+    const onRoomError = (payload: { message?: string }) => {
+      if (!active) {
+        return
+      }
+
+      const message = payload.message?.trim() || 'Study room realtime error'
+      setRoomError(message)
+      toast.error(message)
+    }
+
+    const connectRealtime = async () => {
+      const token = TokenManager.getToken()
+      if (!token) {
+        return
+      }
+
+      try {
+        await studyRoomRealtime.connect(token)
+        await studyRoomRealtime.joinRoom({
+          roomId: effectiveRoomId,
+          password: routeState.password,
+        })
+      } catch (error) {
+        if (active) {
+          const message = getStudyRoomErrorMessage(error, 'Unable to join realtime room')
+          setRoomError(message)
+          toast.error(message)
+        }
+      }
+    }
+
+    void connectRealtime()
+
+    studyRoomRealtime.on('room.participant.joined', onParticipantJoined)
+    studyRoomRealtime.on('room.participant.updated', onParticipantUpdated)
+    studyRoomRealtime.on('room.participant.left', onParticipantLeft)
+    studyRoomRealtime.on('room.error', onRoomError)
+
+    return () => {
+      active = false
+
+      studyRoomRealtime.off('room.participant.joined', onParticipantJoined as (...args: unknown[]) => void)
+      studyRoomRealtime.off('room.participant.updated', onParticipantUpdated as (...args: unknown[]) => void)
+      studyRoomRealtime.off('room.participant.left', onParticipantLeft as (...args: unknown[]) => void)
+      studyRoomRealtime.off('room.error', onRoomError as (...args: unknown[]) => void)
+
+      void studyRoomRealtime.leaveRoom(effectiveRoomId).catch(() => {
+        // Ignore cleanup leave errors.
+      })
+      studyRoomRealtime.disconnect()
+    }
+  }, [effectiveRoomId, routeState.password, upsertParticipant])
+
+  useEffect(() => {
+    setRoomDetail((previous) =>
+      previous
+        ? {
+            ...previous,
+            onlineCount: participants.length,
+          }
+        : previous,
+    )
+  }, [participants.length])
+
+  const displayTitle = roomDetail?.title || routeRoomData?.title || roomData?.title || 'Computer Science 101'
+  const displaySubtitle = roomDetail
+    ? `${roomDetail.roomMode.toUpperCase()} mode · ${participants.length}/${roomDetail.maxParticipants} participants`
+    : routeRoomData?.subtitle || roomData?.subtitle || 'Programming Basics · Study Room'
 
   const handleSendMessage = useCallback(() => {
     if (chatInput.trim()) {
@@ -204,9 +498,89 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
 
   const handleLeaveRoom = useCallback(() => {
     if (window.confirm('Are you sure you want to leave the room?')) {
-      onLeaveRoom?.()
+      const leave = async () => {
+        try {
+          if (effectiveRoomId) {
+            await studyRoomRealtime.leaveRoom(effectiveRoomId)
+          }
+        } catch {
+          // Ignore leave errors and continue closing.
+        } finally {
+          stopLocalMediaTracks()
+          studyRoomRealtime.disconnect()
+          onLeaveRoom?.()
+        }
+      }
+
+      void leave()
     }
-  }, [onLeaveRoom])
+  }, [effectiveRoomId, onLeaveRoom, stopLocalMediaTracks])
+
+  const handleToggleMic = useCallback(async () => {
+    const next = !isMicOn
+    if (next) {
+      const granted = await ensureMediaPermissions({ audio: true })
+      if (!granted) {
+        setIsMicOn(false)
+        return
+      }
+    }
+
+    setIsMicOn(next)
+
+    if (!effectiveRoomId) {
+      return
+    }
+
+    try {
+      await studyRoomRealtime.updateParticipantState({ roomId: effectiveRoomId, micOn: next })
+      await studyRoomRealtime.toggleMic({ roomId: effectiveRoomId, enabled: next })
+    } catch (error) {
+      setIsMicOn(!next)
+      toast.error(getStudyRoomErrorMessage(error, 'Unable to update microphone state'))
+    }
+  }, [effectiveRoomId, ensureMediaPermissions, isMicOn])
+
+  const handleToggleCamera = useCallback(async () => {
+    const next = !isCameraOn
+    if (next) {
+      const granted = await ensureMediaPermissions({ video: true })
+      if (!granted) {
+        setIsCameraOn(false)
+        return
+      }
+    }
+
+    setIsCameraOn(next)
+
+    if (!effectiveRoomId) {
+      return
+    }
+
+    try {
+      await studyRoomRealtime.updateParticipantState({ roomId: effectiveRoomId, cameraOn: next })
+      await studyRoomRealtime.toggleCamera({ roomId: effectiveRoomId, enabled: next })
+    } catch (error) {
+      setIsCameraOn(!next)
+      toast.error(getStudyRoomErrorMessage(error, 'Unable to update camera state'))
+    }
+  }, [effectiveRoomId, ensureMediaPermissions, isCameraOn])
+
+  const handleToggleHandRaised = useCallback(async () => {
+    const next = !isHandRaised
+    setIsHandRaised(next)
+
+    if (!effectiveRoomId) {
+      return
+    }
+
+    try {
+      await studyRoomRealtime.updateParticipantState({ roomId: effectiveRoomId, handRaised: next })
+    } catch (error) {
+      setIsHandRaised(!next)
+      toast.error(getStudyRoomErrorMessage(error, 'Unable to update hand raise state'))
+    }
+  }, [effectiveRoomId, isHandRaised])
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -235,10 +609,10 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
             </Button>
             <div className="relative">
               <h1 className="text-white font-semibold text-lg">
-                {roomData?.title || 'Computer Science 101'}
+                {displayTitle}
               </h1>
               <p className="text-slate-300 text-sm">
-                {roomData?.subtitle || 'Programming Basics  Prof. Lee'}
+                {displaySubtitle}
               </p>
               <div className="absolute -left-2 top-1 w-2 h-2 bg-green-400 rounded-full"></div>
             </div>
@@ -247,7 +621,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
           <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/10">
             <Users className="w-4 h-4 text-slate-300" />
             <span className="text-white text-sm font-medium">
-              {roomData?.students || '18 participants'}
+              {participants.length} participants
             </span>
           </div>
 
@@ -271,6 +645,24 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
 
       <div className="flex h-[calc(100vh-72px)]">
         <div className="flex-1 p-6">
+          {roomLoading && (
+            <div className="mb-4 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/80">
+              Loading room details...
+            </div>
+          )}
+
+          {roomError && (
+            <div className="mb-4 rounded-xl border border-red-300/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {roomError}
+            </div>
+          )}
+
+          {mediaError && (
+            <div className="mb-4 rounded-xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              {mediaError}
+            </div>
+          )}
+
           <div className="mb-4">
             <div className="bg-white/5 rounded-2xl overflow-hidden aspect-video relative border border-white/10">
               <img
@@ -299,9 +691,9 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 h-20">
-            {participants.map((participant, index) => (
+            {participants.map((participant) => (
               <div
-                key={index}
+                key={participant.accountId}
                 className={`bg-white/5 rounded overflow-hidden relative transition-all duration-200 hover:ring-1 hover:ring-white/20 border border-white/10 ${participant.isSpeaking ? 'ring-1 ring-emerald-400' : ''
                   }`}
               >
@@ -315,7 +707,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
                 />
 
                 <div className="absolute bottom-0.5 left-0.5 bg-black/60 px-1 py-0.5 rounded text-xs text-white max-w-[calc(100%-4px)] truncate">
-                  {participant.name}
+                  {participant.name}{participant.isHost ? ' (Host)' : ''}
                 </div>
 
                 <div className="absolute top-0.5 right-0.5">
@@ -334,12 +726,11 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
               </div>
             ))}
 
-            <div className="bg-white/5 rounded flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors border border-white/10">
-              <div className="text-center">
-                <span className="text-lg text-slate-300 block">+</span>
-                <span className="text-xs text-slate-400">13</span>
+            {participants.length === 0 && (
+              <div className="col-span-2 rounded border border-white/10 bg-white/5 p-2 text-center text-xs text-slate-300 sm:col-span-4 md:col-span-5 lg:col-span-7">
+                No participants online yet.
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -481,7 +872,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
             <div className="flex items-center gap-3">
               <IconToggleButton
                 isOn={isMicOn}
-                onToggle={() => setIsMicOn(!isMicOn)}
+                onToggle={() => void handleToggleMic()}
                 onIcon={Mic}
                 offIcon={MicOff}
                 ariaLabel={isMicOn ? "Mute microphone" : "Unmute microphone"}
@@ -489,7 +880,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
 
               <IconToggleButton
                 isOn={isCameraOn}
-                onToggle={() => setIsCameraOn(!isCameraOn)}
+                onToggle={() => void handleToggleCamera()}
                 onIcon={Video}
                 offIcon={VideoOff}
                 ariaLabel={isCameraOn ? "Turn off camera" : "Turn on camera"}
@@ -505,7 +896,7 @@ export default function VideoRoom({ roomData, onLeaveRoom }: VideoRoomProps) {
 
               <IconToggleButton
                 isOn={isHandRaised}
-                onToggle={() => setIsHandRaised(!isHandRaised)}
+                onToggle={() => void handleToggleHandRaised()}
                 onIcon={Hand}
                 offIcon={Hand}
                 ariaLabel={isHandRaised ? "Lower hand" : "Raise hand"}

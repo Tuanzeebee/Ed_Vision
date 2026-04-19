@@ -27,6 +27,7 @@ import {
   type WeekInfo,
 } from '@/lib/weekUtils';
 import axios from 'axios';
+import { buildUrl } from '@/services/api/config';
 
 ChartJS.register(
   CategoryScale,
@@ -125,7 +126,7 @@ export default function TeacherSchedule(): React.JSX.Element {
       
       // Fetch instructor's weekly slots and appointments
       const response = await axios.get(
-        `http://localhost:3000/admin/instructors/${teacherId}/schedule`,
+        buildUrl(`/admin/instructors/${teacherId}/schedule`),
         { params: { startDate, endDate } }
       );
 
@@ -187,7 +188,7 @@ export default function TeacherSchedule(): React.JSX.Element {
     if (!teacherId) return;
     try {
       const response = await axios.get(
-        `http://localhost:3000/admin/instructors/${teacherId}/schedule/filter-options`
+        buildUrl(`/admin/instructors/${teacherId}/schedule/filter-options`)
       );
       if (response.data) {
         setMeetingPurposes(response.data.meetingPurposes || []);
@@ -213,7 +214,7 @@ export default function TeacherSchedule(): React.JSX.Element {
     setIsLoadingUpcoming(true);
     try {
       const response = await axios.get(
-        `http://localhost:3000/admin/instructors/${teacherId}/appointments/upcoming`,
+        buildUrl(`/admin/instructors/${teacherId}/appointments/upcoming`),
         { params: { page, limit: 5 } }
       );
       setUpcomingAppointments(response.data.data || []);
@@ -234,7 +235,7 @@ export default function TeacherSchedule(): React.JSX.Element {
     setIsLoadingHistory(true);
     try {
       const response = await axios.get(
-        `http://localhost:3000/admin/instructors/${teacherId}/appointments/history`,
+        buildUrl(`/admin/instructors/${teacherId}/appointments/history`),
         { params: { page, limit: 10 } }
       );
       setAppointmentHistory(response.data.data || []);
@@ -255,7 +256,7 @@ export default function TeacherSchedule(): React.JSX.Element {
     setIsLoadingChart(true);
     try {
       const response = await axios.get(
-        `http://localhost:3000/admin/instructors/${teacherId}/appointments/stats`
+        buildUrl(`/admin/instructors/${teacherId}/appointments/stats`)
       );
       setChartData(response.data);
     } catch (error) {
@@ -965,5 +966,6 @@ export default function TeacherSchedule(): React.JSX.Element {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>);
+    </AdminLayout>
+  );
 }

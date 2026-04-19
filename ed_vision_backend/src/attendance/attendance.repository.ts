@@ -6,10 +6,23 @@ import {
   DeviceFingerprint,
   CampusNetworkConfig,
 } from '@prisma/client';
+import { RedisService } from '../redis/redis.service';
+
+type StoredQrToken = {
+  token: string;
+  expiresAt: number;
+  issuedAt: number;
+  used: boolean;
+};
 
 @Injectable()
 export class AttendanceRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly qrFreshWindowMs = 5000;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
+  ) {}
 
   // Session management
   async createSession(data: {
@@ -171,29 +184,109 @@ export class AttendanceRepository {
   }
 
   // QR token management (in-memory cache for this demo)
-  private qrTokens = new Map<
-    string,
-    { token: string; expiresAt: Date; used: boolean }
-  >();
+  private qrTokens = new Map<string, StoredQrToken>();
+
+  private getQrTokenStoreKey(sessionId: string): string {
+    return `attendance:qr:${sessionId}`;
+  }
+
+  private async getStoredQrToken(
+    sessionId: string,
+  ): Promise<StoredQrToken | null> {
+    if (this.redisService.isReady()) {
+      return this.redisService.getJson<StoredQrToken>(
+        this.getQrTokenStoreKey(sessionId),
+      );
+    }
+
+    return this.qrTokens.get(sessionId) ?? null;
+  }
+
+  private async validateQrTokenWithRedis(
+    sessionId: string,
+    providedToken: string,
+  ): Promise<boolean> {
+    const client = this.redisService.getClient();
+    if (!client) {
+      return false;
+    }
+
+    const result = await client.eval(
+      `
+        local payload = redis.call('GET', KEYS[1])
+        if not payload then
+          return 0
+        end
+
+        local data = cjson.decode(payload)
+        local providedToken = ARGV[1]
+        local now = tonumber(ARGV[2])
+
+        if data["used"] == true then
+          return 0
+        end
+
+        if tonumber(data["expiresAt"]) < now then
+          return 0
+        end
+
+        if data["token"] ~= providedToken then
+          return 0
+        end
+
+        data["used"] = true
+        redis.call('SET', KEYS[1], cjson.encode(data), 'KEEPTTL')
+        return 1
+      `,
+      {
+        keys: [this.redisService.getKey(this.getQrTokenStoreKey(sessionId))],
+        arguments: [providedToken, `${Date.now()}`],
+      },
+    );
+
+    return Number(result) === 1;
+  }
 
   async storeQRToken(
     sessionId: string,
     token: string,
     expiresInSeconds: number,
   ): Promise<void> {
-    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
-    this.qrTokens.set(sessionId, { token, expiresAt, used: false });
+    const now = Date.now();
+    const storedToken: StoredQrToken = {
+      token,
+      expiresAt: now + expiresInSeconds * 1000,
+      issuedAt: now,
+      used: false,
+    };
+
+    const storedInRedis = await this.redisService.setJson(
+      this.getQrTokenStoreKey(sessionId),
+      storedToken,
+      expiresInSeconds,
+    );
+
+    if (!storedInRedis) {
+      this.qrTokens.set(sessionId, storedToken);
+    }
   }
 
   async validateQRToken(
     sessionId: string,
     providedToken: string,
   ): Promise<boolean> {
+    if (this.redisService.isReady()) {
+      return this.validateQrTokenWithRedis(sessionId, providedToken);
+    }
+
     const stored = this.qrTokens.get(sessionId);
     if (!stored) return false;
 
-    const now = new Date();
-    if (now > stored.expiresAt || stored.used) return false;
+    const now = Date.now();
+    if (now > stored.expiresAt || stored.used) {
+      this.qrTokens.delete(sessionId);
+      return false;
+    }
 
     if (stored.token === providedToken) {
       stored.used = true; // Mark as used
@@ -204,11 +297,14 @@ export class AttendanceRepository {
   }
 
   async isQRTokenFresh(sessionId: string): Promise<boolean> {
-    const stored = this.qrTokens.get(sessionId);
+    const stored = await this.getStoredQrToken(sessionId);
     if (!stored) return false;
 
-    const now = new Date();
-    const tokenAge = now.getTime() - (stored.expiresAt.getTime() - 15000); // 15 seconds expiry
-    return tokenAge < 5000; // Fresh if less than 5 seconds old
+    const now = Date.now();
+    if (stored.used || now > stored.expiresAt) {
+      return false;
+    }
+
+    return now - stored.issuedAt < this.qrFreshWindowMs;
   }
 }

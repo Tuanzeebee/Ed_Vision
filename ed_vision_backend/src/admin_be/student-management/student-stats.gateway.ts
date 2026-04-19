@@ -5,6 +5,7 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { buildSocketCorsOptions } from '../../common/config/network.config';
 
 export interface StudentOnlineStats {
   totalCount: number;
@@ -12,10 +13,7 @@ export interface StudentOnlineStats {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  cors: buildSocketCorsOptions(),
   namespace: '/student-stats',
 })
 export class StudentStatsGateway

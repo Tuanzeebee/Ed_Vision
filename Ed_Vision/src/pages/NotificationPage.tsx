@@ -9,20 +9,18 @@ import {
 } from '@/stores/notificationStore';
 import type { SystemNotification } from '@/stores/notificationStore';
 import { useTranslation } from 'react-i18next';
+import { buildAssetUrl } from '@/services/api/config';
 
 interface NotificationPageProps {
   userRole?: 'student'| 'teacher'| 'admin'| 'parent';
 }
-
-// Get API base URL
-const API_BASE_URL = (import.meta.env && (import.meta.env.VITE_API_BASE_URL as string)) || 'http://localhost:3000';
 
 // Helper function to get full URL for attachments
 const getAttachmentUrl = (url: string) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
     return url;
   }
-  return `${API_BASE_URL}${url}`;
+  return buildAssetUrl(url);
 };
 
 export default function NotificationPage({ userRole = 'student'}: NotificationPageProps) {

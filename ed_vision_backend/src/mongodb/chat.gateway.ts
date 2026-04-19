@@ -10,12 +10,10 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { Logger } from '@nestjs/common';
+import { buildSocketCorsOptions } from '../common/config/network.config';
 
 @WebSocketGateway({
-  cors: {
-    origin: 'http://localhost:5173',
-    credentials: true,
-  },
+  cors: buildSocketCorsOptions(),
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()

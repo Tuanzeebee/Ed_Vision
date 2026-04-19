@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { TokenManager } from '@/lib/tokenManager';
 import { fetchNotifications } from '@/stores/notificationStore';
+import { buildSocketUrl } from '@/services/api/config';
 
 const SOCKET_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
@@ -41,9 +42,8 @@ export function useNotificationSocket() {
     }
 
     // Kết nối WebSocket
-    const socket = io(`${SOCKET_BASE_URL}/notifications`, {
-      transports: ['polling'],
-      upgrade: false,
+    const socket = io(buildSocketUrl('/notifications'), {
+      transports: ['websocket', 'polling'],
       query: {
         accountId: accountId.toString(),
         role: role,
