@@ -11,6 +11,7 @@ import { useMusicPlayer } from '../music/MusicPlayerContext';
 import { searchTracks as searchYouTube } from '../services/youtubeService';
 import type { YouTubeTrack } from '../types/youtubeTypes';
 import AnimatedList from './AnimatedList';
+import { VinylSleeveImage } from './MusicImage';
 import {
   TRACKS,
   ALBUMS,
@@ -19,8 +20,11 @@ import {
   PODCAST_SHOWS,
   MUSIC_TAGS,
   searchAll,
+  getLyricsForTrack,
+  hasLyrics,
   type Track,
   type Album,
+  type LyricLine,
 } from '../music/mockData';
 
 type Props = {
@@ -50,18 +54,23 @@ export default function MusicPanel({
     currentTime,
     duration,
     volume,
+    repeatMode,
     isBuffering,
     recentlyPlayed,
     likedTracks,
+    playlists,
     playTrack: contextPlayTrack,
     pause,
     resume,
     seekTo,
     setVolume,
+    cycleRepeatMode,
     playNext,
     playPrevious,
     toggleLike,
     isLiked,
+    addTrackToPlaylist,
+    isTrackInPlaylist,
   } = useMusicPlayer();
   
   // View state
@@ -86,42 +95,35 @@ export default function MusicPanel({
   // Liked Songs List Modal
   const [showLikedSongsList, setShowLikedSongsList] = useState(false);
 
-  // Lyrics data with timestamps
-  const lyrics = [
-    { time: 0, text: "In the silence of the night" },
-    { time: 15, text: "I hear your voice calling out to me" },
-    { time: 30, text: "Through the darkness and the light" },
-    { time: 45, text: "You're the only one I see" },
-    { time: 60, text: "But I can't follow to meet you" },
-    { time: 75, text: "You are far away out, out on the other side" },
-    { time: 90, text: "When the stars begin to fade" },
-    { time: 105, text: "And the morning breaks the sky" },
-    { time: 120, text: "I'll be waiting for the day" },
-    { time: 135, text: "When our worlds collide" },
-    { time: 150, text: "Can you feel my heartbeat" },
-    { time: 165, text: "Racing through the endless time" },
-    { time: 180, text: "Every moment incomplete" },
-    { time: 195, text: "Until you're finally mine" },
-    { time: 210, text: "Forever in my dreams" },
-    { time: 225, text: "You'll always be the one" },
-  ];
+  // Get current and next lyrics based on current time and current track
+  const getCurrentLyrics = useCallback((): { current: LyricLine | null; next: LyricLine | null; hasLyrics: boolean } => {
+    // Get lyrics for the current track
+    const trackId = currentTrack?.id || selectedSong?.id;
+    if (!trackId) {
+      return { current: null, next: null, hasLyrics: false };
+    }
 
-  // Get current and next lyrics based on current time
-  const getCurrentLyrics = useCallback(() => {
+    const trackLyrics = getLyricsForTrack(trackId);
+    
+    if (trackLyrics.length === 0) {
+      return { current: null, next: null, hasLyrics: false };
+    }
+
+    // Find current lyric based on playback time
     let currentIndex = 0;
-    for (let i = 0; i < lyrics.length; i++) {
-      if (currentTime >= lyrics[i].time) {
+    for (let i = 0; i < trackLyrics.length; i++) {
+      if (currentTime >= trackLyrics[i].time) {
         currentIndex = i;
       } else {
         break;
       }
     }
     
-    const current = lyrics[currentIndex];
-    const next = lyrics[currentIndex + 1];
+    const current = trackLyrics[currentIndex];
+    const next = trackLyrics[currentIndex + 1] || null;
     
-    return { current, next };
-  }, [currentTime]);
+    return { current, next, hasLyrics: true };
+  }, [currentTime, currentTrack, selectedSong]);
 
   // Handle progress circle click/drag for circular design
   const handleProgressCircleInteraction = useCallback((e: React.MouseEvent<SVGCircleElement>) => {
@@ -190,8 +192,8 @@ export default function MusicPanel({
       title: ytTrack.title,
       artist: ytTrack.artist,
       album: ytTrack.album,
-      thumbnail: ytTrack.imageUrl || `https://i.ytimg.com/vi/${ytTrack.id}/hqdefault.jpg`,
-      duration: ytTrack.duration,
+      imageUrl: ytTrack.imageUrl || `https://i.ytimg.com/vi/${ytTrack.id}/hqdefault.jpg`,
+      duration: ytTrack.duration || '0:00',
     };
   }, []);
 
@@ -296,11 +298,13 @@ export default function MusicPanel({
   const topBillboard = TRACKS.slice(0, 10).map((track, index) => ({
     rank: index + 1,
     ...track,
-    image: track.thumbnail,
+    image: track.imageUrl,
   }));
+  const displayPlaylists = [...playlists, ...PLAYLISTS];
   const displayRecentlyPlayed = recentlyPlayed.length > 0 
     ? recentlyPlayed.slice(0, 5) 
     : TRACKS.slice(0, 5);
+  const isCurrentTrackInPlaylist = currentTrack ? isTrackInPlaylist(currentTrack.id) : false;
 
   return (
     <div
@@ -449,7 +453,7 @@ export default function MusicPanel({
                     >
                       <div className="relative">
                         <img
-                          src={track.thumbnail}
+                          src={track.imageUrl}
                           alt={track.title}
                           className="w-10 h-10 rounded object-cover"
                         />
@@ -481,7 +485,7 @@ export default function MusicPanel({
                           className="flex items-center gap-3 p-2 hover:bg-white/10 cursor-pointer transition"
                         >
                           <img
-                            src={album.cover}
+                            src={album.imageUrl}
                             alt={album.title}
                             className="w-10 h-10 rounded object-cover"
                           />
@@ -579,10 +583,10 @@ export default function MusicPanel({
               // Album Detail View
               <div className="p-6">
                 <div className="flex gap-6 mb-6">
-                  <img
-                    src={selectedAlbum.cover}
+                  <VinylSleeveImage
+                    src={selectedAlbum.imageUrl}
                     alt={selectedAlbum.title}
-                    className="w-48 h-48 rounded-2xl shadow-lg"
+                    className="w-48 h-48"
                   />
                   <div className="flex flex-col justify-end">
                     <div className="text-white/60 text-sm">Album</div>
@@ -618,7 +622,7 @@ export default function MusicPanel({
                         {index + 1}
                       </span>
                       <i className="fas fa-play text-purple-400 text-xs hidden group-hover:block w-6 text-center"></i>
-                      <img src={track.thumbnail} alt={track.title} className="w-10 h-10 rounded" />
+                      <img src={track.imageUrl} alt={track.title} className="w-10 h-10 rounded" />
                       <div className="flex-1 min-w-0">
                         <div className={`text-sm font-medium truncate ${currentTrack?.id === track.id ? 'text-purple-400' : 'text-white'}`}>
                           {track.title}
@@ -810,7 +814,7 @@ export default function MusicPanel({
                                   }`}
                                 >
                                   <div className="relative w-12 h-12 flex-shrink-0">
-                                    <img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover rounded-lg" />
+                                    <img src={track.imageUrl} alt={track.title} className="w-full h-full object-cover rounded-lg" />
                                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded-lg">
                                       <i className="fas fa-play text-white text-sm"></i>
                                     </div>
@@ -843,10 +847,10 @@ export default function MusicPanel({
                                   className="group cursor-pointer"
                                 >
                                   <div className="relative mb-3">
-                                    <img
-                                      src={album.cover}
+                                    <VinylSleeveImage
+                                      src={album.imageUrl}
                                       alt={album.title}
-                                      className="w-full aspect-square object-cover rounded-xl"
+                                      className="w-full aspect-square"
                                     />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-xl flex items-center justify-center">
                                       <button className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg">
@@ -892,10 +896,10 @@ export default function MusicPanel({
                         className="cursor-pointer hover:bg-white/5 rounded-xl p-3 transition group"
                       >
                         <div className="relative mb-3">
-                          <img
-                            src={item.thumbnail}
+                          <VinylSleeveImage
+                            src={item.imageUrl}
                             alt={item.title}
-                            className="w-full aspect-square rounded-xl object-cover"
+                            className="w-full aspect-square"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center">
                             <button className="w-12 h-12 bg-white/0 group-hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform scale-75 group-hover:scale-100">
@@ -969,7 +973,7 @@ export default function MusicPanel({
                         <div className="relative mb-3">
                           <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center overflow-hidden">
                             <img
-                              src={show.cover}
+                              src={show.imageUrl}
                               alt={show.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -1015,14 +1019,14 @@ export default function MusicPanel({
                           id: episode.id,
                           title: episode.title,
                           artist: episode.showTitle,
-                          thumbnail: episode.thumbnail,
+                          imageUrl: episode.imageUrl,
                           duration: episode.duration,
                         })}
                         className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 cursor-pointer transition group"
                       >
                         <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           <img 
-                            src={episode.thumbnail} 
+                            src={episode.imageUrl} 
                             alt={episode.title} 
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -1062,10 +1066,10 @@ export default function MusicPanel({
                       className="cursor-pointer hover:bg-white/5 rounded-xl p-4 transition group"
                     >
                       <div className="relative mb-3">
-                        <img
-                          src={album.cover}
+                        <VinylSleeveImage
+                          src={album.imageUrl}
                           alt={album.title}
-                          className="w-full aspect-square rounded-xl object-cover"
+                          className="w-full aspect-square"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center">
                           <button className="w-12 h-12 bg-white/0 group-hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform scale-75 group-hover:scale-100">
@@ -1083,16 +1087,16 @@ export default function MusicPanel({
                 {/* Playlists */}
                 <h3 className="text-white font-semibold text-sm mb-4 mt-8">PLAYLISTS</h3>
                 <div className="grid grid-cols-4 gap-4">
-                  {PLAYLISTS.map((playlist) => (
+                  {displayPlaylists.map((playlist) => (
                     <div
                       key={playlist.id}
                       className="cursor-pointer hover:bg-white/5 rounded-xl p-4 transition group"
                     >
                       <div className="relative mb-3">
-                        <img
-                          src={playlist.cover}
+                        <VinylSleeveImage
+                          src={playlist.imageUrl}
                           alt={playlist.title}
-                          className="w-full aspect-square rounded-xl object-cover"
+                          className="w-full aspect-square"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-xl transition flex items-center justify-center">
                           <button 
@@ -1150,7 +1154,7 @@ export default function MusicPanel({
                       </div>
                     </div>
                     <img
-                      src={heroTrack.thumbnail}
+                      src={heroTrack.imageUrl}
                       alt="Hero Track"
                       className="absolute right-0 top-0 h-full w-1/2 object-cover opacity-50"
                     />
@@ -1171,7 +1175,7 @@ export default function MusicPanel({
                       >
                         <div className="relative w-full aspect-square rounded-xl mb-2 overflow-hidden bg-gradient-to-br from-purple-600/40 to-pink-600/40">
                           <img
-                            src={artist.image}
+                            src={artist.imageUrl}
                             alt={artist.name}
                             className="w-full h-full object-cover transition-opacity duration-300"
                             loading="lazy"
@@ -1215,7 +1219,7 @@ export default function MusicPanel({
                         <span className="text-white/60 text-sm font-semibold w-8">
                           {String(index + 1).padStart(2, '0')}
                         </span>
-                        <img src={song.thumbnail} alt={song.title} className="w-10 h-10 rounded-lg" />
+                        <img src={song.imageUrl} alt={song.title} className="w-10 h-10 rounded-lg" />
                         <div className="flex-1 min-w-0">
                           <div className={`text-sm font-medium truncate ${currentTrack?.id === song.id ? 'text-purple-400' : 'text-white'}`}>
                             {song.title}
@@ -1245,9 +1249,9 @@ export default function MusicPanel({
                 }}
               >
                 <img
-                  src={currentTrack?.thumbnail || 'https://via.placeholder.com/100'}
+                  src={currentTrack?.imageUrl || 'https://via.placeholder.com/100'}
                   alt="Album"
-                  className="w-14 h-14 rounded-lg transition-transform group-hover:scale-105"
+                  className="w-10 h-10 rounded-lg object-cover"
                 />
                 <div className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                   <i className="fas fa-expand text-white text-sm"></i>
@@ -1427,7 +1431,7 @@ export default function MusicPanel({
                   className="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition"
                 >
                   <img
-                    src={track.thumbnail}
+                    src={track.imageUrl}
                     alt={track.title}
                     className="w-12 h-12 rounded-lg"
                   />
@@ -1471,7 +1475,7 @@ export default function MusicPanel({
                       className="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition"
                     >
                       <img
-                        src={track.thumbnail}
+                        src={track.imageUrl}
                         alt={track.title}
                         className="w-10 h-10 rounded-lg"
                       />
@@ -1531,7 +1535,7 @@ export default function MusicPanel({
                             <span className="text-white/40 text-sm w-6 text-right">{index + 1}</span>
                             <div className="relative">
                               <img
-                                src={track.thumbnail}
+                                src={track.imageUrl}
                                 alt={track.title}
                                 className="w-12 h-12 rounded-lg object-cover"
                               />
@@ -1595,7 +1599,7 @@ export default function MusicPanel({
             {/* Background Album Art - Always sync with currentTrack */}
             <div className="absolute inset-0 opacity-15">
               <img
-                src={currentTrack?.thumbnail || selectedSong?.thumbnail}
+                src={currentTrack?.imageUrl || selectedSong?.imageUrl}
                 alt={currentTrack?.title || selectedSong?.title || 'Album Art'}
                 className="w-full h-full object-cover blur-3xl scale-110"
               />
@@ -1631,19 +1635,17 @@ export default function MusicPanel({
                   <div className="flex flex-col items-center justify-center">
                     {/* Album Art - Synced with current playing track */}
                     <div className="relative group">
-                      <img
-                        src={currentTrack?.thumbnail || selectedSong?.thumbnail || '/default-album.png'}
+                      <VinylSleeveImage
+                        src={currentTrack?.imageUrl || selectedSong?.imageUrl || '/default-album.png'}
                         alt={currentTrack?.title || selectedSong?.title || 'Album Art'}
-                        className="w-64 h-64 rounded-2xl shadow-2xl object-cover transition-all duration-500 group-hover:scale-105"
-                        style={{
-                          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(148, 255, 181, 0.15)'
-                        }}
+                        className="w-64 h-64 transition-all duration-500 group-hover:scale-105"
+                        showShadow={false}
                       />
                       {/* Overlay on hover */}
-                      <div className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="pointer-events-none absolute inset-0 bg-black/30 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <button
                           onClick={togglePlayPause}
-                          className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
+                          className="pointer-events-auto w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition"
                         >
                           <i className={`fas fa-${isPlaying ? 'pause' : 'play'} text-2xl ${!isPlaying ? 'ml-1' : ''}`}></i>
                         </button>
@@ -1852,13 +1854,24 @@ export default function MusicPanel({
                       </div>
                       
                       <div className="h-px bg-white/20 w-5 mx-auto"></div>
-                      
                       <button 
-                        className="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
-                        style={{ color: 'rgba(167, 255, 90, 0.85)' }}
-                        title="Repeat"
+                        onClick={cycleRepeatMode}
+                        className={`relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 ${
+                          repeatMode === 'off' ? 'hover:opacity-80' : 'bg-[#a7ff5a]/15'
+                        }`}
+                        style={{ color: repeatMode === 'off' ? 'rgba(167, 255, 90, 0.85)' : '#a7ff5a' }}
+                        title={
+                          repeatMode === 'off'
+                            ? 'Repeat: Off'
+                            : repeatMode === 'all'
+                              ? 'Repeat: All tracks'
+                              : 'Repeat: Current track'
+                        }
                       >
                         <i className="fas fa-repeat text-sm"></i>
+                        {repeatMode === 'one' && (
+                          <span className="absolute -bottom-0.5 -right-0.5 text-[8px] font-bold leading-none text-[#a7ff5a]">1</span>
+                        )}
                       </button>
                       <button 
                         onClick={() => currentTrack && toggleLike(currentTrack)}
@@ -1871,25 +1884,48 @@ export default function MusicPanel({
                         <i className={`${currentTrack && isLiked(currentTrack.id) ? 'fas' : 'far'} fa-heart text-sm`}></i>
                       </button>
                       <button 
-                        className="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 hover:opacity-80"
-                        style={{ color: 'rgba(167, 255, 90, 0.85)' }}
-                        title="Add to playlist"
+                        onClick={() => {
+                          if (currentTrack) {
+                            addTrackToPlaylist(currentTrack);
+                          }
+                        }}
+                        disabled={!currentTrack}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 ${
+                          !currentTrack ? 'opacity-40 cursor-not-allowed' : 'hover:opacity-80'
+                        } ${isCurrentTrackInPlaylist ? 'bg-[#a7ff5a]/15' : ''}`}
+                        style={{ color: isCurrentTrackInPlaylist ? '#a7ff5a' : 'rgba(167, 255, 90, 0.85)' }}
+                        title={
+                          !currentTrack
+                            ? 'Select a track first'
+                            : isCurrentTrackInPlaylist
+                              ? 'Already in My Playlist'
+                              : 'Add to My Playlist'
+                        }
                       >
                         <i className="fas fa-plus text-sm"></i>
                       </button>
                     </div>
                   </div>
 
-                  {/* Lyrics - Dynamic based on current time */}
+                  {/* Lyrics - Dynamic based on current time and track */}
                   <div className="text-center max-w-md mt-6">
-                    <div className="text-white/70 text-sm leading-relaxed">
-                      <p className="mb-1 transition-all duration-500 ease-in-out transform">
-                        {getCurrentLyrics().current?.text || " Playing music..."}
-                      </p>
-                      <p className="text-white/50 text-xs transition-all duration-500 ease-in-out transform opacity-60">
-                        {getCurrentLyrics().next?.text || "..."}
-                      </p>
-                    </div>
+                    {getCurrentLyrics().hasLyrics ? (
+                      <div className="text-white/70 text-sm leading-relaxed">
+                        <p className="mb-1 transition-all duration-500 ease-in-out transform animate-pulse-slow">
+                          {getCurrentLyrics().current?.text || "♪ Playing..."}
+                        </p>
+                        {getCurrentLyrics().next && (
+                          <p className="text-white/50 text-xs transition-all duration-500 ease-in-out transform opacity-60">
+                            {getCurrentLyrics().next?.text}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-white/50 text-sm">
+                        <p className="mb-2">♪ No lyrics available ♪</p>
+                        <p className="text-xs text-white/30">Enjoy the music!</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Navigation Controls */}
