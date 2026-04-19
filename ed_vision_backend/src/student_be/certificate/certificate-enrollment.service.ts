@@ -28,7 +28,13 @@ function getBandOrder(certType: string): string[] | null {
 
 const BAND_TOPIC_COUNTS: Record<string, Record<string, number>> = {
   ielts: { '4.0': 18, '5.0': 18, '6.0': 18, '6.5': 18, '7.0': 18, '7.5+': 18 },
-  toeic: { '350-495': 15, '500-599': 15, '600-699': 15, '700-799': 15, '800+': 15 },
+  toeic: {
+    '350-495': 15,
+    '500-599': 15,
+    '600-699': 15,
+    '700-799': 15,
+    '800+': 15,
+  },
   'mos-word': { associate: 12, expert: 10 },
   'mos-excel': { associate: 12, expert: 10 },
   'mos-powerpoint': { associate: 10 },
@@ -111,7 +117,11 @@ export class CertificateEnrollmentService {
 
     // [DEV MODE] Band progression checks bypassed - freely switch bands for testing
     const existing = await this.db.certificateEnrollment.findFirst({
-      where: { student_id: studentId, cert_type: dto.cert_type, status: 'active' },
+      where: {
+        student_id: studentId,
+        cert_type: dto.cert_type,
+        status: 'active',
+      },
     });
     if (existing) {
       await this.db.certificateEnrollment.update({
@@ -128,7 +138,9 @@ export class CertificateEnrollmentService {
       },
       include: { topicProgress: { select: { topic_key: true } } },
     });
-    this.logger.log(`Student ${studentId} enrolled in ${dto.cert_type} ${dto.target_band}`);
+    this.logger.log(
+      `Student ${studentId} enrolled in ${dto.cert_type} ${dto.target_band}`,
+    );
     return this.toDto(created);
   }
 
@@ -147,13 +159,19 @@ export class CertificateEnrollmentService {
 
     await this.db.certificateTopicProgress.upsert({
       where: {
-        enrollment_id_topic_key: { enrollment_id: enrollmentId, topic_key: dto.topic_key },
+        enrollment_id_topic_key: {
+          enrollment_id: enrollmentId,
+          topic_key: dto.topic_key,
+        },
       },
       create: { enrollment_id: enrollmentId, topic_key: dto.topic_key },
       update: {},
     });
 
-    const totalTopics = getTotalTopics(enrollment.cert_type, enrollment.target_band);
+    const totalTopics = getTotalTopics(
+      enrollment.cert_type,
+      enrollment.target_band,
+    );
     const completedCount = enrollment.topicProgress.length + 1;
     if (completedCount >= totalTopics) {
       await this.db.certificateEnrollment.update({
@@ -178,7 +196,8 @@ export class CertificateEnrollmentService {
       where: { id: enrollmentId, student_id: studentId, status: 'active' },
       include: { topicProgress: { select: { topic_key: true } } },
     });
-    if (!enrollment) throw new NotFoundException('Không tìm thấy enrollment đang active.');
+    if (!enrollment)
+      throw new NotFoundException('Không tìm thấy enrollment đang active.');
 
     const updated = await this.db.certificateEnrollment.update({
       where: { id: enrollmentId },

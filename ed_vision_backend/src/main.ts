@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import * as express from 'express';
+import { placementRouter } from './placement/placement.controller';
 
 async function bootstrap() {
   // Create app with reduced logger (only warnings/errors)
@@ -36,6 +37,13 @@ async function bootstrap() {
   // Serve uploaded files (avatars, etc.) as static files
   const uploadsPath = join(__dirname, '..', 'uploads');
   app.use('/uploads', express.static(uploadsPath));
+
+  // Ensure Express routers mounted directly can read JSON/form bodies
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Placement test router
+  app.use('/placement-test', placementRouter);
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   await app.listen(port);

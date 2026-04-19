@@ -17,7 +17,7 @@ export class ClassManagementService {
    */
   async getInstructorClasses(instructorId: number) {
     const now = new Date();
-    
+
     // Get all classes where this instructor is the adviser (active assignment)
     const classGroups = await this.prisma.classGroup.findMany({
       where: {
@@ -25,10 +25,7 @@ export class ClassManagementService {
         adviserAssignments: {
           some: {
             instructor_id: instructorId,
-            OR: [
-              { ended_date: null },
-              { ended_date: { gte: now } },
-            ],
+            OR: [{ ended_date: null }, { ended_date: { gte: now } }],
           },
         },
       },
@@ -53,10 +50,7 @@ export class ClassManagementService {
         adviserAssignments: {
           where: {
             instructor_id: instructorId,
-            OR: [
-              { ended_date: null },
-              { ended_date: { gte: now } },
-            ],
+            OR: [{ ended_date: null }, { ended_date: { gte: now } }],
           },
           include: {
             instructor: {
@@ -299,10 +293,7 @@ export class ClassManagementService {
           where: {
             class_id: classGroup.class_id,
             instructor_id: instructorId,
-            OR: [
-              { ended_date: null },
-              { ended_date: { gte: now } },
-            ],
+            OR: [{ ended_date: null }, { ended_date: { gte: now } }],
           },
         });
         if (!isAdviser)

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { getEnrollment } from '@/services/api/certificateService'
 import type { EnrollmentResponse } from '@/services/api/certificateService'
@@ -27,14 +27,13 @@ import {
   Headphones,
   BookOpen,
   Sparkles,
+  Pencil,
 } from 'lucide-react'
 import {
   CERTIFICATES,
   getSkills,
   getRoadmap,
-  getPracticeTests,
   getMosTasksBycert,
-  getRadarData,
   getBandOption,
   BandSelector,
   RoadmapView,
@@ -60,38 +59,22 @@ const mapCalibrationBandToCertBand = (targetBand?: string | null): CertBand | nu
   return '4.0'
 }
 
-// Community discussions per cert type
-const DISCUSSIONS: Record<string, { q: string; replies: number; time: string }[]> = {
-  ielts: [
-    { q: 'Tips viết intro Task 2 như thế nào?', replies: 12, time: '2 giờ trước' },
-    { q: 'Phân biệt False và Not Given?', replies: 8, time: '5 giờ trước' },
-    { q: 'Cách học từ vựng IELTS hiệu quả?', replies: 20, time: '1 ngày trước' },
-  ],
-  toeic: [
-    { q: 'Chiến lược làm Part 2 nhanh?', replies: 9, time: '3 giờ trước' },
-    { q: 'Cách tăng điểm Reading TOEIC?', replies: 14, time: '6 giờ trước' },
-    { q: 'Business vocabulary quan trọng nhất?', replies: 17, time: '2 ngày trước' },
-  ],
-  'mos-word': [
-    { q: 'Mail Merge có cần Excel không?', replies: 5, time: '4 giờ trước' },
-    { q: 'Cách tạo Table of Contents tự động?', replies: 11, time: '1 ngày trước' },
-    { q: 'Track Changes dùng khi nào?', replies: 7, time: '3 ngày trước' },
-  ],
-  'mos-excel': [
-    { q: 'VLOOKUP vs INDEX MATCH cái nào tốt hơn?', replies: 23, time: '1 giờ trước' },
-    { q: 'Cách làm Pivot Table từ nhiều sheet?', replies: 15, time: '8 giờ trước' },
-    { q: 'Conditional Formatting nâng cao?', replies: 10, time: '2 ngày trước' },
-  ],
-  'mos-powerpoint': [
-    { q: 'Animation có bị trừ điểm không?', replies: 6, time: '5 giờ trước' },
-    { q: 'Cách chèn video vào slide đúng cách?', replies: 8, time: '1 ngày trước' },
-    { q: 'SmartArt nào hay được hỏi trong thi?', replies: 12, time: '4 ngày trước' },
-  ],
+const IELTS_GOAL_BAND_STORAGE_KEY = 'ieltsGoalBand'
+const IELTS_EXAM_DATE_STORAGE_KEY = 'ieltsExamDate'
+const IELTS_CURRENT_BAND_STORAGE_KEY = 'ieltsCurrentBand'
+
+const normalizeBand = (rawValue?: string | null): string | null => {
+  if (!rawValue) return null
+  const numericBand = Number.parseFloat(rawValue)
+  if (Number.isNaN(numericBand)) return null
+  const clamped = Math.min(9, Math.max(0, numericBand))
+  return clamped.toFixed(1)
 }
 
 export default function CertificateDetail() {
   const { certId } = useParams<{ certId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const currentAccountIdValue = user?.account_id ?? user?.id ?? user?.accountId ?? null
   const normalizedAccountId = currentAccountIdValue != null ? String(currentAccountIdValue) : null
@@ -100,13 +83,18 @@ export default function CertificateDetail() {
   const isEnglish = cert.type === 'english'
   const isIelts = cert.id === 'ielts'
 
-  const practiceTests = getPracticeTests(cert.id)
+  const practiceTests: Array<{ icon: React.ReactNode; title: string; meta: string; scoreLabel: string; scoreColor: string }> = []
   const mosTasks = getMosTasksBycert(cert.id)
-  const radarData = getRadarData(cert.id)
-  const discussions = DISCUSSIONS[cert.id] ?? []
+  const discussions: Array<{ q: string; replies: number; time: string }> = []
 
-  const [activeSkill, setActiveSkill] = useState<EnglishSkill>('grammar')
+  const [activeSkill, setActiveSkill] = useState<EnglishSkill>(isIelts ? 'listening' : 'grammar')
   const [selectedBand, setSelectedBand] = useState<CertBand | null>(null)
+  const [manualGoalBand, setManualGoalBand] = useState<string | null>(null)
+  const [manualExamDate, setManualExamDate] = useState<string | null>(null)
+  const [realCurrentBand, setRealCurrentBand] = useState<string | null>(null)
+  const [isIeltsSetupOpen, setIsIeltsSetupOpen] = useState(false)
+  const [draftGoalBand, setDraftGoalBand] = useState('')
+  const [draftExamDate, setDraftExamDate] = useState('')
 
   // ── Dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null)
@@ -114,13 +102,65 @@ export default function CertificateDetail() {
     getEnrollment(cert.id).then(setEnrollment).catch(() => {})
   }, [cert.id])
 
+  useEffect(() => {
+    if (!isIelts) return
+
+    try {
+      const savedGoal = window.localStorage.getItem(IELTS_GOAL_BAND_STORAGE_KEY)
+      const savedExamDate = window.localStorage.getItem(IELTS_EXAM_DATE_STORAGE_KEY)
+      const savedCurrentBand = window.localStorage.getItem(IELTS_CURRENT_BAND_STORAGE_KEY)
+
+      setManualGoalBand(normalizeBand(savedGoal))
+      setManualExamDate(savedExamDate || null)
+      setRealCurrentBand(normalizeBand(savedCurrentBand))
+    } catch {
+      // ignore storage error
+    }
+  }, [isIelts])
+
+  useEffect(() => {
+    if (!isIelts) return
+
+    const params = new URLSearchParams(location.search)
+    const incomingGoalBand = normalizeBand(params.get('goalBand'))
+    const incomingCurrentBand = normalizeBand(params.get('currentBand'))
+    const incomingExamDate = params.get('examDate')
+
+    if (incomingGoalBand) {
+      setManualGoalBand(incomingGoalBand)
+      try {
+        window.localStorage.setItem(IELTS_GOAL_BAND_STORAGE_KEY, incomingGoalBand)
+      } catch {
+        // ignore storage error
+      }
+    }
+
+    if (incomingCurrentBand) {
+      setRealCurrentBand(incomingCurrentBand)
+      try {
+        window.localStorage.setItem(IELTS_CURRENT_BAND_STORAGE_KEY, incomingCurrentBand)
+      } catch {
+        // ignore storage error
+      }
+    }
+
+    if (incomingExamDate) {
+      setManualExamDate(incomingExamDate)
+      try {
+        window.localStorage.setItem(IELTS_EXAM_DATE_STORAGE_KEY, incomingExamDate)
+      } catch {
+        // ignore storage error
+      }
+    }
+  }, [isIelts, location.search])
+
   // onboarding removed: no localStorage calibration to load
 
   // For IELTS, prefer enrollment.target_band if present, otherwise use UI selection
   const derivedIeltsBand = useMemo(() => {
     if (!isIelts) return null
-    return mapCalibrationBandToCertBand(enrollment?.target_band ?? null)
-  }, [isIelts, enrollment?.target_band])
+    return mapCalibrationBandToCertBand(manualGoalBand ?? enrollment?.target_band ?? null)
+  }, [isIelts, manualGoalBand, enrollment?.target_band])
 
   const effectiveSelectedBand = isIelts ? derivedIeltsBand : selectedBand
 
@@ -133,6 +173,36 @@ export default function CertificateDetail() {
     // Reset selection — onboarding removed so simply reset
     setSelectedBand(null)
   }, [])
+
+  const handleOpenIeltsSetup = useCallback(() => {
+    setDraftGoalBand(manualGoalBand ?? enrollment?.target_band ?? '')
+    setDraftExamDate(manualExamDate ?? '')
+    setIsIeltsSetupOpen(true)
+  }, [manualGoalBand, enrollment?.target_band, manualExamDate])
+
+  const handleSaveIeltsSetup = useCallback(() => {
+    const normalizedGoalBand = normalizeBand(draftGoalBand)
+
+    setManualGoalBand(normalizedGoalBand)
+    setManualExamDate(draftExamDate || null)
+    setIsIeltsSetupOpen(false)
+
+    try {
+      if (normalizedGoalBand) {
+        window.localStorage.setItem(IELTS_GOAL_BAND_STORAGE_KEY, normalizedGoalBand)
+      } else {
+        window.localStorage.removeItem(IELTS_GOAL_BAND_STORAGE_KEY)
+      }
+
+      if (draftExamDate) {
+        window.localStorage.setItem(IELTS_EXAM_DATE_STORAGE_KEY, draftExamDate)
+      } else {
+        window.localStorage.removeItem(IELTS_EXAM_DATE_STORAGE_KEY)
+      }
+    } catch {
+      // ignore storage error
+    }
+  }, [draftGoalBand, draftExamDate])
 
 
   // ── MOS Word Simulator ────────────────────────────────────────────────
@@ -159,6 +229,14 @@ export default function CertificateDetail() {
         : t.done,
     })),
   }))
+  const radarData = useMemo(() => (
+    skills.map((section) => {
+      const total = section.topics.length
+      if (!total) return 0
+      const completed = section.topics.filter((topic) => topic.done).length
+      return Math.round((completed / total) * 100)
+    })
+  ), [skills])
   const radarLabels = skills.map((s) => s.label)
   const roadmapSteps = getRoadmap(cert.id, effectiveSelectedBand ?? undefined)
   const activeSkillData = skills.find((s) => s.id === activeSkill)
@@ -204,6 +282,19 @@ export default function CertificateDetail() {
     skills.find((section) => section.id === 'writing')?.topics.find((t) => t.topicKey)?.topicKey
   ), [skills])
 
+  const skillRoadmapTopicKey = useMemo(() => ({
+    reading: skills.find((section) => section.id === 'reading')?.topics.find((t) => t.topicKey)?.topicKey,
+    listening: listeningTopicKey,
+    writing: writingTopicKey,
+    speaking: speakingTopicKey,
+  }), [skills, listeningTopicKey, writingTopicKey, speakingTopicKey])
+
+  const handleOpenSkillRoadmap = useCallback((skill: 'reading' | 'listening' | 'writing' | 'speaking') => {
+    const topicKey = skillRoadmapTopicKey[skill]
+    if (!topicKey) return
+    navigate(buildLessonUrl(topicKey))
+  }, [skillRoadmapTopicKey, navigate, buildLessonUrl])
+
   const highlightTopics = (activeSkillData?.topics ?? []).slice(0, 3)
   const practiceRecommendations = practiceTests.slice(0, 2)
   const streakDays = Math.min(21, Math.max(1, Math.round(realProgress / 5) || 1))
@@ -224,12 +315,14 @@ export default function CertificateDetail() {
     return null
   }, [bandOption])
 
-  const goalBandDisplay = enrollment?.target_band ?? goalBandFallback ?? '--'
-  const currentBandDisplay = '0.0'
+  const goalBandDisplay = isIelts
+    ? (manualGoalBand ?? enrollment?.target_band ?? '--')
+    : (enrollment?.target_band ?? goalBandFallback ?? '--')
+  const currentBandDisplay = realCurrentBand ?? '--'
   const goalBandNumber = Number(goalBandDisplay) || 0
   const currentBandNumber = Number(currentBandDisplay) || 0
   const goalProgressPercent = goalBandNumber > 0 ? Math.min(100, Math.round((currentBandNumber / goalBandNumber) * 100)) : 0
-  const examDateStr = null
+  const examDateStr = manualExamDate
   const dDayValue = useMemo(() => {
     if (!examDateStr) return null
     const today = new Date()
@@ -281,8 +374,7 @@ export default function CertificateDetail() {
           <span className="font-semibold text-slate-700">{cert.label}</span>
         </nav>
 
-        {/* ── Cert Hero ── */}
-        {isIelts ? (
+        {isIelts && (
           <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1b1230] via-[#281d52] to-[#472669] p-8 text-white">
             <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle at top right, rgba(255,255,255,0.35), transparent 50%)' }} />
             <div className="relative z-10 flex flex-col lg:flex-row items-start gap-8">
@@ -314,12 +406,59 @@ export default function CertificateDetail() {
                     <ArrowRightCircle className="w-4 h-4" /> Tiếp tục lộ trình
                   </button>
                   <button
-                    onClick={() => navigate('/student/certificate-review')}
+                    onClick={handleOpenIeltsSetup}
                     className="px-4 py-3 rounded-2xl border border-white/20 text-sm font-semibold text-white/80 hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     Cập nhật mục tiêu
                   </button>
                 </div>
+
+                {isIeltsSetupOpen && (
+                  <div className="mt-4 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur space-y-4">
+                    <h3 className="text-sm font-semibold text-white">Thiết lập Goal Band & D-Day</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="text-xs text-white/80 space-y-1 block">
+                        Goal Band
+                        <input
+                          value={draftGoalBand}
+                          onChange={(e) => setDraftGoalBand(e.target.value)}
+                          inputMode="decimal"
+                          placeholder="Ví dụ: 6.5"
+                          className="w-full px-3 py-2 rounded-xl border border-white/20 bg-black/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                        />
+                      </label>
+
+                      <label className="text-xs text-white/80 space-y-1 block">
+                        Ngày thi (D-Day)
+                        <input
+                          type="date"
+                          value={draftExamDate}
+                          onChange={(e) => setDraftExamDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-white/20 bg-black/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+                      Current Band đang nhận từ kết quả test thật truyền vào qua URL `?currentBand=` hoặc localStorage key `ieltsCurrentBand`.
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setIsIeltsSetupOpen(false)}
+                        className="px-3 py-2 rounded-xl border border-white/20 text-xs font-semibold text-white/80 hover:bg-white/10 transition-colors"
+                      >
+                        Huỷ
+                      </button>
+                      <button
+                        onClick={handleSaveIeltsSetup}
+                        className="px-3 py-2 rounded-xl bg-white text-[#1b1230] text-xs font-semibold hover:bg-white/90 transition-colors"
+                      >
+                        Lưu thiết lập
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="w-full lg:w-80 bg-white/10 border border-white/15 rounded-3xl p-5 backdrop-blur">
                 <p className="text-sm font-semibold text-white/80 flex items-center gap-2 mb-4">
@@ -354,7 +493,10 @@ export default function CertificateDetail() {
               </div>
             </div>
           </section>
-        ) : (
+        )}
+
+        {/* ── Cert Hero ── */}
+        {!isIelts && (
           <section className={`bg-gradient-to-r ${cert.bgFrom} ${cert.bgTo} rounded-2xl p-6 text-white`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -403,312 +545,75 @@ export default function CertificateDetail() {
 
         {isIelts && (
           <>
-            <section className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-6">
-                <div className="relative w-40 h-40 shrink-0">
-                  <div
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      background: `conic-gradient(#6366f1 ${goalProgressPercent}%, #e2e8f0 ${goalProgressPercent}% 100%)`,
-                    }}
-                  />
-                  <div className="absolute inset-4 bg-white rounded-full border border-indigo-50 flex flex-col items-center justify-center gap-1">
-                    <span className="text-xs text-slate-400">Current Band</span>
-                    <span className="text-4xl font-black text-indigo-600">{currentBandDisplay}</span>
-                    <span className="text-xs text-slate-400">{goalProgressPercent}% Goal</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm uppercase tracking-wide text-slate-400 mb-1">Goal Band</p>
-                  <p className="text-4xl font-bold text-slate-800">{goalBandDisplay}</p>
-                  <p className="mt-3 text-slate-500 text-sm flex items-center gap-2">
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
-                    Tiến độ {goalProgressPercent}% – tiếp tục nhé!
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100 rounded-3xl p-5 border border-blue-100 flex flex-col justify-between">
-                <div>
-                  <p className="text-sm text-blue-500 font-semibold">Goal Band</p>
-                  <p className="text-4xl font-black text-blue-700">{goalBandDisplay}</p>
-                  <p className="text-sm text-blue-500 mt-2">Đặt mục tiêu rõ ràng giúp bạn tăng tốc từng ngày.</p>
-                </div>
-                <div className="mt-4 flex items-center gap-3 text-sm text-slate-500">
-                  <span className="text-2xl">🦉</span>
-                  <p>Nói lớn lên nhé! Mỗi lần luyện là một bước gần hơn.</p>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-rose-50 to-orange-50 rounded-3xl p-5 border border-rose-100 flex flex-col justify-between">
-                <div>
-                  <p className="text-sm text-rose-500 font-semibold">D-Day</p>
-                  <p className="text-4xl font-black text-rose-600">{dDayValue ?? '—'}</p>
-                  <p className="text-sm text-rose-500 mt-2">
-                    {examDateLabel ? `Còn ${dDayValue ?? 0} ngày tới ${examDateLabel}` : 'Chưa đặt ngày thi'}
-                  </p>
-                </div>
-                <div className="mt-4 text-xs text-rose-400">
-                  Duy trì luyện tập ít nhất 60 phút/ngày để đạt mục tiêu nhé!
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 flex flex-col justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500 flex items-center gap-2"><Flame className="w-4 h-4 text-amber-500" /> Chuỗi ngày luyện tập</p>
-                  <p className="text-4xl font-black text-slate-800 mt-2">{streakDays} ngày</p>
-                  <p className="text-xs text-slate-400">Giữ streak để được mở khóa đề thi nâng cao.</p>
-                </div>
-                <div className="mt-4">
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-                    <span className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
-                      <span
-                        className="block h-full bg-gradient-to-r from-amber-400 to-orange-500"
-                        style={{ width: `${Math.min(100, (streakDays / 14) * 100)}%` }}
-                      />
-                    </span>
-                    <span>14d</span>
-                  </div>
-                  <p className="text-xs text-amber-600 font-semibold">Còn {Math.max(0, 14 - streakDays)} ngày để đạt streak vàng!</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-              <div className="xl:col-span-2">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="h-7 w-1 rounded-full bg-gradient-to-b from-indigo-400 to-pink-400" />
-                  <h2 className="text-xl font-bold text-slate-800">IELTS Focus Lab</h2>
-                </div>
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="flex overflow-x-auto border-b border-slate-100">
-                    {skills.map((skill) => (
-                      <button
-                        key={skill.id}
-                        onClick={() => setActiveSkill(skill.id)}
-                        className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 border-b-2 cursor-pointer ${
-                          activeSkill === skill.id
-                            ? 'border-purple-500 text-purple-700 bg-purple-50'
-                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className={activeSkill === skill.id ? skill.color : 'text-slate-400'}>
-                          {skill.icon}
-                        </span>
-                        {skill.label}
-                      </button>
-                    ))}
-                  </div>
-                  {activeSkillData && (
-                    <div className="p-6">
-                      <div className="flex items-start gap-3 mb-5">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeSkillData.bg}`}>
-                          <span className={activeSkillData.color}>{activeSkillData.icon}</span>
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-slate-800">{activeSkillData.label}</h3>
-                          <p className="text-sm text-slate-400">
-                            {activeSkillData.topics.filter((t) => t.done).length}/{activeSkillData.topics.length} chủ đề đã hoàn thành
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {activeSkillData.topics.map((topic, i) => (
-                          <div
-                            key={i}
-                            onClick={() => topic.topicKey && navigate(buildLessonUrl(topic.topicKey))}
-                            className={`flex items-start gap-2.5 p-3.5 rounded-xl border transition-all cursor-pointer hover:shadow-sm group ${
-                              topic.done
-                                ? 'bg-emerald-50 border-emerald-100 hover:border-emerald-300'
-                                : 'bg-white border-slate-100 hover:border-purple-200 hover:bg-purple-50/30'
-                            }`}
-                          >
-                            <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${topic.done ? 'bg-emerald-500' : 'bg-slate-100'}`}>
-                              {topic.done ? (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                              ) : (
-                                <span className="text-xs font-bold text-slate-400">{i + 1}</span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className={`text-sm font-semibold ${topic.done ? 'text-emerald-700' : 'text-slate-700'}`}>
-                                {topic.title}
-                              </div>
-                              <div className="text-xs text-slate-400 mt-0.5">{topic.desc}</div>
-                              {topic.topicKey && (
-                                <div className="mt-1.5 text-xs text-purple-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                  <span>Xem bài học chi tiết</span>
-                                  <ChevronRight className="w-3 h-3" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-4 p-4 rounded-xl bg-purple-50/60">
-                        <div className="text-sm font-bold text-purple-600 mb-2 flex items-center gap-1.5">
-                          <Zap className="w-4 h-4" /> Mẹo học tập
-                        </div>
-                        <ul className="space-y-1.5">
-                          {activeSkillData.tips.map((tip, i) => (
-                            <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                              <span className="mt-0.5 text-slate-400">•</span> {tip}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="mt-4 flex gap-2.5">
-                        <button
-                          onClick={() => {
-                            const firstTopic = activeSkillData?.topics.find((t) => t.topicKey && !t.done) ?? activeSkillData?.topics.find((t) => t.topicKey)
-                            if (firstTopic?.topicKey) navigate(buildLessonUrl(firstTopic.topicKey))
-                          }}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-medium rounded-xl hover:from-purple-600 hover:to-blue-600 transition-colors cursor-pointer"
-                        >
-                          <PlayCircle className="w-4 h-4" /> Bắt đầu học
-                        </button>
-                        <button
-                          onClick={() => {
-                            const firstTopic = activeSkillData?.topics.find((t) => t.topicKey)
-                            if (firstTopic?.topicKey) navigate(buildLessonUrl(firstTopic.topicKey, 'flashcard'))
-                          }}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          <Library className="w-4 h-4" /> Flashcard
-                        </button>
-                      </div>
+            {/* Bottom: Streak (bigger, more eye-catching) + Progress to Goal Band (long horizontal) */}
+            <section className="flex flex-col sm:flex-row gap-3">
+              {/* Streak - Bigger & More Prominent */}
+              <div className="sm:w-40 w-full bg-gradient-to-br from-orange-400 via-amber-500 to-yellow-400 rounded-xl border-2 border-orange-500 px-5 py-4 shadow-lg">
+                <div className="flex items-center gap-3">
+                  {/* Big Fire Icon with glow */}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-orange-300 blur-md rounded-full" />
+                    <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Flame className="w-7 h-7 text-white" />
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
-                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Headphones className="w-4 h-4 text-purple-500" /> Lối tắt luyện tập
-                  </h3>
-                  <div className="space-y-3">
-                    {[
-                      { icon: <Headphones className="w-5 h-5 text-blue-500" />, title: 'Listening Lab 25’', desc: 'Chọn Section 3-4 theo band hiện tại.', topicKey: listeningTopicKey },
-                      { icon: <Mic2 className="w-5 h-5 text-rose-500" />, title: 'Speaking Coach', desc: 'Ghi âm câu trả lời Part 2 & Part 3.', topicKey: speakingTopicKey, mode: 'flashcard' },
-                      { icon: <BookOpen className="w-5 h-5 text-amber-500" />, title: 'Writing Clinic', desc: 'Ôn cấu trúc Task 2 + checklist 4 tiêu chí.', topicKey: writingTopicKey },
-                    ].map((action) => (
-                      <button
-                        key={action.title}
-                        onClick={() => navigateToTopic(action.topicKey, action.mode)}
-                        className={`w-full text-left flex items-start gap-3 p-3 rounded-2xl border transition ${action.topicKey ? 'hover:border-purple-200 hover:bg-purple-50/40 cursor-pointer' : 'opacity-60 cursor-not-allowed bg-slate-50 border-slate-100'}`}
-                      >
-                        <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center">
-                          {action.icon}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-800">{action.title}</p>
-                          <p className="text-xs text-slate-500">{action.desc}</p>
-                        </div>
-                      </button>
-                    ))}
                   </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl p-5 text-white">
-                  <p className="text-sm font-semibold text-white/80">Weekly Pulse</p>
-                  <h3 className="text-2xl font-bold mt-1">{realProgress}% tiến độ</h3>
-                  <p className="text-sm text-white/70">
-                    Hoàn thành ít nhất 3 đề trong tuần để mở khóa đề Speaking nâng cao.
-                  </p>
-                  <div className="mt-4 space-y-3">
-                    {practiceRecommendations.map((test) => (
-                      <div key={test.title} className="bg-white/10 rounded-2xl px-3 py-2 text-sm flex items-center gap-2">
-                        <span className="text-white">{test.icon}</span>
-                        <div>
-                          <p className="font-semibold text-white">{test.title}</p>
-                          <p className="text-xs text-white/70">{test.meta}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-purple-500" /> Lộ trình học
-                </h3>
-                <RoadmapView steps={roadmapSteps} />
-              </div>
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                    <FileCheck className="w-4 h-4 text-purple-500" /> Kho đề thi thử
-                  </h3>
-                  <button className="text-sm text-purple-600 font-medium hover:underline flex items-center gap-1 cursor-pointer">
-                    Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <PracticeTestList tests={practiceTests} />
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {radarData.length > 0 && (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Star className="w-4 h-4 text-purple-500" /> Phân tích kỹ năng
-                  </h3>
-                  <div className="h-56 relative">
-                    <SkillRadar data={radarData} labels={radarLabels} />
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="p-2.5 bg-slate-50 rounded-xl text-center">
-                      <p className="text-xs text-slate-400">Mạnh nhất</p>
-                      <p className="font-bold text-emerald-600 text-sm">{strongest}</p>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 rounded-xl text-center">
-                      <p className="text-xs text-slate-400">Yếu nhất</p>
-                      <p className="font-bold text-orange-500 text-sm">{weakest}</p>
+                  <div>
+                    <p className="text-xs font-bold text-white/90 uppercase tracking-wide">Streak</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-white">{streakDays}</span>
+                      <span className="text-sm font-bold text-white/90">ngày</span>
                     </div>
                   </div>
                 </div>
-              )}
-
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-purple-500" /> Thảo luận gần đây
-                </h3>
-                <div className="space-y-3">
-                  {discussions.map((item, i) => (
-                    <div key={i} className="pb-3 border-b border-slate-50 last:border-0 last:pb-0">
-                      <p className="text-sm font-medium text-slate-700 hover:text-purple-600 cursor-pointer">
-                        {item.q}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="w-3 h-3" /> {item.replies}
-                        </span>
-                        <span>• {item.time}</span>
-                      </div>
-                    </div>
+                {/* Flame trail effect */}
+                <div className="flex gap-1 mt-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-2 w-2 bg-orange-300 rounded-full animate-pulse"
+                      style={{ opacity: 0.5 + (i * 0.1), animationDelay: `${i * 0.1}s` }}
+                    />
                   ))}
                 </div>
-                <button className="w-full mt-4 text-sm text-purple-600 font-medium hover:bg-purple-50 py-2 rounded-xl transition-colors cursor-pointer">
-                  Xem cộng đồng
-                </button>
+              </div>
+
+              {/* Progress to Goal Band - Long horizontal with fun animation */}
+              <div className="flex-1 flex items-center gap-3 bg-gradient-to-r from-violet-100 via-purple-100 to-indigo-100 rounded-xl border border-violet-200 px-4 py-3">
+                <div className="shrink-0">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-violet-200">
+                    <Target className="w-5 h-5 text-violet-500" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <p className="text-xs text-violet-600 font-medium">
+                      Band {effectiveSelectedBand || '--'} → {goalBandDisplay}
+                    </p>
+                    <p className="text-xs font-bold text-violet-500">
+                      {Math.round(((Number(goalBandDisplay) || 0) - (Number(effectiveSelectedBand || '0') || 0)) * 10)} bước
+                    </p>
+                  </div>
+                  {/* Fun progress bar with animation */}
+                  <div className="h-3 bg-violet-200 rounded-full overflow-hidden relative">
+                    <div
+                      className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full transition-all duration-1000 relative"
+                      style={{ width: '30%' }}
+                    >
+                      {/* Walking character */}
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
+                        <span className="text-lg animate-bounce" style={{ animationDuration: '0.5s' }}>🏃</span>
+                      </div>
+                    </div>
+                    {/* Goal marker */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <span className="text-sm">🎯</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-violet-500 mt-1">Đang trên đường chinh phục Goal! 💪</p>
+                </div>
               </div>
             </section>
 
-            <section>
-              <div className="flex items-center gap-3 mb-5">
-                <div className="h-7 w-1 rounded-full bg-gradient-to-b from-purple-400 to-blue-400" />
-                <h2 className="text-xl font-bold text-slate-800">Tổng quan tất cả kỹ năng</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {skills.map((skill) => (
-                  <SkillTopicCard key={skill.id} section={skill} />
-                ))}
-              </div>
-            </section>
           </>
         )}
 
@@ -1109,6 +1014,246 @@ export default function CertificateDetail() {
                 <button className="w-full mt-4 text-sm text-purple-600 font-medium hover:bg-purple-50 py-2 rounded-xl transition-colors cursor-pointer">
                   Xem cộng đồng
                 </button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            4 SKILL ROADMAPS (Reading, Listening, Writing, Speaking)
+        ══════════════════════════════════════════════════════════════════════ */}
+        {isIelts && (
+          <>
+            <section>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="h-7 w-1 rounded-full bg-gradient-to-b from-blue-400 to-violet-400" />
+                <h2 className="text-xl font-bold text-slate-800">Lộ trình chi tiết theo kỹ năng</h2>
+              </div>
+
+              {/* 4 Skill Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* READING */}
+                <div
+                  onClick={() => handleOpenSkillRoadmap('reading')}
+                  className={`bg-white rounded-2xl border shadow-sm p-5 transition-all ${
+                    skillRoadmapTopicKey.reading
+                      ? 'border-slate-100 cursor-pointer hover:border-blue-200 hover:shadow-md'
+                      : 'border-slate-100 opacity-70 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">Reading</h3>
+                      <p className="text-xs text-slate-400">Kỹ năng đọc hiểu</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { sub: 'Skimming & Scanning', progress: 75 },
+                      { sub: 'True/False/Not Given', progress: 60 },
+                      { sub: 'Matching Headings', progress: 50 },
+                      { sub: 'Multiple Choice', progress: 45 },
+                      { sub: 'Sentence Completion', progress: 40 },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-600">{item.sub}</span>
+                            <span className="text-slate-400">{item.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${item.progress}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* LISTENING */}
+                <div
+                  onClick={() => handleOpenSkillRoadmap('listening')}
+                  className={`bg-white rounded-2xl border shadow-sm p-5 transition-all ${
+                    skillRoadmapTopicKey.listening
+                      ? 'border-slate-100 cursor-pointer hover:border-green-200 hover:shadow-md'
+                      : 'border-slate-100 opacity-70 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                      <Headphones className="w-5 h-5 text-green-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">Listening</h3>
+                      <p className="text-xs text-slate-400">Kỹ năng nghe hiểu</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { sub: 'Form Completion', progress: 80 },
+                      { sub: 'Multiple Choice', progress: 65 },
+                      { sub: 'Matching', progress: 55 },
+                      { sub: 'Map/Diagram', progress: 45 },
+                      { sub: 'Short Answers', progress: 40 },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-600">{item.sub}</span>
+                            <span className="text-slate-400">{item.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${item.progress}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* WRITING */}
+                <div
+                  onClick={() => handleOpenSkillRoadmap('writing')}
+                  className={`bg-white rounded-2xl border shadow-sm p-5 transition-all ${
+                    skillRoadmapTopicKey.writing
+                      ? 'border-slate-100 cursor-pointer hover:border-orange-200 hover:shadow-md'
+                      : 'border-slate-100 opacity-70 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+                      <Pencil className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">Writing</h3>
+                      <p className="text-xs text-slate-400">Kỹ năng viết</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { sub: 'Task 1 - Report', progress: 70 },
+                      { sub: 'Task 2 - Essay', progress: 55 },
+                      { sub: 'Paraphrasing', progress: 65 },
+                      { sub: 'Cohesion & Coherence', progress: 50 },
+                      { sub: 'Grammar Range', progress: 45 },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-600">{item.sub}</span>
+                            <span className="text-slate-400">{item.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${item.progress}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SPEAKING */}
+                <div
+                  onClick={() => handleOpenSkillRoadmap('speaking')}
+                  className={`bg-white rounded-2xl border shadow-sm p-5 transition-all ${
+                    skillRoadmapTopicKey.speaking
+                      ? 'border-slate-100 cursor-pointer hover:border-pink-200 hover:shadow-md'
+                      : 'border-slate-100 opacity-70 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
+                      <Mic2 className="w-5 h-5 text-pink-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">Speaking</h3>
+                      <p className="text-xs text-slate-400">Kỹ năng nói</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { sub: 'Part 1 - Introduction', progress: 85 },
+                      { sub: 'Part 2 - Long Turn', progress: 60 },
+                      { sub: 'Part 3 - Discussion', progress: 50 },
+                      { sub: 'Pronunciation', progress: 70 },
+                      { sub: 'Fluency', progress: 55 },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-600">{item.sub}</span>
+                            <span className="text-slate-400">{item.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${item.progress}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            VOCABULARY & GRAMMAR SYSTEM
+        ══════════════════════════════════════════════════════════════════════ */}
+        {isIelts && (
+          <>
+            {/* Từ vựng theo chủ đề */}
+            <section className="mt-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="h-7 w-1 rounded-full bg-gradient-to-b from-violet-400 to-amber-400" />
+                <h2 className="text-xl font-bold text-slate-800">Từ vựng theo chủ đề</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { topic: 'Education', count: 150, icon: '📚' },
+                  { topic: 'Technology', count: 120, icon: '💻' },
+                  { topic: 'Environment', count: 100, icon: '🌍' },
+                  { topic: 'Health', count: 90, icon: '🏥' },
+                  { topic: 'Business', count: 130, icon: '💼' },
+                  { topic: 'Travel', count: 80, icon: '✈️' },
+                  { topic: 'Culture', count: 110, icon: '🎭' },
+                  { topic: 'Science', count: 95, icon: '🔬' },
+                ].map((item, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer">
+                    <div className="text-2xl mb-1">{item.icon}</div>
+                    <p className="font-semibold text-slate-800 text-sm">{item.topic}</p>
+                    <p className="text-xs text-slate-400">{item.count} từ</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Ngữ pháp theo cấp độ */}
+            <section className="mt-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="h-7 w-1 rounded-full bg-gradient-to-b from-amber-400 to-red-400" />
+                <h2 className="text-xl font-bold text-slate-800">Ngữ pháp theo cấp độ</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { level: 'Basic', grammar: 'Tenses cơ bản, S-V agreement, Articles', progress: 90 },
+                  { level: 'Intermediate', grammar: 'Passive Voice, Conditionals, Reported Speech', progress: 70 },
+                  { level: 'Advanced', grammar: 'Complex structures, Inversions, Cleft sentences', progress: 45 },
+                ].map((item, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-slate-100 p-5">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-bold text-slate-800">{item.level}</span>
+                      <span className="text-sm text-slate-500">{item.progress}%</span>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-3">{item.grammar}</p>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full" style={{ width: `${item.progress}%` }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
           </>

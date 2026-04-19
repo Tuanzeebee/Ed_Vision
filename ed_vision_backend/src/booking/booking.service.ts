@@ -180,19 +180,22 @@ export class BookingService {
           existingAppointment.booker_account_id !== accountId ||
           existingAppointment.booker_role !== bookerRole;
 
-				const updatedAppointment = await this.repository.reactivateCancelledAppointment(
-					existingAppointment.appointment_id,
-					status,
-					meetingType as any,
-					dto.meetingPurpose,
-					needsBookerUpdate ? accountId : undefined,
-					needsBookerUpdate ? bookerRole : undefined
-				);
+        const updatedAppointment =
+          await this.repository.reactivateCancelledAppointment(
+            existingAppointment.appointment_id,
+            status,
+            meetingType as any,
+            dto.meetingPurpose,
+            needsBookerUpdate ? accountId : undefined,
+            needsBookerUpdate ? bookerRole : undefined,
+          );
 
-				// If booker changed, delete old appointment contact
-				if (needsBookerUpdate) {
-					await this.repository.deleteAppointmentContact(updatedAppointment.appointment_id);
-				}
+        // If booker changed, delete old appointment contact
+        if (needsBookerUpdate) {
+          await this.repository.deleteAppointmentContact(
+            updatedAppointment.appointment_id,
+          );
+        }
 
         // re-fetch to include slot and related info
         const full = await this.repository.getAppointmentById(
@@ -372,8 +375,6 @@ export class BookingService {
         // Parse thành UTC
         const appointmentTimeUTC = new Date(datetimeVN);
 
-        
-
         // Tạo reminder cho người đặt lịch (student hoặc parent)
         await this.reminderScheduler.createRemindersForAppointment(
           appointment.appointment_id,
@@ -386,7 +387,7 @@ export class BookingService {
         if (instructorId) {
           const instructorAccount =
             await this.repository.getInstructorById(instructorId);
-            if (instructorAccount) {
+          if (instructorAccount) {
             await this.reminderScheduler.createRemindersForAppointment(
               appointment.appointment_id,
               instructorAccount.account_id,
@@ -434,8 +435,6 @@ export class BookingService {
               bookerAccount?.profile?.full_name ||
               (bookerRole === 'parent' ? 'Phụ huynh' : studentName);
           }
-
-          
 
           // Format date
           const slotDate = fullWithSlot?.slot?.date?.specific_date

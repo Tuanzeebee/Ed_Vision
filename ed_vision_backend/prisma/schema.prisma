@@ -45,6 +45,7 @@ model Account {
   deviceFingerprints DeviceFingerprint[] // Device fingerprints for attendance verification
   approvedAttempts   AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
   verificationAttempts AttendanceVerificationAttempt[] // All verification attempts by this account
+  prismaplacements   IeltsPlacementSession[]
   @@map("Account")
 }
 
@@ -837,4 +838,91 @@ model CertificateTopicProgress {
   @@unique([enrollment_id, topic_key])
   @@index([enrollment_id])
   @@map("CertificateTopicProgress")
+}
+
+enum PlacementStatus {
+  in_progress
+  completed
+  abandoned
+}
+
+enum ConfidenceLevel {
+  low
+  medium
+  high
+}
+
+model IeltsQuestion {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skill             String
+  subSkillCode      String?                @map("sub_skill_code")
+  questionType      String                 @map("question_type")
+  questionText      String                 @map("question_text")
+  options           Json?
+  correctAnswer     String                 @map("correct_answer")
+  explanation       String?
+  keywords          String[]               @default([])
+  bandMin           Decimal                @map("band_min") @db.Decimal(2, 1)
+  bandMax           Decimal                @map("band_max") @db.Decimal(2, 1)
+  difficultyWeight  Decimal                @default(1.0) @map("difficulty_weight") @db.Decimal(3, 2)
+  expectedTimeSec   Int                    @default(60) @map("expected_time_sec")
+  errorTag          String?                @map("error_tag")
+  topicTags         String[]               @default([]) @map("topic_tags")
+  isAiGenerated     Boolean                @default(false) @map("is_ai_generated")
+  aiModel           String?                @map("ai_model")
+  seedQuestionIds   String[]               @default([]) @db.Uuid @map("seed_question_ids")
+  status            String                 @default("draft")
+  qualityScore      Int?                   @map("quality_score") @db.SmallInt
+  usedCount         Int                    @default(0) @map("used_count")
+  correctRate       Decimal?               @map("correct_rate") @db.Decimal(4, 3)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  placementAnswers  IeltsPlacementAnswer[] @relation("PlacementAnswers")
+
+  @@index([skill, status], map: "idx_ielts_q_skill_status")
+  @@index([bandMin, bandMax], map: "idx_ielts_q_band")
+  @@index([errorTag], map: "idx_ielts_q_error_tag")
+  @@map("ielts_questions")
+}
+
+model IeltsPlacementSession {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId            Int                   @map("account_id")
+  user                 Account               @relation(fields: [accountId], references: [account_id], onDelete: Cascade)
+  skillsTested         String[]              @map("skills_tested")
+  status               PlacementStatus       @default(in_progress)
+  currentEstimatedBand Decimal               @default(5.0) @map("current_estimated_band") @db.Decimal(2, 1)
+  usedQuestionIds      String[]              @default([]) @db.Uuid @map("used_question_ids")
+  totalQuestionsAsked  Int                   @default(0) @map("total_questions_asked")
+  consecutiveCorrect   Int                   @default(0) @map("consecutive_correct")
+  consecutiveWrong     Int                   @default(0) @map("consecutive_wrong")
+  startedAt            DateTime              @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt          DateTime?             @map("completed_at") @db.Timestamptz(6)
+  finalBand            Decimal?              @map("final_band") @db.Decimal(2, 1)
+  skillBands           Json?                 @map("skill_bands")
+  confidenceLevel      ConfidenceLevel?      @map("confidence_level")
+  answers              IeltsPlacementAnswer[]
+
+  @@index([accountId, status], map: "idx_placement_account")
+  @@map("ielts_placement_sessions")
+}
+
+model IeltsPlacementAnswer {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId        String                @db.Uuid @map("session_id")
+  session          IeltsPlacementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId       String                @db.Uuid @map("question_id")
+  question         IeltsQuestion         @relation("PlacementAnswers", fields: [questionId], references: [id])
+  questionOrder    Int                   @map("question_order") @db.SmallInt
+  bandAtTime       Decimal               @map("band_at_time") @db.Decimal(2, 1)
+  bandMid          Decimal               @map("band_mid") @db.Decimal(2, 1)
+  difficultyWeight Decimal               @map("difficulty_weight") @db.Decimal(3, 2)
+  userAnswer       String?               @map("user_answer")
+  isCorrect        Boolean?              @map("is_correct")
+  timeTakenSec     Int?                  @map("time_taken_sec")
+  answeredAt       DateTime              @default(now()) @map("answered_at") @db.Timestamptz(6)
+
+  @@unique([sessionId, questionOrder])
+  @@index([sessionId, questionOrder], map: "idx_placement_answers_session")
+  @@map("ielts_placement_answers")
 }
