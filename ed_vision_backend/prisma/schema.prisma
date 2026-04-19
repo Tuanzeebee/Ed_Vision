@@ -813,31 +813,27 @@ model CampusNetworkConfig {
 /// Constraint: only ONE active enrollment per (student, cert_type) at a time.
 /// To switch bands the student must complete the current band first.
 model CertificateEnrollment {
-  id            Int       @id @default(autoincrement())
-  student_id    Int
-  cert_type     String    @db.VarChar(30)   // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
-  status        String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
-  learning_status String  @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
-  progress_percent Int    @default(0) @db.SmallInt // 0..100
-  current_score Int?      // current TOEIC score used for roadmap realtime UI
-  target_score  Int?      // target TOEIC score learner is pursuing
-  toeic_plan_state Json?  // JSON state for TOEIC roadmap (current/target/sessions/foundation)
-  started_at    DateTime? @db.Timestamptz(6)
+  id               Int       @id @default(autoincrement())
+  student_id       Int
+  cert_type        String    @db.VarChar(30) // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
+  status           String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
+  learning_status  String    @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
+  progress_percent Int       @default(0) @db.SmallInt // 0..100
+  current_score    Int? // current TOEIC score used for roadmap realtime UI
+  target_score     Int? // target TOEIC score learner is pursuing
+  toeic_plan_state Json? // JSON state for TOEIC roadmap (current/target/sessions/foundation)
+  /// Accumulated practice reserve points (0–100).
+  /// Reaching 100 unlocks the exam-simulation for the current score band.
+  reserve_points   Float     @default(0) @db.DoublePrecision
+  started_at       DateTime? @db.Timestamptz(6)
   last_activity_at DateTime? @db.Timestamptz(6)
-  status        String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
-  learning_status String  @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
-  progress_percent Int    @default(0) @db.SmallInt // 0..100
-  current_score Int?      // current TOEIC score used for roadmap realtime UI
-  target_score  Int?      // target TOEIC score learner is pursuing
-  toeic_plan_state Json?  // JSON state for TOEIC roadmap (current/target/sessions/foundation)
-  started_at    DateTime? @db.Timestamptz(6)
-  last_activity_at DateTime? @db.Timestamptz(6)
-  completed_at  DateTime? @db.Timestamptz(6)
-  enrolled_at   DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime  @updatedAt @db.Timestamptz(6)
+  completed_at     DateTime? @db.Timestamptz(6)
+  enrolled_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @updatedAt @db.Timestamptz(6)
 
-  student       Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  topicProgress CertificateTopicProgress[]
+  student            Student                       @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  topicProgress      CertificateTopicProgress[]
+  practicePartSessions ToeicPracticePartSession[]
 
   // A student may only have one active enrollment per cert at a time (enforced in service layer).
   @@index([student_id, cert_type, status])
@@ -951,7 +947,38 @@ model CertificateTopicProgress {
   @@index([enrollment_id])
   @@map("CertificateTopicProgress")
 }
+model ToeicPracticePartSession {
+  id              Int       @id @default(autoincrement())
+  enrollment_id   Int
 
+  skill_area      String    @db.VarChar(20)  // 'listening' | 'reading'
+  toeic_part      Int       @db.SmallInt     // 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+  /// Score band of questions served in this session (matches student's level).
+  score_band_min  Int       @default(0)
+  score_band_max  Int       @default(990)
+
+  /// IDs of the ToeicPracticeQuestion rows that were served (ordered).
+  question_ids    Json                       // Int[]
+
+  /// Student's submitted answers: { "<question_id>": "A" | "B" | "C" | "D" }
+  answers         Json                       // Record<string, string>
+
+  total_questions Int       @default(10) @db.SmallInt
+  correct_count   Int       @default(0)  @db.SmallInt
+
+  /// Reserve points earned in this session (correct_count × points_per_correct for this part).
+  earned_points   Float     @default(0) @db.DoublePrecision
+
+  completed_at    DateTime  @default(now()) @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+
+  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+
+  @@index([enrollment_id, skill_area, toeic_part])
+  @@index([enrollment_id, completed_at])
+  @@map("ToeicPracticePartSession")
+}
 model Room {
   room_id          Int       @id @default(autoincrement())
   host_id          Int?
