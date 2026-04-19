@@ -61,11 +61,128 @@ const SOUND_URLS: Record<SoundType, string> = {
   train: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_4986a8125c.mp3',
 };
 
+const CLICK_SOUND_STORAGE_KEYS = {
+  ENABLED: 'ed-vision-click-sound-enabled',
+  FILE: 'ed-vision-click-sound-file',
+  VOLUME: 'ed-vision-click-sound-volume',
+} as const;
+
+const CLICK_SOUND_FILE_NAMES = [
+  'abstract1',
+  'abstract2',
+  'african1',
+  'african2',
+  'african3',
+  'african4',
+  'coffee1',
+  'coffee2',
+  'minimalist1',
+  'minimalist10',
+  'minimalist11',
+  'minimalist12',
+  'minimalist13',
+  'minimalist2',
+  'minimalist3',
+  'minimalist4',
+  'minimalist5',
+  'minimalist6',
+  'minimalist7',
+  'minimalist8',
+  'minimalist9',
+  'modern1',
+  'modern10',
+  'modern11',
+  'modern12',
+  'modern13',
+  'modern14',
+  'modern15',
+  'modern16',
+  'modern2',
+  'modern3',
+  'modern4',
+  'modern5',
+  'modern6',
+  'modern7',
+  'modern8',
+  'modern9',
+  'retro1',
+  'retro10',
+  'retro11',
+  'retro12',
+  'retro2',
+  'retro3',
+  'retro4',
+  'retro5',
+  'retro6',
+  'retro7',
+  'retro8',
+  'retro9',
+  'wood-block1',
+  'wood-block2',
+  'wood-block3',
+] as const;
+
+const CLICK_SOUND_OPTIONS = CLICK_SOUND_FILE_NAMES.map((name) => ({
+  id: name,
+  label: name
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' '),
+  file: `/sounds/ui/${name}.mp3`,
+  description: 'Âm thanh click từ UI Soundpack.',
+}));
+
+const DEFAULT_CLICK_SOUND = CLICK_SOUND_OPTIONS.find((option) => option.id === 'minimalist11')?.file || CLICK_SOUND_OPTIONS[0].file;
+const DEFAULT_CLICK_SOUND_VOLUME = 40;
+const MUSIC_MATCHED_PANEL_WIDTH = 1200;
+const MUSIC_MATCHED_PANEL_HEIGHT = 600;
+const MAP_PANEL_WIDTH = 1120;
+const MAP_PANEL_HEIGHT = 680;
+const DAILY_MISSION_CELEBRATION_EVENT = 'edvision-daily-mission-celebration';
+const DAILY_MISSION_COIN_BURST = Array.from({ length: 44 }, (_, index) => ({
+  id: index,
+  left: (index * 23) % 100,
+  delay: (index % 11) * 0.09,
+  duration: 2.1 + (index % 6) * 0.28,
+  size: 14 + (index % 5) * 3,
+}));
+
 export default function LearningSpace({ className = '' }: Props) {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const learningSpaceRef = useRef<HTMLDivElement | null>(null);
+  const buttonClickSoundRef = useRef<HTMLAudioElement | null>(null);
+  const dailyMissionCelebrationTimerRef = useRef<number | null>(null);
+  const [clickSoundEnabled, setClickSoundEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CLICK_SOUND_STORAGE_KEYS.ENABLED);
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [selectedClickSound, setSelectedClickSound] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CLICK_SOUND_STORAGE_KEYS.FILE);
+      const isSupported = CLICK_SOUND_OPTIONS.some((option) => option.file === saved);
+      return isSupported ? (saved as string) : DEFAULT_CLICK_SOUND;
+    } catch {
+      return DEFAULT_CLICK_SOUND;
+    }
+  });
+  const [clickSoundVolume, setClickSoundVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CLICK_SOUND_STORAGE_KEYS.VOLUME);
+      if (saved === null) return DEFAULT_CLICK_SOUND_VOLUME;
+      const parsed = Number(saved);
+      if (!Number.isFinite(parsed)) return DEFAULT_CLICK_SOUND_VOLUME;
+      return Math.min(100, Math.max(0, parsed));
+    } catch {
+      return DEFAULT_CLICK_SOUND_VOLUME;
+    }
+  });
   
   // Weather effects
   const [showSnow, setShowSnow] = useState(true);
@@ -88,12 +205,17 @@ export default function LearningSpace({ className = '' }: Props) {
   const [pomoJustStopped, setPomoJustStopped] = useState(false);
   const [showExplosion, setShowExplosion] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showDailyMissionCelebration, setShowDailyMissionCelebration] = useState(false);
+  const [dailyMissionCelebrationMessage, setDailyMissionCelebrationMessage] = useState(
+    'Bạn đã hoàn thành nhiệm vụ ngày hôm nay!'
+  );
   const [ambienceVisible, setAmbienceVisible] = useState(false);
   const [themeVisible, setThemeVisible] = useState(false);
   const [musicPanelVisible, setMusicPanelVisible] = useState(false);
   const [journalVisible, setJournalVisible] = useState(false);
   const [roomVisible, setRoomVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
   const [learningMapVisible, setLearningMapVisible] = useState(false);
   const [videoCallVisible, setVideoCallVisible] = useState(false);
   const [currentRoomTitle, setCurrentRoomTitle] = useState('');
@@ -173,6 +295,97 @@ export default function LearningSpace({ className = '' }: Props) {
       [sound]: volume
     }));
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLICK_SOUND_STORAGE_KEYS.ENABLED, String(clickSoundEnabled));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [clickSoundEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLICK_SOUND_STORAGE_KEYS.FILE, selectedClickSound);
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [selectedClickSound]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLICK_SOUND_STORAGE_KEYS.VOLUME, String(clickSoundVolume));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [clickSoundVolume]);
+
+  useEffect(() => {
+    if (!buttonClickSoundRef.current) {
+      buttonClickSoundRef.current = new Audio(selectedClickSound);
+      buttonClickSoundRef.current.preload = 'auto';
+      buttonClickSoundRef.current.volume = clickSoundVolume / 100;
+      return;
+    }
+
+    buttonClickSoundRef.current.src = selectedClickSound;
+    buttonClickSoundRef.current.volume = clickSoundVolume / 100;
+  }, [selectedClickSound, clickSoundVolume]);
+
+  const playLearningSpaceButtonSound = useCallback((soundPath?: string) => {
+    if (!clickSoundEnabled) return;
+
+    const playbackVolume = clickSoundVolume / 100;
+
+    if (soundPath && soundPath !== selectedClickSound) {
+      const previewSound = new Audio(soundPath);
+      previewSound.preload = 'auto';
+      previewSound.volume = playbackVolume;
+      previewSound.play().catch(() => {
+        // Ignore playback failures when browser blocks autoplay.
+      });
+      return;
+    }
+
+    if (!buttonClickSoundRef.current) {
+      buttonClickSoundRef.current = new Audio(selectedClickSound);
+      buttonClickSoundRef.current.preload = 'auto';
+      buttonClickSoundRef.current.volume = playbackVolume;
+    }
+
+    buttonClickSoundRef.current.volume = playbackVolume;
+    buttonClickSoundRef.current.currentTime = 0;
+    buttonClickSoundRef.current.play().catch(() => {
+      // Ignore playback failures when browser blocks autoplay.
+    });
+  }, [clickSoundEnabled, selectedClickSound, clickSoundVolume]);
+
+  useEffect(() => {
+    const handleGlobalButtonClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      const clickedElement = target.closest(
+        'button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .dock-item'
+      );
+
+      if (!clickedElement) return;
+      if (clickedElement instanceof HTMLButtonElement && clickedElement.disabled) return;
+
+      if (clickedElement instanceof HTMLElement && clickedElement.dataset.clickSound === 'off') {
+        return;
+      }
+
+      if (!learningSpaceRef.current?.contains(clickedElement)) return;
+
+      playLearningSpaceButtonSound();
+    };
+
+    document.addEventListener('click', handleGlobalButtonClick, true);
+    return () => {
+      document.removeEventListener('click', handleGlobalButtonClick, true);
+    };
+  }, [playLearningSpaceButtonSound]);
 
   // Load theme state asynchronously to avoid blocking render
   useEffect(() => {
@@ -258,6 +471,7 @@ export default function LearningSpace({ className = '' }: Props) {
     setMusicPanelVisible(false);
     setJournalVisible(false);
     setSettingsVisible(false);
+    setProfileVisible(false);
     setLearningMapVisible(false);
     setLearningModuleVisible(false);
     setRoomVisible(false);
@@ -291,6 +505,9 @@ export default function LearningSpace({ className = '' }: Props) {
       case 'settings':
         setSettingsVisible(true);
         break;
+      case 'profile':
+        setProfileVisible(true);
+        break;
       case 'map':
         setLearningMapVisible(true);
         break;
@@ -309,6 +526,7 @@ export default function LearningSpace({ className = '' }: Props) {
     { id: 'pomo', icon: 'fas fa-clock', label: 'Pomo', onClick: () => openPanel('pomo') },
     { id: 'music', icon: 'fas fa-music', label: 'Music', onClick: () => openPanel('music') },
     { id: 'map', icon: 'fas fa-map', label: 'Learning Map', onClick: () => openPanel('map') },
+    { id: 'profile', icon: 'fas fa-user-circle', label: 'Profile', onClick: () => openPanel('profile') },
     { id: 'learn', icon: 'fas fa-tv', label: 'Learn', onClick: () => openPanel('learn') },
     { id: 'settings', icon: 'fas fa-cog', label: 'Settings', onClick: () => openPanel('settings') },
   ], [navigate, openPanel]);
@@ -450,6 +668,38 @@ export default function LearningSpace({ className = '' }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleDailyMissionCelebration = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      const nextMessage =
+        typeof customEvent.detail?.message === 'string' && customEvent.detail.message.trim().length > 0
+          ? customEvent.detail.message
+          : 'Bạn đã hoàn thành nhiệm vụ ngày hôm nay!';
+
+      setDailyMissionCelebrationMessage(nextMessage);
+      setShowDailyMissionCelebration(true);
+
+      if (dailyMissionCelebrationTimerRef.current) {
+        window.clearTimeout(dailyMissionCelebrationTimerRef.current);
+      }
+
+      dailyMissionCelebrationTimerRef.current = window.setTimeout(() => {
+        setShowDailyMissionCelebration(false);
+        dailyMissionCelebrationTimerRef.current = null;
+      }, 3400);
+    };
+
+    window.addEventListener(DAILY_MISSION_CELEBRATION_EVENT, handleDailyMissionCelebration);
+
+    return () => {
+      window.removeEventListener(DAILY_MISSION_CELEBRATION_EVENT, handleDailyMissionCelebration);
+      if (dailyMissionCelebrationTimerRef.current) {
+        window.clearTimeout(dailyMissionCelebrationTimerRef.current);
+        dailyMissionCelebrationTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Toggle fullscreen function
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -470,9 +720,15 @@ export default function LearningSpace({ className = '' }: Props) {
     backgroundPosition: 'center',
   }), [liveEnabled, activeLiveTheme, backgroundImage]);
 
+  const matchedPanelInitialX = (window.innerWidth - MUSIC_MATCHED_PANEL_WIDTH) / 2;
+  const matchedPanelInitialY = (window.innerHeight - MUSIC_MATCHED_PANEL_HEIGHT - 80) / 2;
+  const learningMapInitialX = (window.innerWidth - MAP_PANEL_WIDTH) / 2;
+  const learningMapInitialY = (window.innerHeight - MAP_PANEL_HEIGHT - 80) / 2;
+
   return (
     <MusicPlayerProvider>
     <div
+      ref={learningSpaceRef}
       className={`min-h-screen overflow-hidden relative learning-space-container ${className}`}
       style={backgroundStyle}
     >
@@ -730,6 +986,30 @@ export default function LearningSpace({ className = '' }: Props) {
           <SettingsPanel
             visible={settingsVisible}
             onClose={() => setSettingsVisible(false)}
+            panelMode="settings"
+            clickSoundEnabled={clickSoundEnabled}
+            onToggleClickSound={setClickSoundEnabled}
+            selectedClickSound={selectedClickSound}
+            onSelectClickSound={setSelectedClickSound}
+            clickSoundOptions={CLICK_SOUND_OPTIONS}
+            clickSoundVolume={clickSoundVolume}
+            onChangeClickSoundVolume={setClickSoundVolume}
+            onPreviewClickSound={playLearningSpaceButtonSound}
+          />
+        </Suspense>
+      )}
+
+      {/* Profile Panel */}
+      {profileVisible && (
+        <Suspense fallback={null}>
+          <SettingsPanel
+            visible={profileVisible}
+            onClose={() => setProfileVisible(false)}
+            panelMode="profile"
+            initialX={matchedPanelInitialX}
+            initialY={matchedPanelInitialY}
+            initialWidth={MUSIC_MATCHED_PANEL_WIDTH}
+            initialHeight={MUSIC_MATCHED_PANEL_HEIGHT}
           />
         </Suspense>
       )}
@@ -741,6 +1021,11 @@ export default function LearningSpace({ className = '' }: Props) {
             visible={learningMapVisible}
             onClose={() => setLearningMapVisible(false)}
             onModuleClick={handleModuleClick}
+            selectedCourseId={selectedCourseId}
+            initialX={learningMapInitialX}
+            initialY={learningMapInitialY}
+            initialWidth={MAP_PANEL_WIDTH}
+            initialHeight={MAP_PANEL_HEIGHT}
           />
         </Suspense>
       )}
@@ -751,6 +1036,8 @@ export default function LearningSpace({ className = '' }: Props) {
           <LearningModulePanel
             visible={learningModuleVisible}
             onClose={() => setLearningModuleVisible(false)}
+            selectedCourseId={selectedCourseId}
+            selectedModuleId={selectedModuleId}
             onCompleteModule={() => {
               // Close module panel and open map panel to show animation
               setLearningModuleVisible(false);
@@ -769,6 +1056,71 @@ export default function LearningSpace({ className = '' }: Props) {
             roomTitle={currentRoomTitle}
           />
         </Suspense>
+      )}
+
+      {showDailyMissionCelebration && (
+        <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
+          <div className="absolute inset-0 bg-black/25"></div>
+
+          <div className="absolute inset-0">
+            {DAILY_MISSION_COIN_BURST.map((coin) => (
+              <i
+                key={coin.id}
+                className="fas fa-coins absolute -top-10 text-amber-200/95 drop-shadow-[0_6px_8px_rgba(0,0,0,0.35)]"
+                style={{
+                  left: `${coin.left}%`,
+                  fontSize: `${coin.size}px`,
+                  animationName: 'dailyMissionCoinRain',
+                  animationTimingFunction: 'linear',
+                  animationFillMode: 'forwards',
+                  animationDelay: `${coin.delay}s`,
+                  animationDuration: `${coin.duration}s`,
+                }}
+              ></i>
+            ))}
+          </div>
+
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div
+              className="w-full max-w-[460px] rounded-2xl border border-amber-200/45 bg-[#2f1e14]/88 px-6 py-5 text-center shadow-[0_16px_38px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+              style={{ animation: 'dailyMissionNoticePop 0.35s ease-out' }}
+            >
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-amber-200/50 bg-amber-300/20 text-amber-100">
+                <i className="fas fa-trophy text-2xl"></i>
+              </div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-amber-100/75">Daily Mission</p>
+              <h3 className="mt-1 text-xl font-bold text-amber-50">Hoàn thành nhiệm vụ ngày!</h3>
+              <p className="mt-2 text-sm text-amber-100/85">{dailyMissionCelebrationMessage}</p>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes dailyMissionCoinRain {
+              0% {
+                transform: translateY(-14vh) rotate(0deg);
+                opacity: 0;
+              }
+              8% {
+                opacity: 1;
+              }
+              100% {
+                transform: translateY(118vh) rotate(560deg);
+                opacity: 0.95;
+              }
+            }
+
+            @keyframes dailyMissionNoticePop {
+              0% {
+                opacity: 0;
+                transform: translateY(14px) scale(0.94);
+              }
+              100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+          `}</style>
+        </div>
       )}
 
       {/* Font Awesome CDN - Required for icons */}

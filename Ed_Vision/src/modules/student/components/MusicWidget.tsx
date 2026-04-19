@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useMusicPlayer } from '../music/MusicPlayerContext';
 import { TOP_TRACKS as TRACKS } from '../music/mockData';
-import type { Track } from '../music/types';
+import { VinylSleeveImage } from './MusicImage';
 
 type Props = {
   visible: boolean;
@@ -29,15 +29,19 @@ export default function MusicWidget({
     currentTime,
     duration,
     volume,
+    repeatMode,
     queue,
     pause,
     resume,
     seekTo,
     setVolume,
+    cycleRepeatMode,
     playNext,
     playPrevious,
     toggleLike,
     isLiked,
+    addTrackToPlaylist,
+    isTrackInPlaylist,
     playTrack,
   } = useMusicPlayer();
 
@@ -99,7 +103,7 @@ export default function MusicWidget({
     title: currentTrack.title,
     artist: currentTrack.artist,
     duration: currentTrack.duration || formatTime(duration),
-    albumArt: currentTrack.thumbnail || 'https://via.placeholder.com/100',
+    albumArt: currentTrack.imageUrl || 'https://via.placeholder.com/100',
   } : {
     id: '',
     title: 'No track playing',
@@ -109,6 +113,7 @@ export default function MusicWidget({
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const isCurrentTrackInPlaylist = currentTrack ? isTrackInPlaylist(currentTrack.id) : false;
 
   // Get next tracks from queue or from TRACKS list
   const upNextTracks = queue.length > 0 
@@ -117,7 +122,7 @@ export default function MusicWidget({
         title: t.title,
         artist: t.artist,
         duration: t.duration || '0:00',
-        albumArt: t.thumbnail || 'https://via.placeholder.com/40',
+        albumArt: t.imageUrl || 'https://via.placeholder.com/40',
       }))
     : currentTrack 
       ? TRACKS.filter(t => t.id !== currentTrack.id).slice(0, 3).map(t => ({
@@ -150,13 +155,12 @@ export default function MusicWidget({
 
         <div className="px-4 pt-2 pb-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-500 to-pink-500">
-              <img
-                src={track.albumArt}
-                alt="Album Cover"
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <VinylSleeveImage
+              src={track.albumArt}
+              alt="Album Cover"
+              className="w-12 h-12 flex-shrink-0"
+              showShadow={false}
+            />
             <div className="flex-1 min-w-0">
               <div className="text-white font-semibold text-sm truncate flex items-center gap-2">
                 {track.title}
@@ -169,7 +173,7 @@ export default function MusicWidget({
                 className={`transition flex-shrink-0 mr-2 ${isLiked(currentTrack.id) ? 'text-pink-500' : 'text-white/60 hover:text-white'}`}
                 title={isLiked(currentTrack.id) ? 'Unlike' : 'Like'}
               >
-                <i className={`fas fa-heart text-sm`}></i>
+                <i className={`${isLiked(currentTrack.id) ? 'fas' : 'far'} fa-heart text-sm`}></i>
               </button>
             )}
             <button
@@ -300,18 +304,52 @@ export default function MusicWidget({
                 <button className="hover:text-white transition">
                   <i className="fas fa-shuffle"></i>
                 </button>
-                <button className="hover:text-white transition">
+                <button
+                  onClick={cycleRepeatMode}
+                  className={`relative transition ${repeatMode === 'off' ? 'hover:text-white' : 'text-pink-500'}`}
+                  title={
+                    repeatMode === 'off'
+                      ? 'Repeat: Off'
+                      : repeatMode === 'all'
+                        ? 'Repeat: All tracks'
+                        : 'Repeat: Current track'
+                  }
+                >
                   <i className="fas fa-repeat"></i>
+                  {repeatMode === 'one' && (
+                    <span className="absolute -bottom-1 -right-1 text-[9px] font-bold leading-none">1</span>
+                  )}
                 </button>
                 {currentTrack && (
                   <button 
                     onClick={() => toggleLike(currentTrack)}
                     className={`transition ${isLiked(currentTrack.id) ? 'text-pink-500' : 'hover:text-white'}`}
                   >
-                    <i className="fas fa-heart"></i>
+                    <i className={`${isLiked(currentTrack.id) ? 'fas' : 'far'} fa-heart`}></i>
                   </button>
                 )}
-                <button className="hover:text-white transition">
+                <button
+                  onClick={() => {
+                    if (currentTrack) {
+                      addTrackToPlaylist(currentTrack);
+                    }
+                  }}
+                  disabled={!currentTrack}
+                  className={`transition ${
+                    !currentTrack
+                      ? 'opacity-40 cursor-not-allowed'
+                      : isCurrentTrackInPlaylist
+                        ? 'text-pink-500'
+                        : 'hover:text-white'
+                  }`}
+                  title={
+                    !currentTrack
+                      ? 'Select a track first'
+                      : isCurrentTrackInPlaylist
+                        ? 'Already in My Playlist'
+                        : 'Add to My Playlist'
+                  }
+                >
                   <i className="fas fa-list"></i>
                 </button>
               </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
 import { LIVE_THEMES, getFeaturedLiveTheme, type LiveTheme } from '@/data/liveThemes';
@@ -44,6 +44,8 @@ export default function ThemePanel({
   const [featuredTheme, setFeaturedTheme] = useState<LiveTheme | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [urlError, setUrlError] = useState('');
+  const uploadSectionRef = useRef<HTMLDivElement | null>(null);
+  const customYoutubeSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Load live themes data
@@ -69,6 +71,23 @@ export default function ThemePanel({
     { id: 'Pets' as ThemeCategory, icon: '🐾', label: 'Pets' },
     { id: 'Kpop' as ThemeCategory, icon: '👥', label: 'Kpop' },
   ];
+
+  const handleCategoryClick = (category: ThemeCategory) => {
+    setActiveCategory(category);
+
+    if (category !== 'Custom') {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (activeTab === 'static') {
+        uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      customYoutubeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const handleLiveThemeClick = (theme: LiveTheme) => {
     if (onSelectLiveTheme) {
@@ -210,7 +229,7 @@ export default function ThemePanel({
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setActiveCategory(category.id)}
+                onClick={() => handleCategoryClick(category.id)}
                 className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition ${
                   activeCategory === category.id
                     ? 'bg-white/20 shadow-lg scale-105'
@@ -412,7 +431,7 @@ export default function ThemePanel({
 
           {/* Custom YouTube URL - Only show in Live tab */}
           {activeTab === 'live' && (
-            <div className="border-t border-white/20 pt-4 mb-4">
+            <div ref={customYoutubeSectionRef} className="border-t border-white/20 pt-4 mb-4">
               <label className="block text-white text-xs font-semibold mb-2 flex items-center gap-1.5">
                 <i className="fab fa-youtube text-red-500 text-sm"></i>
                 Add Custom YouTube Video
@@ -449,7 +468,7 @@ export default function ThemePanel({
 
           {/* Upload Custom - Only show in Static tab */}
           {activeTab === 'static' && (
-            <div className="border-t border-white/20 pt-6">
+            <div ref={uploadSectionRef} className="border-t border-white/20 pt-6">
               <label className="block text-white font-semibold mb-3 flex items-center gap-2">
                 <i className="fas fa-upload"></i>
                 Upload Custom Background

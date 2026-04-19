@@ -5,7 +5,7 @@
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { Track } from './mockData';
+import type { Track, Playlist } from './mockData';
 import YouTubeMusicPlayer from './YouTubeMusicPlayer';
 import type { YouTubeMusicPlayerRef } from './YouTubeMusicPlayer';
 
@@ -13,8 +13,22 @@ import type { YouTubeMusicPlayerRef } from './YouTubeMusicPlayer';
 const STORAGE_KEYS = {
   RECENTLY_PLAYED: 'music_recently_played',
   LIKED_TRACKS: 'music_liked_tracks',
+  PLAYLISTS: 'music_playlists',
+  REPEAT_MODE: 'music_repeat_mode',
   VOLUME: 'music_volume',
 } as const;
+
+export type RepeatMode = 'off' | 'all' | 'one';
+
+const DEFAULT_PLAYLIST_ID = 'playlist-my-music';
+const DEFAULT_PLAYLIST: Playlist = {
+  id: DEFAULT_PLAYLIST_ID,
+  title: 'My Playlist',
+  description: 'Tracks you saved from the player',
+  imageUrl: 'https://i.ytimg.com/vi/jfKfPfyJRdk/hqdefault.jpg',
+  tracks: [],
+  createdBy: 'You',
+};
 
 export interface RecentlyPlayedTrack extends Track {
   playedAt: Date;
@@ -26,10 +40,12 @@ interface MusicPlayerState {
   currentTime: number;
   duration: number;
   volume: number;
+  repeatMode: RepeatMode;
   isBuffering: boolean;
   queue: Track[];
   recentlyPlayed: RecentlyPlayedTrack[];
   likedTracks: Track[];
+  playlists: Playlist[];
 }
 
 interface MusicPlayerContextValue extends MusicPlayerState {
@@ -40,6 +56,7 @@ interface MusicPlayerContextValue extends MusicPlayerState {
   stop: () => void;
   seekTo: (seconds: number) => void;
   setVolume: (volume: number) => void;
+  cycleRepeatMode: () => void;
   
   // Queue management
   addToQueue: (track: Track) => void;
@@ -51,6 +68,10 @@ interface MusicPlayerContextValue extends MusicPlayerState {
   // Liked tracks
   toggleLike: (track: Track) => boolean;
   isLiked: (trackId: string) => boolean;
+
+  // Playlists
+  addTrackToPlaylist: (track: Track, playlistId?: string) => void;
+  isTrackInPlaylist: (trackId: string, playlistId?: string) => boolean;
   
   // Recently played
   getRecentlyPlayed: (limit?: number) => RecentlyPlayedTrack[];
@@ -87,6 +108,17 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
       return 70;
     }
   });
+  const [repeatMode, setRepeatModeState] = useState<RepeatMode>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.REPEAT_MODE);
+      if (saved === 'all' || saved === 'one' || saved === 'off') {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return 'off';
+  });
   const [isBuffering, setIsBuffering] = useState(false);
   const [queue, setQueue] = useState<Track[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedTrack[]>(() => {
@@ -112,6 +144,20 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
       return [];
     }
   });
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Playlist[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return [DEFAULT_PLAYLIST];
+  });
 
   // History for previous track
   const playHistoryRef = useRef<Track[]>([]);
@@ -132,6 +178,22 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
       // ignore
     }
   }, [likedTracks]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlists));
+    } catch {
+      // ignore
+    }
+  }, [playlists]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.REPEAT_MODE, repeatMode);
+    } catch {
+      // ignore
+    }
+  }, [repeatMode]);
 
   useEffect(() => {
     try {
@@ -199,6 +261,14 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     playerRef.current?.setVolume(clampedVolume);
   }, []);
 
+  const cycleRepeatMode = useCallback(() => {
+    setRepeatModeState(prev => {
+      if (prev === 'off') return 'all';
+      if (prev === 'all') return 'one';
+      return 'off';
+    });
+  }, []);
+
   // Queue management
   const addToQueue = useCallback((track: Track) => {
     setQueue(prev => [...prev, track]);
@@ -251,6 +321,41 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     return likedTracks.some(t => t.id === trackId);
   }, [likedTracks]);
 
+  // Playlist management
+  const addTrackToPlaylist = useCallback((track: Track, playlistId = DEFAULT_PLAYLIST_ID) => {
+    setPlaylists(prev => {
+      const targetPlaylist = prev.find(playlist => playlist.id === playlistId) || prev[0];
+      if (!targetPlaylist) {
+        return prev;
+      }
+
+      const alreadyAdded = targetPlaylist.tracks.some(playlistTrack => playlistTrack.id === track.id);
+      if (alreadyAdded) {
+        return prev;
+      }
+
+      return prev.map(playlist => {
+        if (playlist.id !== targetPlaylist.id) {
+          return playlist;
+        }
+
+        return {
+          ...playlist,
+          imageUrl: track.imageUrl || playlist.imageUrl,
+          tracks: [track, ...playlist.tracks],
+        };
+      });
+    });
+  }, []);
+
+  const isTrackInPlaylist = useCallback((trackId: string, playlistId = DEFAULT_PLAYLIST_ID) => {
+    const targetPlaylist = playlists.find(playlist => playlist.id === playlistId) || playlists[0];
+    if (!targetPlaylist) {
+      return false;
+    }
+    return targetPlaylist.tracks.some(track => track.id === trackId);
+  }, [playlists]);
+
   // Recently played
   const getRecentlyPlayed = useCallback((limit = 10) => {
     return recentlyPlayed.slice(0, limit);
@@ -259,6 +364,16 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
   const clearRecentlyPlayed = useCallback(() => {
     setRecentlyPlayed([]);
   }, []);
+
+  const replayCurrentTrack = useCallback(() => {
+    if (!currentTrack) {
+      return;
+    }
+
+    setCurrentTime(0);
+    setIsPlaying(true);
+    playerRef.current?.play(currentTrack.id);
+  }, [currentTrack]);
 
   // Player event handlers
   const handleStateChange = useCallback((state: 'playing' | 'paused' | 'ended' | 'buffering') => {
@@ -269,13 +384,24 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     } else if (state === 'paused') {
       setIsPlaying(false);
     } else if (state === 'ended') {
-      setIsPlaying(false);
-      // Auto play next in queue
+      if (repeatMode === 'one') {
+        replayCurrentTrack();
+        return;
+      }
+
       if (queue.length > 0) {
         playNext();
+        return;
       }
+
+      if (repeatMode === 'all') {
+        replayCurrentTrack();
+        return;
+      }
+
+      setIsPlaying(false);
     }
-  }, [queue.length, playNext]);
+  }, [queue.length, playNext, repeatMode, replayCurrentTrack]);
 
   const handleTimeUpdate = useCallback((time: number, dur: number) => {
     setCurrentTime(time);
@@ -288,16 +414,19 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     currentTime,
     duration,
     volume,
+    repeatMode,
     isBuffering,
     queue,
     recentlyPlayed,
     likedTracks,
+    playlists,
     playTrack,
     pause,
     resume,
     stop,
     seekTo,
     setVolume,
+    cycleRepeatMode,
     addToQueue,
     removeFromQueue,
     clearQueue,
@@ -305,6 +434,8 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     playPrevious,
     toggleLike,
     isLiked,
+    addTrackToPlaylist,
+    isTrackInPlaylist,
     getRecentlyPlayed,
     clearRecentlyPlayed,
   };
