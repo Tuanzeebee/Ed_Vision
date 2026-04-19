@@ -184,3 +184,65 @@
 .animate-confetti-fall {
   animation: confetti-fall 3s ease-in forwards;
 }
+
+/* Cat companion layer */
+.learning-space-cats-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.learning-space-cat-track {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.learning-space-cat-transform {
+  width: 16px;
+  height: 16px;
+  transform-origin: top left;
+}
+
+.learning-space-cat-stack {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  transform-origin: center center;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+}
+
+.learning-space-cat-sprite {
+  position: absolute;
+  inset: 0;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background-repeat: no-repeat;
+  transform-origin: center center;
+  animation-name: learning-space-cat-walk;
+  animation-timing-function: steps(22);
+  animation-iteration-count: infinite;
+  will-change: background-position, transform;
+}
+
+.learning-space-cat-sprite-base {
+  z-index: 1;
+}
+
+.learning-space-cat-sprite-overlay {
+  z-index: 2;
+}
+
+@keyframes learning-space-cat-walk {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -352px;
+  }
+}
