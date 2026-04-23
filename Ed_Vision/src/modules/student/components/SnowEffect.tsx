@@ -8,7 +8,7 @@ function SnowEffect({ show }: Props) {
   // Dùng useMemo để tính toán vị trí tuyết 1 lần duy nhất lúc mount
   const snowflakes = useMemo(() => {
     return Array.from({ length: 50 }, (_, i) => {
-      const isVertical = Math.random() > 0.5; // 50% rơi thẳng, 50% rơi chéo (gió thổi)
+      const isVertical = Math.random() >0.5; // 50% rơi thẳng, 50% rơi chéo (gió thổi)
       
       return {
         id: i,
@@ -27,12 +27,11 @@ function SnowEffect({ show }: Props) {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[1]">
-      {snowflakes.map((flake) => (
+      {snowflakes.map((flake) =>(
         <div
           key={flake.id}
           className={`absolute -top-5 bg-white rounded-full opacity-80 ${
-            flake.isVertical ? 'animate-[fall_linear_infinite]' : 'animate-[drift_linear_infinite]'
-          }`}
+            flake.isVertical ? 'animate-[fall_linear_infinite]': 'animate-[drift_linear_infinite]'}`}
           style={{
             left: `${flake.left}%`,
             width: `${flake.size}px`,
@@ -40,8 +39,7 @@ function SnowEffect({ show }: Props) {
             animationDuration: `${flake.duration}s`,
             animationDelay: `${flake.delay}s`,
           }}
-        />
-      ))}
+        />))}
       <style>{`
         @keyframes fall {
           to {
@@ -55,8 +53,7 @@ function SnowEffect({ show }: Props) {
           }
         }
       `}</style>
-    </div>
-  );
+    </div>);
 }
 
 export default memo(SnowEffect);

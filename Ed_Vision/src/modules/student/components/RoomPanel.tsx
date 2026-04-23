@@ -1,17 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
-import WaitingRoom from './WaitingRoom';
+import WaitingRoom, { type WaitingRoomJoinPayload } from './WaitingRoom';
+import { TokenManager } from '@/lib/tokenManager';
+import { studyRoomRealtime } from '@/services/student/studyRoomRealtime';
+import {
+  getStudyRoomErrorMessage,
+  studyRoomService,
+  type PublicStudyRoom,
+} from '@/services/student/studyRoomService';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSelectRoom: (url: string) => void;
-  onJoinCall?: (roomTitle: string) => void;
+  onJoinCall?: (room: {
+    roomId: number;
+    roomTitle: string;
+    password?: string;
+    micOn: boolean;
+    cameraOn: boolean;
+    micDeviceId?: string;
+    cameraDeviceId?: string;
+    participantId: number;
+    livekitToken: string;
+    livekitUrl?: string;
+  }) => void;
   initialX?: number;
   initialY?: number;
   initialWidth?: number;
   initialHeight?: number;
+};
+
+type RoomCard = {
+  id: string;
+  roomId: number;
+  title: string;
+  url: string;
+  roomMode: 'audio' | 'video' | 'focus';
+  hasPassword: boolean;
+  currentParticipantsCount: number;
+  maxParticipants: number;
 };
 
 export default function RoomPanel({
@@ -27,7 +57,7 @@ export default function RoomPanel({
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
   const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 600, 420);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'study' | 'cozy' | 'nature' | 'city'>('all');
+  const [filter, setFilter] = useState<'all' | 'audio' | 'video' | 'focus'>('all');
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [roomName, setRoomName] = useState('');
   const [roomType, setRoomType] = useState<'video' | 'voice' | 'focus'>('video');
@@ -38,28 +68,240 @@ export default function RoomPanel({
   const [backgroundTab, setBackgroundTab] = useState<'static' | 'live'>('static');
   const [backgroundCategory, setBackgroundCategory] = useState<'custom' | 'exclusive' | 'chill' | 'focus' | 'anime' | 'pets' | 'kpop'>('custom');
   const [showWaitingRoom, setShowWaitingRoom] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<{ title: string; url: string } | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<RoomCard | null>(null);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
+  const [publicRooms, setPublicRooms] = useState<PublicStudyRoom[]>([]);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [isRealtimePreparing, setIsRealtimePreparing] = useState(false);
+  const [isEndingRoom, setIsEndingRoom] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
-  if (!visible) return null;
+  const loadPublicRooms = async () => {
+    try {
+      setRoomsLoading(true);
+      setRoomsError(null);
+      const rooms = await studyRoomService.getPublicRooms();
+      setPublicRooms(rooms);
+    } catch (error) {
+      const message = getStudyRoomErrorMessage(error, 'Không thể tải danh sách phòng');
+      setRoomsError(message);
+    } finally {
+      setRoomsLoading(false);
+    }
+  };
 
-  const handleJoinRoom = (room: { id: string; title: string; url: string }) => {
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    void loadPublicRooms();
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || studyRoomRealtime.isConnected()) {
+      return;
+    }
+
+    const token = TokenManager.getToken();
+    if (!token) {
+      return;
+    }
+
+    let disposed = false;
+
+    const warmupRealtime = async () => {
+      try {
+        setIsRealtimePreparing(true);
+        await studyRoomRealtime.connect(token);
+      } catch {
+        // Ignore warmup errors here; action handlers will retry and show proper feedback.
+      } finally {
+        if (!disposed) {
+          setIsRealtimePreparing(false);
+        }
+      }
+    };
+
+    void warmupRealtime();
+
+    return () => {
+      disposed = true;
+    };
+  }, [visible]);
+
+  const roomCards = useMemo<RoomCard[]>(() => {
+    return publicRooms.map((room) => ({
+      id: String(room.roomId),
+      roomId: room.roomId,
+      title: room.title || `Phòng #${room.roomId}`,
+      url:
+        room.coverUrl ||
+        'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&h=1080&fit=crop',
+      roomMode: room.roomMode,
+      hasPassword: room.hasPassword,
+      currentParticipantsCount: room.currentParticipantsCount,
+      maxParticipants: room.maxParticipants,
+    }));
+  }, [publicRooms]);
+
+  const handleJoinRoom = (room: RoomCard) => {
     setSelectedRoom(room);
     setShowWaitingRoom(true);
   };
 
-  const handleJoinCall = () => {
+  const handleJoinCall = async (payload: WaitingRoomJoinPayload) => {
+    if (isEndingRoom) {
+      return;
+    }
+
     if (selectedRoom) {
-      setShowWaitingRoom(false);
-      onClose();
-      if (onJoinCall) {
-        onJoinCall(selectedRoom.title);
+      try {
+        setIsJoiningRoom(true);
+        const joinResult = await studyRoomService.joinPublicRoom(payload.roomId, {
+          password: payload.password,
+        });
+
+        if (!joinResult.success) {
+          throw new Error('Join room rejected');
+        }
+
+        setShowWaitingRoom(false);
+        onClose();
+
+        if (onJoinCall) {
+          onJoinCall({
+            roomId: payload.roomId,
+            roomTitle: selectedRoom.title,
+            password: payload.password,
+            micOn: payload.micOn,
+            cameraOn: payload.cameraOn,
+            micDeviceId: payload.micDeviceId,
+            cameraDeviceId: payload.cameraDeviceId,
+            participantId: joinResult.participantId,
+            livekitToken: joinResult.livekitToken,
+            livekitUrl: joinResult.livekitUrl ?? undefined,
+          });
+        }
+
+        toast.success(`Đã vào phòng ${selectedRoom.title}`);
+      } catch (error) {
+        toast.error(getStudyRoomErrorMessage(error, 'Không thể vào phòng'));
+      } finally {
+        setIsJoiningRoom(false);
       }
     }
   };
 
+  const handleEndRoomFromPreview = async (roomId: number) => {
+    if (isEndingRoom || isRealtimePreparing) {
+      return;
+    }
+
+    const token = TokenManager.getToken();
+    if (!token) {
+      toast.error('Vui lòng đăng nhập lại để kết thúc phòng.');
+      return;
+    }
+
+    const roomTitleForToast = selectedRoom?.title ?? `#${roomId}`;
+
+    try {
+      setIsEndingRoom(true);
+      if (!studyRoomRealtime.isConnected()) {
+        await studyRoomRealtime.connect(token);
+      }
+      await studyRoomRealtime.endRoom({ roomId });
+
+      toast.success(`Đã kết thúc phòng ${roomTitleForToast}.`);
+      setPublicRooms((previous) =>
+        previous.filter((room) => room.roomId !== roomId),
+      );
+      setShowWaitingRoom(false);
+      setSelectedRoom(null);
+      void loadPublicRooms();
+    } catch (error) {
+      toast.error(getStudyRoomErrorMessage(error, 'Không thể kết thúc phòng'));
+    } finally {
+      setIsEndingRoom(false);
+    }
+  };
+
   const handleCloseWaitingRoom = () => {
+    if (isEndingRoom) {
+      return;
+    }
+
     setShowWaitingRoom(false);
     setSelectedRoom(null);
+  };
+
+  const resetCreateForm = () => {
+    setShowCreateRoom(false);
+    setRoomName('');
+    setRoomType('video');
+    setIsLocked(false);
+    setRoomPassword('');
+    setRoomBackground('');
+    setCreateError(null);
+  };
+
+  const handleCreateRoom = async () => {
+    const title = roomName.trim() || 'Phòng học mới';
+    const password = roomPassword.trim();
+
+    if (title.length > 255) {
+      setCreateError('Tên phòng không được vượt quá 255 ký tự');
+      return;
+    }
+
+    if (password.length > 120) {
+      setCreateError('Mật khẩu không được vượt quá 120 ký tự');
+      return;
+    }
+
+    const roomMode = roomType === 'voice' ? 'audio' : roomType;
+
+    try {
+      setIsCreatingRoom(true);
+      setCreateError(null);
+
+      const createdRoom = await studyRoomService.createStudyRoom({
+        title,
+        roomMode,
+        password: isLocked ? password || undefined : undefined,
+        coverType: roomBackground ? 'image' : undefined,
+        coverUrl: roomBackground || undefined,
+        isPublic: true,
+      });
+
+      if (roomBackground) {
+        _onSelectRoom(roomBackground);
+      }
+
+      setPublicRooms((previous) => [
+        {
+          roomId: createdRoom.roomId,
+          title: createdRoom.title,
+          roomMode: createdRoom.roomMode,
+          coverUrl: createdRoom.coverUrl,
+          coverType: createdRoom.coverType,
+          maxParticipants: createdRoom.maxParticipants,
+          currentParticipantsCount: createdRoom.onlineCount,
+          hasPassword: createdRoom.requiresPassword,
+        },
+        ...previous.filter((room) => room.roomId !== createdRoom.roomId),
+      ]);
+
+      toast.success(`Đã tạo phòng ${createdRoom.title}`);
+      resetCreateForm();
+    } catch (error) {
+      setCreateError(getStudyRoomErrorMessage(error, 'Không thể tạo phòng mới'));
+    } finally {
+      setIsCreatingRoom(false);
+    }
   };
 
   // Summer Special themes
@@ -101,20 +343,19 @@ export default function RoomPanel({
     { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=1080&fit=crop', name: 'Study with me', author: 'Focus Music' },
   ];
 
-  const rooms = [
-    { id: 'r1', title: 'Cozy Study', url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&h=1080&fit=crop', tags: ['cozy', 'study'] },
-    { id: 'r2', title: 'Minimal Desk', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&h=1080&fit=crop', tags: ['study'] },
-    { id: 'r3', title: 'Cafe Corner', url: 'https://images.unsplash.com/photo-1513366884929-f0b3d46eee4b?w=1920&h=1080&fit=crop', tags: ['cozy'] },
-    { id: 'r4', title: 'Forest Window', url: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1920&h=1080&fit=crop', tags: ['nature'] },
-    { id: 'r5', title: 'City Night', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1920&h=1080&fit=crop', tags: ['city'] },
-    { id: 'r6', title: 'Loft Workspace', url: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&h=1080&fit=crop', tags: ['study', 'city'] },
-  ];
+  const filtered = roomCards.filter((room) => {
+    if (filter !== 'all' && room.roomMode !== filter) {
+      return false;
+    }
 
-  const filtered = rooms.filter((r) => {
-    if (filter !== 'all' && !r.tags.includes(filter)) return false;
-    if (search && !r.title.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !room.title.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+
     return true;
   });
+
+  if (!visible) return null;
 
   return (
     <div
@@ -128,7 +369,7 @@ export default function RoomPanel({
         >
           <div className="flex items-center gap-3">
             <i className="fas fa-video text-white/80 text-lg"></i>
-            <h2 className="text-xl font-semibold text-white">Rooms</h2>
+            <h2 className="text-xl font-semibold text-white">Phòng học</h2>
           </div>
           <button onClick={onClose} className="text-white/60 hover:text-white transition">
             <i className="fas fa-times text-xl"></i>
@@ -143,24 +384,23 @@ export default function RoomPanel({
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search rooms or keywords"
+                  placeholder="Tìm phòng hoặc từ khóa"
                   className="bg-transparent text-white placeholder-white/60 outline-none text-sm w-64"
                 />
               </div>
 
               <div className="flex items-center gap-2"> 
-                <button onClick={() => setFilter('all')} className={`px-3 py-1 rounded-full text-sm ${filter === 'all' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>All</button>
-                <button onClick={() => setFilter('study')} className={`px-3 py-1 rounded-full text-sm ${filter === 'study' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Study</button>
-                <button onClick={() => setFilter('cozy')} className={`px-3 py-1 rounded-full text-sm ${filter === 'cozy' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Cozy</button>
-                <button onClick={() => setFilter('nature')} className={`px-3 py-1 rounded-full text-sm ${filter === 'nature' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Nature</button>
-                <button onClick={() => setFilter('city')} className={`px-3 py-1 rounded-full text-sm ${filter === 'city' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>City</button>
+                <button onClick={() => setFilter('all')} className={`px-3 py-1 rounded-full text-sm ${filter === 'all' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Tất cả</button>
+                <button onClick={() => setFilter('video')} className={`px-3 py-1 rounded-full text-sm ${filter === 'video' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Video</button>
+                <button onClick={() => setFilter('audio')} className={`px-3 py-1 rounded-full text-sm ${filter === 'audio' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Âm thanh</button>
+                <button onClick={() => setFilter('focus')} className={`px-3 py-1 rounded-full text-sm ${filter === 'focus' ? 'bg-white/20 text-white' : 'text-white/70 bg-black/30'}`}>Tập trung</button>
               </div>
             </div>
 
             <div className="flex-1 overflow-auto px-6 pb-6"> 
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-bold text-lg">Online Rooms</h3>
+                  <h3 className="text-white font-bold text-lg">Phòng đang mở</h3>
                   <button 
                     onClick={() => setShowCreateRoom(true)}
                     className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white text-sm font-semibold rounded-full transition flex items-center gap-2"
@@ -169,6 +409,24 @@ export default function RoomPanel({
                     Tạo phòng
                   </button>
                 </div>
+
+                {roomsError && (
+                  <div className="mb-3 rounded-xl border border-red-300 bg-red-500/10 p-3 text-sm text-red-200">
+                    {roomsError}
+                    <button
+                      onClick={() => void loadPublicRooms()}
+                      className="ml-3 rounded-full border border-red-300 px-3 py-1 text-xs font-semibold text-red-100 hover:bg-red-500/20"
+                    >
+                      Thử lại
+                    </button>
+                  </div>
+                )}
+
+                {roomsLoading && (
+                  <div className="mb-3 rounded-xl bg-white/10 p-3 text-sm text-white/80">
+                    Đang tải danh sách phòng...
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-4">
                   {filtered.map((room) => (
@@ -181,7 +439,10 @@ export default function RoomPanel({
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition">
                         <div className="absolute bottom-3 left-3 right-3">
                           <div className="text-white text-sm font-semibold truncate">{room.title}</div>
-                          <div className="text-white/70 text-[11px]">Click to join</div>
+                          <div className="text-white/70 text-[11px]">
+                            {room.currentParticipantsCount}/{room.maxParticipants} · {room.roomMode === 'audio' ? 'âm thanh' : room.roomMode === 'focus' ? 'tập trung' : 'video'}
+                            {room.hasPassword ? ' · có mật khẩu' : ''}
+                          </div>
                         </div>
                       </div>
                       <div className="absolute top-3 right-3 w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition">
@@ -190,6 +451,12 @@ export default function RoomPanel({
                     </div>
                   ))}
                 </div>
+
+                {!roomsLoading && filtered.length === 0 && (
+                  <div className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-white/70">
+                    Không tìm thấy phòng phù hợp.
+                  </div>
+                )}
               </div>
 
               
@@ -489,7 +756,7 @@ export default function RoomPanel({
                         <div className="mb-6">
                           <div className="flex items-center gap-2 mb-3">
                             <h3 className="text-white font-bold text-lg">Summer Special</h3>
-                            <span className="text-xl">☀️</span>
+                            <span className="text-xl"></span>
                           </div>
                           <div className="grid grid-cols-3 gap-3">
                             {summerSpecialThemes.map((theme, index) => (
@@ -582,7 +849,7 @@ export default function RoomPanel({
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <h3 className="text-white font-bold text-lg">Featuring</h3>
-                            <span className="text-xl">✨</span>
+                            <span className="text-xl"></span>
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-3">
@@ -602,7 +869,7 @@ export default function RoomPanel({
                                   <div className="text-white/70 text-[10px]">by {theme.author}</div>
                                 </div>
                                 <div className="absolute top-2 left-2 bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <span>✨</span> Featured
+                                  <span></span> Featured
                                 </div>
                               </div>
                               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
@@ -654,34 +921,25 @@ export default function RoomPanel({
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
                 <button
-                  onClick={() => {
-                    setShowCreateRoom(false);
-                    setRoomName('');
-                    setRoomType('video');
-                    setIsLocked(false);
-                    setRoomPassword('');
-                    setRoomBackground('');
-                  }}
+                  onClick={resetCreateForm}
                   className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-full transition"
                 >
-                  Cancel
+                  Hủy
                 </button>
                 <button
-                  onClick={() => {
-                    // Handle create room logic here
-                    console.log('Creating room:', { roomName, roomType, isLocked, roomPassword, roomBackground });
-                    setShowCreateRoom(false);
-                    setRoomName('');
-                    setRoomType('video');
-                    setIsLocked(false);
-                    setRoomPassword('');
-                    setRoomBackground('');
-                  }}
+                  onClick={() => void handleCreateRoom()}
+                  disabled={isCreatingRoom}
                   className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-full transition"
                 >
-                  Đến phòng của tôi
+                  {isCreatingRoom ? 'Đang tạo...' : 'Đến phòng của tôi'}
                 </button>
               </div>
+
+              {createError && (
+                <div className="rounded-xl border border-red-300 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {createError}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -696,7 +954,13 @@ export default function RoomPanel({
         visible={showWaitingRoom}
         onClose={handleCloseWaitingRoom}
         onJoinCall={handleJoinCall}
+        onEndRoom={handleEndRoomFromPreview}
+        isEndingRoom={isEndingRoom}
+        roomId={selectedRoom?.roomId ?? null}
         roomTitle={selectedRoom?.title || ''}
+        hasPassword={selectedRoom?.hasPassword ?? false}
+        currentParticipantsCount={selectedRoom?.currentParticipantsCount ?? 0}
+        maxParticipants={selectedRoom?.maxParticipants ?? 0}
       />
     </div>
   );

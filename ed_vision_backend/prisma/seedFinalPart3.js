@@ -31,14 +31,14 @@ function generateTimeSlots() {
 }
 
 async function main() {
-  console.log('🌱 Starting seedFinalPart3.js - Seeding Instructor Availability & Appointments...\n');
+  console.log(' Starting seedFinalPart3.js - Seeding Instructor Availability & Appointments...\n');
 
   // 1. Get all instructors
   const allInstructors = await prisma.instructor.findMany({
     orderBy: { instructor_id: 'asc' },
   });
 
-  console.log(`✅ Found ${allInstructors.length} instructors\n`);
+  console.log(` Found ${allInstructors.length} instructors\n`);
 
   // 2. Get all students and parents with their relationships
   const allStudents = await prisma.student.findMany({
@@ -56,8 +56,8 @@ async function main() {
     },
   });
 
-  console.log(`✅ Found ${allStudents.length} students and ${allParents.length} parents\n`);
-  console.log(`✅ Found ${parentStudentLinks.length} parent-student links\n`);
+  console.log(` Found ${allStudents.length} students and ${allParents.length} parents\n`);
+  console.log(` Found ${parentStudentLinks.length} parent-student links\n`);
 
   // Create a map for quick lookup: student_id -> parent_id
   const studentToParentMap = {};
@@ -68,7 +68,7 @@ async function main() {
   // ====================================================================
   // 3. Seed InstructorAvailabilityWeek, Date, and Slots
   // ====================================================================
-  console.log('🌱 Seeding InstructorAvailability (Week, Date, Slot)...\n');
+  console.log(' Seeding InstructorAvailability (Week, Date, Slot)...\n');
 
   const years = [2021, 2022, 2023, 2024, 2025];
   const allSlots = []; // Store all slots for appointment booking later
@@ -78,7 +78,7 @@ async function main() {
   let slotCount = 0;
 
   for (const instructor of allInstructors) {
-    console.log(`\n📋 Processing instructor ${instructor.instructor_id}...`);
+    console.log(`\n Processing instructor ${instructor.instructor_id}...`);
 
     // Generate 2-4 random weeks per year per instructor (total ~10-20 weeks per instructor)
     for (const year of years) {
@@ -193,24 +193,24 @@ async function main() {
 
                   slotCount++;
                 } catch (e) {
-                  console.warn(`⚠️ Error creating slot: ${e.message}`);
+                  console.warn(` Error creating slot: ${e.message}`);
                 }
               }
             }
           }
         } catch (e) {
-          console.warn(`⚠️ Error creating week for instructor ${instructor.instructor_id}: ${e.message}`);
+          console.warn(` Error creating week for instructor ${instructor.instructor_id}: ${e.message}`);
         }
       }
     }
   }
 
-  console.log(`\n✅ Seeded ${weekCount} weeks, ${dateCount} dates, ${slotCount} slots!`);
+  console.log(`\n Seeded ${weekCount} weeks, ${dateCount} dates, ${slotCount} slots!`);
 
   // ====================================================================
   // 4. Seed Appointments (~1000 bookings)
   // ====================================================================
-  console.log('\n🌱 Seeding Appointments (~1000 bookings)...\n');
+  console.log('\n Seeding Appointments (~1000 bookings)...\n');
 
   // Filter slots that are in the past (before Dec 2025) or near current date
   const currentDate = new Date(2025, 11, 20);
@@ -219,7 +219,7 @@ async function main() {
     return slotDate <= currentDate && slot.capacity > slot.bookedCount;
   });
 
-  console.log(`📊 Available slots for booking: ${availableSlotsForBooking.length}`);
+  console.log(` Available slots for booking: ${availableSlotsForBooking.length}`);
 
   // Shuffle slots for random booking
   const shuffledSlots = [...availableSlotsForBooking].sort(() => Math.random() - 0.5);
@@ -413,20 +413,20 @@ async function main() {
       }
 
       if ((appointmentCount) % 100 === 0) {
-        console.log(`✅ Created ${appointmentCount} appointments...`);
+        console.log(` Created ${appointmentCount} appointments...`);
       }
     } catch (e) {
-      console.warn(`⚠️ Error creating appointment: ${e.message}`);
+      console.warn(` Error creating appointment: ${e.message}`);
     }
   }
 
-  console.log(`\n✅ Seeded ${appointmentCount} appointments!`);
-  console.log(`✅ Seeded ${contactCount} appointment contacts (for parent bookings)!`);
+  console.log(`\n Seeded ${appointmentCount} appointments!`);
+  console.log(` Seeded ${contactCount} appointment contacts (for parent bookings)!`);
 
   // ====================================================================
   // 5. Statistics
   // ====================================================================
-  console.log('\n📊 Final Statistics:');
+  console.log('\n Final Statistics:');
   
   const totalAppointments = await prisma.appointment.count();
   const confirmedCount = await prisma.appointment.count({ where: { status: 'confirmed' } });
@@ -449,12 +449,12 @@ async function main() {
   console.log(`   - Student: ${studentBookings}`);
   console.log(`   - Parent: ${parentBookings}`);
 
-  console.log('\n✨ seedFinalPart3.js completed!');
+  console.log('\n seedFinalPart3.js completed!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seeding:', e);
+    console.error(' Error during seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

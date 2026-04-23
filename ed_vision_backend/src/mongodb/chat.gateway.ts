@@ -10,12 +10,10 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { Logger } from '@nestjs/common';
+import { buildSocketCorsOptions } from '../common/config/network.config';
 
 @WebSocketGateway({
-  cors: {
-    origin: 'http://localhost:5173',
-    credentials: true,
-  },
+  cors: buildSocketCorsOptions(),
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -48,7 +46,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     this.userSockets.set(data.userId, client.id);
     this.logger.log(
-      `✅ User registered: ${data.userId} (${data.userType}) - Socket: ${client.id}`,
+      ` User registered: ${data.userId} (${data.userType}) - Socket: ${client.id}`,
     );
 
     // Join user to their personal room
@@ -93,7 +91,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     this.logger.log(
-      `📨 Received message from ${data.senderId} in conversation ${data.conversationId}`,
+      ` Received message from ${data.senderId} in conversation ${data.conversationId}`,
     );
 
     try {
@@ -105,7 +103,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.content,
       );
 
-      this.logger.log(`💾 Message saved to DB: ${message._id}`);
+      this.logger.log(` Message saved to DB: ${message._id}`);
 
       // Broadcast to all users in conversation (including sender)
       this.server
@@ -113,7 +111,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit('newMessage', message);
 
       this.logger.log(
-        `📤 Broadcasting to room: conversation:${data.conversationId}`,
+        ` Broadcasting to room: conversation:${data.conversationId}`,
       );
 
       // Also send to each participant's personal room (for notification badge)
@@ -134,13 +132,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             },
           });
         this.logger.log(
-          `🔔 Notified user: ${participant.userId} (sender: ${participant.userId === data.senderId ? 'YES' : 'NO'})`,
+          ` Notified user: ${participant.userId} (sender: ${participant.userId === data.senderId ? 'YES' : 'NO'})`,
         );
       });
 
       return { success: true, message };
     } catch (error) {
-      this.logger.error('❌ Error sending message:', error);
+      this.logger.error(' Error sending message:', error);
       return { success: false, error: error.message };
     }
   }

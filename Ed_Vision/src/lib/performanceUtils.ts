@@ -10,7 +10,7 @@ interface PerformanceMetric {
 
 class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
-  private marks: Map<string, number> = new Map();
+  private marks: Map<string, number>= new Map();
 
   /**
    * Start measuring a metric
@@ -43,7 +43,7 @@ class PerformanceMonitor {
   /**
    * Measure a function execution time
    */
-  async measure<T>(name: string, fn: () => T | Promise<T>): Promise<T> {
+  async measure<T>(name: string, fn: () =>T | Promise<T>): Promise<T> {
     this.start(name);
     try {
       const result = await fn();
@@ -66,7 +66,7 @@ class PerformanceMonitor {
    * Get metrics by name
    */
   getMetricsByName(name: string): PerformanceMetric[] {
-    return this.metrics.filter((m) => m.name === name);
+    return this.metrics.filter((m) =>m.name === name);
   }
 
   /**
@@ -76,7 +76,7 @@ class PerformanceMonitor {
     const metrics = this.getMetricsByName(name);
     if (metrics.length === 0) return 0;
 
-    const total = metrics.reduce((sum, m) => sum + m.duration, 0);
+    const total = metrics.reduce((sum, m) =>sum + m.duration, 0);
     return total / metrics.length;
   }
 
@@ -97,7 +97,7 @@ class PerformanceMonitor {
       return;
     }
 
-    console.group('🚀 Performance Report');
+    console.group('Performance Report');
     
     const metricsByName = this.metrics.reduce((acc, metric) => {
       if (!acc[metric.name]) {
@@ -108,11 +108,11 @@ class PerformanceMonitor {
     }, {} as Record<string, number[]>);
 
     Object.entries(metricsByName).forEach(([name, durations]) => {
-      const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+      const avg = durations.reduce((a, b) =>a + b, 0) / durations.length;
       const min = Math.min(...durations);
       const max = Math.max(...durations);
       
-      console.log(`📊 ${name}:`, {
+      console.log(` ${name}:`, {
         average: `${avg.toFixed(2)}ms`,
         min: `${min.toFixed(2)}ms`,
         max: `${max.toFixed(2)}ms`,
@@ -136,7 +136,7 @@ export function usePerformanceMonitor(componentName: string) {
   return {
     logMount: () => {
       const duration = performance.now() - mounted;
-      console.log(`⚡ ${componentName} mounted in ${duration.toFixed(2)}ms`);
+      console.log(` ${componentName} mounted in ${duration.toFixed(2)}ms`);
     },
   };
 }
@@ -144,10 +144,10 @@ export function usePerformanceMonitor(componentName: string) {
 /**
  * Debounce function for performance optimization
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: any[]) =>any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: Parameters<T>) =>void {
   let timeout: NodeJS.Timeout | null = null;
 
   return function (this: any, ...args: Parameters<T>) {
@@ -164,10 +164,10 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function for performance optimization
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: any[]) =>any>(
   func: T,
   limit: number
-): (...args: Parameters<T>) => void {
+): (...args: Parameters<T>) =>void {
   let inThrottle: boolean = false;
 
   return function (this: any, ...args: Parameters<T>) {
@@ -203,9 +203,8 @@ export function isLowEndDevice(): boolean {
   return (
     cores <= 2 ||
     (memory && memory <= 4) ||
-    effectiveType === 'slow-2g' ||
-    effectiveType === '2g'
-  );
+    effectiveType === 'slow-2g'||
+    effectiveType === '2g');
 }
 
 /**

@@ -22,7 +22,7 @@ const isDateInRange = (startDate: string, endDate: string): boolean => {
   const currentMMDD = `${String(currentMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`;
 
   // Handle year wrap (e.g., event from 12-20 to 01-05)
-  if (startDate > endDate) {
+  if (startDate >endDate) {
     return currentMMDD >= startDate || currentMMDD <= endDate;
   }
 
@@ -44,7 +44,7 @@ interface SeasonalEffectProviderProps {
   forceEvent?: SeasonalEvent; // Để test, có thể force event cụ thể
 }
 
-export const SeasonalEffectProvider: React.FC<SeasonalEffectProviderProps> = ({
+export const SeasonalEffectProvider: React.FC<SeasonalEffectProviderProps>= ({
   children,
   forceEvent,
 }) => {
@@ -57,12 +57,12 @@ export const SeasonalEffectProvider: React.FC<SeasonalEffectProviderProps> = ({
     const saved = localStorage.getItem("seasonal-effects-v2");
     // Nếu chưa có giá trị trong localStorage, mặc định là true (BẬT)
     // Nếu có giá trị, parse từ string "true"/"false"
-    return saved === null ? true : saved === "true";
+return saved === null ? true : saved === "true";
   });
 
   const config = useMemo(() => {
     if (forceEvent) {
-      return SEASONAL_EVENTS.find((e) => e.event === forceEvent) || null;
+      return SEASONAL_EVENTS.find((e) =>e.event === forceEvent) || null;
     }
     return getCurrentEvent();
   }, [forceEvent]);
@@ -109,11 +109,10 @@ export const SeasonalEffectProvider: React.FC<SeasonalEffectProviderProps> = ({
       case "CHRISTMAS":
         return (
           <>
-            <Snowfall intensity="medium" />
+            <Snowfall intensity="medium"/>
             <ChristmasDecorations />
             <ChristmasMusic volume={0.2} />
-          </>
-        );
+          </>);
       // Thêm các event khác sau
       case "LUNAR_NEW_YEAR":
         // TODO: Thêm hiệu ứng Tết
@@ -137,8 +136,7 @@ export const SeasonalEffectProvider: React.FC<SeasonalEffectProviderProps> = ({
     >
       {renderEffects()}
       {children}
-    </SeasonalEffectContext.Provider>
-  );
+    </SeasonalEffectContext.Provider>);
 };
 
 export default SeasonalEffectProvider;

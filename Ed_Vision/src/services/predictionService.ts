@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { TokenManager } from '../lib/tokenManager';
 import cacheService from './cacheService';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '@/services/api/config';
 
 // Cache TTL constants (in milliseconds)
 const CACHE_TTL = {
@@ -21,7 +20,7 @@ export interface StudentGrade {
   financial_support_by_course?: number | null;
   emotional_support_by_course?: number | null;
   final_pred?: number | null;
-  confidence?: 'high' | 'medium' | 'low' | null;
+  confidence?: 'high'| 'medium'| 'low'| null;
 }
 
 export interface UploadResponse {

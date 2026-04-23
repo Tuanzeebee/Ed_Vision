@@ -1,6 +1,5 @@
 import * as React from "react"
 import { cn } from "@/lib/Teacher_utils"
-
 interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
     value?: number
     max?: number
@@ -20,13 +19,10 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
                 {...props}
             >
                 <div
-                    className="h-full bg-slate-900 transition-all duration-300 ease-in-out"
-                    style={{ width: `${percentage}%` }}
+                    className="h-full bg-slate-900 transition-all duration-300 ease-in-out"style={{ width: `${percentage}%` }}
                 />
-            </div>
-        )
+            </div>)
     }
 )
 Progress.displayName = "Progress"
-
 export { Progress }

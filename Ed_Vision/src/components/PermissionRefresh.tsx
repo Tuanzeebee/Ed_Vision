@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { PermissionService } from '@/services/permissionService'
-
-/**
+import { PermissionService } from '@/services/permissionService'/**
  * Component để refresh permissions manually
  */
 export function PermissionRefreshButton() {
@@ -23,21 +21,17 @@ export function PermissionRefreshButton() {
     <button
       onClick={handleRefresh}
       disabled={isLoading}
-      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-    >
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
       {isLoading ? (
         <>
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           <span>Đang cập nhật...</span>
-        </>
-      ) : (
+        </>) : (
         <>
-          <span>🔄</span>
+          <span></span>
           <span>Cập nhật quyền</span>
-        </>
-      )}
-    </button>
-  )
+        </>)}
+    </button>)
 }
 
 /**
@@ -47,16 +41,13 @@ export function CurrentPermissionsDisplay() {
   const user = PermissionService.getCurrentUser()
   const permissions = PermissionService.getUserPermissions()
   const role = user?.roleRel?.code || user?.role || 'unknown'
-
-  if (!user) {
+if (!user) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        Không tìm thấy thông tin user
-      </div>
-    )
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Không tìm thấy thông tin user
+      </div>)
   }
 
-  const enabledPermissions = Object.entries(permissions).filter(([_, enabled]) => enabled)
+  const enabledPermissions = Object.entries(permissions).filter(([_, enabled]) =>enabled)
   const totalPermissions = Object.keys(permissions).length
 
   return (
@@ -72,23 +63,18 @@ export function CurrentPermissionsDisplay() {
         <div><strong>Tổng quyền:</strong> {enabledPermissions.length}/{totalPermissions}</div>
       </div>
 
-      {enabledPermissions.length > 0 ? (
+      {enabledPermissions.length >0 ? (
         <div>
           <h4 className="font-medium text-gray-700 mb-2">Các quyền được cấp:</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {enabledPermissions.map(([permission, _]) => (
+            {enabledPermissions.map(([permission, _]) =>(
               <div key={permission} className="flex items-center space-x-2 text-sm">
-                <span className="text-green-500">✅</span>
+                <span className="text-green-500"></span>
                 <code className="bg-gray-100 px-2 py-1 rounded text-xs">{permission}</code>
-              </div>
-            ))}
+              </div>))}
           </div>
-        </div>
-      ) : (
-        <div className="text-gray-500 text-center py-4">
-          Không có quyền nào được cấp
-        </div>
-      )}
-    </div>
-  )
+        </div>) : (
+        <div className="text-gray-500 text-center py-4">Không có quyền nào được cấp
+        </div>)}
+    </div>)
 }

@@ -39,11 +39,11 @@ function getScoreBg(score: number): string {
 }
 
 function getScoreLabel(score: number): string {
-  if (score >= 90) return 'Xuất sắc! 🎉'
-  if (score >= 80) return 'Tốt lắm! 👍'
-  if (score >= 60) return 'Khá ổn – cố thêm một chút! 💪'
-  if (score >= 40) return 'Cần luyện thêm 📚'
-  return 'Thử lại nhé 🔄'
+  if (score >= 90) return 'Xuất sắc! '
+  if (score >= 80) return 'Tốt lắm! '
+  if (score >= 60) return 'Khá ổn – cố thêm một chút! '
+  if (score >= 40) return 'Cần luyện thêm '
+  return 'Thử lại nhé '
 }
 
 // ─── Browser TTS (model answer playback) ──────────────────────────────────────
@@ -125,7 +125,7 @@ const WordHighlight: React.FC<{ expected: string; spoken: string }> = ({ expecte
             ? 'bg-green-900/60 text-green-300 border border-green-700'
             : 'bg-red-900/60 text-red-300 border border-red-700'
         }`}>
-          {w.ok ? '✓' : '✗'} {w.word}
+          {w.ok ? '' : ''} {w.word}
         </span>
       ))}
     </div>
@@ -261,9 +261,9 @@ const SpeakingPractice: React.FC<Props> = ({ topicKey }) => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('openai-whisper')) {
-        setError('⚙️ Cài đặt Whisper: pip install openai-whisper  (chỉ cần 1 lần)')
+        setError(' Cài đặt Whisper: pip install openai-whisper  (chỉ cần 1 lần)')
       } else if (msg.includes('python not found')) {
-        setError('⚙️ Python chưa được cài đặt hoặc không có trong PATH.')
+        setError(' Python chưa được cài đặt hoặc không có trong PATH.')
       } else {
         setError(`Lỗi nhận dạng: ${msg}`)
       }
@@ -326,13 +326,13 @@ const SpeakingPractice: React.FC<Props> = ({ topicKey }) => {
             ? 'bg-purple-900/50 text-purple-300 border border-purple-700'
             : 'bg-teal-900/50 text-teal-300 border border-teal-700'
         }`}>
-          {exercise.type === 'word' ? '🔤 Từ đơn' : exercise.type === 'sentence' ? '📝 Câu' : '💬 Hỏi – Đáp'}
+          {exercise.type === 'word' ? ' Từ đơn' : exercise.type === 'sentence' ? ' Câu' : ' Hỏi – Đáp'}
         </span>
 
         {/* Q&A question */}
         {exercise.type === 'qa' && exercise.question && (
           <div className="bg-teal-900/20 border border-teal-800 rounded-lg p-3">
-            <p className="text-xs text-teal-400 font-medium mb-1">❓ Câu hỏi</p>
+            <p className="text-xs text-teal-400 font-medium mb-1"> Câu hỏi</p>
             <p className="text-white text-sm leading-relaxed">{exercise.question}</p>
           </div>
         )}
@@ -431,7 +431,7 @@ const SpeakingPractice: React.FC<Props> = ({ topicKey }) => {
             <span className="text-red-400 text-sm font-medium animate-pulse">Đang ghi âm...</span>
           </div>
           <p className="text-zinc-400 text-xs text-center">
-            🎤 Hãy nói to và rõ. Nhấn Dừng khi xong.
+             Hãy nói to và rõ. Nhấn Dừng khi xong.
           </p>
           <div className="flex justify-center">
             <button
@@ -586,7 +586,7 @@ const SpeakingPractice: React.FC<Props> = ({ topicKey }) => {
 
       {completedCount > 0 && (
         <p className="text-xs text-zinc-500 text-center">
-          ✅ Đã hoàn thành <span className="text-green-400 font-medium">{completedCount}</span> lần thực hành trong phiên này
+           Đã hoàn thành <span className="text-green-400 font-medium">{completedCount}</span> lần thực hành trong phiên này
         </p>
       )}
     </div>

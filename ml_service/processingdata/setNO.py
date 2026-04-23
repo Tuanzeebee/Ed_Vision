@@ -1,13 +1,13 @@
 import os
 import pandas as pd
 
-# 📁 Thư mục chứa các file CSV cần xử lý
+#  Thư mục chứa các file CSV cần xử lý
 ROOT = "output_final_fixed"
 
-# 🔧 Nếu bạn muốn ghi đè file cũ → True
+#  Nếu bạn muốn ghi đè file cũ → True
 OVERWRITE = True
 
-# 🔧 Nếu muốn lưu file mới, sửa tên folder này
+#  Nếu muốn lưu file mới, sửa tên folder này
 OUTPUT = "output_final_train"
 
 if not OVERWRITE:
@@ -18,14 +18,14 @@ for root, dirs, files in os.walk(ROOT):
         if file.lower().endswith(".csv"):
             path = os.path.join(root, file)
 
-            print(f"\n📌 Đang xử lý: {path}")
+            print(f"\n Đang xử lý: {path}")
 
             try:
                 df = pd.read_csv(path)
 
                 # kiểm tra cột "no"
                 if "no" not in df.columns:
-                    print("   ❌ Không có cột 'no', bỏ qua.")
+                    print("    Không có cột 'no', bỏ qua.")
                     continue
 
                 # đánh lại thứ tự 1 → n
@@ -34,11 +34,11 @@ for root, dirs, files in os.walk(ROOT):
                 # lưu file
                 if OVERWRITE:
                     df.to_csv(path, index=False)
-                    print("   ✔ Đã ghi đè file.")
+                    print("    Đã ghi đè file.")
                 else:
                     out_path = os.path.join(OUTPUT, file)
                     df.to_csv(out_path, index=False)
-                    print(f"   ✔ Đã lưu file mới: {out_path}")
+                    print(f"    Đã lưu file mới: {out_path}")
 
             except Exception as e:
-                print(f"   ❌ Lỗi đọc file: {e}")
+                print(f"    Lỗi đọc file: {e}")

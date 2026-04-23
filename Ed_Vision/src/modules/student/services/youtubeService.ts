@@ -17,9 +17,7 @@ import type {
   RecentlyPlayedTrack,
   MUSIC_STORAGE_KEYS,
 } from '../types/youtubeTypes';
-
-// API base URL - adjust based on your environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '@/services/api/config';
 
 /**
  * Generic fetch helper with error handling
@@ -125,7 +123,7 @@ export function getRecentlyPlayed(limit = 10): RecentlyPlayedTrack[] {
     if (!stored) return [];
     
     const tracks: RecentlyPlayedTrack[] = JSON.parse(stored);
-    return tracks.slice(0, limit).map(track => ({
+    return tracks.slice(0, limit).map(track =>({
       ...track,
       playedAt: new Date(track.playedAt),
     }));
@@ -143,7 +141,7 @@ export function addToRecentlyPlayed(track: YouTubeTrack): void {
     const existing = getRecentlyPlayed(50);
     
     // Remove if already exists
-    const filtered = existing.filter(t => t.id !== track.id);
+    const filtered = existing.filter(t =>t.id !== track.id);
     
     // Add to front
     const newTrack: RecentlyPlayedTrack = {
@@ -177,7 +175,7 @@ export function getLikedTracks(): YouTubeTrack[] {
  */
 export function isTrackLiked(trackId: string): boolean {
   const liked = getLikedTracks();
-  return liked.some(t => t.id === trackId);
+  return liked.some(t =>t.id === trackId);
 }
 
 /**
@@ -186,11 +184,11 @@ export function isTrackLiked(trackId: string): boolean {
 export function toggleLikeTrack(track: YouTubeTrack): boolean {
   try {
     const existing = getLikedTracks();
-    const isLiked = existing.some(t => t.id === track.id);
+    const isLiked = existing.some(t =>t.id === track.id);
     
     let updated: YouTubeTrack[];
     if (isLiked) {
-      updated = existing.filter(t => t.id !== track.id);
+      updated = existing.filter(t =>t.id !== track.id);
     } else {
       updated = [track, ...existing];
     }
@@ -260,7 +258,7 @@ export function getRelativeTime(date: Date): string {
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins} min ago`;
   if (diffHours < 24) return `${diffHours} hr ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays >1 ? 's': ''} ago`;
   
   return date.toLocaleDateString();
 }
@@ -270,9 +268,9 @@ export function getRelativeTime(date: Date): string {
  */
 export function getYouTubeThumbnail(
   videoId: string,
-  quality: 'default' | 'medium' | 'high' | 'standard' | 'maxres' = 'high',
+  quality: 'default'| 'medium'| 'high'| 'standard'| 'maxres'= 'high',
 ): string {
-  return `https://img.youtube.com/vi/${videoId}/${quality === 'medium' ? 'mqdefault' : quality === 'high' ? 'hqdefault' : quality === 'standard' ? 'sddefault' : quality === 'maxres' ? 'maxresdefault' : 'default'}.jpg`;
+  return `https://img.youtube.com/vi/${videoId}/${quality === 'medium'? 'mqdefault': quality === 'high'? 'hqdefault': quality === 'standard'? 'sddefault': quality === 'maxres'? 'maxresdefault': 'default'}.jpg`;
 }
 
 /**

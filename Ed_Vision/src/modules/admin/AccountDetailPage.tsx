@@ -23,22 +23,20 @@ const RoleBadge = ({ role }: { role: string }) => {
     'Giảng viên': 'bg-green-100 text-green-800',
     'Sinh viên': 'bg-blue-100 text-blue-800',
     'Phụ huynh': 'bg-purple-100 text-purple-800',
-    'Quản trị viên': 'bg-orange-100 text-orange-800'
-  };
+    'Quản trị viên': 'bg-orange-100 text-orange-800'};
 
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${roleClasses[role] || 'bg-gray-100 text-gray-800'}`}>
       {role}
-    </span>
-  );
+    </span>);
 };
 
 // Status badge
-const StatusBadge = ({ status }: { status: 'active' | 'inactive' | 'blocked' }) => {
+const StatusBadge = ({ status }: { status: 'active'| 'inactive'| 'blocked'}) => {
   const statusConfig = {
-    active: { color: 'bg-green-100 text-green-800', icon: 'fa-check-circle', text: 'Hoạt động' },
-    inactive: { color: 'bg-yellow-100 text-yellow-800', icon: 'fa-pause-circle', text: 'Vắng mặt' },
-    blocked: { color: 'bg-red-100 text-red-800', icon: 'fa-ban', text: 'Đã khóa' }
+    active: { color: 'bg-green-100 text-green-800', icon: 'fa-check-circle', text: 'Hoạt động'},
+    inactive: { color: 'bg-yellow-100 text-yellow-800', icon: 'fa-pause-circle', text: 'Vắng mặt'},
+    blocked: { color: 'bg-red-100 text-red-800', icon: 'fa-ban', text: 'Đã khóa'}
   };
 
   const config = statusConfig[status];
@@ -47,16 +45,14 @@ const StatusBadge = ({ status }: { status: 'active' | 'inactive' | 'blocked' }) 
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
       <i className={`fas ${config.icon} mr-1.5`}></i>
       {config.text}
-    </span>
-  );
+    </span>);
 };
 
 // Card component
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
 // Button component
 const Button = ({ 
@@ -67,8 +63,8 @@ const Button = ({
   ...props 
 }: { 
   children: React.ReactNode; 
-  variant?: "primary" | "secondary" | "danger";
-  size?: "sm" | "md" | "lg";
+  variant?: "primary"| "secondary"| "danger";
+  size?: "sm"| "md"| "lg";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   const baseClasses = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -76,14 +72,12 @@ const Button = ({
   const variants = {
     primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
     secondary: "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 focus:ring-blue-500",
-    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"
-  };
+    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"};
   
   const sizes = {
     sm: "px-3 py-2 text-sm",
     md: "px-4 py-2 text-sm", 
-    lg: "px-6 py-3 text-base"
-  };
+    lg: "px-6 py-3 text-base"};
   
   return (
     <button 
@@ -91,8 +85,7 @@ const Button = ({
       {...props}
     >
       {children}
-    </button>
-  );
+    </button>);
 };
 
 // Utility functions
@@ -103,8 +96,7 @@ const getRoleDisplayName = (roleCode?: string, roleName?: string): string => {
     'leader': 'Lãnh đạo',
     'teacher': 'Giảng viên',
     'student': 'Sinh viên',
-    'parent': 'Phụ huynh'
-  };
+    'parent': 'Phụ huynh'};
   return roleCode ? roleMap[roleCode] || roleCode : 'N/A';
 };
 
@@ -116,8 +108,7 @@ const formatDateWithTime = (dateString?: string): string => {
     month: '2-digit', 
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
-  });
+    minute: '2-digit'});
 };
 
 export default function AccountDetailPage() {
@@ -226,8 +217,7 @@ export default function AccountDetailPage() {
       message: 'Bạn có chắc chắn muốn lưu các thay đổi này?',
       confirmText: 'Đồng ý',
       cancelText: 'Hủy bỏ',
-      type: 'info'
-    });
+      type: 'info'});
 
     if (confirmed) {
       try {
@@ -280,10 +270,9 @@ export default function AccountDetailPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-screen">
-          <LoadingSpinner text="Đang tải thông tin tài khoản..." size="lg" />
+          <LoadingSpinner text="Đang tải thông tin tài khoản..."size="lg"/>
         </div>
-      </AdminLayout>
-    );
+      </AdminLayout>);
   }
 
   if (!account) {
@@ -293,14 +282,13 @@ export default function AccountDetailPage() {
           <div className="text-center">
             <i className="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
             <p className="text-gray-600 text-lg">Không tìm thấy tài khoản</p>
-            <Button variant="secondary" onClick={() => navigate('/admin/accounts')} className="mt-4">
+            <Button variant="secondary"onClick={() =>navigate('/admin/accounts')} className="mt-4">
               <i className="fas fa-arrow-left mr-2"></i>
               <span>Quay lại</span>
             </Button>
           </div>
         </div>
-      </AdminLayout>
-    );
+      </AdminLayout>);
   }
 
   return (
@@ -312,27 +300,24 @@ export default function AccountDetailPage() {
           <div className="flex items-center space-x-3">
             {isEditing ? (
               <>
-                <Button variant="secondary" onClick={handleCancelEdit} className="cursor-pointer">
-                  <i className="fas fa-times mr-2"></i>
-                  Hủy bỏ
+                <Button variant="secondary"onClick={handleCancelEdit} className="cursor-pointer">
+                  <i className="fas fa-times mr-2"></i>Hủy bỏ
                 </Button>
-                <Button variant="primary" onClick={handleSaveEdit} className="cursor-pointer">
+                <Button variant="primary"onClick={handleSaveEdit} className="cursor-pointer">
                   <SaveIcon />
                   <span className="ml-2">Lưu chỉnh sửa</span>
                 </Button>
-              </>
-            ) : (
+              </>) : (
               <>
-                <Button variant="secondary" onClick={handleEditClick} className="cursor-pointer">
+                <Button variant="secondary"onClick={handleEditClick} className="cursor-pointer">
                   <EditIcon />
                   <span className="ml-2">Chỉnh sửa</span>
                 </Button>
-                <Button variant="danger" onClick={() => setShowResetPasswordModal(true)} className="cursor-pointer">
+                <Button variant="danger"onClick={() =>setShowResetPasswordModal(true)} className="cursor-pointer">
                   <KeyIcon />
                   <span className="ml-2">Đặt lại mật khẩu</span>
                 </Button>
-              </>
-            )}
+              </>)}
           </div>
         </div>
 
@@ -355,11 +340,9 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="flex-1">
                     <input
-                      type="text"
-                      value={account.email}
+                      type="text"value={account.email}
                       disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                    />
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
                   </div>
                 </div>
 
@@ -371,32 +354,25 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="flex-1">
                     <input
-                      type="password"
-                      value="••••••••••••"
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
-                    />
+                      type="password"value="••••••••••••"disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"/>
                     <p className="text-xs text-gray-500 mt-1">
-                      <i className="fas fa-lock mr-1"></i>
-                      Mật khẩu được mã hóa và không thể xem
+                      <i className="fas fa-lock mr-1"></i>Mật khẩu được mã hóa và không thể xem
                     </p>
                   </div>
                 </div>
 
                 {/* Full Name */}
                 <div className="flex items-start">
-                  <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                    Họ và tên
+                  <div className="w-32 text-sm font-medium text-gray-500 pt-2">Họ và tên
                   </div>
                   <div className="flex-1">
                     <input
-                      type="text"
-                      value={isEditing ? formData.fullName : (account.profile?.fullName || 'N/A')}
+                      type="text"value={isEditing ? formData.fullName : (account.profile?.fullName || 'N/A')}
                       disabled={!isEditing}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      onChange={(e) =>setFormData({ ...formData, fullName: e.target.value })}
                       className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                        isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'
-                      }`}
+                        isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                     />
                   </div>
                 </div>
@@ -404,37 +380,30 @@ export default function AccountDetailPage() {
                 {/* Date of Birth - Show for all accounts except parent */}
                 {!account.parent && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Ngày sinh
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Ngày sinh
                     </div>
                     <div className="flex-1">
                       <input
-                        type="date"
-                        value={isEditing ? formData.dateOfBirth : (account.profile?.dateOfBirth?.split('T')[0] || '')}
+                        type="date"value={isEditing ? formData.dateOfBirth : (account.profile?.dateOfBirth?.split('T')[0] || '')}
                         disabled={!isEditing}
-                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        onChange={(e) =>setFormData({ ...formData, dateOfBirth: e.target.value })}
                         className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'
-                        }`}
+                          isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                       />
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* Address - Show for all accounts */}
                 <div className="flex items-start">
-                  <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                    Địa chỉ
+                  <div className="w-32 text-sm font-medium text-gray-500 pt-2">Địa chỉ
                   </div>
                   <div className="flex-1">
                     <input
-                      type="text"
-                      value={isEditing ? formData.address : (account.profile?.address || '')}
+                      type="text"value={isEditing ? formData.address : (account.profile?.address || '')}
                       disabled={!isEditing}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) =>setFormData({ ...formData, address: e.target.value })}
                       className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                        isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'
-                      }`}
+                        isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                     />
                   </div>
                 </div>
@@ -442,127 +411,99 @@ export default function AccountDetailPage() {
                 {/* Student Code */}
                 {account.student?.studentCode && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Mã sinh viên
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Mã sinh viên
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={account.student.studentCode}
+                        type="text"value={account.student.studentCode}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* Instructor Employee Code */}
                 {account.instructor && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Mã giảng viên
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Mã giảng viên
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={isEditing ? formData.employeeCode : account.instructor.employeeCode}
-                        onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
+                        type="text"value={isEditing ? formData.employeeCode : account.instructor.employeeCode}
+                        onChange={(e) =>setFormData({ ...formData, employeeCode: e.target.value })}
                         disabled={!isEditing}
                         className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'
-                        }`}
+                          isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                       />
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* School/Department (Trường) for Student */}
                 {account.student?.departmentName && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Trường
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Trường
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={account.student.departmentName}
+                        type="text"value={account.student.departmentName}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* School/Department (Trường) for Instructor */}
                 {account.instructor?.departmentName && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Trường
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Trường
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={account.instructor.departmentName}
+                        type="text"value={account.instructor.departmentName}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* Major (Only for Student) */}
                 {account.student?.programName && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Ngành
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Ngành
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={account.student.programName}
+                        type="text"value={account.student.programName}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* Academic Title (Only for Instructor) */}
                 {account.instructor && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Chức danh
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Chức danh
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={isEditing ? formData.academicTitle : (account.instructor.academicTitle || '')}
-                        onChange={(e) => setFormData({ ...formData, academicTitle: e.target.value })}
+                        type="text"value={isEditing ? formData.academicTitle : (account.instructor.academicTitle || '')}
+                        onChange={(e) =>setFormData({ ...formData, academicTitle: e.target.value })}
                         disabled={!isEditing}
                         className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'
-                        }`}
+                          isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                       />
                     </div>
-                  </div>
-                )}
+                  </div>)}
 
                 {/* Position (Only for Instructor) - Read Only */}
                 {account.instructor && (
                   <div className="flex items-start">
-                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">
-                      Chức vụ
+                    <div className="w-32 text-sm font-medium text-gray-500 pt-2">Chức vụ
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"
-                        value={account.instructor.position || ''}
+                        type="text"value={account.instructor.position || ''}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
                     </div>
-                  </div>
-                )}
+                  </div>)}
               </div>
             </Card>
           </div>
@@ -578,7 +519,7 @@ export default function AccountDetailPage() {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-2">Trạng thái</p>
-                  <StatusBadge status={account.status as 'active' | 'inactive' | 'blocked'} />
+                  <StatusBadge status={account.status as 'active'| 'inactive'| 'blocked'} />
                 </div>
                 
                 <div>
@@ -613,25 +554,20 @@ export default function AccountDetailPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-30">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
               <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Xác nhận đặt lại mật khẩu
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Xác nhận đặt lại mật khẩu
                 </h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  Bạn có chắc chắn muốn đặt lại mật khẩu cho tài khoản <strong>{account.email}</strong>?
+                <p className="text-sm text-gray-600 mb-6">Bạn có chắc chắn muốn đặt lại mật khẩu cho tài khoản <strong>{account.email}</strong>?
                   Mật khẩu mới sẽ được gửi qua email.
                 </p>
                 <div className="flex justify-end space-x-3">
-                  <Button variant="secondary" onClick={() => setShowResetPasswordModal(false)}>
-                    Hủy
+                  <Button variant="secondary"onClick={() =>setShowResetPasswordModal(false)}>Hủy
                   </Button>
-                  <Button variant="danger" onClick={handleResetPassword}>
-                    Đặt lại mật khẩu
+                  <Button variant="danger"onClick={handleResetPassword}>Đặt lại mật khẩu
                   </Button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          </div>)}
 
         {/* Confirm Dialog */}
         <ConfirmDialog
@@ -653,22 +589,18 @@ export default function AccountDetailPage() {
                 <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-4">
                   <i className="fas fa-check text-green-600 text-2xl"></i>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
-                  Thành công!
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">Thành công!
                 </h3>
                 <p className="text-sm text-gray-600 mb-6 text-center">
                   {successMessage}
                 </p>
                 <div className="flex justify-center">
-                  <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
-                    Đóng
+                  <Button variant="primary"onClick={() =>setShowSuccessModal(false)}>Đóng
                   </Button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          </div>)}
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

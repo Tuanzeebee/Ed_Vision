@@ -18,47 +18,41 @@ import { socketService } from '@/services/socketService';
 import type { Conversation, ChatMessage } from '@/services/chatService';
 
 // Custom Avatar Component
-const Avatar = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div className={`relative overflow-hidden ${className}`}>{children}</div>
-);
+const Avatar = ({ children, className = ''}: { children: React.ReactNode; className?: string }) =>(
+  <div className={`relative overflow-hidden ${className}`}>{children}</div>);
 
-const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
+const AvatarImage = ({ src, alt }: { src: string; alt: string }) =>(
   <img 
     src={src} 
     alt={alt} 
-    className="w-full h-full rounded-full object-cover absolute inset-0 z-10" 
-    onError={(e) => {
+    className="w-full h-full rounded-full object-cover absolute inset-0 z-10"onError={(e) => {
       (e.target as HTMLImageElement).style.display = 'none';
     }}
-  />
-);
+  />);
 
-const AvatarFallback = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+const AvatarFallback = ({ children, className = ''}: { children: React.ReactNode; className?: string }) =>(
   <div className={`w-full h-full rounded-full flex items-center justify-center absolute inset-0 z-0 ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
 // Custom Badge Component
 const Badge = ({ 
   children, 
-  className = ''
-}: { 
+  className = ''}: { 
   children: React.ReactNode; 
   className?: string;
-  variant?: 'default' | 'secondary';
-}) => (
+  variant?: 'default'| 'secondary';
+}) =>(
   <span className={`inline-flex items-center justify-center rounded-full ${className}`}>
     {children}
-  </span>
-);
+  </span>);
 
 interface Teacher {
   id: string;
   name: string;
   title?: string;
   avatar?: string;
-  status: 'online' | 'away' | 'offline';
+  status: 'online'| 'away'| 'offline';
   lastMessage: string;
   lastMessageTime: string;
   unreadCount?: number;
@@ -103,14 +97,14 @@ export default function ChatWithTeachers({}: Props) {
       const data = await chatService.getParentTeachers();
       
       // Transform data to Teacher interface
-      const transformedTeachers: Teacher[] = data.map((teacher: any) => ({
+      const transformedTeachers: Teacher[] = data.map((teacher: any) =>({
         id: teacher.id,
         name: teacher.name,
-        title: teacher.students && teacher.students.length > 0 
+        title: teacher.students && teacher.students.length >0 
           ? `${t('parent:chat.teacherRoles.classTeacher')} - ${teacher.students[0].className}`
           : t('parent:chat.teacherRoles.teacher'),
         avatar: teacher.avatar,
-        status: 'online' as const,
+        status: 'online'as const,
         lastMessage: '',
         lastMessageTime: '',
         unreadCount: 0,
@@ -133,16 +127,15 @@ export default function ChatWithTeachers({}: Props) {
       setConversations(data);
       
       // Update teachers with conversation info
-      setTeachers(prev => prev.map(teacher => {
-        const conv = data.find((c: Conversation) => 
-          c.participants.some(p => p.userId === teacher.id && p.userType === 'teacher')
+      setTeachers(prev =>prev.map(teacher => {
+        const conv = data.find((c: Conversation) =>c.participants.some(p =>p.userId === teacher.id && p.userType === 'teacher')
         );
         if (conv) {
           return {
             ...teacher,
             lastMessage: conv.lastMessage?.content || '',
             lastMessageTime: conv.lastMessage?.timestamp 
-              ? new Date(conv.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+              ? new Date(conv.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit'})
               : '',
             unreadCount: conv.unreadCount || 0,
           };
@@ -173,7 +166,7 @@ export default function ChatWithTeachers({}: Props) {
     if (currentConversationId && message.conversationId === currentConversationId) {
       setMessages(prev => {
         // Check duplicate
-        if (prev.some(m => m._id === message._id)) {
+        if (prev.some(m =>m._id === message._id)) {
           return prev;
         }
         return [...prev, message];
@@ -182,7 +175,7 @@ export default function ChatWithTeachers({}: Props) {
   }, [currentConversationId]);
 
   const handleConversationUpdated = useCallback((data: any) => {
-    setConversations(prev => prev.map(conv => {
+    setConversations(prev =>prev.map(conv => {
       if (conv._id === data.conversationId) {
         const isCurrentlyViewing = currentConversationId === data.conversationId;
         return {
@@ -195,16 +188,15 @@ export default function ChatWithTeachers({}: Props) {
     }));
     
     // Update teachers list
-    setTeachers(prev => prev.map(teacher => {
-      const conv = conversations.find(c => 
-        c._id === data.conversationId && 
-        c.participants.some(p => p.userId === teacher.id)
+    setTeachers(prev =>prev.map(teacher => {
+      const conv = conversations.find(c =>c._id === data.conversationId && 
+        c.participants.some(p =>p.userId === teacher.id)
       );
       if (conv) {
         return {
           ...teacher,
           lastMessage: data.lastMessage.content,
-          lastMessageTime: new Date(data.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          lastMessageTime: new Date(data.lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit'}),
           unreadCount: currentConversationId === data.conversationId ? 0 : (teacher.unreadCount || 0) + 1
         };
       }
@@ -217,7 +209,7 @@ export default function ChatWithTeachers({}: Props) {
 
     // Get parent userId from first conversation
     const firstConv = conversations[0];
-    const parentParticipant = firstConv?.participants.find(p => p.userType === 'parent');
+    const parentParticipant = firstConv?.participants.find(p =>p.userType === 'parent');
     
     if (!parentParticipant) {
       console.warn('No parent participant found in conversations');
@@ -228,7 +220,7 @@ export default function ChatWithTeachers({}: Props) {
       if (!socketService.isConnected()) {
         try {
           await socketService.connect(parentParticipant.userId, 'parent');
-          console.log('✅ Parent socket ready');
+          console.log('Parent socket ready');
         } catch (error) {
           console.error('Failed to connect parent socket:', error);
           return;
@@ -249,7 +241,7 @@ export default function ChatWithTeachers({}: Props) {
 
   // Cleanup socket on unmount
   useEffect(() => {
-    return () => socketService.disconnect();
+    return () =>socketService.disconnect();
   }, []);
 
   // Auto-scroll to bottom
@@ -288,7 +280,7 @@ export default function ChatWithTeachers({}: Props) {
       await loadConversations();
       
       // Update teacher as active
-      setTeachers(prev => prev.map(t => ({
+      setTeachers(prev =>prev.map(t =>({
         ...t,
         isActive: t.id === teacher.id,
         unreadCount: t.id === teacher.id ? 0 : t.unreadCount
@@ -306,13 +298,13 @@ export default function ChatWithTeachers({}: Props) {
     if (!text || !currentConversationId) return;
 
     // Get parent userId from conversations
-    const currentConv = conversations.find(c => c._id === currentConversationId);
+    const currentConv = conversations.find(c =>c._id === currentConversationId);
     if (!currentConv) {
       alert('Không tìm thấy cuộc trò chuyện');
       return;
     }
 
-    const parentParticipant = currentConv.participants.find(p => p.userType === 'parent');
+    const parentParticipant = currentConv.participants.find(p =>p.userType === 'parent');
     if (!parentParticipant) {
       alert('Không tìm thấy thông tin phụ huynh trong cuộc trò chuyện');
       return;
@@ -334,8 +326,7 @@ export default function ChatWithTeachers({}: Props) {
       );
       
       // Update local conversation lastMessage
-      setConversations(prev => prev.map(conv => 
-        conv._id === currentConversationId
+      setConversations(prev =>prev.map(conv =>conv._id === currentConversationId
           ? { 
               ...conv, 
               lastMessage: {
@@ -355,7 +346,7 @@ export default function ChatWithTeachers({}: Props) {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter'&& !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -384,10 +375,10 @@ export default function ChatWithTeachers({}: Props) {
 
   // Helper function to get initials from name (skip titles like Dr., Mr., Ms., Mrs.)
   const getInitials = (name: string) => {
-    const words = name.split(' ');
+    const words = name.split('');
     // If first word is a title, skip it
     const titles = ['Dr.', 'Mr.', 'Ms.', 'Mrs.', 'Dr', 'Mr', 'Ms', 'Mrs'];
-    const filteredWords = words.filter(word => !titles.includes(word));
+    const filteredWords = words.filter(word =>!titles.includes(word));
     
     if (filteredWords.length === 0) return words[0].substring(0, 2).toUpperCase();
     
@@ -412,8 +403,7 @@ export default function ChatWithTeachers({}: Props) {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">{t('common:loading')}</p>
         </div>
-      </div>
-    );
+      </div>);
   }
 
   return (
@@ -423,17 +413,14 @@ export default function ChatWithTeachers({}: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button
-              variant="ghost"
-              size="icon"
-              className="p-2 hover:bg-gray-100 rounded-lg"
-              onClick={() => window.history.back()}
+              variant="ghost"size="icon"className="p-2 hover:bg-gray-100 rounded-lg"onClick={() =>window.history.back()}
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-gray-600"/>
             </Button>
             <div className="flex items-center space-x-3">
               <div className="bg-blue-600 rounded-lg p-2">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <svg className="w-6 h-6 text-white"fill="currentColor"viewBox="0 0 24 24">
+                  <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                 </svg>
               </div>
               <div>
@@ -443,12 +430,11 @@ export default function ChatWithTeachers({}: Props) {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="icon" className="p-2 text-gray-400 hover:text-gray-600">
-              <Settings className="w-5 h-5" />
+            <Button variant="ghost"size="icon"className="p-2 text-gray-400 hover:text-gray-600">
+              <Settings className="w-5 h-5"/>
             </Button>
             <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">
-                ST
+              <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">ST
               </AvatarFallback>
             </Avatar>
           </div>
@@ -460,18 +446,15 @@ export default function ChatWithTeachers({}: Props) {
         {/* Teachers List Sidebar */}
         <div
           className={`w-80 bg-white border-r border-gray-200 flex-col ${
-            showSidebar ? 'flex' : 'hidden'
-          } lg:flex`}
+            showSidebar ? 'flex': 'hidden'} lg:flex`}
         >
           {/* Search */}
           <div className="p-4 border-b border-gray-200">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"/>
               <Input
-                type="text"
-                placeholder={t('parent:chat.searchTeachers')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+                type="text"placeholder={t('parent:chat.searchTeachers')}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
             </div>
           </div>
 
@@ -481,20 +464,16 @@ export default function ChatWithTeachers({}: Props) {
               {teachers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p>{t('parent:chat.noTeachers')}</p>
-                </div>
-              ) : (
-                teachers.map((teacher) => (
+                </div>) : (
+                teachers.map((teacher) =>(
                   <div
                     key={teacher.id}
-                    onClick={() => handleSelectTeacher(teacher)}
-                    className="cursor-pointer"
-                  >
+                    onClick={() =>handleSelectTeacher(teacher)}
+                    className="cursor-pointer">
                     <Card
                       className={`p-3 mb-2 transition-colors border ${
                         teacher.isActive
-                          ? 'bg-blue-50 border-blue-200'
-                          : 'hover:bg-gray-50 border-transparent'
-                      }`}
+                          ? 'bg-blue-50 border-blue-200': 'hover:bg-gray-50 border-transparent'}`}
                     >
                       <div className="flex items-center space-x-3">
                       <div className="relative">
@@ -514,32 +493,26 @@ export default function ChatWithTeachers({}: Props) {
                         <div className="flex items-center justify-between">
                           <h3 className="font-medium text-gray-900 truncate whitespace-nowrap">{teacher.name}</h3>
                           {teacher.lastMessageTime && (
-                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{teacher.lastMessageTime}</span>
-                          )}
+                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{teacher.lastMessageTime}</span>)}
                         </div>
                         <p className="text-sm text-gray-600 truncate whitespace-nowrap">{teacher.title}</p>
                         {teacher.lastMessage && (
                           <p
                             className={`text-sm truncate ${
-                              teacher.isActive ? 'text-blue-600 font-medium' : 'text-gray-500'
-                            }`}
+                              teacher.isActive ? 'text-blue-600 font-medium': 'text-gray-500'}`}
                           >
                             {teacher.lastMessage}
-                          </p>
-                        )}
+                          </p>)}
                       </div>
-                      {teacher.unreadCount && teacher.unreadCount > 0 && (
+                      {teacher.unreadCount && teacher.unreadCount >0 && (
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100 px-2 py-1 text-xs">
                           {teacher.unreadCount}
-                        </Badge>
-                      )}
+                        </Badge>)}
                       {teacher.isActive && !teacher.unreadCount && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                      )}
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"/>)}
                     </div>
                     </Card>
-                  </div>
-                ))
+                  </div>))
               )}
             </div>
           </div>
@@ -553,12 +526,9 @@ export default function ChatWithTeachers({}: Props) {
               <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-                    onClick={() => setShowSidebar(!showSidebar)}
+                    variant="ghost"size="icon"className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"onClick={() =>setShowSidebar(!showSidebar)}
                   >
-                    <Menu className="w-5 h-5 text-gray-600" />
+                    <Menu className="w-5 h-5 text-gray-600"/>
                   </Button>
                   <div className="relative">
                     <Avatar className="w-12 h-12">
@@ -576,7 +546,7 @@ export default function ChatWithTeachers({}: Props) {
                   <div>
                     <h2 className="font-semibold text-gray-900 whitespace-nowrap">{selectedTeacher.name}</h2>
                     <p className="text-sm text-gray-500 whitespace-nowrap">
-                      {selectedTeacher.title} •{' '}
+                      {selectedTeacher.title} •{''}
                       <span className="text-green-600 capitalize">{t(`parent:chat.${selectedTeacher.status}`)}</span>
                     </p>
                   </div>
@@ -586,25 +556,22 @@ export default function ChatWithTeachers({}: Props) {
               {/* Messages Area */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 p-4 space-y-4"
-              >
+                className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 p-4 space-y-4">
                 {loading ? (
                   <div className="flex justify-center items-center h-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : messages.length === 0 ? (
+                  </div>) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                    <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    <svg className="w-16 h-16 mb-4"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+                      <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                     </svg>
                     <p>{t('parent:chat.noMessages')}</p>
                     <p className="text-sm mt-2">{t('parent:chat.startConversation')}</p>
-                  </div>
-                ) : (
+                  </div>) : (
                   <>
                     {/* Date Separator */}
                     <div className="flex items-center justify-center">
-                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs px-3 py-1">
+                      <Badge variant="secondary"className="bg-gray-100 text-gray-600 text-xs px-3 py-1">
                         {t('parent:chat.today')}
                       </Badge>
                     </div>
@@ -616,8 +583,7 @@ export default function ChatWithTeachers({}: Props) {
                         <div
                           key={message._id}
                           className={`flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-300 ${
-                            isSent ? 'justify-end' : ''
-                          }`}
+                            isSent ? 'justify-end': ''}`}
                         >
                           {!isSent && (
                             <Avatar className="w-8 h-8 flex-shrink-0">
@@ -625,31 +591,26 @@ export default function ChatWithTeachers({}: Props) {
                               <AvatarFallback className="bg-blue-100 text-blue-600 font-medium text-xs">
                                 {getInitials(selectedTeacher.name)}
                               </AvatarFallback>
-                            </Avatar>
-                          )}
+                            </Avatar>)}
 
-                          <div className={`flex-1 flex flex-col ${isSent ? 'items-end' : ''}`}>
+                          <div className={`flex-1 flex flex-col ${isSent ? 'items-end': ''}`}>
                             <div
                               className={`rounded-lg p-3 max-w-md break-words ${
-                                isSent ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
-                              }`}
+                                isSent ? 'bg-blue-600 text-white': 'bg-gray-100 text-gray-900'}`}
                             >
                               <p className="break-words">{message.content}</p>
                             </div>
                             <p className="text-xs text-gray-500 mt-1">
-                              {new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit'})}
                             </p>
                           </div>
 
                           {isSent && (
                             <Avatar className="w-8 h-8 flex-shrink-0">
-                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
-                                PH
+                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">PH
                               </AvatarFallback>
-                            </Avatar>
-                          )}
-                        </div>
-                      );
+                            </Avatar>)}
+                        </div>);
                     })}
 
                     {/* Typing Indicator */}
@@ -663,32 +624,25 @@ export default function ChatWithTeachers({}: Props) {
                         </Avatar>
                         <div className="bg-gray-100 rounded-lg p-3">
                           <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"/>
                             <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                              style={{ animationDelay: '0.2s' }}
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"style={{ animationDelay: '0.2s'}}
                             />
                             <div
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"
-                              style={{ animationDelay: '0.4s' }}
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"style={{ animationDelay: '0.4s'}}
                             />
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                      </div>)}
+                  </>)}
               </div>
 
               {/* Message Input */}
               <div className="bg-white border-t border-gray-200 p-4">
                 <div className="flex items-end space-x-3">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                  >
-                    <Paperclip className="w-5 h-5" />
+                    variant="ghost"size="icon"className="p-2 text-gray-400 hover:text-gray-600">
+                    <Paperclip className="w-5 h-5"/>
                   </Button>
                   <div className="flex-1 relative">
                     <textarea
@@ -699,39 +653,31 @@ export default function ChatWithTeachers({}: Props) {
                       onChange={handleTextareaChange}
                       onKeyDown={handleKeyDown}
                       disabled={!currentConversationId}
-                      className="w-full resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
+                      className="w-full resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"/>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-                    >
-                      <Smile className="w-5 h-5" />
+                      variant="ghost"size="icon"className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600">
+                      <Smile className="w-5 h-5"/>
                     </Button>
                   </div>
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleSendMessage}
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"onClick={handleSendMessage}
                     disabled={!currentConversationId || !messageInput.trim()}
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-5 h-5"/>
                   </Button>
                 </div>
               </div>
-            </>
-          ) : (
+            </>) : (
             <div className="flex-1 flex items-center justify-center text-gray-500">
               <div className="text-center">
-                <svg className="w-24 h-24 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                <svg className="w-24 h-24 mx-auto mb-4"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+                  <path strokeLinecap="round"strokeLinejoin="round"strokeWidth="2"d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                 </svg>
                 <p className="text-lg font-medium">{t('parent:chat.selectTeacher')}</p>
                 <p className="text-sm mt-2">{t('parent:chat.selectTeacherDescription')}</p>
               </div>
-            </div>
-          )}
+            </div>)}
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }

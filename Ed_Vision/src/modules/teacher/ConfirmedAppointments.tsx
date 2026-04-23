@@ -275,7 +275,7 @@ export default function ConfirmedAppointments({
     <>
       <div className="p-4 md:p-6 lg:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">✅ Lịch hẹn đã xác nhận</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2"> Lịch hẹn đã xác nhận</h1>
           <p className="text-gray-600">
             Danh sách các cuộc hẹn đã được xác nhận ({confirmedRequests.length})
           </p>
@@ -416,7 +416,7 @@ export default function ConfirmedAppointments({
                               : 'bg-purple-100 text-purple-800'
                           }`}
                         >
-                          {request.type === 'online' ? '🌐 Trực tuyến' : '🏫 Trực tiếp'}
+                          {request.type === 'online' ? ' Trực tuyến' : ' Trực tiếp'}
                           {request.platform && ` - ${request.platform}`}
                         </span>
                       </div>
@@ -519,9 +519,9 @@ export default function ConfirmedAppointments({
                         Phụ huynh của {request.studentName}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-gray-700 mt-2">
-                        <span>📅 {request.desiredDate}</span>
+                        <span> {request.desiredDate}</span>
                         <span>•</span>
-                        <span>⏰ {request.desiredTime}</span>
+                        <span> {request.desiredTime}</span>
                       </div>
                     </div>
                   );

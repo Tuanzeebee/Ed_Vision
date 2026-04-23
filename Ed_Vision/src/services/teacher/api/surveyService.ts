@@ -7,10 +7,10 @@ const API_BASE_URL = API_CONFIG.BASE_URL;
 // Cache keys and TTL
 const CACHE_KEYS = {
     DASHBOARD: 'survey:dashboard',
-    SURVEYS: (filters?: string) => `survey:surveys:${filters || 'all'}`,
-    SURVEY_DETAIL: (id: string) => `survey:detail:${id}`,
-    SURVEY_ANALYTICS: (id: string) => `survey:analytics:${id}`,
-    AVAILABLE_QUESTIONS: (category?: string) => `survey:questions:${category || 'all'}`,
+    SURVEYS: (filters?: string) =>`survey:surveys:${filters || 'all'}`,
+    SURVEY_DETAIL: (id: string) =>`survey:detail:${id}`,
+    SURVEY_ANALYTICS: (id: string) =>`survey:analytics:${id}`,
+    AVAILABLE_QUESTIONS: (category?: string) =>`survey:questions:${category || 'all'}`,
 };
 
 const CACHE_TTL = {
@@ -38,7 +38,7 @@ export const clearSurveyCache = (surveyId: string) => {
 export interface SurveyQuestion {
     id: string;
     question: string;
-    type: 'text' | 'multiple-choice' | 'rating' | 'yes-no' | 'scale';
+    type: 'text'| 'multiple-choice'| 'rating'| 'yes-no'| 'scale';
     options?: string[];
     minScale?: number;
     maxScale?: number;
@@ -51,7 +51,7 @@ export interface Survey {
     title: string;
     description?: string;
     type?: string;
-    status: 'draft' | 'active' | 'completed' | 'expired' | 'closed'; // Added 'closed' from backend
+    status: 'draft'| 'active'| 'completed'| 'expired'| 'closed'; // Added 'closed'from backend
     questions: SurveyQuestion[];
     startDate?: string;
     endDate?: string;
@@ -152,7 +152,7 @@ export interface SurveyAnalytics {
 /**
  * Get survey dashboard
  */
-export const getSurveyDashboard = async (): Promise<SurveyDashboard> => {
+export const getSurveyDashboard = async (): Promise<SurveyDashboard>=> {
     return cacheService.getOrFetch(
         CACHE_KEYS.DASHBOARD,
         async () => {
@@ -171,7 +171,7 @@ export const getSurveys = async (filters?: {
     type?: string;
     startDate?: string;
     endDate?: string;
-}): Promise<{ surveys: Survey[]; total: number }> => {
+}): Promise<{ surveys: Survey[]; total: number }>=> {
     const filterKey = JSON.stringify(filters || {});
     return cacheService.getOrFetch(
         CACHE_KEYS.SURVEYS(filterKey),
@@ -188,7 +188,7 @@ export const getSurveys = async (filters?: {
 /**
  * Get survey detail by ID
  */
-export const getSurveyDetail = async (id: string): Promise<Survey> => {
+export const getSurveyDetail = async (id: string): Promise<Survey>=> {
     return cacheService.getOrFetch(
         CACHE_KEYS.SURVEY_DETAIL(id),
         async () => {
@@ -202,7 +202,7 @@ export const getSurveyDetail = async (id: string): Promise<Survey> => {
 /**
  * Create new survey
  */
-export const createSurvey = async (data: CreateSurveyDto): Promise<Survey> => {
+export const createSurvey = async (data: CreateSurveyDto): Promise<Survey>=> {
     const response = await axios.post(`${API_BASE_URL}/teacher/surveys`, data);
     // Clear cache after creating
     clearAllSurveyCache();
@@ -214,8 +214,7 @@ export const createSurvey = async (data: CreateSurveyDto): Promise<Survey> => {
  */
 export const updateSurvey = async (
     id: string,
-    data: Partial<CreateSurveyDto>
-): Promise<Survey> => {
+    data: Partial<CreateSurveyDto>): Promise<Survey>=> {
     const response = await axios.put(`${API_BASE_URL}/teacher/surveys/${id}`, data);
     // Clear cache after updating
     clearSurveyCache(id);
@@ -225,7 +224,7 @@ export const updateSurvey = async (
 /**
  * Delete survey
  */
-export const deleteSurvey = async (id: string): Promise<void> => {
+export const deleteSurvey = async (id: string): Promise<void>=> {
     await axios.delete(`${API_BASE_URL}/teacher/surveys/${id}`);
     // Clear ALL cache after deleting (affects dashboard and lists)
     clearAllSurveyCache();
@@ -234,7 +233,7 @@ export const deleteSurvey = async (id: string): Promise<void> => {
 /**
  * Get survey analytics
  */
-export const getSurveyAnalytics = async (id: string): Promise<SurveyAnalytics> => {
+export const getSurveyAnalytics = async (id: string): Promise<SurveyAnalytics>=> {
     return cacheService.getOrFetch(
         CACHE_KEYS.SURVEY_ANALYTICS(id),
         async () => {
@@ -248,7 +247,7 @@ export const getSurveyAnalytics = async (id: string): Promise<SurveyAnalytics> =
 /**
  * Get incomplete students for a survey
  */
-export const getIncompleteStudents = async (id: string): Promise<any[]> => {
+export const getIncompleteStudents = async (id: string): Promise<any[]>=> {
     const response = await axios.get(`${API_BASE_URL}/teacher/surveys/${id}/incomplete-students`);
     return response.data;
 };
@@ -260,7 +259,7 @@ export const sendReminder = async (data: {
     surveyId: string;
     message: string;
     studentIds?: string[];
-}): Promise<void> => {
+}): Promise<void>=> {
     await axios.post(`${API_BASE_URL}/teacher/surveys/send-reminder`, data);
 };
 
@@ -272,7 +271,7 @@ export const getHistoryStatistics = async (): Promise<{
     totalResponses: number;
     improvingStudents: number;
     needSupportStudents: number;
-}> => {
+}>=> {
     const response = await axios.get(`${API_BASE_URL}/teacher/surveys/history-statistics`);
     return response.data;
 };
@@ -283,7 +282,7 @@ export const getHistoryStatistics = async (): Promise<{
 export const getTargetStudentCount = async (
     facultyId?: string,
     classId?: string,
-): Promise<number> => {
+): Promise<number>=> {
     const params = new URLSearchParams();
     if (facultyId && facultyId !== 'all') params.append('facultyId', facultyId);
     if (classId && classId !== 'all') params.append('classId', classId);
@@ -297,7 +296,7 @@ export const getTargetStudentCount = async (
 /**
  * Export survey responses
  */
-export const exportSurveyResponses = async (id: string): Promise<Blob> => {
+export const exportSurveyResponses = async (id: string): Promise<Blob>=> {
     const response = await axios.get(`${API_BASE_URL}/teacher/surveys/${id}/export`, {
         responseType: 'blob',
     });
@@ -309,7 +308,7 @@ export const exportSurveyResponses = async (id: string): Promise<Blob> => {
  */
 export const getAvailableQuestions = async (
     category?: string
-): Promise<AvailableQuestion[]> => {
+): Promise<AvailableQuestion[]>=> {
     return cacheService.getOrFetch(
         CACHE_KEYS.AVAILABLE_QUESTIONS(category),
         async () => {
@@ -327,7 +326,7 @@ export const getAvailableQuestions = async (
  */
 export const createSurveyFromQuestions = async (
     data: CreateSurveyFromQuestionsDto
-): Promise<Survey> => {
+): Promise<Survey>=> {
     const response = await axios.post(
         `${API_BASE_URL}/teacher/surveys/from-questions`,
         data
@@ -343,7 +342,7 @@ export const createSurveyFromQuestions = async (
 export const addQuestionToSurvey = async (
     surveyId: string,
     questionId: number
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean }>=> {
     const response = await axios.post(
         `${API_BASE_URL}/teacher/surveys/${surveyId}/questions/${questionId}`
     );
@@ -358,7 +357,7 @@ export const addQuestionToSurvey = async (
 export const removeQuestionFromSurvey = async (
     surveyId: string,
     questionId: number
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean }>=> {
     const response = await axios.delete(
         `${API_BASE_URL}/teacher/surveys/${surveyId}/questions/${questionId}`
     );
@@ -373,7 +372,7 @@ export const removeQuestionFromSurvey = async (
 export const reorderSurveyQuestions = async (
     surveyId: string,
     questionOrder: { questionId: number; order: number }[]
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean }>=> {
     const response = await axios.put(
         `${API_BASE_URL}/teacher/surveys/${surveyId}/questions/reorder`,
         { questionOrder }

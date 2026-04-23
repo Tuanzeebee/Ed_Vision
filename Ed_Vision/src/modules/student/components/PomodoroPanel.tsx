@@ -4,6 +4,20 @@ import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
 import { toast } from 'react-hot-toast';
 
+const STUDY_TIME_STORAGE_KEY = 'edvision-study-total-seconds';
+
+const appendFocusStudySeconds = (seconds: number) => {
+  if (seconds <= 0) return;
+
+  try {
+    const currentValue = Number(localStorage.getItem(STUDY_TIME_STORAGE_KEY) || '0');
+    const nextValue = (Number.isFinite(currentValue) ? currentValue : 0) + seconds;
+    localStorage.setItem(STUDY_TIME_STORAGE_KEY, String(Math.max(0, Math.round(nextValue))));
+  } catch {
+    // Ignore storage failures to avoid interrupting timer flow.
+  }
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -174,7 +188,13 @@ export default function PomodoroPanel({
     let interval: NodeJS.Timeout;
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          if (prev <= 0) return 0;
+          if (activeModeRef.current === 'focus') {
+            appendFocusStudySeconds(1);
+          }
+          return prev - 1;
+        });
       }, 1000);
     } else if (timeLeft === 0) {
       setIsRunning(false);

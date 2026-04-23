@@ -46,6 +46,14 @@ model Account {
   approvedAttempts   AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
   verificationAttempts AttendanceVerificationAttempt[] // All verification attempts by this account
   prismaplacements   IeltsPlacementSession[]
+  hostedRooms       Room[]             @relation("RoomHost")
+  roomParticipants  RoomParticipant[]
+  roomActions       RoomAction[]       @relation("RoomActionTarget")
+  roomBans          RoomBan[]
+  studySessions     StudySession[]
+  dailyStreak       DailyStreak?
+  studyStat         StudyStat?
+  leaderboard       Leaderboard?
   @@map("Account")
 }
 
@@ -644,12 +652,12 @@ model PredictionResult {
   term_id                 Int?      // Liên kết với AcademicTerm để biết học kỳ
   created_at              DateTime  @default(now()) @db.Timestamptz(6)
   updated_at              DateTime  @updatedAt @db.Timestamptz(6)
-  
+
   student                 Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   course                  Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
   instructor              Instructor? @relation(fields: [instructor_id], references: [instructor_id])
   academicTerm            AcademicTerm? @relation(fields: [term_id], references: [term_id])
-  
+
   // Unique constraint: Một sinh viên chỉ có một dự đoán cho một môn từ một mô hình tại một thời điểm
   @@unique([student_id, course_id, model_type, model_version])
   @@map("PredictionResult")
@@ -663,9 +671,9 @@ model StudentSurveyFactors {
   financial_support_score Float?   // Hỗ trợ tài chính (score từ AI, 0-100)
   mental_health_score    Float?    // Tinh thần (score từ AI, 0-100)
   updated_at             DateTime  @updatedAt @db.Timestamptz(6)
-  
+
   student                Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  
+
   // Unique: Một sinh viên chỉ có một bộ yếu tố (có thể update nếu survey lại)
   @@unique([student_id])
   @@map("StudentSurveyFactors")
@@ -806,23 +814,124 @@ model CampusNetworkConfig {
 /// Constraint: only ONE active enrollment per (student, cert_type) at a time.
 /// To switch bands the student must complete the current band first.
 model CertificateEnrollment {
-  id            Int       @id @default(autoincrement())
-  student_id    Int
-  cert_type     String    @db.VarChar(30)   // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
-  target_band   String    @db.VarChar(20)   // '4.0' | '5.0' | '6.0' | '6.5' | '7.0' | '7.5+' | '350-495' | '500-599' | '600-699' | '700-799' | '800+' | 'associate' | 'expert'
-  status        String    @default("active") @db.VarChar(20) // 'active' | 'completed'
-  completed_at  DateTime? @db.Timestamptz(6)
-  enrolled_at   DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime  @updatedAt @db.Timestamptz(6)
+  id               Int       @id @default(autoincrement())
+  student_id       Int
+  cert_type        String    @db.VarChar(30) // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
+  status           String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
+  learning_status  String    @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
+  progress_percent Int       @default(0) @db.SmallInt // 0..100
+  current_score    Int? // current TOEIC score used for roadmap realtime UI
+  target_score     Int? // target TOEIC score learner is pursuing
+  toeic_plan_state Json? // JSON state for TOEIC roadmap (current/target/sessions/foundation)
+  /// Accumulated practice reserve points (0–100).
+  /// Reaching 100 unlocks the exam-simulation for the current score band.
+  reserve_points   Float     @default(0) @db.DoublePrecision
+  started_at       DateTime? @db.Timestamptz(6)
+  last_activity_at DateTime? @db.Timestamptz(6)
+  completed_at     DateTime? @db.Timestamptz(6)
+  enrolled_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @updatedAt @db.Timestamptz(6)
 
-  student       Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  topicProgress CertificateTopicProgress[]
+  student            Student                       @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  topicProgress      CertificateTopicProgress[]
+  practicePartSessions ToeicPracticePartSession[]
 
   // A student may only have one active enrollment per cert at a time (enforced in service layer).
-  // The unique key includes target_band so historical completed rows are preserved.
-  @@unique([student_id, cert_type, target_band])
   @@index([student_id, cert_type, status])
   @@map("CertificateEnrollment")
+}
+
+/// Detailed content repository for certificate learning materials (question-bank style).
+model LearningRepository {
+  id                Int      @id @default(autoincrement())
+  cert_type         String   @db.VarChar(30) // ielts | toeic | mos-word | mos-excel | mos-powerpoint
+  title             String   @db.VarChar(255)
+  slug              String   @unique @db.VarChar(120)
+  description       String?
+  content_type      String   @default("practice_set") @db.VarChar(30) // lesson | practice_set | mini_test | mock_test
+  skill_area        String?  @db.VarChar(50) // listening | reading | grammar | vocabulary | writing | speaking
+  topic_group       String?  @db.VarChar(100)
+  difficulty_level  String?  @db.VarChar(20) // beginner | intermediate | advanced
+  target_score_min  Int?
+  target_score_max  Int?
+  estimated_minutes Int?
+  pass_score        Int?     // normalized pass threshold for this repository
+  tags              Json?    // string[] for flexible filtering
+  metadata          Json?    // flexible payload: source, authoring notes, etc.
+  total_items       Int      @default(0)
+  is_published      Boolean  @default(false)
+  version           Int      @default(1)
+  created_by        Int?
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt @db.Timestamptz(6)
+
+  items             LearningRepositoryItem[]
+
+  @@index([cert_type, content_type, is_published])
+  @@index([skill_area, topic_group])
+  @@map("LearningRepository")
+}
+
+/// Individual learning item/question in a repository.
+model LearningRepositoryItem {
+  id                 Int      @id @default(autoincrement())
+  repository_id      Int
+  item_order         Int      @default(1)
+  item_type          String   @default("single_choice") @db.VarChar(30) // single_choice | multi_choice | fill_blank | short_answer
+  title              String?  @db.VarChar(255)
+  stem               String   // question/content body
+  reading_passage    String?  // optional shared/inline passage
+  hint               String?
+  explanation        String?  // Giải thích nền tảng (thủ công / nhập liệu)
+  ai_explanation     String?  // Giải thích AI (Ollama) — sinh tự động, tái sử dụng
+  difficulty_level   String?  @db.VarChar(20)
+  score_weight       Int      @default(1)
+  estimated_seconds  Int?
+  media_audio_url    String?
+  media_image_url    String?
+  metadata           Json?
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @updatedAt @db.Timestamptz(6)
+
+  repository         LearningRepository @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  options            LearningRepositoryOption[]
+
+  @@unique([repository_id, item_order])
+  @@index([repository_id])
+  @@map("LearningRepositoryItem")
+}
+
+/// Options/answers for objective learning items.
+model LearningRepositoryOption {
+  id             Int      @id @default(autoincrement())
+  item_id        Int
+  option_key     String   @db.VarChar(10) // A/B/C/D...
+  option_text    String
+  is_correct     Boolean  @default(false)
+  rationale      String?
+  sort_order     Int      @default(1)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  item           LearningRepositoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_id, option_key])
+  @@index([item_id, sort_order])
+  @@map("LearningRepositoryOption")
+}
+
+/// DB cache for AI-generated explanations of hardcoded TOEIC practice questions.
+/// Keyed by topic_key (e.g. "toeic.listening.node_0.q_1.full") — survives server restarts.
+model ToeicNodeQuestionCache {
+  id         Int      @id @default(autoincrement())
+  topic_key  String   @unique @db.VarChar(220) // stable key from frontend: toeic.<skill>.node_<n>.q_<m>.<mode>
+  cert_type  String   @db.VarChar(30)          // toeic | ielts | ...
+  ai_answer  String                            // full explanation text from Ollama
+  model      String   @db.VarChar(100)         // e.g. qwen2.5:3b
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([cert_type])
+  @@map("ToeicNodeQuestionCache")
 }
 
 /// Tracks which individual topics a student has completed within an enrollment.
@@ -925,4 +1034,180 @@ model IeltsPlacementAnswer {
   @@unique([sessionId, questionOrder])
   @@index([sessionId, questionOrder], map: "idx_placement_answers_session")
   @@map("ielts_placement_answers")
+model ToeicPracticePartSession {
+  id              Int       @id @default(autoincrement())
+  enrollment_id   Int
+
+  skill_area      String    @db.VarChar(20)  // 'listening' | 'reading'
+  toeic_part      Int       @db.SmallInt     // 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+  /// Score band of questions served in this session (matches student's level).
+  score_band_min  Int       @default(0)
+  score_band_max  Int       @default(990)
+
+  /// IDs of the ToeicPracticeQuestion rows that were served (ordered).
+  question_ids    Json                       // Int[]
+
+  /// Student's submitted answers: { "<question_id>": "A" | "B" | "C" | "D" }
+  answers         Json                       // Record<string, string>
+
+  total_questions Int       @default(10) @db.SmallInt
+  correct_count   Int       @default(0)  @db.SmallInt
+
+  /// Reserve points earned in this session (correct_count × points_per_correct for this part).
+  earned_points   Float     @default(0) @db.DoublePrecision
+
+  completed_at    DateTime  @default(now()) @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+
+  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+
+  @@index([enrollment_id, skill_area, toeic_part])
+  @@index([enrollment_id, completed_at])
+  @@map("ToeicPracticePartSession")
+}
+model Room {
+  room_id          Int       @id @default(autoincrement())
+  host_id          Int?
+  title            String    @db.VarChar(255)
+
+  room_mode        String    @db.VarChar(20) // audio | video | focus
+  password_hash    String?   @db.VarChar(255)
+
+  cover_type       String?   @db.VarChar(20) // image | youtube
+  cover_url        String?   @db.VarChar(500)
+
+  is_public        Boolean   @default(true)
+  max_participants Int       @default(6)
+
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+
+  // relations
+  host             Account?  @relation("RoomHost", fields: [host_id], references: [account_id])
+  participants     RoomParticipant[]
+  actions          RoomAction[]
+  bans             RoomBan[]
+  studySessions    StudySession[]
+
+  @@index([room_mode])
+  @@index([is_public])
+  @@map("Room")
+}
+
+model RoomParticipant {
+  id          Int      @id @default(autoincrement())
+
+  room_id     Int
+  account_id  Int
+
+  is_host     Boolean  @default(false)
+
+  camera_on   Boolean  @default(false)
+  mic_on      Boolean  @default(false)
+
+  joined_at   DateTime @default(now()) @db.Timestamptz(6)
+  left_at     DateTime? @db.Timestamptz(6)
+
+  // relations
+  room        Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  account     Account  @relation(fields: [account_id], references: [account_id])
+
+  @@index([room_id])
+  @@index([account_id])
+  @@index([room_id, left_at])
+  @@map("RoomParticipant")
+}
+
+model RoomAction {
+  id                 Int      @id @default(autoincrement())
+
+  room_id            Int
+  target_account_id  Int
+
+  action_type        String   @db.VarChar(20) // kick | mute
+
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  // relations
+  room               Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  targetAccount      Account  @relation("RoomActionTarget", fields: [target_account_id], references: [account_id])
+
+  @@map("RoomAction")
+}
+
+model RoomBan {
+  id          Int      @id @default(autoincrement())
+
+  room_id     Int
+  account_id  Int
+
+  banned_until DateTime? @db.Timestamptz(6)
+
+  // relations
+  room        Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  account     Account  @relation(fields: [account_id], references: [account_id])
+
+  @@map("RoomBan")
+}
+
+model StudySession {
+  id               Int      @id @default(autoincrement())
+
+  account_id       Int
+  room_id          Int?
+
+  started_at       DateTime @db.Timestamptz(6)
+  ended_at         DateTime? @db.Timestamptz(6)
+
+  duration_minutes Int?
+
+  // relations
+  account          Account  @relation(fields: [account_id], references: [account_id])
+  room             Room?    @relation(fields: [room_id], references: [room_id], onDelete: SetNull)
+
+  @@index([account_id])
+  @@index([started_at])
+  @@map("StudySession")
+}
+
+model DailyStreak {
+  account_id     Int   @id
+
+  current_streak Int   @default(0)
+  longest_streak Int   @default(0)
+
+  last_study_date DateTime? @db.Date
+
+  // relation
+  account        Account @relation(fields: [account_id], references: [account_id])
+
+  @@map("DailyStreak")
+}
+
+model StudyStat {
+  account_id     Int   @id
+
+  total_minutes  Int   @default(0)
+  total_sessions Int   @default(0)
+
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  // relation
+  account        Account @relation(fields: [account_id], references: [account_id])
+
+  @@map("StudyStat")
+}
+
+model Leaderboard {
+  account_id Int   @id
+
+  score      Int?
+  rank       Int?
+
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // relation
+  account    Account @relation(fields: [account_id], references: [account_id])
+
+  @@map("Leaderboard")
 }

@@ -3,7 +3,7 @@
  * Maps Vietnamese labels to i18n keys
  */
 
-export const MENU_LABEL_KEYS: Record<string, string> = {
+export const MENU_LABEL_KEYS: Record<string, string>= {
   // Main menu
   "Trang chủ": "admin:sidebar.home",
   "Quản lý": "admin:sidebar.management",

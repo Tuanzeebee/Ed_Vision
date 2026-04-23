@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Injectable,
   NotFoundException,
@@ -461,7 +458,7 @@ export class BookingService {
           // Tạo notification master với tên người đặt lịch chính xác
           const master = await this.prisma.notificationMaster.create({
             data: {
-              title: '📅 Lịch hẹn mới',
+              title: ' Lịch hẹn mới',
               body: `${bookerName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
               type: 'appointment_created',
               priority: 'Cao',
@@ -485,7 +482,7 @@ export class BookingService {
           // Push real-time qua WebSocket
           const payload = {
             masterId: master.id,
-            title: '📅 Lịch hẹn mới',
+            title: ' Lịch hẹn mới',
             body: `${bookerName} đã đặt lịch vào khung giờ ${slotTime} ngày ${slotDate} của bạn.`,
             type: 'appointment_created',
             target: 'individual',
@@ -802,7 +799,7 @@ export class BookingService {
           slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
 
-        const title = '✅ Lịch hẹn đã được xác nhận';
+        const title = ' Lịch hẹn đã được xác nhận';
         const body = `${instructorName} đã xác nhận lịch hẹn vào khung giờ ${slotTime} ngày ${slotDate}.`;
 
         // Tạo notification
@@ -918,7 +915,7 @@ export class BookingService {
           slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
 
-        const title = '❌ Lịch hẹn đã bị từ chối';
+        const title = ' Lịch hẹn đã bị từ chối';
         let body = `${instructorName} đã từ chối lịch hẹn vào khung giờ ${slotTime} ngày ${slotDate}.`;
 
         // Thêm lý do từ chối nếu có
@@ -1057,8 +1054,8 @@ export class BookingService {
 
           const title =
             status === 'confirmed'
-              ? '✅ Lịch hẹn đã được xác nhận'
-              : '❌ Lịch hẹn đã bị từ chối';
+              ? ' Lịch hẹn đã được xác nhận'
+              : ' Lịch hẹn đã bị từ chối';
 
           const body =
             status === 'confirmed'

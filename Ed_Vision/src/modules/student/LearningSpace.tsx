@@ -18,28 +18,28 @@ import { MusicPlayerProvider } from './music/MusicPlayerContext';
 import MusicWidgetWrapper from './components/MusicWidgetWrapper';
 
 // Lazy load heavy components
-const PomodoroPanel = lazy(() => import('./components/PomodoroPanel'));
-const PomodoroOverlay = lazy(() => import('./components/PomodoroOverlay'));
-const PomodoroCompactWidget = lazy(() => import('./components/PomodoroCompactWidget'));
-const ExplosionEffect = lazy(() => import('./components/ExplosionEffect'));
-const ConfettiEffect = lazy(() => import('./components/ConfettiEffect'));
-const AmbiencePanel = lazy(() => import('./components/AmbiencePanel'));
-const ThemePanel = lazy(() => import('./components/ThemePanel'));
-const MusicPanel = lazy(() => import('./components/MusicPanel'));
-const JournalPanel = lazy(() => import('./components/JournalPanel'));
-const RoomPanel = lazy(() => import('./components/RoomPanel'));
-const SettingsPanel = lazy(() => import('./components/SettingsPanel'));
-const LearningMapPanel = lazy(() => import('./components/LearningMapPanel'));
-const VideoCallRoom = lazy(() => import('./components/VideoCallRoom'));
-const LearningModulePanel = lazy(() => import('./components/LearningModulePanel'));
-const YouTubeBackground = lazy(() => import('./components/YouTubeBackground'));
+const PomodoroPanel = lazy(() =>import('./components/PomodoroPanel'));
+const PomodoroOverlay = lazy(() =>import('./components/PomodoroOverlay'));
+const PomodoroCompactWidget = lazy(() =>import('./components/PomodoroCompactWidget'));
+const ExplosionEffect = lazy(() =>import('./components/ExplosionEffect'));
+const ConfettiEffect = lazy(() =>import('./components/ConfettiEffect'));
+const AmbiencePanel = lazy(() =>import('./components/AmbiencePanel'));
+const ThemePanel = lazy(() =>import('./components/ThemePanel'));
+const MusicPanel = lazy(() =>import('./components/MusicPanel'));
+const JournalPanel = lazy(() =>import('./components/JournalPanel'));
+const RoomPanel = lazy(() =>import('./components/RoomPanel'));
+const SettingsPanel = lazy(() =>import('./components/SettingsPanel'));
+const LearningMapPanel = lazy(() =>import('./components/LearningMapPanel'));
+const VideoCallRoom = lazy(() =>import('./components/VideoCallRoom'));
+const LearningModulePanel = lazy(() =>import('./components/LearningModulePanel'));
+const YouTubeBackground = lazy(() =>import('./components/YouTubeBackground'));
 
 type Props = {
   className?: string;
 };
 
 // Sound URLs mapping
-const SOUND_URLS: Record<SoundType, string> = {
+const SOUND_URLS: Record<SoundType, string>= {
   rain: 'https://static.wixstatic.com/mp3/3d08de_0c9159454b04482c8032ac56dc427314.mp3',
   birds: 'https://static.wixstatic.com/mp3/3d08de_24a228e2b84f4afaade5486edd484d90.mp3',
   campfire: 'https://static.wixstatic.com/mp3/3d08de_0948c4b3598f413294d31676194a3149.mp3',
@@ -61,11 +61,128 @@ const SOUND_URLS: Record<SoundType, string> = {
   train: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_4986a8125c.mp3',
 };
 
+const CLICK_SOUND_STORAGE_KEYS = {
+  ENABLED: 'ed-vision-click-sound-enabled',
+  FILE: 'ed-vision-click-sound-file',
+  VOLUME: 'ed-vision-click-sound-volume',
+} as const;
+
+const CLICK_SOUND_FILE_NAMES = [
+  'abstract1',
+  'abstract2',
+  'african1',
+  'african2',
+  'african3',
+  'african4',
+  'coffee1',
+  'coffee2',
+  'minimalist1',
+  'minimalist10',
+  'minimalist11',
+  'minimalist12',
+  'minimalist13',
+  'minimalist2',
+  'minimalist3',
+  'minimalist4',
+  'minimalist5',
+  'minimalist6',
+  'minimalist7',
+  'minimalist8',
+  'minimalist9',
+  'modern1',
+  'modern10',
+  'modern11',
+  'modern12',
+  'modern13',
+  'modern14',
+  'modern15',
+  'modern16',
+  'modern2',
+  'modern3',
+  'modern4',
+  'modern5',
+  'modern6',
+  'modern7',
+  'modern8',
+  'modern9',
+  'retro1',
+  'retro10',
+  'retro11',
+  'retro12',
+  'retro2',
+  'retro3',
+  'retro4',
+  'retro5',
+  'retro6',
+  'retro7',
+  'retro8',
+  'retro9',
+  'wood-block1',
+  'wood-block2',
+  'wood-block3',
+] as const;
+
+const CLICK_SOUND_OPTIONS = CLICK_SOUND_FILE_NAMES.map((name) => ({
+  id: name,
+  label: name
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' '),
+  file: `/sounds/ui/${name}.mp3`,
+  description: 'Âm thanh click từ UI Soundpack.',
+}));
+
+const DEFAULT_CLICK_SOUND = CLICK_SOUND_OPTIONS.find((option) => option.id === 'minimalist11')?.file || CLICK_SOUND_OPTIONS[0].file;
+const DEFAULT_CLICK_SOUND_VOLUME = 40;
+const MUSIC_MATCHED_PANEL_WIDTH = 1200;
+const MUSIC_MATCHED_PANEL_HEIGHT = 600;
+const MAP_PANEL_WIDTH = 1120;
+const MAP_PANEL_HEIGHT = 680;
+const DAILY_MISSION_CELEBRATION_EVENT = 'edvision-daily-mission-celebration';
+const DAILY_MISSION_COIN_BURST = Array.from({ length: 44 }, (_, index) => ({
+  id: index,
+  left: (index * 23) % 100,
+  delay: (index % 11) * 0.09,
+  duration: 2.1 + (index % 6) * 0.28,
+  size: 14 + (index % 5) * 3,
+}));
+
 export default function LearningSpace({ className = '' }: Props) {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const learningSpaceRef = useRef<HTMLDivElement | null>(null);
+  const buttonClickSoundRef = useRef<HTMLAudioElement | null>(null);
+  const dailyMissionCelebrationTimerRef = useRef<number | null>(null);
+  const [clickSoundEnabled, setClickSoundEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CLICK_SOUND_STORAGE_KEYS.ENABLED);
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [selectedClickSound, setSelectedClickSound] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CLICK_SOUND_STORAGE_KEYS.FILE);
+      const isSupported = CLICK_SOUND_OPTIONS.some((option) => option.file === saved);
+      return isSupported ? (saved as string) : DEFAULT_CLICK_SOUND;
+    } catch {
+      return DEFAULT_CLICK_SOUND;
+    }
+  });
+  const [clickSoundVolume, setClickSoundVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CLICK_SOUND_STORAGE_KEYS.VOLUME);
+      if (saved === null) return DEFAULT_CLICK_SOUND_VOLUME;
+      const parsed = Number(saved);
+      if (!Number.isFinite(parsed)) return DEFAULT_CLICK_SOUND_VOLUME;
+      return Math.min(100, Math.max(0, parsed));
+    } catch {
+      return DEFAULT_CLICK_SOUND_VOLUME;
+    }
+  });
   
   // Weather effects
   const [showSnow, setShowSnow] = useState(true);
@@ -79,7 +196,7 @@ export default function LearningSpace({ className = '' }: Props) {
   const [pomoVisible, setPomoVisible] = useState(false);
   const [pomoOverlayVisible, setPomoOverlayVisible] = useState(false);
   const [pomoCompactVisible, setPomoCompactVisible] = useState(false);
-  const [pomoViewMode, setPomoViewMode] = useState<'spotlight' | 'minimalist'>('spotlight');
+  const [pomoViewMode, setPomoViewMode] = useState<'spotlight'| 'minimalist'>('spotlight');
   const prevRunningRef = useRef(false);
   const [pomoFocusTitle, setPomoFocusTitle] = useState('');
   const [pomoTimeLeft, setPomoTimeLeft] = useState(0);
@@ -88,15 +205,29 @@ export default function LearningSpace({ className = '' }: Props) {
   const [pomoJustStopped, setPomoJustStopped] = useState(false);
   const [showExplosion, setShowExplosion] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showDailyMissionCelebration, setShowDailyMissionCelebration] = useState(false);
+  const [dailyMissionCelebrationMessage, setDailyMissionCelebrationMessage] = useState(
+    'Bạn đã hoàn thành nhiệm vụ ngày hôm nay!'
+  );
   const [ambienceVisible, setAmbienceVisible] = useState(false);
   const [themeVisible, setThemeVisible] = useState(false);
   const [musicPanelVisible, setMusicPanelVisible] = useState(false);
   const [journalVisible, setJournalVisible] = useState(false);
   const [roomVisible, setRoomVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
   const [learningMapVisible, setLearningMapVisible] = useState(false);
   const [videoCallVisible, setVideoCallVisible] = useState(false);
   const [currentRoomTitle, setCurrentRoomTitle] = useState('');
+  const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
+  const [currentRoomPassword, setCurrentRoomPassword] = useState<string | undefined>(undefined);
+  const [currentRoomMicOn, setCurrentRoomMicOn] = useState(false);
+  const [currentRoomCameraOn, setCurrentRoomCameraOn] = useState(false);
+  const [currentRoomMicDeviceId, setCurrentRoomMicDeviceId] = useState<string | undefined>(undefined);
+  const [currentRoomCameraDeviceId, setCurrentRoomCameraDeviceId] = useState<string | undefined>(undefined);
+  const [currentRoomParticipantId, setCurrentRoomParticipantId] = useState<number | null>(null);
+  const [currentRoomLivekitToken, setCurrentRoomLivekitToken] = useState<string | null>(null);
+  const [currentRoomLivekitUrl, setCurrentRoomLivekitUrl] = useState<string | null>(null);
   const [learningModuleVisible, setLearningModuleVisible] = useState(false);
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -133,9 +264,9 @@ export default function LearningSpace({ className = '' }: Props) {
     return cached.backgroundImage || 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&h=1080&fit=crop';
   });
   const [activeLiveTheme, setActiveLiveTheme] = useState<LiveTheme | null>(null);
-  const [liveEnabled, setLiveEnabled] = useState(() => loadThemeState().liveEnabled);
-  const [videoMuted, setVideoMuted] = useState(() => loadThemeState().videoMuted ?? true);
-  const [videoVolume, setVideoVolume] = useState(() => loadThemeState().videoVolume ?? 70);
+  const [liveEnabled, setLiveEnabled] = useState(() =>loadThemeState().liveEnabled);
+  const [videoMuted, setVideoMuted] = useState(() =>loadThemeState().videoMuted ?? true);
+  const [videoVolume, setVideoVolume] = useState(() =>loadThemeState().videoVolume ?? 70);
 
   // Handle Ambience Sounds
   useEffect(() => {
@@ -154,9 +285,9 @@ export default function LearningSpace({ className = '' }: Props) {
       audio.volume = volume / 100;
 
       // Play or pause based on volume
-      if (volume > 0) {
+      if (volume >0) {
         if (audio.paused) {
-          audio.play().catch(e => console.log(`Audio playback failed for ${soundType}:`, e));
+          audio.play().catch(e =>console.log(`Audio playback failed for ${soundType}:`, e));
         }
       } else {
         if (!audio.paused) {
@@ -168,11 +299,102 @@ export default function LearningSpace({ className = '' }: Props) {
   }, [soundVolumes]);
 
   const handleSoundVolumeChange = useCallback((sound: SoundType, volume: number) => {
-    setSoundVolumes(prev => ({
+    setSoundVolumes(prev =>({
       ...prev,
       [sound]: volume
     }));
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLICK_SOUND_STORAGE_KEYS.ENABLED, String(clickSoundEnabled));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [clickSoundEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLICK_SOUND_STORAGE_KEYS.FILE, selectedClickSound);
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [selectedClickSound]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLICK_SOUND_STORAGE_KEYS.VOLUME, String(clickSoundVolume));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [clickSoundVolume]);
+
+  useEffect(() => {
+    if (!buttonClickSoundRef.current) {
+      buttonClickSoundRef.current = new Audio(selectedClickSound);
+      buttonClickSoundRef.current.preload = 'auto';
+      buttonClickSoundRef.current.volume = clickSoundVolume / 100;
+      return;
+    }
+
+    buttonClickSoundRef.current.src = selectedClickSound;
+    buttonClickSoundRef.current.volume = clickSoundVolume / 100;
+  }, [selectedClickSound, clickSoundVolume]);
+
+  const playLearningSpaceButtonSound = useCallback((soundPath?: string) => {
+    if (!clickSoundEnabled) return;
+
+    const playbackVolume = clickSoundVolume / 100;
+
+    if (soundPath && soundPath !== selectedClickSound) {
+      const previewSound = new Audio(soundPath);
+      previewSound.preload = 'auto';
+      previewSound.volume = playbackVolume;
+      previewSound.play().catch(() => {
+        // Ignore playback failures when browser blocks autoplay.
+      });
+      return;
+    }
+
+    if (!buttonClickSoundRef.current) {
+      buttonClickSoundRef.current = new Audio(selectedClickSound);
+      buttonClickSoundRef.current.preload = 'auto';
+      buttonClickSoundRef.current.volume = playbackVolume;
+    }
+
+    buttonClickSoundRef.current.volume = playbackVolume;
+    buttonClickSoundRef.current.currentTime = 0;
+    buttonClickSoundRef.current.play().catch(() => {
+      // Ignore playback failures when browser blocks autoplay.
+    });
+  }, [clickSoundEnabled, selectedClickSound, clickSoundVolume]);
+
+  useEffect(() => {
+    const handleGlobalButtonClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      const clickedElement = target.closest(
+        'button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .dock-item'
+      );
+
+      if (!clickedElement) return;
+      if (clickedElement instanceof HTMLButtonElement && clickedElement.disabled) return;
+
+      if (clickedElement instanceof HTMLElement && clickedElement.dataset.clickSound === 'off') {
+        return;
+      }
+
+      if (!learningSpaceRef.current?.contains(clickedElement)) return;
+
+      playLearningSpaceButtonSound();
+    };
+
+    document.addEventListener('click', handleGlobalButtonClick, true);
+    return () => {
+      document.removeEventListener('click', handleGlobalButtonClick, true);
+    };
+  }, [playLearningSpaceButtonSound]);
 
   // Load theme state asynchronously to avoid blocking render
   useEffect(() => {
@@ -182,10 +404,10 @@ export default function LearningSpace({ className = '' }: Props) {
       try {
         // Simulate async loading with requestIdleCallback for better performance
         await new Promise<void>((resolve) => {
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => resolve());
+          if ('requestIdleCallback'in window) {
+            requestIdleCallback(() =>resolve());
           } else {
-            setTimeout(() => resolve(), 0);
+            setTimeout(() =>resolve(), 0);
           }
         });
 
@@ -231,7 +453,7 @@ export default function LearningSpace({ className = '' }: Props) {
       });
     }, 300); // Debounce 300ms
 
-    return () => clearTimeout(saveTimeout);
+    return () =>clearTimeout(saveTimeout);
   }, [activeLiveTheme, liveEnabled, backgroundImage, videoMuted, videoVolume, isInitialLoading]);
 
   // Journal entries - lazy load from localStorage
@@ -258,6 +480,7 @@ export default function LearningSpace({ className = '' }: Props) {
     setMusicPanelVisible(false);
     setJournalVisible(false);
     setSettingsVisible(false);
+    setProfileVisible(false);
     setLearningMapVisible(false);
     setLearningModuleVisible(false);
     setRoomVisible(false);
@@ -291,6 +514,9 @@ export default function LearningSpace({ className = '' }: Props) {
       case 'settings':
         setSettingsVisible(true);
         break;
+      case 'profile':
+        setProfileVisible(true);
+        break;
       case 'map':
         setLearningMapVisible(true);
         break;
@@ -309,6 +535,7 @@ export default function LearningSpace({ className = '' }: Props) {
     { id: 'pomo', icon: 'fas fa-clock', label: 'Pomo', onClick: () => openPanel('pomo') },
     { id: 'music', icon: 'fas fa-music', label: 'Music', onClick: () => openPanel('music') },
     { id: 'map', icon: 'fas fa-map', label: 'Learning Map', onClick: () => openPanel('map') },
+    { id: 'profile', icon: 'fas fa-user-circle', label: 'Profile', onClick: () => openPanel('profile') },
     { id: 'learn', icon: 'fas fa-tv', label: 'Learn', onClick: () => openPanel('learn') },
     { id: 'settings', icon: 'fas fa-cog', label: 'Settings', onClick: () => openPanel('settings') },
   ], [navigate, openPanel]);
@@ -398,7 +625,7 @@ export default function LearningSpace({ className = '' }: Props) {
   useEffect(() => {
     if (pomoJustStopped) return;
     // Only consider active if running OR if paused but time has elapsed (not at start/reset state)
-    const isActive = pomoRunning || (pomoTotalTime > 0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft > 0);
+    const isActive = pomoRunning || (pomoTotalTime >0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft >0);
     if (!isActive) return;
     if (pomoViewMode === 'spotlight') {
       setPomoOverlayVisible(true);
@@ -414,7 +641,7 @@ export default function LearningSpace({ className = '' }: Props) {
       setPomoJustStopped(false);
       return;
     }
-    const isActive = pomoRunning || (pomoTotalTime > 0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft > 0);
+    const isActive = pomoRunning || (pomoTotalTime >0 && pomoTimeLeft < pomoTotalTime && pomoTimeLeft >0);
     if (!isActive && pomoJustStopped) {
       setPomoJustStopped(false);
     }
@@ -450,6 +677,38 @@ export default function LearningSpace({ className = '' }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleDailyMissionCelebration = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      const nextMessage =
+        typeof customEvent.detail?.message === 'string' && customEvent.detail.message.trim().length > 0
+          ? customEvent.detail.message
+          : 'Bạn đã hoàn thành nhiệm vụ ngày hôm nay!';
+
+      setDailyMissionCelebrationMessage(nextMessage);
+      setShowDailyMissionCelebration(true);
+
+      if (dailyMissionCelebrationTimerRef.current) {
+        window.clearTimeout(dailyMissionCelebrationTimerRef.current);
+      }
+
+      dailyMissionCelebrationTimerRef.current = window.setTimeout(() => {
+        setShowDailyMissionCelebration(false);
+        dailyMissionCelebrationTimerRef.current = null;
+      }, 3400);
+    };
+
+    window.addEventListener(DAILY_MISSION_CELEBRATION_EVENT, handleDailyMissionCelebration);
+
+    return () => {
+      window.removeEventListener(DAILY_MISSION_CELEBRATION_EVENT, handleDailyMissionCelebration);
+      if (dailyMissionCelebrationTimerRef.current) {
+        window.clearTimeout(dailyMissionCelebrationTimerRef.current);
+        dailyMissionCelebrationTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Toggle fullscreen function
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -464,21 +723,26 @@ export default function LearningSpace({ className = '' }: Props) {
   }, []);
 
   // Memoize background style for performance
-  const backgroundStyle = useMemo(() => ({
-    backgroundImage: liveEnabled && activeLiveTheme ? 'none' : `url('${backgroundImage}')`,
+  const backgroundStyle = useMemo(() =>({
+    backgroundImage: liveEnabled && activeLiveTheme ? 'none': `url('${backgroundImage}')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
   }), [liveEnabled, activeLiveTheme, backgroundImage]);
 
+  const matchedPanelInitialX = (window.innerWidth - MUSIC_MATCHED_PANEL_WIDTH) / 2;
+  const matchedPanelInitialY = (window.innerHeight - MUSIC_MATCHED_PANEL_HEIGHT - 80) / 2;
+  const learningMapInitialX = (window.innerWidth - MAP_PANEL_WIDTH) / 2;
+  const learningMapInitialY = (window.innerHeight - MAP_PANEL_HEIGHT - 80) / 2;
+
   return (
     <MusicPlayerProvider>
     <div
+      ref={learningSpaceRef}
       className={`min-h-screen overflow-hidden relative learning-space-container ${className}`}
       style={backgroundStyle}
     >
       <Toaster 
-        position="top-center"
-        toastOptions={{
+        position="top-center"toastOptions={{
           duration: 2000,
           style: {
             background: '#333',
@@ -490,7 +754,7 @@ export default function LearningSpace({ className = '' }: Props) {
       />
       {/* YouTube Live Background - Lazy loaded */}
       {liveEnabled && activeLiveTheme && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/20 animate-pulse" />}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/20 animate-pulse"/>}>
           <YouTubeBackground
             videoId={activeLiveTheme.youtubeVideoId}
             start={activeLiveTheme.start}
@@ -498,8 +762,7 @@ export default function LearningSpace({ className = '' }: Props) {
             volume={videoVolume}
             end={activeLiveTheme.end}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Weather Effects - Lightweight, no Suspense needed */}
       <SnowEffect show={showSnow} />
@@ -518,8 +781,8 @@ export default function LearningSpace({ className = '' }: Props) {
             timeLeft={pomoTimeLeft}
             totalTime={pomoTotalTime}
             isRunning={pomoRunning}
-            onClose={() => setPomoOverlayVisible(false)}
-            onOpenPanel={() => setPomoVisible(true)}
+            onClose={() =>setPomoOverlayVisible(false)}
+            onOpenPanel={() =>setPomoVisible(true)}
             onPause={() => {
               // Handle pause/resume
               if ((window as any).__pomoToggleHandler) {
@@ -544,8 +807,7 @@ export default function LearningSpace({ className = '' }: Props) {
               
               if (amount < 0 && (pomoTimeLeft + amount) <= 0) {
                 toast.error("Không thể giảm thời gian về 0 hoặc thấp hơn!", {
-                  id: 'pomo-min-limit'
-                });
+                  id: 'pomo-min-limit'});
                 return;
               }
 
@@ -556,8 +818,7 @@ export default function LearningSpace({ className = '' }: Props) {
               }
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Pomodoro Compact Widget */}
       {pomoCompactVisible && (
@@ -581,8 +842,7 @@ export default function LearningSpace({ className = '' }: Props) {
               }
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Explosion Effect */}
       {showExplosion && (
@@ -594,8 +854,7 @@ export default function LearningSpace({ className = '' }: Props) {
               setShowConfetti(true);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Confetti Effect */}
       {showConfetti && (
@@ -606,8 +865,7 @@ export default function LearningSpace({ className = '' }: Props) {
               setShowConfetti(false);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Clock Display - Lightweight, always visible */}
       <ClockDisplay />
@@ -622,14 +880,14 @@ export default function LearningSpace({ className = '' }: Props) {
       <Suspense fallback={null}>
         <PomodoroPanel
           visible={pomoVisible}
-          onClose={() => setPomoVisible(false)}
+          onClose={() =>setPomoVisible(false)}
           onStartTimer={handlePomoStart}
           onStopTimer={() => {
             setPomoOverlayVisible(false);
             setPomoCompactVisible(false);
             setPomoVisible(true);
           }}
-          onViewModeChange={(m) => setPomoViewMode(m)}
+          onViewModeChange={(m) =>setPomoViewMode(m)}
         />
       </Suspense>
 
@@ -638,7 +896,7 @@ export default function LearningSpace({ className = '' }: Props) {
         <Suspense fallback={null}>
           <AmbiencePanel
             visible={ambienceVisible}
-            onClose={() => setAmbienceVisible(false)}
+            onClose={() =>setAmbienceVisible(false)}
             soundVolumes={soundVolumes}
             onSoundVolumeChange={handleSoundVolumeChange}
             showRain={showRain}
@@ -647,51 +905,57 @@ export default function LearningSpace({ className = '' }: Props) {
             showLeaves={showLeaves}
             showStars={showStars}
             showClouds={showClouds}
-            onToggleRain={() => setShowRain(!showRain)}
-            onToggleSnow={() => setShowSnow(!showSnow)}
-            onToggleFireflies={() => setShowFireflies(!showFireflies)}
-            onToggleLeaves={() => setShowLeaves(!showLeaves)}
-            onToggleStars={() => setShowStars(!showStars)}
-            onToggleClouds={() => setShowClouds(!showClouds)}
+            onToggleRain={() =>setShowRain(!showRain)}
+            onToggleSnow={() =>setShowSnow(!showSnow)}
+            onToggleFireflies={() =>setShowFireflies(!showFireflies)}
+            onToggleLeaves={() =>setShowLeaves(!showLeaves)}
+            onToggleStars={() =>setShowStars(!showStars)}
+            onToggleClouds={() =>setShowClouds(!showClouds)}
             onResetAnimations={handleResetAnimations}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Theme Panel */}
       {themeVisible && (
         <Suspense fallback={null}>
           <ThemePanel
             visible={themeVisible}
-            onClose={() => setThemeVisible(false)}
+            onClose={() =>setThemeVisible(false)}
             onChangeBackground={handleChangeBackground}
             onUploadBackground={handleUploadBackground}
             onSelectLiveTheme={handleSelectLiveTheme}
             videoMuted={videoMuted}
-            onToggleVideoMute={() => setVideoMuted(!videoMuted)}
+            onToggleVideoMute={() =>setVideoMuted(!videoMuted)}
             videoVolume={videoVolume}
             onVolumeChange={setVideoVolume}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Room Panel */}
       {roomVisible && (
         <Suspense fallback={null}>
           <RoomPanel
             visible={roomVisible}
-            onClose={() => setRoomVisible(false)}
+            onClose={() =>setRoomVisible(false)}
             onSelectRoom={(url) => {
               setBackgroundImage(url);
               setRoomVisible(false);
             }}
             onJoinCall={(roomTitle) => {
-              setCurrentRoomTitle(roomTitle);
+              setCurrentRoomTitle(roomTitle.roomTitle);
+              setCurrentRoomId(roomTitle.roomId);
+              setCurrentRoomPassword(roomTitle.password);
+              setCurrentRoomMicOn(roomTitle.micOn);
+              setCurrentRoomCameraOn(roomTitle.cameraOn);
+              setCurrentRoomMicDeviceId(roomTitle.micDeviceId);
+              setCurrentRoomCameraDeviceId(roomTitle.cameraDeviceId);
+              setCurrentRoomParticipantId(roomTitle.participantId);
+              setCurrentRoomLivekitToken(roomTitle.livekitToken);
+              setCurrentRoomLivekitUrl(roomTitle.livekitUrl ?? null);
               setVideoCallVisible(true);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Music Panel */}
       {musicPanelVisible && (
@@ -703,26 +967,23 @@ export default function LearningSpace({ className = '' }: Props) {
                 <span className="text-white/80 text-sm">Loading Music Panel...</span>
               </div>
             </div>
-          </div>
-        }>
+          </div>}>
           <MusicPanel
             visible={musicPanelVisible}
-            onClose={() => setMusicPanelVisible(false)}
+            onClose={() =>setMusicPanelVisible(false)}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Journal Panel */}
       {journalVisible && (
         <Suspense fallback={null}>
           <JournalPanel
             visible={journalVisible}
-            onClose={() => setJournalVisible(false)}
+            onClose={() =>setJournalVisible(false)}
             onSaveEntry={handleSaveJournalEntry}
             recentEntries={journalEntries}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Settings Panel */}
       {settingsVisible && (
@@ -730,20 +991,47 @@ export default function LearningSpace({ className = '' }: Props) {
           <SettingsPanel
             visible={settingsVisible}
             onClose={() => setSettingsVisible(false)}
+            panelMode="settings"
+            clickSoundEnabled={clickSoundEnabled}
+            onToggleClickSound={setClickSoundEnabled}
+            selectedClickSound={selectedClickSound}
+            onSelectClickSound={setSelectedClickSound}
+            clickSoundOptions={CLICK_SOUND_OPTIONS}
+            clickSoundVolume={clickSoundVolume}
+            onChangeClickSoundVolume={setClickSoundVolume}
+            onPreviewClickSound={playLearningSpaceButtonSound}
           />
         </Suspense>
       )}
+
+      {/* Profile Panel */}
+      {profileVisible && (
+        <Suspense fallback={null}>
+          <SettingsPanel
+            visible={profileVisible}
+            onClose={() => setProfileVisible(false)}
+            panelMode="profile"
+            initialX={matchedPanelInitialX}
+            initialY={matchedPanelInitialY}
+            initialWidth={MUSIC_MATCHED_PANEL_WIDTH}
+            initialHeight={MUSIC_MATCHED_PANEL_HEIGHT}
+          />
+        </Suspense>)}
 
       {/* Learning Map Panel */}
       {learningMapVisible && (
         <Suspense fallback={null}>
           <LearningMapPanel
             visible={learningMapVisible}
-            onClose={() => setLearningMapVisible(false)}
+            onClose={() =>setLearningMapVisible(false)}
             onModuleClick={handleModuleClick}
+            selectedCourseId={selectedCourseId}
+            initialX={learningMapInitialX}
+            initialY={learningMapInitialY}
+            initialWidth={MAP_PANEL_WIDTH}
+            initialHeight={MAP_PANEL_HEIGHT}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Learning Module Panel */}
       {learningModuleVisible && (
@@ -751,41 +1039,111 @@ export default function LearningSpace({ className = '' }: Props) {
           <LearningModulePanel
             visible={learningModuleVisible}
             onClose={() => setLearningModuleVisible(false)}
+            selectedCourseId={selectedCourseId}
+            selectedModuleId={selectedModuleId}
             onCompleteModule={() => {
               // Close module panel and open map panel to show animation
               setLearningModuleVisible(false);
               setLearningMapVisible(true);
             }}
           />
-        </Suspense>
-      )}
+        </Suspense>)}
 
       {/* Video Call Room */}
       {videoCallVisible && (
         <Suspense fallback={null}>
           <VideoCallRoom
             visible={videoCallVisible}
-            onClose={() => setVideoCallVisible(false)}
+            onClose={() =>setVideoCallVisible(false)}
             roomTitle={currentRoomTitle}
+            roomId={currentRoomId}
+            roomPassword={currentRoomPassword}
+            initialMicOn={currentRoomMicOn}
+            initialCameraOn={currentRoomCameraOn}
+            initialMicDeviceId={currentRoomMicDeviceId}
+            initialCameraDeviceId={currentRoomCameraDeviceId}
+            participantId={currentRoomParticipantId}
+            livekitToken={currentRoomLivekitToken}
+            livekitUrl={currentRoomLivekitUrl}
           />
-        </Suspense>
+        </Suspense>)}
+
+      {showDailyMissionCelebration && (
+        <div className="pointer-events-none fixed inset-0 z-[90] overflow-hidden">
+          <div className="absolute inset-0 bg-black/25"></div>
+
+          <div className="absolute inset-0">
+            {DAILY_MISSION_COIN_BURST.map((coin) => (
+              <i
+                key={coin.id}
+                className="fas fa-coins absolute -top-10 text-amber-200/95 drop-shadow-[0_6px_8px_rgba(0,0,0,0.35)]"
+                style={{
+                  left: `${coin.left}%`,
+                  fontSize: `${coin.size}px`,
+                  animationName: 'dailyMissionCoinRain',
+                  animationTimingFunction: 'linear',
+                  animationFillMode: 'forwards',
+                  animationDelay: `${coin.delay}s`,
+                  animationDuration: `${coin.duration}s`,
+                }}
+              ></i>
+            ))}
+          </div>
+
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div
+              className="w-full max-w-[460px] rounded-2xl border border-amber-200/45 bg-[#2f1e14]/88 px-6 py-5 text-center shadow-[0_16px_38px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+              style={{ animation: 'dailyMissionNoticePop 0.35s ease-out' }}
+            >
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-amber-200/50 bg-amber-300/20 text-amber-100">
+                <i className="fas fa-trophy text-2xl"></i>
+              </div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-amber-100/75">Daily Mission</p>
+              <h3 className="mt-1 text-xl font-bold text-amber-50">Hoàn thành nhiệm vụ ngày!</h3>
+              <p className="mt-2 text-sm text-amber-100/85">{dailyMissionCelebrationMessage}</p>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes dailyMissionCoinRain {
+              0% {
+                transform: translateY(-14vh) rotate(0deg);
+                opacity: 0;
+              }
+              8% {
+                opacity: 1;
+              }
+              100% {
+                transform: translateY(118vh) rotate(560deg);
+                opacity: 0.95;
+              }
+            }
+
+            @keyframes dailyMissionNoticePop {
+              0% {
+                opacity: 0;
+                transform: translateY(14px) scale(0.94);
+              }
+              100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+          `}</style>
+        </div>
       )}
 
       {/* Font Awesome CDN - Required for icons */}
       <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-      />
+        rel="stylesheet"href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
       {/* Fullscreen Toggle Button */}
       <button
         onClick={toggleFullscreen}
-        className="fixed bottom-4 left-4 z-50 w-10 h-10 rounded-full backdrop-blur-md bg-black/30 border border-white/20 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/50 hover:scale-110 transition-all duration-200 shadow-lg"
-        title={isFullscreen ? 'Thoát chế độ toàn màn hình (F11)' : 'Phóng to toàn màn hình (F11)'}
+        className="fixed bottom-4 left-4 z-50 w-10 h-10 rounded-full backdrop-blur-md bg-black/30 border border-white/20 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/50 hover:scale-110 transition-all duration-200 shadow-lg"title={isFullscreen ? 'Thoát chế độ toàn màn hình (F11)': 'Phóng to toàn màn hình (F11)'}
       >
-        <i className={`fas ${isFullscreen ? 'fa-compress' : 'fa-expand'} text-sm`}></i>
+        <i className={`fas ${isFullscreen ? 'fa-compress': 'fa-expand'} text-sm`}></i>
       </button>
     </div>
-    </MusicPlayerProvider>
-  );
+    </MusicPlayerProvider>);
 }

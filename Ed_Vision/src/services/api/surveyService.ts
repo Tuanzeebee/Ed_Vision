@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { TokenManager } from '@/lib/tokenManager';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { API_BASE_URL } from './config';
 
 // Create a separate axios instance for survey that doesn't auto-redirect on 401
 const surveyApiClient = axios.create({
@@ -13,7 +12,7 @@ const surveyApiClient = axios.create({
 
 // Helper to get token from multiple sources (matches other modules)
 const getAuthToken = (): string | null => {
-  // Priority: dev-token → simple 'token' key (set by TokenManager.setToken) → TokenManager
+  // Priority: dev-token → simple 'token'key (set by TokenManager.setToken) → TokenManager
   const devToken = localStorage.getItem('dev-token');
   if (devToken) return devToken;
 
@@ -40,7 +39,7 @@ surveyApiClient.interceptors.request.use(
 
 // Response interceptor - NO auto redirect, let component handle errors
 surveyApiClient.interceptors.response.use(
-  (response) => response,
+  (response) =>response,
   (error) => {
     // Don't redirect, just reject the promise
     return Promise.reject(error);

@@ -1,6 +1,4 @@
-import { apiFetch } from '@/services/api/fetch'
-
-/**
+import { apiFetch } from '@/services/api/fetch'/**
  * Service để load và sync permissions từ server
  */
 export class PermissionService {
@@ -18,12 +16,12 @@ export class PermissionService {
       const roleCode = user.role
 
       // First check if user already has permissions from login
-      if (user.permissions && Object.keys(user.permissions).length > 0) {
+      if (user.permissions && Object.keys(user.permissions).length >0) {
         return user.permissions
       }
 
       // For admin/leader, load from server
-      if (roleCode === 'admin' || roleCode === 'leader') {
+      if (roleCode === 'admin'|| roleCode === 'leader') {
         const response = await apiFetch(`/admin/role-permissions/${roleCode}`)
         
         if (response && response.success) {
@@ -43,7 +41,7 @@ export class PermissionService {
       }
 
       // For other roles, return default permissions
-      const defaultPermissions: Record<string, string[]> = {
+      const defaultPermissions: Record<string, string[]>= {
         'student': [
           'student_dashboard',
           'student_profile',
@@ -59,16 +57,14 @@ export class PermissionService {
           'student_financial_survey',
           'student_choose_mascot',
           'student_learning_adventure',
-          'student_chat_student'
-        ],
+          'student_chat_student'],
         'teacher': [
           'teacher_dashboard',
           'teacher_profile',
           'teacher_schedule',
           'teacher_appointments',
           'teacher_students',
-          'teacher_survey'
-        ],
+          'teacher_survey'],
         'parent': [
           'parent_dashboard',
           'parent_profile',
@@ -76,12 +72,11 @@ export class PermissionService {
           'parent_appointments',
           'appointments',
           'parent_book_appointment',
-          'booking_scheduler'
-        ]
+          'booking_scheduler']
       }
 
       const rolePermissions = defaultPermissions[roleCode] || []
-      const permissions: Record<string, boolean> = {}
+      const permissions: Record<string, boolean>= {}
       rolePermissions.forEach(perm => {
         permissions[perm] = true
       })

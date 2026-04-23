@@ -69,10 +69,10 @@ class InstructorAvailabilityApi {
       }
 
       // Fetch from API if cache miss
-      const params: Record<string, string> = {};
+      const params: Record<string, string>= {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
-      params.autoCreate = autoCreate ? 'true' : 'false';
+      params.autoCreate = autoCreate ? 'true': 'false';
       // Add timestamp to bypass browser cache when skipCache is true
       if (skipCache) {
         params._t = Date.now().toString();
@@ -83,7 +83,7 @@ class InstructorAvailabilityApi {
       const response = await fetch(url);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const error = await response.json().catch(() =>({ message: 'Unknown error'}));
         throw new Error(error.message || 'Không thể tải thời gian biểu');
       }
 
@@ -125,7 +125,7 @@ class InstructorAvailabilityApi {
       const response = await fetch(url);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const error = await response.json().catch(() =>({ message: 'Unknown error'}));
         throw new Error(error.message || 'Không thể tải thống kê');
       }
 
@@ -161,7 +161,7 @@ class InstructorAvailabilityApi {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() =>({ message: 'Unknown error'}));
       throw new Error(error.message || 'Không thể thêm ngày có thể dạy');
     }
 
@@ -190,7 +190,7 @@ class InstructorAvailabilityApi {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() =>({ message: 'Unknown error'}));
       throw new Error(error.message || 'Không thể tạo hàng loạt thời gian biểu');
     }
 
@@ -213,7 +213,7 @@ class InstructorAvailabilityApi {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() =>({ message: 'Unknown error'}));
       throw new Error(error.message || 'Không thể xóa ngày có thể dạy');
     }
 
@@ -233,7 +233,7 @@ class InstructorAvailabilityApi {
     slotData: {
       startTime: string;
       endTime: string;
-      meetingType: 'online' | 'offline' | 'both';
+      meetingType: 'online'| 'offline'| 'both';
       capacity: number;
       note?: string;
     }
@@ -249,7 +249,7 @@ class InstructorAvailabilityApi {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() =>({ message: 'Unknown error'}));
       throw new Error(error.message || 'Không thể thêm khung giờ');
     }
 
@@ -271,7 +271,7 @@ class InstructorAvailabilityApi {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() =>({ message: 'Unknown error'}));
       throw new Error(error.message || 'Không thể xóa khung giờ');
     }
 
@@ -291,7 +291,7 @@ class InstructorAvailabilityApi {
     updateData: {
       startTime?: string;
       endTime?: string;
-      meetingType?: 'online' | 'offline' | 'both';
+      meetingType?: 'online'| 'offline'| 'both';
       capacity?: number;
       isOpen?: boolean;
       autoAccept?: boolean;
@@ -315,7 +315,7 @@ class InstructorAvailabilityApi {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() =>({ message: 'Unknown error'}));
       throw new Error(error.message || 'Không thể cập nhật khung giờ');
     }
 

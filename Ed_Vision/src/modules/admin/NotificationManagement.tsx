@@ -19,7 +19,7 @@ ChartJS.register(
 
 // ==================== REUSABLE EMOJI ICON BUTTON COMPONENT ====================
 export interface EmojiIconButtonProps {
-  emoji: string; // Emoji character (e.g., '👁️', '✏️', '🗑️')
+  emoji: string; // Emoji character (e.g., '', '', '')
   title: string; // Tooltip text
   onClick: () => void;
   color?: 'blue' | 'green' | 'red' | 'yellow' | 'emerald' | 'purple';
@@ -90,7 +90,7 @@ interface NotificationHistory {
   readCount?: number; // Số người đã đọc
 }
 
-// ✅ NotificationChart với data từ API
+//  NotificationChart với data từ API
 const NotificationChart = memo(function NotificationChart({ viewMode }: { viewMode: 'day' | 'month' | 'year' | 'all' }) {
   const [chartData, setChartData] = useState<{
     labels: string[];
@@ -1026,7 +1026,7 @@ export default function NotificationManagement() {
                   }
                 `}
               >
-                <span className="text-lg">📊</span>
+                <span className="text-lg"></span>
                 <span>Tổng quan</span>
               </button>
               
@@ -1040,7 +1040,7 @@ export default function NotificationManagement() {
                   }
                 `}
               >
-                <span className="text-lg">📜</span>
+                <span className="text-lg"></span>
                 <span>Lịch sử thông báo</span>
                 {notificationHistory.length > 0 && (
                   <span className="ml-2 bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs font-medium">
@@ -1064,11 +1064,11 @@ export default function NotificationManagement() {
                 <p className="text-sm font-medium text-blue-700">Tổng số thông báo</p>
                 <p className="text-3xl font-bold text-blue-900">{statistics.total}</p>
                 <p className={`text-sm font-medium flex items-center mt-1 ${statistics.totalDiff >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
-                  {statistics.totalDiff >= 0 ? '↗' : '↘'} {statistics.totalDiff >= 0 ? '+' : ''}{statistics.totalDiff} so với {getComparisonText()}
+                  {statistics.totalDiff >= 0 ? '' : ''} {statistics.totalDiff >= 0 ? '+' : ''}{statistics.totalDiff} so với {getComparisonText()}
                 </p>
               </div>
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white text-xl">🔔</span>
+                <span className="text-white text-xl"></span>
               </div>
             </div>
           </CardContent>
@@ -1081,11 +1081,11 @@ export default function NotificationManagement() {
                 <p className="text-sm font-medium text-green-700">Đã đọc</p>
                 <p className="text-3xl font-bold text-green-900">{statistics.read}</p>
                 <p className={`text-sm font-medium flex items-center mt-1 ${statistics.readDiff >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                  {statistics.readDiff >= 0 ? '↗' : '↘'} {statistics.readDiff >= 0 ? '+' : ''}{statistics.readDiff} so với {getComparisonText()}
+                  {statistics.readDiff >= 0 ? '' : ''} {statistics.readDiff >= 0 ? '+' : ''}{statistics.readDiff} so với {getComparisonText()}
                 </p>
               </div>
               <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white text-xl">✓</span>
+                <span className="text-white text-xl"></span>
               </div>
             </div>
           </CardContent>
@@ -1098,11 +1098,11 @@ export default function NotificationManagement() {
                 <p className="text-sm font-medium text-red-700">Chưa đọc</p>
                 <p className="text-3xl font-bold text-red-900">{statistics.unread}</p>
                 <p className={`text-sm font-medium flex items-center mt-1 ${statistics.unreadDiff >= 0 ? 'text-red-700' : 'text-green-600'}`}>
-                  {statistics.unreadDiff >= 0 ? '↗' : '↘'} {statistics.unreadDiff >= 0 ? '+' : ''}{statistics.unreadDiff} so với {getComparisonText()}
+                  {statistics.unreadDiff >= 0 ? '' : ''} {statistics.unreadDiff >= 0 ? '+' : ''}{statistics.unreadDiff} so với {getComparisonText()}
                 </p>
               </div>
               <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white text-xl">✕</span>
+                <span className="text-white text-xl"></span>
               </div>
             </div>
           </CardContent>
@@ -1210,7 +1210,7 @@ export default function NotificationManagement() {
                       id="file-upload"
                     />
                     <label htmlFor="file-upload" className="cursor-pointer">
-                      <span className="text-gray-400 text-2xl mb-2 block">☁️</span>
+                      <span className="text-gray-400 text-2xl mb-2 block"></span>
                       <p className="text-sm text-gray-600">Kéo thả file hoặc <span className="text-blue-600 font-medium">chọn file</span></p>
                       <p className="text-xs text-gray-500 mt-1">Hỗ trợ: PDF, DOC, DOCX, JPG, PNG (tối đa 30MB)</p>
                     </label>
@@ -1228,7 +1228,7 @@ export default function NotificationManagement() {
                       {Array.from(newNotification.files).map((file, index) => (
                         <div key={index} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                           <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <span className="text-blue-600">📎</span>
+                            <span className="text-blue-600"></span>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-gray-800 truncate">{file.name}</p>
                               <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
@@ -1240,7 +1240,7 @@ export default function NotificationManagement() {
                             className="ml-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors cursor-pointer"
                             title="Xóa file"
                           >
-                            ✕
+                            
                           </button>
                         </div>
                       ))}
@@ -1257,13 +1257,13 @@ export default function NotificationManagement() {
                     onClick={handleCancelEdit}
                     className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer"
                   >
-                    ✕ Hủy
+                     Hủy
                   </button>
                   <button 
                     onClick={handleSaveEdit}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer"
                   >
-                    💾 Lưu chỉnh sửa
+                     Lưu chỉnh sửa
                   </button>
                 </>
               ) : (
@@ -1271,7 +1271,7 @@ export default function NotificationManagement() {
                   onClick={handleCreateNotification}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-1.5 rounded-lg font-medium text-xs transition-colors cursor-pointer"
                 >
-                  ➕ Tạo thông báo
+                   Tạo thông báo
                 </button>
               )}
             </div>
@@ -1357,7 +1357,7 @@ export default function NotificationManagement() {
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center text-gray-400">
-                        <span className="text-4xl mb-2">⏳</span>
+                        <span className="text-4xl mb-2"></span>
                         <p className="text-sm">Đang tải dữ liệu...</p>
                       </div>
                     </td>
@@ -1366,7 +1366,7 @@ export default function NotificationManagement() {
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center text-gray-400">
-                        <span className="text-4xl mb-2">📝</span>
+                        <span className="text-4xl mb-2"></span>
                         <p className="text-sm">Chưa có thông báo nào phù hợp với bộ lọc</p>
                       </div>
                     </td>
@@ -1390,7 +1390,7 @@ export default function NotificationManagement() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <span className="text-blue-500 mr-3">🔔</span>
+                          <span className="text-blue-500 mr-3"></span>
                           <div>
                             <div className="text-sm font-medium text-gray-900">{notification.title}</div>
                             <div className="text-sm text-gray-500 line-clamp-1">{notification.content}</div>
@@ -1410,19 +1410,19 @@ export default function NotificationManagement() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
                           <EmojiIconButton
-                            emoji="👁️"
+                            emoji=""
                             title="Xem trước"
                             onClick={() => handlePreviewDraft(notification.id)}
                             color="blue"
                           />
                           <EmojiIconButton
-                            emoji="✏️"
+                            emoji=""
                             title="Chỉnh sửa"
                             onClick={() => handleEditDraft(notification.id)}
                             color="yellow"
                           />
                           <EmojiIconButton
-                            emoji="🗑️"
+                            emoji=""
                             title="Xóa"
                             onClick={() => handleDeleteDraft(notification.id)}
                             color="red"
@@ -1474,7 +1474,7 @@ export default function NotificationManagement() {
                     : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                 }`}
               >
-                📧 Gửi thông báo ({selectedNotifications.length})
+                 Gửi thông báo ({selectedNotifications.length})
               </button>
               
               {/* Pagination controls */}
@@ -1618,14 +1618,14 @@ export default function NotificationManagement() {
           {historyLoading ? (
             <div className="p-12 text-center">
               <div className="flex flex-col items-center justify-center text-gray-400">
-                <span className="text-6xl mb-4">⏳</span>
+                <span className="text-6xl mb-4"></span>
                 <p className="text-lg font-medium">Đang tải dữ liệu...</p>
               </div>
             </div>
           ) : notificationHistory.length === 0 ? (
             <div className="p-12 text-center">
               <div className="flex flex-col items-center justify-center text-gray-400">
-                <span className="text-6xl mb-4">📜</span>
+                <span className="text-6xl mb-4"></span>
                 <p className="text-lg font-medium">Không tìm thấy lịch sử phù hợp</p>
                 <p className="text-sm mt-2">Thử điều chỉnh bộ lọc để xem kết quả khác</p>
               </div>
@@ -1657,11 +1657,11 @@ export default function NotificationManagement() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {history.action === 'sent' ? (
                             <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                              ✓ Đã gửi
+                               Đã gửi
                             </span>
                           ) : (
                             <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
-                              ✕ Đã xóa
+                               Đã xóa
                             </span>
                           )}
                         </td>
@@ -1687,7 +1687,7 @@ export default function NotificationManagement() {
                                   >
                                     {/* Tooltip - chỉ hiện khi hover vào phần màu xanh */}
                                     <div className="absolute hidden group-hover:block bg-white border-2 border-green-500 text-gray-800 text-xs rounded py-1.5 px-2.5 -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-50 shadow-xl font-medium pointer-events-none">
-                                      ✓ Đã đọc: {history.readCount} người
+                                       Đã đọc: {history.readCount} người
                                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-0.5">
                                         <div className="border-[5px] border-transparent border-t-green-500"></div>
                                       </div>
@@ -1703,7 +1703,7 @@ export default function NotificationManagement() {
                                   >
                                     {/* Tooltip - chỉ hiện khi hover vào phần màu vàng */}
                                     <div className="absolute hidden group-hover:block bg-white border-2 border-yellow-500 text-gray-800 text-xs rounded py-1.5 px-2.5 -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-50 shadow-xl font-medium pointer-events-none">
-                                      ⏱ Chưa đọc: {history.totalRecipients! - history.readCount!} người
+                                       Chưa đọc: {history.totalRecipients! - history.readCount!} người
                                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-0.5">
                                         <div className="border-[5px] border-transparent border-t-yellow-500"></div>
                                       </div>
@@ -1727,7 +1727,7 @@ export default function NotificationManagement() {
                             className="text-blue-600 hover:text-blue-900 text-xs font-medium cursor-pointer transition-colors"
                             title="Xem chi tiết"
                           >
-                            👁️ Xem chi tiết
+                             Xem chi tiết
                           </button>
                         </td>
                       </tr>

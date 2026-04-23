@@ -4,11 +4,11 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function seedCompleteDatabase() {
-  console.log('🌱 Starting complete database seeding...\n');
+  console.log(' Starting complete database seeding...\n');
 
   try {
     // ========== 1. ROLES & PERMISSIONS ==========
-    console.log('📋 Step 1: Seeding Roles...');
+    console.log(' Step 1: Seeding Roles...');
     const roles = [
       { code: 'admin', name: 'Administrator' },
       { code: 'student', name: 'Sinh viên' },
@@ -24,9 +24,9 @@ async function seedCompleteDatabase() {
         create: r,
       });
     }
-    console.log('✅ Roles created\n');
+    console.log(' Roles created\n');
 
-    console.log('📋 Step 2: Seeding Permissions...');
+    console.log(' Step 2: Seeding Permissions...');
     const permissionDefs = [
       // Admin permissions
       { key: 'admin_overview', name: 'Admin Overview', category: 'admin' },
@@ -100,9 +100,9 @@ async function seedCompleteDatabase() {
         create: p,
       });
     }
-    console.log('✅ Permissions created\n');
+    console.log(' Permissions created\n');
 
-    console.log('📋 Step 3: Assigning Role Permissions...');
+    console.log(' Step 3: Assigning Role Permissions...');
     const allPerms = await prisma.permission.findMany();
 
     // Admin: all permissions
@@ -174,10 +174,10 @@ async function seedCompleteDatabase() {
       }
       if (rows.length) await prisma.rolePermission.createMany({ data: rows });
     }
-    console.log('✅ Role permissions assigned\n');
+    console.log(' Role permissions assigned\n');
 
     // ========== 2. DEMO ACCOUNTS ==========
-    console.log('📋 Step 4: Creating Demo Accounts...');
+    console.log(' Step 4: Creating Demo Accounts...');
     const hashedPassword = await bcrypt.hash('password123', 10);
 
     // Admin Account
@@ -202,7 +202,7 @@ async function seedCompleteDatabase() {
         phone_number: '0123456789',
       },
     });
-    console.log('  ✓ Admin: admin@dtu.edu.vn / password123');
+    console.log('   Admin: admin@dtu.edu.vn / password123');
 
     // Teacher Accounts
     const teachers = [
@@ -253,7 +253,7 @@ async function seedCompleteDatabase() {
         },
       });
     }
-    console.log('  ✓ Teachers: teacher@dtu.edu.vn, teacher2@dtu.edu.vn, teacher3@dtu.edu.vn / password123');
+    console.log('   Teachers: teacher@dtu.edu.vn, teacher2@dtu.edu.vn, teacher3@dtu.edu.vn / password123');
 
     // Student Accounts
     const students = [
@@ -306,7 +306,7 @@ async function seedCompleteDatabase() {
         },
       });
     }
-    console.log('  ✓ Students: student@dtu.edu.vn - student5@dtu.edu.vn / password123');
+    console.log('   Students: student@dtu.edu.vn - student5@dtu.edu.vn / password123');
 
     // Parent Accounts
     const parents = [
@@ -346,10 +346,10 @@ async function seedCompleteDatabase() {
         },
       });
     }
-    console.log('  ✓ Parents: parent@dtu.edu.vn, parent2@dtu.edu.vn / password123\n');
+    console.log('   Parents: parent@dtu.edu.vn, parent2@dtu.edu.vn / password123\n');
 
     // ========== 3. DEPARTMENTS & PROGRAMS ==========
-    console.log('📋 Step 5: Creating Departments & Programs...');
+    console.log(' Step 5: Creating Departments & Programs...');
     const dept = await prisma.department.upsert({
       where: { code: 'CNTT' },
       update: {},
@@ -370,10 +370,10 @@ async function seedCompleteDatabase() {
         department_id: dept.department_id,
       },
     });
-    console.log('✅ Departments & Programs created\n');
+    console.log(' Departments & Programs created\n');
 
     // ========== 4. CLASSES ==========
-    console.log('📋 Step 6: Creating Classes...');
+    console.log(' Step 6: Creating Classes...');
     const classGroup = await prisma.classGroup.upsert({
       where: { class_code: '21SE1' },
       update: {},
@@ -384,10 +384,10 @@ async function seedCompleteDatabase() {
         status: 'active',
       },
     });
-    console.log('✅ Classes created\n');
+    console.log(' Classes created\n');
 
     // ========== 5. COURSES ==========
-    console.log('📋 Step 7: Creating Courses...');
+    console.log(' Step 7: Creating Courses...');
     const courses = [
       { code: 'IT101', name: 'Nhập môn Lập trình', credits: 4, difficulty: 'easy' },
       { code: 'IT102', name: 'Cấu trúc Dữ liệu', credits: 4, difficulty: 'medium' },
@@ -410,10 +410,10 @@ async function seedCompleteDatabase() {
         },
       });
     }
-    console.log('✅ Courses created\n');
+    console.log(' Courses created\n');
 
     // ========== 6. ACADEMIC TERMS ==========
-    console.log('📋 Step 8: Creating Academic Terms...');
+    console.log(' Step 8: Creating Academic Terms...');
     const terms = [
       { year: '2023-2024', semester: 1 },
       { year: '2023-2024', semester: 2 },
@@ -432,10 +432,10 @@ async function seedCompleteDatabase() {
         },
       });
     }
-    console.log('✅ Academic Terms created\n');
+    console.log(' Academic Terms created\n');
 
     // ========== 7. NOTIFICATION TEMPLATES ==========
-    console.log('📋 Step 9: Creating Notification Templates...');
+    console.log(' Step 9: Creating Notification Templates...');
     const templates = [
       { code: 'appointment.created', title: 'Cuộc hẹn mới', content: 'Cuộc hẹn của bạn với {instructor_name} vào {date} đã được tạo.', channel: 'both' },
       { code: 'appointment.reminder', title: 'Nhắc nhở cuộc hẹn', content: 'Bạn có cuộc hẹn với {instructor_name} vào {date}.', channel: 'both' },
@@ -450,10 +450,10 @@ async function seedCompleteDatabase() {
         create: t,
       });
     }
-    console.log('✅ Notification Templates created\n');
+    console.log(' Notification Templates created\n');
 
     // ========== 8. CAMPUS NETWORK CONFIG ==========
-    console.log('📋 Step 10: Creating Campus Network Config...');
+    console.log(' Step 10: Creating Campus Network Config...');
     await prisma.campusNetworkConfig.upsert({
       where: { campus_name: 'DTU Main Campus' },
       update: {},
@@ -468,10 +468,10 @@ async function seedCompleteDatabase() {
         is_active: true,
       },
     });
-    console.log('✅ Campus Network Config created\n');
+    console.log(' Campus Network Config created\n');
 
     // ========== 9. SURVEY QUESTIONS ==========
-    console.log('📋 Step 11: Creating Survey Questions...');
+    console.log(' Step 11: Creating Survey Questions...');
     const questions = [
       { text: 'Bạn học bao nhiêu giờ mỗi tuần?', type: 'slider', category: 'academic', code: 'study_time', min: 0, max: 40 },
       { text: 'Bạn làm việc bao nhiêu giờ mỗi tuần?', type: 'slider', category: 'work', code: 'work_time', min: 0, max: 40 },
@@ -494,27 +494,27 @@ async function seedCompleteDatabase() {
         },
       });
     }
-    console.log('✅ Survey Questions created\n');
+    console.log(' Survey Questions created\n');
 
-    console.log('🎉 Database seeding completed successfully!\n');
+    console.log(' Database seeding completed successfully!\n');
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('📋 LOGIN CREDENTIALS:');
+    console.log(' LOGIN CREDENTIALS:');
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('👑 Admin:    admin@dtu.edu.vn     / password123');
-    console.log('👨‍🏫 Teachers: teacher@dtu.edu.vn   / password123');
+    console.log(' Admin:    admin@dtu.edu.vn     / password123');
+    console.log(' Teachers: teacher@dtu.edu.vn   / password123');
     console.log('            teacher2@dtu.edu.vn  / password123');
     console.log('            teacher3@dtu.edu.vn  / password123');
-    console.log('👨‍🎓 Students: student@dtu.edu.vn   / password123');
+    console.log(' Students: student@dtu.edu.vn   / password123');
     console.log('            student2@dtu.edu.vn  / password123');
     console.log('            student3@dtu.edu.vn  / password123');
     console.log('            student4@dtu.edu.vn  / password123');
     console.log('            student5@dtu.edu.vn  / password123');
-    console.log('👪 Parents:  parent@dtu.edu.vn    / password123');
+    console.log(' Parents:  parent@dtu.edu.vn    / password123');
     console.log('            parent2@dtu.edu.vn   / password123');
     console.log('═══════════════════════════════════════════════════════════');
 
   } catch (error) {
-    console.error('❌ Error during seeding:', error);
+    console.error(' Error during seeding:', error);
     throw error;
   } finally {
     await prisma.$disconnect();

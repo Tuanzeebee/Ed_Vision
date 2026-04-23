@@ -27,7 +27,7 @@ export default function RequireInputSurvey({ children }: Props) {
   };
 
   const role = getUserRole();
-  const isStudent = role === 'student' || role === 'student_role';
+  const isStudent = role === 'student'|| role === 'student_role';
   
   // Chỉ check nếu là student và không phải đang ở trang survey
   const isSurveyPage = location.pathname.startsWith('/student/survey');
@@ -48,13 +48,12 @@ export default function RequireInputSurvey({ children }: Props) {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Đang kiểm tra thông tin...</p>
         </div>
-      </div>
-    );
+      </div>);
   }
 
   // Chưa hoàn thành survey input → redirect
   if (!hasCompletedInputSurvey) {
-    return <Navigate to="/student/survey" state={{ from: location, mandatory: true }} replace />;
+    return <Navigate to="/student/survey"state={{ from: location, mandatory: true }} replace />;
   }
 
   // Đã hoàn thành → render children

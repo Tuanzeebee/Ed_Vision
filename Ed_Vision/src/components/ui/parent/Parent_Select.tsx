@@ -1,6 +1,5 @@
 import * as React from "react"
 import { cn } from "@/lib/Parent_utils"
-
 export interface SelectProps
   extends React.SelectHTMLAttributes<HTMLSelectElement> {}
 
@@ -16,10 +15,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {...props}
       >
         {children}
-      </select>
-    )
+      </select>)
   }
 )
 Select.displayName = "Select"
-
 export { Select }

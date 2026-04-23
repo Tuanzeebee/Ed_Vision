@@ -1,9 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from './config';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
-export type QuestionCategory = 'psychology' | 'finance' | 'general' | 'academic' | 'health';
-export type QuestionType = 'single-choice' | 'multiple-choice' | 'text' | 'scale';
+export type QuestionCategory = 'psychology'| 'finance'| 'general'| 'academic'| 'health';
+export type QuestionType = 'single-choice'| 'multiple-choice'| 'text'| 'scale';
 
 export interface Question {
   questionId: number;

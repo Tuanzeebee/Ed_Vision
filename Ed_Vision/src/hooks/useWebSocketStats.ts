@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { buildSocketUrl } from "@/services/api/config";
 
 /**
  * Hook to initialize shared WebSocket listeners for student/instructor stats.
@@ -9,20 +10,20 @@ export default function useWebSocketStats(): number {
   const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
-    let studentSocket: ReturnType<typeof io> | null = null;
-    let instructorSocket: ReturnType<typeof io> | null = null;
+    let studentSocket: ReturnType<typeof io>| null = null;
+    let instructorSocket: ReturnType<typeof io>| null = null;
 
     const initializeWebSockets = () => {
       // Student socket
       try {
-        studentSocket = io("http://localhost:3000/student-stats", {
+        studentSocket = io(buildSocketUrl("/student-stats"), {
           transports: ["websocket", "polling"],
         });
         studentSocket.on("connect", () => {
           // connected
         });
         studentSocket.on("studentOnlineStatsUpdated", () => {
-          setTrigger((p) => p + 1);
+          setTrigger((p) =>p + 1);
         });
         studentSocket.on("disconnect", () => {
           // disconnected
@@ -36,14 +37,14 @@ export default function useWebSocketStats(): number {
 
       // Instructor socket
       try {
-        instructorSocket = io("http://localhost:3000/instructor-stats", {
+        instructorSocket = io(buildSocketUrl("/instructor-stats"), {
           transports: ["websocket", "polling"],
         });
         instructorSocket.on("connect", () => {
           // connected
         });
         instructorSocket.on("instructorOnlineStatsUpdated", () => {
-          setTrigger((p) => p + 1);
+          setTrigger((p) =>p + 1);
         });
         instructorSocket.on("disconnect", () => {
           // disconnected

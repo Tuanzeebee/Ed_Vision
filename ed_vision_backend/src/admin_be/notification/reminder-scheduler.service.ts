@@ -79,7 +79,7 @@ export class ReminderSchedulerService implements OnModuleInit {
 
   onModuleInit() {
     this.logger.log(
-      '[ReminderScheduler] ✅ Service initialized - @Cron job registered',
+      '[ReminderScheduler]  Service initialized - @Cron job registered',
     );
     this.logger.log(
       '[ReminderScheduler] Cron will run every minute to check reminders',
@@ -283,7 +283,7 @@ export class ReminderSchedulerService implements OnModuleInit {
     const meetingPurpose =
       reminder.appointment?.meeting_purpose || 'Cuộc hẹn tư vấn';
 
-    // Nếu là parent đặt lịch, lấy tên parent ưu tiên theo thứ tự: appointment.booker.profile, appointmentContact.contact_name, recipient account profile
+    // Nếu parent đặt lịch: ưu tiên tên từ booker, rồi contact_name, rồi profile recipient.
     const bookerRole = reminder.appointment?.booker_role;
     const bookerName = ((): string => {
       if (bookerRole === 'parent') {
@@ -383,13 +383,13 @@ export class ReminderSchedulerService implements OnModuleInit {
     // Default content nếu không có template
     if (isTeacher) {
       return {
-        title: '⏰ Nhắc nhở lịch hẹn',
+        title: ' Nhắc nhở lịch hẹn',
         body: `Bạn có lịch hẹn "${meetingPurpose}" với ${otherPartyName} lúc ${timeStr} ${dateStr}. Cuộc hẹn sẽ bắt đầu trong ${timeRemainingStr}.`,
       };
     }
 
     return {
-      title: '⏰ Nhắc nhở lịch hẹn',
+      title: ' Nhắc nhở lịch hẹn',
       body: `${recipientName}, bạn có lịch hẹn "${meetingPurpose}" với ${otherPartyName} lúc ${timeStr} ${dateStr}. Cuộc hẹn sẽ bắt đầu trong ${timeRemainingStr}.`,
     };
   }

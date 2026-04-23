@@ -2,12 +2,12 @@ import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  variant?: 'default' | 'ghost' | 'outline';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
+  variant?: 'default'| 'ghost'| 'outline';
+  size?: 'default'| 'sm'| 'lg'| 'icon';
   className?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
+export const Button: React.FC<ButtonProps>= ({ 
   children, 
   variant = 'default', 
   size = 'default', 
@@ -19,15 +19,13 @@ export const Button: React.FC<ButtonProps> = ({
   const variantClasses = {
     default: 'bg-primary text-primary-foreground hover:bg-primary/90',
     ghost: 'hover:bg-accent hover:text-accent-foreground',
-    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
-  };
+    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'};
   
   const sizeClasses = {
     default: 'h-10 py-2 px-4',
     sm: 'h-9 px-3 rounded-md',
     lg: 'h-11 px-8 rounded-md',
-    icon: 'h-10 w-10'
-  };
+    icon: 'h-10 w-10'};
   
   return (
     <button 
@@ -35,6 +33,5 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {children}
-    </button>
-  );
+    </button>);
 };

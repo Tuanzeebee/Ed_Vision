@@ -25,7 +25,7 @@ export interface AtRiskStudent {
     gpa: number;
     absences: number;
     debtCourses: number;
-    riskLevel: 'high' | 'medium' | 'low';
+    riskLevel: 'high'| 'medium'| 'low';
 }
 
 export interface ChartData {
@@ -66,15 +66,15 @@ class TeacherDashboardService {
      */
     async getDashboardStats(filters?: TeacherDashboardFilterDto): Promise<TeacherDashboardResponse> {
         try {
-            console.log('📊 Fetching dashboard stats with filters:', filters);
+            console.log('Fetching dashboard stats with filters:', filters);
             const response = await apiClient.get<TeacherDashboardResponse>(
                 '/teacher/dashboard/stats',
                 { params: filters }
             );
-            console.log('✅ Dashboard stats response:', response.data);
+            console.log('Dashboard stats response:', response.data);
             return response.data;
         } catch (error: any) {
-            console.error('❌ Error fetching teacher dashboard stats:', error);
+            console.error('Error fetching teacher dashboard stats:', error);
             console.error('Error details:', error.response?.data || error.message);
             throw error;
         }
@@ -85,14 +85,13 @@ class TeacherDashboardService {
      */
     async getFilterOptions(): Promise<FilterOptionsResponse> {
         try {
-            console.log('📋 Fetching filter options...');
+            console.log('Fetching filter options...');
             const response = await apiClient.get<FilterOptionsResponse>(
-                '/teacher/dashboard/filter-options'
-            );
-            console.log('✅ Filter options response:', response.data);
+                '/teacher/dashboard/filter-options');
+            console.log('Filter options response:', response.data);
             return response.data;
         } catch (error: any) {
-            console.error('❌ Error fetching filter options:', error);
+            console.error('Error fetching filter options:', error);
             console.error('Error details:', error.response?.data || error.message);
             // Return default values if API fails
             return {

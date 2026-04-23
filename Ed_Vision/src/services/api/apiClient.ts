@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { TokenManager } from '@/lib/tokenManager';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '@/services/api/config';
 
 // Create axios instance
 const apiClient = axios.create({
@@ -29,7 +28,7 @@ apiClient.interceptors.request.use(
 
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) =>response,
   (error) => {
     // Chỉ redirect khi 401 và không phải development
     if (error.response?.status === 401 && !import.meta.env.DEV) {

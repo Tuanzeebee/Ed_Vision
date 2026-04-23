@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/student/Student_button"
+import toast, { Toaster } from 'react-hot-toast'
 import FriendsView from './FriendsView'
 import CreateRoomView from './CreateRoomView'
 import FavoritesView from './FavoritesView'
 import { LIVE_THEMES, getFeaturedLiveTheme, type LiveTheme } from '@/data/liveThemes'
+import StudyStreakCard from './components/StudyStreakCard'
+import {
+  getStudyRoomErrorMessage,
+  studyRoomService,
+  type MyStudyStats,
+  type PublicStudyRoom,
+  type StudyRoomMode,
+} from '@/services/student/studyRoomService'
 import { 
   Menu, 
   X, 
@@ -18,7 +27,8 @@ import {
   GraduationCap, 
   Clock,
   Play,
-  Sparkles
+  Sparkles,
+  Lock
 } from "lucide-react"
 
 type ViewType = 'home' | 'friends' | 'create' | 'chat' | 'favorites' | 'live-themes'
@@ -26,12 +36,18 @@ type ThemeCategory = 'all' | 'Custom' | 'Exclusive' | 'Chill' | 'Focus' | 'Anime
 
 interface Room {
   id: string
+  roomId: number
   title: string
   subtitle: string
   description: string
   students: string
   image: string
   gradient: string
+  hasPassword: boolean
+  roomMode: StudyRoomMode
+  coverType: string | null
+  currentParticipantsCount: number
+  maxParticipants: number
 }
 
 interface StudyRoomsProps {
@@ -43,94 +59,168 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false)
+  const [joinPassword, setJoinPassword] = useState('')
+  const [joinError, setJoinError] = useState<string | null>(null)
+  const [joiningRoomId, setJoiningRoomId] = useState<number | null>(null)
   const [activeView, setActiveView] = useState<ViewType>('home')
   const [liveThemes, setLiveThemes] = useState<LiveTheme[]>(LIVE_THEMES)
   const [featuredTheme, setFeaturedTheme] = useState<LiveTheme | null>(null)
   const [activeCategory, setActiveCategory] = useState<ThemeCategory>('all')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [urlError, setUrlError] = useState('')
+  const [rooms, setRooms] = useState<PublicStudyRoom[]>([])
+  const [roomsLoading, setRoomsLoading] = useState(false)
+  const [roomsError, setRoomsError] = useState<string | null>(null)
+  const [stats, setStats] = useState<MyStudyStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsError, setStatsError] = useState<string | null>(null)
+
+  const getRoomGradientByMode = useCallback((roomMode: StudyRoomMode): string => {
+    switch (roomMode) {
+      case 'audio':
+        return 'from-orange-500 to-amber-600'
+      case 'video':
+        return 'from-blue-500 to-indigo-600'
+      case 'focus':
+      default:
+        return 'from-emerald-500 to-teal-600'
+    }
+  }, [])
+
+  const buildRoomSubtitle = useCallback((room: PublicStudyRoom): string => {
+    const modeLabel = room.roomMode.charAt(0).toUpperCase() + room.roomMode.slice(1)
+    const lockLabel = room.hasPassword ? 'Private access' : 'Open access'
+    return `${modeLabel} mode · ${lockLabel}`
+  }, [])
+
+  const buildRoomDescription = useCallback((room: PublicStudyRoom): string => {
+    const base = `Live room with ${room.currentParticipantsCount} participant(s) online.`
+    if (room.hasPassword) {
+      return `${base} Password required before joining.`
+    }
+
+    return `${base} Join instantly and start studying.`
+  }, [])
+
+  const mapRoomToCard = useCallback(
+    (room: PublicStudyRoom): Room => ({
+      id: String(room.roomId),
+      roomId: room.roomId,
+      title: room.title || `Study Room #${room.roomId}`,
+      subtitle: buildRoomSubtitle(room),
+      description: buildRoomDescription(room),
+      students: `${room.currentParticipantsCount}/${room.maxParticipants} participants`,
+      image:
+        room.coverUrl ||
+        'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=400&h=225&fit=crop',
+      gradient: getRoomGradientByMode(room.roomMode),
+      hasPassword: room.hasPassword,
+      roomMode: room.roomMode,
+      coverType: room.coverType,
+      currentParticipantsCount: room.currentParticipantsCount,
+      maxParticipants: room.maxParticipants,
+    }),
+    [buildRoomDescription, buildRoomSubtitle, getRoomGradientByMode],
+  )
+
+  const roomCards = useMemo(() => rooms.map(mapRoomToCard), [mapRoomToCard, rooms])
+
+  const loadPublicRooms = useCallback(async () => {
+    try {
+      setRoomsLoading(true)
+      setRoomsError(null)
+      const data = await studyRoomService.getPublicRooms()
+      setRooms(data)
+    } catch (error) {
+      const message = getStudyRoomErrorMessage(error, 'Failed to load study rooms')
+      setRoomsError(message)
+    } finally {
+      setRoomsLoading(false)
+    }
+  }, [])
+
+  const loadStats = useCallback(async () => {
+    try {
+      setStatsLoading(true)
+      setStatsError(null)
+      const data = await studyRoomService.getMyStudyStats()
+      setStats(data)
+    } catch (error) {
+      setStatsError(getStudyRoomErrorMessage(error, 'Failed to load study streak'))
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     setLiveThemes(LIVE_THEMES)
     setFeaturedTheme(getFeaturedLiveTheme())
-  }, [])
-
-  const rooms: Room[] = [
-    {
-      id: 'cs101',
-      title: 'Computer Science 101',
-      subtitle: 'Programming Basics · Prof. Lee',
-      description: 'Learn the fundamentals of programming with hands-on coding exercises and interactive discussions.',
-      students: '18 students',
-      image: 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=400&h=225&fit=crop',
-      gradient: 'from-blue-500 to-purple-600'
-    },
-    {
-      id: 'history',
-      title: 'History Seminar',
-      subtitle: 'World War II · Dr. Brown',
-      description: 'Explore the major events and impacts of World War II through primary sources and group discussions.',
-      students: '26 students',
-      image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=225&fit=crop',
-      gradient: 'from-amber-500 to-orange-600'
-    },
-    {
-      id: 'biology',
-      title: 'Biology Workshop',
-      subtitle: 'Cell Biology · Dr. Garcia',
-      description: 'Dive deep into cellular structures and processes with virtual lab experiments and microscopy.',
-      students: '14 students',
-      image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=225&fit=crop',
-      gradient: 'from-green-500 to-emerald-600'
-    },
-    {
-      id: 'art',
-      title: 'Art & Design',
-      subtitle: 'Digital Art · Ms. Taylor',
-      description: 'Create stunning digital artwork using industry-standard tools and creative techniques.',
-      students: '11 students',
-      image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=225&fit=crop',
-      gradient: 'from-pink-500 to-rose-600'
-    },
-    {
-      id: 'spanish',
-      title: 'Language Exchange',
-      subtitle: 'Spanish Conversation · Señora Martínez',
-      description: 'Practice Spanish conversation skills with native speakers and fellow learners.',
-      students: '28 students',
-      image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=225&fit=crop',
-      gradient: 'from-red-500 to-pink-600'
-    },
-    {
-      id: 'economics',
-      title: 'Economics Study Group',
-      subtitle: 'Microeconomics · Prof. Anderson',
-      description: 'Master microeconomic principles through real-world case studies and problem-solving sessions.',
-      students: '21 students',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=225&fit=crop',
-      gradient: 'from-indigo-500 to-blue-600'
-    }
-  ]
+    void loadPublicRooms()
+    void loadStats()
+  }, [loadPublicRooms, loadStats])
 
   const handleJoinRoom = (room: Room) => {
     setSelectedRoom(room)
     setIsJoinDialogOpen(true)
+    setJoinPassword('')
+    setJoinError(null)
     setIsMobileSidebarOpen(false)
   }
 
-  const handleConfirmJoin = () => {
-    if (selectedRoom) {
-      // Close dialog first
-      setIsJoinDialogOpen(false)
-      setSelectedRoom(null)
-      
-      // Navigate to video room URL
-      navigate('/student/video-room')
-      
-      // Call the parent callback if provided
-      if (onJoinRoom) {
-        onJoinRoom(selectedRoom.id)
+  const handleConfirmJoin = async () => {
+    if (!selectedRoom) {
+      return
+    }
+
+    if (selectedRoom.hasPassword && !joinPassword.trim()) {
+      setJoinError('This room requires a password')
+      return
+    }
+
+    try {
+      setJoiningRoomId(selectedRoom.roomId)
+      setJoinError(null)
+
+      const joinResult = await studyRoomService.joinPublicRoom(selectedRoom.roomId, {
+        password: joinPassword.trim() || undefined,
+      })
+
+      if (!joinResult.success) {
+        throw new Error('Join room request was rejected')
       }
+
+      toast.success(`Joined room: ${selectedRoom.title}`)
+      setIsJoinDialogOpen(false)
+
+      const routeState = {
+        roomId: joinResult.roomId,
+        participantId: joinResult.participantId,
+        livekitToken: joinResult.livekitToken,
+        password: joinPassword.trim() || undefined,
+        roomData: {
+          id: String(selectedRoom.roomId),
+          title: selectedRoom.title,
+          subtitle: selectedRoom.subtitle,
+          description: selectedRoom.description,
+          students: selectedRoom.students,
+        },
+      }
+
+      navigate('/student/video-room', { state: routeState })
+
+      if (onJoinRoom) {
+        onJoinRoom(String(selectedRoom.roomId))
+      }
+
+      setSelectedRoom(null)
+      setJoinPassword('')
+      void loadPublicRooms()
+    } catch (error) {
+      const message = getStudyRoomErrorMessage(error, 'Unable to join this room')
+      setJoinError(message)
+      toast.error(message)
+    } finally {
+      setJoiningRoomId(null)
     }
   }
 
@@ -214,13 +304,13 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
                   All Themes
                 </button>
                 {[
-                  { id: 'Custom', icon: '🖼️', label: 'Custom' },
-                  { id: 'Exclusive', icon: '🎭', label: 'Exclusive' },
-                  { id: 'Chill', icon: '🌺', label: 'Chill' },
-                  { id: 'Focus', icon: '📖', label: 'Focus' },
-                  { id: 'Anime', icon: '⚔️', label: 'Anime' },
-                  { id: 'Pets', icon: '🐾', label: 'Pets' },
-                  { id: 'Kpop', icon: '👥', label: 'Kpop' },
+                  { id: 'Custom', icon: '', label: 'Custom' },
+                  { id: 'Exclusive', icon: '', label: 'Exclusive' },
+                  { id: 'Chill', icon: '', label: 'Chill' },
+                  { id: 'Focus', icon: '', label: 'Focus' },
+                  { id: 'Anime', icon: '', label: 'Anime' },
+                  { id: 'Pets', icon: '', label: 'Pets' },
+                  { id: 'Kpop', icon: '', label: 'Kpop' },
                 ].map((category) => (
                   <button
                     key={category.id}
@@ -367,8 +457,35 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
             </div>
 
             {/* Rooms Grid */}
+            <div className="mb-6">
+              <StudyStreakCard
+                stats={stats}
+                loading={statsLoading}
+                error={statsError}
+                onRetry={() => void loadStats()}
+              />
+            </div>
+
+            {roomsError && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="text-sm text-red-700">{roomsError}</p>
+                <Button
+                  onClick={() => void loadPublicRooms()}
+                  className="mt-3 bg-red-600 text-white hover:bg-red-700"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+
+            {roomsLoading && (
+              <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                Loading public rooms...
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rooms.map((room) => (
+              {roomCards.map((room) => (
                 <div 
                   key={room.id}
                   onClick={() => handleJoinRoom(room)}
@@ -384,17 +501,35 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                     </div>
                     <CardContent className="p-5">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{room.title}</h3>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900">{room.title}</h3>
+                        {room.hasPassword && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+                            <Lock className="h-3 w-3" />
+                            Protected
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-600 text-sm mb-3">{room.subtitle}</p>
+                      <p className="text-gray-500 text-sm mb-3">{room.description}</p>
                       <div className="flex items-center text-gray-500 text-sm">
                         <Users className="w-4 h-4 mr-1" />
                         <span>{room.students}</span>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Cover: {room.coverType ?? 'none'} · Mode: {room.roomMode}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
               ))}
             </div>
+
+            {!roomsLoading && roomCards.length === 0 && (
+              <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 text-center text-sm text-gray-600">
+                No public study rooms found.
+              </div>
+            )}
           </div>
         )
     }
@@ -492,6 +627,7 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
   // Render different views based on activeView state
   return (
     <div className="bg-gray-50 min-h-screen">
+      <Toaster position="top-center" />
       {/* Mobile Hamburger Button */}
       <Button
         size="icon"
@@ -572,15 +708,50 @@ export default function StudyRooms({ onJoinRoom }: StudyRoomsProps) {
                       <span>Live now</span>
                     </div>
                   </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                    {selectedRoom.hasPassword ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-700">
+                        <Lock className="h-3 w-3" />
+                        Password required
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 font-medium text-emerald-700">
+                        Open room
+                      </span>
+                    )}
+                    <span>Mode: {selectedRoom.roomMode}</span>
+                  </div>
                 </div>
+
+                {selectedRoom.hasPassword && (
+                  <div className="mb-4">
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Room password
+                    </label>
+                    <input
+                      type="password"
+                      value={joinPassword}
+                      onChange={(event) => setJoinPassword(event.target.value)}
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                      placeholder="Enter room password"
+                    />
+                  </div>
+                )}
+
+                {joinError && (
+                  <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {joinError}
+                  </div>
+                )}
 
                 {/* Dialog Actions */}
                 <div className="flex gap-3">
                   <Button 
                     onClick={handleConfirmJoin}
+                    disabled={joiningRoomId === selectedRoom.roomId}
                     className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-xl"
                   >
-                    Join Room
+                    {joiningRoomId === selectedRoom.roomId ? 'Joining...' : 'Join Room'}
                   </Button>
                   <Button 
                     variant="outline"

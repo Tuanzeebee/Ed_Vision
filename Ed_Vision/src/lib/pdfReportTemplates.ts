@@ -97,8 +97,7 @@ export const generatePDFReportByType = (
   scope: string,
   timeRange: string,
   stats: ScopeStats,
-  charts?: Record<string, string | null>
-) => {
+  charts?: Record<string, string | null>) => {
   const timestamp = new Date().toLocaleString('vi-VN');
   const today = new Date().toLocaleDateString('vi-VN');
 
@@ -117,7 +116,7 @@ export const generatePDFReportByType = (
       alignment: 'justify',
       lineHeight: 1.5,
       margin: [60, 0, 60, 0],
-      pageBreak: 'after' as const
+      pageBreak: 'after'as const
     }
   ];
 
@@ -136,9 +135,8 @@ export const generatePDFReportByType = (
           ['Ngày tạo:', timestamp]
         ]
       },
-      layout: 'lightHorizontalLines'
-    },
-    { text: '\n' },
+      layout: 'lightHorizontalLines'},
+    { text: '\n'},
     
     // System scale section - vertical layout
     { text: 'QUY MÔ HỆ THỐNG', style: 'sectionHeader', margin: [0, 10, 0, 10] },
@@ -347,8 +345,7 @@ export const generatePDFReportByType = (
         'Khuyến khích giảng viên ít hoạt động tham gia cố vấn nhiều hơn',
         'Cải thiện chất lượng tài liệu học tập để tăng tương tác (+12% mục tiêu)',
         'Tăng cường sử dụng tính năng dự đoán điểm AI để hỗ trợ sinh viên',
-        'Tổ chức thêm các nhóm học tập online cho các môn có tỷ lệ fail cao'
-      ],
+        'Tổ chức thêm các nhóm học tập online cho các môn có tỷ lệ fail cao'],
       fontSize: 9,
       margin: [0, 0, 0, 15]
     },
@@ -356,12 +353,11 @@ export const generatePDFReportByType = (
     { text: 'ĐIỂM NỔI BẬT', style: 'sectionHeader', margin: [0, 10, 0, 10] },
     {
       ul: [
-        '✅ Tỷ lệ sinh viên xem lịch học & lịch thi cao (91%)',
-        '✅ Tỷ lệ sinh viên làm bài tập trực tuyến tốt (82%)',
-        '✅ Giảng viên tích cực cố vấn sinh viên (95%)',
-        '✅ Tỷ lệ đạt yêu cầu môn học cao (94.7%)',
-        '✅ Xu hướng cải thiện điểm tích cực (+5.8%)'
-      ],
+        'Tỷ lệ sinh viên xem lịch học & lịch thi cao (91%)',
+        'Tỷ lệ sinh viên làm bài tập trực tuyến tốt (82%)',
+        'Giảng viên tích cực cố vấn sinh viên (95%)',
+        'Tỷ lệ đạt yêu cầu môn học cao (94.7%)',
+        'Xu hướng cải thiện điểm tích cực (+5.8%)'],
       fontSize: 9,
       margin: [0, 0, 0, 10]
     }
@@ -369,9 +365,9 @@ export const generatePDFReportByType = (
 
   // Footer
   const footer = [
-    { text: '\n' },
-    { text: '✅ Báo cáo được tạo tự động bởi hệ thống Ed_Vision', alignment: 'center', fontSize: 9, color: '#666' },
-    { text: '📧 Liên hệ: admin@edvision.edu.vn | Hotline: 1900-xxxx', alignment: 'center', fontSize: 9, color: '#666' }
+    { text: '\n'},
+    { text: 'Báo cáo được tạo tự động bởi hệ thống Ed_Vision', alignment: 'center', fontSize: 9, color: '#666'},
+    { text: 'Liên hệ: admin@edvision.edu.vn | Hotline: 1900-xxxx', alignment: 'center', fontSize: 9, color: '#666'}
   ];
 
   // Build content based on report type
@@ -403,20 +399,17 @@ export const generatePDFReportByType = (
         fontSize: 18,
         bold: true,
         margin: [0, 0, 0, 10],
-        color: '#1976d2'
-      },
+        color: '#1976d2'},
       subheader: {
         fontSize: 14,
         bold: true,
         margin: [0, 0, 0, 20],
-        color: '#1976d2'
-      },
+        color: '#1976d2'},
       sectionHeader: {
         fontSize: 13,
         bold: true,
         margin: [0, 10, 0, 5],
-        color: '#424242'
-      }
+        color: '#424242'}
     },
     defaultStyle: {
       fontSize: 10

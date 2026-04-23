@@ -5,35 +5,30 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 // Simple Card components for content sections
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
-const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const CardContent = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={className}>
     {children}
-  </div>
-);
+  </div>);
 
 // Achievements data
 const achievements = [
   {
     icon: "fas fa-medal",
     color: "text-yellow-500",
-    text: "Giải thưởng Giảng viên xuất sắc năm 2023"
-  },
+    text: "Giải thưởng Giảng viên xuất sắc năm 2023"},
   {
     icon: "fas fa-file-alt",
     color: "text-blue-500",
-    text: "Hơn 50 công trình nghiên cứu công bố"
-  },
+    text: "Hơn 50 công trình nghiên cứu công bố"},
   {
     icon: "fas fa-project-diagram",
     color: "text-green-500",
-    text: "Chủ nhiệm 5 đề tài nghiên cứu cấp Bộ"
-  }
+    text: "Chủ nhiệm 5 đề tài nghiên cứu cấp Bộ"}
 ];
 
 // Recent activities data
@@ -42,8 +37,7 @@ const recentActivities = [
     icon: "fas fa-calendar-check",
     color: "text-blue-500",
     title: "Tham gia hội thảo AI & ML",
-    date: "15/11/2024"
-  },
+    date: "15/11/2024"},
   {
     icon: "fas fa-user-graduate",
     color: "text-purple-500",
@@ -154,19 +148,9 @@ export default function TeacherDetailProfile() {
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">Trạng thái</label>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        teacherData.status === 'Đang hoạt động' 
-                          ? 'bg-green-100 text-green-800' 
-                          : teacherData.status === 'Nghỉ phép'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                      }`}>
+                        teacherData.status === 'Đang hoạt động'? 'bg-green-100 text-green-800': teacherData.status === 'Nghỉ phép'? 'bg-yellow-100 text-yellow-800': 'bg-red-100 text-red-800'}`}>
                         <span className={`w-2 h-2 rounded-full mr-1 ${
-                          teacherData.status === 'Đang hoạt động' 
-                            ? 'bg-green-400' 
-                            : teacherData.status === 'Nghỉ phép'
-                              ? 'bg-yellow-400'
-                              : 'bg-red-400'
-                        }`}></span>
+                          teacherData.status === 'Đang hoạt động'? 'bg-green-400': teacherData.status === 'Nghỉ phép'? 'bg-yellow-400': 'bg-red-400'}`}></span>
                         {teacherData.status}
                       </span>
                     </div>
@@ -177,48 +161,40 @@ export default function TeacherDetailProfile() {
               {/* Outstanding Achievements */}
               <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
                 <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
-                  <i className="fas fa-trophy mr-2"></i>
-                  Thành tích nổi bật
+                  <i className="fas fa-trophy mr-2"></i>Thành tích nổi bật
                 </h3>
                 <div className="space-y-3">
-                  {achievements.map((achievement, index) => (
+                  {achievements.map((achievement, index) =>(
                     <div key={index} className="flex items-start">
                       <i className={`${achievement.icon} ${achievement.color} mt-1 mr-3`}></i>
                       <p className="text-blue-700">{achievement.text}</p>
-                    </div>
-                  ))}
+                    </div>))}
                 </div>
               </div>
 
               {/* Recent Activities */}
               <div className="bg-green-50 rounded-lg border border-green-200 p-6">
                 <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
-                  <i className="fas fa-clock mr-2"></i>
-                  Hoạt động gần đây
+                  <i className="fas fa-clock mr-2"></i>Hoạt động gần đây
                 </h3>
                 <div className="space-y-3">
-                  {recentActivities.map((activity, index) => (
+                  {recentActivities.map((activity, index) =>(
                     <div key={index} className="flex items-start">
                       <i className={`${activity.icon} ${activity.color} mt-1 mr-3`}></i>
                       <div>
                         <p className="text-green-700 font-medium">{activity.title}</p>
                         {activity.date && (
-                          <p className="text-green-600 text-sm">{activity.date}</p>
-                        )}
+                          <p className="text-green-600 text-sm">{activity.date}</p>)}
                       </div>
-                    </div>
-                  ))}
+                    </div>))}
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
+          </div>) : (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-3 text-gray-600">Đang tải thông tin...</span>
-          </div>
-        )}
+          </div>)}
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

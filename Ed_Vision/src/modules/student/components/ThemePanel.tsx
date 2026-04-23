@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
 import { LIVE_THEMES, getFeaturedLiveTheme, type LiveTheme } from '@/data/liveThemes';
@@ -44,6 +44,8 @@ export default function ThemePanel({
   const [featuredTheme, setFeaturedTheme] = useState<LiveTheme | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [urlError, setUrlError] = useState('');
+  const uploadSectionRef = useRef<HTMLDivElement | null>(null);
+  const customYoutubeSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Load live themes data
@@ -61,14 +63,31 @@ export default function ThemePanel({
   };
 
   const categories = [
-    { id: 'Custom' as ThemeCategory, icon: '🖼️', label: 'Custom' },
-    { id: 'Exclusive' as ThemeCategory, icon: '🎭', label: 'Exclusive' },
-    { id: 'Chill' as ThemeCategory, icon: '🌺', label: 'Chill' },
-    { id: 'Focus' as ThemeCategory, icon: '📖', label: 'Focus' },
-    { id: 'Anime' as ThemeCategory, icon: '⚔️', label: 'Anime' },
-    { id: 'Pets' as ThemeCategory, icon: '🐾', label: 'Pets' },
-    { id: 'Kpop' as ThemeCategory, icon: '👥', label: 'Kpop' },
+    { id: 'Custom' as ThemeCategory, icon: '', label: 'Custom' },
+    { id: 'Exclusive' as ThemeCategory, icon: '', label: 'Exclusive' },
+    { id: 'Chill' as ThemeCategory, icon: '', label: 'Chill' },
+    { id: 'Focus' as ThemeCategory, icon: '', label: 'Focus' },
+    { id: 'Anime' as ThemeCategory, icon: '', label: 'Anime' },
+    { id: 'Pets' as ThemeCategory, icon: '', label: 'Pets' },
+    { id: 'Kpop' as ThemeCategory, icon: '', label: 'Kpop' },
   ];
+
+  const handleCategoryClick = (category: ThemeCategory) => {
+    setActiveCategory(category);
+
+    if (category !== 'Custom') {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (activeTab === 'static') {
+        uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      customYoutubeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const handleLiveThemeClick = (theme: LiveTheme) => {
     if (onSelectLiveTheme) {
@@ -210,7 +229,7 @@ export default function ThemePanel({
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setActiveCategory(category.id)}
+                onClick={() => handleCategoryClick(category.id)}
                 className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition ${
                   activeCategory === category.id
                     ? 'bg-white/20 shadow-lg scale-105'
@@ -232,7 +251,7 @@ export default function ThemePanel({
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-white font-bold text-lg">Summer Special</h3>
-                  <span className="text-xl">☀️</span>
+                  <span className="text-xl"></span>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   {summerSpecialThemes.map((theme, index) => (
@@ -288,7 +307,7 @@ export default function ThemePanel({
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <h3 className="text-white font-bold text-lg">Featuring</h3>
-                      <span className="text-xl">✨</span>
+                      <span className="text-xl"></span>
                     </div>
                     <button className="text-white/60 hover:text-white text-sm flex items-center gap-1">
                       <i className="fas fa-share"></i>
@@ -306,7 +325,7 @@ export default function ThemePanel({
                           <div className="text-white/70 text-[10px]">by {featuredTheme.attribution || 'Unknown'}</div>
                         </div>
                         <div className="absolute top-2 left-2 bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <span>✨</span> Featuring
+                          <span></span> Featuring
                         </div>
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
@@ -412,7 +431,7 @@ export default function ThemePanel({
 
           {/* Custom YouTube URL - Only show in Live tab */}
           {activeTab === 'live' && (
-            <div className="border-t border-white/20 pt-4 mb-4">
+            <div ref={customYoutubeSectionRef} className="border-t border-white/20 pt-4 mb-4">
               <label className="block text-white text-xs font-semibold mb-2 flex items-center gap-1.5">
                 <i className="fab fa-youtube text-red-500 text-sm"></i>
                 Add Custom YouTube Video
@@ -449,7 +468,7 @@ export default function ThemePanel({
 
           {/* Upload Custom - Only show in Static tab */}
           {activeTab === 'static' && (
-            <div className="border-t border-white/20 pt-6">
+            <div ref={uploadSectionRef} className="border-t border-white/20 pt-6">
               <label className="block text-white font-semibold mb-3 flex items-center gap-2">
                 <i className="fas fa-upload"></i>
                 Upload Custom Background

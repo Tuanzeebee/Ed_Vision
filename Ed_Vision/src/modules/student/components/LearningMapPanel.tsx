@@ -1,1137 +1,1762 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDraggable } from '../hooks/useDraggable';
 import { useResizable } from '../hooks/useResizable';
+import {
+  STUDENT_LEARNING_COURSES,
+  type StudentLearningCourse
+} from '../data/learningCourses';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onModuleClick?: (moduleId: number, courseId: string) => void;
+  selectedCourseId?: string | null;
   initialX?: number;
   initialY?: number;
   initialWidth?: number;
   initialHeight?: number;
 };
 
+type ModuleStatus = 'locked' | 'completed' | 'current';
+
 type ModuleNode = {
   id: number;
   title: string;
-  status: 'locked' | 'available' | 'completed' | 'current';
+  status: ModuleStatus;
   stars?: number;
-  position: { x: number; y: number };
+  thumbnail: string;
+  note: string;
   isBoss?: boolean;
 };
 
-type Course = {
-  id: string;
-  name: string;
-  subject: string;
-  moduleCount: number;
-  completedModules: number;
-  totalStars: number;
-  earnedStars: number;
-  mapLayout: 'linear' | 'branching' | 'spiral' | 'tree' | 'circular';
-  description: string;
+type Course = StudentLearningCourse;
+
+type LearningEconomyState = {
+  hearts: number;
+  gems: number;
+  streakDays: number;
+  lastStudyDate: string | null;
+  totalXp: number;
 };
 
-type MapLayoutType = 'linear' | 'branching' | 'spiral' | 'tree' | 'circular';
+type FloorThemeId = 'bedroom' | 'hotel' | 'museum';
+
+type FloorTheme = {
+  id: FloorThemeId;
+  name: string;
+  shortLabel: string;
+  icon: string;
+  framePalettes: string[];
+  wallGlowClass: string;
+  wallTintClass: string;
+  topTrimClass: string;
+  wallPatternClass: string;
+  floorShadeClass: string;
+  dustColorClass: string;
+  doorPalette: {
+    shell: string;
+    inner: string;
+    badge: string;
+    knob: string;
+    glow: string;
+    lockPill: string;
+  };
+};
+
+type LockOverlayProps = {
+  message: string;
+};
+
+type FrameItemProps = {
+  module: ModuleNode;
+  framePalette: string;
+  lockEnabled: boolean;
+  justUnlocked: boolean;
+  onOpenLesson: (module: ModuleNode) => void;
+  onOpenNote: (module: ModuleNode) => void;
+};
+
+type NotePopupProps = {
+  module: ModuleNode | null;
+  onClose: () => void;
+};
+
+type LobbySceneProps = {
+  floorTheme: FloorTheme;
+  onStart: () => void;
+  onExit: () => void;
+};
+
+type CorridorDoorProps = {
+  variant: FloorTheme;
+  direction: 'forward' | 'backward';
+  unlocked: boolean;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+};
+
+type GalleryWallProps = {
+  modules: ModuleNode[];
+  floorTheme: FloorTheme;
+  lockEnabled: boolean;
+  justUnlockedModule: number | null;
+  nextDoorUnlocked: boolean;
+  nextDoorTitle: string;
+  nextDoorSubtitle: string;
+  backDoorTitle: string;
+  backDoorSubtitle: string;
+  wallRef: { current: HTMLDivElement | null };
+  isDragging: boolean;
+  onWallMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onWallMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onWallMouseUp: () => void;
+  onWallWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+  onModuleOpen: (module: ModuleNode) => void;
+  onNoteOpen: (module: ModuleNode) => void;
+  onBackDoorClick: () => void;
+  onGateClick: () => void;
+};
+
+const LEARNING_ECONOMY_STORAGE_KEY = 'edvision-learning-economy';
+const DEFAULT_LEARNING_ECONOMY: LearningEconomyState = {
+  hearts: 5,
+  gems: 0,
+  streakDays: 0,
+  lastStudyDate: null,
+  totalXp: 0
+};
+
+const getLocalDateStamp = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPreviousDateStamp = (dateStamp: string) => {
+  const [year, month, day] = dateStamp.split('-').map((value) => Number(value));
+  if (!year || !month || !day) return null;
+
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() - 1);
+  return getLocalDateStamp(date);
+};
+
+const normalizeStreakDaysByStudyDate = (
+  streakDays: number,
+  lastStudyDate: string | null
+) => {
+  if (!lastStudyDate) return 0;
+
+  const today = getLocalDateStamp();
+  const yesterday = getPreviousDateStamp(today);
+  const isStreakActive =
+    lastStudyDate === today || (!!yesterday && lastStudyDate === yesterday);
+
+  return isStreakActive ? Math.max(0, Math.round(streakDays)) : 0;
+};
+
+const readLearningEconomy = (): LearningEconomyState => {
+  try {
+    const rawValue = localStorage.getItem(LEARNING_ECONOMY_STORAGE_KEY);
+    if (!rawValue) return DEFAULT_LEARNING_ECONOMY;
+
+    const parsed = JSON.parse(rawValue) as Partial<LearningEconomyState>;
+    const heartsValue = Number(parsed?.hearts);
+    const gemsValue = Number(parsed?.gems);
+    const streakDaysValue = Number(parsed?.streakDays);
+    const totalXpValue = Number(parsed?.totalXp);
+    const lastStudyDateValue =
+      typeof parsed?.lastStudyDate === 'string' ? parsed.lastStudyDate : null;
+
+    if (
+      !Number.isFinite(heartsValue) ||
+      !Number.isFinite(gemsValue) ||
+      !Number.isFinite(streakDaysValue) ||
+      !Number.isFinite(totalXpValue)
+    ) {
+      return DEFAULT_LEARNING_ECONOMY;
+    }
+
+    const normalizedStreakDays = normalizeStreakDaysByStudyDate(
+      streakDaysValue,
+      lastStudyDateValue
+    );
+
+    return {
+      hearts: Math.max(0, Math.min(5, Math.round(heartsValue))),
+      gems: Math.max(0, Math.round(gemsValue)),
+      streakDays: normalizedStreakDays,
+      lastStudyDate: lastStudyDateValue,
+      totalXp: Math.max(0, Math.round(totalXpValue))
+    };
+  } catch {
+    return DEFAULT_LEARNING_ECONOMY;
+  }
+};
+
+const LESSON_THUMBNAILS = [
+  'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1489493887464-892be6d1daae?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1519999482648-25049ddd37b1?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1529074963764-98f45c47344b?auto=format&fit=crop&w=860&q=80',
+  'https://images.unsplash.com/photo-1517697471339-4aa32003c11a?auto=format&fit=crop&w=860&q=80'
+];
+
+const FLOOR_THEMES: FloorTheme[] = [
+  {
+    id: 'bedroom',
+    name: 'Moonlight Bedroom Corridor',
+    shortLabel: 'Bedroom Floor',
+    icon: 'fas fa-bed',
+    framePalettes: [
+      'from-[#c8b2e3] via-[#e4d6f4] to-[#f4ebff]',
+      'from-[#ad91cc] via-[#ccb7e4] to-[#e7d8f7]'
+    ],
+    wallGlowClass:
+      'bg-[radial-gradient(circle_at_20%_0%,rgba(255,244,255,0.5),transparent_42%),radial-gradient(circle_at_78%_10%,rgba(237,220,255,0.35),transparent_50%)]',
+    wallTintClass: 'bg-gradient-to-b from-[#6f5a92]/12 via-[#4e3f6d]/22 to-[#2a213d]/48',
+    topTrimClass: 'bg-gradient-to-r from-[#d8c4ee]/40 via-[#f3e8ff]/72 to-[#d8c4ee]/40',
+    wallPatternClass:
+      'bg-[repeating-linear-gradient(90deg,rgba(247,240,255,0.13)_0,rgba(247,240,255,0.13)_164px,rgba(122,102,161,0.1)_164px,rgba(122,102,161,0.1)_178px)]',
+    floorShadeClass: 'bg-gradient-to-b from-transparent to-[#2b223f]/72',
+    dustColorClass: 'bg-[#f6edff]/72',
+    doorPalette: {
+      shell: 'border-[#e9d8ff]/45 bg-gradient-to-b from-[#8f77b3] via-[#6a527f] to-[#3d2d52]',
+      inner: 'border-[#f1e6ff]/30 bg-gradient-to-b from-[#b59cd3] to-[#5d4879]',
+      badge: 'bg-[#2a1f3a]/85 text-[#f2e8ff]',
+      knob: 'bg-[#f2e1ff]',
+      glow: 'from-[#ebddff]/35 to-transparent',
+      lockPill: 'bg-[#261b35]/82 text-[#f5e8ff]'
+    }
+  },
+  {
+    id: 'hotel',
+    name: 'Royal Hotel Hall',
+    shortLabel: 'Hotel Floor',
+    icon: 'fas fa-hotel',
+    framePalettes: [
+      'from-[#6e1830] via-[#b7435b] to-[#ebbe68]',
+      'from-[#4c1022] via-[#7f243b] to-[#d6a251]'
+    ],
+    wallGlowClass:
+      'bg-[radial-gradient(circle_at_18%_0%,rgba(255,214,226,0.3),transparent_45%),radial-gradient(circle_at_82%_8%,rgba(255,218,154,0.28),transparent_50%)]',
+    wallTintClass: 'bg-gradient-to-b from-[#6a1e2d]/10 via-[#451423]/20 to-[#240d15]/55',
+    topTrimClass: 'bg-gradient-to-r from-[#a56d3f]/36 via-[#edcb87]/70 to-[#a56d3f]/36',
+    wallPatternClass:
+      'bg-[repeating-linear-gradient(90deg,rgba(255,230,192,0.06)_0,rgba(255,230,192,0.06)_132px,rgba(110,20,40,0.12)_132px,rgba(110,20,40,0.12)_146px)]',
+    floorShadeClass: 'bg-gradient-to-b from-transparent to-[#3b111d]/75',
+    dustColorClass: 'bg-[#ffe6bf]/62',
+    doorPalette: {
+      shell: 'border-[#f7d7a1]/45 bg-gradient-to-b from-[#7f1f33] via-[#5a1526] to-[#2a0c15]',
+      inner: 'border-[#f2d9a4]/32 bg-gradient-to-b from-[#96445c] to-[#3f1321]',
+      badge: 'bg-[#2a0f17]/85 text-[#ffdca3]',
+      knob: 'bg-[#f5c980]',
+      glow: 'from-[#ffd88d]/32 to-transparent',
+      lockPill: 'bg-[#220b12]/85 text-[#fbd79f]'
+    }
+  },
+  {
+    id: 'museum',
+    name: 'Grand Archive Museum',
+    shortLabel: 'Museum Floor',
+    icon: 'fas fa-landmark',
+    framePalettes: [
+      'from-[#8b5b32] via-[#b67a42] to-[#d8b57a]',
+      'from-[#5f432d] via-[#8a623f] to-[#c9a16b]'
+    ],
+    wallGlowClass:
+      'bg-[radial-gradient(circle_at_20%_0%,rgba(255,240,214,0.45),transparent_42%),radial-gradient(circle_at_80%_10%,rgba(255,231,193,0.3),transparent_48%)]',
+    wallTintClass: 'bg-gradient-to-b from-[#5a3b26]/5 via-transparent to-[#311f14]/40',
+    topTrimClass: 'bg-gradient-to-r from-[#c5a87a]/30 via-[#efd8ad]/65 to-[#c5a87a]/30',
+    wallPatternClass:
+      'bg-[repeating-linear-gradient(90deg,rgba(255,244,225,0.09)_0,rgba(255,244,225,0.09)_190px,rgba(102,67,43,0.05)_190px,rgba(102,67,43,0.05)_200px)]',
+    floorShadeClass: 'bg-gradient-to-b from-transparent to-[#3b2418]/65',
+    dustColorClass: 'bg-[#fff3da]/70',
+    doorPalette: {
+      shell: 'border-[#f4e4be]/40 bg-gradient-to-b from-[#6d4a2e] via-[#4a301e] to-[#2a1a12]',
+      inner: 'border-[#d7bd89]/35 bg-gradient-to-b from-[#8b613b] to-[#3e281a]',
+      badge: 'bg-[#1f130d]/85 text-amber-200',
+      knob: 'bg-[#d6b377]',
+      glow: 'from-amber-200/35 to-transparent',
+      lockPill: 'bg-[#180e09]/80 text-[#f5dca8]'
+    }
+  }
+];
+
+const getModuleTitle = (index: number): string => {
+  const titles = [
+    'Introduction', 'Fundamentals', 'Core Concepts', 'Advanced Topics',
+    'Practical Applications', 'Deep Dive', 'Expert Techniques', 'Specialization',
+    'Integration', 'Final Project', 'Capstone', 'Mastery'
+  ];
+  return titles[index % titles.length];
+};
+
+const buildMuseumModules = (course: Course, completedModules: number): ModuleNode[] => {
+  const modules: ModuleNode[] = [];
+  const midtermIndex = Math.floor(course.moduleCount / 2);
+  const finalIndex = course.moduleCount - 1;
+
+  for (let i = 0; i < course.moduleCount; i++) {
+    const isCompleted = i < completedModules;
+    const isCurrent = i === completedModules && completedModules < course.moduleCount;
+    const isFinalExam = i === finalIndex;
+    const isMidtermExam = i === midtermIndex && !isFinalExam;
+
+    const moduleTitle = isFinalExam
+      ? `Lesson ${i + 1}: Comprehensive Final Assessment`
+      : isMidtermExam
+      ? `Lesson ${i + 1}: Midterm Checkpoint`
+      : `Lesson ${i + 1}: ${getModuleTitle(i)}`;
+
+    const moduleNote = isFinalExam
+      ? 'Đây là bài kiểm tra tổng hợp cuối course của floor hiện tại. Hoàn thành để mở cổng tiếp theo.'
+      : isMidtermExam
+      ? 'Đây là bài kiểm tra giữa kỳ để đánh giá tiến độ học trước khi đi tiếp.'
+      : `Focus of this lesson: ${getModuleTitle(i)}. ${course.description}`;
+
+    modules.push({
+      id: i + 1,
+      title: moduleTitle,
+      status: isCompleted ? 'completed' : isCurrent ? 'current' : 'locked',
+      stars: isCompleted ? ((i % 3) + 1) : undefined,
+      thumbnail: LESSON_THUMBNAILS[i % LESSON_THUMBNAILS.length],
+      note: moduleNote,
+      isBoss: isFinalExam
+    });
+  }
+
+  return modules;
+};
+
+function LockOverlay({ message }: LockOverlayProps) {
+  return (
+    <div className="lock-overlay">
+      <div className="lock-cloud"></div>
+
+      <div className="lock-icon">
+        <i className="fas fa-lock"></i>
+      </div>
+
+      <div className="lock-tooltip">
+        {message}
+      </div>
+    </div>
+  );
+}
+
+function FrameItem({
+  module,
+  framePalette,
+  lockEnabled,
+  justUnlocked,
+  onOpenLesson,
+  onOpenNote
+}: FrameItemProps) {
+  const isLocked = lockEnabled && module.status === 'locked';
+  const isCurrent = module.status === 'current';
+
+  return (
+    <div className="frame-wrapper">
+      <button
+        type="button"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          if (!isLocked) {
+            onOpenLesson(module);
+          }
+        }}
+        className={`frame-card ${isLocked ? 'locked' : ''}`}
+      >
+        {justUnlocked && (
+          <div className="animate-unlock-halo pointer-events-none absolute -inset-3 rounded-lg bg-gradient-to-r from-amber-100/75 via-yellow-100/65 to-amber-100/75 blur-md"></div>
+        )}
+
+        <img
+          src={module.thumbnail}
+          alt={module.title}
+          className={`${isLocked ? 'brightness-[0.45] saturate-0' : ''}`}
+        />
+
+        <div className={`pointer-events-none absolute inset-x-3 top-3 h-1 rounded-full bg-gradient-to-r ${framePalette} opacity-55`}></div>
+
+        {isLocked && (
+          <LockOverlay message="Complete previous lesson to unlock" />
+        )}
+
+        <div className="frame-glow"></div>
+
+        {isCurrent && (
+          <span className="frame-badge current">Current</span>
+        )}
+
+        {module.isBoss && (
+          <span className="frame-badge boss">
+            <i className="fas fa-crown mr-1"></i>
+            Final
+          </span>
+        )}
+      </button>
+
+      <div className="frame-info">
+        <p className="lesson-title">{module.title}</p>
+
+        <div className="mt-2 flex items-center justify-center gap-2">
+        {typeof module.stars === 'number' && (
+            <span className="stars-pill">
+            <i className="fas fa-star mr-1 text-amber-300"></i>
+            {module.stars}/3
+          </span>
+        )}
+
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenNote(module);
+          }}
+          className="note-btn"
+        >
+          <i className="fas fa-sticky-note mr-1"></i>
+          Note
+        </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CorridorDoor({
+  variant,
+  direction,
+  unlocked,
+  title,
+  subtitle,
+  onClick
+}: CorridorDoorProps) {
+  const isForward = direction === 'forward';
+  const gateToneClass =
+    variant.id === 'hotel'
+      ? 'gate-tone-hotel'
+      : variant.id === 'bedroom'
+        ? 'gate-tone-bedroom'
+        : 'gate-tone-museum';
+  const doorImageByFloor: Record<FloorThemeId, string> = {
+    bedroom: '/doors/door-1.png',
+    hotel: '/doors/door-2.png',
+    museum: '/doors/door-3.png'
+  };
+  const doorImage = doorImageByFloor[variant.id];
+
+  return (
+    <div className="gate-wrapper">
+      <button
+        type="button"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          if (unlocked) {
+            onClick();
+          }
+        }}
+        aria-label={`${title}. ${subtitle}`}
+        className={`gate ${unlocked ? 'open' : 'locked'} ${gateToneClass}`}
+      >
+        <div className="gate-door">
+          <img src={doorImage} alt={`${title} door`} className="gate-door-image" draggable={false} />
+        </div>
+
+        <div className="gate-sign">
+          {title}
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function GalleryWall({
+  modules,
+  floorTheme,
+  lockEnabled,
+  justUnlockedModule,
+  nextDoorUnlocked,
+  nextDoorTitle,
+  nextDoorSubtitle,
+  backDoorTitle,
+  backDoorSubtitle,
+  wallRef,
+  isDragging,
+  onWallMouseDown,
+  onWallMouseMove,
+  onWallMouseUp,
+  onWallWheel,
+  onModuleOpen,
+  onNoteOpen,
+  onBackDoorClick,
+  onGateClick
+}: GalleryWallProps) {
+  const framePalettes = floorTheme.framePalettes;
+  const wallWidth = Math.max(2200, modules.length * 360 + 900);
+  const wallAmbientPalette: Record<FloorThemeId, {
+    shellStart: string;
+    shellMid: string;
+    shellEnd: string;
+    baseLeft: string;
+    baseMid: string;
+    baseRight: string;
+    overlayTop: string;
+    overlayBottom: string;
+    stripeLight: string;
+    stripeSoft: string;
+    textPrimary: string;
+    textSecondary: string;
+    textShadow: string;
+  }> = {
+    bedroom: {
+      shellStart: '#8074a3',
+      shellMid: '#5a4d79',
+      shellEnd: '#302744',
+      baseLeft: '#d7d0ed',
+      baseMid: '#c1b5df',
+      baseRight: '#a899c8',
+      overlayTop: 'rgba(78,67,118,0.2)',
+      overlayBottom: 'rgba(25,18,42,0.5)',
+      stripeLight: 'rgba(255,255,255,0.18)',
+      stripeSoft: 'rgba(111,92,165,0.24)',
+      textPrimary: '#f8f1ff',
+      textSecondary: '#e5d8ff',
+      textShadow: 'rgba(24,15,42,0.78)'
+    },
+    hotel: {
+      shellStart: '#9a4a60',
+      shellMid: '#66263a',
+      shellEnd: '#341320',
+      baseLeft: '#f0d4c8',
+      baseMid: '#ddb6a4',
+      baseRight: '#c38f79',
+      overlayTop: 'rgba(132,57,78,0.22)',
+      overlayBottom: 'rgba(40,14,24,0.52)',
+      stripeLight: 'rgba(255,245,232,0.16)',
+      stripeSoft: 'rgba(152,73,98,0.24)',
+      textPrimary: '#ffe8dc',
+      textSecondary: '#f8d2c2',
+      textShadow: 'rgba(40,14,24,0.8)'
+    },
+    museum: {
+      shellStart: '#8a6b4d',
+      shellMid: '#5f4734',
+      shellEnd: '#32251d',
+      baseLeft: '#e2cfb4',
+      baseMid: '#ccb18f',
+      baseRight: '#ae8a64',
+      overlayTop: 'rgba(112,82,53,0.2)',
+      overlayBottom: 'rgba(35,24,14,0.5)',
+      stripeLight: 'rgba(255,248,230,0.16)',
+      stripeSoft: 'rgba(120,88,56,0.24)',
+      textPrimary: '#f8ead4',
+      textSecondary: '#ead2ad',
+      textShadow: 'rgba(33,22,12,0.76)'
+    }
+  };
+  const activeWallPalette = wallAmbientPalette[floorTheme.id];
+  const wallBackground = `
+    linear-gradient(to bottom, ${activeWallPalette.overlayTop}, ${activeWallPalette.overlayBottom}),
+    repeating-linear-gradient(90deg, ${activeWallPalette.stripeLight} 0, ${activeWallPalette.stripeLight} 132px, ${activeWallPalette.stripeSoft} 132px, ${activeWallPalette.stripeSoft} 148px),
+    linear-gradient(to right, ${activeWallPalette.baseLeft}, ${activeWallPalette.baseMid}, ${activeWallPalette.baseRight})
+  `;
+
+  return (
+    <div
+      className="relative h-full overflow-hidden"
+      style={{
+        background: `linear-gradient(120deg, ${activeWallPalette.shellStart}, ${activeWallPalette.shellMid}, ${activeWallPalette.shellEnd})`
+      }}
+    >
+
+      <div
+        ref={wallRef}
+        className={`museum-scroll relative h-full overflow-x-auto overflow-y-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        onMouseDown={onWallMouseDown}
+        onMouseMove={onWallMouseMove}
+        onMouseUp={onWallMouseUp}
+        onMouseLeave={onWallMouseUp}
+        onWheel={onWallWheel}
+      >
+        <div
+          className="wall-container"
+          style={{ minWidth: `${wallWidth}px`, background: wallBackground }}
+        >
+          <CorridorDoor
+            variant={floorTheme}
+            direction="backward"
+            unlocked
+            title={backDoorTitle}
+            subtitle={backDoorSubtitle}
+            onClick={onBackDoorClick}
+          />
+
+          {modules.map((module, index) => (
+            <FrameItem
+              key={module.id}
+              module={module}
+              framePalette={framePalettes[index % framePalettes.length]}
+              lockEnabled={lockEnabled}
+              justUnlocked={justUnlockedModule === module.id}
+              onOpenLesson={onModuleOpen}
+              onOpenNote={onNoteOpen}
+            />
+          ))}
+
+          <CorridorDoor
+            variant={floorTheme}
+            direction="forward"
+            unlocked={nextDoorUnlocked}
+            title={nextDoorTitle}
+            subtitle={nextDoorSubtitle}
+            onClick={onGateClick}
+          />
+        </div>
+      </div>
+
+      <style>{`
+        .museum-scroll {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        .museum-scroll::-webkit-scrollbar {
+          display: none;
+        }
+
+        .wall-container {
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          min-height: 100%;
+          padding: 80px;
+          background:
+            linear-gradient(to bottom, rgba(76, 60, 45, 0.24), rgba(25, 18, 13, 0.5)),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0, rgba(255,255,255,0.14) 132px, rgba(124,95,66,0.2) 132px, rgba(124,95,66,0.2) 148px),
+            linear-gradient(to right, #dfc6a4, #b9936f, #7f6149);
+        }
+
+        .frame-wrapper {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin: 0 60px;
+        }
+
+        .frame-card {
+          position: relative;
+          width: 220px;
+          height: 300px;
+          padding: 12px;
+          background: linear-gradient(145deg, #c9a46a, #8b6b3e);
+          border: 6px solid #5a4324;
+          border-radius: 6px;
+          box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.45),
+            inset 0 0 10px rgba(255, 255, 255, 0.2);
+          cursor: pointer;
+          transition: transform 0.3s ease;
+          overflow: visible;
+        }
+
+        .frame-card.locked {
+          cursor: not-allowed;
+        }
+
+        .frame-card img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border: 3px solid #2c2c2c;
+          display: block;
+        }
+
+        .frame-card:hover:not(.locked) {
+          transform: scale(1.05) rotate(0.5deg);
+        }
+
+        .frame-glow {
+          position: absolute;
+          inset: 0;
+          box-shadow: 0 0 25px rgba(255, 215, 120, 0.45);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          pointer-events: none;
+        }
+
+        .frame-card:hover:not(.locked) .frame-glow {
+          opacity: 1;
+        }
+
+        .frame-badge {
+          position: absolute;
+          left: 12px;
+          top: 12px;
+          border-radius: 9999px;
+          padding: 3px 8px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #1c120c;
+          background: rgba(255, 233, 176, 0.95);
+          border: 1px solid rgba(90, 67, 36, 0.45);
+        }
+
+        .frame-badge.boss {
+          left: auto;
+          right: 12px;
+          background: rgba(255, 213, 136, 0.95);
+        }
+
+        .frame-info {
+          margin-top: 12px;
+          text-align: center;
+          color: ${activeWallPalette.textSecondary};
+          max-width: 240px;
+          text-shadow: 0 2px 8px ${activeWallPalette.textShadow};
+        }
+
+        .lesson-title {
+          font-size: 13px;
+          font-weight: 600;
+          color: ${activeWallPalette.textPrimary};
+          line-height: 1.35;
+          text-shadow: 0 2px 8px ${activeWallPalette.textShadow};
+        }
+
+        .stars-pill {
+          display: inline-flex;
+          align-items: center;
+          border: 1px solid rgba(255, 216, 140, 0.35);
+          background: rgba(44, 30, 19, 0.85);
+          padding: 4px 10px;
+          border-radius: 9999px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #f0cc89;
+        }
+
+        .note-btn {
+          margin-top: 0;
+          padding: 4px 10px;
+          border: none;
+          background: #444;
+          color: #fff;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+          transition: background 0.2s ease;
+        }
+
+        .note-btn:hover {
+          background: #555;
+        }
+
+        .lock-overlay {
+          position: absolute;
+          inset: 0;
+          backdrop-filter: blur(6px);
+          background: rgba(200, 200, 200, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: visible;
+        }
+
+        .lock-cloud {
+          position: absolute;
+          width: 120%;
+          height: 120%;
+          background: radial-gradient(circle, rgba(255,255,255,0.8), transparent);
+          filter: blur(20px);
+          animation: cloudMove 6s infinite linear;
+        }
+
+        .lock-icon {
+          font-size: 32px;
+          z-index: 2;
+          color: #2d2018;
+          text-shadow: 0 4px 10px rgba(255, 255, 255, 0.45);
+        }
+
+        .lock-tooltip {
+          position: absolute;
+          bottom: -34px;
+          background: #222;
+          color: #fff;
+          padding: 5px 10px;
+          font-size: 12px;
+          border-radius: 6px;
+          opacity: 0;
+          transition: 0.2s;
+          white-space: nowrap;
+        }
+
+        .lock-overlay:hover .lock-tooltip {
+          opacity: 1;
+        }
+
+        .gate-wrapper {
+          margin: 0 60px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .gate {
+          width: 200px;
+          height: 320px;
+          position: relative;
+          cursor: pointer;
+          border: none;
+          background: transparent;
+          padding: 0;
+          transition: transform 0.3s ease;
+        }
+
+        .gate.open:hover {
+          transform: translateY(-6px);
+        }
+
+        .gate.locked {
+          cursor: not-allowed;
+        }
+
+        .gate-door {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          transition: transform 0.35s ease;
+        }
+
+        .gate-door-image {
+          width: 94%;
+          height: 100%;
+          object-fit: contain;
+          image-rendering: pixelated;
+          pointer-events: none;
+          filter: drop-shadow(0 16px 18px rgba(38, 23, 11, 0.36));
+          transition: transform 0.35s ease, filter 0.35s ease;
+        }
+
+        .gate-tone-bedroom .gate-door-image {
+          filter: drop-shadow(0 16px 20px rgba(95, 77, 139, 0.42));
+        }
+
+        .gate-tone-hotel .gate-door-image {
+          filter: drop-shadow(0 16px 20px rgba(124, 62, 43, 0.42));
+        }
+
+        .gate-tone-museum .gate-door-image {
+          width: 106%;
+          filter: drop-shadow(0 16px 20px rgba(109, 90, 49, 0.4));
+        }
+
+        .gate.open .gate-door {
+          transform: translateY(-2px) scale(1.03);
+        }
+
+        .gate.open .gate-door-image {
+          filter:
+            drop-shadow(0 0 16px rgba(255, 200, 93, 0.85))
+            drop-shadow(0 16px 20px rgba(106, 73, 28, 0.45));
+          animation: gateGlow 2.6s ease-in-out infinite;
+        }
+
+        .gate.locked .gate-door-image {
+          filter: grayscale(0.35) brightness(0.78) drop-shadow(0 16px 18px rgba(28, 20, 13, 0.38));
+        }
+
+        .gate-sign {
+          position: absolute;
+          left: 50%;
+          bottom: 24px;
+          transform: translate(-50%, 8px);
+          border: 1px solid #46362f;
+          border-radius: 4px;
+          padding: 8px 12px;
+          min-width: 132px;
+          text-align: center;
+          background: #2a2020;
+          color: #f6ece0;
+          font-size: 10px;
+          font-weight: 600;
+          line-height: 1.2;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        .gate-wrapper:hover .gate-sign,
+        .gate-wrapper:focus-within .gate-sign {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+
+        @keyframes cloudMove {
+          0% { transform: translateX(-10px); }
+          50% { transform: translateX(10px); }
+          100% { transform: translateX(-10px); }
+        }
+
+        @keyframes unlockHalo {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          25% {
+            opacity: 1;
+            transform: scale(1.06);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1.15);
+          }
+        }
+
+        .animate-unlock-halo {
+          animation: unlockHalo 1.8s ease-out;
+        }
+
+        @keyframes gateGlow {
+          0%, 100% {
+            filter: saturate(1) brightness(1);
+          }
+          50% {
+            filter: saturate(1.15) brightness(1.1);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function MuseumLobbyScene({ floorTheme: _floorTheme, onStart, onExit: _onExit }: LobbySceneProps) {
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const panTimeoutRef = useRef<number | null>(null);
+
+  const playClickSound = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    audio.play().catch(() => {
+      // Ignore playback failures when browser blocks autoplay.
+    });
+  };
+
+  const clearPanTimer = () => {
+    if (panTimeoutRef.current) {
+      window.clearTimeout(panTimeoutRef.current);
+      panTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearPanTimer();
+    };
+  }, []);
+
+  const handleStartChoice = () => {
+    playClickSound();
+    sceneRef.current?.classList.add('pan');
+    clearPanTimer();
+
+    panTimeoutRef.current = window.setTimeout(() => {
+      sceneRef.current?.classList.remove('pan');
+      onStart();
+    }, 760);
+  };
+
+  return (
+    <div className="lobby-container" ref={sceneRef}>
+      <div className="lobby-bg"></div>
+
+      <div className="lobby-content">
+        <button
+          type="button"
+          className="tap-start-text"
+          onClick={handleStartChoice}
+          aria-label="Tab TO start"
+        >
+          Tab TO start
+        </button>
+      </div>
+
+      <audio ref={audioRef} preload="auto">
+        <source src="/sounds/pomodoro/pause.mp3" type="audio/mpeg" />
+      </audio>
+
+      <style>{`
+        .lobby-container {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          font-family: 'Nunito', 'Baloo 2', 'Quicksand', 'Segoe UI', sans-serif;
+          isolation: isolate;
+        }
+
+        .lobby-container::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to bottom, rgba(255, 255, 255, 0.24), rgba(41, 74, 101, 0.28));
+          pointer-events: none;
+          z-index: 3;
+        }
+
+        .lobby-bg {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(0, 26, 46, 0.22)),
+            url('/backgrounds/forever-morning/flattened_image_spaceship.png');
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: cover;
+          transition: transform 0.8s ease;
+        }
+
+        .lobby-bg::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(circle at 20% 16%, rgba(255, 255, 255, 0.28), transparent 42%),
+            radial-gradient(circle at 78% 20%, rgba(255, 255, 255, 0.2), transparent 45%);
+        }
+
+        .lobby-bg::after {
+          content: '';
+          position: absolute;
+          width: 320px;
+          height: 320px;
+          border-radius: 999px;
+          right: -90px;
+          bottom: -140px;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+          filter: blur(8px);
+        }
+
+        .lobby-container.pan .lobby-bg {
+          transform: scale(1.06);
+        }
+
+        .lobby-container.pan .lobby-content {
+          transform: scale(1.02) translateY(-12px);
+          opacity: 0.1;
+        }
+
+        .lobby-content {
+          position: absolute;
+          inset: 0;
+          z-index: 4;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          transition: transform 0.8s ease, opacity 0.8s ease;
+        }
+
+        .tap-start-text {
+          border: none;
+          background: transparent;
+          padding: 0;
+          font-size: 28px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #ffffff;
+          text-shadow:
+            0 8px 24px rgba(0, 0, 0, 0.45),
+            0 0 20px rgba(255, 255, 255, 0.35);
+          cursor: pointer;
+          transition: transform 0.2s ease, text-shadow 0.2s ease;
+          animation: tapPulse 1.6s ease-in-out infinite;
+        }
+
+        .tap-start-text:hover {
+          transform: scale(1.03);
+          text-shadow:
+            0 12px 26px rgba(0, 0, 0, 0.5),
+            0 0 26px rgba(255, 255, 255, 0.45);
+        }
+
+        .tap-start-text:focus-visible {
+          outline: none;
+          text-shadow:
+            0 12px 30px rgba(0, 0, 0, 0.56),
+            0 0 30px rgba(255, 255, 255, 0.56);
+        }
+
+        @keyframes tapPulse {
+          0%,
+          100% {
+            transform: scale(1);
+            text-shadow:
+              0 8px 24px rgba(0, 0, 0, 0.45),
+              0 0 20px rgba(255, 255, 255, 0.35);
+          }
+          50% {
+            transform: scale(1.02);
+            text-shadow:
+              0 12px 28px rgba(0, 0, 0, 0.5),
+              0 0 30px rgba(255, 255, 255, 0.48);
+          }
+        }
+
+        @media (max-width: 900px) {
+          .lobby-content {
+            padding: 16px;
+          }
+
+          .tap-start-text {
+            font-size: 25px;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function NotePopup({ module, onClose }: NotePopupProps) {
+  if (!module) return null;
+
+  return (
+    <div className="pointer-events-auto absolute bottom-[78px] left-5 z-30 w-[min(340px,calc(100%-2.5rem))]">
+      <div className="rounded-xl border border-[#f3dfb3]/35 bg-gradient-to-r from-[#4e3425]/92 via-[#3a2518]/92 to-[#2e1d13]/92 p-3 text-[#f8ead0] shadow-xl backdrop-blur-md">
+        <div className="mb-1.5 flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-[#ecd5a4]/80">Lesson Note</p>
+            <h4 className="mt-0.5 text-xs font-semibold text-[#f8ead0]">{module.title}</h4>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-[#f2ddb0]/30 bg-[#2a1a12]/80 text-[11px] text-[#f5e4c1] transition hover:bg-[#3a2517]"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+
+        <p className="max-h-24 overflow-y-auto pr-1 text-xs leading-relaxed text-[#f6e6c7]/90">{module.note}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function LearningMapPanel({
   visible,
   onClose,
   onModuleClick,
-  initialX = (window.innerWidth - 800) / 2,
-  initialY = (window.innerHeight - 600 - 80) / 2,
-  initialWidth = 800,
-  initialHeight = 600,
+  selectedCourseId,
+  initialX = (window.innerWidth - 900) / 2,
+  initialY = (window.innerHeight - 660 - 80) / 2,
+  initialWidth = 900,
+  initialHeight = 660,
 }: Props) {
   const { position, handleMouseDown } = useDraggable(initialX, initialY);
-  const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 700, 500);
+  const { size, handleMouseDown: handleResize } = useResizable(initialWidth, initialHeight, 760, 520);
 
-  // State for course selection
   const [showCourseList, setShowCourseList] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [statsCollapsed, setStatsCollapsed] = useState(true);
+  const [learningEconomy, setLearningEconomy] = useState<LearningEconomyState>(() =>
+    readLearningEconomy()
+  );
+  const [hasStartedJourney, setHasStartedJourney] = useState(false);
+  const [activeNoteModule, setActiveNoteModule] = useState<ModuleNode | null>(null);
+  const [showGateMessage, setShowGateMessage] = useState(false);
+  const [currentFloorIndex, setCurrentFloorIndex] = useState(0);
 
-  // Map drag-to-pan functionality
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [isDraggingMap, setIsDraggingMap] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [scrollStart, setScrollStart] = useState({ left: 0, top: 0 });
+  const [isDraggingWall, setIsDraggingWall] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [scrollStartLeft, setScrollStartLeft] = useState(0);
 
-  // Car animation state
-  const [carPosition, setCarPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isCarMoving, setIsCarMoving] = useState(false);
-  const [animatingToModule, setAnimatingToModule] = useState<number | null>(null);
   const [justUnlockedModule, setJustUnlockedModule] = useState<number | null>(null);
-  const carAnimationRef = useRef<number | null>(null);
+  const [pendingUnlockModule, setPendingUnlockModule] = useState<number | null>(null);
+  const [sessionCompletedModules, setSessionCompletedModules] = useState<Record<string, number>>({});
 
-  const handleMapMouseDown = (e: React.MouseEvent) => {
-    if (!mapContainerRef.current) return;
-    setIsDraggingMap(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-    setScrollStart({
-      left: mapContainerRef.current.scrollLeft,
-      top: mapContainerRef.current.scrollTop
-    });
+  const wallRef = useRef<HTMLDivElement>(null);
+  const unlockTimerRef = useRef<number | null>(null);
+
+  const handleWallMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!wallRef.current) return;
+    setIsDraggingWall(true);
+    setDragStartX(e.clientX);
+    setScrollStartLeft(wallRef.current.scrollLeft);
   };
 
-  const handleMapMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingMap || !mapContainerRef.current) return;
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    mapContainerRef.current.scrollLeft = scrollStart.left - dx;
-    mapContainerRef.current.scrollTop = scrollStart.top - dy;
+  const handleWallMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingWall || !wallRef.current) return;
+    const deltaX = e.clientX - dragStartX;
+    wallRef.current.scrollLeft = scrollStartLeft - deltaX;
   };
 
-  const handleMapMouseUp = () => {
-    setIsDraggingMap(false);
+  const handleWallMouseUp = () => {
+    setIsDraggingWall(false);
   };
 
-  const handleMapMouseLeave = () => {
-    setIsDraggingMap(false);
-  };
-
-  if (!visible) return null;
-
-  // Mock courses data
-  const availableCourses: Course[] = [
-    {
-      id: 'ai-101',
-      name: 'Artificial Intelligence Fundamentals',
-      subject: 'Computer Science',
-      moduleCount: 7,
-      completedModules: 4,
-      totalStars: 21,
-      earnedStars: 11,
-      mapLayout: 'linear',
-      description: 'Learn the basics of AI and machine learning'
-    },
-    {
-      id: 'ds-201',
-      name: 'Data Structures & Algorithms',
-      subject: 'Computer Science',
-      moduleCount: 10,
-      completedModules: 6,
-      totalStars: 30,
-      earnedStars: 18,
-      mapLayout: 'branching',
-      description: 'Master fundamental data structures'
-    },
-    {
-      id: 'web-301',
-      name: 'Web Development Advanced',
-      subject: 'Software Engineering',
-      moduleCount: 8,
-      completedModules: 2,
-      totalStars: 24,
-      earnedStars: 6,
-      mapLayout: 'spiral',
-      description: 'Build modern web applications'
-    },
-    {
-      id: 'db-401',
-      name: 'Database Systems',
-      subject: 'Information Systems',
-      moduleCount: 6,
-      completedModules: 0,
-      totalStars: 18,
-      earnedStars: 0,
-      mapLayout: 'tree',
-      description: 'Design and manage databases'
-    },
-    {
-      id: 'sec-501',
-      name: 'Cybersecurity Essentials',
-      subject: 'Network Security',
-      moduleCount: 9,
-      completedModules: 3,
-      totalStars: 27,
-      earnedStars: 9,
-      mapLayout: 'circular',
-      description: 'Protect systems and data'
+  const handleWallWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!wallRef.current) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      wallRef.current.scrollLeft += e.deltaY;
     }
-  ];
+  };
 
-  // Initialize with first course
+  const availableCourses: Course[] = STUDENT_LEARNING_COURSES;
+
   const currentCourse = selectedCourse || availableCourses[0];
-
-  // Generate modules based on layout type
-  const generateModulesForLayout = (layout: MapLayoutType, count: number): ModuleNode[] => {
-    const modules: ModuleNode[] = [];
-    
-    switch (layout) {
-      case 'linear': {
-        // Winding road path like a real road map
-        for (let i = 0; i < count; i++) {
-          const progress = i / (count - 1);
-          // Create S-curve road path
-          const xProgress = progress * 900 + 150;
-          const yBase = 400;
-          const wave1 = Math.sin(progress * Math.PI * 2) * 120;
-          const wave2 = Math.sin(progress * Math.PI * 3 + 1) * 60;
-          const yPos = yBase + wave1 + wave2;
-          
-          modules.push({
-            id: i + 1,
-            title: `Module ${i + 1}: ${getModuleTitle(i)}`,
-            status: i < currentCourse.completedModules ? 'completed' : 
-                    i === currentCourse.completedModules ? 'current' : 
-                    i === currentCourse.completedModules + 1 ? 'available' : 'locked',
-            stars: i < currentCourse.completedModules ? Math.floor(Math.random() * 3) + 1 : undefined,
-            position: {
-              x: xProgress,
-              y: yPos
-            },
-            isBoss: i === count - 1 // Boss at the end like final building
-          });
-        }
-        break;
-      }
-      
-      case 'branching': {
-        // Tree-like structure with branches
-        const levels = Math.ceil(Math.log2(count + 1));
-        let nodeIndex = 0;
-        
-        for (let level = 0; level < levels && nodeIndex < count; level++) {
-          const nodesInLevel = Math.min(Math.pow(2, level), count - nodeIndex);
-          for (let i = 0; i < nodesInLevel && nodeIndex < count; i++) {
-            modules.push({
-              id: nodeIndex + 1,
-              title: `Module ${nodeIndex + 1}: ${getModuleTitle(nodeIndex)}`,
-              status: nodeIndex < currentCourse.completedModules ? 'completed' : 
-                      nodeIndex === currentCourse.completedModules ? 'current' : 
-                      nodeIndex === currentCourse.completedModules + 1 ? 'available' : 'locked',
-              stars: nodeIndex < currentCourse.completedModules ? Math.floor(Math.random() * 3) + 1 : undefined,
-              position: {
-                x: 150 + level * 200,
-                y: 150 + (i * (500 / Math.max(nodesInLevel - 1, 1)))
-              },
-              isBoss: nodeIndex === count - 1
-            });
-            nodeIndex++;
-          }
-        }
-        break;
-      }
-      
-      case 'spiral': {
-        // Spiral pattern from center outward
-        const centerX = 500;
-        const centerY = 350;
-        for (let i = 0; i < count; i++) {
-          const angle = (i / count) * Math.PI * 4;
-          const radius = 50 + (i / count) * 300;
-          modules.push({
-            id: i + 1,
-            title: `Module ${i + 1}: ${getModuleTitle(i)}`,
-            status: i < currentCourse.completedModules ? 'completed' : 
-                    i === currentCourse.completedModules ? 'current' : 
-                    i === currentCourse.completedModules + 1 ? 'available' : 'locked',
-            stars: i < currentCourse.completedModules ? Math.floor(Math.random() * 3) + 1 : undefined,
-            position: {
-              x: centerX + Math.cos(angle) * radius,
-              y: centerY + Math.sin(angle) * radius
-            },
-            isBoss: i === count - 1
-          });
-        }
-        break;
-      }
-      
-      case 'tree': {
-        // Hierarchical tree structure
-        modules.push({
-          id: 1,
-          title: `Module 1: ${getModuleTitle(0)}`,
-          status: 'completed',
-          stars: 3,
-          position: { x: 500, y: 100 }
-        });
-        
-        for (let i = 1; i < count; i++) {
-          const level = Math.floor(Math.log2(i + 1));
-          const posInLevel = i - (Math.pow(2, level) - 1);
-          const totalInLevel = Math.pow(2, level);
-          
-          modules.push({
-            id: i + 1,
-            title: `Module ${i + 1}: ${getModuleTitle(i)}`,
-            status: i < currentCourse.completedModules ? 'completed' : 
-                    i === currentCourse.completedModules ? 'current' : 
-                    i === currentCourse.completedModules + 1 ? 'available' : 'locked',
-            stars: i < currentCourse.completedModules ? Math.floor(Math.random() * 3) + 1 : undefined,
-            position: {
-              x: 200 + (posInLevel * (600 / Math.max(totalInLevel - 1, 1))),
-              y: 150 + level * 150
-            },
-            isBoss: i === Math.floor(count * 0.7)
-          });
-        }
-        break;
-      }
-      
-      case 'circular': {
-        // Circular arrangement
-        const centerX = 500;
-        const centerY = 350;
-        const radius = 250;
-        
-        for (let i = 0; i < count; i++) {
-          const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-          modules.push({
-            id: i + 1,
-            title: `Module ${i + 1}: ${getModuleTitle(i)}`,
-            status: i < currentCourse.completedModules ? 'completed' : 
-                    i === currentCourse.completedModules ? 'current' : 
-                    i === currentCourse.completedModules + 1 ? 'available' : 'locked',
-            stars: i < currentCourse.completedModules ? Math.floor(Math.random() * 3) + 1 : undefined,
-            position: {
-              x: centerX + Math.cos(angle) * radius,
-              y: centerY + Math.sin(angle) * radius
-            },
-            isBoss: i === 0
-          });
-        }
-        break;
-      }
+  const finalFloorIndex = FLOOR_THEMES.length - 1;
+  const floorTheme = FLOOR_THEMES[currentFloorIndex];
+  const isFinalFloor = currentFloorIndex === finalFloorIndex;
+  const nextFloorTheme = FLOOR_THEMES[currentFloorIndex + 1] || null;
+  const previousFloorTheme = FLOOR_THEMES[currentFloorIndex - 1] || null;
+  const floorSceneBackground: Record<FloorThemeId, string> = {
+    bedroom: 'from-[#5f5477]/35 via-[#3b3553]/52 to-[#201b33]/75',
+    hotel: 'from-[#70273a]/32 via-[#421523]/55 to-[#220b13]/76',
+    museum: 'from-[#6e4a33]/25 via-[#3a271b]/45 to-[#24170f]/65'
+  };
+  const statsSurfaceByFloor: Record<FloorThemeId, {
+    panelBg: string;
+    panelBorder: string;
+    cardBg: string;
+    cardBorder: string;
+    buttonBg: string;
+    buttonBorder: string;
+    buttonText: string;
+  }> = {
+    bedroom: {
+      panelBg: 'rgba(53, 41, 80, 0.34)',
+      panelBorder: 'rgba(233, 215, 255, 0.26)',
+      cardBg: 'rgba(60, 48, 92, 0.46)',
+      cardBorder: 'rgba(236, 221, 255, 0.28)',
+      buttonBg: 'rgba(52, 40, 81, 0.48)',
+      buttonBorder: 'rgba(236, 220, 255, 0.3)',
+      buttonText: '#f6e9ff'
+    },
+    hotel: {
+      panelBg: 'rgba(68, 28, 40, 0.34)',
+      panelBorder: 'rgba(255, 219, 186, 0.26)',
+      cardBg: 'rgba(81, 34, 49, 0.46)',
+      cardBorder: 'rgba(255, 219, 186, 0.28)',
+      buttonBg: 'rgba(72, 30, 44, 0.48)',
+      buttonBorder: 'rgba(255, 220, 188, 0.3)',
+      buttonText: '#fbe7ce'
+    },
+    museum: {
+      panelBg: 'rgba(73, 49, 31, 0.32)',
+      panelBorder: 'rgba(245, 220, 179, 0.25)',
+      cardBg: 'rgba(86, 59, 39, 0.44)',
+      cardBorder: 'rgba(245, 220, 179, 0.28)',
+      buttonBg: 'rgba(80, 55, 37, 0.46)',
+      buttonBorder: 'rgba(245, 220, 179, 0.3)',
+      buttonText: '#f8e8ca'
     }
-    
-    return modules;
+  };
+  const statsSurface = statsSurfaceByFloor[floorTheme.id];
+  const statsPanelStyle = {
+    backgroundColor: statsSurface.panelBg,
+    borderColor: statsSurface.panelBorder
+  };
+  const statsCardStyle = {
+    backgroundColor: statsSurface.cardBg,
+    borderColor: statsSurface.cardBorder
+  };
+  const statsActionButtonStyle = {
+    backgroundColor: statsSurface.buttonBg,
+    borderColor: statsSurface.buttonBorder,
+    color: statsSurface.buttonText
   };
 
-  const getModuleTitle = (index: number): string => {
-    const titles = [
-      'Introduction', 'Fundamentals', 'Core Concepts', 'Advanced Topics',
-      'Practical Applications', 'Deep Dive', 'Expert Techniques', 'Specialization',
-      'Integration', 'Final Project', 'Capstone', 'Mastery'
-    ];
-    return titles[index % titles.length];
-  };
+  const effectiveCompletedModules =
+    sessionCompletedModules[currentCourse.id] ?? currentCourse.completedModules;
 
-  const modules = generateModulesForLayout(currentCourse.mapLayout, currentCourse.moduleCount);
+  const modules = buildMuseumModules(currentCourse, effectiveCompletedModules);
+  const currentModule = modules.find((module) => module.status === 'current') || null;
 
-  // Generate path connections between modules
-  const generatePaths = () => {
-    const paths: Array<{ from: { x: number; y: number }; to: { x: number; y: number } }> = [];
-    
-    if (currentCourse.mapLayout === 'branching' || currentCourse.mapLayout === 'tree') {
-      // Connect parent to children in tree structures
-      for (let i = 0; i < modules.length; i++) {
-        const childIndex1 = 2 * i + 1;
-        const childIndex2 = 2 * i + 2;
-        if (childIndex1 < modules.length) {
-          paths.push({ from: modules[i].position, to: modules[childIndex1].position });
-        }
-        if (childIndex2 < modules.length) {
-          paths.push({ from: modules[i].position, to: modules[childIndex2].position });
-        }
-      }
-    } else {
-      // Linear connections for other layouts
-      for (let i = 0; i < modules.length - 1; i++) {
-        paths.push({ from: modules[i].position, to: modules[i + 1].position });
-      }
-    }
-    
-    return paths;
-  };
+  const progressRatio =
+    currentCourse.moduleCount > 0
+      ? Math.min((effectiveCompletedModules / currentCourse.moduleCount) * 100, 100)
+      : 0;
 
-  const pathData = generatePaths();
+  const gateUnlocked = !isFinalFloor || effectiveCompletedModules >= currentCourse.moduleCount;
+  const lessonLockEnabled = isFinalFloor;
 
   const handleModuleNodeClick = (module: ModuleNode) => {
-    if (module.status !== 'locked' && onModuleClick) {
-      onModuleClick(module.id, currentCourse.id);
-    }
+    if (lessonLockEnabled && module.status === 'locked') return;
+    onModuleClick?.(module.id, currentCourse.id);
   };
 
   const handleCourseSelect = (course: Course) => {
     setSelectedCourse(course);
     setShowCourseList(false);
+    setHasStartedJourney(false);
+    setActiveNoteModule(null);
+    setShowGateMessage(false);
+    setCurrentFloorIndex(0);
   };
 
-  const getNodeIcon = (module: ModuleNode) => {
-    if (module.isBoss) return '👑';
-    if (module.status === 'locked') return '🔒';
-    if (module.status === 'current') return '🎯';
-    if (module.status === 'completed') return '⭐';
-    return '📚';
-  };
-
-  const getNodeColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'from-emerald-400 via-teal-400 to-cyan-400';
-      case 'current':
-        return 'from-blue-400 via-indigo-400 to-purple-400';
-      case 'available':
-        return 'from-amber-300 via-orange-300 to-yellow-300';
-      default:
-        return 'from-gray-300 via-gray-400 to-gray-500';
+  const handleGateClick = () => {
+    if (!isFinalFloor) {
+      setCurrentFloorIndex((prev) => Math.min(prev + 1, finalFloorIndex));
+      setShowGateMessage(false);
+      return;
     }
-  };
 
-  // Animate car movement along the path
-  const animateCarToNextModule = (fromModuleId: number, toModuleId: number) => {
-    const fromModule = modules.find(m => m.id === fromModuleId);
-    const toModule = modules.find(m => m.id === toModuleId);
-    
-    if (!fromModule || !toModule) return;
+    if (!gateUnlocked) return;
 
-    setIsCarMoving(true);
-    setAnimatingToModule(toModuleId);
-    
-    const startPos = fromModule.position;
-    const endPos = toModule.position;
-    const duration = 2000; // 2 seconds
-    const startTime = performance.now();
+    const currentIndex = availableCourses.findIndex((course) => course.id === currentCourse.id);
+    const nextCourse = availableCourses[currentIndex + 1];
 
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Easing function for smooth movement
-      const easeProgress = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-      const currentX = startPos.x + (endPos.x - startPos.x) * easeProgress;
-      const currentY = startPos.y + (endPos.y - startPos.y) * easeProgress;
-
-      setCarPosition({ x: currentX, y: currentY });
-
-      if (progress < 1) {
-        carAnimationRef.current = requestAnimationFrame(animate);
-      } else {
-        // Animation complete - unlock next module
-        setIsCarMoving(false);
-        setAnimatingToModule(null);
-        setJustUnlockedModule(toModuleId);
-        
-        // Clear unlock highlight after 1.5 seconds
-        setTimeout(() => {
-          setJustUnlockedModule(null);
-        }, 1500);
-      }
-    };
-
-    carAnimationRef.current = requestAnimationFrame(animate);
-  };
-
-  // Initialize car position at current module
-  useEffect(() => {
-    if (!carPosition && currentCourse) {
-      const currentModule = modules.find(m => m.status === 'current');
-      if (currentModule) {
-        setCarPosition(currentModule.position);
-      }
+    if (nextCourse) {
+      setSelectedCourse(nextCourse);
+      setCurrentFloorIndex(0);
+      setHasStartedJourney(false);
+      setActiveNoteModule(null);
+      setShowGateMessage(false);
+      return;
     }
-  }, [carPosition, modules, currentCourse]);
 
-  // Cleanup animation on unmount
+    setShowGateMessage(true);
+  };
+
+  const handleBackDoorClick = () => {
+    if (currentFloorIndex > 0) {
+      setCurrentFloorIndex((prev) => Math.max(prev - 1, 0));
+      setShowGateMessage(false);
+      return;
+    }
+
+    setHasStartedJourney(false);
+    setActiveNoteModule(null);
+    setShowGateMessage(false);
+  };
+
+  const handleContinue = () => {
+    if (!hasStartedJourney) {
+      setHasStartedJourney(true);
+      return;
+    }
+
+    if (!currentModule) return;
+    handleModuleNodeClick(currentModule);
+  };
+
   useEffect(() => {
     return () => {
-      if (carAnimationRef.current) {
-        cancelAnimationFrame(carAnimationRef.current);
+      if (unlockTimerRef.current) {
+        window.clearTimeout(unlockTimerRef.current);
       }
     };
   }, []);
 
-  // Trigger animation when a module is completed
   useEffect(() => {
     if (!visible) return;
-    
-    // Check if user just completed a module (this would be triggered from parent)
-    const currentModule = modules.find(m => m.status === 'current');
-    const nextModule = modules.find(m => m.status === 'available');
-    
-    if (currentModule && nextModule && !isCarMoving) {
-      // Check if we should trigger animation (e.g., from localStorage flag)
-      const shouldAnimate = localStorage.getItem('triggerModuleUnlock');
-      if (shouldAnimate === 'true') {
-        localStorage.removeItem('triggerModuleUnlock');
-        setTimeout(() => {
-          animateCarToNextModule(currentModule.id, nextModule.id);
-        }, 300);
+
+    const shouldAnimate = localStorage.getItem('triggerModuleUnlock');
+    if (shouldAnimate !== 'true') return;
+
+    localStorage.removeItem('triggerModuleUnlock');
+
+    const currentProgress = sessionCompletedModules[currentCourse.id] ?? currentCourse.completedModules;
+    const nextProgress = Math.min(currentProgress + 1, currentCourse.moduleCount);
+    const nextUnlockedId = nextProgress < currentCourse.moduleCount ? nextProgress + 1 : null;
+
+    setSessionCompletedModules((prev) => ({
+      ...prev,
+      [currentCourse.id]: nextProgress
+    }));
+
+    if (nextUnlockedId !== null) {
+      setPendingUnlockModule(nextUnlockedId);
+    }
+  }, [
+    visible,
+    currentCourse.id,
+    currentCourse.completedModules,
+    currentCourse.moduleCount,
+    sessionCompletedModules
+  ]);
+
+  useEffect(() => {
+    if (!hasStartedJourney || pendingUnlockModule === null) return;
+
+    setJustUnlockedModule(pendingUnlockModule);
+    setPendingUnlockModule(null);
+
+    if (unlockTimerRef.current) {
+      window.clearTimeout(unlockTimerRef.current);
+    }
+
+    unlockTimerRef.current = window.setTimeout(() => {
+      setJustUnlockedModule(null);
+    }, 1800);
+  }, [hasStartedJourney, pendingUnlockModule]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    setStatsCollapsed(true);
+
+    if (selectedCourseId) {
+      const mappedCourse = availableCourses.find((course) => course.id === selectedCourseId);
+      if (mappedCourse) {
+        setSelectedCourse(mappedCourse);
       }
     }
-  }, [visible, modules, isCarMoving]);
+
+    setLearningEconomy(readLearningEconomy());
+  }, [visible, selectedCourseId]);
+
+  if (!visible) return null;
 
   return (
     <div
       className="fixed z-10"
-      style={{ left: `${position.x}px`, top: `${position.y}px`, width: `${size.width}px`, height: `${size.height}px` }}
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        width: `${size.width}px`,
+        height: `${size.height}px`,
+        maxWidth: 'calc(100vw - 16px)',
+        maxHeight: 'calc(100vh - 16px)'
+      }}
     >
-      <div className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl shadow-2xl h-full flex flex-col relative overflow-hidden">
-        
-        {/* Header */}
+      <div className="relative flex h-full flex-col overflow-hidden rounded-3xl border border-[#ead7b0]/35 bg-gradient-to-b from-[#f4e5ca]/20 via-[#a1764e]/10 to-[#2f1e14]/45 shadow-2xl backdrop-blur-[14px]">
         <div
-          className="flex-shrink-0 h-10 cursor-move rounded-t-3xl flex items-center justify-between px-6 border-b border-white/20"
+          className="flex h-12 flex-shrink-0 cursor-move items-center justify-between border-b border-white/20 bg-white/10 px-5 backdrop-blur-[20px]"
           onMouseDown={handleMouseDown}
         >
           <div className="flex items-center gap-3">
-            <i className="fas fa-map text-white/80 text-lg"></i>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/90">
+              <i className={floorTheme.icon}></i>
+            </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">{currentCourse.name}</h2>
-            </div>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="text-white/60 hover:text-white transition"
-          >
-            <i className="fas fa-times text-xl"></i>
-          </button>
-        </div>
-
-        {/* Top Stats Bar */}
-        <div className="flex-shrink-0 px-6 py-3 bg-black/20 backdrop-blur-sm border-b border-white/20 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                <i className="fas fa-book-open text-white text-sm"></i>
-              </div>
-              <div>
-                <div className="text-white/60 text-[10px] font-semibold">Progress</div>
-                <div className="text-white font-bold text-sm">{currentCourse.completedModules}/{currentCourse.moduleCount} Modules</div>
-                <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1 shadow-inner">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-500"
-                    style={{ width: `${(currentCourse.completedModules / currentCourse.moduleCount) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="w-px h-10 bg-white/20"></div>
-
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/25">
-                <i className="fas fa-star text-white text-sm"></i>
-              </div>
-              <div>
-                <div className="text-white/60 text-[10px] font-semibold">Stars</div>
-                <div className="text-white font-bold text-sm">{currentCourse.earnedStars}/{currentCourse.totalStars} ⭐</div>
-                <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1 shadow-inner">
-                  <div 
-                    className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-500"
-                    style={{ width: `${(currentCourse.earnedStars / currentCourse.totalStars) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+              <h2 className="text-base font-semibold text-white">Three-Floor Learning Corridor</h2>
+              <p className="text-[11px] text-white/70">
+                {currentCourse.name} • Floor {currentFloorIndex + 1}/{FLOOR_THEMES.length} • {floorTheme.shortLabel}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-            <i className="fas fa-layer-group text-purple-400 text-sm"></i>
-            <span className="text-white/90 text-xs font-semibold">
-              {currentCourse.mapLayout.charAt(0).toUpperCase() + currentCourse.mapLayout.slice(1)}
-            </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+            >
+              <i className="fas fa-times"></i>
+            </button>
           </div>
         </div>
 
-        {/* Map Canvas */}
-        <div 
-          ref={mapContainerRef}
-          className="flex-1 relative overflow-auto scrollbar-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #FFF5F7 0%, #FFF9E6 25%, #F0F4FF 50%, #F5F0FF 75%, #FFF5F7 100%)',
-            cursor: isDraggingMap ? 'grabbing' : 'grab'
-          }}
-          onMouseDown={handleMapMouseDown}
-          onMouseMove={handleMapMouseMove}
-          onMouseUp={handleMapMouseUp}
-          onMouseLeave={handleMapMouseLeave}
-        >
-          {/* Hidden scrollbar styles */}
-          <style>{`
-            .scrollbar-hidden::-webkit-scrollbar {
-              display: none;
-            }
-            .scrollbar-hidden {
-              -ms-overflow-style: none;
-              scrollbar-width: none;
-            }
-          `}</style>
-          
-          {/* Scrollable content wrapper */}
-          <div className="relative" style={{ minWidth: '1200px', minHeight: '800px' }}>
-            {/* SVG for road paths */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25))' }}>
-              <defs>
-                {/* Gradient for road */}
-                <linearGradient id="roadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.8" />
-                </linearGradient>
-                {/* Animated gradient for active road */}
-                <linearGradient id="activeRoadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#60a5fa" stopOpacity="1">
-                    <animate attributeName="stopColor" values="#60a5fa;#3b82f6;#60a5fa" dur="1.5s" repeatCount="indefinite" />
-                  </stop>
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="1">
-                    <animate attributeName="stopColor" values="#3b82f6;#2563eb;#3b82f6" dur="1.5s" repeatCount="indefinite" />
-                  </stop>
-                </linearGradient>
-              </defs>
-              {pathData.map((path, index) => {
-                const dx = path.to.x - path.from.x;
-                const dy = path.to.y - path.from.y;
-                
-                // Create curved path for more natural roads
-                const midX = (path.from.x + path.to.x) / 2;
-                const midY = (path.from.y + path.to.y) / 2;
-                
-                // Control point offset for curve
-                const offsetX = -dy * 0.15;
-                const offsetY = dx * 0.15;
-                
-                const pathD = `M ${path.from.x} ${path.from.y} Q ${midX + offsetX} ${midY + offsetY} ${path.to.x} ${path.to.y}`;
-                
-                // Check if this is the active animating path
-                const fromModule = modules[index];
-                const toModule = modules[index + 1];
-                const isActivePath = isCarMoving && 
-                  fromModule && toModule && 
-                  animatingToModule === toModule.id;
-                
-                return (
-                  <g key={index}>
-                    {/* Road background (wider) */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={isActivePath ? "#3b82f6" : "#8b5cf6"}
-                      strokeWidth="12"
-                      strokeOpacity={isActivePath ? "0.5" : "0.3"}
-                      strokeLinecap="round"
-                    />
-                    
-                    {/* Main road */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={isActivePath ? "url(#activeRoadGradient)" : "url(#roadGradient)"}
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    
-                    {/* Road centerline (dashed) */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="1.5"
-                      strokeOpacity={isActivePath ? "0.8" : "0.5"}
-                      strokeDasharray="8 8"
-                      strokeLinecap="round"
-                    >
-                      {isActivePath && <animate attributeName="strokeDashoffset" from="0" to="-16" dur="0.5s" repeatCount="indefinite" />}
-                    </path>
-                    
-                    {/* Glowing effect for active path */}
-                    {isActivePath && (
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke="#60a5fa"
-                        strokeWidth="16"
-                        strokeOpacity="0.3"
-                        strokeLinecap="round"
-                        filter="blur(8px)"
-                      />
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+        <div className="flex flex-shrink-0 flex-col border-b px-5 py-2.5 backdrop-blur-[18px]" style={statsPanelStyle}>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f5e6c8]/75">
+              Journey Dashboard
+            </p>
 
-            {/* Animated Car */}
-            {carPosition && (
-              <div
-                className="absolute pointer-events-none z-20 transition-transform"
-                style={{
-                  left: `${carPosition.x}px`,
-                  top: `${carPosition.y}px`,
-                  transform: 'translate(-50%, -50%)',
-                  transition: isCarMoving ? 'none' : 'all 0.3s ease'
-                }}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCourseList(true)}
+                className="rounded-xl border px-3 py-2 text-xs font-semibold transition hover:bg-white/10"
+                style={statsActionButtonStyle}
               >
-                <div className="relative">
-                  {/* Car body with shadow */}
-                  <div className="relative animate-bounce-subtle">
-                    {/* SVG Car - Clear and Colorful */}
-                    <svg 
-                      width="64" 
-                      height="64" 
-                      viewBox="0 0 64 64" 
-                      className="drop-shadow-2xl"
-                      style={{
-                        filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4))'
-                      }}
-                    >
-                      {/* Car Shadow */}
-                      <ellipse cx="32" cy="56" rx="24" ry="4" fill="rgba(0,0,0,0.2)" />
-                      
-                      {/* Car Body - Main */}
-                      <path 
-                        d="M8 36 L12 24 L20 20 L44 20 L52 24 L56 36 L56 44 L8 44 Z" 
-                        fill="url(#carBodyGradient)" 
-                        stroke="#c0392b" 
-                        strokeWidth="1.5"
-                      />
-                      
-                      {/* Car Roof */}
-                      <path 
-                        d="M16 24 L20 14 L44 14 L48 24 Z" 
-                        fill="url(#carRoofGradient)" 
-                        stroke="#2c3e50" 
-                        strokeWidth="1"
-                      />
-                      
-                      {/* Windows */}
-                      <path 
-                        d="M18 22 L21 16 L30 16 L30 22 Z" 
-                        fill="#87CEEB" 
-                        stroke="#5dade2" 
-                        strokeWidth="0.5"
-                      />
-                      <path 
-                        d="M34 16 L43 16 L46 22 L34 22 Z" 
-                        fill="#87CEEB" 
-                        stroke="#5dade2" 
-                        strokeWidth="0.5"
-                      />
-                      
-                      {/* Window Reflection */}
-                      <path d="M19 18 L21 16 L28 16 L28 17 Z" fill="rgba(255,255,255,0.5)" />
-                      <path d="M36 16 L42 16 L44 18 L36 17 Z" fill="rgba(255,255,255,0.5)" />
-                      
-                      {/* Headlights */}
-                      <circle cx="12" cy="34" r="3" fill="#f1c40f" stroke="#f39c12" strokeWidth="0.5" />
-                      <circle cx="52" cy="34" r="3" fill="#f1c40f" stroke="#f39c12" strokeWidth="0.5" />
-                      <circle cx="12" cy="34" r="1.5" fill="#fff" opacity="0.8" />
-                      <circle cx="52" cy="34" r="1.5" fill="#fff" opacity="0.8" />
-                      
-                      {/* Tail Lights */}
-                      <rect x="6" y="38" width="4" height="3" rx="1" fill="#e74c3c" />
-                      <rect x="54" y="38" width="4" height="3" rx="1" fill="#e74c3c" />
-                      
-                      {/* Wheels */}
-                      <circle cx="18" cy="46" r="8" fill="#2c3e50" stroke="#1a252f" strokeWidth="1" />
-                      <circle cx="18" cy="46" r="5" fill="#7f8c8d" />
-                      <circle cx="18" cy="46" r="2" fill="#bdc3c7" />
-                      
-                      <circle cx="46" cy="46" r="8" fill="#2c3e50" stroke="#1a252f" strokeWidth="1" />
-                      <circle cx="46" cy="46" r="5" fill="#7f8c8d" />
-                      <circle cx="46" cy="46" r="2" fill="#bdc3c7" />
-                      
-                      {/* Wheel Details */}
-                      <g fill="#95a5a6">
-                        <rect x="16" y="42" width="4" height="1" rx="0.5" />
-                        <rect x="16" y="49" width="4" height="1" rx="0.5" />
-                        <rect x="14" y="44" width="1" height="4" rx="0.5" />
-                        <rect x="21" y="44" width="1" height="4" rx="0.5" />
-                        
-                        <rect x="44" y="42" width="4" height="1" rx="0.5" />
-                        <rect x="44" y="49" width="4" height="1" rx="0.5" />
-                        <rect x="42" y="44" width="1" height="4" rx="0.5" />
-                        <rect x="49" y="44" width="1" height="4" rx="0.5" />
-                      </g>
-                      
-                      {/* Door Handle */}
-                      <rect x="28" y="30" width="8" height="2" rx="1" fill="#a93226" />
-                      
-                      {/* Body Shine */}
-                      <path 
-                        d="M14 28 L20 22 L44 22 L50 28 L50 32 L14 32 Z" 
-                        fill="rgba(255,255,255,0.15)" 
-                      />
-                      
-                      {/* Gradients */}
-                      <defs>
-                        <linearGradient id="carBodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#e74c3c" />
-                          <stop offset="50%" stopColor="#c0392b" />
-                          <stop offset="100%" stopColor="#a93226" />
-                        </linearGradient>
-                        <linearGradient id="carRoofGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#34495e" />
-                          <stop offset="100%" stopColor="#2c3e50" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    
-                    {isCarMoving && (
-                      <div className="absolute inset-0 animate-pulse">
-                        <div className="w-full h-full bg-blue-400 rounded-full blur-xl opacity-50"></div>
-                      </div>
-                    )}
-                  </div>
-                  {/* Speed lines when moving */}
-                  {isCarMoving && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full space-y-1">
-                      <div className="h-0.5 w-8 bg-blue-400 opacity-70 animate-speed-line"></div>
-                      <div className="h-0.5 w-6 bg-blue-300 opacity-50 animate-speed-line" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="h-0.5 w-4 bg-blue-200 opacity-30 animate-speed-line" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
-                  )}
-                  {/* Dust particles when moving */}
-                  {isCarMoving && (
-                    <div className="absolute -left-4 bottom-0 space-x-1 flex">
-                      <div className="w-2 h-2 bg-amber-200 rounded-full opacity-60 animate-dust-1"></div>
-                      <div className="w-1.5 h-1.5 bg-amber-300 rounded-full opacity-40 animate-dust-2"></div>
-                      <div className="w-1 h-1 bg-amber-100 rounded-full opacity-30 animate-dust-3"></div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                <i className="fas fa-scroll mr-2 text-amber-300"></i>
+                Courses
+              </button>
 
-            {/* Module Nodes */}
-            <div className="relative w-full h-full">
-            {modules.map((module) => (
-              <div
-                key={module.id}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-                style={{
-                  left: `${module.position.x}px`,
-                  top: `${module.position.y}px`,
-                }}
-                onClick={() => handleModuleNodeClick(module)}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                {/* Unlock animation effect */}
-                {justUnlockedModule === module.id && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-                    <div className="absolute w-32 h-32 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
-                    <div className="absolute w-24 h-24 bg-blue-400 rounded-full animate-pulse opacity-50"></div>
-                    <div className="absolute text-6xl animate-bounce">🔓</div>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full">
-                      <div className="bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 text-white px-4 py-2 rounded-full font-bold text-sm shadow-xl animate-bounce whitespace-nowrap">
-                        Unlocked!
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Node Circle - Road Stop/Marker Style */}
-                <div
-                  className={`relative w-24 h-24 rounded-full bg-gradient-to-br ${getNodeColor(module.status)} 
-                    shadow-2xl border-4 ${module.status === 'locked' ? 'border-gray-400' : 'border-white'} 
-                    flex items-center justify-center
-                    ${module.status === 'current' ? 'animate-pulse ring-4 ring-yellow-400/60' : ''}
-                    ${module.status !== 'locked' ? 'hover:scale-110 hover:shadow-3xl' : 'opacity-70'}
-                    transition-all duration-300`}
-                  style={{
-                    boxShadow: module.status !== 'locked' 
-                      ? '0 8px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.9) inset, 0 12px 24px rgba(0, 0, 0, 0.2)' 
-                      : '0 4px 12px rgba(0, 0, 0, 0.2)',
-                    transform: 'perspective(500px) rotateX(20deg)'
-                  }}
+              {hasStartedJourney && (
+                <button
+                  type="button"
+                  onClick={() => setHasStartedJourney(false)}
+                  className="rounded-xl border px-3 py-2 text-xs font-semibold transition hover:bg-white/10"
+                  style={statsActionButtonStyle}
                 >
-                  {/* 3D effect - inner circle */}
-                  <div className="absolute inset-2 rounded-full bg-gradient-to-b from-white/30 to-transparent"></div>
-                  
-                  {/* Module Number on White Background Circle */}
-                  <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center relative z-10 border-2 border-gray-200">
-                    <span className="text-3xl font-bold bg-gradient-to-br from-gray-700 to-gray-900 bg-clip-text text-transparent">
-                      {module.id}
-                    </span>
-                  </div>
-                  
-                  {/* Status Icon Badge - Top Right */}
-                  {module.status !== 'available' && (
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-xl flex items-center justify-center border-2 border-white" style={{
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
-                    }}>
-                      <span className="text-lg">{getNodeIcon(module)}</span>
-                    </div>
-                  )}
+                  <i className="fas fa-door-open mr-2 text-amber-300"></i>
+                  Lobby
+                </button>
+              )}
 
-                  {/* Stars for completed modules */}
-                  {module.stars && (
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-gradient-to-b from-yellow-400 to-orange-500 px-2 py-1.5 rounded-full border-2 border-white shadow-xl">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="text-base">
-                          {i < (module.stars || 0) ? '⭐' : '☆'}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Boss - Final Destination Building */}
-                  {module.isBoss && (
-                    <div className="absolute -top-16 left-1/2 -translate-x-1/2">
-                      <div className="text-6xl animate-bounce" style={{
-                        filter: 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4))'
-                      }}>🏆</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Tooltip */}
-                <div className="absolute top-24 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50 group-hover:translate-y-1">
-                  <div className="relative bg-white/95 backdrop-blur-xl text-gray-800 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap shadow-xl border border-gray-200">
-                    {/* Arrow */}
-                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45"></div>
-                    
-                    <div className="relative z-10">
-                      <div className="font-bold text-sm mb-1 text-gray-900">{module.title}</div>
-                      {module.status === 'locked' && (
-                        <div className="flex items-center gap-2 text-gray-600 text-[11px] mt-1">
-                          <i className="fas fa-lock text-red-500"></i>
-                          <span>Complete previous module first</span>
-                        </div>
-                      )}
-                      {module.status === 'current' && (
-                        <div className="flex items-center gap-2 text-blue-600 text-[11px] mt-1">
-                          <i className="fas fa-play-circle text-blue-500"></i>
-                          <span>Click to start learning!</span>
-                        </div>
-                      )}
-                      {module.status === 'available' && (
-                        <div className="flex items-center gap-2 text-emerald-600 text-[11px] mt-1">
-                          <i className="fas fa-check-circle text-emerald-500"></i>
-                          <span>Ready to continue!</span>
-                        </div>
-                      )}
-                      {module.status === 'completed' && (
-                        <div className="flex items-center gap-2 text-purple-600 text-[11px] mt-1">
-                          <i className="fas fa-redo text-purple-500"></i>
-                          <span>Click to review content</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-              {/* Decorative floating elements */}
-              <div className="absolute top-32 right-32 w-24 h-24 opacity-20 animate-float">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-300 to-indigo-400 blur-2xl"></div>
-              </div>
-              <div className="absolute bottom-40 left-40 w-20 h-20 opacity-20 animate-float-delayed">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-300 to-pink-400 blur-2xl"></div>
-              </div>
-              <div className="absolute top-1/2 left-1/4 w-16 h-16 opacity-20 animate-float">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-cyan-300 to-blue-400 blur-2xl"></div>
-              </div>
-              
-              <style>{`
-                @keyframes float {
-                  0%, 100% { transform: translateY(0px); }
-                  50% { transform: translateY(-20px); }
-                }
-                @keyframes float-delayed {
-                  0%, 100% { transform: translateY(0px); }
-                  50% { transform: translateY(-15px); }
-                }
-                @keyframes bounce-subtle {
-                  0%, 100% { transform: translateY(0px); }
-                  50% { transform: translateY(-4px); }
-                }
-                @keyframes speed-line {
-                  0% { transform: translateX(0) scaleX(1); opacity: 0.7; }
-                  100% { transform: translateX(-20px) scaleX(0.5); opacity: 0; }
-                }
-                .animate-float {
-                  animation: float 6s ease-in-out infinite;
-                }
-                .animate-float-delayed {
-                  animation: float-delayed 8s ease-in-out infinite;
-                }
-                .animate-bounce-subtle {
-                  animation: bounce-subtle 0.5s ease-in-out infinite;
-                }
-                .animate-speed-line {
-                  animation: speed-line 0.6s ease-out infinite;
-                }
-                @keyframes dust-1 {
-                  0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
-                  100% { transform: translate(-15px, -8px) scale(0.3); opacity: 0; }
-                }
-                @keyframes dust-2 {
-                  0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-                  100% { transform: translate(-12px, 5px) scale(0.2); opacity: 0; }
-                }
-                @keyframes dust-3 {
-                  0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-                  100% { transform: translate(-10px, -3px) scale(0.1); opacity: 0; }
-                }
-                .animate-dust-1 {
-                  animation: dust-1 0.8s ease-out infinite;
-                }
-                .animate-dust-2 {
-                  animation: dust-2 0.6s ease-out infinite 0.1s;
-                }
-                .animate-dust-3 {
-                  animation: dust-3 0.5s ease-out infinite 0.2s;
-                }
-              `}</style>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Action Bar */}
-        <div className="flex-shrink-0 px-6 py-3 bg-black/20 backdrop-blur-xl border-t border-white/20 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3 flex-1">
-            <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all duration-300 flex items-center gap-2 border border-white/20 text-sm">
-              <i className="fas fa-info-circle text-blue-500"></i>
-              <span>Info</span>
-            </button>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl border border-white/20">
-              <i className="fas fa-quote-left text-white/40 text-[10px]"></i>
-              <span className="text-white/80 text-xs font-medium italic truncate max-w-[200px]">{currentCourse.description}</span>
-              <i className="fas fa-quote-right text-white/40 text-[10px]"></i>
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setShowCourseList(true)}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all duration-300 flex items-center gap-2 border border-white/20 text-sm"
-            >
-              <i className="fas fa-th-list"></i>
-              <span>Courses</span>
-              <span className="ml-0.5 px-2 py-0.5 bg-white/20 rounded-lg text-xs font-bold">{availableCourses.length}</span>
-            </button>
-            <button 
-              onClick={() => {
-                const currentModule = modules.find(m => m.status === 'current');
-                if (currentModule) handleModuleNodeClick(currentModule);
-              }}
-              className="px-5 py-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:scale-105 border border-white/50 text-sm"
-            >
-              <i className="fas fa-play"></i>
-              <span>Continue</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Resize Handle */}
-        <div
-          className="absolute w-3 h-3 bg-white/30 border-2 border-white/60 rounded-full cursor-nwse-resize bottom-[-6px] right-[-6px] z-10 hover:bg-white/50"
-          onMouseDown={handleResize}
-        />
-      </div>
-
-      {/* Course List Modal */}
-      {showCourseList && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-md rounded-3xl flex items-center justify-center z-50">
-          <div className="backdrop-blur-[20px] bg-white/10 border border-white/20 rounded-3xl p-6 max-w-3xl w-full max-h-[550px] overflow-hidden flex flex-col shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <i className="fas fa-graduation-cap text-white text-base"></i>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Select Course</h3>
-                  <p className="text-white/60 text-xs">Choose a course to view its learning path</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowCourseList(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all duration-300 border border-white/20"
+              <button
+                type="button"
+                onClick={() => setStatsCollapsed((prev) => !prev)}
+                className="rounded-xl border px-3 py-2 text-xs font-semibold transition hover:bg-white/10"
+                style={statsActionButtonStyle}
+                title={statsCollapsed ? 'Mở phần thống kê' : 'Thu gọn phần thống kê'}
               >
-                <i className="fas fa-times"></i>
+                <i className={`fas ${statsCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'} mr-2 text-[#f7e5be]`}></i>
+                {statsCollapsed ? 'Mở Stats' : 'Ẩn Stats'}
               </button>
             </div>
+          </div>
 
-            {/* Course List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hidden">
-              {availableCourses.map((course) => (
-                <div
-                  key={course.id}
-                  onClick={() => handleCourseSelect(course)}
-                  className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 border ${
-                    currentCourse.id === course.id
-                      ? 'bg-white/20 border-white/40 shadow-lg'
-                      : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Course Icon */}
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${
-                      currentCourse.id === course.id
-                        ? 'bg-gradient-to-br from-blue-400 to-purple-500'
-                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
-                    }`}>
-                      <i className="fas fa-book-open text-white text-lg"></i>
-                    </div>
-
-                    {/* Course Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex-1">
-                          <h4 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                            {course.name}
-                            {currentCourse.id === course.id && (
-                              <span className="px-2 py-0.5 bg-gradient-to-r from-emerald-400 to-teal-500 text-white text-[10px] rounded-lg font-bold">
-                                ACTIVE
-                              </span>
-                            )}
-                          </h4>
-                          <p className="text-white/60 text-xs mb-2">{course.description}</p>
-                          <div className="flex items-center gap-2 text-[11px]">
-                            <span className="flex items-center gap-1.5 text-white/70 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                              <i className="fas fa-book text-blue-400 text-[10px]"></i>
-                              <span>{course.subject}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5 text-white/70 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                              <i className="fas fa-layer-group text-purple-400 text-[10px]"></i>
-                              <span>{course.mapLayout.charAt(0).toUpperCase() + course.mapLayout.slice(1)}</span>
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="flex gap-3 flex-shrink-0">
-                          <div className="text-center">
-                            <div className="text-white font-bold text-lg">
-                              {course.completedModules}<span className="text-white/50 text-sm">/{course.moduleCount}</span>
-                            </div>
-                            <div className="text-white/50 text-[9px] font-semibold">MODULES</div>
-                          </div>
-                          <div className="w-px bg-white/20"></div>
-                          <div className="text-center">
-                            <div className="text-amber-400 font-bold text-lg flex items-center gap-1">
-                              <i className="fas fa-star text-sm"></i>
-                              <span>{course.earnedStars}<span className="text-white/50 text-sm">/{course.totalStars}</span></span>
-                            </div>
-                            <div className="text-white/50 text-[9px] font-semibold">STARS</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="h-2 bg-black/30 rounded-full overflow-hidden border border-white/10">
-                        <div 
-                          className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500 relative overflow-hidden"
-                          style={{ width: `${(course.completedModules / course.moduleCount) * 100}%` }}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              statsCollapsed ? 'max-h-0 opacity-0' : 'mt-2 max-h-60 opacity-100'
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-2xl border px-3 py-2 backdrop-blur-md" style={statsCardStyle}>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#e8d1a8]/70">Progress</p>
+                <p className="text-sm font-semibold text-[#f8e8c6]">
+                  {effectiveCompletedModules}/{currentCourse.moduleCount} lessons
+                </p>
+                <div className="mt-1.5 h-1.5 w-32 overflow-hidden rounded-full bg-[#1d120c]/65">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 transition-all duration-700"
+                    style={{ width: `${progressRatio}%` }}
+                  ></div>
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <style>{`
-              @keyframes shimmer {
-                0% { transform: translateX(-100%); }
-                100% { transform: translateX(100%); }
-              }
-              .animate-shimmer {
-                animation: shimmer 2s infinite;
-              }
-            `}</style>
+              <div className="rounded-2xl border px-3 py-2 backdrop-blur-md" style={statsCardStyle}>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#e8d1a8]/70">Stars</p>
+                <p className="text-sm font-semibold text-[#f8e8c6]">
+                  {currentCourse.earnedStars}/{currentCourse.totalStars}
+                </p>
+                <p className="text-[11px] text-[#e7d4ad]/70">{currentCourse.subject}</p>
+              </div>
+
+              <div className="rounded-2xl border px-3 py-2 backdrop-blur-md" style={statsCardStyle}>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#e8d1a8]/70">Floor</p>
+                <p className="text-sm font-semibold text-[#f8e8c6]">
+                  {currentFloorIndex + 1}/{FLOOR_THEMES.length}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border px-3 py-2 backdrop-blur-md" style={statsCardStyle}>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#e8d1a8]/70">Learning Stats</p>
+                <div className="mt-1 flex items-center gap-3 text-[11px] font-semibold text-[#f8e8c6]">
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-heart text-rose-300"></i>
+                    {learningEconomy.hearts}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-gem text-cyan-200"></i>
+                    {learningEconomy.gems}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-fire text-amber-300"></i>
+                    {learningEconomy.streakDays}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#e7d4ad]/70">XP: {learningEconomy.totalXp}</p>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+
+        <div className={`relative flex-1 overflow-hidden bg-gradient-to-b ${floorSceneBackground[floorTheme.id]}`}>
+          {!hasStartedJourney ? (
+            <MuseumLobbyScene
+              floorTheme={floorTheme}
+              onStart={() => setHasStartedJourney(true)}
+              onExit={onClose}
+            />
+          ) : (
+            <GalleryWall
+              modules={modules}
+              floorTheme={floorTheme}
+              lockEnabled={lessonLockEnabled}
+              justUnlockedModule={isFinalFloor ? justUnlockedModule : null}
+              nextDoorUnlocked={gateUnlocked}
+              nextDoorTitle={
+                isFinalFloor
+                  ? 'Grand Archive Gate'
+                  : `Go Up To ${nextFloorTheme?.shortLabel ?? 'Next Floor'}`
+              }
+              nextDoorSubtitle={
+                isFinalFloor
+                  ? 'Enter the next course only after this final floor is complete.'
+                  : 'Move to the next floor any time.'
+              }
+              backDoorTitle={
+                currentFloorIndex === 0
+                  ? 'Back To Lobby'
+                  : `Return To ${previousFloorTheme?.shortLabel ?? 'Previous Floor'}`
+              }
+              backDoorSubtitle={
+                currentFloorIndex === 0
+                  ? 'Leave this corridor and return to the hall.'
+                  : 'Use this door to go down one floor.'
+              }
+              wallRef={wallRef}
+              isDragging={isDraggingWall}
+              onWallMouseDown={handleWallMouseDown}
+              onWallMouseMove={handleWallMouseMove}
+              onWallMouseUp={handleWallMouseUp}
+              onWallWheel={handleWallWheel}
+              onModuleOpen={handleModuleNodeClick}
+              onNoteOpen={setActiveNoteModule}
+              onBackDoorClick={handleBackDoorClick}
+              onGateClick={handleGateClick}
+            />
+          )}
+        </div>
+
+        {hasStartedJourney && (
+          <div className="flex flex-shrink-0 items-center justify-end border-t px-5 py-3 backdrop-blur-[18px]" style={statsPanelStyle}>
+            <button
+              type="button"
+              onClick={handleContinue}
+              disabled={!currentModule}
+              className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
+                !currentModule
+                  ? 'cursor-not-allowed border border-white/20 bg-white/10 text-white/45'
+                  : 'border border-amber-100/40 bg-gradient-to-r from-[#ce9a50] via-[#f0ca82] to-[#ce9a50] text-[#352112] shadow-[0_12px_24px_rgba(186,132,55,0.42)] hover:scale-105 hover:shadow-[0_18px_30px_rgba(186,132,55,0.55)]'
+              }`}
+            >
+              <i className="fas fa-play mr-2"></i>
+              Continue Lesson
+            </button>
+          </div>
+        )}
+
+        <div
+          className="absolute -bottom-1.5 -right-1.5 z-20 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-[#f0ddb7]/70 bg-[#8f6844]/85 hover:bg-[#a97b4f]"
+          onMouseDown={handleResize}
+        ></div>
+
+        <NotePopup module={activeNoteModule} onClose={() => setActiveNoteModule(null)} />
+
+        {showGateMessage && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-3xl border border-[#f3dfb3]/35 bg-gradient-to-b from-[#4e3425]/95 to-[#2e1d13]/95 p-6 text-[#f8ead0] shadow-2xl">
+              <h4 className="text-xl font-semibold">All Galleries Completed</h4>
+              <p className="mt-2 text-sm text-[#f5e6c7]/85">
+                You reached the final archive door. This is the end of the current mock museum sequence.
+              </p>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowGateMessage(false)}
+                  className="rounded-xl border border-[#f4dfb4]/35 bg-[#2b1b12]/85 px-4 py-2 text-sm font-semibold text-[#f7e8c8] transition hover:bg-[#3e2818]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCourseList && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-3xl rounded-3xl border border-[#f0ddb3]/30 bg-gradient-to-b from-[#4f3424]/95 to-[#2f1e14]/95 p-5 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between border-b border-[#f1ddb2]/20 pb-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#f9edcf]">Select Museum Wing</h3>
+                  <p className="text-xs text-[#f1ddb2]/70">Each course opens as its own curated art wall.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCourseList(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f2deaf]/25 bg-[#28190f]/80 text-[#f6e5c3] transition hover:bg-[#3a2517]"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                {availableCourses.map((course) => {
+                  const effectiveCompleted =
+                    sessionCompletedModules[course.id] ?? course.completedModules;
+                  const isActive = currentCourse.id === course.id;
+                  const progress =
+                    course.moduleCount > 0
+                      ? Math.min((effectiveCompleted / course.moduleCount) * 100, 100)
+                      : 0;
+
+                  return (
+                    <button
+                      type="button"
+                      key={course.id}
+                      onClick={() => handleCourseSelect(course)}
+                      className={`w-full rounded-2xl border p-4 text-left transition-all duration-300 ${
+                        isActive
+                          ? 'border-[#f5e2ba]/45 bg-[#3a2618]/80 shadow-lg'
+                          : 'border-[#ecd7af]/20 bg-[#2a1a11]/55 hover:border-[#f2deaf]/35 hover:bg-[#3a2518]/65'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="truncate text-sm font-semibold text-[#faedcf]">{course.name}</h4>
+                            {isActive && (
+                              <span className="rounded-full bg-amber-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#3a2312]">
+                                Active
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="mt-1 text-xs text-[#efd9af]/75">{course.description}</p>
+
+                          <div className="mt-2 flex items-center gap-2 text-[11px] text-[#f2e0b9]/85">
+                            <span className="rounded-full border border-[#f2dfb1]/25 bg-[#24170f]/65 px-2 py-0.5">
+                              {course.subject}
+                            </span>
+                            <span className="rounded-full border border-[#f2dfb1]/25 bg-[#24170f]/65 px-2 py-0.5">
+                              {course.mapLayout}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 text-[11px] text-[#f1ddb2]/75">
+                            {course.moduleCount} lessons • Midterm: lesson {Math.floor(course.moduleCount / 2) + 1} • Final comprehensive: lesson {course.moduleCount}
+                          </p>
+                        </div>
+
+                        <div className="text-right text-xs text-[#f1ddb2]/80">
+                          <p className="font-semibold text-[#f9edcf]">
+                            {effectiveCompleted}/{course.moduleCount}
+                          </p>
+                          <p>lessons</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#1a1009]">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 transition-all duration-700"
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

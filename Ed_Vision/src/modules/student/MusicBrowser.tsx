@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Image
 } from "lucide-react"
+import { VinylSleeveImage } from './components/MusicImage'
 
 interface Track {
   id: string
@@ -440,7 +441,7 @@ export default function MusicBrowser({
               >
                 <Heart className="h-5 w-5" />
                 <span>Liked Songs</span>
-                <div className="ml-auto text-red-500">♥</div>
+                <div className="ml-auto text-red-500"></div>
               </button>
             </nav>
           </div>
@@ -742,10 +743,11 @@ export default function MusicBrowser({
             {currentTrack && (
               <div className="border-t border-white/20 p-4 flex items-center justify-between bg-white/60 backdrop-blur-[20px]">
                 <div className="flex items-center space-x-4 flex-1">
-                  <img 
-                    src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=50&h=50&fit=crop" 
-                    alt="Now Playing" 
-                    className="w-12 h-12 rounded object-cover" 
+                  <VinylSleeveImage
+                    src={currentTrack.cover || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=50&h=50&fit=crop'}
+                    alt="Now Playing"
+                    className="w-12 h-12"
+                    showShadow={false}
                   />
                   <div>
                     <h4 className="font-medium text-gray-800">{currentTrack.title}</h4>

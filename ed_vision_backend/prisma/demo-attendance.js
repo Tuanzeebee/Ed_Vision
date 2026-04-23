@@ -17,11 +17,11 @@ const testAppointmentId = 1; // Replace with actual appointment ID
 const testSessionId = 'test_session_id';
 
 async function demoAttendanceVerification() {
-  console.log('🚀 Starting Attendance Verification Demo\n');
+  console.log(' Starting Attendance Verification Demo\n');
 
   try {
     // Step 1: Instructor creates attendance session
-    console.log('1️⃣ Instructor creates attendance session...');
+    console.log('1⃣ Instructor creates attendance session...');
     const sessionResponse = await axios.post(
       `${BASE_URL}/attendance/session`,
       {
@@ -33,22 +33,22 @@ async function demoAttendanceVerification() {
         headers: { Authorization: `Bearer ${TEST_INSTRUCTOR_TOKEN}` },
       }
     );
-    console.log('✅ Session created:', sessionResponse.data);
+    console.log(' Session created:', sessionResponse.data);
 
     const sessionId = sessionResponse.data.session_id;
 
     // Step 2: Get QR code
-    console.log('\n2️⃣ Getting QR code...');
+    console.log('\n2⃣ Getting QR code...');
     const qrResponse = await axios.get(
       `${BASE_URL}/attendance/session/${sessionId}/qr`,
       {
         headers: { Authorization: `Bearer ${TEST_INSTRUCTOR_TOKEN}` },
       }
     );
-    console.log('✅ QR Code:', qrResponse.data);
+    console.log(' QR Code:', qrResponse.data);
 
     // Step 3: Student registers device
-    console.log('\n3️⃣ Student registers device...');
+    console.log('\n3⃣ Student registers device...');
     const deviceResponse = await axios.post(
       `${BASE_URL}/attendance/device`,
       {
@@ -66,10 +66,10 @@ async function demoAttendanceVerification() {
         headers: { Authorization: `Bearer ${TEST_STUDENT_TOKEN}` },
       }
     );
-    console.log('✅ Device registered:', deviceResponse.data);
+    console.log(' Device registered:', deviceResponse.data);
 
     // Step 4: Student verifies attendance
-    console.log('\n4️⃣ Student verifies attendance...');
+    console.log('\n4⃣ Student verifies attendance...');
     const verifyResponse = await axios.post(
       `${BASE_URL}/attendance/verify`,
       {
@@ -88,21 +88,21 @@ async function demoAttendanceVerification() {
         headers: { Authorization: `Bearer ${TEST_STUDENT_TOKEN}` },
       }
     );
-    console.log('✅ Verification result:', JSON.stringify(verifyResponse.data, null, 2));
+    console.log(' Verification result:', JSON.stringify(verifyResponse.data, null, 2));
 
     // Step 5: Instructor checks session status
-    console.log('\n5️⃣ Instructor checks session status...');
+    console.log('\n5⃣ Instructor checks session status...');
     const statusResponse = await axios.get(
       `${BASE_URL}/attendance/session/${sessionId}`,
       {
         headers: { Authorization: `Bearer ${TEST_INSTRUCTOR_TOKEN}` },
       }
     );
-    console.log('✅ Session status:', JSON.stringify(statusResponse.data, null, 2));
+    console.log(' Session status:', JSON.stringify(statusResponse.data, null, 2));
 
     // Step 6: Instructor approves attempt (if needed)
     if (verifyResponse.data.riskLevel !== 'low') {
-      console.log('\n6️⃣ Instructor approves attempt...');
+      console.log('\n6⃣ Instructor approves attempt...');
       const approveResponse = await axios.put(
         `${BASE_URL}/attendance/attempt/${verifyResponse.data.attemptId}/approve`,
         {
@@ -112,19 +112,19 @@ async function demoAttendanceVerification() {
           headers: { Authorization: `Bearer ${TEST_INSTRUCTOR_TOKEN}` },
         }
       );
-      console.log('✅ Attempt approved:', approveResponse.data);
+      console.log(' Attempt approved:', approveResponse.data);
     }
 
-    console.log('\n🎉 Demo completed successfully!');
+    console.log('\n Demo completed successfully!');
 
   } catch (error) {
-    console.error('❌ Demo failed:', error.response?.data || error.message);
+    console.error(' Demo failed:', error.response?.data || error.message);
   }
 }
 
 // Setup campus configuration (run once)
 async function setupCampusConfig() {
-  console.log('🔧 Setting up campus configuration...');
+  console.log(' Setting up campus configuration...');
 
   try {
     const configResponse = await axios.post(
@@ -142,9 +142,9 @@ async function setupCampusConfig() {
         headers: { Authorization: `Bearer admin_token_here` }, // Admin token
       }
     );
-    console.log('✅ Campus config created:', configResponse.data);
+    console.log(' Campus config created:', configResponse.data);
   } catch (error) {
-    console.error('❌ Campus config failed:', error.response?.data || error.message);
+    console.error(' Campus config failed:', error.response?.data || error.message);
   }
 }
 

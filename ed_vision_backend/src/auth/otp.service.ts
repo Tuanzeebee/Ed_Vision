@@ -101,12 +101,12 @@ export class OtpService {
     const transporter = this.getTransport();
     const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
     const expiryMinutes = 5; // đổi nếu bạn muốn
-    // const verifyUrl = `https://edvision.yoursite.com/verify?email=${encodeURIComponent(email)}`; // (tuỳ chọn) nếu bạn có trang verify
+    // Optional: thêm verifyUrl nếu có trang xác thực riêng.
 
     const mailOptions = {
       from,
       to: email,
-      subject: '🎯 Ed_Vision - Your Verification Code',
+      subject: ' Ed_Vision - Your Verification Code',
       text: `Ed_Vision - Email Verification
 
 Hello there!
@@ -114,7 +114,7 @@ Hello there!
 Welcome to Ed_Vision! We're excited to have you join our AI-powered learning platform.
 
 Your verification code: ${code}
-⏰ Valid for ${expiryMinutes} minutes
+ Valid for ${expiryMinutes} minutes
 
 Simply enter this code to activate your account and start your learning journey.
 

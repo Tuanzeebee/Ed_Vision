@@ -1,6 +1,11 @@
+import {
+  API_BASE_URL,
+  buildUrl as sharedBuildUrl,
+} from '@/services/api/config';
+
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  BASE_URL: API_BASE_URL,
   ENDPOINTS: {
     INSTRUCTOR_AVAILABILITY: '/instructor-availability',
   },
@@ -8,14 +13,9 @@ export const API_CONFIG = {
 };
 
 // Helper to build full URL
-export function buildUrl(endpoint: string, params?: Record<string, string>): string {
-  const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.append(key, value);
-      }
-    });
-  }
-  return url.toString();
+export function buildUrl(
+  endpoint: string,
+  params?: Record<string, string>,
+): string {
+  return sharedBuildUrl(endpoint, params);
 }

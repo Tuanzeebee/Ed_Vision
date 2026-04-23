@@ -428,7 +428,7 @@ export class ClassManagementService {
     if (!rawData.length) throw new BadRequestException('File is empty');
 
     const columns = Object.keys(rawData[0]);
-    console.log('📄 File info:', {
+    console.log(' File info:', {
       rows: rawData.length,
       columns: columns,
       firstRow: rawData[0],
@@ -519,9 +519,9 @@ export class ClassManagementService {
       });
     }
 
-    console.log(`✅ Parsed ${students.length} valid students`);
+    console.log(` Parsed ${students.length} valid students`);
     if (errors.length > 0) {
-      console.warn(`⚠️ ${errors.length} rows skipped due to errors:`);
+      console.warn(` ${errors.length} rows skipped due to errors:`);
       errors.slice(0, 5).forEach((err) => console.warn(`   ${err}`));
       if (errors.length > 5)
         console.warn(`   ... and ${errors.length - 5} more errors`);

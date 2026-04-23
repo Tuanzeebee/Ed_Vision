@@ -5,14 +5,14 @@ interface ConfirmOptions {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  type?: 'danger' | 'warning' | 'info';
+  type?: 'danger'| 'warning'| 'info';
   confirmButtonClass?: string;
 }
 
 interface ConfirmState extends ConfirmOptions {
   isOpen: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onConfirm: () =>void;
+  onCancel: () =>void;
 }
 
 export function useConfirm() {
@@ -27,17 +27,17 @@ export function useConfirm() {
     onCancel: () => {}
   });
 
-  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
+  const confirm = useCallback((options: ConfirmOptions): Promise<boolean>=> {
     return new Promise((resolve) => {
       setConfirmState({
         isOpen: true,
         ...options,
         onConfirm: () => {
-          setConfirmState(prev => ({ ...prev, isOpen: false }));
+          setConfirmState(prev =>({ ...prev, isOpen: false }));
           resolve(true);
         },
         onCancel: () => {
-          setConfirmState(prev => ({ ...prev, isOpen: false }));
+          setConfirmState(prev =>({ ...prev, isOpen: false }));
           resolve(false);
         }
       });

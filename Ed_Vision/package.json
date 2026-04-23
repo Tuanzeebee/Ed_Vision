@@ -11,6 +11,7 @@
     "i18n:validate": "node scripts/validateTranslations.cjs"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-select": "^2.2.6",
@@ -49,6 +50,7 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
+    "livekit-client": "^2.18.1",
     "lucide-react": "^0.544.0",
     "pdfmake": "^0.2.20",
     "pptxgenjs": "^4.0.1",

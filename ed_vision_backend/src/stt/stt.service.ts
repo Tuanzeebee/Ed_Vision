@@ -42,7 +42,6 @@ export class SttService {
         maxBuffer: 1024 * 1024,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result: { text?: string; error?: string } = JSON.parse(
         stdout.trim(),
       );

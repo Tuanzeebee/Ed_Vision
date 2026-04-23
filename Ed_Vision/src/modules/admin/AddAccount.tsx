@@ -14,11 +14,10 @@ const DownloadIcon = () => <i className="fas fa-download text-gray-400"></i>;
 const TrashIcon = () => <i className="fas fa-trash text-red-500"></i>;
 
 // Simple Card component
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
   <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
     {children}
-  </div>
-);
+  </div>);
 
 // Form data type
 type AccountFormData = {
@@ -44,10 +43,10 @@ export default function AddAccount() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<'manual' | 'auto'>('manual');
+  const [activeTab, setActiveTab] = useState<'manual'| 'auto'>('manual');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [autoAccountType, setAutoAccountType] = useState<'student' | 'teacher' | 'parent'>('student');
+  const [autoAccountType, setAutoAccountType] = useState<'student'| 'teacher'| 'parent'>('student');
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   
@@ -67,11 +66,10 @@ export default function AddAccount() {
     sendEmail: true,
     forcePasswordChange: true,
     twoFactor: false,
-    notes: ''
-  });
+    notes: ''});
 
   const handleInputChange = (field: keyof AccountFormData, value: string | boolean | File | null) => {
-    setFormData(prev => ({
+    setFormData(prev =>({
       ...prev,
       [field]: value
     }));
@@ -159,7 +157,7 @@ export default function AddAccount() {
     
     const csvContent = [headers.join(','), sampleData.join(',')].join('\n');
     
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff'+ csvContent], { type: 'text/csv;charset=utf-8;'});
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -202,29 +200,21 @@ export default function AddAccount() {
         {/* Tabs */}
         <div className="flex space-x-1 border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('manual')}
+            onClick={() =>setActiveTab('manual')}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'manual'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Thủ công
+              activeTab === 'manual'? 'border-b-2 border-blue-600 text-blue-600': 'text-gray-600 hover:text-gray-900'}`}
+          >Thủ công
           </button>
           <button
-            onClick={() => setActiveTab('auto')}
+            onClick={() =>setActiveTab('auto')}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'auto'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Tự động (CSV)
+              activeTab === 'auto'? 'border-b-2 border-blue-600 text-blue-600': 'text-gray-600 hover:text-gray-900'}`}
+          >Tự động (CSV)
           </button>
         </div>
 
         {/* Manual Tab */}
-        {activeTab === 'manual' && (
+        {activeTab === 'manual'&& (
         <Card>
           <div className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -233,43 +223,33 @@ export default function AddAccount() {
                 <div className="flex-shrink-0">
                   <div 
                     onClick={handleAvatarClick}
-                    className="relative w-24 h-24 bg-gray-200 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-gray-50 transition-colors overflow-hidden"
-                  >
+                    className="relative w-24 h-24 bg-gray-200 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-gray-50 transition-colors overflow-hidden">
                     {avatarPreview ? (
                       <>
-                        <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                        <img src={avatarPreview} alt="Avatar preview"className="w-full h-full object-cover"/>
                         <button
-                          type="button"
-                          onClick={(e) => {
+                          type="button"onClick={(e) => {
                             e.stopPropagation();
                             handleRemoveAvatar();
                           }}
-                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                          style={{ width: '24px', height: '24px' }}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"style={{ width: '24px', height: '24px'}}
                         >
                           <TimesIcon />
                         </button>
-                      </>
-                    ) : (
-                      <CameraIcon />
-                    )}
+                      </>) : (
+                      <CameraIcon />)}
                   </div>
                   <input
                     ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
+                    type="file"accept="image/*"onChange={handleAvatarChange}
+                    className="hidden"/>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-900 mb-1">Ảnh đại diện</h3>
                   <p className="text-xs text-gray-500 mb-2">Tải lên ảnh đại diện cho tài khoản (tùy chọn)</p>
                   <button 
-                    type="button"
-                    onClick={handleAvatarClick}
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  >
+                    type="button"onClick={handleAvatarClick}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                     <UploadIcon />
                     <span className="ml-2">Chọn ảnh</span>
                   </button>
@@ -281,47 +261,36 @@ export default function AddAccount() {
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Thông tin cá nhân</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Họ và tên <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên <span className="text-red-500">*</span>
                     </label>
                     <input 
-                      type="text" 
-                      required 
+                      type="text"required 
                       value={formData.fullName}
-                      onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                      placeholder="Nhập họ và tên"
-                    />
+                      onChange={(e) =>handleInputChange('fullName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="Nhập họ và tên"/>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span>
                     </label>
                     <input 
-                      type="email" 
-                      required 
+                      type="email"required 
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                      placeholder="example@predica.edu.vn"
-                    />
+                      onChange={(e) =>handleInputChange('email', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="example@predica.edu.vn"/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
                     <input 
-                      type="date" 
-                      value={formData.birthDate}
-                      onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                      type="date"value={formData.birthDate}
+                      onChange={(e) =>handleInputChange('birthDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
                     <select 
                       value={formData.gender}
-                      onChange={(e) => handleInputChange('gender', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700"
-                    >
+                      onChange={(e) =>handleInputChange('gender', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700">
                       <option value="">Chọn giới tính</option>
                       <option value="Nam">Nam</option>
                       <option value="Nữ">Nữ</option>
@@ -331,22 +300,16 @@ export default function AddAccount() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
                     <input 
-                      type="tel" 
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                      placeholder="0123456789"
-                    />
+                      type="tel"value={formData.phone}
+                      onChange={(e) =>handleInputChange('phone', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="0123456789"/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
                     <input 
-                      type="text" 
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                      placeholder="Nhập địa chỉ"
-                    />
+                      type="text"value={formData.address}
+                      onChange={(e) =>handleInputChange('address', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="Nhập địa chỉ"/>
                   </div>
                 </div>
               </div>
@@ -356,15 +319,13 @@ export default function AddAccount() {
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Thông tin tài khoản</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Vai trò <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò <span className="text-red-500">*</span>
                     </label>
                     <select 
                       required 
                       value={formData.role}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700"
-                    >
+                      onChange={(e) =>handleInputChange('role', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700">
                       <option value="">Chọn vai trò</option>
                       <option value="admin">Quản trị viên</option>
                       <option value="leader">Lãnh đạo</option>
@@ -374,15 +335,13 @@ export default function AddAccount() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Trường/Khoa <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trường/Khoa <span className="text-red-500">*</span>
                     </label>
                     <select 
                       required 
                       value={formData.school}
-                      onChange={(e) => handleInputChange('school', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700"
-                    >
+                      onChange={(e) =>handleInputChange('school', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700">
                       <option value="">Chọn trường/khoa</option>
                       <option value="cs">Khoa học Máy tính</option>
                       <option value="medical">Y - Dược</option>
@@ -394,47 +353,37 @@ export default function AddAccount() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mật khẩu <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input 
-                        type={showPassword ? "text" : "password"} 
+                        type={showPassword ? "text": "password"} 
                         required 
                         value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                        placeholder="Nhập mật khẩu"
-                      />
+                        onChange={(e) =>handleInputChange('password', e.target.value)}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="Nhập mật khẩu"/>
                       <button 
-                        type="button" 
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
-                      >
-                        {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                        type="button"onClick={() =>setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer">
+                        {showPassword ? <EyeSlashIcon />: <EyeIcon />}
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Xác nhận mật khẩu <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input 
-                        type={showConfirmPassword ? "text" : "password"} 
+                        type={showConfirmPassword ? "text": "password"} 
                         required 
                         value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                        placeholder="Nhập lại mật khẩu"
-                      />
+                        onChange={(e) =>handleInputChange('confirmPassword', e.target.value)}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="Nhập lại mật khẩu"/>
                       <button 
-                        type="button" 
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
-                      >
-                        {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                        type="button"onClick={() =>setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer">
+                        {showConfirmPassword ? <EyeSlashIcon />: <EyeIcon />}
                       </button>
                     </div>
                   </div>
@@ -442,9 +391,8 @@ export default function AddAccount() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái tài khoản</label>
                     <select 
                       value={formData.status}
-                      onChange={(e) => handleInputChange('status', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700"
-                    >
+                      onChange={(e) =>handleInputChange('status', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700">
                       <option value="active">Hoạt động</option>
                       <option value="inactive">Vắng mặt</option>
                       <option value="blocked">Đã khóa</option>
@@ -459,38 +407,26 @@ export default function AddAccount() {
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <input 
-                      type="checkbox" 
-                      id="send-email" 
-                      checked={formData.sendEmail}
-                      onChange={(e) => handleInputChange('sendEmail', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                    />
-                    <label htmlFor="send-email" className="ml-2 text-sm text-gray-700 cursor-pointer">
-                      Gửi email thông báo tài khoản đến người dùng
+                      type="checkbox"id="send-email"checked={formData.sendEmail}
+                      onChange={(e) =>handleInputChange('sendEmail', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"/>
+                    <label htmlFor="send-email"className="ml-2 text-sm text-gray-700 cursor-pointer">Gửi email thông báo tài khoản đến người dùng
                     </label>
                   </div>
                   <div className="flex items-center">
                     <input 
-                      type="checkbox" 
-                      id="force-password-change" 
-                      checked={formData.forcePasswordChange}
-                      onChange={(e) => handleInputChange('forcePasswordChange', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                    />
-                    <label htmlFor="force-password-change" className="ml-2 text-sm text-gray-700 cursor-pointer">
-                      Yêu cầu đổi mật khẩu khi đăng nhập lần đầu
+                      type="checkbox"id="force-password-change"checked={formData.forcePasswordChange}
+                      onChange={(e) =>handleInputChange('forcePasswordChange', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"/>
+                    <label htmlFor="force-password-change"className="ml-2 text-sm text-gray-700 cursor-pointer">Yêu cầu đổi mật khẩu khi đăng nhập lần đầu
                     </label>
                   </div>
                   <div className="flex items-center">
                     <input 
-                      type="checkbox" 
-                      id="two-factor" 
-                      checked={formData.twoFactor}
-                      onChange={(e) => handleInputChange('twoFactor', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                    />
-                    <label htmlFor="two-factor" className="ml-2 text-sm text-gray-700 cursor-pointer">
-                      Kích hoạt xác thực hai yếu tố (2FA)
+                      type="checkbox"id="two-factor"checked={formData.twoFactor}
+                      onChange={(e) =>handleInputChange('twoFactor', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"/>
+                    <label htmlFor="two-factor"className="ml-2 text-sm text-gray-700 cursor-pointer">Kích hoạt xác thực hai yếu tố (2FA)
                     </label>
                   </div>
                 </div>
@@ -502,43 +438,36 @@ export default function AddAccount() {
                 <textarea 
                   rows={3} 
                   value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  placeholder="Thêm ghi chú về tài khoản này (tùy chọn)"
-                />
+                  onChange={(e) =>handleInputChange('notes', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"placeholder="Thêm ghi chú về tài khoản này (tùy chọn)"/>
               </div>
 
               {/* Form Actions */}
               <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
                 <button 
-                  type="button" 
-                  onClick={handleCancel}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
+                  type="button"onClick={handleCancel}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <TimesIcon />
                   <span className="ml-2">Hủy bỏ</span>
                 </button>
                 <button 
-                  type="submit" 
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
+                  type="submit"className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <PlusIcon />
                   <span className="ml-2">Tạo tài khoản</span>
                 </button>
               </div>
             </form>
           </div>
-        </Card>
-        )}
+        </Card>)}
 
         {/* Auto Tab */}
-        {activeTab === 'auto' && (
+        {activeTab === 'auto'&& (
         <Card>
           <div className="p-6">
             <form onSubmit={handleAutoSubmit} className="space-y-6">
               {/* Instructions */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-blue-900 mb-2">📋 Hướng dẫn sử dụng</h3>
+                <h3 className="text-sm font-medium text-blue-900 mb-2">Hướng dẫn sử dụng</h3>
                 <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
                   <li>Chọn loại đối tượng cần tạo tài khoản</li>
                   <li>Tải xuống file mẫu CSV tương ứng</li>
@@ -555,23 +484,22 @@ export default function AddAccount() {
                 <select 
                   value={autoAccountType}
                   onChange={(e) => {
-                    setAutoAccountType(e.target.value as 'student' | 'teacher' | 'parent');
+                    setAutoAccountType(e.target.value as 'student'| 'teacher'| 'parent');
                     // Reset CSV file when changing type
                     setCsvFile(null);
                     if (csvInputRef.current) {
                       csvInputRef.current.value = '';
                     }
                   }}
-                  className="w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700"
-                >
+                  className="w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-gray-700">
                   <option value="student">Sinh viên</option>
                   <option value="teacher">Giảng viên</option>
                   <option value="parent">Phụ huynh</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-2">
-                  {autoAccountType === 'student' && 'Tạo tài khoản cho sinh viên với thông tin học tập'}
-                  {autoAccountType === 'teacher' && 'Tạo tài khoản cho giảng viên với thông tin giảng dạy'}
-                  {autoAccountType === 'parent' && 'Tạo tài khoản cho phụ huynh liên kết với sinh viên'}
+                  {autoAccountType === 'student'&& 'Tạo tài khoản cho sinh viên với thông tin học tập'}
+                  {autoAccountType === 'teacher'&& 'Tạo tài khoản cho giảng viên với thông tin giảng dạy'}
+                  {autoAccountType === 'parent'&& 'Tạo tài khoản cho phụ huynh liên kết với sinh viên'}
                 </p>
               </div>
 
@@ -579,26 +507,20 @@ export default function AddAccount() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Bước 1: Tải file mẫu</h3>
                 <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
+                  type="button"onClick={handleDownloadTemplate}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <DownloadIcon />
-                  <span className="ml-2">
-                    Tải xuống file mẫu {autoAccountType === 'student' ? 'Sinh viên' : autoAccountType === 'teacher' ? 'Giảng viên' : 'Phụ huynh'}
+                  <span className="ml-2">Tải xuống file mẫu {autoAccountType === 'student'? 'Sinh viên': autoAccountType === 'teacher'? 'Giảng viên': 'Phụ huynh'}
                   </span>
                 </button>
                 <div className="text-xs text-gray-500 mt-2">
                   <p className="font-medium mb-1">File mẫu chứa các cột:</p>
-                  {autoAccountType === 'student' && (
-                    <p>MSSV, Họ tên, Ngày sinh, Giới tính, Email, Địa chỉ, Số điện thoại, Trường, Ngành, Lớp, Thông tin người thân</p>
-                  )}
-                  {autoAccountType === 'teacher' && (
-                    <p>Mã GV, Họ tên, Ngày sinh, Giới tính, Email, Địa chỉ, Số điện thoại, Trường, Chuyên môn, Học vị</p>
-                  )}
-                  {autoAccountType === 'parent' && (
-                    <p>Mã PH, Họ tên, Ngày sinh, Giới tính, Email, Địa chỉ, Số điện thoại, MSSV con, Họ tên con, Quan hệ</p>
-                  )}
+                  {autoAccountType === 'student'&& (
+                    <p>MSSV, Họ tên, Ngày sinh, Giới tính, Email, Địa chỉ, Số điện thoại, Trường, Ngành, Lớp, Thông tin người thân</p>)}
+                  {autoAccountType === 'teacher'&& (
+                    <p>Mã GV, Họ tên, Ngày sinh, Giới tính, Email, Địa chỉ, Số điện thoại, Trường, Chuyên môn, Học vị</p>)}
+                  {autoAccountType === 'parent'&& (
+                    <p>Mã PH, Họ tên, Ngày sinh, Giới tính, Email, Địa chỉ, Số điện thoại, MSSV con, Họ tên con, Quan hệ</p>)}
                 </div>
               </div>
 
@@ -612,63 +534,47 @@ export default function AddAccount() {
                         <FileIcon />
                         <span className="text-sm font-medium text-gray-900">{csvFile.name}</span>
                         <button
-                          type="button"
-                          onClick={handleRemoveCsv}
-                          className="text-red-500 hover:text-red-700 cursor-pointer"
-                        >
+                          type="button"onClick={handleRemoveCsv}
+                          className="text-red-500 hover:text-red-700 cursor-pointer">
                           <TrashIcon />
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Kích thước: {(csvFile.size / 1024).toFixed(2)} KB
+                      <p className="text-xs text-gray-500">Kích thước: {(csvFile.size / 1024).toFixed(2)} KB
                       </p>
-                    </div>
-                  ) : (
+                    </div>) : (
                     <div className="space-y-4">
                       <FileIcon />
                       <div>
                         <button
-                          type="button"
-                          onClick={handleCsvUploadClick}
-                          className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                        >
+                          type="button"onClick={handleCsvUploadClick}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                           <UploadIcon />
                           <span className="ml-2">Chọn file CSV</span>
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Chỉ chấp nhận file .csv
+                      <p className="text-xs text-gray-500">Chỉ chấp nhận file .csv
                       </p>
-                    </div>
-                  )}
+                    </div>)}
                   <input
                     ref={csvInputRef}
-                    type="file"
-                    accept=".csv"
-                    onChange={handleCsvChange}
-                    className="hidden"
-                  />
+                    type="file"accept=".csv"onChange={handleCsvChange}
+                    className="hidden"/>
                 </div>
               </div>
 
               {/* Form Actions */}
               <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
                 <button 
-                  type="button" 
-                  onClick={handleCancel}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
+                  type="button"onClick={handleCancel}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <TimesIcon />
                   <span className="ml-2">Hủy bỏ</span>
                 </button>
                 <button 
-                  type="submit"
-                  disabled={!csvFile}
+                  type="submit"disabled={!csvFile}
                   className={`inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     csvFile 
-                      ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
-                      : 'bg-gray-400 cursor-not-allowed'
-                  }`}
+                      ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer': 'bg-gray-400 cursor-not-allowed'}`}
                 >
                   <PlusIcon />
                   <span className="ml-2">Tạo tài khoản hàng loạt</span>
@@ -676,9 +582,7 @@ export default function AddAccount() {
               </div>
             </form>
           </div>
-        </Card>
-        )}
+        </Card>)}
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
 }

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import {
   GradeStructure,
   GradeStructureDocument,
@@ -67,7 +67,7 @@ export class GradeStructureService {
     teacherId?: string;
     isActive?: boolean;
   }): Promise<GradeStructure[]> {
-    const query: any = {};
+    const query: FilterQuery<GradeStructureDocument> = {};
 
     if (filters) {
       if (filters.academicYear) query.academicYear = filters.academicYear;
@@ -220,7 +220,16 @@ export class GradeStructureService {
       .exec();
 
     // Deduplicate by courseCode (lấy course mới nhất)
-    const courseMap = new Map();
+    type AvailableCourse = {
+      courseCode: string;
+      courseName: string;
+      academicYear: string;
+      semester: number;
+      credits: number;
+      totalWeight: number;
+    };
+
+    const courseMap = new Map<string, AvailableCourse>();
 
     for (const structure of structures) {
       const key = structure.courseCode;
