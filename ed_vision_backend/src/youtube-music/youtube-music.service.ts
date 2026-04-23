@@ -177,7 +177,7 @@ export class YouTubeMusicService {
       throw new Error(`YouTube API error: ${response.status}`);
     }
 
-    return response.json();
+    return (await response.json()) as T;
   }
 
   /**

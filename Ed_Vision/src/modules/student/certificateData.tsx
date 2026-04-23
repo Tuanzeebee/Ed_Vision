@@ -565,11 +565,7 @@ const IELTS_SKILLS_4: SkillSection[] = [
         done: false,
       },
     ],
-    [
-      { key: 'writing.task1_basic',  title: 'Task 1 – Biểu đồ đơn giản', desc: 'Mô tả bar chart / pie chart cơ bản', done: false },
-      { key: 'writing.task2_intro',  title: 'Task 2 – Opinion Basics', desc: 'Mở bài/paraphrase đề, nêu thesis rõ ràng theo Task Response', done: false },
-      { key: 'writing.paragraph_tp', title: 'Paragraph Control (TEEL)', desc: 'Topic sentence + explanation + example + link', done: false },
-    ],
+    ["Flashcard 10 từ mới mỗi ngày với Anki.", "Nghe podcast hằng ngày."],
   ),
   mk(
     "reading",
@@ -578,8 +574,6 @@ const IELTS_SKILLS_4: SkillSection[] = [
     "text-emerald-600",
     "bg-emerald-50",
     [
-      { key: 'speaking.part1_basics', title: 'Part 1 – Chủ đề quen thuộc', desc: 'Trả lời câu hỏi cá nhân: tên, sở thích, gia đình', done: false },
-      { key: 'speaking.pronunciation',title: 'Pronunciation Foundations', desc: 'Word stress, chunking, intonation để tăng độ dễ hiểu', done: false },
       {
         key: "reading.skim_scan",
         title: "Skimming & Scanning",
@@ -2534,209 +2528,6 @@ export const IELTS_ROADMAP_75: RoadmapStep[] = [
   { title: 'Viết: Band 8 control + Register mastery', subtitle: 'Ít lỗi ngữ pháp, phát triển luận điểm sâu, giọng văn học thuật linh hoạt', status: 'locked' },
   { title: 'Nói: Band 8 performance', subtitle: 'Fluency linh hoạt, lexical range rộng, pronunciation nhất quán dễ hiểu', status: 'locked' },
 ]
-  {
-    title: "Ngữ pháp cơ bản",
-    subtitle: "12 thì, mạo từ, câu đơn/ghép, so sánh cơ bản",
-    status: "completed",
-  },
-  {
-    title: "Từ vựng đời thường (2,500 từ)",
-    subtitle: "Chủ đề gia đình, du lịch, môi trường, sức khỏe",
-    status: "in-progress",
-    progress: 45,
-  },
-  {
-    title: "Nghe Section 1 & 2",
-    subtitle: "Form completion, Note completion, kỹ thuật ghi chú",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Skimming & True/False/NG",
-    subtitle: "Đọc lướt, tìm thông tin cụ thể, phân biệt T/F/NG",
-    status: "locked",
-  },
-  {
-    title: "Viết Task 1 cơ bản & cấu trúc đoạn",
-    subtitle: "Mô tả biểu đồ đơn giản, Topic-Point paragraph",
-    status: "locked",
-  },
-  {
-    title: "Nói Part 1 & phát âm cơ bản",
-    subtitle: "Chủ đề quen thuộc, word stress, vowel sounds",
-    status: "locked",
-  },
-];
-
-export const IELTS_ROADMAP_50: RoadmapStep[] = [
-  {
-    title: "Ngữ pháp trung cấp",
-    subtitle: "Bị động, điều kiện 1&2, mệnh đề quan hệ, câu gián tiếp",
-    status: "completed",
-  },
-  {
-    title: "Phrasal Verbs & Collocations cơ bản",
-    subtitle: "100 phrasal verbs, verb-noun & adj-noun collocations",
-    status: "in-progress",
-    progress: 40,
-  },
-  {
-    title: "Nghe Section 3 & nhận diện paraphrase",
-    subtitle: "Hội thoại học thuật 2–3 người, Multiple choice",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Matching Headings & Summary",
-    subtitle: "Tóm tắt ý chính, điền từ vào đoạn tóm tắt",
-    status: "locked",
-  },
-  {
-    title: "Viết Task 2 cấu trúc 4 đoạn & linking words",
-    subtitle: "Intro-Body1-Body2-Conclusion, từ nối cơ bản",
-    status: "locked",
-  },
-  {
-    title: "Nói Part 2 – Cue Card (2 phút)",
-    subtitle: "Ghi chú 1 phút, mở rộng câu trả lời bằng PEEL",
-    status: "locked",
-  },
-];
-
-export const IELTS_ROADMAP_60: RoadmapStep[] = [
-  {
-    title: "Ngữ pháp nâng cao",
-    subtitle: "Điều kiện 3/mixed, bị động phức, mệnh đề trạng ngữ, đảo ngữ",
-    status: "completed",
-  },
-  {
-    title: "AWL 570 từ & Paraphrase",
-    subtitle: "Academic Word List cốt lõi, kỹ thuật rewrite câu",
-    status: "in-progress",
-    progress: 35,
-  },
-  {
-    title: "Nghe Section 4 & Map/Plan",
-    subtitle: "Academic lecture tốc độ cao, bài điền nhãn bản đồ",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Matching Info & Yes/No/NG",
-    subtitle: "Quan điểm tác giả, sentence endings, reading 3 passages",
-    status: "locked",
-  },
-  {
-    title: "Viết Task 2 lập luận cân bằng",
-    subtitle: "Discussion essay, cohesion nâng cao, văn phong học thuật",
-    status: "locked",
-  },
-  {
-    title: "Nói Part 3 – câu hỏi trừu tượng",
-    subtitle: "Lập luận có ví dụ, cấu trúc POINT-REASON-EXAMPLE",
-    status: "locked",
-  },
-];
-
-export const IELTS_ROADMAP_65: RoadmapStep[] = [
-  {
-    title: "Cleft sentences & Nominalization",
-    subtitle: "It is… that…, What… is…, chuyển động từ thành danh từ",
-    status: "completed",
-  },
-  {
-    title: "Idioms 100 cụm & Register nuance",
-    subtitle: "Idiom cho Speaking Part 3, formal/informal phân biệt",
-    status: "in-progress",
-    progress: 30,
-  },
-  {
-    title: "Nghe: Thái độ speaker & multi-level inference",
-    subtitle: "Agreement/disagreement, đọc vị điều speaker không nói thẳng",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Inference & Author purpose/tone",
-    subtitle: "Implied meaning, nhận ra mục đích và giọng điệu",
-    status: "locked",
-  },
-  {
-    title: "Viết: Linkers nâng cao & Precision vocab",
-    subtitle: "Nevertheless, Conversely…, tránh vague words",
-    status: "locked",
-  },
-  {
-    title: "Nói: Lexical variety & Cohesion",
-    subtitle: "Tránh lặp từ, kết nối ý mượt mà với discourse markers",
-    status: "locked",
-  },
-];
-
-export const IELTS_ROADMAP_70: RoadmapStep[] = [
-  {
-    title: "Đảo ngữ nâng cao & Subjunctive",
-    subtitle: "Emphatic inversion, It is essential that…, Were it not…",
-    status: "completed",
-  },
-  {
-    title: "AWL nâng cao & Metaphor học thuật",
-    subtitle: "Từ chuyên ngành C1, academic metaphors chấp nhận trong writing",
-    status: "in-progress",
-    progress: 25,
-  },
-  {
-    title: "Nghe: Thái độ tinh tế qua intonation",
-    subtitle: "Scepticism, enthusiasm, concern – BBC In Our Time",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Critical analysis & Implicit argument",
-    subtitle: "Đánh giá độ tin cậy, tìm luận điểm ẩn, journal articles",
-    status: "locked",
-  },
-  {
-    title: "Viết: Lập luận tinh tế gần native",
-    subtitle:
-      "Counterargument + refutation, conditional hedging, natural phrasing",
-    status: "locked",
-  },
-  {
-    title: "Nói: Fluency strategy & Phát âm nâng cao",
-    subtitle: "Strategic pausing, linking, weak forms, thought groups",
-    status: "locked",
-  },
-];
-
-export const IELTS_ROADMAP_75: RoadmapStep[] = [
-  {
-    title: "Discourse organisation & Pragmatic language",
-    subtitle: "Macro-structure học thuật, hedging, modality, stance markers",
-    status: "completed",
-  },
-  {
-    title: "C1 Precision & Advanced idioms",
-    subtitle: "Chọn từ chính xác nhất, low-frequency impressive expressions",
-    status: "in-progress",
-    progress: 20,
-  },
-  {
-    title: "Nghe: Accent đa dạng tốc độ cao",
-    subtitle: "Native-speed British, Australian, Scottish, Irish unscripted",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Tốc độ ≥ 300 wpm & Ghi nhớ cao",
-    subtitle: "Cambridge IELTS 18–19 full timed practice",
-    status: "locked",
-  },
-  {
-    title: "Viết: Văn nghị luận thuyết phục + Register mastery",
-    subtitle: "Ethos/logos/pathos, điều chỉnh giọng văn linh hoạt",
-    status: "locked",
-  },
-  {
-    title: "Nói: Fluency tự nhiên như native",
-    subtitle: "Rhythm, speed, idiomatic use – conversation exchange",
-    status: "locked",
-  },
-];
 
 // ── TOEIC per-band roadmaps ───────────────────────────────────────────────────
 export const TOEIC_ROADMAP_350: RoadmapStep[] = [
@@ -2851,6 +2642,11 @@ export const TOEIC_ROADMAP_700: RoadmapStep[] = [
   {
     title: "Reading: Triple Passage & Văn bản phức tạp",
     subtitle: "Cross-reference 3 văn bản, annual report, legal memo, RFP",
+    status: "locked",
+  },
+  {
+    title: "SW: Email cơ bản & Describe Photo",
+    subtitle: "Trả lời 3 câu hỏi trong email, mô tả ảnh 45 giây",
     status: "locked",
   },
   {
@@ -2986,11 +2782,6 @@ export function getMosIcon(id: CertId): React.ReactNode {
 }
 
 export function getRoadmap(id: CertId, band?: CertBand): RoadmapStep[] {
-  if (id === 'ielts') {
-    const resolvedBand: IeltsBand = band && band in IELTS_ROADMAP_TEMP_BY_BAND
-      ? (band as IeltsBand)
-      : '6.0'
-    return IELTS_ROADMAP_TEMP_BY_BAND[resolvedBand]
   if (id === "ielts") {
     const map: Record<IeltsBand, RoadmapStep[]> = {
       "4.0": IELTS_ROADMAP_40,

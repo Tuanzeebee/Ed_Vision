@@ -49,7 +49,10 @@ return { ...c, progress, status }
     const localFlag = typeof window !== 'undefined'
       ? window.localStorage.getItem(IELTS_SURVEY_KEY) === 'true'
       : false
-    return Boolean(enrollment?.target_band) || localFlag
+    const ieltsGoalBand = typeof window !== 'undefined'
+      ? window.localStorage.getItem('ieltsGoalBand')
+      : null
+    return Boolean(ieltsGoalBand) || localFlag
   }, [enrollments])
 
   const handleCertClick = (id: CertId) => {

@@ -1033,7 +1033,10 @@ model IeltsPlacementAnswer {
 
   @@unique([sessionId, questionOrder])
   @@index([sessionId, questionOrder], map: "idx_placement_answers_session")
-  @@map("ielts_placement_answers")
+  @@map("ielts_placement_answers") 
+
+}
+
 model ToeicPracticePartSession {
   id              Int       @id @default(autoincrement())
   enrollment_id   Int
