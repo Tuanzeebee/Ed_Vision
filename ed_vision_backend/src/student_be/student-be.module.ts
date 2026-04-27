@@ -3,6 +3,7 @@ import { TranscriptUploadModule } from './transcript-upload/transcript-upload.mo
 import { StudentSurveyModule } from './survey/student-survey.module';
 import { MessagesModule } from './messages/messages.module';
 import { CertificateModule } from './certificate/certificate.module';
+import { LearningPathModule } from './learning-path/learning-path.module';
 
 @Module({
   imports: [
@@ -10,12 +11,14 @@ import { CertificateModule } from './certificate/certificate.module';
     StudentSurveyModule,
     MessagesModule,
     CertificateModule,
+    LearningPathModule,
   ],
   exports: [
     TranscriptUploadModule,
     StudentSurveyModule,
     MessagesModule,
     CertificateModule,
+    LearningPathModule,
   ],
 })
 export class StudentBeModule {}

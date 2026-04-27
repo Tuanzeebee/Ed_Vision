@@ -1,10 +1,10 @@
-﻿import {
+import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { encryptString, encryptRecord } from '../../common/crypto.util';
 import {
   access,
   mkdir,
@@ -15,6 +15,8 @@ import {
 import { basename, extname, join } from 'path';
 import type { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateEnrollmentDto,
@@ -30,10 +32,16 @@ import {
   ToeicRepositorySubmitResponseDto,
   ToeicReadingImportDto,
   ToeicReadingImportResponseDto,
+  ToeicOcrImportDto,
+  ToeicOcrImportResponseDto,
+  ToeicAnswerKeyImportDto,
+  ToeicAnswerKeyImportResponseDto,
   ToeicManualListeningCreateDto,
   ToeicManualListeningCreateResponseDto,
   ToeicExplainAnswerDto,
   ToeicExplainAnswerResponseDto,
+  ToeicRepositoryPregenerateExplanationsDto,
+  ToeicRepositoryPregenerateExplanationsResponseDto,
   CertificateTutorAskDto,
   CertificateTutorAskResponseDto,
 } from './dto/certificate.dto';
@@ -121,6 +129,29 @@ type ToeicRepositoryWithItemsForSubmit = Prisma.LearningRepositoryGetPayload<{
   };
 }>;
 
+type ToeicRepositoryItemForPregenerate =
+  Prisma.LearningRepositoryItemGetPayload<{
+    select: {
+      id: true;
+      item_order: true;
+      title: true;
+      stem: true;
+      reading_passage: true;
+      explanation: true;
+      ai_explanation: true;
+      metadata: true;
+      updated_at: true;
+      options: {
+        select: {
+          option_key: true;
+          option_text: true;
+          is_correct: true;
+          sort_order: true;
+        };
+      };
+    };
+  }>;
+
 type ToeicEnrollmentLeaderboardRow = Prisma.CertificateEnrollmentGetPayload<{
   include: {
     student: {
@@ -186,6 +217,17 @@ type ParsedImportOption = {
   rationale?: string | null;
 };
 
+type ParsedOcrQuestion = {
+  questionNumber?: number | null;
+  part: number | null;
+  stem: string;
+  context?: string | null;
+  options: ParsedImportOption[];
+  explanation?: string | null;
+};
+
+type ToeicOptionKey = 'A' | 'B' | 'C' | 'D';
+
 type ParsedListeningOption = {
   option_key: string;
   option_text: string;
@@ -228,10 +270,13 @@ const DEFAULT_READING_EXCLUDED_KEYWORDS = [
 
 const TOEIC_LOOKAHEAD_PREFETCH_COUNT = 3;
 const TOEIC_LOOKAHEAD_PREFETCH_BATCH_SIZE = 2;
+const PHASE1_DEFAULT_BATCH_SIZE = 2;
+const PHASE1_MAX_BATCH_SIZE = 8;
+const PHASE1_DEFAULT_LIMIT = 120;
 
 @Injectable()
 export class CertificateEnrollmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private readonly inFlightExplanationGenerations = new Map<
     string,
@@ -289,6 +334,7 @@ export class CertificateEnrollmentService {
     progress_percent?: number;
     current_score?: number | null;
     target_score?: number | null;
+    exam_score?: number | null;
     enrolled_at: Date;
     completed_at: Date | null;
     topicProgress: { topic_key: string }[];
@@ -305,6 +351,7 @@ export class CertificateEnrollmentService {
       progress_percent: Number(row.progress_percent ?? 0),
       current_score: row.current_score ?? null,
       target_score: row.target_score ?? null,
+      exam_score: row.exam_score ?? null,
       enrolled_at: row.enrolled_at,
       completed_at: row.completed_at,
       completed_topics: learningTopics,
@@ -395,8 +442,8 @@ export class CertificateEnrollmentService {
         new Set(
           Array.isArray(state.foundation_completed)
             ? state.foundation_completed.filter(
-                (x): x is string => typeof x === 'string',
-              )
+              (x): x is string => typeof x === 'string',
+            )
             : fromMeta.foundation_completed,
         ),
       ),
@@ -417,6 +464,600 @@ export class CertificateEnrollmentService {
     if (!student)
       throw new NotFoundException('Không tìm thấy thông tin sinh viên.');
     return student.student_id;
+  }
+
+  private resolveOllamaBaseUrlRoot(): string {
+    const configured = process.env.OLLAMA_BASE_URL?.trim();
+    if (!configured) return 'http://127.0.0.1:11434';
+    return configured.replace(/\/api\/generate\/?$/i, '');
+  }
+
+  private mapToeicPartTokenToNumber(token: string): number | null {
+    const normalized = token
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .trim();
+    if (!normalized) return null;
+
+    if (/^[1-7]$/.test(normalized)) {
+      return Number(normalized);
+    }
+
+    const romanMap: Record<string, number> = {
+      I: 1,
+      II: 2,
+      III: 3,
+      IV: 4,
+      V: 5,
+      VI: 6,
+      VII: 7,
+    };
+
+    return romanMap[normalized] ?? null;
+  }
+
+  private detectToeicPartFromText(
+    ...sources: Array<string | null | undefined>
+  ): number | null {
+    for (const source of sources) {
+      if (!source || source.trim().length === 0) continue;
+      const normalized = source.toLowerCase();
+
+      const partMatch = normalized.match(/\bpart\s*([ivx]+|[1-7])\b/i);
+      if (partMatch?.[1]) {
+        const parsed = this.mapToeicPartTokenToNumber(partMatch[1]);
+        if (parsed) return parsed;
+      }
+
+      const compactPartMatch = normalized.match(/\bpart([ivx]+|[1-7])\b/i);
+      if (compactPartMatch?.[1]) {
+        const parsed = this.mapToeicPartTokenToNumber(compactPartMatch[1]);
+        if (parsed) return parsed;
+      }
+
+      const shortMatch = normalized.match(/\bp\s*([1-7])\b/i);
+      if (shortMatch?.[1]) return Number(shortMatch[1]);
+    }
+    return null;
+  }
+
+  private readPartFromMetadata(
+    metadata: Prisma.JsonValue | null,
+  ): number | null {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return null;
+    }
+
+    const meta = metadata;
+    const partRaw = meta.part;
+
+    if (typeof partRaw === 'number' && Number.isFinite(partRaw)) {
+      const rounded = Math.round(partRaw);
+      return rounded >= 1 && rounded <= 7 ? rounded : null;
+    }
+
+    if (typeof partRaw === 'string') {
+      const fromText = this.detectToeicPartFromText(partRaw);
+      if (fromText) return fromText;
+      const numeric = Number(partRaw);
+      if (Number.isFinite(numeric)) {
+        const rounded = Math.round(numeric);
+        return rounded >= 1 && rounded <= 7 ? rounded : null;
+      }
+    }
+
+    return null;
+  }
+
+  private readQuestionNumberFromMetadata(
+    metadata: Prisma.JsonValue | null,
+  ): number | null {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return null;
+    }
+
+    const meta = metadata;
+    const raw = meta.question_number;
+
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      const rounded = Math.round(raw);
+      return rounded >= 1 && rounded <= 200 ? rounded : null;
+    }
+
+    if (typeof raw === 'string') {
+      return this.parseQuestionNumber(raw);
+    }
+
+    return null;
+  }
+
+  private parseQuestionNumber(raw: string): number | null {
+    const match = String(raw).match(/\d{1,3}/);
+    if (!match?.[0]) return null;
+    const parsed = Number(match[0]);
+    if (!Number.isFinite(parsed)) return null;
+    return parsed >= 1 && parsed <= 200 ? parsed : null;
+  }
+
+  private normalizeToeicOptionKey(raw: string): ToeicOptionKey | null {
+    const normalized = String(raw).toUpperCase().trim();
+    if (!normalized) return null;
+
+    const direct = normalized.match(/^[[(]?\s*([A-D])\s*[\]).:-]?$/);
+    if (direct?.[1]) {
+      return direct[1] as ToeicOptionKey;
+    }
+
+    const token = normalized.match(/\b([A-D])\b/);
+    if (token?.[1]) {
+      return token[1] as ToeicOptionKey;
+    }
+
+    return null;
+  }
+
+  private isQuestionNumberInSkillRange(
+    questionNumber: number,
+    skillArea: string | null | undefined,
+  ): boolean {
+    if (!Number.isFinite(questionNumber) || questionNumber < 1) return false;
+
+    if (skillArea === 'reading') {
+      return questionNumber >= 100 && questionNumber <= 200;
+    }
+
+    if (skillArea === 'listening') {
+      return questionNumber >= 1 && questionNumber <= 100;
+    }
+
+    return questionNumber <= 200;
+  }
+
+  private fallbackQuestionNumberByItemOrder(
+    itemOrder: number,
+    skillArea: string | null | undefined,
+  ): number | null {
+    if (!Number.isFinite(itemOrder) || itemOrder < 1) return null;
+
+    if (skillArea === 'reading') {
+      const mapped = 99 + Math.round(itemOrder);
+      return mapped >= 100 && mapped <= 200 ? mapped : null;
+    }
+
+    if (skillArea === 'listening') {
+      const mapped = Math.round(itemOrder);
+      return mapped >= 1 && mapped <= 100 ? mapped : null;
+    }
+
+    return Math.round(itemOrder);
+  }
+
+  private detectToeicPartFromItem(
+    item: ToeicRepositoryItemForPregenerate,
+  ): number | null {
+    return (
+      this.readPartFromMetadata(item.metadata) ??
+      this.detectToeicPartFromText(item.title, item.stem, item.reading_passage)
+    );
+  }
+
+  private isPhase1ReadingItem(
+    item: ToeicRepositoryItemForPregenerate,
+  ): boolean {
+    const part = this.detectToeicPartFromItem(item);
+    if (typeof part === 'number') {
+      return part >= 5 && part <= 7;
+    }
+
+    // Missing part metadata still allowed in Phase 1 if no clear listening signal.
+    const combinedText =
+      `${item.title ?? ''} ${item.stem ?? ''} ${item.reading_passage ?? ''}`
+        .toLowerCase()
+        .trim();
+
+    if (
+      combinedText.includes('listening') ||
+      /\bpart\s*[1-4]\b/.test(combinedText)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private splitIntoRagChunks(
+    text: string,
+    chunkSize = 420,
+    overlap = 80,
+  ): string[] {
+    const normalized = text.replace(/\s+/g, ' ').trim();
+    if (!normalized) return [];
+    if (normalized.length <= chunkSize) return [normalized];
+
+    const chunks: string[] = [];
+    let cursor = 0;
+
+    while (cursor < normalized.length) {
+      const end = Math.min(normalized.length, cursor + chunkSize);
+      const chunk = normalized.slice(cursor, end).trim();
+      if (chunk.length > 0) chunks.push(chunk);
+
+      if (end >= normalized.length) break;
+      cursor = Math.max(0, end - overlap);
+    }
+
+    return chunks;
+  }
+
+  private tokenizeForSimilarity(text: string): Set<string> {
+    return new Set(
+      text
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2),
+    );
+  }
+
+  private scoreLexicalSimilarity(
+    chunk: string,
+    queryTokens: Set<string>,
+  ): number {
+    if (queryTokens.size === 0) return 0;
+    const chunkTokens = this.tokenizeForSimilarity(chunk);
+    if (chunkTokens.size === 0) return 0;
+
+    let overlap = 0;
+    for (const token of queryTokens) {
+      if (chunkTokens.has(token)) overlap += 1;
+    }
+
+    return overlap / Math.max(1, Math.sqrt(chunkTokens.size));
+  }
+
+  private cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0;
+
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < a.length; i += 1) {
+      dot += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+
+    if (normA <= 0 || normB <= 0) return 0;
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  private async rankChunksByRelevance(
+    chunks: string[],
+    query: string,
+  ): Promise<string[]> {
+    if (chunks.length <= 1) return chunks;
+
+    const queryTokens = this.tokenizeForSimilarity(query);
+    const lexicalScores = chunks.map((chunk) =>
+      this.scoreLexicalSimilarity(chunk, queryTokens),
+    );
+
+    const embeddingModel = process.env.OLLAMA_EMBEDDING_MODEL?.trim();
+    if (!embeddingModel) {
+      return chunks
+        .map((chunk, idx) => ({ chunk, score: lexicalScores[idx] }))
+        .sort((a, b) => b.score - a.score)
+        .map((entry) => entry.chunk);
+    }
+
+    try {
+      const embeddings = new OllamaEmbeddings({
+        model: embeddingModel,
+        baseUrl: this.resolveOllamaBaseUrlRoot(),
+      });
+
+      const [queryVector, chunkVectors] = await Promise.all([
+        embeddings.embedQuery(query),
+        embeddings.embedDocuments(chunks),
+      ]);
+
+      return chunks
+        .map((chunk, idx) => {
+          const cosine = this.cosineSimilarity(queryVector, chunkVectors[idx]);
+          const lexical = lexicalScores[idx] ?? 0;
+          const score = cosine * 0.7 + lexical * 0.3;
+          return { chunk, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .map((entry) => entry.chunk);
+    } catch {
+      return chunks
+        .map((chunk, idx) => ({ chunk, score: lexicalScores[idx] }))
+        .sort((a, b) => b.score - a.score)
+        .map((entry) => entry.chunk);
+    }
+  }
+
+  private async buildRagContextForItem(
+    item: ToeicRepositoryItemForPregenerate,
+  ): Promise<string> {
+    const correctOption = item.options.find((option) => option.is_correct);
+    const optionText = item.options
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((option) => `${option.option_key}. ${option.option_text}`)
+      .join('\n');
+
+    const chunks: string[] = [];
+    if (item.reading_passage?.trim()) {
+      const passageChunks = this.splitIntoRagChunks(
+        item.reading_passage,
+        460,
+        90,
+      ).map((chunk, index) => `Passage đoạn ${index + 1}: ${chunk}`);
+      chunks.push(...passageChunks);
+    }
+
+    chunks.push(`Question: ${item.stem}`);
+    chunks.push(`Options:\n${optionText}`);
+
+    if (item.explanation?.trim()) {
+      chunks.push(`Base hint: ${item.explanation.trim()}`);
+    }
+
+    const query = [
+      item.title ?? '',
+      item.stem,
+      correctOption?.option_text ?? '',
+    ]
+      .filter((value) => value.trim().length > 0)
+      .join(' ')
+      .trim();
+
+    const ranked = await this.rankChunksByRelevance(chunks, query);
+    return ranked.slice(0, 4).join('\n\n');
+  }
+
+  private extractLangChainContent(content: unknown): string {
+    if (typeof content === 'string') return content.trim();
+
+    if (Array.isArray(content)) {
+      const parts = content
+        .map((part) => {
+          if (typeof part === 'string') return part.trim();
+          if (part && typeof part === 'object' && 'text' in part) {
+            const text = (part as { text?: unknown }).text;
+            return typeof text === 'string' ? text.trim() : '';
+          }
+          return '';
+        })
+        .filter((part) => part.length > 0);
+
+      return parts.join('\n').trim();
+    }
+
+    return '';
+  }
+
+  private async generatePhase1ExplanationWithLangChain(
+    item: ToeicRepositoryItemForPregenerate,
+    model: string,
+  ): Promise<string> {
+    const correctOption = item.options.find((option) => option.is_correct);
+    if (!correctOption) {
+      throw new BadRequestException('Câu hỏi thiếu đáp án đúng.');
+    }
+
+    const options = item.options
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((option) => `${option.option_key}. ${option.option_text}`)
+      .join('\n');
+
+    const ragContext = await this.buildRagContextForItem(item);
+
+    const template = PromptTemplate.fromTemplate(
+      [
+        'Bạn là gia sư TOEIC Reading cho Part 5-7. Trả lời bằng tiếng Việt.',
+        'Nhiệm vụ: tạo lời giải NGẮN GỌN, chính xác, không dùng JSON.',
+        'BẮT BUỘC FORMAT (mỗi mục một đoạn riêng):',
+        'Đáp án đúng: ...',
+        'A: ...',
+        'B: ...',
+        'C: ...',
+        'D: ...',
+        'Không tiết lộ mẹo mơ hồ, phải chỉ ra bằng chứng cụ thể từ câu/passage.',
+        '',
+        'Ngữ cảnh đã chọn bằng RAG:',
+        '{rag_context}',
+        '',
+        'Câu hỏi: {stem}',
+        'Các lựa chọn:',
+        '{options}',
+        'Đáp án đúng: {correct_key}. {correct_text}',
+        '{base_hint}',
+      ].join('\n'),
+    );
+
+    const prompt = await template.format({
+      rag_context: ragContext,
+      stem: item.stem,
+      options,
+      correct_key: correctOption.option_key,
+      correct_text: correctOption.option_text,
+      base_hint:
+        item.explanation && item.explanation.trim().length > 0
+          ? `Gợi ý bổ sung: ${item.explanation.trim()}`
+          : 'Gợi ý bổ sung: (không có)',
+    });
+
+    const llm = new ChatOllama({
+      model,
+      baseUrl: this.resolveOllamaBaseUrlRoot(),
+      temperature: OLLAMA_EXPLANATION_OPTIONS.temperature,
+      numPredict: OLLAMA_EXPLANATION_OPTIONS.num_predict,
+      numCtx: OLLAMA_EXPLANATION_OPTIONS.num_ctx,
+      topP: OLLAMA_EXPLANATION_OPTIONS.top_p,
+      repeatPenalty: OLLAMA_EXPLANATION_OPTIONS.repeat_penalty,
+    });
+
+    const message = await llm.invoke(prompt);
+    const raw = this.extractLangChainContent(message.content);
+
+    if (!raw || raw.length < 24) {
+      throw new BadRequestException(
+        'LangChain/Ollama không trả lời đủ nội dung.',
+      );
+    }
+
+    const normalized = this.normalizeExplanationForDisplay(raw);
+    if (normalized.length >= 40) {
+      return normalized;
+    }
+
+    // Fallback hardening: dùng prompt cũ nếu output quá ngắn.
+    const fallbackPrompt = this.buildFullExplanationPrompt({
+      stem: item.stem,
+      reading_passage: item.reading_passage,
+      explanation: item.explanation,
+      options: item.options.map((option) => ({
+        option_key: option.option_key,
+        option_text: option.option_text,
+        is_correct: option.is_correct,
+      })),
+    });
+
+    const fallbackRaw = await this.callOllamaExplanation(fallbackPrompt, model);
+    return this.normalizeExplanationForDisplay(fallbackRaw);
+  }
+
+  async preGenerateToeicReadingExplanations(
+    accountId: number,
+    slug: string,
+    dto: ToeicRepositoryPregenerateExplanationsDto,
+  ): Promise<ToeicRepositoryPregenerateExplanationsResponseDto> {
+    await this.getStudentId(accountId);
+
+    const repository = await this.prisma.learningRepository.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        cert_type: true,
+        skill_area: true,
+        items: {
+          orderBy: { item_order: 'asc' },
+          select: {
+            id: true,
+            item_order: true,
+            title: true,
+            stem: true,
+            reading_passage: true,
+            explanation: true,
+            ai_explanation: true,
+            metadata: true,
+            updated_at: true,
+            options: {
+              orderBy: { sort_order: 'asc' },
+              select: {
+                option_key: true,
+                option_text: true,
+                is_correct: true,
+                sort_order: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!repository || repository.cert_type !== 'toeic') {
+      throw new NotFoundException('Không tìm thấy repository TOEIC.');
+    }
+
+    if (
+      repository.skill_area &&
+      repository.skill_area !== 'reading' &&
+      repository.skill_area !== 'grammar'
+    ) {
+      throw new BadRequestException(
+        'Phase 1 hiện chỉ hỗ trợ pre-generate cho repository TOEIC Reading (Part 5-7).',
+      );
+    }
+
+    const forceRegenerate = dto.force_regenerate === true;
+    const safeLimit = Math.max(
+      1,
+      Math.min(500, Math.round(dto.limit ?? PHASE1_DEFAULT_LIMIT)),
+    );
+    const safeBatchSize = Math.max(
+      1,
+      Math.min(
+        PHASE1_MAX_BATCH_SIZE,
+        Math.round(dto.batch_size ?? PHASE1_DEFAULT_BATCH_SIZE),
+      ),
+    );
+    const model = this.resolveOllamaModel('toeic');
+
+    const phase1Eligible = repository.items.filter((item) => {
+      const hasCorrect = item.options.some((option) => option.is_correct);
+      return hasCorrect && this.isPhase1ReadingItem(item);
+    });
+
+    const queued = phase1Eligible
+      .filter((item) => {
+        if (forceRegenerate) return true;
+        return !(item.ai_explanation && item.ai_explanation.trim().length > 20);
+      })
+      .slice(0, safeLimit);
+
+    let generatedCount = 0;
+    let failedCount = 0;
+    const failedIds: number[] = [];
+
+    for (let i = 0; i < queued.length; i += safeBatchSize) {
+      const batch = queued.slice(i, i + safeBatchSize);
+      await Promise.all(
+        batch.map(async (item) => {
+          try {
+            const explanation =
+              await this.generatePhase1ExplanationWithLangChain(item, model);
+
+            const cacheKey = this.buildItemLevelCacheKey(
+              item.id,
+              item.updated_at,
+              repository.slug,
+              model,
+            );
+            const cachePath = this.buildExplanationCachePath(cacheKey);
+            await this.persistGeneratedExplanation(
+              item.id,
+              explanation,
+              cachePath,
+              model,
+            );
+            generatedCount += 1;
+          } catch {
+            failedCount += 1;
+            failedIds.push(item.id);
+          }
+        }),
+      );
+    }
+
+    const skippedCount = Math.max(0, phase1Eligible.length - queued.length);
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      model,
+      total_items: phase1Eligible.length,
+      queued_items: queued.length,
+      generated_count: generatedCount,
+      skipped_count: skippedCount,
+      failed_count: failedCount,
+      sample_failed_item_ids: failedIds.slice(0, 20),
+    };
   }
 
   async getEnrollment(
@@ -682,10 +1323,10 @@ export class CertificateEnrollmentService {
     const goalStartScore = targetChanged
       ? currentScore
       : Number(
-          rawExistingState?.goal_start_score ??
-            enrollment.current_score ??
-            currentScore,
-        );
+        rawExistingState?.goal_start_score ??
+        enrollment.current_score ??
+        currentScore,
+      );
 
     const nextState: ToeicPlanStateRaw = {
       current_score: currentScore,
@@ -707,8 +1348,8 @@ export class CertificateEnrollmentService {
       ),
       foundation_completed: Array.isArray(dto.foundation_completed)
         ? dto.foundation_completed.filter(
-            (x): x is string => typeof x === 'string' && x.length > 0,
-          )
+          (x): x is string => typeof x === 'string' && x.length > 0,
+        )
         : existingState.foundation_completed,
       foundation_skipped: Boolean(
         dto.foundation_skipped ?? existingState.foundation_skipped,
@@ -719,11 +1360,11 @@ export class CertificateEnrollmentService {
     const hasActivity =
       dto.has_activity === true ||
       Number(nextState.total_boost ?? 0) >
-        Number(existingState.total_boost ?? 0) ||
+      Number(existingState.total_boost ?? 0) ||
       Number(nextState.listening_sessions ?? 0) >
-        Number(existingState.listening_sessions ?? 0) ||
+      Number(existingState.listening_sessions ?? 0) ||
       Number(nextState.reading_sessions ?? 0) >
-        Number(existingState.reading_sessions ?? 0);
+      Number(existingState.reading_sessions ?? 0);
     const progressPercent = toPercent(
       currentScore,
       goalStartScore,
@@ -867,7 +1508,7 @@ export class CertificateEnrollmentService {
     file: Express.Multer.File,
   ): Promise<ParsedImportRow[]> {
     if (!file?.path) {
-      throw new BadRequestException('Khong tim thay file import.');
+      throw new BadRequestException('Không tìm thấy file import.');
     }
 
     const extension = extname(file.originalname || file.path).toLowerCase();
@@ -882,7 +1523,7 @@ export class CertificateEnrollmentService {
 
       if (!Array.isArray(rows)) {
         throw new BadRequestException(
-          'File JSON khong dung dinh dang mang dong.',
+          'File JSON không đúng định dạng mảng dòng.',
         );
       }
 
@@ -897,7 +1538,7 @@ export class CertificateEnrollmentService {
     const workbook = XLSX.readFile(file.path);
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
-      throw new BadRequestException('File import khong co worksheet.');
+      throw new BadRequestException('File import không có worksheet.');
     }
     const sheet = workbook.Sheets[firstSheetName];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
@@ -969,27 +1610,27 @@ export class CertificateEnrollmentService {
       text: string;
       rationale: string;
     }> = [
-      {
-        key: 'A',
-        text: this.rowValue(row, ['option_a', 'a', 'choice_a']),
-        rationale: this.rowValue(row, ['rationale_a']),
-      },
-      {
-        key: 'B',
-        text: this.rowValue(row, ['option_b', 'b', 'choice_b']),
-        rationale: this.rowValue(row, ['rationale_b']),
-      },
-      {
-        key: 'C',
-        text: this.rowValue(row, ['option_c', 'c', 'choice_c']),
-        rationale: this.rowValue(row, ['rationale_c']),
-      },
-      {
-        key: 'D',
-        text: this.rowValue(row, ['option_d', 'd', 'choice_d']),
-        rationale: this.rowValue(row, ['rationale_d']),
-      },
-    ];
+        {
+          key: 'A',
+          text: this.rowValue(row, ['option_a', 'a', 'choice_a']),
+          rationale: this.rowValue(row, ['rationale_a']),
+        },
+        {
+          key: 'B',
+          text: this.rowValue(row, ['option_b', 'b', 'choice_b']),
+          rationale: this.rowValue(row, ['rationale_b']),
+        },
+        {
+          key: 'C',
+          text: this.rowValue(row, ['option_c', 'c', 'choice_c']),
+          rationale: this.rowValue(row, ['rationale_c']),
+        },
+        {
+          key: 'D',
+          text: this.rowValue(row, ['option_d', 'd', 'choice_d']),
+          rationale: this.rowValue(row, ['rationale_d']),
+        },
+      ];
 
     const options = optionEntries
       .filter((entry) => entry.text.length > 0)
@@ -1020,6 +1661,12 @@ export class CertificateEnrollmentService {
       | 'unlock_score'
     >,
     skillArea: 'reading' | 'listening',
+    options?: {
+      contentType?: 'practice_set' | 'mock_test' | 'exam_simulation';
+      source?: string;
+      createdBy?: number;
+      examYear?: number;
+    },
   ): Promise<{ id: number; slug: string }> {
     const now = Date.now();
     const fallbackSlug = `toeic-${skillArea}-custom-${now}`;
@@ -1029,6 +1676,8 @@ export class CertificateEnrollmentService {
     const unlockScore = Number(
       dto.unlock_score ?? Math.max(300, milestoneScore - 50),
     );
+    const contentType = options?.contentType ?? 'exam_simulation';
+    const source = options?.source ?? 'manual_import';
 
     const repository = await this.prisma.learningRepository.upsert({
       where: { slug },
@@ -1038,16 +1687,18 @@ export class CertificateEnrollmentService {
           dto.repository_title ??
           `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
         description: dto.repository_description ?? null,
-        content_type: 'practice_set',
+        content_type: contentType,
         skill_area: skillArea,
         is_published: true,
         target_score_min: unlockScore,
         target_score_max: milestoneScore + 99,
+        created_by: options?.createdBy,
         metadata: {
           topic_key: `${skillArea}.custom_${slug}`,
           milestone_score: milestoneScore,
           unlock_score: unlockScore,
-          source: 'manual_import',
+          exam_year: options?.examYear ?? null,
+          source,
         },
       },
       create: {
@@ -1057,18 +1708,20 @@ export class CertificateEnrollmentService {
           `TOEIC ${skillArea.toUpperCase()} Custom ${now}`,
         slug,
         description: dto.repository_description ?? null,
-        content_type: 'practice_set',
+        content_type: contentType,
         skill_area: skillArea,
         is_published: true,
         target_score_min: unlockScore,
         target_score_max: milestoneScore + 99,
         estimated_minutes: 1,
         pass_score: 1,
+        created_by: options?.createdBy,
         metadata: {
           topic_key: `${skillArea}.custom_${slug}`,
           milestone_score: milestoneScore,
           unlock_score: unlockScore,
-          source: 'manual_import',
+          exam_year: options?.examYear ?? null,
+          source,
         },
       },
       select: { id: true, slug: true },
@@ -1077,17 +1730,1166 @@ export class CertificateEnrollmentService {
     return repository;
   }
 
+  private resolveSkillAreaFromImportInput(
+    requestedSkillArea: 'reading' | 'listening' | undefined,
+    filename: string,
+  ): 'reading' | 'listening' {
+    if (
+      requestedSkillArea === 'reading' ||
+      requestedSkillArea === 'listening'
+    ) {
+      return requestedSkillArea;
+    }
+
+    const normalized = filename.toLowerCase();
+    if (
+      normalized.includes('listening') ||
+      normalized.includes('part1') ||
+      normalized.includes('part2') ||
+      normalized.includes('part3') ||
+      normalized.includes('part4')
+    ) {
+      return 'listening';
+    }
+
+    return 'reading';
+  }
+
+  private async extractRawTextFromOcrImportFile(
+    file: Express.Multer.File,
+  ): Promise<string> {
+    if (!file?.path) {
+      throw new BadRequestException('Không tìm thấy file OCR để xử lý.');
+    }
+
+    const extension = extname(file.originalname || file.path).toLowerCase();
+    if (extension === '.txt' || extension === '.md') {
+      return (await readFile(file.path, 'utf8')).trim();
+    }
+
+    if (extension === '.pdf') {
+      const buffer = await readFile(file.path);
+      try {
+        const pdfParseModule = await import('pdf-parse');
+
+        // pdf-parse v2 exports PDFParse class; older versions export a default function.
+        type PdfParseCtor = new (options: {
+          data: Buffer | Uint8Array;
+          verbosity?: number;
+        }) => {
+          getText: (params?: unknown) => Promise<{ text?: string }>;
+          destroy?: () => Promise<void>;
+        };
+
+        const PDFParseCtor = (pdfParseModule as { PDFParse?: PdfParseCtor })
+          .PDFParse;
+
+        if (typeof PDFParseCtor === 'function') {
+          const parser = new PDFParseCtor({ data: buffer });
+          try {
+            const parsed = await parser.getText();
+            return String(parsed?.text ?? '').trim();
+          } finally {
+            if (typeof parser.destroy === 'function') {
+              await parser.destroy().catch(() => undefined);
+            }
+          }
+        }
+
+        const legacyDefault = (pdfParseModule as { default?: unknown }).default;
+        if (typeof legacyDefault === 'function') {
+          const parsed = await (
+            legacyDefault as (data: Buffer) => Promise<{ text?: string }>
+          )(buffer);
+          return String(parsed?.text ?? '').trim();
+        }
+
+        const legacyDirect = pdfParseModule as unknown;
+        if (typeof legacyDirect === 'function') {
+          const parsed = await (
+            legacyDirect as (data: Buffer) => Promise<{ text?: string }>
+          )(buffer);
+          return String(parsed?.text ?? '').trim();
+        }
+
+        throw new BadRequestException(
+          'Không thể khởi tạo bộ đọc PDF (pdf-parse API không tương thích).',
+        );
+      } catch (error: unknown) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException(
+          'Không đọc được nội dung từ file PDF. Vui lòng kiểm tra file hợp lệ.',
+        );
+      }
+    }
+
+    const isImage = [
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.webp',
+      '.bmp',
+      '.tif',
+      '.tiff',
+    ].includes(extension);
+
+    if (!isImage) {
+      throw new BadRequestException(
+        'Định dạng file chưa được hỗ trợ OCR. Hỗ trợ: pdf, txt, png, jpg, jpeg, webp, bmp, tif, tiff.',
+      );
+    }
+
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker('eng');
+    try {
+      const result = await worker.recognize(file.path);
+      return String(result?.data?.text ?? '').trim();
+    } finally {
+      await worker.terminate();
+    }
+  }
+
+  private isOcrNoiseLine(line: string): boolean {
+    return (
+      /^--\s*\d+\s*of\s*\d+\s*--$/i.test(line) ||
+      /^\d{1,3}$/.test(line) ||
+      /^mẫu đề thi listening\s*-\s*reading$/i.test(line)
+    );
+  }
+
+  private isLikelyAnswerKeyLine(line: string): boolean {
+    const normalized = line.replace(/\s+/g, ' ').trim();
+    if (!normalized) return false;
+
+    // Avoid parsing question text lines such as "131. A. advance".
+    if (/\b\d{1,3}\s*[).:-]\s*[A-D]\s*[).:-]\s*[A-Za-z]/.test(normalized)) {
+      return false;
+    }
+
+    const pairRegex = /\b\d{1,3}\s*[).:-]?\s*[A-D]\b/g;
+    const pairMatches = normalized.match(pairRegex) ?? [];
+
+    // Answer-key lines should mostly contain only number-letter pairs and separators.
+    const residue = normalized
+      .replace(pairRegex, ' ')
+      .replace(/[\s,.;:()-]+/g, '')
+      .trim();
+
+    if (residue.length > 0) return false;
+
+    if (pairMatches.length >= 3) return true;
+    if (pairMatches.length >= 2 && normalized.length <= 90) return true;
+    return false;
+  }
+
+  private extractAnswerKeyMapFromOcrText(
+    rawText: string,
+    skillArea: 'reading' | 'listening',
+  ): Map<number, 'A' | 'B' | 'C' | 'D'> {
+    const answerMap = new Map<number, 'A' | 'B' | 'C' | 'D'>();
+    const lines = rawText
+      .replace(/\r/g, '\n')
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter((line) => line.length > 0);
+
+    let inAnswerSection = false;
+
+    for (const line of lines) {
+      if (/\b(answer\s*key|đáp\s*án|dap\s*an)\b/i.test(line)) {
+        inAnswerSection = true;
+        continue;
+      }
+
+      const shouldParseLine =
+        inAnswerSection || this.isLikelyAnswerKeyLine(line);
+      if (!shouldParseLine) continue;
+
+      const pairRegex =
+        /(\d{1,3})\s*[).:-]?\s*([A-D])(?=\s*(?:\d{1,3}\s*[).:-]?\s*[A-D]|$|[,;]))/g;
+      let match: RegExpExecArray | null = null;
+      while ((match = pairRegex.exec(line)) !== null) {
+        const questionNumber = Number(match[1]);
+        const answer = match[2].toUpperCase() as 'A' | 'B' | 'C' | 'D';
+        if (!Number.isFinite(questionNumber) || questionNumber < 1) continue;
+
+        if (skillArea === 'reading') {
+          if (questionNumber < 100 || questionNumber > 200) continue;
+        } else {
+          if (questionNumber < 1 || questionNumber > 100) continue;
+        }
+
+        answerMap.set(questionNumber, answer);
+      }
+    }
+
+    return answerMap;
+  }
+
+  private extractAnswerKeyMapFromText(
+    rawText: string,
+    skillArea: string | null | undefined,
+  ): Map<number, ToeicOptionKey> {
+    const answerMap = new Map<number, ToeicOptionKey>();
+    const lines = rawText
+      .replace(/\r/g, '\n')
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter((line) => line.length > 0);
+
+    let inAnswerSection = false;
+
+    for (const line of lines) {
+      if (/\b(answer\s*key|đáp\s*án|dap\s*an)\b/i.test(line)) {
+        inAnswerSection = true;
+        continue;
+      }
+
+      const pairRegex = /\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi;
+      const pairs = Array.from(line.matchAll(pairRegex));
+      if (pairs.length === 0) continue;
+
+      const residue = line
+        .replace(pairRegex, ' ')
+        .replace(/[\s,.;:()\-_/]+/g, '')
+        .trim();
+
+      const isSingleCleanPair = pairs.length === 1 && residue.length === 0;
+      const shouldParse =
+        inAnswerSection ||
+        this.isLikelyAnswerKeyLine(line) ||
+        isSingleCleanPair;
+
+      if (!shouldParse) continue;
+
+      for (const pair of pairs) {
+        const questionNumber = Number(pair[1]);
+        const answer = this.normalizeToeicOptionKey(pair[2]);
+        if (!answer) continue;
+        if (!this.isQuestionNumberInSkillRange(questionNumber, skillArea)) {
+          continue;
+        }
+        answerMap.set(questionNumber, answer);
+      }
+    }
+
+    return answerMap;
+  }
+
+  private extractAnswerKeyMapFromRows(
+    rows: ParsedImportRow[],
+    skillArea: string | null | undefined,
+  ): Map<number, ToeicOptionKey> {
+    const answerMap = new Map<number, ToeicOptionKey>();
+
+    for (const row of rows) {
+      const questionRaw = this.rowValue(row, [
+        'question_number',
+        'question_no',
+        'question',
+        'item_number',
+        'item_order',
+        'no',
+        'stt',
+        'id',
+      ]);
+
+      const answerRaw = this.rowValue(row, [
+        'correct_answer',
+        'answer_key',
+        'answer',
+        'correct_option',
+        'correct_option_key',
+        'key',
+      ]);
+
+      const questionNumber = this.parseQuestionNumber(questionRaw);
+      const answer = this.normalizeToeicOptionKey(answerRaw);
+
+      if (
+        typeof questionNumber === 'number' &&
+        answer &&
+        this.isQuestionNumberInSkillRange(questionNumber, skillArea)
+      ) {
+        answerMap.set(questionNumber, answer);
+        continue;
+      }
+
+      const mergedLine = Object.values(row)
+        .filter((value) => typeof value === 'string' && value.trim().length > 0)
+        .join(' ')
+        .trim();
+
+      if (!mergedLine) continue;
+
+      const parsedFromText = this.extractAnswerKeyMapFromText(
+        mergedLine,
+        skillArea,
+      );
+
+      for (const [qNo, key] of parsedFromText.entries()) {
+        answerMap.set(qNo, key);
+      }
+    }
+
+    return answerMap;
+  }
+
+  private async parseToeicAnswerKeyFromFile(
+    file: Express.Multer.File,
+    skillArea: string | null | undefined,
+  ): Promise<Map<number, ToeicOptionKey>> {
+    if (!file?.path) {
+      throw new BadRequestException('Không tìm thấy file answer key.');
+    }
+
+    const extension = extname(file.originalname || file.path).toLowerCase();
+
+    if (extension === '.txt' || extension === '.md') {
+      const raw = await readFile(file.path, 'utf8');
+      return this.extractAnswerKeyMapFromText(raw, skillArea);
+    }
+
+    const ocrSupportedExtensions = new Set([
+      '.pdf',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.webp',
+      '.bmp',
+      '.tif',
+      '.tiff',
+    ]);
+
+    if (ocrSupportedExtensions.has(extension)) {
+      try {
+        const raw = await this.extractRawTextFromOcrImportFile(file);
+        const parsed = this.extractAnswerKeyMapFromText(raw, skillArea);
+        if (parsed.size > 0) {
+          return parsed;
+        }
+      } catch {
+        // Fallback to structured parsers below when OCR/text extraction fails.
+      }
+    }
+
+    if (extension === '.json') {
+      const raw = await readFile(file.path, 'utf8');
+      const parsed = JSON.parse(raw) as unknown;
+
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const objectParsed = parsed as Record<string, unknown>;
+        const rowsValue = objectParsed.rows;
+
+        if (Array.isArray(rowsValue)) {
+          const rows = rowsValue
+            .filter(
+              (item): item is Record<string, unknown> =>
+                Boolean(item) &&
+                typeof item === 'object' &&
+                !Array.isArray(item),
+            )
+            .map((item) => this.normalizeImportRow(item));
+
+          return this.extractAnswerKeyMapFromRows(rows, skillArea);
+        }
+
+        const mapFromObject = new Map<number, ToeicOptionKey>();
+        for (const [rawQuestion, rawAnswer] of Object.entries(objectParsed)) {
+          const questionNumber = this.parseQuestionNumber(rawQuestion);
+          const answerRawValue =
+            typeof rawAnswer === 'string' || typeof rawAnswer === 'number'
+              ? String(rawAnswer)
+              : '';
+          const answer = this.normalizeToeicOptionKey(answerRawValue);
+
+          if (
+            typeof questionNumber === 'number' &&
+            answer &&
+            this.isQuestionNumberInSkillRange(questionNumber, skillArea)
+          ) {
+            mapFromObject.set(questionNumber, answer);
+          }
+        }
+
+        if (mapFromObject.size > 0) {
+          return mapFromObject;
+        }
+      }
+    }
+
+    const rows = await this.parseImportRowsFromFile(file);
+    return this.extractAnswerKeyMapFromRows(rows, skillArea);
+  }
+
+  private extractInlineOptionsFromLine(line: string): {
+    stem: string;
+    options: ParsedImportOption[];
+  } {
+    const markerRegex = /([A-D])[).:-]\s*/g;
+    const markers = Array.from(line.matchAll(markerRegex)).filter((match) => {
+      const idx = match.index ?? -1;
+      return idx === 0 || /\s/.test(line[idx - 1] ?? '');
+    });
+
+    if (markers.length === 0) {
+      return { stem: line.trim(), options: [] };
+    }
+
+    const stem = line.slice(0, markers[0].index ?? 0).trim();
+    const options: ParsedImportOption[] = [];
+
+    for (let i = 0; i < markers.length; i += 1) {
+      const marker = markers[i];
+      const nextMarker = markers[i + 1];
+      const start = (marker.index ?? 0) + marker[0].length;
+      const end = nextMarker?.index ?? line.length;
+      const optionText = line.slice(start, end).replace(/\s+/g, ' ').trim();
+
+      if (!optionText) continue;
+
+      options.push({
+        optionKey: marker[1].toUpperCase(),
+        optionText,
+        isCorrect: false,
+        rationale: null,
+      });
+    }
+
+    return { stem, options };
+  }
+
+  private deriveStemFromContextLines(contextLines: string[]): string {
+    const preferred = [...contextLines]
+      .reverse()
+      .find((line) => /\.\.{2,}|_{2,}|…/.test(line));
+    if (preferred) return preferred.trim();
+
+    const fallback = [...contextLines]
+      .reverse()
+      .find(
+        (line) =>
+          line.length >= 12 &&
+          !/^Directions?:/i.test(line) &&
+          !/^Questions?\s+\d+/i.test(line) &&
+          !/^PART\s*([IVX]+|[1-7])/i.test(line),
+      );
+
+    return fallback?.trim() ?? '';
+  }
+
+  private isLikelyOptionContinuationLine(line: string): boolean {
+    return (
+      /^[a-z(]/.test(line) ||
+      /^(and|or|to|for|of|with|in|on|at|from|that|which|who|where|when)\b/i.test(
+        line,
+      )
+    );
+  }
+
+  private isLikelyPassageLine(line: string): boolean {
+    return (
+      /\.\.{2,}|_{2,}|…/.test(line) ||
+      /^(To:|From:|Date:|Subject:|Dear\s|Sincerely|Thank you)/i.test(line) ||
+      /^[A-Z][A-Za-z0-9'",;:()\-\s]{20,}$/.test(line)
+    );
+  }
+
+  private parseToeicQuestionsFromOcrText(
+    rawText: string,
+    skillArea: 'reading' | 'listening',
+  ): ParsedOcrQuestion[] {
+    const normalized = rawText
+      .replace(/\r/g, '\n')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[\t\f\v]+/g, ' ')
+      .trim();
+
+    if (!normalized) return [];
+
+    const lines = normalized
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter((line) => line.length > 0);
+
+    const answerKeyMap = this.extractAnswerKeyMapFromOcrText(
+      normalized,
+      skillArea,
+    );
+
+    const allowedParts = new Set(
+      skillArea === 'reading' ? [5, 6, 7] : [1, 2, 3, 4],
+    );
+    const questions: ParsedOcrQuestion[] = [];
+
+    let readingSectionStarted = skillArea !== 'reading';
+    let currentPart: number | null = skillArea === 'reading' ? 5 : 1;
+    let activeRange: { start: number; end: number } | null = null;
+    let rangeContextLines: string[] = [];
+    let contextBuffer: string[] = [];
+
+    type WorkingQuestion = {
+      questionNumber: number | null;
+      stemLines: string[];
+      contextLines: string[];
+      optionsMap: Map<'A' | 'B' | 'C' | 'D', string>;
+      answerKey: 'A' | 'B' | 'C' | 'D' | null;
+      explanationLines: string[];
+      part: number | null;
+      lastOptionKey: 'A' | 'B' | 'C' | 'D' | null;
+      inExplanation: boolean;
+    };
+
+    let working: WorkingQuestion | null = null;
+
+    const pushContextLine = (line: string) => {
+      if (!line || this.isOcrNoiseLine(line)) return;
+      contextBuffer.push(line);
+      if (contextBuffer.length > 18) {
+        contextBuffer.shift();
+      }
+
+      if (activeRange) {
+        rangeContextLines.push(line);
+        if (rangeContextLines.length > 40) {
+          rangeContextLines.shift();
+        }
+      }
+    };
+
+    const flushQuestion = () => {
+      if (!working) return;
+      const current = working;
+
+      const optionKeys: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
+      const options = optionKeys
+        .filter((key) => current.optionsMap.has(key))
+        .map((key) => ({
+          optionKey: key,
+          optionText: (current.optionsMap.get(key) ?? '')
+            .replace(/\s*Questions?\s+\d+\s*-\s*\d+\s*refer.*$/i, '')
+            .trim(),
+          isCorrect: false,
+          rationale: null,
+        }))
+        .filter((opt) => opt.optionText.trim().length > 0);
+
+      if (options.length < 2) {
+        working = null;
+        return;
+      }
+
+      const answerFromQuestion =
+        current.answerKey &&
+          options.some((opt) => opt.optionKey === current.answerKey)
+          ? current.answerKey
+          : null;
+
+      const questionNo = current.questionNumber;
+      const mappedAnswer =
+        typeof questionNo === 'number' ? answerKeyMap.get(questionNo) : null;
+
+      const answerFromKeyMap =
+        typeof mappedAnswer === 'string' &&
+          options.some((opt) => opt.optionKey === mappedAnswer)
+          ? mappedAnswer
+          : null;
+
+      const effectiveAnswer = answerFromQuestion ?? answerFromKeyMap;
+
+      for (const option of options) {
+        option.isCorrect =
+          typeof effectiveAnswer === 'string' &&
+          option.optionKey === effectiveAnswer;
+      }
+
+      let stem = current.stemLines.join(' ').replace(/\s+/g, ' ').trim();
+      let context = current.contextLines
+        .filter(
+          (line) =>
+            !/^Directions?:/i.test(line) &&
+            !/^Questions?\s+\d+\s*-\s*\d+\s*refer/i.test(line) &&
+            !/^PART\s*([IVX]+|[1-7])/i.test(line),
+        )
+        .join('\n')
+        .trim();
+
+      if (!stem) {
+        stem = this.deriveStemFromContextLines(current.contextLines);
+      }
+
+      if (!stem && context) {
+        stem = context;
+        context = '';
+      }
+
+      if (!stem) {
+        working = null;
+        return;
+      }
+
+      if (context && context.includes(stem)) {
+        context = context.replace(stem, '').trim();
+      }
+
+      if (current.part === 5) {
+        context = '';
+      }
+
+      questions.push({
+        questionNumber: current.questionNumber,
+        part: current.part,
+        stem,
+        context: context || null,
+        options,
+        explanation:
+          current.explanationLines.length > 0
+            ? current.explanationLines.join(' ').trim()
+            : null,
+      });
+
+      working = null;
+    };
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || this.isOcrNoiseLine(line)) continue;
+
+      if (/^READING\s*TEST$/i.test(line)) {
+        if (skillArea === 'reading') {
+          readingSectionStarted = true;
+          currentPart = 5;
+          activeRange = null;
+          rangeContextLines = [];
+          contextBuffer = [];
+          flushQuestion();
+        } else {
+          break;
+        }
+        continue;
+      }
+
+      if (skillArea === 'reading' && !readingSectionStarted) {
+        continue;
+      }
+
+      const partMatch =
+        line.match(/\bPART\s*([IVX]+|[1-7])\b/i) ??
+        line.match(/\bPART([IVX]+|[1-7])\b/i);
+      if (partMatch?.[1]) {
+        const parsedPart = this.mapToeicPartTokenToNumber(partMatch[1]);
+        if (parsedPart) {
+          flushQuestion();
+          currentPart = parsedPart;
+          activeRange = null;
+          rangeContextLines = [];
+          contextBuffer = [];
+        }
+        continue;
+      }
+
+      if (currentPart !== null && !allowedParts.has(currentPart)) {
+        continue;
+      }
+
+      const rangeMatch = line.match(
+        /Questions?\s*(\d{1,3})\s*-\s*(\d{1,3})\s*refer/i,
+      );
+      if (rangeMatch?.[1] && rangeMatch?.[2]) {
+        flushQuestion();
+        activeRange = {
+          start: Number(rangeMatch[1]),
+          end: Number(rangeMatch[2]),
+        };
+        rangeContextLines = [];
+        contextBuffer = [];
+        continue;
+      }
+
+      const questionStart = line.match(
+        /^(?:q(?:uestion)?\s*)?(\d{1,3})[).:-]\s*(.*)$/i,
+      );
+      if (questionStart?.[1]) {
+        const questionNumber = Number(questionStart[1]);
+
+        if (skillArea === 'reading' && questionNumber < 100) {
+          continue;
+        }
+        if (skillArea === 'listening' && questionNumber > 100) {
+          continue;
+        }
+
+        flushQuestion();
+
+        const remainder = questionStart[2]?.trim() ?? '';
+        const inline = this.extractInlineOptionsFromLine(remainder);
+        const inRange =
+          Boolean(activeRange) &&
+          questionNumber >= Number(activeRange?.start) &&
+          questionNumber <= Number(activeRange?.end);
+
+        const inheritedContext = [
+          ...(inRange ? rangeContextLines : []),
+          ...contextBuffer,
+        ].filter(
+          (value, index, array) =>
+            value.length > 0 && array.indexOf(value) === index,
+        );
+
+        let stem = inline.stem.trim();
+        if (!stem) {
+          stem = this.deriveStemFromContextLines(inheritedContext);
+        }
+
+        working = {
+          questionNumber,
+          stemLines: stem ? [stem] : [],
+          contextLines: inheritedContext,
+          optionsMap: new Map(),
+          answerKey: null,
+          explanationLines: [],
+          part: currentPart,
+          lastOptionKey: null,
+          inExplanation: false,
+        };
+
+        for (const option of inline.options) {
+          const key = option.optionKey.toUpperCase() as 'A' | 'B' | 'C' | 'D';
+          working.optionsMap.set(key, option.optionText.trim());
+          working.lastOptionKey = key;
+          if (option.isCorrect) {
+            working.answerKey = key;
+          }
+        }
+
+        contextBuffer = [];
+        continue;
+      }
+
+      if (!working) {
+        pushContextLine(line);
+        continue;
+      }
+
+      const answerMatch = line.match(
+        /^(?:answer|correct\s*answer|dap\s*an|đáp\s*án)\s*[:-]?\s*([A-D])\b/i,
+      );
+      if (answerMatch?.[1]) {
+        working.answerKey = answerMatch[1].toUpperCase() as
+          | 'A'
+          | 'B'
+          | 'C'
+          | 'D';
+        working.inExplanation = false;
+        continue;
+      }
+
+      const explanationStart = line.match(
+        /^(?:explanation|giai\s*thich|giải\s*thích)\s*[:-]?\s*(.*)$/i,
+      );
+      if (explanationStart) {
+        const initial = explanationStart[1]?.trim();
+        if (initial) {
+          working.explanationLines.push(initial);
+        }
+        working.inExplanation = true;
+        continue;
+      }
+
+      if (working.inExplanation) {
+        working.explanationLines.push(line);
+        continue;
+      }
+
+      const optionLineMatch = line.match(/^([A-D])[).:-]\s*(.*)$/i);
+      if (optionLineMatch?.[1]) {
+        const parsedInlineOptions = this.extractInlineOptionsFromLine(line);
+        const incoming = parsedInlineOptions.options;
+
+        if (incoming.length > 0) {
+          for (const option of incoming) {
+            const key = option.optionKey.toUpperCase() as 'A' | 'B' | 'C' | 'D';
+            working.optionsMap.set(key, option.optionText.trim());
+            working.lastOptionKey = key;
+            if (option.isCorrect) {
+              working.answerKey = key;
+            }
+          }
+
+          if (!working.stemLines.length && parsedInlineOptions.stem.trim()) {
+            working.stemLines.push(parsedInlineOptions.stem.trim());
+          }
+          continue;
+        }
+      }
+
+      if (working.optionsMap.size >= 2 && this.isLikelyPassageLine(line)) {
+        flushQuestion();
+        pushContextLine(line);
+        continue;
+      }
+
+      if (
+        working.lastOptionKey &&
+        working.optionsMap.size > 0 &&
+        this.isLikelyOptionContinuationLine(line)
+      ) {
+        const previous = working.optionsMap.get(working.lastOptionKey) ?? '';
+        working.optionsMap.set(
+          working.lastOptionKey,
+          `${previous} ${line}`.replace(/\s+/g, ' ').trim(),
+        );
+        continue;
+      }
+
+      if (working.optionsMap.size === 0) {
+        working.stemLines.push(line);
+        continue;
+      }
+
+      flushQuestion();
+      pushContextLine(line);
+    }
+
+    flushQuestion();
+
+    const numberedRatio =
+      questions.length === 0
+        ? 0
+        : questions.filter((q) => typeof q.questionNumber === 'number').length /
+        questions.length;
+
+    if (numberedRatio >= 0.8) {
+      return [...questions].sort(
+        (a, b) =>
+          Number(a.questionNumber ?? Number.MAX_SAFE_INTEGER) -
+          Number(b.questionNumber ?? Number.MAX_SAFE_INTEGER),
+      );
+    }
+
+    return questions;
+  }
+
+  async importToeicExamFromOcrFile(
+    accountId: number,
+    dto: ToeicOcrImportDto,
+    file: Express.Multer.File,
+  ): Promise<ToeicOcrImportResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng gửi file để OCR import.');
+    }
+
+    const skillArea = this.resolveSkillAreaFromImportInput(
+      dto.skill_area,
+      file.originalname || '',
+    );
+    const rawText = await this.extractRawTextFromOcrImportFile(file);
+
+    const allowEmpty = (dto as any).allow_empty_parsing === true;
+
+    if (!rawText || rawText.length < 40) {
+      if (!allowEmpty) {
+        throw new BadRequestException(
+          'OCR không trích xuất đủ text để tạo bộ câu hỏi.',
+        );
+      }
+    }
+
+    const parsedQuestions = this.parseToeicQuestionsFromOcrText(
+      rawText,
+      skillArea,
+    );
+
+    if (parsedQuestions.length === 0) {
+      if (!allowEmpty) {
+        throw new BadRequestException(
+          'Không parse được câu hỏi hợp lệ từ nội dung OCR.',
+        );
+      }
+    }
+
+    const repository = await this.getOrCreateToeicRepositoryForImport(
+      {
+        repository_slug: dto.repository_slug,
+        repository_title: dto.repository_title,
+        repository_description: dto.repository_description,
+        milestone_score: dto.milestone_score,
+        unlock_score: dto.unlock_score,
+      },
+      skillArea,
+      {
+        contentType: 'exam_simulation',
+        source: 'ocr_import',
+        createdBy: accountId,
+        examYear: dto.exam_year,
+      },
+    );
+
+    const shouldReplace = dto.replace_existing !== false;
+    if (shouldReplace) {
+      await this.prisma.learningRepositoryItem.deleteMany({
+        where: { repository_id: repository.id },
+      });
+    }
+
+    const lastItem = await this.prisma.learningRepositoryItem.findFirst({
+      where: { repository_id: repository.id },
+      orderBy: { item_order: 'desc' },
+      select: { item_order: true },
+    });
+
+    let nextItemOrder = Number(lastItem?.item_order ?? 0) + 1;
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    for (const parsed of parsedQuestions) {
+      if (!parsed.stem || parsed.options.length < 2) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const createdItem = await this.prisma.learningRepositoryItem.create({
+        data: {
+          repository_id: repository.id,
+          item_order: nextItemOrder,
+          item_type: 'single_choice',
+          stem: parsed.stem,
+          reading_passage: parsed.context ?? null,
+          explanation: parsed.explanation ?? null,
+          score_weight: 1,
+          estimated_seconds: skillArea === 'listening' ? 40 : 60,
+          metadata: {
+            source: 'ocr_import',
+            source_file: basename(file.originalname || file.path),
+            part: parsed.part,
+            question_number: parsed.questionNumber ?? null,
+          },
+        },
+        select: { id: true },
+      });
+
+      await this.prisma.learningRepositoryOption.createMany({
+        data: parsed.options.map((option, index) => ({
+          item_id: createdItem.id,
+          option_key: option.optionKey,
+          option_text: option.optionText,
+          is_correct: option.isCorrect,
+          rationale: option.rationale ?? null,
+          sort_order: index + 1,
+        })),
+      });
+
+      importedCount += 1;
+      nextItemOrder += 1;
+    }
+
+    const totalItems = await this.prisma.learningRepositoryItem.count({
+      where: { repository_id: repository.id },
+    });
+
+    await this.prisma.learningRepository.update({
+      where: { id: repository.id },
+      data: {
+        total_items: totalItems,
+        estimated_minutes: Math.max(1, Math.ceil(totalItems / 2)),
+        pass_score: Math.max(1, Math.ceil(totalItems * 0.7)),
+      },
+    });
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      skill_area: skillArea,
+      imported_count: importedCount,
+      skipped_count: skippedCount,
+      total_detected: parsedQuestions.length,
+      source_filename: basename(file.originalname || file.path),
+    };
+  }
+
+  async importToeicAnswerKeyFromFile(
+    accountId: number,
+    dto: ToeicAnswerKeyImportDto,
+    file: Express.Multer.File,
+  ): Promise<ToeicAnswerKeyImportResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng gửi file answer key.');
+    }
+
+    const repositorySlug = dto.repository_slug?.trim();
+    if (!repositorySlug) {
+      throw new BadRequestException('repository_slug la bat buoc.');
+    }
+
+    const repository = await this.prisma.learningRepository.findUnique({
+      where: { slug: repositorySlug },
+      select: {
+        id: true,
+        slug: true,
+        cert_type: true,
+        skill_area: true,
+        metadata: true,
+      },
+    });
+
+    if (!repository || repository.cert_type !== 'toeic') {
+      throw new NotFoundException(
+        'Không tìm thấy repository TOEIC cần cập nhật.',
+      );
+    }
+
+    const skillArea = repository.skill_area;
+    if (skillArea !== 'reading' && skillArea !== 'listening') {
+      throw new BadRequestException(
+        'Chỉ hỗ trợ import answer key cho repository TOEIC listening/reading.',
+      );
+    }
+
+    const answerKeyMap = await this.parseToeicAnswerKeyFromFile(
+      file,
+      skillArea,
+    );
+    if (answerKeyMap.size === 0) {
+      throw new BadRequestException(
+        'Không tìm thấy cặp question_number + answer (A/B/C/D) hợp lệ trong file.',
+      );
+    }
+
+    const items = await this.prisma.learningRepositoryItem.findMany({
+      where: { repository_id: repository.id },
+      orderBy: { item_order: 'asc' },
+      select: {
+        id: true,
+        item_order: true,
+        metadata: true,
+        options: {
+          orderBy: { sort_order: 'asc' },
+          select: {
+            id: true,
+            option_key: true,
+          },
+        },
+      },
+    });
+
+    if (items.length === 0) {
+      throw new BadRequestException(
+        'Repository hiện chưa có câu hỏi để gán đáp án.',
+      );
+    }
+
+    const clearExisting = dto.clear_existing !== false;
+    const operations: Prisma.PrismaPromise<unknown>[] = [];
+
+    if (clearExisting) {
+      operations.push(
+        this.prisma.learningRepositoryOption.updateMany({
+          where: { item: { repository_id: repository.id } },
+          data: { is_correct: false },
+        }),
+      );
+    }
+
+    const repositoryQuestionNumbers = new Set<number>();
+    const matchedQuestionNumbers = new Set<number>();
+    let appliedItems = 0;
+
+    for (const item of items) {
+      const questionNumber =
+        this.readQuestionNumberFromMetadata(item.metadata) ??
+        this.fallbackQuestionNumberByItemOrder(item.item_order, skillArea);
+
+      if (typeof questionNumber === 'number') {
+        repositoryQuestionNumbers.add(questionNumber);
+      }
+
+      if (typeof questionNumber !== 'number') continue;
+
+      const mappedAnswer = answerKeyMap.get(questionNumber);
+
+      if (!mappedAnswer) continue;
+
+      const matchedOption = item.options.find(
+        (option) =>
+          this.normalizeToeicOptionKey(option.option_key) === mappedAnswer,
+      );
+      if (!matchedOption) continue;
+
+      operations.push(
+        this.prisma.learningRepositoryOption.updateMany({
+          where: { item_id: item.id },
+          data: { is_correct: false },
+        }),
+        this.prisma.learningRepositoryOption.update({
+          where: { id: matchedOption.id },
+          data: { is_correct: true },
+        }),
+      );
+
+      appliedItems += 1;
+      matchedQuestionNumbers.add(questionNumber);
+    }
+
+    if (operations.length > 0) {
+      await this.prisma.$transaction(operations);
+    }
+
+    const unansweredItems = await this.prisma.learningRepositoryItem.count({
+      where: {
+        repository_id: repository.id,
+        options: {
+          none: { is_correct: true },
+        },
+      },
+    });
+
+    const unknownQuestionNumbers = [...answerKeyMap.keys()]
+      .filter(
+        (questionNumber) => !repositoryQuestionNumbers.has(questionNumber),
+      )
+      .sort((a, b) => a - b);
+
+    const metadata = (repository.metadata ?? {}) as Prisma.JsonObject;
+    await this.prisma.learningRepository.update({
+      where: { id: repository.id },
+      data: {
+        metadata: {
+          ...metadata,
+          answer_key_source: 'file_import',
+          answer_key_imported_at: new Date().toISOString(),
+          answer_key_source_filename: basename(file.originalname || file.path),
+          answer_key_imported_by: accountId,
+          answer_key_answers_detected: answerKeyMap.size,
+          answer_key_matched_questions: matchedQuestionNumbers.size,
+        },
+      },
+    });
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      skill_area: skillArea,
+      source_filename: basename(file.originalname || file.path),
+      total_answers_detected: answerKeyMap.size,
+      applied_items: appliedItems,
+      unanswered_items: unansweredItems,
+      unknown_question_numbers: unknownQuestionNumbers,
+    };
+  }
+
   async importToeicReadingFromFile(
     dto: ToeicReadingImportDto,
     file: Express.Multer.File,
   ): Promise<ToeicReadingImportResponseDto> {
     if (!file) {
-      throw new BadRequestException('Vui long gui file reading de import.');
+      throw new BadRequestException('Vui lòng gửi file reading để import.');
     }
 
     const rows = await this.parseImportRowsFromFile(file);
     if (rows.length === 0) {
-      throw new BadRequestException('Khong doc duoc du lieu tu file import.');
+      throw new BadRequestException('Không đọc được dữ liệu từ file import.');
     }
 
     const requiredKeywords = this.parseKeywordList(
@@ -1123,6 +2925,7 @@ export class CertificateEnrollmentService {
         'part_title',
         'skill_area',
       ]);
+      const partNumber = this.detectToeicPartFromText(sectionText);
 
       const isReading = this.sectionMatchesReading(
         sectionText,
@@ -1164,6 +2967,13 @@ export class CertificateEnrollmentService {
             this.rowValue(row, ['reading_passage', 'passage', 'paragraph']) ||
             null,
           explanation: this.rowValue(row, ['explanation']) || null,
+          metadata:
+            sectionText || partNumber
+              ? {
+                source_section: sectionText || null,
+                part: partNumber,
+              }
+              : undefined,
           estimated_seconds: Number(
             this.rowValue(row, ['estimated_seconds']) || 60,
           ),
@@ -1215,7 +3025,7 @@ export class CertificateEnrollmentService {
     if (dto.options_json && dto.options_json.trim().length > 0) {
       const parsed = JSON.parse(dto.options_json) as unknown;
       if (!Array.isArray(parsed)) {
-        throw new BadRequestException('options_json phai la mang JSON hop le.');
+        throw new BadRequestException('options_json phải là mảng JSON hợp lệ.');
       }
 
       const normalized = parsed
@@ -1237,7 +3047,7 @@ export class CertificateEnrollmentService {
 
       if (normalized.length === 0) {
         throw new BadRequestException(
-          'Khong co dap an hop le trong options_json.',
+          'Không có đáp án hợp lệ trong options_json.',
         );
       }
 
@@ -1275,12 +3085,12 @@ export class CertificateEnrollmentService {
 
     if (manualOptions.length < 2) {
       throw new BadRequestException(
-        'Can toi thieu 2 dap an cho cau hoi listening.',
+        'Cần tối thiểu 2 đáp án cho câu hỏi listening.',
       );
     }
     if (!manualOptions.some((option) => option.isCorrect)) {
       throw new BadRequestException(
-        'Ban phai chi dinh correct_option_key hop le.',
+        'Bạn phải chỉ định correct_option_key hợp lệ.',
       );
     }
     return manualOptions;
@@ -1613,8 +3423,8 @@ export class CertificateEnrollmentService {
     const uniqueOptions = Array.from(new Set(optionMatches));
     const alternatives = selectedText
       ? uniqueOptions.filter(
-          (option) => option.toLowerCase() !== selectedText.toLowerCase(),
-        )
+        (option) => option.toLowerCase() !== selectedText.toLowerCase(),
+      )
       : uniqueOptions;
 
     const normalizedParts: string[] = [];
@@ -2140,7 +3950,7 @@ export class CertificateEnrollmentService {
         // Cache cũ chất lượng thấp/stale -> xoá để lần gọi hiện tại regenerate.
         void this.prisma.toeicNodeQuestionCache
           .delete({ where: { topic_key: dbTopicKey } })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
 
@@ -2170,7 +3980,7 @@ export class CertificateEnrollmentService {
                 model: cached.model,
               },
             })
-            .catch(() => {});
+            .catch(() => { });
         }
         return {
           cert_type: certType,
@@ -2214,7 +4024,7 @@ export class CertificateEnrollmentService {
               model,
             },
           })
-          .catch(() => {});
+          .catch(() => { });
       }
 
       return {
@@ -2325,22 +4135,15 @@ export class CertificateEnrollmentService {
   private async persistGeneratedExplanation(
     itemId: number,
     explanation: string,
-    cachePath: string,
-    model: string,
+    _cachePath: string, // kept for signature compatibility — file cache removed
+    _model: string,
   ): Promise<void> {
-    await Promise.all([
-      this.prisma.learningRepositoryItem
-        .update({
-          where: { id: itemId },
-          data: { ai_explanation: explanation },
-        })
-        .catch(() => {}),
-      this.writeExplanationCache(cachePath, {
-        explanation,
-        model,
-        created_at: new Date().toISOString(),
-      }),
-    ]);
+    await this.prisma.learningRepositoryItem
+      .update({
+        where: { id: itemId },
+        data: { ai_explanation: explanation },
+      })
+      .catch(() => { });
   }
 
   private triggerToeicLookaheadPrefetch(
@@ -2387,7 +4190,7 @@ export class CertificateEnrollmentService {
           batch.map((nextItem) => this.prefetchItemExplanation(nextItem, slug)),
         );
       }
-    })().catch(() => {});
+    })().catch(() => { });
   }
 
   // ─── Prefetch: được gọi bởi ToeicExplanationPrefetchService ───────────────
@@ -2435,7 +4238,7 @@ export class CertificateEnrollmentService {
           where: { id: item.id },
           data: { ai_explanation: normalized || fileCached.explanation },
         })
-        .catch(() => {});
+        .catch(() => { });
       return;
     }
 
@@ -2535,7 +4338,7 @@ export class CertificateEnrollmentService {
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
         is_correct: true,
-        explanation: normalized || item.ai_explanation,
+        explanation: encryptString(normalized || item.ai_explanation),
         model,
         source: 'cache',
       };
@@ -2561,13 +4364,13 @@ export class CertificateEnrollmentService {
           where: { id: item.id },
           data: { ai_explanation: normalized || cached.explanation },
         })
-        .catch(() => {});
+        .catch(() => { });
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
         is_correct: true,
-        explanation: normalized || cached.explanation,
+        explanation: encryptString(normalized || cached.explanation),
         model: cached.model,
         source: 'cache',
       };
@@ -2602,7 +4405,7 @@ export class CertificateEnrollmentService {
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
         is_correct: true,
-        explanation,
+        explanation: encryptString(explanation),
         model,
         source: 'ollama',
       };
@@ -2623,11 +4426,74 @@ export class CertificateEnrollmentService {
         selected_option_id: selectedOption.id,
         correct_option_id: correctOption.id,
         is_correct: true,
-        explanation: normalizedFallback || fallback,
+        explanation: encryptString(normalizedFallback || fallback),
         model,
         source: 'fallback',
       };
     }
+  }
+
+  async getToeicExamRepositoryByType(
+    accountId: number,
+    examType: string,
+  ): Promise<ToeicRepositoryDetailResponseDto> {
+    if (examType !== 'listening' && examType !== 'reading') {
+      throw new BadRequestException(
+        'examType không hợp lệ. Chỉ nhận listening hoặc reading.',
+      );
+    }
+
+    await this.getStudentId(accountId);
+
+    // Only fetch full exam repositories (imported by teachers)
+    const candidates = await this.prisma.learningRepository.findMany({
+      where: {
+        cert_type: 'toeic',
+        is_published: true,
+        skill_area: examType,
+        content_type: 'exam_simulation',
+      },
+      select: {
+        slug: true,
+        metadata: true,
+        created_at: true,
+      },
+    });
+
+    if (candidates.length === 0) {
+      // Fallback: also try mock_test for backward compat
+      const fallback = await this.prisma.learningRepository.findFirst({
+        where: {
+          cert_type: 'toeic',
+          is_published: true,
+          skill_area: examType,
+          content_type: { in: ['mock_test', 'exam_simulation'] },
+        },
+        orderBy: { updated_at: 'desc' },
+        select: { slug: true },
+      });
+      if (!fallback) {
+        throw new NotFoundException(
+          `Chưa có bộ đề TOEIC ${examType} được publish trong hệ thống.`,
+        );
+      }
+      return this.getToeicRepositoryDetail(accountId, fallback.slug);
+    }
+
+    // Sort candidates by exam_year ASC, then created_at ASC
+    const sorted = candidates.sort((a, b) => {
+      const aYear = Number((a.metadata as any)?.exam_year ?? 9999);
+      const bYear = Number((b.metadata as any)?.exam_year ?? 9999);
+      if (aYear !== bYear) return aYear - bYear;
+      return (
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    });
+
+    // For now, return the first (earliest year) exam.
+    // TODO: track which exams the student completed and pick the next one.
+    const selected = sorted[0];
+    return this.getToeicRepositoryDetail(accountId, selected.slug);
   }
 
   async getToeicRepositoryOverview(
@@ -2678,13 +4544,13 @@ export class CertificateEnrollmentService {
         const metadata = (repo.metadata ?? {}) as Prisma.JsonObject;
         const milestoneScore = Number(
           readJsonNumber(metadata, 'milestone_score') ??
-            repo.target_score_min ??
-            targetScore,
+          repo.target_score_min ??
+          targetScore,
         );
         const unlockScore = Number(
           readJsonNumber(metadata, 'unlock_score') ??
-            repo.target_score_min ??
-            milestoneScore,
+          repo.target_score_min ??
+          milestoneScore,
         );
         const topicKeyFromMetadata = readJsonString(metadata, 'topic_key');
         const fallbackTopicKey = `${repo.skill_area ?? 'reading'}.repo_${repo.id}`;
@@ -2740,6 +4606,47 @@ export class CertificateEnrollmentService {
     const metadata = (repo.metadata ?? {}) as Prisma.JsonObject;
 
     const totalItems = Number(repo.total_items ?? repo.items?.length ?? 0);
+    const items = (repo.items ?? []).map((item) => {
+      const parsedPart =
+        this.readPartFromMetadata(item.metadata) ??
+        this.detectToeicPartFromText(
+          item.title ?? undefined,
+          item.stem,
+          item.reading_passage ?? undefined,
+        );
+
+      return {
+        id: Number(item.id),
+        item_order: Number(item.item_order),
+        part: parsedPart ?? null,
+        item_type: String(item.item_type),
+        title: item.title ?? null,
+        stem: encryptString(String(item.stem)),
+        reading_passage: item.reading_passage ? encryptString(item.reading_passage) : null,
+        media_audio_url: item.media_audio_url ?? null,
+        media_image_url: item.media_image_url ?? null,
+        estimated_seconds: item.estimated_seconds ?? null,
+        score_weight: Number(item.score_weight ?? 1),
+        options: (item.options ?? []).map((opt) => ({
+          id: Number(opt.id),
+          option_key: String(opt.option_key),
+          option_text: encryptString(String(opt.option_text)),
+          is_correct: Boolean(opt.is_correct),
+          rationale: opt.rationale ? encryptString(opt.rationale) : null,
+          option_audio_url: opt.option_audio_url ?? null,
+          sort_order: Number(opt.sort_order ?? 1),
+        })),
+        explanation: item.explanation ? encryptString(item.explanation) : null,
+      };
+    });
+
+    const answerKeyConfiguredItems = items.filter((item) =>
+      item.options.some((opt) => opt.is_correct),
+    ).length;
+    const answerKeyMissingItems = Math.max(
+      0,
+      items.length - answerKeyConfiguredItems,
+    );
 
     return {
       repository_id: Number(repo.id),
@@ -2757,26 +4664,10 @@ export class CertificateEnrollmentService {
         repo.pass_score ?? Math.max(1, Math.ceil(totalItems * 0.7)),
       ),
       total_items: totalItems,
-      items: (repo.items ?? []).map((item) => ({
-        id: Number(item.id),
-        item_order: Number(item.item_order),
-        item_type: String(item.item_type),
-        title: item.title ?? null,
-        stem: String(item.stem),
-        reading_passage: item.reading_passage ?? null,
-        media_audio_url: item.media_audio_url ?? null,
-        estimated_seconds: item.estimated_seconds ?? null,
-        score_weight: Number(item.score_weight ?? 1),
-        options: (item.options ?? []).map((opt) => ({
-          id: Number(opt.id),
-          option_key: String(opt.option_key),
-          option_text: String(opt.option_text),
-          is_correct: Boolean(opt.is_correct),
-          rationale: opt.rationale ?? null,
-          sort_order: Number(opt.sort_order ?? 1),
-        })),
-        explanation: item.explanation ?? null,
-      })),
+      answer_key_configured_items: answerKeyConfiguredItems,
+      answer_key_missing_items: answerKeyMissingItems,
+      answer_key_ready: items.length > 0 && answerKeyMissingItems === 0,
+      items,
     };
   }
 
@@ -2821,18 +4712,6 @@ export class CertificateEnrollmentService {
       },
     );
 
-    const metadata = (repository.metadata ?? {}) as Prisma.JsonObject;
-    const unlockScore = Number(
-      metadata.unlock_score ?? repository.target_score_min ?? 300,
-    );
-    const effectiveScore = this.getEffectiveToeicScore(
-      enrollment,
-      currentState,
-    );
-    if (effectiveScore < unlockScore) {
-      throw new ForbiddenException('Bộ đề chưa mở theo cột mốc điểm hiện tại.');
-    }
-
     const answerByItem = new Map<number, number>();
     for (const ans of dto.answers) {
       answerByItem.set(Number(ans.item_id), Number(ans.option_id));
@@ -2852,30 +4731,106 @@ export class CertificateEnrollmentService {
       if (selected?.is_correct) correctCount += 1;
     }
 
-    const gainPerCorrect =
-      repository.skill_area === 'listening' ||
-      repository.skill_area === 'reading'
-        ? 2.5
-        : 1.5;
-    const gainedScore = Math.round(correctCount * gainPerCorrect);
+    // TOEIC score calculation:
+    // Each skill (Listening / Reading) is scored 5–495, total 10–990.
+    // For a full 100-question exam: each correct = ~4.9 points.
+    // For partial exams: scale proportionally.
+    // Minimum score floor = 5 (per ETS standard).
+    const FULL_SKILL_QUESTIONS = 100; // questions in a full skill exam
+    const MAX_SKILL_SCORE = 495;
+    const MIN_SKILL_SCORE = 5;
+
+    const gradableItems = (repository.items ?? []).filter((item) =>
+      (item.options ?? []).some((opt) => opt.is_correct),
+    );
+    const gradableTotal = gradableItems.length;
+
+    // Use gradable items for score calculation (skip items without official answers)
+    let gradableCorrect = 0;
+    for (const item of gradableItems) {
+      const selectedOptionId = answerByItem.get(Number(item.id));
+      if (!selectedOptionId) continue;
+      const selected = (item.options ?? []).find(
+        (opt) => Number(opt.id) === selectedOptionId,
+      );
+      if (selected?.is_correct) gradableCorrect += 1;
+    }
+
+    const scaledScore =
+      gradableTotal > 0
+        ? Math.round(
+          (gradableCorrect / Math.max(gradableTotal, FULL_SKILL_QUESTIONS)) *
+          MAX_SKILL_SCORE,
+        )
+        : 0;
+
+    const newSkillScore = Math.max(
+      MIN_SKILL_SCORE,
+      Math.min(MAX_SKILL_SCORE, scaledScore),
+    );
+
+    // Build the updated plan: set the skill score directly (not boost-based)
+    const isListeningExam = repository.skill_area === 'listening';
+    const isReadingExam = repository.skill_area === 'reading';
+
+    // Previous scores for the OTHER skill (keep unchanged)
+    const prevListeningScore = isListeningExam
+      ? newSkillScore
+      : Math.round(Number(currentState.current_score ?? 0) / 2);
+    const prevReadingScore = isReadingExam
+      ? newSkillScore
+      : Math.round(Number(currentState.current_score ?? 0) / 2);
+
+    const rawNewTotalScore = Math.min(
+      990,
+      Math.max(10, prevListeningScore + prevReadingScore),
+    );
+
+    // Only adopt the new score if it is strictly higher than the current one.
+    const prevTotalScore = Number(currentState.current_score ?? 0);
+    const finalScore =
+      rawNewTotalScore > prevTotalScore ? rawNewTotalScore : prevTotalScore;
+
+    const gainedScore = Math.max(0, finalScore - prevTotalScore);
+
+    const targetScore = Number(currentState.target_score ?? 0);
+
+    // Student clears the milestone when their exam score meets/beats the target.
+    const canChangeTarget = rawNewTotalScore >= targetScore && targetScore > 0;
 
     const updatedPlan = await this.saveToeicPlanState(accountId, {
-      current_score: currentState.current_score,
-      target_score: currentState.target_score,
-      total_boost: Math.max(0, Number(currentState.total_boost) + gainedScore),
-      listening_sessions:
-        repository.skill_area === 'listening'
-          ? Number(currentState.listening_sessions) + 1
-          : Number(currentState.listening_sessions),
-      reading_sessions:
-        repository.skill_area === 'reading'
-          ? Number(currentState.reading_sessions) + 1
-          : Number(currentState.reading_sessions),
+      current_score: finalScore,
+      target_score: targetScore,
+      total_boost: Number(currentState.total_boost ?? 0),
+      listening_sessions: isListeningExam
+        ? Number(currentState.listening_sessions) + 1
+        : Number(currentState.listening_sessions),
+      reading_sessions: isReadingExam
+        ? Number(currentState.reading_sessions) + 1
+        : Number(currentState.reading_sessions),
       foundation_completed: currentState.foundation_completed,
       foundation_skipped: currentState.foundation_skipped,
       first_guide_shown: currentState.first_guide_shown,
       has_activity: true,
     });
+
+    // Persist latest exam score on active TOEIC enrollment(s).
+    // When the student reaches target, reset reserve points for the next cycle.
+    const enrollmentPatchData = {
+      exam_score: rawNewTotalScore,
+      ...(canChangeTarget ? { reserve_points: 0 } : {}),
+    } as Prisma.CertificateEnrollmentUpdateManyMutationInput;
+
+    await this.prisma.certificateEnrollment
+      .updateMany({
+        where: {
+          student_id: studentId,
+          cert_type: 'toeic',
+          status: 'active',
+        },
+        data: enrollmentPatchData,
+      })
+      .catch(() => { });
 
     const passScore = Number(
       repository.pass_score ?? Math.max(1, Math.ceil(totalCount * 0.7)),
@@ -2889,6 +4844,8 @@ export class CertificateEnrollmentService {
       pass_score: passScore,
       is_passed: correctCount >= passScore,
       gained_score: gainedScore,
+      exam_score: rawNewTotalScore,
+      can_change_target: canChangeTarget,
       projected_score: Number(
         updatedPlan.current_score + updatedPlan.total_boost,
       ),

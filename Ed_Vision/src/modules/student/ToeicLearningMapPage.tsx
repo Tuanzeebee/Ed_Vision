@@ -1,5 +1,5 @@
 // D:\Ed_Vision\Ed_Vision\src\modules\student\ToeicLearningMapPage.tsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Flag,
@@ -44,7 +44,7 @@ interface LearningMapState {
   reading: SkillMapState;
 }
 
-const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v1";
+const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v2";
 
 // ── Listening: 5 separate nodes (Part 1, 2, 3, 4, Advanced) ───────────────
 const LISTENING_NODES: NodeInfo[] = [
@@ -560,33 +560,219 @@ function NodePath({
 }
 
 function Mascot({ x, y }: { x: number; y: number }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <g transform={`translate(${x},${y - 44})`}>
-      {/* Shadow */}
-      <ellipse cx="0" cy="20" rx="14" ry="5" fill="rgba(0,0,0,0.2)" />
-      {/* White circle bg */}
-      <circle
-        cx="0"
-        cy="0"
-        r="16"
-        fill="white"
-        opacity="0.95"
-        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-      />
-      {/* Bounce animation */}
-      <g>
+    <g 
+      transform={`translate(${x},${y - 48})`} 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ cursor: "pointer" }}
+    >
+      <defs>
+        <radialGradient id="helmetGrad" cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="70%" stopColor="#e2e8f0" />
+          <stop offset="100%" stopColor="#94a3b8" />
+        </radialGradient>
+        <linearGradient id="visorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#0f172a" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+        <linearGradient id="suitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#94a3b8" />
+        </linearGradient>
+        <linearGradient id="jetpackGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#64748b" />
+          <stop offset="50%" stopColor="#94a3b8" />
+          <stop offset="100%" stopColor="#475569" />
+        </linearGradient>
+        <linearGradient id="fireGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="20%" stopColor="#fde047" />
+          <stop offset="60%" stopColor="#f97316" />
+          <stop offset="100%" stopColor="transparent" />
+        </linearGradient>
+      </defs>
+
+      {/* Floating Shadow */}
+      <ellipse cx="0" cy="36" rx={isHovered ? 16 : 14} ry="5" fill="rgba(0,0,0,0.25)" style={{ transition: 'all 0.3s' }}>
+        <animate
+          attributeName="opacity"
+          values="0.25; 0.1; 0.25"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </ellipse>
+
+      {/* Astronaut Body */}
+      <g style={{ transform: isHovered ? 'translateY(-6px)' : 'translateY(0)', transition: 'transform 0.3s ease-out' }}>
         <animateTransform
           attributeName="transform"
           type="translate"
-          values="0,0; 0,-4; 0,0"
-          dur="1.5s"
+          values={isHovered ? "0,-2; 0,-6; 0,-2" : "0,0; 0,-4; 0,0"}
+          dur="2s"
           repeatCount="indefinite"
         />
-        <text x="0" y="6" textAnchor="middle" fontSize="18">
-          🦊
-        </text>
+        
+        {/* Jetpack */}
+        <rect x="-15" y="-2" width="30" height="22" rx="4" fill="url(#jetpackGrad)" />
+        <rect x="-11" y="-5" width="22" height="24" rx="3" fill="#334155" />
+        {/* Jetpack Nozzles */}
+        <path d="M -13 19 L -7 19 L -8 24 L -12 24 Z" fill="#1e293b" />
+        <path d="M 7 19 L 13 19 L 12 24 L 8 24 Z" fill="#1e293b" />
+        
+        {/* Jetpack Fire Animation */}
+        <g transform="translate(-10, 24)">
+          <path fill="url(#fireGrad)">
+            <animate 
+              attributeName="d" 
+              values={isHovered 
+                ? "M -3.5 0 L 3.5 0 Q 0 15 0 25 Z; M -3.5 0 L 3.5 0 Q 0 20 0 35 Z; M -3.5 0 L 3.5 0 Q 0 15 0 25 Z" 
+                : "M -2.5 0 L 2.5 0 Q 0 8 0 12 Z; M -2.5 0 L 2.5 0 Q 0 12 0 18 Z; M -2.5 0 L 2.5 0 Q 0 8 0 12 Z"} 
+              dur={isHovered ? "0.05s" : "0.1s"} 
+              repeatCount="indefinite" 
+            />
+          </path>
+        </g>
+        <g transform="translate(10, 24)">
+          <path fill="url(#fireGrad)">
+            <animate 
+              attributeName="d" 
+              values={isHovered 
+                ? "M -3.5 0 L 3.5 0 Q 0 15 0 25 Z; M -3.5 0 L 3.5 0 Q 0 20 0 35 Z; M -3.5 0 L 3.5 0 Q 0 15 0 25 Z" 
+                : "M -2.5 0 L 2.5 0 Q 0 8 0 12 Z; M -2.5 0 L 2.5 0 Q 0 12 0 18 Z; M -2.5 0 L 2.5 0 Q 0 8 0 12 Z"} 
+              dur={isHovered ? "0.06s" : "0.12s"} 
+              repeatCount="indefinite" 
+            />
+          </path>
+        </g>
+
+        {/* Main Body */}
+        <rect x="-10" y="4" width="20" height="18" rx="6" fill="url(#suitGrad)" />
+        
+        {/* Chest Plate */}
+        <rect x="-6" y="7" width="12" height="10" rx="2" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="0.5" />
+        <circle cx="-3" cy="10" r="1.5" fill="#3b82f6" />
+        <circle cx="3" cy="10" r="1.5" fill="#ef4444" />
+        <rect x="-3" y="14" width="6" height="1.5" fill="#94a3b8" />
+        
+        {/* Belt */}
+        <rect x="-10" y="19" width="20" height="3" fill="#64748b" />
+        <rect x="-3" y="18.5" width="6" height="4" rx="1" fill="#94a3b8" />
+
+        {/* Legs */}
+        <path d="M -8 22 L -3 22 L -3 32 L -9 32 Z" fill="url(#suitGrad)" rx="2" />
+        <path d="M 3 22 L 8 22 L 9 32 L 3 32 Z" fill="url(#suitGrad)" rx="2" />
+        {/* Boots */}
+        <path d="M -10 32 L -2 32 L -2 36 L -10 36 Z" fill="#64748b" rx="2" />
+        <path d="M 2 32 L 10 32 L 10 36 L 2 36 Z" fill="#64748b" rx="2" />
+
+        {/* Left Arm */}
+        <g>
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            values="10 -12 8; -5 -12 8; 10 -12 8"
+            dur="3s"
+            repeatCount="indefinite"
+          />
+          <path d="M -16 8 L -9 8 L -8 20 L -17 20 Z" fill="url(#suitGrad)" />
+          <circle cx="-12.5" cy="20" r="3.5" fill="#94a3b8" /> {/* Glove */}
+        </g>
+        
+        {/* Right Arm (Waving when hovered) */}
+        <g style={{ transformOrigin: '12px 8px', transform: isHovered ? 'rotate(-140deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+          {!isHovered && (
+             <animateTransform
+              attributeName="transform"
+              type="rotate"
+              values="-10 12 8; 5 12 8; -10 12 8"
+              dur="2.8s"
+              repeatCount="indefinite"
+            />
+          )}
+          {isHovered && (
+             <animateTransform
+              attributeName="transform"
+              type="rotate"
+              values="-140 12 8; -110 12 8; -140 12 8"
+              dur="0.4s"
+              repeatCount="indefinite"
+            />
+          )}
+          <path d="M 9 8 L 16 8 L 17 20 L 8 20 Z" fill="url(#suitGrad)" />
+          <circle cx="12.5" cy="20" r="3.5" fill="#94a3b8" /> {/* Glove */}
+        </g>
+        
+        {/* Helmet Base */}
+        <circle cx="0" cy="-6" r="15" fill="url(#helmetGrad)" />
+        <ellipse cx="0" cy="9" rx="11" ry="3" fill="#cbd5e1" /> {/* Neck ring */}
+        
+        {/* Glass Visor */}
+        <rect x="-12" y="-13" width="24" height="15" rx="7.5" fill="url(#visorGrad)" />
+        
+        {/* Glowing Robot Eyes */}
+        <rect x="-7" y="-10" width="5.5" height="4.5" rx="1.5" fill="#22d3ee" filter="drop-shadow(0 0 3px #06b6d4)" />
+        <rect x="1.5" y="-10" width="5.5" height="4.5" rx="1.5" fill="#22d3ee" filter="drop-shadow(0 0 3px #06b6d4)" />
+        
+        {/* Visor Glare */}
+        <path d="M -10 -11 Q 0 -13 10 -11 Q 6 -7 0 -7 Q -6 -7 -10 -11 Z" fill="rgba(255,255,255,0.25)" />
+        
+        {/* Hover Text Bubble */}
+        {isHovered && (
+          <g transform="translate(18, -24)">
+            <rect x="0" y="-14" width="44" height="20" rx="10" fill="white" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))" />
+            <polygon points="4,6 -2,12 10,6" fill="white" />
+            <text x="22" y="0" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#0ea5e9">Hello!</text>
+          </g>
+        )}
       </g>
     </g>
+  );
+}
+
+// ── Video Background ───────────────────────────────────────────────────────
+function VideoBackground() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    // Fade in smoothly when video is ready
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const handleCanPlay = () => {
+      video.style.transition = "opacity 0.5s ease-in-out";
+      video.style.opacity = "1";
+    };
+
+    video.addEventListener("canplay", handleCanPlay);
+    return () => video.removeEventListener("canplay", handleCanPlay);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <video
+        ref={videoRef}
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4"
+        muted
+        playsInline
+        autoPlay
+        loop
+        style={{
+          opacity: 0,
+          position: "absolute",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "115%",
+          height: "115%",
+          objectFit: "cover",
+          objectPosition: "top center",
+        }}
+      />
+    </div>
   );
 }
 
@@ -739,6 +925,7 @@ export default function ToeicLearningMapPage() {
           {/* ── Mountain Map (1 col on large) ── */}
           <div className="lg:col-span-1">
             <div className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden relative">
+              <VideoBackground />
               {/* Floating header overlay on top of the map */}
               <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-3 pb-2 bg-linear-to-b from-white/90 to-transparent pointer-events-none">
                 <div>
@@ -767,12 +954,10 @@ export default function ToeicLearningMapPage() {
               <svg
                 viewBox="0 0 360 500"
                 width="100%"
-                style={{ display: "block", minHeight: 420 }}
+                style={{ display: "block", minHeight: 420, position: "relative", zIndex: 1 }}
                 role="img"
                 aria-label="Mountain learning map"
               >
-                <RealisticMountainBg isListening={isListening} />
-
                 {/* Paths */}
                 {nodes.slice(0, -1).map((node, i) => (
                   <NodePath

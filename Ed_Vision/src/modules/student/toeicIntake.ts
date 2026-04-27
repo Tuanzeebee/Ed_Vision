@@ -40,7 +40,7 @@ export interface ToeicIntakeProfile {
   updatedAt: string
 }
 
-const STORAGE_KEY = 'edvision.toeic.intake.v1'
+const STORAGE_KEY = 'edvision.toeic.intake.v2'
 
 export const TOEIC_SCORE_PER_CORRECT = 2.5
 export const TOEIC_PRACTICE_SET_SIZE = 10

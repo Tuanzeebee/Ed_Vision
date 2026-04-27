@@ -7,10 +7,6 @@ import {
 } from "react-router-dom";
 import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
-import {
-  SeasonalEffectProvider,
-  SeasonalToggleButton,
-} from "@/components/seasonal-effects";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/booking/AllAppointments";
 import StudentDetails from "./modules/parent/Parent_StudentDetails";
@@ -62,8 +58,8 @@ import CourseDetailView from "./modules/student/CourseDetailView";
 import FinancialSurveyStep1 from "./modules/student/FinancialSurveyStep1";
 import ChooseMascot from "./modules/student/ChooseMascot";
 import LearningAdventure from "./modules/student/LearningAdventure";
-import TeacherAppointmentDashboard from "./modules/teacher/TeacherAppointmentDashboard";
-import MessagesNotifications from "./modules/teacher/MessagesNotifications";
+import TeacherAppointmentDashboard from "@/modules/teacher/TeacherAppointmentDashboard";
+import MessagesNotifications from "@/modules/teacher/MessagesNotifications";
 import ChatWithTeachers from "./modules/parent/ChatWithTeachers";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RequireInputSurvey from "@/components/RequireInputSurvey";
@@ -80,6 +76,9 @@ import ProfileRedirect from "./modules/profile/ProfileRedirect";
 import "./modules/student/styles/learningSpace.css";
 import MeetingDetailView from "./modules/teacher/MeetingDetailView";
 import CalendarOverview from "./modules/teacher/CalendarOverview";
+import ToeicRepositoryImport from "./modules/teacher/ToeicRepositoryImport";
+import ToeicPracticeQuestionImport from "./modules/teacher/ToeicPracticeQuestionImport";
+import ExamPracticeImport from "./modules/teacher/ExamPracticeImport";
 import StudentSurvey from "./modules/survey/StudentSurvey";
 import SettingGradeTable from "./modules/teacher/SettingGradeTable";
 import CertificateReview from "./modules/student/CertificateReview";
@@ -88,7 +87,7 @@ import ToeicLearningMapPage from "./modules/student/ToeicLearningMapPage";
 import ToeicNodePracticePage from "./modules/student/ToeicNodePracticePage";
 import ToeicFoundationStudyPage from "./modules/student/ToeicFoundationStudyPage";
 import ToeicExamSimulationPage from "./modules/student/ToeicExamSimulationPage";
-
+import ToeicFullLeaderboardPage from "./modules/student/ToeicFullLeaderboardPage";
 
 function App() {
   // Initialize permissions on app startup
@@ -107,12 +106,9 @@ function App() {
     };
   }, []);
 
-        return (
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-                        <SeasonalEffectProvider forceEvent="CHRISTMAS">
-                        <Router>
-                                {/* Seasonal Effects Toggle Button */}
-                                <SeasonalToggleButton />
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <Router>
                                 {/* Session timeout warning removed - feature deleted */}
                                 <Routes>
                                         {/* Default route redirect to student landing */}
@@ -144,6 +140,7 @@ function App() {
                                                 <Route path="student-notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
                                                 <Route path="profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
                                                 <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
+                                                <Route path="leaderboard" element={<ProtectedRoute permission="student_course_overview"><ToeicFullLeaderboardPage /></ProtectedRoute>} />
                                                 <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
                                                 <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
                                                 <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
@@ -220,6 +217,9 @@ function App() {
                                         <Route path="/teacher/survey-management" element={<ProtectedRoute permission="teacher_dashboard"><StudentSurveyManagement /></ProtectedRoute>} />
                                         <Route path="/teacher/calendar-overview" element={<ProtectedRoute permission="teacher_appointments"><CalendarOverview /></ProtectedRoute>} />
                                         <Route path="/teacher/notifications" element={<ProtectedRoute permission="teacher_notification"><NotificationPage userRole="teacher" /></ProtectedRoute>} />
+                                        <Route path="/teacher/toeic-repository-import" element={<ProtectedRoute permission="teacher_dashboard"><ToeicRepositoryImport /></ProtectedRoute>} />
+                                        <Route path="/teacher/toeic-practice-import" element={<ProtectedRoute permission="teacher_dashboard"><ToeicPracticeQuestionImport /></ProtectedRoute>} />
+                                        <Route path="/teacher/exam-practice-import" element={<ProtectedRoute permission="teacher_dashboard"><ExamPracticeImport /></ProtectedRoute>} />
                                         {/* legacy teacher/profile route removed; use /profile centralized entry */}
                                         
                                         {/* Booking Scheduler Route */}
@@ -236,7 +236,6 @@ function App() {
 
                                 </Routes>
                         </Router>
-                        </SeasonalEffectProvider>
                 </Suspense>
         );
 }

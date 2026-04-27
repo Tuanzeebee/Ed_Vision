@@ -9,6 +9,8 @@ import {
   BookOpenCheck,
   Brain,
   BookMarked,
+  Star,
+  BookOpen,
 } from "lucide-react";
 import type { ToeicFoundationTopic, ToeicIntakeProfile } from "./toeicIntake";
 import {
@@ -18,10 +20,12 @@ import {
   saveToeicIntakeProfile,
   skipFoundation,
 } from "./toeicIntake";
-import { getSkills } from "./certificateData";
+import { getSkills, getRadarData } from "./certificateData";
+import { askCertificateTutor } from "../../services/api/certificateService";
 import {
   getToeicLeaderboard,
 } from "@/services/api/certificateService";
+import StudentLeaderboard from "./components/StudentLeaderboard";
 
 type Props = {
   profile: ToeicIntakeProfile;
@@ -71,6 +75,37 @@ export default function ToeicRoadmapBoard({
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const projectedScore = getToeicProjectedScore(profile);
+
+  const toeicSkills = useMemo(() => getSkills("toeic", profile.recommendedBand).filter(
+    (s) => s.id === "listening" || s.id === "reading"
+  ), [profile.recommendedBand]);
+
+  const radarDataRaw = useMemo(() => getRadarData("toeic"), []);
+  const radarData = useMemo(() => [radarDataRaw[2] ?? 68, radarDataRaw[3] ?? 64], [radarDataRaw]);
+
+  const maxVal = radarData.length > 0 ? Math.max(...radarData) : 0;
+  const minVal = radarData.length > 0 ? Math.min(...radarData) : 0;
+  const strongest = toeicSkills[radarData.indexOf(maxVal)]?.label ?? "Đọc";
+  const weakest = toeicSkills[radarData.indexOf(minVal)]?.label ?? "Nghe";
+
+  const [aiFeedback, setAiFeedback] = useState<string>("Đang phân tích dữ liệu...");
+
+  useEffect(() => {
+    const listScore = radarData[0] ?? 0;
+    const readScore = radarData[1] ?? 0;
+    
+    askCertificateTutor({
+      cert_type: "toeic",
+      question: `Điểm đánh giá kỹ năng TOEIC hiện tại của tôi: Nghe đạt ${listScore}/100, Đọc đạt ${readScore}/100. Hãy đóng vai một chuyên gia giáo dục, phân tích ngắn gọn điểm mạnh yếu của tôi dựa trên 2 con số này và đưa ra 1 lời khuyên thực tế nhất để cải thiện điểm số. Không chào hỏi, đi thẳng vào vấn đề.`,
+      topic_key: "toeic_skill_analysis",
+      concise: true
+    }).then(res => {
+      setAiFeedback(res.answer);
+    }).catch(err => {
+      setAiFeedback("Hệ thống AI đang bận. Vui lòng thử lại sau.");
+    });
+  }, [radarData]);
+
   const milestones = useMemo(
     () =>
       buildToeicMilestones(
@@ -245,11 +280,10 @@ export default function ToeicRoadmapBoard({
                   <div
                     onMouseEnter={() => setHoveredMilestone(score)}
                     onMouseLeave={() => setHoveredMilestone(null)}
-                    className={`relative h-7 cursor-default border transition-all sm:h-8 ${
-                      reached
+                    className={`relative h-7 cursor-default border transition-all sm:h-8 ${reached
                         ? "border-cyan-400 bg-gradient-to-r from-sky-500 to-cyan-500"
                         : "border-slate-200 bg-slate-200"
-                    }`}
+                      }`}
                     style={{
                       clipPath:
                         idx === milestones.length - 1
@@ -265,11 +299,10 @@ export default function ToeicRoadmapBoard({
                   </div>
                   <div className="mt-2 text-center">
                     <span
-                      className={`inline-flex min-w-[30px] justify-center rounded-full px-1 py-0.5 text-[10px] font-bold sm:min-w-[34px] sm:px-1.5 sm:text-[11px] ${
-                        reached
+                      className={`inline-flex min-w-[30px] justify-center rounded-full px-1 py-0.5 text-[10px] font-bold sm:min-w-[34px] sm:px-1.5 sm:text-[11px] ${reached
                           ? "bg-cyan-100 text-cyan-700"
                           : "bg-slate-100 text-slate-500"
-                      }`}
+                        }`}
                     >
                       {score}
                     </span>
@@ -287,179 +320,149 @@ export default function ToeicRoadmapBoard({
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-2 flex items-center gap-2 text-slate-800">
-            <BookOpenCheck className="h-4 w-4 text-indigo-600" />
-            <h3 className="font-bold">Nền tảng cho người mất gốc</h3>
-          </div>
-          <p className="text-sm text-slate-600">
-            Mặc định hệ thống khóa nhánh tăng tốc cho đến khi hoàn thành tối
-            thiểu 2 chủ đề nền tảng. Bạn có thể bỏ qua nếu đã vững.
-          </p>
-          <div className="mt-3 space-y-2">
-            {foundationTrack.map((item) => {
-              const done = completedFoundation.includes(item.topic);
-              return (
-                <div
-                  key={item.topic}
-                  className="rounded-xl border border-slate-200 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        {item.topic === "grammar" ? (
-                          <Brain className="h-4 w-4 text-violet-600" />
-                        ) : (
-                          <BookMarked className="h-4 w-4 text-blue-600" />
-                        )}
-                        <p className="text-sm font-semibold text-slate-700">
-                          {item.title}
-                        </p>
-                      </div>
-                      <p className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        {item.badge}
-                      </p>
-                      <p className="text-xs text-slate-500">{item.hint}</p>
-                    </div>
-                    {done && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
-                        Done
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => openFoundationTheory(item.topic, item.key)}
-                    className="mt-2 cursor-pointer text-xs font-semibold text-cyan-700 hover:text-cyan-800"
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-slate-800">
+              <BookOpenCheck className="h-4 w-4 text-indigo-600" />
+              <h3 className="font-bold">Nền tảng cho người mất gốc</h3>
+            </div>
+            <p className="text-sm text-slate-600">
+              Mặc định hệ thống khóa nhánh tăng tốc cho đến khi hoàn thành tối
+              thiểu 2 chủ đề nền tảng. Bạn có thể bỏ qua nếu đã vững.
+            </p>
+            <div className="mt-3 space-y-2">
+              {foundationTrack.map((item) => {
+                const done = completedFoundation.includes(item.topic);
+                return (
+                  <div
+                    key={item.topic}
+                    className="rounded-xl border border-slate-200 p-3"
                   >
-                    Mở bài lý thuyết
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          {!profile.milestoneState.foundationSkipped && (
-            <button
-              onClick={handleSkipFoundation}
-              className="mt-3 cursor-pointer text-xs font-semibold text-slate-500 underline decoration-dotted underline-offset-2 hover:text-slate-700"
-            >
-              Bỏ qua phần nền tảng
-            </button>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-2 flex items-center gap-2 text-slate-800">
-            <Ear className="h-4 w-4 text-cyan-600" />
-            <h3 className="font-bold">Nhiệm vụ kỹ năng theo mốc</h3>
-          </div>
-          <p className="text-sm text-slate-600">
-            Listening và Reading được mở liên tục theo cột mốc bạn đang chạm
-            tới.
-          </p>
-
-          <div className="mt-3 grid gap-3">
-            <div
-              className={`rounded-xl border p-3 ${listeningPracticeTopic ? "border-cyan-200 bg-cyan-50/70" : "border-slate-200 bg-slate-50"}`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">
-                    Listening Sprint
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Part 1-4 theo mốc điểm hiện tại của bạn.
-                  </p>
-                </div>
-                {!listeningPracticeTopic && (
-                  <Lock className="h-4 w-4 text-slate-400" />
-                )}
-              </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {item.topic === "grammar" ? (
+                            <Brain className="h-4 w-4 text-violet-600" />
+                          ) : (
+                            <BookMarked className="h-4 w-4 text-blue-600" />
+                          )}
+                          <p className="text-sm font-semibold text-slate-700">
+                            {item.title}
+                          </p>
+                        </div>
+                        <p className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                          {item.badge}
+                        </p>
+                        <p className="text-xs text-slate-500">{item.hint}</p>
+                      </div>
+                      {done && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                          Done
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => openFoundationTheory(item.topic, item.key)}
+                      className="mt-2 cursor-pointer text-xs font-semibold text-cyan-700 hover:text-cyan-800"
+                    >
+                      Mở bài lý thuyết
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {!profile.milestoneState.foundationSkipped && (
               <button
-                onClick={() =>
-                  navigate("/student/certificate-review/toeic/skill/listening")
-                }
-                className="mt-2 cursor-pointer rounded-lg border border-cyan-200 bg-white px-2.5 py-1 text-xs font-semibold text-cyan-700 hover:bg-cyan-50 transition-colors"
+                onClick={handleSkipFoundation}
+                className="mt-3 cursor-pointer text-xs font-semibold text-slate-500 underline decoration-dotted underline-offset-2 hover:text-slate-700"
               >
-                Vào luyện Listening
+                Bỏ qua phần nền tảng
               </button>
-            </div>
+            )}
+          </div>
 
-            <div
-              className={`rounded-xl border p-3 ${readingPracticeTopic ? "border-emerald-200 bg-emerald-50/70" : "border-slate-200 bg-slate-50"}`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">
-                    Reading Sprint
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Part 5-7 theo mốc điểm hiện tại của bạn.
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Star className="w-4 h-4 text-purple-500" />
+              Phân tích kỹ năng
+            </h3>
+            <div className="space-y-4">
+              {toeicSkills.map((skill, idx) => {
+                const value = radarData[idx] ?? 0;
+                const icon =
+                  skill.id === "listening" ? (
+                    <Ear className="w-4 h-4" />
+                  ) : (
+                    <BookOpen className="w-4 h-4" />
+                  );
+                const barColor =
+                  skill.id === "listening"
+                    ? "from-cyan-500 to-sky-500"
+                    : "from-emerald-500 to-teal-500";
+                return (
+                  <div
+                    key={skill.id}
+                    className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                  >
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="flex items-center gap-2 font-semibold text-slate-700">
+                        {icon}
+                        {skill.label}
+                      </span>
+                      <span className="font-bold text-slate-700">
+                        {value}/100
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-slate-200">
+                      <div
+                        className={`h-2.5 rounded-full bg-gradient-to-r ${barColor}`}
+                        style={{
+                          width: `${Math.max(4, Math.min(100, value))}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {value >= 75
+                        ? "Đang ổn định, tập trung tăng tốc độ."
+                        : value >= 55
+                          ? "Mức trung bình, nên luyện đều mỗi ngày."
+                          : "Cần ưu tiên luyện để tránh mất điểm phần này."}
+                    </p>
+                  </div>
+                );
+              })}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 bg-slate-50 rounded-xl text-center">
+                  <p className="text-xs text-slate-400">Mạnh hơn</p>
+                  <p className="font-bold text-emerald-600 text-sm">
+                    {strongest}
                   </p>
                 </div>
-                {!readingPracticeTopic && (
-                  <Lock className="h-4 w-4 text-slate-400" />
-                )}
+                <div className="p-2.5 bg-slate-50 rounded-xl text-center">
+                  <p className="text-xs text-slate-400">Cần ưu tiên</p>
+                  <p className="font-bold text-orange-500 text-sm">
+                    {weakest}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() =>
-                  navigate("/student/certificate-review/toeic/skill/reading")
-                }
-                className="mt-2 cursor-pointer rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
-              >
-                Vào luyện Reading
-              </button>
-            </div>
-          </div>
 
-          <div className="mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-3 text-xs text-cyan-800">
-            Điểm milestone sẽ tự cộng sau mỗi câu trả lời trong bài
-            Listening/Reading thực tế.
-          </div>
-          {!foundationUnlocked && (
-            <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-700">
-              Gợi ý: hoàn thành 2 chủ đề nền tảng để tăng tốc độ ổn định điểm,
-              nhưng bạn vẫn có thể luyện Listening/Reading nếu bài đã mở khóa.
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
-        <div className="mb-2 flex items-center gap-2">
-          <Crown className="h-4 w-4 text-amber-700" />
-          <h3 className="font-bold text-amber-800">Leaderboard Tuần</h3>
-        </div>
-        {leaderboard.length === 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-white px-3 py-4 text-sm text-slate-600">
-            Chưa có dữ liệu xếp hạng thực tế cho tuần này.
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-3">
-            {leaderboard.map((entry, idx) => {
-              const isUser = entry.isCurrentUser || entry.name === "You";
-              const userScore = isUser ? projectedScore : entry.score;
-              return (
-                <div
-                  key={entry.name}
-                  className={`rounded-xl border p-3 ${isUser ? "border-amber-300 bg-white" : "border-amber-200 bg-white/70"}`}
-                >
-                  <p className="text-xs text-slate-500">Hạng {idx + 1}</p>
-                  <p className="font-semibold text-slate-800">{entry.name}</p>
-                  <p className="text-sm font-bold text-amber-700">
-                    {userScore} điểm
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Streak {entry.streak} ngày
-                  </p>
+              {/* AI Feedback */}
+              <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-500" />
+                  <span className="text-sm font-bold text-indigo-900">Nhận xét của Trợ lý ảo</span>
                 </div>
-              );
-            })}
+                <p className="text-xs text-indigo-800/80 leading-relaxed text-justify">
+                  {aiFeedback}
+                </p>
+              </div>
+            </div>
           </div>
-        )}
-        <p className="mt-2 flex items-center gap-1 text-xs text-amber-800">
-          <Sparkles className="h-3.5 w-3.5" /> Hoàn thành phiên hằng ngày để leo
-          bảng xếp hạng nhanh hơn.
-        </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 h-full">
+          <StudentLeaderboard />
+        </div>
       </div>
     </section>
   );
