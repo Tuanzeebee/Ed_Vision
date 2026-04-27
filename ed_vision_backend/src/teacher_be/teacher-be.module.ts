@@ -12,6 +12,8 @@ import { MeetingLogsModule } from './meeting-logs/meeting-logs.module';
 import { AcademicDataModule } from './academic-data/academic-data.module';
 import { GradeStructureModule } from './grade-structure/grade-structure.module';
 import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
+import { TeacherToeicRepositoryModule } from './toeic-repository/toeic-repository.module';
+import { IeltsRepositoryModule } from './ielts-repository/ielts-repository.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
     AcademicDataModule,
     GradeStructureModule,
     GpaMetricsModule,
+    TeacherToeicRepositoryModule,
+    IeltsRepositoryModule,
   ],
   exports: [
     DashboardModule,
@@ -43,6 +47,8 @@ import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
     AcademicDataModule,
     GradeStructureModule,
     GpaMetricsModule,
+    TeacherToeicRepositoryModule,
+    IeltsRepositoryModule,
   ],
 })
 export class TeacherBeModule {}

@@ -26,6 +26,14 @@ import type { Request as ExpressRequest } from 'express';
 import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 import { CertificateEnrollmentService } from './certificate-enrollment.service';
 import {
+  ToeicPracticeSessionService,
+  SubmitPartSessionDto,
+  GetQuestionsForPartResponseDto,
+  SubmitPartSessionResponseDto,
+  ReservePointsStatusDto,
+} from './toeic-practice-session.service';
+import { ToeicDiagnosticService, SubmitDiagnosticDto } from './toeic-diagnostic.service';
+import {
   CreateEnrollmentDto,
   CompleteTopicDto,
   EnrollmentResponseDto,
@@ -42,6 +50,8 @@ import {
   ToeicManualListeningCreateResponseDto,
   ToeicExplainAnswerDto,
   ToeicExplainAnswerResponseDto,
+  ToeicRepositoryPregenerateExplanationsDto,
+  ToeicRepositoryPregenerateExplanationsResponseDto,
   CertificateTutorAskDto,
   CertificateTutorAskResponseDto,
 } from './dto/certificate.dto';
@@ -70,7 +80,25 @@ const certificateMulterStorage = diskStorage({
 @Controller('student/certificate')
 @UseGuards(DevAuthGuard)
 export class CertificateEnrollmentController {
-  constructor(private readonly service: CertificateEnrollmentService) {}
+  constructor(
+    private readonly service: CertificateEnrollmentService,
+    private readonly practiceSessionService: ToeicPracticeSessionService,
+    private readonly diagnosticService: ToeicDiagnosticService,
+  ) {}
+
+  @Get('toeic-diagnostic/generate')
+  async generateDiagnosticTest(
+    @Query('target_score', ParseIntPipe) targetScore: number,
+  ) {
+    return this.diagnosticService.generateDiagnosticTest(targetScore);
+  }
+
+  @Post('toeic-diagnostic/submit')
+  async submitDiagnosticTest(
+    @Body() dto: SubmitDiagnosticDto,
+  ) {
+    return this.diagnosticService.submitDiagnosticTest(dto);
+  }
 
   /**
    * GET /student/certificate/enrollment?certType=ielts
@@ -182,6 +210,21 @@ export class CertificateEnrollmentController {
   }
 
   /**
+   * GET /student/certificate/toeic-repository/exam/:examType
+   * Return latest published TOEIC exam repository (mock_test preferred) by skill area.
+   */
+  @Get('toeic-repository/exam/:examType')
+  async getToeicExamRepositoryByType(
+    @Request() req: AuthenticatedRequest,
+    @Param('examType') examType: string,
+  ): Promise<ToeicRepositoryDetailResponseDto> {
+    return this.service.getToeicExamRepositoryByType(
+      req.user.account_id,
+      examType,
+    );
+  }
+
+  /**
    * GET /student/certificate/toeic-repository/:slug
    * Returns detailed question set for a TOEIC repository slug.
    */
@@ -280,6 +323,23 @@ export class CertificateEnrollmentController {
   }
 
   /**
+   * POST /student/certificate/toeic-repository/:slug/pregenerate-explanations
+   * Phase 1: pre-generate high-quality reading explanations into DB cache.
+   */
+  @Post('toeic-repository/:slug/pregenerate-explanations')
+  async preGenerateToeicRepositoryExplanations(
+    @Request() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+    @Body() dto: ToeicRepositoryPregenerateExplanationsDto,
+  ): Promise<ToeicRepositoryPregenerateExplanationsResponseDto> {
+    return this.service.preGenerateToeicReadingExplanations(
+      req.user.account_id,
+      slug,
+      dto,
+    );
+  }
+
+  /**
    * POST /student/certificate/ai-tutor/ask
    * Shared AI tutor endpoint for all certificate types.
    */
@@ -289,5 +349,58 @@ export class CertificateEnrollmentController {
     @Body() dto: CertificateTutorAskDto,
   ): Promise<CertificateTutorAskResponseDto> {
     return this.service.askCertificateTutor(req.user.account_id, dto);
+  }
+
+  /**
+   * GET /student/certificate/toeic/practice-questions/:part
+   * Returns up to 10 questions for one TOEIC part in the learner score band.
+   */
+  @Get('toeic/practice-questions/:part')
+  async getPracticeQuestionsForPart(
+    @Request() req: AuthenticatedRequest,
+    @Param('part', ParseIntPipe) part: number,
+    @Query('count') count?: string,
+  ): Promise<GetQuestionsForPartResponseDto> {
+    const parsedCount = count !== undefined ? Number(count) : 10;
+    const safeCount =
+      Number.isFinite(parsedCount) && parsedCount > 0
+        ? Math.min(parsedCount, 10)
+        : 10;
+    return this.practiceSessionService.getQuestionsForPart(
+      req.user.account_id,
+      part,
+      safeCount,
+    );
+  }
+
+  /**
+   * POST /student/certificate/toeic/practice-session/submit
+   * Submit answers for a completed practice session.
+   * Scores the attempt, creates a ToeicPracticePartSession record,
+   * and increments reserve_points on the enrollment (capped at 100).
+   */
+  @Post('toeic/practice-session/submit')
+  async submitPracticeSession(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: SubmitPartSessionDto,
+  ): Promise<SubmitPartSessionResponseDto> {
+    return this.practiceSessionService.submitPartSession(
+      req.user.account_id,
+      dto,
+    );
+  }
+
+  /**
+   * GET /student/certificate/toeic/reserve-points
+   * Returns the student's current reserve_points balance, exam-unlock status,
+   * and their 20 most recent practice part-session records.
+   */
+  @Get('toeic/reserve-points')
+  async getReservePointsStatus(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ReservePointsStatusDto> {
+    return this.practiceSessionService.getReservePointsStatus(
+      req.user.account_id,
+    );
   }
 }

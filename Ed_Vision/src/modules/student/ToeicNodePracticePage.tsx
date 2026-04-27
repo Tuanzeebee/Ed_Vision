@@ -23,7 +23,11 @@ import {
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
-import { askCertificateTutor } from "../../services/api/certificateService";
+import {
+  askCertificateTutor,
+  getToeicPracticeQuestions,
+  submitToeicPracticeSession,
+} from "../../services/api/certificateService";
 import {
   getToeicIntakeProfile,
   saveToeicIntakeProfile,
@@ -72,8 +76,39 @@ interface SkillMapState {
   nodeScores: number[];
 }
 
+interface PracticeRunDraft {
+  questions: PracticeQuestion[];
+  sessionQuestionIds: number[];
+  currentQuestionIndex: number;
+  firstAnswers: Record<number, string>;
+  solvedCorrectly: number[];
+  currentAttempt: string | null;
+  aiExplanationByAttempt: Record<string, AiTutorExplanation>;
+  aiErrorByAttempt: Record<string, string>;
+  reservePoints: number | null;
+  unlockThreshold: number;
+  examUnlocked: boolean;
+  updatedAt: string;
+}
+
+interface PracticeMistakeHistoryItem {
+  questionId: string;
+  question: string;
+  firstAttempt: string;
+  correctAnswer: "A" | "B" | "C" | "D";
+  topic: string;
+  explanation: string;
+  createdAt: string;
+}
+
+type PracticeMistakeHistoryStore = Record<string, PracticeMistakeHistoryItem[]>;
+
 // ── Constants ──────────────────────────────────────────────────────────────
-const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v1";
+const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v2";
+const PRACTICE_DRAFT_STORAGE_KEY_PREFIX = "edvision.toeic.practice.draft.v1";
+const PRACTICE_MISTAKE_HISTORY_STORAGE_KEY =
+  "edvision.toeic.practice.mistakes.v1";
+const PRACTICE_MISTAKE_HISTORY_LIMIT = 120;
 const AI_PREFETCH_BATCH_SIZE = 1;
 const AI_PREFETCH_PRIORITY_AHEAD = 2;
 
@@ -95,6 +130,7 @@ function useTTS() {
   const speak = useCallback(
     (text: string) => {
       if (!isSupported) return;
+
       // Stop any ongoing speech first
       window.speechSynthesis.cancel();
 
@@ -1105,626 +1141,6 @@ const LISTENING_QUESTIONS: Record<number, PracticeQuestion[]> = {
   ],
 };
 
-const READING_QUESTIONS: Record<number, PracticeQuestion[]> = {
-  // Node 0 — Part 5-6
-  0: [
-    {
-      id: "R0Q1",
-      question: "She _____ to the office every day by bus.",
-      context: "Choose the correct form of the verb to complete the sentence.",
-      options: [
-        { key: "A", text: "go" },
-        { key: "B", text: "goes" },
-        { key: "C", text: "going" },
-        { key: "D", text: "gone" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        'Chủ ngữ "She" (số ít, ngôi 3) → dùng goes (hiện tại đơn, thêm -es).',
-    },
-    {
-      id: "R0Q2",
-      question: "The report _____ by the manager yesterday.",
-      context: "Choose the correct form of the verb to complete the sentence.",
-      options: [
-        { key: "A", text: "reviews" },
-        { key: "B", text: "reviewed" },
-        { key: "C", text: "was reviewed" },
-        { key: "D", text: "has reviewed" },
-      ],
-      correctAnswer: "C",
-      explanation:
-        'Bị động thì quá khứ đơn: was/were + V3. Từ "yesterday" xác nhận quá khứ đơn.',
-    },
-    {
-      id: "R0Q3",
-      question: "I have been working here _____ five years.",
-      context: "Choose the correct preposition to complete the sentence.",
-      options: [
-        { key: "A", text: "for" },
-        { key: "B", text: "since" },
-        { key: "C", text: "during" },
-        { key: "D", text: "from" },
-      ],
-      correctAnswer: "A",
-      explanation:
-        '"For" dùng với khoảng thời gian (five years = 5 năm). "Since" dùng với mốc thời gian cụ thể (since 2019).',
-    },
-    {
-      id: "R0Q4",
-      question: "He is _____ qualified for the position.",
-      context: "Choose the correct word to complete the sentence.",
-      options: [
-        { key: "A", text: "high" },
-        { key: "B", text: "highly" },
-        { key: "C", text: "higher" },
-        { key: "D", text: "highest" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        'Cần trạng từ (adverb) để bổ nghĩa cho tính từ "qualified" → highly (rất, cao độ).',
-    },
-    {
-      id: "R0Q5",
-      question: "The new policy will _____ effect from next month.",
-      context:
-        "Choose the correct verb to complete the fixed phrase (collocation).",
-      options: [
-        { key: "A", text: "take" },
-        { key: "B", text: "make" },
-        { key: "C", text: "do" },
-        { key: "D", text: "get" },
-      ],
-      correctAnswer: "A",
-      explanation:
-        'Cụm từ cố định (collocation): "take effect" = có hiệu lực. Không thể dùng make/do/get effect.',
-    },
-    {
-      id: "R0Q6",
-      question: "Despite _____ hard, she failed the exam.",
-      context: "Choose the correct verb form after a preposition.",
-      options: [
-        { key: "A", text: "study" },
-        { key: "B", text: "studied" },
-        { key: "C", text: "studying" },
-        { key: "D", text: "to study" },
-      ],
-      correctAnswer: "C",
-      explanation:
-        'Sau "despite" (mặc dù) → dùng V-ing (danh động từ). "Despite studying hard" = mặc dù học chăm chỉ.',
-    },
-    {
-      id: "R0Q7",
-      question: "We are looking forward _____ from you soon.",
-      context: "Choose the correct form to complete the phrasal verb.",
-      options: [
-        { key: "A", text: "to hear" },
-        { key: "B", text: "to hearing" },
-        { key: "C", text: "hear" },
-        { key: "D", text: "heard" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Look forward to" + V-ing. Chú ý: "to" ở đây là giới từ, không phải TO-infinitive.',
-    },
-    {
-      id: "R0Q8",
-      question: "The company's profits have _____ by 20% this year.",
-      context: "Choose the correct verb: rise or raise?",
-      options: [
-        { key: "A", text: "raised" },
-        { key: "B", text: "risen" },
-        { key: "C", text: "arose" },
-        { key: "D", text: "arisen" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Rise" (nội động từ) = tự tăng lên, không cần tân ngữ → have risen. "Raise" (ngoại động từ) = làm tăng cái gì đó.',
-    },
-    {
-      id: "R0Q9",
-      question: "Please _____ the form and return it by Friday.",
-      context: "Choose the correct verb form for an imperative sentence.",
-      options: [
-        { key: "A", text: "complete" },
-        { key: "B", text: "completing" },
-        { key: "C", text: "completed" },
-        { key: "D", text: "to complete" },
-      ],
-      correctAnswer: "A",
-      explanation:
-        "Mệnh lệnh thức (imperative) dùng động từ nguyên mẫu không TO.",
-    },
-    {
-      id: "R0Q10",
-      question: "She _____ her presentation when the lights went out.",
-      context:
-        "Choose the correct tense to express an action in progress when another event occurred.",
-      options: [
-        { key: "A", text: "gave" },
-        { key: "B", text: "was giving" },
-        { key: "C", text: "has given" },
-        { key: "D", text: "gives" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        'Hành động đang diễn ra (quá khứ tiếp diễn) khi sự kiện khác xảy ra đột ngột → "was giving".',
-    },
-  ],
-
-  // Node 1 — Part 7
-  1: [
-    {
-      id: "R1Q1",
-      question: "What is the purpose of this email?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "To announce a public holiday schedule." },
-        {
-          key: "B",
-          text: "To remind staff about the annual performance review.",
-        },
-        { key: "C", text: "To introduce new employees to the team." },
-        { key: "D", text: "To announce a change in company policy." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "Mục đích chính của email là nhắc nhở về quy trình đánh giá hiệu suất hàng năm (annual performance review).",
-    },
-    {
-      id: "R1Q2",
-      question: "When must the self-assessment form be submitted?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "By March 1." },
-        { key: "B", text: "By the end of March." },
-        { key: "C", text: "By February 25." },
-        { key: "D", text: "Immediately after receiving this email." },
-      ],
-      correctAnswer: "C",
-      explanation:
-        '"Required to complete the self-assessment form by February 25" → deadline rõ ràng là ngày 25/2.',
-    },
-    {
-      id: "R1Q3",
-      question: "Who will conduct the one-on-one meetings?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "The executive director." },
-        { key: "B", text: "HR staff members." },
-        { key: "C", text: "Direct managers." },
-        { key: "D", text: "The technical team." },
-      ],
-      correctAnswer: "C",
-      explanation:
-        '"Managers will then conduct one-on-one meetings" = quản lý trực tiếp sẽ thực hiện các buổi gặp riêng.',
-    },
-    {
-      id: "R1Q4",
-      question: "What does 'self-assessment' involve?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "Employees evaluating their colleagues." },
-        { key: "B", text: "Employees evaluating their own performance." },
-        { key: "C", text: "Managers evaluating employees." },
-        { key: "D", text: "Customers providing feedback." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Self-assessment" = tự đánh giá bản thân. "Self-" = tự mình (self-study, self-check, self-review...).',
-    },
-    {
-      id: "R1Q5",
-      question: "What should employees do if they have questions?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "Meet with their manager in person." },
-        { key: "B", text: "Attend an all-staff meeting." },
-        { key: "C", text: "Send an email to hr@company.com." },
-        { key: "D", text: "Read the employee handbook." },
-      ],
-      correctAnswer: "C",
-      explanation:
-        '"For questions, contact hr@company.com" = liên hệ email HR nếu có thắc mắc.',
-    },
-    {
-      id: "R1Q6",
-      question: "When do the one-on-one meetings take place?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "During the last week of February." },
-        { key: "B", text: "During the first two weeks of March." },
-        { key: "C", text: "Throughout the entire month of March." },
-        { key: "D", text: "In April." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"During the first two weeks of March" = trong hai tuần đầu của tháng 3.',
-    },
-    {
-      id: "R1Q7",
-      question: "What is required of ALL employees?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "Attend a full team meeting." },
-        { key: "B", text: "Complete the self-assessment form." },
-        { key: "C", text: "Meet with the HR director." },
-        { key: "D", text: "Write a detailed performance report." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"All employees are required to complete the self-assessment form" = tất cả nhân viên bắt buộc hoàn thành form tự đánh giá.',
-    },
-    {
-      id: "R1Q8",
-      question: "The tone of this email is best described as:",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "Urgent and alarming." },
-        { key: "B", text: "Formal and informative." },
-        { key: "C", text: "Casual and cheerful." },
-        { key: "D", text: "Critical and harsh." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "Email dùng ngôn ngữ lịch sự, trang trọng (formal), truyền đạt thông tin rõ ràng → giọng điệu formal and informative.",
-    },
-    {
-      id: "R1Q9",
-      question: "What period does 'annual' refer to?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "Monthly." },
-        { key: "B", text: "Quarterly (every 3 months)." },
-        { key: "C", text: "Yearly." },
-        { key: "D", text: "Weekly." },
-      ],
-      correctAnswer: "C",
-      explanation:
-        '"Annual" = yearly = hàng năm. Annual report = báo cáo hàng năm. Annual meeting = cuộc họp thường niên.',
-    },
-    {
-      id: "R1Q10",
-      question: "Which department sent this email?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Annual Performance Review\n\nDear Team,\n\nWe would like to remind you that the annual performance review process will begin on March 1. All employees are required to complete the self-assessment form by February 25. Managers will then conduct one-on-one meetings during the first two weeks of March.\n\nFor questions, contact hr@company.com.\n\nBest regards,\nHR Department",
-      options: [
-        { key: "A", text: "The IT Department." },
-        { key: "B", text: "The Sales Department." },
-        { key: "C", text: "The HR Department." },
-        { key: "D", text: "The Accounting Department." },
-      ],
-      correctAnswer: "C",
-      explanation:
-        '"From: HR Department" và "Best regards, HR Department" → phòng Nhân sự (HR) gửi email này.',
-    },
-  ],
-
-  // Node 2 — Advanced Reading
-  2: [
-    {
-      id: "R2Q1",
-      question: "According to David Chen, what has been completed?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "The product launch." },
-        { key: "B", text: "The prototype testing phase." },
-        { key: "C", text: "The marketing campaign." },
-        { key: "D", text: "The budget allocation." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"The prototype testing phase has been completed successfully" = giai đoạn kiểm thử nguyên mẫu đã hoàn thành thành công.',
-    },
-    {
-      id: "R2Q2",
-      question: "What issue was encountered during testing?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "Budget overruns." },
-        { key: "B", text: "Minor calibration issues." },
-        { key: "C", text: "A shortage of staff." },
-        { key: "D", text: "A serious product defect." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Minor calibration issues which have since been resolved" = vấn đề hiệu chỉnh nhỏ nhưng đã được giải quyết.',
-    },
-    {
-      id: "R2Q3",
-      question: "When is the product expected to launch?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "In Q1." },
-        { key: "B", text: "In Q2." },
-        { key: "C", text: "In Q3." },
-        { key: "D", text: "In Q4." },
-      ],
-      correctAnswer: "C",
-      explanation:
-        '"The Q3 launch" được đề cập trong cả hai tài liệu → ra mắt vào quý 3 (Q3).',
-    },
-    {
-      id: "R2Q4",
-      question: "What has the marketing team started doing?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "Testing the product prototype." },
-        { key: "B", text: "Preparing campaign materials." },
-        { key: "C", text: "Recruiting new employees." },
-        { key: "D", text: "Setting up a warehouse." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"The marketing team has begun preparing campaign materials" = đội marketing đã bắt đầu chuẩn bị tài liệu chiến dịch.',
-    },
-    {
-      id: "R2Q5",
-      question: "What will happen on July 15?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "The product will be officially launched." },
-        {
-          key: "B",
-          text: "Stakeholders will attend a meeting with a preview.",
-        },
-        { key: "C", text: "A contract will be signed." },
-        { key: "D", text: "A warehouse inspection will be conducted." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"All stakeholders should expect a preview at the July 15 meeting" = các bên liên quan sẽ xem preview tại cuộc họp ngày 15/7.',
-    },
-    {
-      id: "R2Q6",
-      question: "What can be inferred about the project's current status?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "The project is behind schedule." },
-        { key: "B", text: "The project is on schedule." },
-        { key: "C", text: "The project was completed ahead of schedule." },
-        { key: "D", text: "The project is facing major difficulties." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"The project remains on schedule" = dự án vẫn đúng tiến độ. "On schedule" = đúng kế hoạch.',
-    },
-    {
-      id: "R2Q7",
-      question: "What does 'stakeholders' most likely refer to?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "Regular customers of the company." },
-        { key: "B", text: "All parties with an interest in the project." },
-        { key: "C", text: "Members of the sales team." },
-        { key: "D", text: "External shareholders only." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Stakeholders" = các bên liên quan — rộng hơn "shareholders" (cổ đông). Bao gồm mọi người có lợi ích trong dự án.',
-    },
-    {
-      id: "R2Q8",
-      question: "According to BOTH documents, what is consistent?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "The budget has not yet been approved." },
-        { key: "B", text: "The Q3 launch target." },
-        { key: "C", text: "The product is already fully ready." },
-        { key: "D", text: "The team composition is changing." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        'Cả hai tài liệu đều đề cập "Q3 launch" → mục tiêu ra mắt quý 3 là điểm nhất quán giữa hai văn bản.',
-    },
-    {
-      id: "R2Q9",
-      question: "What does David Chen ask the reader to do?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "Attend the July 15 meeting." },
-        { key: "B", text: "Review the attached report." },
-        { key: "C", text: "Reply to him immediately." },
-        { key: "D", text: "Wait for further information." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Please review the attached report" = vui lòng xem báo cáo đính kèm. Yêu cầu trực tiếp từ David Chen.',
-    },
-    {
-      id: "R2Q10",
-      question: "What does the phrase 'remains on schedule' mean?",
-      context:
-        "From: David Chen\nSubject: Project Atlas - Status Update\n\nThe prototype testing phase has been completed successfully. We encountered minor calibration issues which have since been resolved. The project remains on schedule for the Q3 launch.\n\nPlease review the attached report.\n\n---\nInternal Memo — Re: Project Atlas\n\nFollowing David's update, the marketing team has begun preparing campaign materials for the Q3 launch. Budget allocation has been approved. All stakeholders should expect a preview at the July 15 meeting.",
-      options: [
-        { key: "A", text: "The project is running behind plan." },
-        { key: "B", text: "The project is still on track as planned." },
-        { key: "C", text: "The project was finished earlier than expected." },
-        { key: "D", text: "The timeline needs to be adjusted." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        '"Remains on schedule" = vẫn đúng kế hoạch, không bị trễ. "On schedule" = đúng lịch trình đã đặt ra.',
-    },
-  ],
-  3: [
-    {
-      id: "R3Q1",
-      question: "What is the main purpose of this announcement?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Office Relocation Notice\n\nWe are pleased to inform you that our company will be relocating to a new office at 450 Harbor Boulevard effective March 1st. The new facility offers expanded workspace and improved amenities. All employees are required to complete the relocation form by February 15th. Parking arrangements will be communicated separately.",
-      options: [
-        { key: "A", text: "To announce new job openings." },
-        { key: "B", text: "To inform staff about an office relocation." },
-        { key: "C", text: "To introduce a remote work policy." },
-        { key: "D", text: "To announce a company holiday schedule." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "'Relocating to a new office' = chuyển đến văn phòng mới tại 450 Harbor Boulevard. Đây là mục đích chính.",
-    },
-    {
-      id: "R3Q2",
-      question: "By when must employees submit the relocation form?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Office Relocation Notice\n\nWe are pleased to inform you that our company will be relocating to a new office at 450 Harbor Boulevard effective March 1st. The new facility offers expanded workspace and improved amenities. All employees are required to complete the relocation form by February 15th. Parking arrangements will be communicated separately.",
-      options: [
-        { key: "A", text: "By March 1st." },
-        { key: "B", text: "By February 15th." },
-        { key: "C", text: "By January 31st." },
-        { key: "D", text: "By February 28th." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "'Required to complete the relocation form by February 15th' — deadline rõ ràng được nêu trong văn bản.",
-    },
-    {
-      id: "R3Q3",
-      question: "What is NOT mentioned as a benefit of the new facility?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Office Relocation Notice\n\nWe are pleased to inform you that our company will be relocating to a new office at 450 Harbor Boulevard effective March 1st. The new facility offers expanded workspace and improved amenities. All employees are required to complete the relocation form by February 15th. Parking arrangements will be communicated separately.",
-      options: [
-        { key: "A", text: "Expanded workspace." },
-        { key: "B", text: "Improved amenities." },
-        { key: "C", text: "Parking information will be provided separately." },
-        { key: "D", text: "A modern fitness center." },
-      ],
-      correctAnswer: "D",
-      explanation:
-        "Văn bản đề cập 'expanded workspace' và 'improved amenities' nhưng KHÔNG đề cập phòng gym. Câu hỏi dạng NOT mentioned.",
-    },
-    {
-      id: "R3Q4",
-      question: "What can be inferred about the current office?",
-      context:
-        "To: All Staff\nFrom: HR Department\nSubject: Office Relocation Notice\n\nWe are pleased to inform you that our company will be relocating to a new office at 450 Harbor Boulevard effective March 1st. The new facility offers expanded workspace and improved amenities. All employees are required to complete the relocation form by February 15th. Parking arrangements will be communicated separately.",
-      options: [
-        { key: "A", text: "The current office is being renovated." },
-        { key: "B", text: "The current office has less space." },
-        { key: "C", text: "The current office has already been sold." },
-        { key: "D", text: "The current office has no parking." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "Vì văn phòng mới có 'expanded workspace' → ta suy ra văn phòng hiện tại có không gian hạn chế hơn.",
-    },
-    {
-      id: "R3Q5",
-      question: "What does the word 'amenities' most likely refer to?",
-      context:
-        "The new facility offers expanded workspace and improved amenities.",
-      options: [
-        { key: "A", text: "Old office equipment." },
-        { key: "B", text: "Facilities and support services." },
-        { key: "C", text: "The office rental contract." },
-        { key: "D", text: "Security staff." },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "'Amenities' = các tiện nghi, tiện ích (phòng họp, bếp, khu giải trí...). Từ vựng TOEIC Part 7 quan trọng.",
-    },
-    {
-      id: "R3Q6",
-      question: "What is the relationship between the two documents?",
-      context:
-        "Email from Sales Manager:\nThe Q2 figures show a 15% decline in the Western region. I recommend we increase our marketing budget for that area immediately.\n\n---\nBoard Meeting Minutes:\nFollowing the sales manager's report on Q2 performance, the board approved a supplementary marketing budget of $50,000 for the Western region, effective next quarter.",
-      options: [
-        { key: "A", text: "The two documents contradict each other." },
-        {
-          key: "B",
-          text: "The second document is a formal response to the proposal in the first.",
-        },
-        { key: "C", text: "The two documents are about different regions." },
-        {
-          key: "D",
-          text: "The first document cancels the proposal in the second.",
-        },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "Email đề xuất tăng ngân sách, biên bản họp xác nhận đã phê duyệt → tài liệu 2 là phản hồi chính thức. Dạng câu hỏi double-passage.",
-    },
-    {
-      id: "R3Q7",
-      question: "How much additional budget was approved?",
-      context:
-        "Email from Sales Manager:\nThe Q2 figures show a 15% decline in the Western region. I recommend we increase our marketing budget for that area immediately.\n\n---\nBoard Meeting Minutes:\nFollowing the sales manager's report on Q2 performance, the board approved a supplementary marketing budget of $50,000 for the Western region, effective next quarter.",
-      options: [
-        { key: "A", text: "$15,000" },
-        { key: "B", text: "$50,000" },
-        { key: "C", text: "$150,000" },
-        { key: "D", text: "$500,000" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "Biên bản cuộc họp nêu rõ 'approved a supplementary marketing budget of $50,000'. Đọc kỹ số liệu cụ thể.",
-    },
-    {
-      id: "R3Q8",
-      question: "What does 'supplementary' most likely mean in this context?",
-      context:
-        "The board approved a supplementary marketing budget of $50,000 for the Western region.",
-      options: [
-        { key: "A", text: "Thay thế hoàn toàn ngân sách cũ" },
-        { key: "B", text: "Bổ sung thêm vào ngân sách hiện có" },
-        { key: "C", text: "Tạm thời và có thể bị thu hồi" },
-        { key: "D", text: "Bí mật và không được công bố" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "'Supplementary' = bổ sung, thêm vào. Không thay thế ngân sách cũ mà cộng thêm vào.",
-    },
-    {
-      id: "R3Q9",
-      question: "What can be inferred about the Western region's performance?",
-      context:
-        "Email from Sales Manager:\nThe Q2 figures show a 15% decline in the Western region. I recommend we increase our marketing budget for that area immediately.\n\n---\nBoard Meeting Minutes:\nFollowing the sales manager's report on Q2 performance, the board approved a supplementary marketing budget of $50,000 for the Western region, effective next quarter.",
-      options: [
-        { key: "A", text: "Vùng phía Tây đang tăng trưởng mạnh" },
-        { key: "B", text: "Vùng phía Tây đang gặp khó khăn về doanh số" },
-        { key: "C", text: "Vùng phía Tây đã đạt mục tiêu Q2" },
-        { key: "D", text: "Ban giám đốc đã từ chối đề xuất của sales manager" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "'Q2 figures show a 15% decline' = doanh số giảm 15% → vùng phía Tây đang gặp khó khăn về doanh số.",
-    },
-    {
-      id: "R3Q10",
-      question: "What action did the board take after reviewing the Q2 report?",
-      context:
-        "Email from Sales Manager:\nThe Q2 figures show a 15% decline in the Western region. I recommend we increase our marketing budget for that area immediately.\n\n---\nBoard Meeting Minutes:\nFollowing the sales manager's report on Q2 performance, the board approved a supplementary marketing budget of $50,000 for the Western region, effective next quarter.",
-      options: [
-        { key: "A", text: "Yêu cầu sales manager từ chức" },
-        { key: "B", text: "Phê duyệt ngân sách marketing bổ sung $50,000" },
-        { key: "C", text: "Quyết định đóng cửa vùng phía Tây" },
-        { key: "D", text: "Trì hoãn quyết định đến quý sau" },
-      ],
-      correctAnswer: "B",
-      explanation:
-        "'The board approved a supplementary marketing budget of $50,000' = hội đồng phê duyệt ngân sách marketing bổ sung.",
-    },
-  ],
-};
-
 // ── localStorage helpers ───────────────────────────────────────────────────
 function loadMapState(): LearningMapState {
   try {
@@ -1741,6 +1157,94 @@ function loadMapState(): LearningMapState {
 
 function saveMapState(state: LearningMapState): void {
   localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(state));
+}
+
+function buildPracticeDraftStorageKey(
+  skill: "listening" | "reading",
+  toeicPart: number,
+): string {
+  return `${PRACTICE_DRAFT_STORAGE_KEY_PREFIX}.${skill}.part_${toeicPart}`;
+}
+
+function loadPracticeRunDraft(storageKey: string): PracticeRunDraft | null {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PracticeRunDraft;
+
+    if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+      return null;
+    }
+    if (
+      !Array.isArray(parsed.sessionQuestionIds) ||
+      parsed.sessionQuestionIds.length !== parsed.questions.length
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePracticeRunDraft(
+  storageKey: string,
+  draft: PracticeRunDraft,
+): void {
+  localStorage.setItem(storageKey, JSON.stringify(draft));
+}
+
+function clearPracticeRunDraft(storageKey: string): void {
+  localStorage.removeItem(storageKey);
+}
+
+function buildPracticeMistakeHistoryBucketKey(
+  skill: "listening" | "reading",
+  toeicPart: number,
+): string {
+  return `${skill}.part_${toeicPart}`;
+}
+
+function loadPracticeMistakeHistoryStore(): PracticeMistakeHistoryStore {
+  try {
+    const raw = localStorage.getItem(PRACTICE_MISTAKE_HISTORY_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as PracticeMistakeHistoryStore;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePracticeMistakeHistoryStore(store: PracticeMistakeHistoryStore): void {
+  localStorage.setItem(PRACTICE_MISTAKE_HISTORY_STORAGE_KEY, JSON.stringify(store));
+}
+
+function getPracticeMistakeHistory(
+  skill: "listening" | "reading",
+  toeicPart: number,
+  limit = 30,
+): PracticeMistakeHistoryItem[] {
+  const bucketKey = buildPracticeMistakeHistoryBucketKey(skill, toeicPart);
+  const store = loadPracticeMistakeHistoryStore();
+  const bucket = Array.isArray(store[bucketKey]) ? store[bucketKey] : [];
+  return bucket.slice(-Math.max(1, limit));
+}
+
+function appendPracticeMistakeHistory(
+  skill: "listening" | "reading",
+  toeicPart: number,
+  items: PracticeMistakeHistoryItem[],
+): void {
+  if (items.length === 0) return;
+
+  const bucketKey = buildPracticeMistakeHistoryBucketKey(skill, toeicPart);
+  const store = loadPracticeMistakeHistoryStore();
+  const existing = Array.isArray(store[bucketKey]) ? store[bucketKey] : [];
+
+  const merged = [...existing, ...items].slice(-PRACTICE_MISTAKE_HISTORY_LIMIT);
+  store[bucketKey] = merged;
+  savePracticeMistakeHistoryStore(store);
 }
 
 // ── Score meter helper ────────────────────────────────────────────────────
@@ -1761,6 +1265,15 @@ function getScoreLabel(
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function nodeIndexToToeicPart(
+  skill: "listening" | "reading",
+  nodeIndex: number,
+): number | null {
+  if (skill === "listening") return ([1, 2, 3, 4] as const)[nodeIndex] ?? null;
+  return ([5, 6, 7] as const)[nodeIndex] ?? null;
+}
+
 export default function ToeicNodePracticePage() {
   const { skillId, nodeIndex } = useParams<{
     skillId: string;
@@ -1778,13 +1291,26 @@ export default function ToeicNodePracticePage() {
 
   const isListening = activeSkill === "listening";
   const nodeInfoList = isListening ? LISTENING_NODE_INFO : READING_NODE_INFO;
-  const questionsBank = isListening ? LISTENING_QUESTIONS : READING_QUESTIONS;
+  const questionsBank = isListening ? LISTENING_QUESTIONS : {};
 
   const nodeInfo = nodeInfoList[parsedNodeIndex] ?? null;
-  const questions: PracticeQuestion[] = useMemo(
-    () => questionsBank[parsedNodeIndex] ?? [],
-    [questionsBank, parsedNodeIndex],
+  const toeicPart = nodeIndexToToeicPart(activeSkill, parsedNodeIndex);
+
+  // Declared before questions useMemo since it is referenced inside the memo fn
+  const [dbQuestions, setDbQuestions] = useState<PracticeQuestion[] | null>(
+    null,
   );
+
+  const questions: PracticeQuestion[] = useMemo(() => {
+    // For reading: always use DB questions (no hardcoded fallback)
+    if (!isListening) return dbQuestions ?? [];
+    // For listening: use DB if available, else fall back to hardcoded
+    if (toeicPart !== null && dbQuestions !== null) return dbQuestions;
+    return (
+      (questionsBank as Record<number, PracticeQuestion[]>)[parsedNodeIndex] ??
+      []
+    );
+  }, [toeicPart, dbQuestions, questionsBank, parsedNodeIndex, isListening]);
 
   // ── State ────────────────────────────────────────────────────────────────
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -1810,6 +1336,50 @@ export default function ToeicNodePracticePage() {
   const aiExplanationRef = useRef<Record<string, AiTutorExplanation>>({});
   const aiLoadingRef = useRef<Record<string, boolean>>({});
 
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [sessionQuestionIds, setSessionQuestionIds] = useState<number[]>([]);
+  const [reservePoints, setReservePoints] = useState<number | null>(null);
+  const [unlockThreshold, setUnlockThreshold] = useState<number>(300);
+  const [earnedThisSession, setEarnedThisSession] = useState<number | null>(
+    null,
+  );
+  const [attemptPointsThisSession, setAttemptPointsThisSession] = useState<
+    number | null
+  >(null);
+  const [examUnlocked, setExamUnlocked] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{
+    correct_answers: Record<string, string>;
+    explanations: Record<string, string | null>;
+  } | null>(null);
+  const [partSummaryText, setPartSummaryText] = useState<string | null>(null);
+  const [partSummaryLoading, setPartSummaryLoading] = useState(false);
+  const [partSummaryError, setPartSummaryError] = useState<string | null>(null);
+  const partSummaryRequestedKeyRef = useRef<string | null>(null);
+  const [questionRefreshVersion, setQuestionRefreshVersion] = useState(0);
+  const practiceDraftStorageKey = useMemo(() => {
+    if (toeicPart === null) return null;
+    return buildPracticeDraftStorageKey(activeSkill, toeicPart);
+  }, [activeSkill, toeicPart]);
+
+  const resetPracticeRunState = useCallback(() => {
+    setFirstAnswers({});
+    setCurrentAttempt(null);
+    setSolvedCorrectly(new Set());
+    setCurrentQuestionIndex(0);
+    setShowSummary(false);
+    setAiExplanationByAttempt({});
+    setAiLoadingByAttempt({});
+    setAiErrorByAttempt({});
+    setSubmitResult(null);
+    setEarnedThisSession(null);
+    setAttemptPointsThisSession(null);
+    setPartSummaryText(null);
+    setPartSummaryLoading(false);
+    setPartSummaryError(null);
+    partSummaryRequestedKeyRef.current = null;
+  }, []);
+
   useEffect(() => {
     aiExplanationRef.current = aiExplanationByAttempt;
   }, [aiExplanationByAttempt]);
@@ -1830,12 +1400,137 @@ export default function ToeicNodePracticePage() {
     }
   }, [currentQuestionIndex, showSummary]);
 
-  // ── Guards ───────────────────────────────────────────────────────────────
-  const _isInvalidRoute =
-    !nodeInfo ||
-    questions.length === 0 ||
-    isNaN(parsedNodeIndex) ||
-    parsedNodeIndex < 0;
+  // Fetch questions from API for mapped TOEIC parts
+  useEffect(() => {
+    if (toeicPart === null) return; // Advanced node — use hardcoded
+
+    setDbLoading(true);
+    setDbError(null);
+
+    if (practiceDraftStorageKey) {
+      const draft = loadPracticeRunDraft(practiceDraftStorageKey);
+      if (draft) {
+        setDbQuestions(draft.questions);
+        setSessionQuestionIds(draft.sessionQuestionIds);
+        setCurrentQuestionIndex(
+          Math.max(
+            0,
+            Math.min(draft.currentQuestionIndex ?? 0, draft.questions.length - 1),
+          ),
+        );
+        setFirstAnswers(draft.firstAnswers ?? {});
+        setSolvedCorrectly(new Set(draft.solvedCorrectly ?? []));
+        setCurrentAttempt(draft.currentAttempt ?? null);
+        setAiExplanationByAttempt(draft.aiExplanationByAttempt ?? {});
+        aiExplanationRef.current = draft.aiExplanationByAttempt ?? {};
+        setAiErrorByAttempt(draft.aiErrorByAttempt ?? {});
+        setAiLoadingByAttempt({});
+        aiLoadingRef.current = {};
+        setShowSummary(false);
+        setSubmitResult(null);
+        setEarnedThisSession(null);
+        setAttemptPointsThisSession(null);
+        setPartSummaryText(null);
+        setPartSummaryLoading(false);
+        setPartSummaryError(null);
+        partSummaryRequestedKeyRef.current = null;
+        setReservePoints(draft.reservePoints ?? null);
+        setUnlockThreshold(draft.unlockThreshold ?? 300);
+        setExamUnlocked(Boolean(draft.examUnlocked));
+        setDbLoading(false);
+        return;
+      }
+    }
+
+    resetPracticeRunState();
+    getToeicPracticeQuestions(toeicPart)
+      .then((data) => {
+        if (!Array.isArray(data.questions) || data.questions.length === 0) {
+          setDbQuestions(null);
+          setSessionQuestionIds([]);
+          setDbError(
+            `Part ${toeicPart} hiện chưa đủ 10 câu hỏi mới trong band điểm của bạn. Vui lòng liên hệ giáo viên để bổ sung bộ câu hỏi.`,
+          );
+          return;
+        }
+
+        const mapped: PracticeQuestion[] = data.questions.map((q) => ({
+          id: String(q.id),
+          question: q.stem ?? "",
+          context: q.reading_passage ?? "",
+          options: q.options
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((o) => ({
+              key: o.option_key as "A" | "B" | "C" | "D",
+              text: o.option_text,
+            })),
+          correctAnswer: (q.options.find((o) => o.is_correct)?.option_key ??
+            "A") as "A" | "B" | "C" | "D",
+          explanation: (q.ai_explanation ?? "").trim(),
+        }));
+        setDbQuestions(mapped.length > 0 ? mapped : null);
+        setSessionQuestionIds(data.questions.map((q) => q.id));
+        setReservePoints(data.current_reserve_points);
+        setUnlockThreshold(data.unlock_threshold ?? 300);
+        setExamUnlocked(data.current_reserve_points >= data.unlock_threshold);
+      })
+      .catch((error: unknown) => {
+        const msg =
+          (error as any)?.response?.data?.message ??
+          (error as any)?.message ??
+          "Không tải được câu hỏi từ server.";
+        setDbError(Array.isArray(msg) ? msg.join(" ") : String(msg));
+      })
+      .finally(() => setDbLoading(false));
+  }, [
+    toeicPart,
+    questionRefreshVersion,
+    practiceDraftStorageKey,
+    resetPracticeRunState,
+  ]);
+
+  useEffect(() => {
+    if (toeicPart === null || !practiceDraftStorageKey) return;
+    if (dbLoading || dbError || showSummary || submitResult) return;
+    if (questions.length === 0 || sessionQuestionIds.length !== questions.length)
+      return;
+
+    savePracticeRunDraft(practiceDraftStorageKey, {
+      questions,
+      sessionQuestionIds,
+      currentQuestionIndex,
+      firstAnswers,
+      solvedCorrectly: [...solvedCorrectly],
+      currentAttempt,
+      aiExplanationByAttempt,
+      aiErrorByAttempt,
+      reservePoints,
+      unlockThreshold,
+      examUnlocked,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [
+    aiErrorByAttempt,
+    aiExplanationByAttempt,
+    currentAttempt,
+    currentQuestionIndex,
+    dbError,
+    dbLoading,
+    examUnlocked,
+    firstAnswers,
+    practiceDraftStorageKey,
+    questions,
+    reservePoints,
+    sessionQuestionIds,
+    showSummary,
+    solvedCorrectly,
+    submitResult,
+    toeicPart,
+    unlockThreshold,
+  ]);
+
+  const isInvalidRoute =
+    !nodeInfo || isNaN(parsedNodeIndex) || parsedNodeIndex < 0;
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const currentQuestion = questions[currentQuestionIndex];
@@ -1869,7 +1564,9 @@ export default function ToeicNodePracticePage() {
   );
 
   const currentAttemptKey =
-    currentAttempt !== null ? `${currentQuestion.id}:${currentAttempt}` : null;
+    currentAttempt !== null && currentQuestion
+      ? `${currentQuestion.id}:${currentAttempt}`
+      : null;
   const currentAttemptAi = currentAttemptKey
     ? aiExplanationByAttempt[currentAttemptKey]
     : undefined;
@@ -1896,9 +1593,54 @@ export default function ToeicNodePracticePage() {
     ) {
       return false;
     }
-    return /\b(the|is|are|was|were|should|because|subject|verb|correct|option|maintain|consistency)\b/i.test(
-      text,
-    );
+
+    const lowered = text.toLowerCase();
+    if (
+      /^(the\s+correct\s+answer|correct\s+answer|in\s+this\s+sentence|because\s+)/i.test(
+        lowered,
+      )
+    ) {
+      return true;
+    }
+
+    const tokens = lowered.match(/[a-z]+/g) ?? [];
+    if (tokens.length === 0) return false;
+
+    const englishKeywords = new Set([
+      "the",
+      "is",
+      "are",
+      "was",
+      "were",
+      "because",
+      "should",
+      "must",
+      "correct",
+      "answer",
+      "option",
+      "choice",
+      "selected",
+      "subject",
+      "verb",
+      "noun",
+      "adjective",
+      "adverb",
+      "tense",
+      "grammar",
+      "meaning",
+      "blank",
+      "sentence",
+      "context",
+      "therefore",
+      "maintain",
+      "consistency",
+    ]);
+
+    const matchedKeywords = tokens.filter((token) =>
+      englishKeywords.has(token),
+    ).length;
+
+    return matchedKeywords >= 4 || matchedKeywords / tokens.length >= 0.18;
   }, []);
 
   const isGenericTemplateAnswer = useCallback((text: string): boolean => {
@@ -1914,10 +1656,459 @@ export default function ToeicNodePracticePage() {
     );
   }, []);
 
+  const shouldUseDbExplanationDirectly = useCallback(
+    (text: string): boolean => {
+      const normalized = text.trim();
+      if (normalized.length < 48) return false;
+
+      if (isLikelyEnglishAnswer(normalized)) return false;
+
+      if (
+        /^correct answer\s*:/i.test(normalized) ||
+        /\bsummary\s*:/i.test(normalized) ||
+        /\boption breakdown\s*:/i.test(normalized)
+      ) {
+        return false;
+      }
+
+      if (
+        /\bincorrect\.\s*incorrect\./i.test(normalized) ||
+        /\bcorrect\.\s*correct\./i.test(normalized)
+      ) {
+        return false;
+      }
+
+      return true;
+    },
+    [isLikelyEnglishAnswer],
+  );
+
   const buildAiUnavailableMessage = useCallback(
     (selectedOption: QuestionOption): string =>
       `Qwen chưa phản hồi ổn định cho lần chọn ${selectedOption.key}. Vui lòng bấm "Thử lại AI" để lấy phân tích chi tiết cho câu này.`,
     [],
+  );
+
+  const detectWeaknessTopic = useCallback(
+    (questionData: PracticeQuestion, explanation: string): string => {
+      const optionTokens = questionData.options
+        .map((option) => option.text.trim().toLowerCase().replace(/[^a-z]/g, ""))
+        .filter((token) => token.length > 0);
+      const prepositionSet = new Set([
+        "in",
+        "on",
+        "at",
+        "by",
+        "for",
+        "to",
+        "from",
+        "with",
+        "of",
+        "about",
+        "into",
+        "onto",
+        "over",
+        "under",
+      ]);
+
+      const prepositionOptionHits = optionTokens.filter((token) =>
+        prepositionSet.has(token),
+      ).length;
+
+      const merged = [
+        questionData.question,
+        questionData.context,
+        questionData.options.map((option) => option.text).join(" "),
+        explanation,
+      ]
+        .join("\n")
+        .toLowerCase();
+
+      if (
+        /preposition|giới từ|responsible\s+for|in\s+charge\s+of|by\s*\/\s*at\s*\/\s*in\s*\/\s*on/i.test(
+          merged,
+        ) ||
+        prepositionOptionHits >= 2
+      ) {
+        return "Preposition";
+      }
+
+      if (
+        /subject\s*[- ]?\s*verb|s\s*[- ]?\s*v\s*agreement|hòa hợp chủ ngữ|chia động từ|subject and verb/i.test(
+          merged,
+        )
+      ) {
+        return "Subject-Verb Agreement";
+      }
+
+      if (
+        /word\s*form|dạng từ|noun|verb|adjective|adverb|danh từ|động từ|tính từ|trạng từ/i.test(
+          merged,
+        )
+      ) {
+        return "Word Form";
+      }
+
+      if (/tense|thì|past|present|future|participle|chia thì/i.test(merged)) {
+        return "Tense";
+      }
+
+      if (/collocation|cụm từ|đi với|phrasal|idiom/i.test(merged)) {
+        return "Collocation";
+      }
+
+      return "Vocabulary/Meaning";
+    },
+    [],
+  );
+
+  const extractKnowledgeHints = useCallback((text: string): string[] => {
+    const matches: string[] = [];
+    const quotePattern = /"([^"\n]{3,48})"|'([^'\n]{3,48})'/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = quotePattern.exec(text)) !== null) {
+      const picked = (match[1] ?? match[2] ?? "").trim();
+      if (picked.length >= 3) matches.push(picked);
+      if (matches.length >= 4) break;
+    }
+
+    return Array.from(new Set(matches));
+  }, []);
+
+  const formatAiExplanationForDisplay = useCallback(
+    (text: string, questionData: PracticeQuestion): string => {
+      const cleaned = text
+        .replace(/\r\n/g, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/^#{1,6}\s*/gm, "")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      const localized = cleaned
+        .replace(
+          /^\s*the\s+correct\s+answer\s*(?:is|:)\s*/gim,
+          "Đáp án đúng là ",
+        )
+        .replace(/^\s*correct\s+answer\s*[:\-]\s*/gim, "Đáp án đúng là ")
+        .replace(/^\s*option\s+breakdown\s*[:\-]?\s*/gim, "Phân tích phương án:")
+        .replace(/^\s*option\s*([A-D])\s*[:\-]\s*/gim, "- $1: ")
+        .replace(/^\s*choice\s*([A-D])\s*[:\-]\s*/gim, "- $1: ")
+        .replace(/^\s*([A-D])\s*[.)\-:]\s*/gim, "- $1: ")
+        .replace(/^\s*phân tích các phương án còn lại\s*:?[ \t]*$/gim, "")
+        .replace(/^\s*phân tích phương án\s*:?[ \t]*$/gim, "")
+        .replace(/^\s*summary\s*[:\-]\s*/gim, "Tóm tắt: ")
+        .trim();
+
+      const lines = localized
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      let detectedCorrectAnswer = questionData.correctAnswer;
+      let correctLeadReason = "";
+
+      const explicitCorrectLine = lines.find((line) =>
+        /^đáp án đúng\s*(?::|là)/i.test(line),
+      );
+
+      if (explicitCorrectLine) {
+        const detected = explicitCorrectLine.match(/\b([A-D])\b/i)?.[1];
+        if (detected) {
+          detectedCorrectAnswer = detected.toUpperCase() as "A" | "B" | "C" | "D";
+        }
+
+        correctLeadReason = explicitCorrectLine
+          .replace(/^đáp án đúng\s*(?::|là)\s*[A-D][.)]?\s*/i, "")
+          .trim();
+      }
+
+      const optionReasonByKey = new Map<"A" | "B" | "C" | "D", string>();
+      const narrativeLines: string[] = [];
+      let activeOptionKey: "A" | "B" | "C" | "D" | null = null;
+
+      lines.forEach((line) => {
+        if (/^đáp án đúng\s*(?::|là)/i.test(line)) {
+          activeOptionKey = null;
+          return;
+        }
+
+        if (/^phân tích\s*(các\s*)?phương án\s*:?/i.test(line)) {
+          activeOptionKey = null;
+          return;
+        }
+
+        if (/^tóm tắt\s*:/i.test(line)) {
+          activeOptionKey = null;
+          return;
+        }
+
+        const optionMatch = line.match(/^(?:[-•]\s*)?([A-D])\s*[:.)\-]\s*(.+)$/i);
+        if (optionMatch) {
+          const optionKey = optionMatch[1].toUpperCase() as "A" | "B" | "C" | "D";
+          const optionReason = optionMatch[2].trim();
+          optionReasonByKey.set(optionKey, optionReason);
+          activeOptionKey = optionKey;
+          return;
+        }
+
+        if (activeOptionKey) {
+          const previous = optionReasonByKey.get(activeOptionKey) ?? "";
+          optionReasonByKey.set(
+            activeOptionKey,
+            `${previous} ${line}`.trim(),
+          );
+          return;
+        }
+
+        narrativeLines.push(line);
+      });
+
+      const isWeakReason = (reason: string, optionKey: "A" | "B" | "C" | "D") => {
+        const compact = reason.replace(/\s+/g, " ").trim();
+        if (compact.length < 18) return true;
+
+        const optionText =
+          questionData.options
+            .find((option) => option.key === optionKey)
+            ?.text.trim()
+            .toLowerCase() ?? "";
+
+        if (optionText && compact.toLowerCase() === optionText) return true;
+        if (/^(đúng|sai|correct|incorrect)[.!]?$/i.test(compact)) return true;
+
+        return false;
+      };
+
+      const inferredCorrectReason =
+        (correctLeadReason.length >= 18 ? correctLeadReason : "") ||
+        narrativeLines.find((line) => line.length >= 18) ||
+        `"${questionData.options.find((option) => option.key === detectedCorrectAnswer)?.text ?? detectedCorrectAnswer}" phù hợp nhất với ngữ cảnh và yêu cầu ngữ pháp của câu.`;
+
+      const canonicalOptionLines = questionData.options.map((option) => {
+        const currentReason = (optionReasonByKey.get(option.key) ?? "").trim();
+
+        const resolvedReason =
+          isWeakReason(currentReason, option.key)
+            ? option.key === detectedCorrectAnswer
+              ? inferredCorrectReason
+              : `"${option.text}" không phù hợp với ngữ cảnh hoặc yêu cầu ngữ pháp của câu.`
+            : currentReason;
+
+        return `- ${option.key}: ${resolvedReason}`;
+      });
+
+      return [
+        `Đáp án đúng là ${detectedCorrectAnswer}.`,
+        "",
+        "Phân tích phương án:",
+        ...canonicalOptionLines,
+      ]
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    },
+    [],
+  );
+
+  const resolveReviewExplanation = useCallback(
+    (
+      questionData: PracticeQuestion,
+      questionIndex: number,
+      submittedExplanations?: Record<string, string | null>,
+    ): string => {
+      const attemptKey = `${questionData.id}:${questionData.correctAnswer}`;
+      const cachedAi = aiExplanationByAttempt[attemptKey]?.answer?.trim();
+      if (cachedAi) {
+        const formattedCached = formatAiExplanationForDisplay(
+          cachedAi,
+          questionData,
+        );
+
+        if (!isLikelyEnglishAnswer(formattedCached)) {
+          return formattedCached;
+        }
+      }
+
+      const submittedQuestionId = sessionQuestionIds[questionIndex];
+      const explanationFromSubmit =
+        (submittedExplanations &&
+          (submittedExplanations[String(submittedQuestionId)] ??
+            submittedExplanations[questionData.id])) ??
+        (submitResult?.explanations &&
+          (submitResult.explanations[String(submittedQuestionId)] ??
+            submitResult.explanations[questionData.id])) ??
+        questionData.explanation ??
+        "";
+
+      const normalizedFromSubmit = explanationFromSubmit.trim();
+      if (normalizedFromSubmit.length > 0) {
+        const formattedFromSubmit = formatAiExplanationForDisplay(
+          normalizedFromSubmit,
+          questionData,
+        );
+
+        if (!isLikelyEnglishAnswer(formattedFromSubmit)) {
+          return formattedFromSubmit;
+        }
+      }
+
+      return formatAiExplanationForDisplay(
+        `Đáp án đúng: ${questionData.correctAnswer}. Cần xem lại ngữ cảnh trong câu và loại từ phù hợp để chọn phương án chính xác.`,
+        questionData,
+      );
+    },
+    [
+      aiExplanationByAttempt,
+      formatAiExplanationForDisplay,
+      isLikelyEnglishAnswer,
+      sessionQuestionIds,
+      submitResult,
+    ],
+  );
+
+  const buildFallbackPartSummary = useCallback((): string => {
+    if (toeicPart === null) return "";
+
+    const summaryRows = questions.map((questionData, questionIndex) => {
+      const firstAttempt = firstAnswers[questionIndex] ?? null;
+      const gotItFirstTry = firstAttempt === questionData.correctAnswer;
+      const explanation = resolveReviewExplanation(questionData, questionIndex);
+      const topic = detectWeaknessTopic(questionData, explanation);
+      return {
+        gotItFirstTry,
+        topic,
+        explanation,
+      };
+    });
+
+    const strengthTopicCounts = new Map<string, number>();
+    const weaknessTopicCounts = new Map<string, number>();
+
+    summaryRows.forEach((row) => {
+      const target = row.gotItFirstTry ? strengthTopicCounts : weaknessTopicCounts;
+      target.set(row.topic, (target.get(row.topic) ?? 0) + 1);
+    });
+
+    const strongest =
+      [...strengthTopicCounts.entries()].sort((a, b) => b[1] - a[1])[0] ??
+      (["Độ chính xác lần đầu", correctCount] as const);
+    const weakest =
+      [...weaknessTopicCounts.entries()].sort((a, b) => b[1] - a[1])[0] ??
+      (["Preposition", Math.max(1, questions.length - correctCount)] as const);
+
+    const knowledgeHints = Array.from(
+      new Set(
+        summaryRows
+          .filter((row) => !row.gotItFirstTry)
+          .flatMap((row) => extractKnowledgeHints(row.explanation)),
+      ),
+    ).slice(0, 2);
+
+    const knowledgeLine =
+      knowledgeHints.length > 0
+        ? knowledgeHints.map((hint) => `"${hint}"`).join(" và ")
+        : weakest[0] === "Preposition"
+          ? 'cụm "responsible for" và "in charge of"'
+          : `${weakest[0]} theo ngữ cảnh câu TOEIC`;
+
+    const weakTopicForPractice =
+      weakest[0] === "Preposition" ? "preposition" : weakest[0].toLowerCase();
+
+    return [
+      `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
+      `• Bạn mạnh về ${strongest[0]} (${strongest[1]}/${Math.max(1, correctCount)} đúng).`,
+      `• Điểm yếu lớn: ${weakest[0]} (${weakest[1]}/${Math.max(1, questions.length - correctCount)} lỗi).`,
+      `• Kiến thức cần ôn thêm: ${knowledgeLine}.`,
+      `• Gợi ý: Làm thêm 8 câu về ${weakTopicForPractice} ở mức 550-650.`,
+    ].join("\n");
+  }, [
+    correctCount,
+    detectWeaknessTopic,
+    extractKnowledgeHints,
+    firstAnswers,
+    questions,
+    resolveReviewExplanation,
+    toeicPart,
+  ]);
+
+  const normalizePartSummaryOutput = useCallback(
+    (rawText: string): string | null => {
+      if (toeicPart === null) return null;
+
+      const cleaned = rawText
+        .replace(/\r\n/g, "\n")
+        .replace(/^#{1,6}\s*/gm, "")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/```[\s\S]*?```/g, "")
+        .trim();
+
+      const lines = cleaned
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      const bulletLines = lines
+        .filter(
+          (line) =>
+            /^[-•]/.test(line) ||
+            /^(bạn mạnh|điểm yếu|kiến thức cần ôn thêm|gợi ý)\s*:/i.test(line),
+        )
+        .map((line) => {
+          const normalized = line.replace(/^[-•]\s*/, "").trim();
+          return `• ${normalized}`;
+        });
+
+      if (bulletLines.length < 4) return null;
+
+      return [
+        `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
+        ...bulletLines.slice(0, 4),
+      ].join("\n");
+    },
+    [questions.length, toeicPart],
+  );
+
+  const appendSessionMistakeHistory = useCallback(
+    (submittedExplanations?: Record<string, string | null>) => {
+      if (toeicPart === null) return;
+
+      const wrongItems = questions
+        .map((questionData, questionIndex) => {
+          const firstAttempt = firstAnswers[questionIndex] ?? null;
+          if (!firstAttempt || firstAttempt === questionData.correctAnswer) {
+            return null;
+          }
+
+          const explanation = resolveReviewExplanation(
+            questionData,
+            questionIndex,
+            submittedExplanations,
+          );
+
+          return {
+            questionId: questionData.id,
+            question: questionData.question,
+            firstAttempt,
+            correctAnswer: questionData.correctAnswer,
+            topic: detectWeaknessTopic(questionData, explanation),
+            explanation: explanation.slice(0, 700),
+            createdAt: new Date().toISOString(),
+          } satisfies PracticeMistakeHistoryItem;
+        })
+        .filter((item): item is PracticeMistakeHistoryItem => item !== null);
+
+      appendPracticeMistakeHistory(activeSkill, toeicPart, wrongItems);
+    },
+    [
+      activeSkill,
+      detectWeaknessTopic,
+      firstAnswers,
+      questions,
+      resolveReviewExplanation,
+      toeicPart,
+    ],
   );
 
   // Theme colors
@@ -1981,7 +2172,16 @@ export default function ToeicNodePracticePage() {
         `Câu hỏi: ${questionData.question}`,
         `Học viên chọn: ${selectedOption.key}. ${selectedOption.text}`,
         shouldRevealCorrectAnswer
-          ? `Đáp án đúng: ${questionData.correctAnswer}.`
+          ? [
+              `Đáp án đúng: ${questionData.correctAnswer}.`,
+              "FORMAT TRẢ LỜI BẮT BUỘC:",
+              `Đáp án đúng là ${questionData.correctAnswer}.`,
+              "Phân tích phương án:",
+              "- A: ...",
+              "- B: ...",
+              "- C: ...",
+              "- D: ...",
+            ].join("\n")
           : "Ràng buộc: TUYỆT ĐỐI KHÔNG nêu đáp án đúng, không nêu chữ cái đáp án đúng, không gợi ý chọn phương án khác.",
       ].join("\n");
 
@@ -1995,8 +2195,9 @@ export default function ToeicNodePracticePage() {
           ? [
               "Yêu cầu chất lượng:",
               '- Mở đầu trực tiếp theo mẫu: "Đáp án đúng là ...".',
+                "- Chỉ dùng đúng 1 heading duy nhất: \"Phân tích phương án:\".",
               "- Bắt buộc nhắc lại ít nhất 1 dấu hiệu trong câu (keyword/time marker/collocation).",
-              "- Phân tích lần lượt từng phương án A/B/C/D, mỗi phương án 1 ý ngắn.",
+                "- Bắt buộc có đủ 4 dòng A/B/C/D, trong đó phương án đúng cũng phải giải thích rõ vì sao đúng.",
               "- Không mở đầu bằng câu: lựa chọn học viên hiện tại là ĐÚNG/SAI.",
               "- Không trả lời chung chung; phải gắn trực tiếp vào câu hỏi này.",
             ].join("\n")
@@ -2031,6 +2232,49 @@ export default function ToeicNodePracticePage() {
       const attemptKey = `${questionData.id}:${optionKey}`;
       const shouldRevealCorrectAnswer =
         optionKey === questionData.correctAnswer;
+
+      const dbExplanation = questionData.explanation.trim();
+      if (
+        shouldRevealCorrectAnswer &&
+        shouldUseDbExplanationDirectly(dbExplanation)
+      ) {
+        const formattedDbExplanation = formatAiExplanationForDisplay(
+          dbExplanation,
+          questionData,
+        );
+
+        // Guard one more time after formatting to avoid showing English-like output.
+        if (!isLikelyEnglishAnswer(formattedDbExplanation)) {
+          const cachedFromDb: AiTutorExplanation = {
+            answer: formattedDbExplanation,
+            model: "toeic_practice_db",
+            source: "cache",
+          };
+
+          if (force || !aiExplanationRef.current[attemptKey]) {
+            setAiExplanationByAttempt((prev) => ({
+              ...prev,
+              [attemptKey]: cachedFromDb,
+            }));
+            aiExplanationRef.current = {
+              ...aiExplanationRef.current,
+              [attemptKey]: cachedFromDb,
+            };
+          }
+
+          aiLoadingRef.current = {
+            ...aiLoadingRef.current,
+            [attemptKey]: false,
+          };
+          setAiLoadingByAttempt((prev) => ({ ...prev, [attemptKey]: false }));
+          setAiErrorByAttempt((prev) => {
+            const next = { ...prev };
+            delete next[attemptKey];
+            return next;
+          });
+          return;
+        }
+      }
 
       // Only analyze when learner reaches the correct option.
       if (!shouldRevealCorrectAnswer) return;
@@ -2070,14 +2314,14 @@ export default function ToeicNodePracticePage() {
       });
 
       try {
-        const questionIdToken = questionData.id
+        const stableQuestionToken = String(questionData.id)
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "_");
 
         const response = await askCertificateTutor({
           cert_type: "toeic",
           question,
-          topic_key: `toeic.${activeSkill}.node_${parsedNodeIndex}.q_${questionIndex + 1}.${questionIdToken}.full`,
+          topic_key: `toeic.practice.full.v2.q_${stableQuestionToken}`,
           learning_context: learningContext,
           concise: false,
         });
@@ -2094,10 +2338,24 @@ export default function ToeicNodePracticePage() {
           throw new Error(buildAiUnavailableMessage(selectedOption));
         }
 
+        const formattedAnswer = formatAiExplanationForDisplay(
+          safeAnswer,
+          questionData,
+        );
+
+        const formattedIsLowSignal =
+          looksLikeOptionOnlyAnswer(formattedAnswer) ||
+          isLikelyEnglishAnswer(formattedAnswer) ||
+          isGenericTemplateAnswer(formattedAnswer);
+
+        if (formattedIsLowSignal) {
+          throw new Error(buildAiUnavailableMessage(selectedOption));
+        }
+
         setAiExplanationByAttempt((prev) => ({
           ...prev,
           [attemptKey]: {
-            answer: safeAnswer,
+            answer: formattedAnswer,
             model: response.model,
             source: response.source,
           },
@@ -2105,7 +2363,7 @@ export default function ToeicNodePracticePage() {
         aiExplanationRef.current = {
           ...aiExplanationRef.current,
           [attemptKey]: {
-            answer: safeAnswer,
+            answer: formattedAnswer,
             model: response.model,
             source: response.source,
           },
@@ -2125,11 +2383,13 @@ export default function ToeicNodePracticePage() {
       activeSkill,
       buildAiUnavailableMessage,
       buildTutorQuestion,
+      formatAiExplanationForDisplay,
       isGenericTemplateAnswer,
       isLikelyEnglishAnswer,
       looksLikeOptionOnlyAnswer,
       parsedNodeIndex,
       questions,
+      shouldUseDbExplanationDirectly,
     ],
   );
 
@@ -2187,16 +2447,433 @@ export default function ToeicNodePracticePage() {
     }
   }, [currentQuestionIndex, fetchAiExplanation, questions]);
 
+  useEffect(() => {
+    if (!showSummary || questions.length === 0) return;
+
+    questions.forEach((questionData, questionIndex) => {
+      const attemptKey = `${questionData.id}:${questionData.correctAnswer}`;
+      if (
+        aiExplanationByAttempt[attemptKey] ||
+        aiLoadingByAttempt[attemptKey] ||
+        aiErrorByAttempt[attemptKey]
+      ) {
+        return;
+      }
+
+      void fetchAiExplanation(questionIndex, questionData.correctAnswer, false);
+    });
+  }, [
+    aiErrorByAttempt,
+    aiExplanationByAttempt,
+    aiLoadingByAttempt,
+    fetchAiExplanation,
+    questions,
+    showSummary,
+  ]);
+
+  const partSummaryRequestKey = useMemo(() => {
+    const answerSignature = Object.entries(firstAnswers)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([index, value]) => `${index}:${value}`)
+      .join("|");
+
+    return `${activeSkill}:${toeicPart ?? "na"}:${sessionQuestionIds.join(",")}:${answerSignature}`;
+  }, [activeSkill, firstAnswers, sessionQuestionIds, toeicPart]);
+
+  useEffect(() => {
+    if (!showSummary || toeicPart === null || questions.length === 0) return;
+    if (partSummaryRequestedKeyRef.current === partSummaryRequestKey) return;
+
+    partSummaryRequestedKeyRef.current = partSummaryRequestKey;
+
+    let cancelled = false;
+
+    const generatePartSummary = async () => {
+      setPartSummaryLoading(true);
+      setPartSummaryError(null);
+
+      const fallbackSummary = buildFallbackPartSummary();
+      // Show summary immediately; AI response will refine this in background.
+      setPartSummaryText(fallbackSummary);
+
+      try {
+        const historyRows = getPracticeMistakeHistory(activeSkill, toeicPart, 24);
+
+        const sessionRows = questions.map((questionData, questionIndex) => {
+          const firstAttempt = firstAnswers[questionIndex] ?? "-";
+          const explanation = resolveReviewExplanation(questionData, questionIndex);
+          const topic = detectWeaknessTopic(questionData, explanation);
+
+          return [
+            `Q${questionIndex + 1}: ${questionData.question}`,
+            `first_attempt=${firstAttempt}; correct=${questionData.correctAnswer}; result=${firstAttempt === questionData.correctAnswer ? "first_try_correct" : "retry_then_correct"}`,
+            `topic=${topic}`,
+            `explanation=${explanation}`,
+          ].join("\n");
+        });
+
+        const historyText =
+          historyRows.length === 0
+            ? "Không có dữ liệu lịch sử sai trước đó."
+            : historyRows
+                .map(
+                  (item, idx) =>
+                    `${idx + 1}. topic=${item.topic}; first=${item.firstAttempt}; correct=${item.correctAnswer}; question=${item.question}; explanation=${item.explanation}`,
+                )
+                .join("\n");
+
+        const summaryQuestion = [
+          `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau 10 câu vừa làm.`,
+          "BẮT BUỘC trả lời 100% bằng tiếng Việt (giữ nguyên thuật ngữ TOEIC nếu cần).",
+          "BẮT BUỘC đúng format 5 dòng:",
+          `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
+          "• Bạn mạnh về ...",
+          "• Điểm yếu lớn: ...",
+          "• Kiến thức cần ôn thêm: ...",
+          "• Gợi ý: ...",
+          "Không thêm markdown, không code block, không thêm phần mở đầu/kết luận khác.",
+        ].join("\n");
+
+        const learningContext = [
+          `Skill: ${activeSkill}`,
+          `Part: ${toeicPart}`,
+          `Đúng lần đầu: ${correctCount}/${questions.length}`,
+          "Dữ liệu RAG - 10 câu vừa làm:",
+          sessionRows.join("\n\n"),
+          "Dữ liệu RAG - lịch sử sai của user:",
+          historyText,
+        ].join("\n\n");
+
+        const topicKey = `toeic.practice.summary.v2.part_${toeicPart}.set_${sessionQuestionIds.join("_")}.first_${correctCount}`;
+
+        const response = await askCertificateTutor({
+          cert_type: "toeic",
+          question: summaryQuestion,
+          topic_key: topicKey,
+          learning_context: learningContext,
+          concise: false,
+        });
+
+        if (cancelled) return;
+
+        const normalizedSummary = normalizePartSummaryOutput(response.answer);
+
+        if (
+          response.source === "fallback" ||
+          !normalizedSummary ||
+          isLikelyEnglishAnswer(normalizedSummary)
+        ) {
+          setPartSummaryText(fallbackSummary);
+          setPartSummaryError("AI summary chưa ổn định, đang hiển thị tóm tắt chuẩn hóa.");
+          return;
+        }
+
+        setPartSummaryText(normalizedSummary);
+      } catch {
+        if (cancelled) return;
+        setPartSummaryText(fallbackSummary);
+        setPartSummaryError("Không gọi được AI summary, đang hiển thị tóm tắt chuẩn hóa.");
+      } finally {
+        if (!cancelled) setPartSummaryLoading(false);
+      }
+    };
+
+    void generatePartSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSkill,
+    buildFallbackPartSummary,
+    correctCount,
+    detectWeaknessTopic,
+    firstAnswers,
+    isLikelyEnglishAnswer,
+    normalizePartSummaryOutput,
+    partSummaryRequestKey,
+    questions,
+    resolveReviewExplanation,
+    sessionQuestionIds,
+    showSummary,
+    toeicPart,
+  ]);
+
   const handleRetryAiExplanation = useCallback(() => {
     if (!currentAttempt) return;
     void fetchAiExplanation(currentQuestionIndex, currentAttempt, true);
   }, [currentAttempt, currentQuestionIndex, fetchAiExplanation]);
 
+  const goBackToLearningMap = useCallback(() => {
+    navigate(`/student/certificate-review/toeic/skill/${activeSkill}`);
+  }, [activeSkill, navigate]);
+
+  // Guards
+  if (dbLoading) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: theme.pageGradient }}>
+        <Header />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/60 bg-white/85 backdrop-blur-sm shadow-xl p-8 text-center space-y-4">
+            <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-base font-semibold text-slate-700">
+              Đang chuẩn bị bộ câu hỏi luyện tập...
+            </p>
+            <p className="text-sm text-slate-500">
+              Hệ thống đang ghép bộ 10 câu phù hợp với node hiện tại.
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (dbError) {
+    const compactError = dbError.replace(/\((?:404|409)\)/g, "").trim();
+    const isQuestionPoolIssue =
+      /cau hoi|câu hỏi|part|publish|bo sung|bổ sung|409|404|khong tim thay|không tìm thấy/i.test(
+        dbError,
+      );
+
+    /* ── colour tokens derived from the page theme ─────────────── */
+    const accent      = isListening ? "#0d9488" : "#059669"; // teal-600 / emerald-600
+    const accentLight = isListening ? "#ccfbf1" : "#d1fae5"; // teal-100 / emerald-100
+    const accentPale  = isListening ? "#f0fdfa" : "#ecfdf5"; // teal-50  / emerald-50
+    const accentMid   = isListening ? "#5eead4" : "#6ee7b7"; // teal-300 / emerald-300
+    const accentDark  = isListening ? "#115e59" : "#064e3b"; // teal-800 / emerald-800
+    const accentShadow = isListening
+      ? "rgba(13,148,136,0.25)"
+      : "rgba(5,150,105,0.25)";
+
+    const handleRetryClick = () => {
+      setQuestionRefreshVersion((prev) => prev + 1);
+    };
+
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: theme.pageGradient }}>
+        <Header />
+        <main className="flex-1 py-10 px-4">
+          <div className="max-w-3xl mx-auto">
+            <div
+              className="relative overflow-hidden rounded-3xl"
+              style={{
+                background: "linear-gradient(145deg, #ffffff 0%, #f9fffe 60%, #f0fdfa 100%)",
+                border: `1px solid ${accentMid}33`,
+                boxShadow: `0 12px 48px ${accentShadow}, 0 2px 8px rgba(0,0,0,0.03)`,
+              }}
+            >
+              {/* Gradient top accent */}
+              <div style={{
+                height: "4px",
+                background: `linear-gradient(90deg, ${accent}, ${accentMid}, ${accent})`,
+              }} />
+
+              {/* Decorative bg shapes — using theme-compatible tints */}
+              <div style={{ position: "absolute", top: "-40px", right: "-40px", width: "160px", height: "160px", borderRadius: "50%", background: `${accentLight}88` }} />
+              <div style={{ position: "absolute", bottom: "-60px", left: "-30px", width: "200px", height: "200px", borderRadius: "50%", background: `${accentPale}cc` }} />
+
+              <div className="relative px-8 py-10 sm:px-12 sm:py-12">
+                {/* SVG Illustration — slate + accent harmony */}
+                <div className="flex justify-center mb-8">
+                  <div style={{ position: "relative", width: "140px", height: "140px" }}>
+                    <svg viewBox="0 0 140 140" style={{ width: "100%", height: "100%" }}>
+                      <circle cx="70" cy="70" r="65" fill={accentPale} />
+                      <circle cx="70" cy="70" r="55" fill="none" stroke={accentMid} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.5" />
+                      {/* Document body */}
+                      <rect x="45" y="35" width="40" height="52" rx="6" fill="white" stroke={accentMid} strokeWidth="1.8" />
+                      <rect x="52" y="48" width="26" height="3" rx="1.5" fill={accentLight} />
+                      <rect x="52" y="55" width="20" height="3" rx="1.5" fill={accentLight} />
+                      <rect x="52" y="62" width="14" height="3" rx="1.5" fill={accentLight} />
+                      {/* Question mark badge */}
+                      <circle cx="85" cy="42" r="16" fill={accent} />
+                      <text x="85" y="48" textAnchor="middle" fill="white" fontSize="18" fontWeight="bold">?</text>
+                      {/* Floating dots */}
+                      <circle cx="25" cy="50" r="4" fill={accentMid} opacity="0.5">
+                        <animate attributeName="cy" values="50;44;50" dur="3s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx="115" cy="85" r="3" fill={accentMid} opacity="0.4">
+                        <animate attributeName="cy" values="85;78;85" dur="4s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx="30" cy="100" r="2.5" fill="#94a3b8" opacity="0.35">
+                        <animate attributeName="cy" values="100;93;100" dur="3.5s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Badge */}
+                <div className="flex justify-center mb-5">
+                  <div
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+                    style={{
+                      fontSize: "11px", fontWeight: 700,
+                      textTransform: "uppercase" as const, letterSpacing: "0.08em",
+                      background: accentPale,
+                      color: accentDark,
+                      border: `1.5px solid ${accentMid}66`,
+                    }}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Lượt luyện tập chưa sẵn sàng
+                  </div>
+                </div>
+
+                {/* Title & description */}
+                <div className="text-center space-y-3 mb-8">
+                  <h1
+                    className="font-bold leading-tight"
+                    style={{ fontSize: "clamp(22px, 4vw, 30px)", color: "#1e293b" }}
+                  >
+                    {isQuestionPoolIssue
+                      ? `Part ${toeicPart ?? "?"} tạm thời chưa đủ bộ câu hỏi phù hợp`
+                      : "Không thể tải dữ liệu luyện tập"}
+                  </h1>
+                  <p style={{ fontSize: "14px", color: "#64748b", lineHeight: 1.7, maxWidth: "480px", margin: "0 auto" }}>
+                    {isQuestionPoolIssue
+                      ? "Bạn có thể thử tải lại ngay. Khi hệ thống có thêm câu hỏi hợp lệ, lượt luyện tập sẽ tự hoạt động bình thường."
+                      : "Kết nối tới server đang không ổn định hoặc dữ liệu chưa đồng bộ. Bạn hãy thử lại sau vài giây."}
+                  </p>
+                </div>
+
+                {/* System detail panel */}
+                <div
+                  className="rounded-2xl mb-8 overflow-hidden"
+                  style={{
+                    border: `1px solid ${accentMid}33`,
+                    background: `linear-gradient(135deg, ${accentPale} 0%, #f8fafc 100%)`,
+                  }}
+                >
+                  <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${accentMid}33` }}>
+                    <div style={{
+                      width: "6px", height: "6px", borderRadius: "50%",
+                      background: accent,
+                    }} />
+                    <span style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>
+                      Chi tiết hệ thống
+                    </span>
+                  </div>
+                  <div className="px-5 py-3">
+                    <p className="whitespace-pre-line" style={{ fontSize: "13px", color: "#475569", lineHeight: 1.7 }}>
+                      {compactError}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    disabled={dbLoading}
+                    onClick={handleRetryClick}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition-all duration-200 disabled:opacity-70"
+                    style={{
+                      background: `linear-gradient(135deg, ${accentDark} 0%, ${accent} 100%)`,
+                      boxShadow: `0 4px 16px ${accentShadow}, inset 0 1px 0 rgba(255,255,255,0.15)`,
+                    }}
+                    onMouseEnter={(e) => { if (!dbLoading) { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 24px ${accentShadow}`; } }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 16px ${accentShadow}`; }}
+                  >
+                    {dbLoading ? (
+                      <>
+                        <div
+                          className="animate-spin"
+                          style={{
+                            width: "16px", height: "16px",
+                            border: "2.5px solid rgba(255,255,255,0.3)",
+                            borderTopColor: "#fff",
+                            borderRadius: "50%",
+                          }}
+                        />
+                        Đang tải lại...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="w-4 h-4" />
+                        Thử tải lại câu hỏi
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goBackToLearningMap}
+                    disabled={dbLoading}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold transition-all duration-200 disabled:opacity-60"
+                    style={{
+                      border: `2px solid ${accentMid}55`,
+                      color: accent,
+                      background: "#ffffff",
+                    }}
+                    onMouseEnter={(e) => { if (!dbLoading) { (e.currentTarget as HTMLElement).style.borderColor = accent; (e.currentTarget as HTMLElement).style.background = accentPale; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; } }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = `${accentMid}55`; (e.currentTarget as HTMLElement).style.background = "#ffffff"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Quay lại Learning Map
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isInvalidRoute || questions.length === 0 || !currentQuestion) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: theme.pageGradient }}>
+        <Header />
+        <main className="flex-1 py-10 px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative overflow-hidden rounded-3xl border border-sky-200 bg-white/90 backdrop-blur-sm shadow-2xl">
+              <div className="absolute -top-16 -right-10 w-52 h-52 rounded-full bg-gradient-to-br from-sky-200/70 to-blue-100/20 blur-2xl" />
+
+              <div className="relative px-7 py-8 sm:px-10 sm:py-10 space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 uppercase tracking-wide">
+                  <Target className="w-3.5 h-3.5" />
+                  Node chưa khả dụng
+                </div>
+
+                <div className="space-y-2">
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-800 leading-tight">
+                    Chưa có câu hỏi khả dụng cho node này
+                  </h1>
+                  <p className="text-sm sm:text-base text-slate-600">
+                    Hệ thống chỉ mở khi có đủ bộ câu hỏi hợp lệ theo part và band điểm hiện tại.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuestionRefreshVersion((prev) => prev + 1)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-cyan-500 shadow-md hover:brightness-105 active:scale-[0.99] transition-all"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Kiểm tra lại dữ liệu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goBackToLearningMap}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Quay lại Learning Map
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const handleSelectAnswer = (optionKey: string) => {
-    // If already solved correctly, do nothing
     if (isCurrentSolved) return;
 
-    // Record first attempt (only the very first choice per question index)
     if (firstAnswers[currentQuestionIndex] === undefined) {
       setFirstAnswers((prev) => ({
         ...prev,
@@ -2206,18 +2883,48 @@ export default function ToeicNodePracticePage() {
 
     setCurrentAttempt(optionKey);
 
-    // If correct, mark as solved
     if (optionKey === currentQuestion.correctAnswer) {
       setSolvedCorrectly((prev) => new Set([...prev, currentQuestionIndex]));
       void fetchAiExplanation(currentQuestionIndex, optionKey, false);
     }
   };
-
   const handleNextQuestion = () => {
     // Only allow advancing when current question is solved correctly
     if (!isCurrentSolved && !isCurrentCorrect) return;
 
     if (isLastQuestion) {
+      // Submit to API if using DB questions
+      if (toeicPart !== null && sessionQuestionIds.length > 0) {
+        const answersPayload: Record<string, string> = {};
+        sessionQuestionIds.forEach((qId, idx) => {
+          if (firstAnswers[idx])
+            answersPayload[String(qId)] = firstAnswers[idx];
+        });
+        submitToeicPracticeSession({
+          toeic_part: toeicPart,
+          question_ids: sessionQuestionIds,
+          answers: answersPayload,
+        })
+          .then((result) => {
+            setEarnedThisSession(result.earned_points);
+            setAttemptPointsThisSession(
+              result.attempt_points ?? result.earned_points,
+            );
+            setReservePoints(result.new_reserve_points);
+            setExamUnlocked(result.exam_unlocked);
+            if (result.unlock_threshold)
+              setUnlockThreshold(result.unlock_threshold);
+            setSubmitResult({
+              correct_answers: result.correct_answers,
+              explanations: result.explanations,
+            });
+            appendSessionMistakeHistory(result.explanations);
+            if (practiceDraftStorageKey) {
+              clearPracticeRunDraft(practiceDraftStorageKey);
+            }
+          })
+          .catch(() => {});
+      }
       setShowSummary(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -2503,8 +3210,8 @@ export default function ToeicNodePracticePage() {
                             Giải thích
                           </span>
                         </div>
-                        <p className="text-sm text-amber-800 leading-relaxed">
-                          {q.explanation}
+                        <p className="text-sm text-amber-800 leading-relaxed whitespace-pre-line">
+                          {resolveReviewExplanation(q, idx)}
                         </p>
                       </div>
                     </div>
@@ -2513,16 +3220,78 @@ export default function ToeicNodePracticePage() {
               })}
             </div>
 
+            {/* Reserve Points Earned */}
+            {toeicPart !== null && (
+              <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-5 text-center space-y-1">
+                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
+                  Điểm dự trữ
+                </p>
+                {earnedThisSession !== null ? (
+                  <>
+                    <p className="text-3xl font-bold text-amber-700">
+                      +{earnedThisSession.toFixed(1)}
+                    </p>
+                    {attemptPointsThisSession !== null && (
+                      <p className="text-xs text-amber-700">
+                        Điểm lượt này: {attemptPointsThisSession.toFixed(1)}
+                      </p>
+                    )}
+                    <p className="text-sm text-amber-600">
+                      Tổng: {(reservePoints ?? 0).toFixed(1)} /{" "}
+                      {unlockThreshold}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-2xl font-bold text-amber-700">
+                    {(reservePoints ?? 0).toFixed(1)} / {unlockThreshold}
+                  </p>
+                )}
+                {examUnlocked && (
+                  <p className="text-xs font-bold text-emerald-600 mt-1">
+                    🔓 Thi thử đã mở khóa!
+                  </p>
+                )}
+              </div>
+            )}
+
+            {toeicPart !== null && (
+              <div className="rounded-2xl bg-white border border-sky-200 p-5 shadow-sm space-y-3">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-sky-500" />
+                  <p className="text-sm font-bold text-sky-700">
+                    Tóm tắt Part {toeicPart}
+                  </p>
+                </div>
+
+                {partSummaryLoading && !partSummaryText ? (
+                  <p className="text-sm text-slate-500">
+                    AI đang tổng hợp tóm tắt từ 10 câu vừa làm và lịch sử sai...
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                    {partSummaryText ?? buildFallbackPartSummary()}
+                  </p>
+                )}
+
+                {partSummaryError && (
+                  <p className="text-xs text-amber-600">{partSummaryError}</p>
+                )}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="sticky bottom-4 z-10">
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-100 p-4 flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
-                    setFirstAnswers({});
-                    setCurrentAttempt(null);
-                    setSolvedCorrectly(new Set());
-                    setCurrentQuestionIndex(0);
-                    setShowSummary(false);
+                    if (toeicPart !== null) {
+                      if (practiceDraftStorageKey) {
+                        clearPracticeRunDraft(practiceDraftStorageKey);
+                      }
+                      setQuestionRefreshVersion((prev) => prev + 1);
+                    } else {
+                      resetPracticeRunState();
+                    }
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all"
@@ -2821,7 +3590,10 @@ export default function ToeicNodePracticePage() {
                       {/* AI đã xong — hiện kết quả */}
                       {!currentAttemptAiLoading && currentAttemptAi && (
                         <p className="text-sm text-sky-900 leading-relaxed whitespace-pre-line">
-                          {currentAttemptAi.answer}
+                          {formatAiExplanationForDisplay(
+                            currentAttemptAi.answer,
+                            currentQuestion,
+                          )}
                         </p>
                       )}
 
@@ -2941,3 +3713,5 @@ export default function ToeicNodePracticePage() {
     </div>
   );
 }
+
+

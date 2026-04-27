@@ -1,184 +1,237 @@
 @import "tailwindcss";
+@import "./styles/fonts.css";
+@import "./styles/theme.css";
+
+/* ── Owl mascot running animation ── */
+@keyframes owl-run {
+    0% {
+        transform: translateY(0px) rotate(-4deg);
+        filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.2));
+    }
+    20% {
+        transform: translateY(-7px) rotate(0deg) scaleY(1.05);
+        filter: drop-shadow(0 12px 6px rgba(0, 0, 0, 0.1));
+    }
+    40% {
+        transform: translateY(-1px) rotate(4deg);
+        filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.2));
+    }
+    60% {
+        transform: translateY(-8px) rotate(0deg) scaleY(1.05);
+        filter: drop-shadow(0 13px 6px rgba(0, 0, 0, 0.09));
+    }
+    80% {
+        transform: translateY(-1px) rotate(-3deg);
+        filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.19));
+    }
+    100% {
+        transform: translateY(0px) rotate(-4deg);
+        filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.2));
+    }
+}
+
+@keyframes owl-shadow {
+    0%,
+    100% {
+        transform: translateX(-50%) scaleX(1);
+        opacity: 0.25;
+    }
+    40%,
+    60% {
+        transform: translateX(-50%) scaleX(0.55);
+        opacity: 0.1;
+    }
+}
+
+.owl-running {
+    animation: owl-run 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+    display: inline-block;
+    transform-origin: center bottom;
+}
+
+.owl-running-shadow {
+    animation: owl-shadow 0.44s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+    color-scheme: light dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #242424;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 
-  /* CSS Variables for shadcn/ui components */
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --radius: 0.5rem;
+    /* CSS Variables for shadcn/ui components */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-  }
+    :root {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 217.2 91.2% 59.8%;
+        --primary-foreground: 222.2 84% 4.9%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 224.3 76.3% 94.1%;
+    }
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
+    :root {
+        color: #213547;
+        background-color: #ffffff;
+    }
 
-  a:hover {
-    color: #747bff;
-  }
+    a:hover {
+        color: #747bff;
+    }
 }
 
 /* Fix browser autofill background (Chrome/Edge/Safari) so inputs keep app styles */
 input:-webkit-autofill,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
-  box-shadow: 0 0 0px 1000px #ffffff inset !important;
-  -webkit-text-fill-color: #111827 !important;
-  /* dark text */
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    -webkit-text-fill-color: #111827 !important;
+    /* dark text */
 }
 
 /* Force white background for checkboxes */
 input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-color: white !important;
-  border: 2px solid #9CA3AF;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  position: relative;
-  display: inline-block;
-  vertical-align: middle;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: white !important;
+    border: 2px solid #9ca3af;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 input[type="checkbox"]:checked {
-  background-color: #3B82F6 !important;
-  border-color: #3B82F6 !important;
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
 }
 
 input[type="checkbox"]:checked::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: bold;
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
 }
 
 input[type="checkbox"]:focus {
-  outline: none !important;
-  box-shadow: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 input[type="checkbox"]:hover:not(:disabled) {
-  border-color: #3B82F6;
+    border-color: #3b82f6;
 }
 
 /* Toast Notification Animations */
 @keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
 
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 .animate-slideInRight {
-  animation: slideInRight 0.3s ease-out;
+    animation: slideInRight 0.3s ease-out;
 }
 
 /* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari, Opera */
+    display: none; /* Chrome, Safari, Opera */
 }
 
 /* Custom Range Slider for Volume Control - Removed to allow component-specific styles */
 input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  /* background: #22c55e; Removed global green color */
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    /* background: #22c55e; Removed global green color */
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  /* box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); Removed global green shadow */
+    transform: scale(1.2);
+    /* box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); Removed global green shadow */
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  /* background: #22c55e; Removed global green color */
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    /* background: #22c55e; Removed global green color */
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-  transform: scale(1.2);
-  /* box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); Removed global green shadow */
+    transform: scale(1.2);
+    /* box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); Removed global green shadow */
 }
