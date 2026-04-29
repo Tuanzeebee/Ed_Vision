@@ -81,11 +81,14 @@ placementRouter.post('/abandon', async (req: Request, res: Response, next: NextF
 })
 
 // GET /placement-test/result/:sessionId
-placementRouter.get('/result/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const result = await getPlacementResult(req.params.sessionId)
-    return res.status(200).json(result)
-  } catch (err) {
-    next(err)
-  }
-})
+placementRouter.get(
+  '/result/:sessionId',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await getPlacementResult(String(req.params.sessionId));
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);

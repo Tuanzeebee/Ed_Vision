@@ -68,11 +68,11 @@ export class PredictionController {
    * Get uploaded grades by upload_id
    * GET /api/teacher/prediction/upload/:uploadId
    */
-  @Get('upload/:uploadId')
+@Get('upload/:uploadId')
   async getUploadedGrades(
     @Param('uploadId') uploadId: string,
     @Query('teacher_id') teacherId?: string,
-  ) {
+  ): Promise<any> {
     return await this.predictionService.getUploadedGrades(uploadId, teacherId);
   }
 
@@ -80,33 +80,31 @@ export class PredictionController {
    * Get all uploads for a teacher
    * GET /api/teacher/prediction/uploads
    */
-  @Get('uploads')
-  async getTeacherUploads(
-    @Request() req: any,
-    @Query('course_code') courseCode?: string,
-  ) {
-    // Get account_id from JWT
-    const accountId = req.user?.account_id || req.user?.sub;
-    if (!accountId) {
-      throw new BadRequestException('User not authenticated');
-    }
+ @Get('uploads')
+async getTeacherUploads(
+  @Request() req: any,
+  @Query('course_code') courseCode?: string,
+): Promise<any> {
+  const accountId = req.user?.account_id || req.user?.sub;
 
-    // Get instructor_id from Instructor table
-    const instructor = await this.prisma.instructor.findUnique({
-      where: { account_id: accountId },
-      select: { instructor_id: true },
-    });
-
-    if (!instructor) {
-      throw new BadRequestException('Instructor not found for this account');
-    }
-
-    // Use instructor_id as teacher_id for MongoDB queries
-    return await this.predictionService.getTeacherUploads(
-      instructor.instructor_id.toString(),
-      courseCode,
-    );
+  if (!accountId) {
+    throw new BadRequestException('User not authenticated');
   }
+
+  const instructor = await this.prisma.instructor.findUnique({
+    where: { account_id: accountId },
+    select: { instructor_id: true },
+  });
+
+  if (!instructor) {
+    throw new BadRequestException('Instructor not found for this account');
+  }
+
+  return await this.predictionService.getTeacherUploads(
+    instructor.instructor_id.toString(),
+    courseCode,
+  );
+}
 
   /**
    * Get available academic years and semesters from GradeStructure

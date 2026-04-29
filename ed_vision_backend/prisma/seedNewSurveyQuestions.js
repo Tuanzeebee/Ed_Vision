@@ -916,32 +916,10 @@ async function main() {
         }
     ];
 
-    // Insert all questions
+    // Insert all questions using the createQuestion helper
     console.log('Creating survey questions...');
     for (const q of surveyQuestions) {
-        const question = await prisma.surveyQuestion.create({
-            data: {
-                question_text: q.question_text,
-                question_type: q.question_type,
-                category: q.category,
-                is_active: true,
-            },
-        });
-
-        // Create options if exist
-        if (q.options && q.options.length > 0) {
-            for (const opt of q.options) {
-                await prisma.surveyOption.create({
-                    data: {
-                        question_id: question.question_id,
-                        option_text: opt.text,
-                        option_value: opt.value,
-                    },
-                });
-            }
-        }
-
-        console.log(`✓ Created question ${q.question_id}: ${q.question_text.substring(0, 50)}...`);
+        await createQuestion(q);
     }
 
     console.log('✅ Successfully seeded 155 survey questions!');
