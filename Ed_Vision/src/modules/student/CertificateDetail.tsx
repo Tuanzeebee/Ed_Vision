@@ -16,6 +16,7 @@ import ToeicFirstGuidePopup from "./ToeicFirstGuidePopup";
 import { getToeicIntakeProfile, hydrateToeicProfileFromServer, saveToeicIntakeProfile } from "./toeicIntake";
 import type { ToeicIntakeProfile } from "./toeicIntake";
 import IeltsCertificateSection from "./IeltsCertificateSection";
+import { ieltsAdaptiveApi } from "@/services/ielts-adaptive/api";
 
 const IELTS_GOAL_BAND_STORAGE_KEY = "ieltsGoalBand";
 const IELTS_EXAM_DATE_STORAGE_KEY = "ieltsExamDate";
@@ -89,7 +90,7 @@ export default function CertificateDetail() {
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
 
   useEffect(() => {
-    getEnrollment(cert.id).then(setEnrollment).catch(() => {});
+    getEnrollment(cert.id).then(setEnrollment).catch(() => { });
   }, [cert.id]);
 
   const enrollmentTargetBand = useMemo(() => {
@@ -125,15 +126,15 @@ export default function CertificateDetail() {
 
     if (incomingGoalBand) {
       setManualGoalBand(incomingGoalBand);
-      try { window.localStorage.setItem(IELTS_GOAL_BAND_STORAGE_KEY, incomingGoalBand); } catch {}
+      try { window.localStorage.setItem(IELTS_GOAL_BAND_STORAGE_KEY, incomingGoalBand); } catch { }
     }
     if (incomingCurrentBand) {
       setRealCurrentBand(incomingCurrentBand);
-      try { window.localStorage.setItem(IELTS_CURRENT_BAND_STORAGE_KEY, incomingCurrentBand); } catch {}
+      try { window.localStorage.setItem(IELTS_CURRENT_BAND_STORAGE_KEY, incomingCurrentBand); } catch { }
     }
     if (incomingExamDate) {
       setManualExamDate(incomingExamDate);
-      try { window.localStorage.setItem(IELTS_EXAM_DATE_STORAGE_KEY, incomingExamDate); } catch {}
+      try { window.localStorage.setItem(IELTS_EXAM_DATE_STORAGE_KEY, incomingExamDate); } catch { }
     }
   }, [isIelts, location.search]);
 
@@ -158,7 +159,7 @@ export default function CertificateDetail() {
     getToeicPlanSync().then((synced) => {
       if (guideDismissedInSessionRef.current) return;
       setToeicGuideCompleted(Boolean(synced?.first_guide_shown));
-    }).catch(() => {});
+    }).catch(() => { });
   }, [isToeic]);
 
   const derivedIeltsBand = useMemo(() => {
@@ -228,12 +229,34 @@ export default function CertificateDetail() {
     setIsIeltsSetupOpen(true);
   }, [manualGoalBand, enrollmentTargetBand, manualExamDate]);
 
-  const handleSaveIeltsSetup = useCallback(() => {
+  const handleSaveIeltsSetup = useCallback(async () => {
     const normalizedGoalBand = normalizeBand(draftGoalBand);
     setManualGoalBand(normalizedGoalBand);
     setManualExamDate(draftExamDate || null);
     setIsIeltsSetupOpen(false);
-  }, [draftGoalBand, draftExamDate]);
+
+    // Persist to localStorage immediately
+    try {
+      if (normalizedGoalBand) window.localStorage.setItem(IELTS_GOAL_BAND_STORAGE_KEY, normalizedGoalBand);
+      if (draftExamDate) window.localStorage.setItem(IELTS_EXAM_DATE_STORAGE_KEY, draftExamDate);
+    } catch { }
+
+    // Sync to backend and regenerate roadmap if there's a valid target band
+    if (normalizedGoalBand) {
+      try {
+        const currentBandStr = realCurrentBand ?? enrollmentTargetBand;
+        await ieltsAdaptiveApi.updateMyTargets({
+          target_band: Number(normalizedGoalBand),
+          ...(currentBandStr ? { current_band: Number(currentBandStr) } : {}),
+          ...(draftExamDate ? { target_completion_date: draftExamDate } : {}),
+        });
+        // Refresh enrollment data after update
+        getEnrollment(cert.id).then(setEnrollment).catch(() => { });
+      } catch {
+        // Silently fail – local state is already updated
+      }
+    }
+  }, [draftGoalBand, draftExamDate, realCurrentBand, enrollmentTargetBand, cert.id]);
 
   const goalBandDisplay = isIelts ? (manualGoalBand ?? enrollmentTargetBand ?? "--") : (enrollmentTargetBand ?? "--");
   const currentBandDisplay = realCurrentBand ?? "--";
@@ -298,7 +321,7 @@ export default function CertificateDetail() {
     }
   }, [toeicProfile, isSavingGuide, showErrorToast]);
 
-  const handleSimulatorComplete = useCallback((_result: TaskResult) => {}, []);
+  const handleSimulatorComplete = useCallback((_result: TaskResult) => { }, []);
 
   void user;
 
@@ -362,7 +385,7 @@ export default function CertificateDetail() {
 
         {isEnglish && !isIelts && (
           <>
-            {isToeic && toeicProfile && <ToeicRoadmapBoard profile={toeicProfile} onProfileUpdated={setToeicProfile} onOpenTopic={() => {}} />}
+            {isToeic && toeicProfile && <ToeicRoadmapBoard profile={toeicProfile} onProfileUpdated={setToeicProfile} onOpenTopic={() => { }} />}
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><FileCheck className="w-4 h-4 text-purple-500" /> Kho đề thi thử</h3>
               <PracticeTestList tests={practiceTests} />
