@@ -7,8 +7,8 @@ import type { EnrollmentResponse } from "@/services/api/certificateService";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { ChevronLeft, BarChart2, FileCheck, Star, MessageCircle, PlayCircle, Library, Clock, Monitor, Trophy, CheckCircle2, Zap } from "lucide-react";
-import { CERTIFICATES, getSkills, getRoadmap, getMosTasksBycert, getBandOption, getPracticeTests, BandSelector, RoadmapView, PracticeTestList, SkillRadar, SkillTopicCard, MosTaskPanel } from "./certificateData";
-import type { CertId, EnglishSkill, CertBand } from "./certificateData";
+import { CERTIFICATES, getSkills, getRoadmap, getMosTasksBycert, getBandOption, getPracticeTests, BandSelector, RoadmapView, PracticeTestList, SkillRadar, SkillTopicCard, MosTaskPanel, IELTS_SKILLS_BY_BAND } from "./certificateData";
+import type { CertId, EnglishSkill, CertBand, IeltsBand } from "./certificateData";
 import MosWordSimulator from "./MosWordSimulator";
 import type { TaskResult } from "./MosWordSimulator";
 import ToeicRoadmapBoard from "./ToeicRoadmapBoard";
@@ -267,6 +267,18 @@ export default function CertificateDetail() {
   const highlightTopics = (activeSkillData?.topics ?? []).slice(0, 3);
   const streakDays = Math.min(21, Math.max(1, Math.round((enrollment?.progress_percent ?? 0) / 5) || 1));
 
+  const ieltsGrammarSection = useMemo(() => {
+    if (!isIelts || !derivedIeltsBand) return undefined;
+    const skillsForBand = IELTS_SKILLS_BY_BAND[derivedIeltsBand as IeltsBand];
+    return skillsForBand?.find((s) => s.id === "grammar");
+  }, [isIelts, derivedIeltsBand]);
+
+  const ieltsVocabSection = useMemo(() => {
+    if (!isIelts || !derivedIeltsBand) return undefined;
+    const skillsForBand = IELTS_SKILLS_BY_BAND[derivedIeltsBand as IeltsBand];
+    return skillsForBand?.find((s) => s.id === "vocabulary");
+  }, [isIelts, derivedIeltsBand]);
+
   useEffect(() => {
     if (!isToeic || !effectiveSelectedBand || !toeicProfile || toeicGuideCompleted) return;
     if (!showFirstGuidePopup) {
@@ -347,6 +359,8 @@ export default function CertificateDetail() {
             effectiveSelectedBand={effectiveSelectedBand}
             handleOpenSkillRoadmap={handleOpenSkillRoadmap}
             skillRoadmapTopicKey={skillRoadmapTopicKey}
+            grammarSection={ieltsGrammarSection}
+            vocabSection={ieltsVocabSection}
           />
         ) : (
           <section className={`bg-gradient-to-r ${cert.bgFrom} ${cert.bgTo} rounded-2xl p-6 text-white`}>

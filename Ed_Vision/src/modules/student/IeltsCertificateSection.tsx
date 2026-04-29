@@ -11,12 +11,13 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
-import type { CertBand } from "./certificateData";
+import type { CertBand, SkillSection } from "./certificateData";
 
 type TopicItem = {
   title: string;
   desc: string;
   topicKey?: string;
+  done?: boolean;
 };
 
 type Props = {
@@ -44,6 +45,8 @@ type Props = {
     writing?: string;
     speaking?: string;
   };
+  grammarSection?: SkillSection;
+  vocabSection?: SkillSection;
 };
 
 export default function IeltsCertificateSection({
@@ -66,6 +69,8 @@ export default function IeltsCertificateSection({
   effectiveSelectedBand,
   handleOpenSkillRoadmap,
   skillRoadmapTopicKey,
+  grammarSection,
+  vocabSection,
 }: Props) {
   const goalBandNumber = Number(goalBandDisplay) || 0;
   const currentBandNumber = Number(currentBandDisplay) || 0;
@@ -384,25 +389,52 @@ export default function IeltsCertificateSection({
           <h2 className="text-xl font-bold text-slate-800">Từ vựng theo chủ đề</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { topic: "Education", count: 150, icon: "📚" },
-            { topic: "Technology", count: 120, icon: "💻" },
-            { topic: "Environment", count: 100, icon: "🌍" },
-            { topic: "Health", count: 90, icon: "🏥" },
-            { topic: "Business", count: 130, icon: "💼" },
-            { topic: "Travel", count: 80, icon: "✈️" },
-            { topic: "Culture", count: 110, icon: "🎭" },
-            { topic: "Science", count: 95, icon: "🔬" },
-          ].map((item) => (
-            <div
-              key={item.topic}
-              className="bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="text-2xl mb-1">{item.icon}</div>
-              <p className="font-semibold text-slate-800 text-sm">{item.topic}</p>
-              <p className="text-xs text-slate-400">{item.count} từ</p>
-            </div>
-          ))}
+          {(vocabSection?.topics ?? []).length > 0 ? (
+            (vocabSection?.topics ?? []).map((item) => (
+              <div
+                key={item.topicKey}
+                className={`bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer ${item.done ? 'bg-emerald-50/30' : ''}`}
+              >
+                <div className="text-2xl mb-1">
+                  {item.title.toLowerCase().includes('edu') ? '📚' :
+                   item.title.toLowerCase().includes('tech') ? '💻' :
+                   item.title.toLowerCase().includes('env') ? '🌍' :
+                   item.title.toLowerCase().includes('health') ? '🏥' :
+                   item.title.toLowerCase().includes('biz') || item.title.toLowerCase().includes('office') ? '💼' :
+                   item.title.toLowerCase().includes('travel') ? '✈️' :
+                   item.title.toLowerCase().includes('cultur') ? '🎭' :
+                   item.title.toLowerCase().includes('scien') ? '🔬' : '📑'}
+                </div>
+                <p className="font-semibold text-slate-800 text-sm">{item.title}</p>
+                <p className="text-xs text-slate-400">{item.desc}</p>
+                {item.done && (
+                  <div className="mt-2 text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Đã hoàn thành
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            [
+              { topic: "Education", count: 150, icon: "📚" },
+              { topic: "Technology", count: 120, icon: "💻" },
+              { topic: "Environment", count: 100, icon: "🌍" },
+              { topic: "Health", count: 90, icon: "🏥" },
+              { topic: "Business", count: 130, icon: "💼" },
+              { topic: "Travel", count: 80, icon: "✈️" },
+              { topic: "Culture", count: 110, icon: "🎭" },
+              { topic: "Science", count: 95, icon: "🔬" },
+            ].map((item) => (
+              <div
+                key={item.topic}
+                className="bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
+              >
+                <div className="text-2xl mb-1">{item.icon}</div>
+                <p className="font-semibold text-slate-800 text-sm">{item.topic}</p>
+                <p className="text-xs text-slate-400">{item.count} từ</p>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -412,37 +444,60 @@ export default function IeltsCertificateSection({
           <h2 className="text-xl font-bold text-slate-800">Ngữ pháp theo cấp độ</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            {
-              level: "Basic",
-              grammar: "Tenses cơ bản, S-V agreement, Articles",
-              progress: 90,
-            },
-            {
-              level: "Intermediate",
-              grammar: "Passive Voice, Conditionals, Reported Speech",
-              progress: 70,
-            },
-            {
-              level: "Advanced",
-              grammar: "Complex structures, Inversions, Cleft sentences",
-              progress: 45,
-            },
-          ].map((item) => (
-            <div key={item.level} className="bg-white rounded-xl border border-slate-100 p-5">
-              <div className="flex justify-between items-center mb-3">
-                <span className="font-bold text-slate-800">{item.level}</span>
-                <span className="text-sm text-slate-500">{item.progress}%</span>
+          {(grammarSection?.topics ?? []).length > 0 ? (
+            (grammarSection?.topics ?? []).map((item, idx) => (
+              <div key={item.topicKey} className={`bg-white rounded-xl border border-slate-100 p-5 ${item.done ? 'bg-violet-50/30' : ''}`}>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold text-slate-800">Part {idx + 1}</span>
+                  {item.done ? (
+                    <span className="text-xs font-bold text-emerald-500">100%</span>
+                  ) : (
+                    <span className="text-sm text-slate-500">Chưa bắt đầu</span>
+                  )}
+                </div>
+                <h4 className="text-sm font-bold text-slate-700 mb-1">{item.title}</h4>
+                <p className="text-xs text-slate-500 mb-3">{item.desc}</p>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full transition-all`}
+                    style={{ width: item.done ? '100%' : '0%' }}
+                  />
+                </div>
               </div>
-              <p className="text-sm text-slate-500 mb-3">{item.grammar}</p>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full"
-                  style={{ width: `${item.progress}%` }}
-                />
+            ))
+          ) : (
+            [
+              {
+                level: "Basic",
+                grammar: "Tenses cơ bản, S-V agreement, Articles",
+                progress: 90,
+              },
+              {
+                level: "Intermediate",
+                grammar: "Passive Voice, Conditionals, Reported Speech",
+                progress: 70,
+              },
+              {
+                level: "Advanced",
+                grammar: "Complex structures, Inversions, Cleft sentences",
+                progress: 45,
+              },
+            ].map((item) => (
+              <div key={item.level} className="bg-white rounded-xl border border-slate-100 p-5">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold text-slate-800">{item.level}</span>
+                  <span className="text-sm text-slate-500">{item.progress}%</span>
+                </div>
+                <p className="text-sm text-slate-500 mb-3">{item.grammar}</p>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full"
+                    style={{ width: `${item.progress}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
     </>

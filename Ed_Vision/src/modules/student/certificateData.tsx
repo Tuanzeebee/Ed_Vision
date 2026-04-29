@@ -515,9 +515,6 @@ const IELTS_SKILLS_4: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
-      { key: 'listening.sec1_form',    title: 'Section 1 – Form Completion', desc: 'Điền form từ hội thoại đời thường', done: false },
-      { key: 'listening.sec2_note',    title: 'Section 2 – Note/Map Basics', desc: 'Monologue xã hội: note completion + định hướng bản đồ cơ bản', done: false },
-      { key: 'listening.note_symbols', title: 'Kỹ thuật nghe chi tiết', desc: 'Nhận diện spelling, number, date, distractors và paraphrase cơ bản', done: false },
       {
         key: "vocab.everyday_2500",
         title: "Từ vựng đời thường (2,500 từ)",
@@ -696,8 +693,6 @@ const IELTS_SKILLS_5: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
-      { key: 'listening.sec3_conv',     title: 'Section 3 – Academic Discussion', desc: 'Hội thoại học thuật 2–3 người: MCQ, matching, table completion', done: false },
-      { key: 'listening.paraphrase',    title: 'Paraphrase & Distractor', desc: 'Đối chiếu từ khóa câu hỏi với cách nói lại trong audio', done: false },
       {
         key: "vocab.phrasal_verbs",
         title: "Phrasal Verbs phổ biến",
@@ -729,9 +724,6 @@ const IELTS_SKILLS_5: SkillSection[] = [
     "text-cyan-600",
     "bg-cyan-50",
     [
-      { key: 'writing.task1_trend',     title: 'Task 1 – Biểu đồ có trend/comparison', desc: 'Mô tả xu hướng tăng giảm, so sánh 2+ dữ liệu', done: false },
-      { key: 'writing.task2_4para',     title: 'Task 2 – Cấu trúc 4 đoạn', desc: 'Intro, Body 1, Body 2, Conclusion chuẩn', done: false },
-      { key: 'writing.linkers_basic',   title: 'Cohesion cơ bản', desc: 'Dùng linking words hợp lý, tránh lạm dụng từ nối', done: false },
       {
         key: "listening.sec3_conv",
         title: "Section 3 – Conversation chiến lược",
@@ -754,8 +746,6 @@ const IELTS_SKILLS_5: SkillSection[] = [
     "text-emerald-600",
     "bg-emerald-50",
     [
-      { key: 'speaking.part2_cuecard',  title: 'Part 2 – Cue Card (2 phút)', desc: 'Chiến lược ghi chú 1 phút, nói đủ 2 phút', done: false },
-      { key: 'speaking.extend_answers', title: 'Mở rộng câu trả lời', desc: 'Why/How/Example để tăng Fluency & Coherence', done: false },
       {
         key: "reading.match_headings",
         title: "Matching Headings",
@@ -869,8 +859,6 @@ const IELTS_SKILLS_6: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
-      { key: 'listening.sec4_lecture',  title: 'Section 4 – Academic Lecture', desc: 'Monologue học thuật tốc độ cao', done: false },
-      { key: 'listening.map_plan',      title: 'Map/Plan/Diagram Labelling', desc: 'Bám theo direction language, orientation và landmark', done: false },
       {
         key: "vocab.awl_570",
         title: "Academic Word List (AWL – 570 từ)",
@@ -921,9 +909,6 @@ const IELTS_SKILLS_6: SkillSection[] = [
     "text-emerald-600",
     "bg-emerald-50",
     [
-      { key: 'writing.task2_balanced',  title: 'Task 2 – Lập luận cân bằng', desc: 'Discussion essay: both sides + opinion', done: false },
-      { key: 'writing.cohesion_adv',    title: 'Coherence & Paragraph Logic', desc: 'Reference/substitution + phát triển luận điểm mạch lạc', done: false },
-      { key: 'writing.academic_style',  title: 'Lexical Resource học thuật', desc: 'Paraphrase chính xác, collocation tự nhiên, giảm lỗi word choice', done: false },
       {
         key: "reading.match_info",
         title: "Matching Information",
@@ -952,8 +937,6 @@ const IELTS_SKILLS_6: SkillSection[] = [
     "text-orange-600",
     "bg-orange-50",
     [
-      { key: 'speaking.part3_abstract', title: 'Part 3 – Câu hỏi trừu tượng', desc: 'Lập luận có ví dụ, đồng ý/phản đối', done: false },
-      { key: 'speaking.develop_ideas',  title: 'Phát triển ý có chiều sâu', desc: 'Point-Reason-Example-Result để tăng điểm Fluency/LR/GRA', done: false },
       {
         key: "writing.task2_balanced",
         title: "Task 2 – Lập luận cân bằng",
@@ -1076,8 +1059,6 @@ const IELTS_SKILLS_65: SkillSection[] = [
     "text-cyan-600",
     "bg-cyan-50",
     [
-      { key: 'writing.adv_linkers',     title: 'Cohesive Devices nâng cao', desc: 'Liên kết logic tự nhiên theo tiêu chí Coherence & Cohesion', done: false },
-      { key: 'writing.precision_vocab', title: 'Lexical Precision trong Task 2', desc: 'Dùng từ chính xác ngữ cảnh, kiểm soát collocation', done: false },
       {
         key: "listening.attitude",
         title: "Nhận diện thái độ & ý kiến",

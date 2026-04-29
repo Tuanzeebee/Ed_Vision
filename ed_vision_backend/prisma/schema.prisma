@@ -986,11 +986,19 @@ model IeltsQuestion {
   correctRate       Decimal?               @map("correct_rate") @db.Decimal(4, 3)
   createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  
+  // IRT parameters for adaptive testing
+  irtA              Decimal?               @map("irt_a") @db.Decimal(5, 3)
+  irtB              Decimal?               @map("irt_b") @db.Decimal(5, 3)
+  irtC              Decimal?               @map("irt_c") @db.Decimal(5, 3)
+  isPlacement       Boolean                @default(false) @map("is_placement")
+  
   placementAnswers  IeltsPlacementAnswer[] @relation("PlacementAnswers")
 
   @@index([skill, status], map: "idx_ielts_q_skill_status")
   @@index([bandMin, bandMax], map: "idx_ielts_q_band")
   @@index([errorTag], map: "idx_ielts_q_error_tag")
+  @@index([isPlacement, status], map: "idx_ielts_q_placement")
   @@map("ielts_questions")
 }
 
@@ -1010,6 +1018,9 @@ model IeltsPlacementSession {
   finalBand            Decimal?              @map("final_band") @db.Decimal(2, 1)
   skillBands           Json?                 @map("skill_bands")
   confidenceLevel      ConfidenceLevel?      @map("confidence_level")
+  skillsAnswered       Json                  @default("{\"reading\":0,\"listening\":0,\"writing\":0,\"speaking\":0}") @map("skills_answered")
+  skillThetas          Json                  @default("{\"reading\":0,\"listening\":0,\"writing\":0,\"speaking\":0}") @map("skill_thetas")
+  sem                  Decimal?              @map("sem") @db.Decimal(5, 4)
   answers              IeltsPlacementAnswer[]
 
   @@index([accountId, status], map: "idx_placement_account")
@@ -1030,6 +1041,10 @@ model IeltsPlacementAnswer {
   isCorrect        Boolean?              @map("is_correct")
   timeTakenSec     Int?                  @map("time_taken_sec")
   answeredAt       DateTime              @default(now()) @map("answered_at") @db.Timestamptz(6)
+  irtASnapshot     Decimal?              @map("irt_a_snapshot") @db.Decimal(5, 3)
+  irtBSnapshot     Decimal?              @map("irt_b_snapshot") @db.Decimal(5, 3)
+  irtCSnapshot     Decimal?              @map("irt_c_snapshot") @db.Decimal(5, 3)
+  skill            String?
 
   @@unique([sessionId, questionOrder])
   @@index([sessionId, questionOrder], map: "idx_placement_answers_session")
