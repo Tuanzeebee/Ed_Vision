@@ -1551,14 +1551,14 @@ export class ToeicPracticeImportService {
     let autoMappedCount = 0;
     if (chunks.length > 0) {
       const questions = await this.prisma.toeicPracticeQuestion.findMany({
-        where: { practice_set_id: slug },
-        select: { id: true, question_number: true },
+        where: { source_slug: slug },
+        select: { id: true, source_item_id: true },
       });
 
       const qNumToId = new Map<number, number>();
       for (const q of questions) {
-        if (typeof q.question_number === 'number') {
-          qNumToId.set(q.question_number, q.id);
+        if (typeof q.source_item_id === 'number') {
+          qNumToId.set(q.source_item_id, q.id);
         }
       }
 
@@ -1567,7 +1567,7 @@ export class ToeicPracticeImportService {
         if (!itemId) continue;
         await this.prisma.toeicPracticeQuestion.update({
           where: { id: itemId },
-          data: { media_audio_url: chunk.url },
+          data: { context_audio: chunk.url },
         });
         autoMappedCount++;
       }

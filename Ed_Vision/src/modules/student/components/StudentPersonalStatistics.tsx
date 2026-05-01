@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { Target, Headphones, Clock, Languages, BookOpenCheck, FileText, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Target, Headphones, Languages, BookOpenCheck, Calendar } from "lucide-react";
+import { getToeicPlanSync } from "@/services/api/certificateService";
+import { useVocabStats } from "@/hooks/useVocab";
 
 type StatCardProps = {
   title: string;
@@ -23,19 +25,42 @@ function StatCard({ title, value, todayAdd, yesterdayAdd, icon, iconBg, iconColo
       <div className="flex justify-between items-end mt-2">
         <p className="text-2xl font-black text-slate-800">{value}</p>
         <div className="text-right">
-          <p className="text-xs text-slate-500 font-medium">Nay: <span className="text-slate-700">+{todayAdd}</span></p>
-          <p className="text-xs text-slate-500 font-medium">Qua: <span className="text-slate-700">+{yesterdayAdd}</span></p>
+          {todayAdd > 0 && <p className="text-xs text-slate-500 font-medium">Nay: <span className="text-slate-700">+{todayAdd}</span></p>}
+          {yesterdayAdd > 0 && <p className="text-xs text-slate-500 font-medium">Qua: <span className="text-slate-700">+{yesterdayAdd}</span></p>}
         </div>
       </div>
     </div>
   );
 }
 
-export default function StudentPersonalStatistics() {
+type StudentPersonalStatisticsProps = {
+  enrollmentId?: number | null;
+};
+
+export default function StudentPersonalStatistics({ enrollmentId }: StudentPersonalStatisticsProps) {
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
+
+  const [listeningSessions, setListeningSessions] = useState(0);
+  const [readingSessions, setReadingSessions] = useState(0);
+  const vocabStats = useVocabStats(enrollmentId ?? null);
+  const knownWords = vocabStats?.knownWords ?? 0;
+  const knownWordsDisplay = knownWords.toLocaleString('en-US');
+
+  useEffect(() => {
+    getToeicPlanSync()
+      .then((data) => {
+        if (data) {
+          setListeningSessions(data.listening_sessions || 0);
+          setReadingSessions(data.reading_sessions || 0);
+        }
+      })
+      .catch(() => {
+        // Silent catch
+      });
+  }, []);
 
   return (
     <section className="mb-8">
@@ -64,60 +89,42 @@ export default function StudentPersonalStatistics() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Tổng lượt làm bài" 
-          value="150,142" 
-          todayAdd={8733} 
-          yesterdayAdd={7626}
+          title="Tổng lượt làm bài thi" 
+          value={listeningSessions + readingSessions} 
+          todayAdd={0} 
+          yesterdayAdd={0}
           icon={<Target className="w-4 h-4" />}
           iconBg="bg-blue-50"
           iconColor="text-blue-500"
         />
         <StatCard 
-          title="Listening Sessions" 
-          value="343,731" 
-          todayAdd={11433} 
-          yesterdayAdd={20145}
+          title="Listening hoàn thành" 
+          value={listeningSessions} 
+          todayAdd={0} 
+          yesterdayAdd={0}
           icon={<Headphones className="w-4 h-4" />}
           iconBg="bg-sky-50"
           iconColor="text-sky-500"
         />
         <StatCard 
-          title="Thời gian nghe" 
-          value="477h 24m" 
-          todayAdd={2} 
-          yesterdayAdd={4}
-          icon={<Clock className="w-4 h-4" />}
-          iconBg="bg-cyan-50"
-          iconColor="text-cyan-500"
-        />
-        <StatCard 
-          title="Từ vựng đã học" 
-          value="113,284" 
-          todayAdd={2017} 
-          yesterdayAdd={4213}
-          icon={<Languages className="w-4 h-4" />}
-          iconBg="bg-indigo-50"
-          iconColor="text-indigo-500"
-        />
-        <StatCard 
           title="Reading hoàn thành" 
-          value="4,361" 
-          todayAdd={132} 
-          yesterdayAdd={243}
+          value={readingSessions} 
+          todayAdd={0} 
+          yesterdayAdd={0}
           icon={<BookOpenCheck className="w-4 h-4" />}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-500"
         />
         <StatCard 
-          title="Mock Tests" 
-          value="1,098" 
-          todayAdd={48} 
-          yesterdayAdd={81}
-          icon={<FileText className="w-4 h-4" />}
-          iconBg="bg-teal-50"
-          iconColor="text-teal-500"
+          title="Từ vựng đã học" 
+          value={knownWordsDisplay} 
+          todayAdd={0} 
+          yesterdayAdd={0}
+          icon={<Languages className="w-4 h-4" />}
+          iconBg="bg-indigo-50"
+          iconColor="text-indigo-500"
         />
       </div>
     </section>

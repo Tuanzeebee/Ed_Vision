@@ -617,9 +617,11 @@ export interface ToeicPracticeSessionSubmitResponse {
 }
 
 export interface ToeicReservePointsPartSession {
-  part: number;
-  sessions_count: number;
-  total_earned: number;
+  toeic_part: number;
+  correct_count: number;
+  total_questions: number;
+  earned_points: number;
+  completed_at: string | null;
 }
 
 export interface ToeicReservePointsResponse {
@@ -651,6 +653,27 @@ export async function submitToeicPracticeSession(
 export async function getToeicReservePoints(): Promise<ToeicReservePointsResponse> {
   const res = await apiClient.get<ToeicReservePointsResponse>(
     "/student/certificate/toeic/reserve-points",
+  );
+  return res.data;
+}
+
+// ─── Personal Scores (Điểm Gốc + Điểm Ôn Tập + EXP) ──────────────────────
+
+export interface PersonalScoresResponse {
+  current_score: number | null;       // Điểm Gốc (from diagnostic test)
+  reserve_points: number;             // Điểm Ôn Tập (accumulated from practice)
+  target_score: number | null;        // Điểm mục tiêu
+  exam_score: number | null;          // Điểm thi thử gần nhất
+  total_exp: number;                  // Tổng EXP tích lũy
+  weekly_exp: number;                 // EXP tuần này
+  exam_simulation_unlocked: boolean;  // Đã mở khóa thi thử chưa
+  progress_percent: number;           // % tiến độ đến target_score
+  remaining_points: number | null;    // Điểm còn cần tích lũy
+}
+
+export async function getPersonalScores(): Promise<PersonalScoresResponse> {
+  const res = await apiClient.get<PersonalScoresResponse>(
+    "/student/certificate/me/scores",
   );
   return res.data;
 }

@@ -6,6 +6,7 @@ import {
 import { IsInt, IsObject, IsArray, Min, Max } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { encryptString, encryptRecord } from '../../common/crypto.util';
+import { QuestionPointsCalculatorService } from '../../study-room/services/question-points-calculator.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -96,6 +97,10 @@ export interface SubmitPartSessionResponseDto {
   exam_unlocked: boolean;
   correct_answers: Record<string, string>;
   explanations: Record<string, string | null>;
+  // EXP earned from this session (question-based)
+  exp_earned: number;
+  exp_question: number;
+  exp_bonus: number;
 }
 
 export interface ReservePointsStatusDto {
@@ -105,6 +110,7 @@ export interface ReservePointsStatusDto {
   part_sessions: Array<{
     toeic_part: number;
     correct_count: number;
+    total_questions: number;
     earned_points: number;
     completed_at: Date | null;
   }>;
@@ -121,7 +127,10 @@ export interface ResetPracticeProgressResponseDto {
 
 @Injectable()
 export class ToeicPracticeSessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly questionPointsCalculator: QuestionPointsCalculatorService,
+  ) {}
 
   // ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -482,6 +491,8 @@ export class ToeicPracticeSessionService {
     let correctCount = 0;
     const correctAnswers: Record<string, string> = {};
     const explanations: Record<string, string | null> = {};
+    // Track per-question results for EXP calculation
+    const questionResults: Array<{ difficulty_score: number | null; is_correct: boolean }> = [];
 
     for (const q of questions) {
       const correctOption = q.options.find((o) => o.is_correct);
@@ -494,14 +505,26 @@ export class ToeicPracticeSessionService {
       explanations[String(q.id)] = q.ai_explanation ?? null;
 
       const chosenKey = dto.answers[String(q.id)] ?? null;
-      if (
-        chosenKey &&
+      const isCorrect =
+        !!(chosenKey &&
         correctKey &&
-        chosenKey.toUpperCase() === correctKey.toUpperCase()
-      ) {
+        chosenKey.toUpperCase() === correctKey.toUpperCase());
+
+      if (isCorrect) {
         correctCount++;
       }
+
+      questionResults.push({
+        difficulty_score: q.difficulty_score ?? null,
+        is_correct: isCorrect,
+      });
     }
+
+    // Calculate Points for this session
+    const pointsResult = this.questionPointsCalculator.calculateSessionExp(
+      questionResults,
+      dto.toeic_part,
+    );
 
     const totalQuestions = uniqueQuestionIds.length;
     const budget = PART_POINT_BUDGET[dto.toeic_part] ?? 10;
@@ -599,6 +622,21 @@ export class ToeicPracticeSessionService {
     const unlockThreshold =
       scoringContext.updatedEnrollment.target_score ?? DEFAULT_UNLOCK_THRESHOLD;
 
+    // ── Award Points for this practice session (async, non-blocking) ─────────
+    // Points is awarded outside the transaction to avoid blocking the response.
+    // Failure to award Points does not affect the session result.
+    setImmediate(() => {
+      this.questionPointsCalculator
+        .awardSessionPoints(accountId, pointsResult.totalPoints, enrollment.id)
+        .catch((err) => {
+          // Log but don't throw — Points failure is non-critical
+          console.error(
+            `[ToeicPracticeSessionService] Failed to award Points for account ${accountId}:`,
+            err,
+          );
+        });
+    });
+
     // Encrypt correct answers and explanations before sending to client
     const encryptedCorrectAnswers: Record<string, string> = {};
     for (const [qId, key] of Object.entries(correctAnswers)) {
@@ -620,6 +658,9 @@ export class ToeicPracticeSessionService {
       exam_unlocked: newReservePoints >= unlockThreshold,
       correct_answers: encryptedCorrectAnswers,
       explanations: encryptedExplanations,
+      exp_earned: pointsResult.totalPoints,
+      exp_question: pointsResult.questionExp,
+      exp_bonus: pointsResult.bonusExp,
     };
   }
 
@@ -662,6 +703,7 @@ export class ToeicPracticeSessionService {
       select: {
         toeic_part: true,
         correct_count: true,
+        total_questions: true,
         earned_points: true,
         completed_at: true,
       },
@@ -677,6 +719,7 @@ export class ToeicPracticeSessionService {
       part_sessions: recentSessions.map((s) => ({
         toeic_part: s.toeic_part,
         correct_count: s.correct_count,
+        total_questions: s.total_questions,
         earned_points: s.earned_points,
         completed_at: s.completed_at,
       })),

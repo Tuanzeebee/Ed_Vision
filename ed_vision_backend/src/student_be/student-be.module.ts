@@ -4,6 +4,7 @@ import { StudentSurveyModule } from './survey/student-survey.module';
 import { MessagesModule } from './messages/messages.module';
 import { CertificateModule } from './certificate/certificate.module';
 import { LearningPathModule } from './learning-path/learning-path.module';
+import { VocabModule } from './vocab/vocab.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { LearningPathModule } from './learning-path/learning-path.module';
     MessagesModule,
     CertificateModule,
     LearningPathModule,
+    VocabModule,
   ],
   exports: [
     TranscriptUploadModule,
@@ -19,6 +21,8 @@ import { LearningPathModule } from './learning-path/learning-path.module';
     MessagesModule,
     CertificateModule,
     LearningPathModule,
+    VocabModule,
   ],
 })
 export class StudentBeModule {}
+

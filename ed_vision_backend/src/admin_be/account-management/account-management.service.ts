@@ -279,6 +279,7 @@ export class AccountManagementService {
         : undefined,
       student: account.student
         ? {
+            studentId: account.student.student_id, // Added for frontend profile tab
             studentCode: account.student.student_code,
             programName: account.student.classGroup?.program?.program_name,
             departmentName:
@@ -289,6 +290,7 @@ export class AccountManagementService {
         : undefined,
       instructor: account.instructor
         ? {
+            instructorId: account.instructor.instructor_id, // Added for frontend profile tab
             employeeCode: account.instructor.employee_code,
             academicTitle: account.instructor.academic_title || undefined,
             position: account.instructor.position || undefined,
@@ -379,6 +381,7 @@ export class AccountManagementService {
         : undefined,
       student: account.student
         ? {
+            studentId: account.student.student_id, // Added for frontend profile tab
             studentCode: account.student.student_code,
             programName: account.student.classGroup?.program?.program_name,
             departmentName:
@@ -389,6 +392,7 @@ export class AccountManagementService {
         : undefined,
       instructor: account.instructor
         ? {
+            instructorId: account.instructor.instructor_id, // Added for frontend profile tab
             employeeCode: account.instructor.employee_code,
             academicTitle: account.instructor.academic_title || undefined,
             position: account.instructor.position || undefined,

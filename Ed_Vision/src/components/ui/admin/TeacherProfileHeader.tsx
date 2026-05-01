@@ -86,17 +86,20 @@ const mapInstructorToTeacherData = (instructor: Instructor): TeacherData => {
 };
 
 type Props = {
+  teacherId?: string;
   teacherData?: TeacherData;
   showActionButtons?: boolean;
   onTeacherDataChange?: (data: TeacherData) =>void;
 }
 
 export default function TeacherProfileHeader({ 
+  teacherId: propTeacherId,
   teacherData: propTeacherData, 
   showActionButtons = true,
   onTeacherDataChange 
 }: Props) {
-  const { teacherId } = useParams();
+  const { teacherId: paramTeacherId } = useParams();
+  const teacherId = propTeacherId || paramTeacherId;
   const [teacherData, setTeacherData] = useState<TeacherData | null>(propTeacherData || null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +126,6 @@ export default function TeacherProfileHeader({
         setTeacherData(mappedData);
         onTeacherDataChangeRef.current?.(mappedData);
       } catch (err) {
-        console.error('Failed to fetch teacher data:', err);
         setError('Không thể tải thông tin giảng viên');
       } finally {
         setIsLoading(false);
@@ -141,7 +143,6 @@ export default function TeacherProfileHeader({
   };
 
   const handleActionClick = (action: string) => {
-    console.log(`${action} clicked for teacher:`, teacherData?.id);
     // Implement action handlers here
   };
 

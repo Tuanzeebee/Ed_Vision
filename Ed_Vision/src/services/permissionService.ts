@@ -60,7 +60,6 @@ export class PermissionService {
           'student_chat_student'],
         'teacher': [
           'teacher_dashboard',
-          'teacher_profile',
           'teacher_schedule',
           'teacher_appointments',
           'teacher_students',

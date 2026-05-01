@@ -149,7 +149,8 @@ export class InstructorManagementService {
   }
 
   async findOne(id: number): Promise<InstructorResponse> {
-    const instructor = await this.prisma.instructor.findUnique({
+    // Try to find by instructor_id first, then by account_id
+    let instructor = await this.prisma.instructor.findUnique({
       where: { instructor_id: id },
       include: {
         account: {
@@ -160,6 +161,21 @@ export class InstructorManagementService {
         department: true,
       },
     });
+
+    // If not found by instructor_id, try account_id
+    if (!instructor) {
+      instructor = await this.prisma.instructor.findUnique({
+        where: { account_id: id },
+        include: {
+          account: {
+            include: {
+              profile: true,
+            },
+          },
+          department: true,
+        },
+      });
+    }
 
     if (!instructor) {
       throw new NotFoundException(`Instructor with ID ${id} not found`);

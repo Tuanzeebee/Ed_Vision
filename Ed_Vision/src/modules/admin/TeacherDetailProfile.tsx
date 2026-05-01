@@ -1,8 +1,11 @@
-import AdminLayout from "@/components/ui/admin/AdminLayout";
 import TeacherProfileHeader, { type TeacherData } from "@/components/ui/admin/TeacherProfileHeader";
 import TeacherTabNavigation from "@/components/ui/admin/TeacherTabNavigation";
+import TeacherSubjects from "./TeacherSubjects";
+import TeacherRatings from "./TeacherRatings";
+import TeacherPerformance from "./TeacherPerformance";
+import TeacherSchedule from "./TeacherSchedule";
+import TeacherSupportHistory from "./TeacherSupportHistory";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
 
 // Simple Card components for content sections
 const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
@@ -52,16 +55,18 @@ const recentActivities = [
   }
 ];
 
-export default function TeacherDetailProfile() {
-  const { teacherId } = useParams();
+export interface TeacherDetailProfileProps {
+  teacherId: string;
+}
+
+export default function TeacherDetailProfile({ teacherId }: TeacherDetailProfileProps) {
   const [activeTab, setActiveTab] = useState("Thông tin cá nhân");
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null);
-
-  // In thực tế, sẽ fetch data dựa trên teacherId
-  console.log("Teacher ID from URL:", teacherId);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleTeacherDataChange = (data: TeacherData) => {
     setTeacherData(data);
+    setIsLoading(false);
   };
 
   const handleTabChange = (tabLabel: string) => {
@@ -70,21 +75,23 @@ export default function TeacherDetailProfile() {
 
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Teacher Profile Header */}
-        <TeacherProfileHeader 
-          onTeacherDataChange={handleTeacherDataChange}
-        />
+    <div className="space-y-6">
+      {/* Teacher Profile Header */}
+      <TeacherProfileHeader 
+        teacherId={teacherId}
+        onTeacherDataChange={handleTeacherDataChange}
+      />
 
         {/* Navigation Tabs */}
         <TeacherTabNavigation 
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          teacherId={teacherId}
+          embedded={true}
         />
 
-        {/* Content Grid - Show content based on teacherData from API */}
-        {teacherData ? (
+        {/* Tab Content */}
+        {activeTab === "Thông tin cá nhân" && teacherData && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Basic Information */}
             <div className="space-y-6">
@@ -190,11 +197,23 @@ export default function TeacherDetailProfile() {
                 </div>
               </div>
             </div>
-          </div>) : (
+          </div>
+        )}
+
+        {/* Other Tabs */}
+        {activeTab === "Môn học giảng dạy" && <TeacherSubjects teacherId={teacherId} />}
+        {activeTab === "Đánh giá giảng dạy" && <TeacherRatings teacherId={teacherId} />}
+        {activeTab === "Hiệu suất giảng viên" && <TeacherPerformance teacherId={teacherId} />}
+        {activeTab === "Lịch tư vấn" && <TeacherSchedule teacherId={teacherId} />}
+        {activeTab === "Lịch sử hỗ trợ" && <TeacherSupportHistory teacherId={teacherId} />}
+
+        {/* Loading State */}
+        {!teacherData && isLoading && (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-3 text-gray-600">Đang tải thông tin...</span>
-          </div>)}
+          </div>
+        )}
       </div>
-    </AdminLayout>);
+  );
 }

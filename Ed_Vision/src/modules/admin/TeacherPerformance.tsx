@@ -1,8 +1,5 @@
 import { useRef } from "react";
-import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { Card, CardContent } from "../../components/ui/card";
-import TeacherProfileHeader from "@/components/ui/admin/TeacherProfileHeader";
-import TeacherTabNavigation from "@/components/ui/admin/TeacherTabNavigation";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -63,7 +60,11 @@ type Recommendation = {
   borderColor: string;
 };
 
-export default function TeacherPerformance() {
+export interface TeacherPerformanceProps {
+  teacherId?: string;
+}
+
+export default function TeacherPerformance({ teacherId }: TeacherPerformanceProps = {}) {
   const chartRef = useRef<ChartJS<'line'>| null>(null);
 
   // Mock data for KPIs
@@ -439,16 +440,9 @@ export default function TeacherPerformance() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Teacher Profile Header */}
-        <TeacherProfileHeader />
-
-        {/* Tab Navigation */}
-        <TeacherTabNavigation activeTab="Hiệu suất giảng viên"/>
-
-        {/* KPI Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      {/* KPI Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {kpis.map((kpi, index) =>(
             <div
               key={index}
@@ -636,5 +630,5 @@ export default function TeacherPerformance() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>);
+    );
 }

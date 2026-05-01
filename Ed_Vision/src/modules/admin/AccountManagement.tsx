@@ -161,7 +161,6 @@ export default function AccountManagement() {
         const options = await accountService.getFilterOptions();
         setFilterOptions(options);
       } catch (error) {
-        console.error('Failed to fetch filter options:', error);
         showToast('Không thể tải danh sách bộ lọc', 'error');
       }
     };
@@ -183,16 +182,12 @@ export default function AccountManagement() {
         limit: usersPerPage,
       };
       
-      // Debug log
-      console.log('Frontend sending filters:', filters);
-      
       const response = await accountService.getAccounts(filters);
 
       setAccountsData(response.data);
       setTotalRecords(response.meta.total);
       setTotalPages(response.meta.totalPages);
     } catch (error) {
-      console.error('Failed to fetch accounts:', error);
       showToast('Không thể tải danh sách tài khoản', 'error');
       setAccountsData([]);
       setTotalRecords(0);
@@ -239,7 +234,6 @@ export default function AccountManagement() {
       // Refresh data
       fetchAccounts();
     } catch (error) {
-      console.error('Failed to lock account:', error);
       showToast('Không thể khóa tài khoản', 'error');
     }
   };
@@ -251,7 +245,6 @@ export default function AccountManagement() {
       // Refresh data
       fetchAccounts();
     } catch (error) {
-      console.error('Failed to unlock account:', error);
       showToast('Không thể mở khóa tài khoản', 'error');
     }
   };
@@ -317,7 +310,6 @@ export default function AccountManagement() {
                 value={selectedRole}
                 onChange={(e) => {
                   const newRole = e.target.value;
-                  console.log('Role changed to:', newRole);
                   setSelectedRole(newRole);
                 }}
                 className="px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 text-xs w-32 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 truncate">
@@ -429,17 +421,21 @@ export default function AccountManagement() {
                   </button>
 
                   {/* Lock/Unlock Button */}
-                  {account.status === 'blocked'? (
-                    <button 
-                      onClick={() =>handleUnlockAccount(account.accountId)}
-                      title="Mở khóa"className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer">
-                      <span style={{ filter: 'sepia(1) hue-rotate(50deg) saturate(3) brightness(1.2)'}}></span>
-                    </button>) : (
-                    <button 
-                      onClick={() =>handleLockAccount(account.accountId)}
-                      title="Khóa tài khoản"className="p-1.5 hover:bg-red-50 rounded-md transition-colors cursor-pointer">
-                      <span style={{ filter: 'hue-rotate(-30deg) saturate(2) brightness(0.9)'}}></span>
-                    </button>)}
+                  {account.status === 'blocked' ? (
+                    <button
+                      onClick={() => handleUnlockAccount(account.accountId)}
+                      title="Mở khóa"
+                      className="p-1.5 hover:bg-green-50 rounded-md transition-colors cursor-pointer">
+                      <i className="fas fa-lock-open text-green-600"></i>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleLockAccount(account.accountId)}
+                      title="Khóa tài khoản"
+                      className="p-1.5 hover:bg-orange-50 rounded-md transition-colors cursor-pointer">
+                      <i className="fas fa-lock text-orange-500"></i>
+                    </button>
+                  )}
                 </div>
               </div>))
             ) : null}

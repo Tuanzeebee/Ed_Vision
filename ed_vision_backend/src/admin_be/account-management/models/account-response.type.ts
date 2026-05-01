@@ -8,6 +8,7 @@ export interface ProfileResponse {
 }
 
 export interface StudentInfo {
+  studentId?: number; // Added for frontend profile tab navigation
   studentCode: string;
   programName?: string;
   departmentName?: string;
@@ -16,6 +17,7 @@ export interface StudentInfo {
 }
 
 export interface InstructorInfo {
+  instructorId?: number; // Added for frontend profile tab navigation
   employeeCode: string;
   academicTitle?: string;
   position?: string;

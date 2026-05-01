@@ -1,8 +1,4 @@
-import AdminLayout from "@/components/ui/admin/AdminLayout";
-import TeacherProfileHeader, { type TeacherData } from "@/components/ui/admin/TeacherProfileHeader";
-import TeacherTabNavigation from "@/components/ui/admin/TeacherTabNavigation";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
 
 // Subject data
 const subjectData = [
@@ -48,39 +44,16 @@ const subjectData = [
   }
 ];
 
-export default function TeacherSubjects() {
-  const { teacherId } = useParams();
-  const [activeTab, setActiveTab] = useState("Môn học giảng dạy");
+export interface TeacherSubjectsProps {
+  teacherId?: string;
+}
+
+export default function TeacherSubjects({ teacherId }: TeacherSubjectsProps = {}) {
   const [selectedYear, setSelectedYear] = useState("2024-2025");
   const [selectedSemester, setSelectedSemester] = useState("Học kỳ 1");
 
-  // Log current active tab for debugging
-  console.log("Current active tab:", activeTab);
-  console.log("Teacher ID:", teacherId);
-
-  const handleTeacherDataChange = (data: TeacherData) => {
-    console.log("Teacher data updated:", data);
-  };
-
-  const handleTabChange = (tabLabel: string) => {
-    setActiveTab(tabLabel);
-  };
-
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Teacher Profile Header */}
-        <TeacherProfileHeader 
-          onTeacherDataChange={handleTeacherDataChange}
-        />
-
-        {/* Navigation Tabs */}
-        <TeacherTabNavigation 
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-
-        {/* Filters */}
+    <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex flex-wrap gap-4">
             <div>
@@ -157,5 +130,5 @@ export default function TeacherSubjects() {
           </div>
         </div>
       </div>
-    </AdminLayout>);
+    );
 }

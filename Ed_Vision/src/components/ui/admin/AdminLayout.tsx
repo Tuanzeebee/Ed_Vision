@@ -99,7 +99,7 @@ const roleCode = (user?.roleRel?.code || user?.role || '').toString().toLowerCas
         })
       }
     } catch (e) {
-      console.error('Logout notify failed', e)
+      // Ignore logout notify errors
     } finally {
       // Delegate to centralized logout which performs full cleanup and redirect
       try {

@@ -5,10 +5,7 @@ import {
   Home,
   Users,
   ClipboardList,
-  BarChart3,
   AlertTriangle,
-  Bell,
-  Settings,
   ChevronDown,
   ChevronRight,
   Brain,
@@ -156,15 +153,7 @@ export default function Sidebar({
           )}
         </div>
 
-        <NavLink
-          to="/teacher/progress-tracking"
-          className={({ isActive }) =>
-            `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"}`
-          }
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span>{t("sidebar.progressTracking")}</span>
-        </NavLink>
+
 
         {/* Survey Management */}
         <NavLink
@@ -197,15 +186,7 @@ export default function Sidebar({
           <span>{t("sidebar.reportsAlerts")}</span>
         </NavLink>
 
-        <NavLink
-          to="/teacher/messages"
-          className={({ isActive }) =>
-            `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"}`
-          }
-        >
-          <Bell className="w-4 h-4" />
-          <span>{t("sidebar.messages")}</span>
-        </NavLink>
+
 
         {/* Appointment Management with Dropdown */}
         <div className="space-y-1">
@@ -263,15 +244,7 @@ export default function Sidebar({
           )}
         </div>
 
-        <NavLink
-          to="/teacher/settings"
-          className={({ isActive }) =>
-            `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"}`
-          }
-        >
-          <Settings className="w-4 h-4" />
-          <span>{t("sidebar.accountSettings")}</span>
-        </NavLink>
+
       </nav>
     </aside>
   );

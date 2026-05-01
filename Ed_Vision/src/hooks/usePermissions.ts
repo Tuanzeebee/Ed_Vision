@@ -110,7 +110,6 @@ export function useTeacherPermissions() {
   const canManageClasses = () =>permissions.hasPermission('teacher_class_management')
   const canManageGrades = () =>permissions.hasPermission('teacher_grade_management')
   const canViewPredictions = () =>permissions.hasPermission('teacher_prediction_view')
-  const canTrackProgress = () =>permissions.hasPermission('teacher_progress_tracking')
   const canAccessReports = () =>permissions.hasPermission('teacher_reports_alerts')
   
   const isTeacher = () =>permissions.hasRole('teacher')
@@ -120,7 +119,6 @@ export function useTeacherPermissions() {
     canManageClasses,
     canManageGrades,
     canViewPredictions,
-    canTrackProgress,
     canAccessReports,
     isTeacher
   }

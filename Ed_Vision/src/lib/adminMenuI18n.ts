@@ -12,8 +12,6 @@ export const MENU_LABEL_KEYS: Record<string, string>= {
   
   // Quản lý submenu
   "Tài khoản & Vai trò": "admin:sidebar.accountsRoles",
-  "Quản lý Sinh viên": "admin:sidebar.studentManagement",
-  "Quản lý Giảng viên/Cố Vấn": "admin:sidebar.teacherManagement",
   "Quản lý Khảo sát": "admin:sidebar.surveyManagement",
   
   // Dữ liệu & Báo cáo submenu

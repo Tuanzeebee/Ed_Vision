@@ -10,20 +10,27 @@ const Card = ({ children, className = ""}: { children: React.ReactNode; classNam
 type Props = {
   activeTab: string;
   onTabChange?: (tabLabel: string) =>void;
+  teacherId?: string; // Optional prop, fallback to useParams if not provided
+  embedded?: boolean; // New prop to indicate if this is embedded in AccountDetailPage
 }
 
-export default function TeacherTabNavigation({ activeTab, onTabChange }: Props) {
-  const { teacherId } = useParams();
+export default function TeacherTabNavigation({ activeTab, onTabChange, teacherId: teacherIdProp, embedded = false }: Props) {
+  const { teacherId: teacherIdParam } = useParams();
   const navigate = useNavigate();
+  
+  // Use prop if provided, otherwise fallback to URL param
+  const teacherId = teacherIdProp || teacherIdParam;
 
   const handleTabClick = (tab: TeacherNavigationTab) => {
-    const targetPath = `/admin/teachers/${teacherId}${tab.path}`;
-    
-    // Navigate to the appropriate route
-    navigate(targetPath);
-    
-    // Call callback if provided
-    onTabChange?.(tab.label);
+    if (embedded) {
+      // If embedded (in AccountDetailPage), just call the callback without navigation
+      onTabChange?.(tab.label);
+    } else {
+      // If standalone (old route), navigate to the appropriate route
+      const targetPath = `/admin/teachers/${teacherId}${tab.path}`;
+      navigate(targetPath);
+      onTabChange?.(tab.label);
+    }
   };
 
   const isTabActive = (tab: TeacherNavigationTab) => {

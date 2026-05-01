@@ -118,9 +118,24 @@ export default function CertificateReview() {
     const active = enrollments.find((e) => e.cert_type === c.id && e.status === 'active')
     const latest = active ?? enrollments.find((e) => e.cert_type === c.id)
     if (!latest) return c
-    const progress = Math.round((latest.completed_topics.length / latest.total_topics) * 100)
+
+    // Tính tiến độ: đồng nhất với CertificateDetail
+    // - TOEIC: current_score / target_score (điểm gốc so với mục tiêu)
+    // - Còn lại: progress_percent từ API
+    // - Fallback: completed_topics / total_topics
+    let progress = 0
+    if (c.id === 'toeic' && latest.current_score && latest.target_score && latest.target_score > 0) {
+      progress = Math.max(0, Math.min(100, Math.round((latest.current_score / latest.target_score) * 100)))
+    } else if (latest.progress_percent != null) {
+      progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
+    } else if (latest.total_topics > 0) {
+      progress = Math.round((latest.completed_topics.length / latest.total_topics) * 100)
+    }
+
     const status: Certificate['status'] = latest.status === 'active' ? 'active' : 'in-progress'
-    return { ...c, progress, status }
+    // "Đang học" chỉ hiện khi đã làm khảo sát và có điểm gốc (current_score)
+    const hasBaseScore = !!(latest.current_score && latest.current_score > 0)
+    return { ...c, progress, status, hasBaseScore }
   })
 
   // ── Tổng hợp thống kê từ dữ liệu thật ────────────────────────────────────────
@@ -175,14 +190,10 @@ export default function CertificateReview() {
                   <h1 className="text-2xl font-bold text-slate-800">Ôn Luyện Chứng Chỉ</h1>
                 </div>
                 <p className="text-slate-500">
-                  Xin chào, 
-                  <span className="font-semibold text-purple-600">{displayName}</span>! Hãy tiếp tục
+                  Xin chào,{" "}
+                  <span className="font-semibold text-slate-700">{displayName}</span>! Hãy tiếp tục
                   lộ trình ôn luyện của bạn.
                 </p>
-              </div>
-              <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full border border-orange-100">
-                <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
-                <span className="text-sm font-bold">{streak} ngày streak</span>
               </div>
             </div>
 
@@ -229,17 +240,17 @@ export default function CertificateReview() {
                 {[...Array(2)].map((_, setIdx) => (
                   <div key={setIdx} className="flex items-center gap-6 px-3">
                     {[
-                      { cert: 'IELTS', rank: 16, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', icon: '🏅' },
-                      { cert: 'TOEIC', rank: 1, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: '🥇' },
-                      { cert: 'MOS Excel', rank: 8, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100', icon: '🏅' },
-                      { cert: 'HSK 2', rank: 3, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: '🥉' },
+                      { cert: 'IELTS', rank: 16, icon: '🏅' },
+                      { cert: 'TOEIC', rank: 1, icon: '🥇' },
+                      { cert: 'MOS Excel', rank: 8, icon: '🏅' },
+                      { cert: 'HSK 2', rank: 3, icon: '🥉' },
                     ].map((r) => (
                       <span
                         key={`${setIdx}-${r.cert}`}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${r.bg} ${r.border} ${r.color}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold bg-slate-50 border-slate-200 text-slate-600"
                       >
-                        <Trophy className="w-3.5 h-3.5 shrink-0" />
-                        Xếp hạng {r.cert}: <strong className="font-bold">#{r.rank}</strong>
+                        <Trophy className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                        Xếp hạng {r.cert}: <strong className="font-bold text-slate-700">#{r.rank}</strong>
                       </span>
                     ))}
                     <span className="text-slate-300 text-xs">✦</span>

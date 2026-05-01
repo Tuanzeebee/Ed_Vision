@@ -42,17 +42,18 @@ model Account {
   reminderSchedules          ReminderSchedule[] // Scheduled reminders targeting this account
   notificationMastersCreated NotificationMaster[]            @relation("NotificationMasterCreator") // Notifications created by this account (admin)
   notificationRecipients     NotificationRecipient[] // Notifications received by this account
-  deviceFingerprints DeviceFingerprint[] // Device fingerprints for attendance verification
-  approvedAttempts   AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
-  verificationAttempts AttendanceVerificationAttempt[] // All verification attempts by this account
-  hostedRooms       Room[]             @relation("RoomHost")
-  roomParticipants  RoomParticipant[]
-  roomActions       RoomAction[]       @relation("RoomActionTarget")
-  roomBans          RoomBan[]
-  studySessions     StudySession[]
-  dailyStreak       DailyStreak?
-  studyStat         StudyStat?
-  leaderboard       Leaderboard?
+  deviceFingerprints         DeviceFingerprint[] // Device fingerprints for attendance verification
+  approvedAttempts           AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
+  verificationAttempts       AttendanceVerificationAttempt[] // All verification attempts by this account
+  hostedRooms                Room[]                          @relation("RoomHost")
+  roomParticipants           RoomParticipant[]
+  roomActions                RoomAction[]                    @relation("RoomActionTarget")
+  roomBans                   RoomBan[]
+  studySessions              StudySession[]
+  dailyStreak                DailyStreak?
+  studyStat                  StudyStat?
+  leaderboard                Leaderboard?
+
   @@map("Account")
 }
 
@@ -832,13 +833,12 @@ model CertificateEnrollment {
   completed_at     DateTime? @db.Timestamptz(6)
   enrolled_at      DateTime  @default(now()) @db.Timestamptz(6)
   updated_at       DateTime  @updatedAt @db.Timestamptz(6)
-  completed_at     DateTime? @db.Timestamptz(6)
-  enrolled_at      DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime  @updatedAt @db.Timestamptz(6)
 
   student              Student                    @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   topicProgress        CertificateTopicProgress[]
   practicePartSessions ToeicPracticePartSession[]
+  userVocabProgress    UserVocabProgress[]
+  vocabTestSessions    VocabTestSession[]
 
   // A student may only have one active enrollment per cert at a time (enforced in service layer).
   @@index([student_id, cert_type, status])
@@ -1253,60 +1253,29 @@ model CertificateTopicProgress {
   @@index([enrollment_id])
   @@map("CertificateTopicProgress")
 }
-model ToeicPracticePartSession {
-  id              Int       @id @default(autoincrement())
-  enrollment_id   Int
 
-  skill_area      String    @db.VarChar(20)  // 'listening' | 'reading'
-  toeic_part      Int       @db.SmallInt     // 1 | 2 | 3 | 4 | 5 | 6 | 7
-
-  /// Score band of questions served in this session (matches student's level).
-  score_band_min  Int       @default(0)
-  score_band_max  Int       @default(990)
-
-  /// IDs of the ToeicPracticeQuestion rows that were served (ordered).
-  question_ids    Json                       // Int[]
-
-  /// Student's submitted answers: { "<question_id>": "A" | "B" | "C" | "D" }
-  answers         Json                       // Record<string, string>
-
-  total_questions Int       @default(10) @db.SmallInt
-  correct_count   Int       @default(0)  @db.SmallInt
-
-  /// Reserve points earned in this session (correct_count × points_per_correct for this part).
-  earned_points   Float     @default(0) @db.DoublePrecision
-
-  completed_at    DateTime  @default(now()) @db.Timestamptz(6)
-  created_at      DateTime  @default(now()) @db.Timestamptz(6)
-
-  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
-
-  @@index([enrollment_id, skill_area, toeic_part])
-  @@index([enrollment_id, completed_at])
-  @@map("ToeicPracticePartSession")
-}
 model Room {
-  room_id          Int       @id @default(autoincrement())
-  host_id          Int?
-  title            String    @db.VarChar(255)
+  room_id Int    @id @default(autoincrement())
+  host_id Int?
+  title   String @db.VarChar(255)
 
-  room_mode        String    @db.VarChar(20) // audio | video | focus
-  password_hash    String?   @db.VarChar(255)
+  room_mode     String  @db.VarChar(20) // audio | video | focus
+  password_hash String? @db.VarChar(255)
 
-  cover_type       String?   @db.VarChar(20) // image | youtube
-  cover_url        String?   @db.VarChar(500)
+  cover_type String? @db.VarChar(20) // image | youtube
+  cover_url  String? @db.VarChar(500)
 
-  is_public        Boolean   @default(true)
-  max_participants Int       @default(6)
+  is_public        Boolean @default(true)
+  max_participants Int     @default(6)
 
-  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
 
   // relations
-  host             Account?  @relation("RoomHost", fields: [host_id], references: [account_id])
-  participants     RoomParticipant[]
-  actions          RoomAction[]
-  bans             RoomBan[]
-  studySessions    StudySession[]
+  host          Account?          @relation("RoomHost", fields: [host_id], references: [account_id])
+  participants  RoomParticipant[]
+  actions       RoomAction[]
+  bans          RoomBan[]
+  studySessions StudySession[]
 
   @@index([room_mode])
   @@index([is_public])
@@ -1314,22 +1283,22 @@ model Room {
 }
 
 model RoomParticipant {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  room_id     Int
-  account_id  Int
+  room_id    Int
+  account_id Int
 
-  is_host     Boolean  @default(false)
+  is_host Boolean @default(false)
 
-  camera_on   Boolean  @default(false)
-  mic_on      Boolean  @default(false)
+  camera_on Boolean @default(false)
+  mic_on    Boolean @default(false)
 
-  joined_at   DateTime @default(now()) @db.Timestamptz(6)
-  left_at     DateTime? @db.Timestamptz(6)
+  joined_at DateTime  @default(now()) @db.Timestamptz(6)
+  left_at   DateTime? @db.Timestamptz(6)
 
   // relations
-  room        Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
-  account     Account  @relation(fields: [account_id], references: [account_id])
+  room    Room    @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  account Account @relation(fields: [account_id], references: [account_id])
 
   @@index([room_id])
   @@index([account_id])
@@ -1338,95 +1307,210 @@ model RoomParticipant {
 }
 
 model RoomAction {
-  id                 Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  room_id            Int
-  target_account_id  Int
+  room_id           Int
+  target_account_id Int
 
-  action_type        String   @db.VarChar(20) // kick | mute
+  action_type String @db.VarChar(20) // kick | mute
 
-  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
 
   // relations
-  room               Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
-  targetAccount      Account  @relation("RoomActionTarget", fields: [target_account_id], references: [account_id])
+  room          Room    @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  targetAccount Account @relation("RoomActionTarget", fields: [target_account_id], references: [account_id])
 
   @@map("RoomAction")
 }
 
 model RoomBan {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  room_id     Int
-  account_id  Int
+  room_id    Int
+  account_id Int
 
   banned_until DateTime? @db.Timestamptz(6)
 
   // relations
-  room        Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
-  account     Account  @relation(fields: [account_id], references: [account_id])
+  room    Room    @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  account Account @relation(fields: [account_id], references: [account_id])
 
   @@map("RoomBan")
 }
 
 model StudySession {
-  id               Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  account_id       Int
-  room_id          Int?
+  account_id Int
+  room_id    Int?
 
-  started_at       DateTime @db.Timestamptz(6)
-  ended_at         DateTime? @db.Timestamptz(6)
+  started_at DateTime  @db.Timestamptz(6)
+  ended_at   DateTime? @db.Timestamptz(6)
 
   duration_minutes Int?
 
   // relations
-  account          Account  @relation(fields: [account_id], references: [account_id])
-  room             Room?    @relation(fields: [room_id], references: [room_id], onDelete: SetNull)
+  account Account @relation(fields: [account_id], references: [account_id])
+  room    Room?   @relation(fields: [room_id], references: [room_id], onDelete: SetNull)
 
   @@index([account_id])
   @@index([started_at])
+  @@index([account_id, ended_at]) // For migration and historical queries
   @@map("StudySession")
 }
 
 model DailyStreak {
-  account_id     Int   @id
+  account_id Int @id
 
-  current_streak Int   @default(0)
-  longest_streak Int   @default(0)
+  current_streak Int @default(0)
+  longest_streak Int @default(0)
 
   last_study_date DateTime? @db.Date
 
   // relation
-  account        Account @relation(fields: [account_id], references: [account_id])
+  account Account @relation(fields: [account_id], references: [account_id])
 
+  @@index([last_study_date]) // For streak queries
   @@map("DailyStreak")
 }
 
 model StudyStat {
-  account_id     Int   @id
+  account_id Int @id
 
-  total_minutes  Int   @default(0)
-  total_sessions Int   @default(0)
-
-  updated_at     DateTime @default(now()) @db.Timestamptz(6)
-
-  // relation
-  account        Account @relation(fields: [account_id], references: [account_id])
-
-  @@map("StudyStat")
-}
-
-model Leaderboard {
-  account_id Int   @id
-
-  score      Int?
-  rank       Int?
+  total_minutes  Int @default(0)
+  total_sessions Int @default(0)
 
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 
   // relation
-  account    Account @relation(fields: [account_id], references: [account_id])
+  account Account @relation(fields: [account_id], references: [account_id])
+
+  @@index([total_minutes(sort: Desc)]) // For total ranking queries
+  @@map("StudyStat")
+}
+
+model Leaderboard {
+  account_id Int @id
+
+  score Int?
+  rank  Int?
+
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // relation
+  account Account @relation(fields: [account_id], references: [account_id])
 
   @@map("Leaderboard")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VOCABULARY SYSTEM MODELS (TOEIC & IELTS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Chủ đề từ vựng TOEIC (Business, Office, Finance...)
+model VocabTopic {
+  id         Int      @id @default(autoincrement())
+  slug       String   @unique @db.VarChar(100) // "email-van-phong"
+  title_vi   String   @db.VarChar(200) // "Email & Văn phòng"
+  title_en   String   @db.VarChar(200) // "Email & Office Communication"
+  emoji      String   @db.VarChar(10) // "📧"
+  cert_type  String   @default("toeic") @db.VarChar(20) // toeic | ielts
+  is_active  Boolean  @default(true)
+  sort_order Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  words VocabWord[]
+
+  @@map("VocabTopic")
+}
+
+/// Từ vựng trong một chủ đề
+model VocabWord {
+  id         Int      @id @default(autoincrement())
+  topic_id   Int
+  word       String   @db.VarChar(200)
+  level      String   @db.VarChar(20) // "Cơ bản" | "Trung bình" | "Nâng cao"
+  freq       Int      @db.SmallInt // 1=thấp | 2=trung bình | 3=cao
+  audio_url  String?  @db.VarChar(500) // TTS pre-generated URL (optional)
+  source     String?  @db.VarChar(50) // "ocr-upload" | "manual" | "ai-generated"
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  topic       VocabTopic          @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  definitions VocabDefinition[]
+  progress    UserVocabProgress[]
+
+  @@unique([topic_id, word])
+  @@index([topic_id])
+  @@map("VocabWord")
+}
+
+/// Nhiều nghĩa/loại từ của một từ vựng
+model VocabDefinition {
+  id         Int    @id @default(autoincrement())
+  word_id    Int
+  pos        String @db.VarChar(20) // "n." | "v." | "adj." | "adv." | "prep."
+  meaning    String @db.VarChar(500) // nghĩa tiếng Việt
+  example_en String @db.Text // ví dụ tiếng Anh (có thể có <strong>)
+  example_vi String @db.Text // dịch ví dụ
+  sort_order Int    @default(0)
+
+  word VocabWord @relation(fields: [word_id], references: [id], onDelete: Cascade)
+
+  @@index([word_id])
+  @@map("VocabDefinition")
+}
+
+/// Tiến độ học từ vựng của từng sinh viên
+model UserVocabProgress {
+  id             Int       @id @default(autoincrement())
+  enrollment_id  Int // → CertificateEnrollment.id
+  word_id        Int
+  is_known       Boolean   @default(false)
+  reviewed_at    DateTime? @db.Timestamptz(6)
+  correct_streak Int       @default(0) // đúng liên tiếp trong bộ kiểm tra
+  total_attempts Int       @default(0)
+  total_correct  Int       @default(0)
+  updated_at     DateTime  @updatedAt @db.Timestamptz(6)
+
+  word       VocabWord             @relation(fields: [word_id], references: [id], onDelete: Cascade)
+  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+
+  @@unique([enrollment_id, word_id])
+  @@index([enrollment_id])
+  @@map("UserVocabProgress")
+}
+
+/// Log lịch sử một phiên kiểm tra từ vựng
+model VocabTestSession {
+  id            Int       @id @default(autoincrement())
+  enrollment_id Int
+  mode          String    @db.VarChar(20) // "flashcard" | "write"
+  word_ids      Json // int[] - danh sách từ được kiểm tra
+  score         Int? // % đúng cuối phiên
+  started_at    DateTime  @default(now()) @db.Timestamptz(6)
+  ended_at      DateTime? @db.Timestamptz(6)
+
+  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  answers    VocabTestAnswer[]
+
+  @@index([enrollment_id])
+  @@map("VocabTestSession")
+}
+
+/// Đáp án từng từ trong phiên kiểm tra
+model VocabTestAnswer {
+  id          Int     @id @default(autoincrement())
+  session_id  Int
+  word_id     Int
+  user_input  String? @db.Text // null nếu mode = flashcard
+  is_correct  Boolean
+  ai_score    Float? // 0.0 - 1.0 (Qwen2.5 fuzzy match)
+  ai_feedback String? @db.Text
+
+  session VocabTestSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
+  @@map("VocabTestAnswer")
 }

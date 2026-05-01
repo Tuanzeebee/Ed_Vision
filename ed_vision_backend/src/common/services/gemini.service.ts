@@ -6,7 +6,7 @@ export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private readonly apiKey = process.env.GEMINI_API_KEY;
   private readonly apiUrl =
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   async analyzeSurvey(
     questionsAndAnswers: string,
