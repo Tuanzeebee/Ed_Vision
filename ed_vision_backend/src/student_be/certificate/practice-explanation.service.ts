@@ -99,7 +99,7 @@ export class PracticeExplanationService implements OnModuleInit {
   private readonly BATCH_SIZE = 5;
 
   /** Ollama model (same as the rest of the AI pipeline) */
-  private readonly MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:3b';
+  private readonly MODEL = process.env.OLLAMA_MODEL ?? 'qwen3';
 
   /** Ollama base URL */
   private readonly OLLAMA_URL =

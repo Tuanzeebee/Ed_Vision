@@ -199,6 +199,20 @@ export class CertificateEnrollmentController {
   }
 
   /**
+   * GET /student/certificate/me/scores
+   * Returns all score types for the authenticated student:
+   * - current_score (Điểm Gốc): from diagnostic test
+   * - reserve_points (Điểm Ôn Tập): accumulated from practice questions
+   * - target_score, exam_score, total_exp, weekly_exp
+   * - exam_simulation_unlocked, progress_percent, remaining_points
+   */
+  @UseGuards(DevAuthGuard)
+  @Get('me/scores')
+  async getPersonalScores(@Request() req: AuthenticatedRequest) {
+    return this.service.getPersonalScores(req.user.account_id);
+  }
+
+  /**
    * GET /student/certificate/toeic-repository/overview
    * Returns TOEIC micro-learning repositories unlocked by student's score/milestones.
    */

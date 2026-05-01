@@ -18,6 +18,8 @@ import * as XLSX from 'xlsx';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
 import { PrismaService } from '../../prisma/prisma.service';
+import { QuestionPointsCalculatorService } from '../../study-room/services/question-points-calculator.service';
+import { getWeekStart } from '../../study-room/leaderboard.constants';
 import {
   CreateEnrollmentDto,
   CompleteTopicDto,
@@ -276,7 +278,10 @@ const PHASE1_DEFAULT_LIMIT = 120;
 
 @Injectable()
 export class CertificateEnrollmentService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly questionPointsCalculator: QuestionPointsCalculatorService,
+  ) { }
 
   private readonly inFlightExplanationGenerations = new Map<
     string,
@@ -1412,6 +1417,84 @@ export class CertificateEnrollmentService {
         target_score: updated.target_score,
       },
     );
+  }
+
+  /**
+   * GET /student/certificate/me/scores
+   *
+   * Returns all score types for the authenticated student:
+   * - current_score (Điểm Gốc): from diagnostic test
+   * - reserve_points (Điểm Ôn Tập): accumulated from practice questions
+   * - target_score: student's goal
+   * - exam_score: latest exam-simulation score
+   * - total_exp: cumulative EXP from practice questions (StudyStat.total_minutes)
+   * - weekly_exp: EXP earned this week (from Redis)
+   * - exam_simulation_unlocked: whether exam-simulation is available
+   * - progress_percent: (reserve_points / target_score) * 100
+   * - remaining_points: points still needed to unlock exam-simulation
+   */
+  async getPersonalScores(accountId: number): Promise<{
+    current_score: number | null;
+    reserve_points: number;
+    target_score: number | null;
+    exam_score: number | null;
+    total_exp: number;
+    weekly_exp: number;
+    exam_simulation_unlocked: boolean;
+    progress_percent: number;
+    remaining_points: number | null;
+  }> {
+    // Fetch enrollment and study stats in parallel
+    const [enrollment, studyStat, weeklyExp] = await Promise.all([
+      this.prisma.certificateEnrollment.findFirst({
+        where: {
+          student: { account_id: accountId },
+          cert_type: 'toeic',
+          status: 'active',
+        },
+        select: {
+          current_score: true,
+          reserve_points: true,
+          target_score: true,
+          exam_score: true,
+        },
+      }),
+      this.prisma.studyStat.findUnique({
+        where: { account_id: accountId },
+        select: { total_minutes: true },
+      }),
+      this.questionPointsCalculator.getWeeklyPoints(accountId, getWeekStart()),
+    ]);
+
+    const reservePoints = Number(enrollment?.reserve_points ?? 0);
+    const targetScore = enrollment?.target_score ?? null;
+    const totalExp = studyStat?.total_minutes ?? 0;
+
+    // Calculate derived fields
+    const examSimulationUnlocked =
+      targetScore !== null && reservePoints >= targetScore;
+
+    const progressPercent =
+      targetScore && targetScore > 0
+        ? Math.min(100, Math.round((reservePoints / targetScore) * 100))
+        : 0;
+
+    const remainingPoints =
+      targetScore !== null
+        ? Math.max(0, targetScore - reservePoints)
+        : null;
+
+    return {
+      current_score: enrollment?.current_score ?? null,
+      reserve_points: reservePoints,
+      target_score: targetScore,
+      exam_score: enrollment?.exam_score ?? null,
+      total_exp: totalExp,
+      weekly_exp: weeklyExp,
+      exam_simulation_unlocked: examSimulationUnlocked,
+      progress_percent: progressPercent,
+      remaining_points: remainingPoints,
+    };
   }
 
   async getToeicLeaderboard(
@@ -3284,7 +3367,7 @@ export class CertificateEnrollmentService {
     if (certSpecificModel && certSpecificModel.length > 0) {
       return certSpecificModel;
     }
-    return process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:3b';
+    return process.env.OLLAMA_MODEL?.trim() || 'qwen3';
   }
 
   private extractTutorAnswerFromRaw(raw: string): string {
@@ -3868,7 +3951,7 @@ export class CertificateEnrollmentService {
     const finalAnswer = normalizedAnswer.length > 0 ? normalizedAnswer : raw;
 
     // Chỉ reject khi hoàn toàn rỗng — không reject dựa trên quality/ngôn ngữ
-    // (các check này đã từng gây reject nhầm với qwen2.5:3b)
+    // (các check này đã từng gây reject nhầm với qwen3)
     if (finalAnswer.trim().length < 5) {
       throw new BadRequestException('Ollama trả về nội dung rỗng.');
     }

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { buildAssetUrl, buildUrl } from "@/services/api/config";
 import { TokenManager } from "@/lib/tokenManager";
 import { useTranslation } from 'react-i18next';
+import { getAvatarUrl } from "@/lib/avatarUtils";
 
 type Props = {
   // Add any specific props if needed
@@ -133,7 +134,6 @@ export default function StudentProfilePage({}: Props) {
         }
 
         const { url } = await uploadRes.json();
-        console.log('Uploaded avatar URL:', url);
 
         // Update profile with new avatar URL
         const updateRes = await fetch(buildUrl('/profile/me'), {
@@ -212,17 +212,10 @@ export default function StudentProfilePage({}: Props) {
   // Map API data to component props expected by UserProfile and children
   const profile = (student as any)?.profile || {};
   
-  // Convert relative avatar URL to full URL if needed
-  const getFullAvatarUrl = (url: string | null | undefined): string => {
-    if (!url) return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop";
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return buildAssetUrl(url);
-  };
-  
   const mappedUser = {
     name: profile.fullName || (student as any)?.studentCode || t('common.user', { defaultValue: 'User'}),
     age: undefined as number | undefined,
-    avatar: getFullAvatarUrl(profile.avatarUrl),
+    avatar: getAvatarUrl(profile.avatarUrl, profile.gender),
     status: ((student as any)?.status as "active"| "inactive") || "active",
     statusLabel: (student as any)?.status === "active"? t('studentAcademic.active') 
       : (student as any)?.status === "inactive"? t('studentAcademic.inactive') 

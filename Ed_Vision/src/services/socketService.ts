@@ -6,6 +6,11 @@ class SocketService {
     private connectPromise: Promise<void>| null = null;
 
     connect(userId: string, userType: 'teacher'| 'student'| 'parent'): Promise<void> {
+        const wsFlag = import.meta.env.VITE_ENABLE_WEBSOCKET;
+        const shouldConnect = wsFlag === 'true' || (wsFlag == null && !import.meta.env.DEV);
+        if (!shouldConnect) {
+            return Promise.resolve();
+        }
         if (this.socket?.connected) {
             return Promise.resolve();
         }
@@ -23,7 +28,6 @@ class SocketService {
             });
 
             this.socket.on('connect', () => {
-                console.log('Socket connected:', this.socket?.id);
                 // Register user
                 this.socket?.emit('register', { userId, userType });
                 this.connectPromise = null;
@@ -31,11 +35,10 @@ class SocketService {
             });
 
             this.socket.on('disconnect', () => {
-                console.log('Socket disconnected');
+                // disconnected
             });
 
             this.socket.on('connect_error', (error) => {
-                console.error('Socket connection error:', error);
                 this.connectPromise = null;
                 reject(error);
             });

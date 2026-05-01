@@ -2,7 +2,7 @@
  * certificate-prompts.ts
  *
  * Tập trung toàn bộ prompt template cho chứng chỉ vào một chỗ.
- * Thiết kế cho qwen2.5:3b — ngắn gọn, rõ ràng, không xung đột instruction.
+ * Thiết kế cho qwen3 — ngắn gọn, rõ ràng, không xung đột instruction.
  */
 
 // ─── Cert-level system persona ────────────────────────────────────────────────
@@ -123,6 +123,14 @@ export function buildTutorPrompt(params: TutorPromptParams): string {
     fullExplanation,
     concise,
   } = params;
+
+  if (questionText.includes('[TRANSLATE_ONLY]')) {
+    return [
+      `Bạn là trợ lý dịch thuật. Nhiệm vụ duy nhất: Dịch chính xác văn bản tiếng Anh sang tiếng Việt.`,
+      `TUYỆT ĐỐI KHÔNG GIẢI THÍCH, KHÔNG GIẢI ĐỀ, KHÔNG THÊM BÌNH LUẬN. Chỉ xuất ra bản dịch và giữ nguyên format (giữ nguyên chữ cái A, B, C, D).`,
+      `Nội dung cần dịch:\n${questionText.replace('[TRANSLATE_ONLY]', '').trim().slice(0, 1000)}`,
+    ].join('\n\n');
+  }
 
   // Cắt context để không vượt context window
   const contextSnippet = (learningContext ?? '').slice(0, 800);

@@ -86,7 +86,6 @@ export default function LoginHistoryModal({
       ];
       setHistory(mockData);
     } catch (error) {
-      console.error('Failed to fetch login history:', error);
     } finally {
       setIsLoading(false);
     }

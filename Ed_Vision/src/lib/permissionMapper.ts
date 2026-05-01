@@ -67,7 +67,6 @@ export const ROUTE_PERMISSION_OVERRIDES: Record<string, string> = {
   '/teacher/class-management': 'teacher_class_management',
   '/teacher/grade-management': 'teacher_grade_management',
   '/teacher/prediction-view': 'teacher_prediction_view',
-  '/teacher/progress-tracking': 'teacher_progress_tracking',
   '/parent/book-appointment': 'parent_book_appointment'
 };
 

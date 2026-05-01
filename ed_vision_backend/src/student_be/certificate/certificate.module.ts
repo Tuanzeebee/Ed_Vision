@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CertificateEnrollmentController } from './certificate-enrollment.controller';
 import { CertificateEnrollmentService } from './certificate-enrollment.service';
@@ -7,9 +6,10 @@ import { ToeicExplanationPrefetchService } from './toeic-explanation-prefetch.se
 import { PracticeExplanationService } from './practice-explanation.service';
 import { ToeicPracticeSessionService } from './toeic-practice-session.service';
 import { ToeicDiagnosticService } from './toeic-diagnostic.service';
+import { StudyRoomModule } from '../../study-room/study-room.module';
 
 @Module({
-  imports: [PrismaModule, ScheduleModule.forRoot()],
+  imports: [PrismaModule, StudyRoomModule],
   controllers: [CertificateEnrollmentController],
   providers: [
     CertificateEnrollmentService,

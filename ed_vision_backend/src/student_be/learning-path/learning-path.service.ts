@@ -194,7 +194,7 @@ export class LearningPathService {
       };
     }).sort((a, b) => b.priority - a.priority);
 
-    // Call LLM / Qwen2.5 to generate the readable plan
+    // Call LLM / Qwen3 to generate the readable plan
     const llmPlan = await this.generateLlmPlan(prioritizedSkills, dto);
 
     return {
@@ -206,7 +206,7 @@ export class LearningPathService {
 
   private async generateLlmPlan(prioritizedSkills: any[], dto: RecommendPlanRequestDto) {
     const baseUrl = process.env.OLLAMA_BASE_URL?.trim() || 'http://127.0.0.1:11434';
-    const model = process.env.OLLAMA_CHAT_MODEL?.trim() || 'qwen2.5:14b';
+    const model = process.env.OLLAMA_CHAT_MODEL?.trim() || 'qwen3';
 
     const llm = new ChatOllama({
       baseUrl,

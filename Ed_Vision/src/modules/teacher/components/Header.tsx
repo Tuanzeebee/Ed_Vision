@@ -2,6 +2,7 @@ import { Search, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { buildUrl } from '@/services/api/config';
 import { useNavigate } from 'react-router-dom';
+import { getAvatarUrl } from '@/lib/avatarUtils';
 
 // Asset imports - Update these paths to match your actual assets
 import imgLogo from "@/assets/teacher/9ba9709b329a1fc3361b3b789060fd60189be79f.png"
@@ -27,11 +28,11 @@ export default function Header() {
         if (response.ok) {
           const profileData = await response.json()
           const avatar = profileData?.profile?.avatarUrl || profileData?.avatarUrl || null
+          const gender = profileData?.profile?.gender || null
           const fullName = profileData?.profile?.fullName || profileData?.profile?.full_name || profileData?.fullName || 'Giảng viên'
-const academicTitle = profileData?.profile?.academicTitle || profileData?.profile?.academic_title || profileData?.academicTitle || ''
-if (avatar) {
-            setAvatarUrl(avatar)
-          }
+          const academicTitle = profileData?.profile?.academicTitle || profileData?.profile?.academic_title || profileData?.academicTitle || ''
+          
+          setAvatarUrl(getAvatarUrl(avatar, gender))
           
           if (fullName) {
             setTeacherName(academicTitle ? `${academicTitle} ${fullName}` : fullName)
@@ -43,6 +44,22 @@ if (avatar) {
     }
 
     fetchProfile()
+
+    // Listen for avatar-updated event
+    const handleAvatarUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url?: string; gender?: string; refetch?: boolean }>
+      
+      if (customEvent.detail?.url) {
+        setAvatarUrl(customEvent.detail.url)
+      } else if (customEvent.detail?.refetch || customEvent.detail?.gender !== undefined) {
+        fetchProfile()
+      }
+    }
+
+    window.addEventListener('avatar-updated', handleAvatarUpdated)
+    return () => {
+      window.removeEventListener('avatar-updated', handleAvatarUpdated)
+    }
   }, [])
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { STUDENT_LEARNING_COURSES } from '../data/learningCourses';
 import { buildUrl } from '@/services/api/config';
 import { TokenManager } from '@/lib/tokenManager';
 import ImageCropModal from './ImageCropModal';
+import { getAvatarUrl } from '@/lib/avatarUtils';
 
 type ProfileData = {
   fullName: string;
@@ -838,7 +839,7 @@ export default function SettingsPanel({
         gender: profile.gender || '',
         nationality: profile.nationality || '',
         address: profile.address || '',
-        avatarUrl: getFullAvatarUrl(profile.avatarUrl),
+        avatarUrl: getAvatarUrl(profile.avatarUrl, profile.gender),
         studentCode: data?.studentCode || '',
         major: data?.major || '',
         className: data?.className || '',
@@ -1053,12 +1054,6 @@ export default function SettingsPanel({
     } catch {
       return '';
     }
-  };
-
-  const getFullAvatarUrl = (url: string | null | undefined): string => {
-    if (!url) return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `http://localhost:3000${url}`;
   };
 
   if (!visible) return null;

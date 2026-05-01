@@ -39,8 +39,6 @@ import enTeacherAppointments from './locales/en/teacher/appointments.json';
 import viTeacherAppointments from './locales/vi/teacher/appointments.json';
 import enTeacherScheduleManagement from './locales/en/teacher/scheduleManagement.json';
 import viTeacherScheduleManagement from './locales/vi/teacher/scheduleManagement.json';
-import enTeacherMessagesNotifications from './locales/en/teacher/messagesNotifications.json';
-import viTeacherMessagesNotifications from './locales/vi/teacher/messagesNotifications.json';
 
 // Configure i18n
 i18n
@@ -67,7 +65,6 @@ i18n
           settingGradeTable: enTeacherSettingGradeTable,
           appointments: enTeacherAppointments,
           scheduleManagement: enTeacherScheduleManagement,
-          messagesNotifications: enTeacherMessagesNotifications,
         },
         admin: enAdmin,
         profile: enProfile,
@@ -89,7 +86,6 @@ i18n
           prediction: viTeacherPrediction,
           gradeManagement: viTeacherGradeManagement,
           scheduleManagement: viTeacherScheduleManagement,
-          messagesNotifications: viTeacherMessagesNotifications,
           settingGradeTable: viTeacherSettingGradeTable,
           appointments: viTeacherAppointments,
         },

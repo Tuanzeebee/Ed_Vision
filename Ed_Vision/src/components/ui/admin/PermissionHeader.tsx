@@ -37,7 +37,6 @@ export default function PermissionHeader({
       onUndo();
     } else {
       // Default undo logic if not provided
-      console.log('Hoàn tác thay đổi');
     }
   };
 
@@ -46,7 +45,6 @@ export default function PermissionHeader({
       onExportConfig();
     } else {
       // Default export logic if not provided
-      console.log('Xuất cấu hình');
     }
   };
 
@@ -55,7 +53,6 @@ export default function PermissionHeader({
       onSaveChanges();
     } else {
       // Default save logic if not provided
-      console.log('Lưu thay đổi');
     }
   };
 

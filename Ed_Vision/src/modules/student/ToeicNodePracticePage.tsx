@@ -27,6 +27,7 @@ import {
   askCertificateTutor,
   getToeicPracticeQuestions,
   submitToeicPracticeSession,
+  getPersonalScores,
 } from "../../services/api/certificateService";
 import {
   getToeicIntakeProfile,
@@ -1327,6 +1328,49 @@ export default function ToeicNodePracticePage() {
   const [aiExplanationByAttempt, setAiExplanationByAttempt] = useState<
     Record<string, AiTutorExplanation>
   >({});
+
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [translatingIds, setTranslatingIds] = useState<Set<string>>(new Set());
+
+  const handleTranslateQuestion = async (question: PracticeQuestion) => {
+    const questionId = String(question.id);
+    if (translatingIds.has(questionId) || translations[questionId]) return;
+
+    setTranslatingIds((prev) => new Set(prev).add(questionId));
+
+    const optionsText = question.options
+      .map((opt) => `${opt.key}. ${opt.text}`)
+      .join("\n");
+
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(
+        question.question + "\n\n" + optionsText
+      )}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data && data[0]) {
+        let translatedText = "";
+        for (let i = 0; i < data[0].length; i++) {
+          translatedText += data[0][i][0];
+        }
+        setTranslations((prev) => ({ ...prev, [questionId]: translatedText.trim() }));
+      } else {
+        throw new Error("Invalid translation response");
+      }
+    } catch (e) {
+      setTranslations((prev) => ({
+        ...prev,
+        [questionId]: "Xin lỗi, không thể dịch câu hỏi lúc này.",
+      }));
+    } finally {
+      setTranslatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(questionId);
+        return next;
+      });
+    }
+  };
   const [aiLoadingByAttempt, setAiLoadingByAttempt] = useState<
     Record<string, boolean>
   >({});
@@ -1340,6 +1384,7 @@ export default function ToeicNodePracticePage() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [sessionQuestionIds, setSessionQuestionIds] = useState<number[]>([]);
   const [reservePoints, setReservePoints] = useState<number | null>(null);
+  const [currentScore, setCurrentScore] = useState<number | null>(null); // Điểm Gốc
   const [unlockThreshold, setUnlockThreshold] = useState<number>(300);
   const [earnedThisSession, setEarnedThisSession] = useState<number | null>(
     null,
@@ -1482,6 +1527,15 @@ export default function ToeicNodePracticePage() {
         setDbError(Array.isArray(msg) ? msg.join(" ") : String(msg));
       })
       .finally(() => setDbLoading(false));
+
+    // Fetch Điểm Gốc (current_score) from personal scores API
+    getPersonalScores()
+      .then((scores) => {
+        setCurrentScore(scores.current_score);
+      })
+      .catch(() => {
+        // Non-critical — don't show error for this
+      });
   }, [
     toeicPart,
     questionRefreshVersion,
@@ -1955,7 +2009,7 @@ export default function ToeicNodePracticePage() {
       }
 
       return formatAiExplanationForDisplay(
-        `Đáp án đúng: ${questionData.correctAnswer}. Cần xem lại ngữ cảnh trong câu và loại từ phù hợp để chọn phương án chính xác.`,
+        `Hiện tại chưa có phần giải thích từng đáp án cho câu hỏi, bạn thông cảm nhé! 🥺\n(Đáp án đúng là ${questionData.correctAnswer})`,
         questionData,
       );
     },
@@ -2114,43 +2168,43 @@ export default function ToeicNodePracticePage() {
   // Theme colors
   const theme = isListening
     ? {
-        primary: "teal",
-        gradient: "from-teal-600 to-cyan-500",
-        gradientLight: "from-teal-50 to-cyan-50",
-        border: "border-teal-200",
-        borderStrong: "border-teal-400",
-        bg: "bg-teal-50",
-        bgStrong: "bg-teal-600",
-        bgMedium: "bg-teal-100",
-        text: "text-teal-700",
-        textStrong: "text-teal-900",
-        textMuted: "text-teal-600",
-        ring: "ring-teal-400",
-        progressBar: "bg-gradient-to-r from-teal-500 to-cyan-400",
-        buttonPrimary: "bg-teal-600 hover:bg-teal-700 text-white",
-        optionSelected: "border-teal-500 bg-teal-50",
-        pageGradient:
-          "linear-gradient(160deg, #f0fdfa 0%, #e0f7f8 40%, #f0fdf4 100%)",
-      }
+      primary: "teal",
+      gradient: "from-teal-600 to-cyan-500",
+      gradientLight: "from-teal-50 to-cyan-50",
+      border: "border-teal-200",
+      borderStrong: "border-teal-400",
+      bg: "bg-teal-50",
+      bgStrong: "bg-teal-600",
+      bgMedium: "bg-teal-100",
+      text: "text-teal-700",
+      textStrong: "text-teal-900",
+      textMuted: "text-teal-600",
+      ring: "ring-teal-400",
+      progressBar: "bg-gradient-to-r from-teal-500 to-cyan-400",
+      buttonPrimary: "bg-teal-600 hover:bg-teal-700 text-white",
+      optionSelected: "border-teal-500 bg-teal-50",
+      pageGradient:
+        "linear-gradient(160deg, #f0fdfa 0%, #e0f7f8 40%, #f0fdf4 100%)",
+    }
     : {
-        primary: "emerald",
-        gradient: "from-emerald-600 to-green-500",
-        gradientLight: "from-emerald-50 to-green-50",
-        border: "border-emerald-200",
-        borderStrong: "border-emerald-400",
-        bg: "bg-emerald-50",
-        bgStrong: "bg-emerald-600",
-        bgMedium: "bg-emerald-100",
-        text: "text-emerald-700",
-        textStrong: "text-emerald-900",
-        textMuted: "text-emerald-600",
-        ring: "ring-emerald-400",
-        progressBar: "bg-gradient-to-r from-emerald-500 to-green-400",
-        buttonPrimary: "bg-emerald-600 hover:bg-emerald-700 text-white",
-        optionSelected: "border-emerald-500 bg-emerald-50",
-        pageGradient:
-          "linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #f0fdfa 100%)",
-      };
+      primary: "emerald",
+      gradient: "from-emerald-600 to-green-500",
+      gradientLight: "from-emerald-50 to-green-50",
+      border: "border-emerald-200",
+      borderStrong: "border-emerald-400",
+      bg: "bg-emerald-50",
+      bgStrong: "bg-emerald-600",
+      bgMedium: "bg-emerald-100",
+      text: "text-emerald-700",
+      textStrong: "text-emerald-900",
+      textMuted: "text-emerald-600",
+      ring: "ring-emerald-400",
+      progressBar: "bg-gradient-to-r from-emerald-500 to-green-400",
+      buttonPrimary: "bg-emerald-600 hover:bg-emerald-700 text-white",
+      optionSelected: "border-emerald-500 bg-emerald-50",
+      pageGradient:
+        "linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #f0fdfa 100%)",
+    };
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const buildTutorQuestion = useCallback(
@@ -2173,15 +2227,15 @@ export default function ToeicNodePracticePage() {
         `Học viên chọn: ${selectedOption.key}. ${selectedOption.text}`,
         shouldRevealCorrectAnswer
           ? [
-              `Đáp án đúng: ${questionData.correctAnswer}.`,
-              "FORMAT TRẢ LỜI BẮT BUỘC:",
-              `Đáp án đúng là ${questionData.correctAnswer}.`,
-              "Phân tích phương án:",
-              "- A: ...",
-              "- B: ...",
-              "- C: ...",
-              "- D: ...",
-            ].join("\n")
+            `Đáp án đúng: ${questionData.correctAnswer}.`,
+            "FORMAT TRẢ LỜI BẮT BUỘC:",
+            `Đáp án đúng là ${questionData.correctAnswer}.`,
+            "Phân tích phương án:",
+            "- A: ...",
+            "- B: ...",
+            "- C: ...",
+            "- D: ...",
+          ].join("\n")
           : "Ràng buộc: TUYỆT ĐỐI KHÔNG nêu đáp án đúng, không nêu chữ cái đáp án đúng, không gợi ý chọn phương án khác.",
       ].join("\n");
 
@@ -2193,23 +2247,23 @@ export default function ToeicNodePracticePage() {
         `Options:\n${optionsText}`,
         shouldRevealCorrectAnswer
           ? [
-              "Yêu cầu chất lượng:",
-              '- Mở đầu trực tiếp theo mẫu: "Đáp án đúng là ...".',
-                "- Chỉ dùng đúng 1 heading duy nhất: \"Phân tích phương án:\".",
-              "- Bắt buộc nhắc lại ít nhất 1 dấu hiệu trong câu (keyword/time marker/collocation).",
-                "- Bắt buộc có đủ 4 dòng A/B/C/D, trong đó phương án đúng cũng phải giải thích rõ vì sao đúng.",
-              "- Không mở đầu bằng câu: lựa chọn học viên hiện tại là ĐÚNG/SAI.",
-              "- Không trả lời chung chung; phải gắn trực tiếp vào câu hỏi này.",
-            ].join("\n")
+            "Yêu cầu chất lượng:",
+            '- Mở đầu trực tiếp theo mẫu: "Đáp án đúng là ...".',
+            "- Chỉ dùng đúng 1 heading duy nhất: \"Phân tích phương án:\".",
+            "- Bắt buộc nhắc lại ít nhất 1 dấu hiệu trong câu (keyword/time marker/collocation).",
+            "- Bắt buộc có đủ 4 dòng A/B/C/D, trong đó phương án đúng cũng phải giải thích rõ vì sao đúng.",
+            "- Không mở đầu bằng câu: lựa chọn học viên hiện tại là ĐÚNG/SAI.",
+            "- Không trả lời chung chung; phải gắn trực tiếp vào câu hỏi này.",
+          ].join("\n")
           : [
-              "Yêu cầu chất lượng:",
-              "- Không tiết lộ đáp án đúng hoặc chữ cái đáp án đúng.",
-              "- Tuyệt đối không gợi ý đáp án khác, không đề xuất phương án nên chọn.",
-              "- Kết luận rõ lựa chọn học viên hiện tại sai/chưa phù hợp.",
-              "- Nêu dấu hiệu nhận biết trong câu và quy tắc liên quan (word form/tense/S-V agreement/collocation/preposition).",
-              "- Giải thích trực tiếp vì sao lựa chọn học viên không khớp chỗ trống.",
-              "- Không trả lời kiểu chung chung hoặc chỉ khuyên 'xem lại ngữ pháp'.",
-            ].join("\n"),
+            "Yêu cầu chất lượng:",
+            "- Không tiết lộ đáp án đúng hoặc chữ cái đáp án đúng.",
+            "- Tuyệt đối không gợi ý đáp án khác, không đề xuất phương án nên chọn.",
+            "- Kết luận rõ lựa chọn học viên hiện tại sai/chưa phù hợp.",
+            "- Nêu dấu hiệu nhận biết trong câu và quy tắc liên quan (word form/tense/S-V agreement/collocation/preposition).",
+            "- Giải thích trực tiếp vì sao lựa chọn học viên không khớp chỗ trống.",
+            "- Không trả lời kiểu chung chung hoặc chỉ khuyên 'xem lại ngữ pháp'.",
+          ].join("\n"),
       ]
         .filter((line) => line.length > 0)
         .join("\n\n");
@@ -2516,11 +2570,11 @@ export default function ToeicNodePracticePage() {
           historyRows.length === 0
             ? "Không có dữ liệu lịch sử sai trước đó."
             : historyRows
-                .map(
-                  (item, idx) =>
-                    `${idx + 1}. topic=${item.topic}; first=${item.firstAttempt}; correct=${item.correctAnswer}; question=${item.question}; explanation=${item.explanation}`,
-                )
-                .join("\n");
+              .map(
+                (item, idx) =>
+                  `${idx + 1}. topic=${item.topic}; first=${item.firstAttempt}; correct=${item.correctAnswer}; question=${item.question}; explanation=${item.explanation}`,
+              )
+              .join("\n");
 
         const summaryQuestion = [
           `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau 10 câu vừa làm.`,
@@ -2637,11 +2691,11 @@ export default function ToeicNodePracticePage() {
       );
 
     /* ── colour tokens derived from the page theme ─────────────── */
-    const accent      = isListening ? "#0d9488" : "#059669"; // teal-600 / emerald-600
+    const accent = isListening ? "#0d9488" : "#059669"; // teal-600 / emerald-600
     const accentLight = isListening ? "#ccfbf1" : "#d1fae5"; // teal-100 / emerald-100
-    const accentPale  = isListening ? "#f0fdfa" : "#ecfdf5"; // teal-50  / emerald-50
-    const accentMid   = isListening ? "#5eead4" : "#6ee7b7"; // teal-300 / emerald-300
-    const accentDark  = isListening ? "#115e59" : "#064e3b"; // teal-800 / emerald-800
+    const accentPale = isListening ? "#f0fdfa" : "#ecfdf5"; // teal-50  / emerald-50
+    const accentMid = isListening ? "#5eead4" : "#6ee7b7"; // teal-300 / emerald-300
+    const accentDark = isListening ? "#115e59" : "#064e3b"; // teal-800 / emerald-800
     const accentShadow = isListening
       ? "rgba(13,148,136,0.25)"
       : "rgba(5,150,105,0.25)";
@@ -2923,7 +2977,7 @@ export default function ToeicNodePracticePage() {
               clearPracticeRunDraft(practiceDraftStorageKey);
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
       setShowSummary(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3092,17 +3146,15 @@ export default function ToeicNodePracticePage() {
                 return (
                   <div
                     key={q.id}
-                    className={`rounded-2xl border-2 overflow-hidden shadow-sm ${
-                      gotItFirstTry
-                        ? "border-emerald-200 bg-white"
-                        : "border-amber-200 bg-white"
-                    }`}
+                    className={`rounded-2xl border-2 overflow-hidden shadow-sm ${gotItFirstTry
+                      ? "border-emerald-200 bg-white"
+                      : "border-amber-200 bg-white"
+                      }`}
                   >
                     {/* Question header */}
                     <div
-                      className={`px-5 py-3 flex items-center justify-between ${
-                        gotItFirstTry ? "bg-emerald-50" : "bg-amber-50"
-                      }`}
+                      className={`px-5 py-3 flex items-center justify-between ${gotItFirstTry ? "bg-emerald-50" : "bg-amber-50"
+                        }`}
                     >
                       <span className="text-sm font-semibold text-slate-600">
                         Câu {idx + 1}
@@ -3164,11 +3216,10 @@ export default function ToeicNodePracticePage() {
 
                       {/* First attempt */}
                       <div
-                        className={`rounded-xl px-4 py-2.5 border flex items-start gap-2.5 ${
-                          gotItFirstTry
-                            ? "bg-emerald-50 border-emerald-200"
-                            : "bg-red-50 border-red-200"
-                        }`}
+                        className={`rounded-xl px-4 py-2.5 border flex items-start gap-2.5 ${gotItFirstTry
+                          ? "bg-emerald-50 border-emerald-200"
+                          : "bg-red-50 border-red-200"
+                          }`}
                       >
                         {gotItFirstTry ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
@@ -3223,8 +3274,18 @@ export default function ToeicNodePracticePage() {
             {/* Reserve Points Earned */}
             {toeicPart !== null && (
               <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-5 text-center space-y-1">
+                {/* Điểm Gốc */}
+                {currentScore !== null && (
+                  <div className="mb-3 pb-3 border-b border-amber-200">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Điểm Gốc
+                    </p>
+                    <p className="text-2xl font-bold text-slate-700">{currentScore}</p>
+                  </div>
+                )}
+                {/* Điểm Ôn Tập */}
                 <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
-                  Điểm dự trữ
+                  Điểm Ôn Tập
                 </p>
                 {earnedThisSession !== null ? (
                   <>
@@ -3245,6 +3306,22 @@ export default function ToeicNodePracticePage() {
                   <p className="text-2xl font-bold text-amber-700">
                     {(reservePoints ?? 0).toFixed(1)} / {unlockThreshold}
                   </p>
+                )}
+                {/* Progress bar */}
+                {unlockThreshold > 0 && (
+                  <div className="mt-2">
+                    <div className="w-full bg-amber-100 rounded-full h-2">
+                      <div
+                        className="bg-amber-500 h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, ((reservePoints ?? 0) / unlockThreshold) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-amber-500 mt-1">
+                      Còn {Math.max(0, unlockThreshold - (reservePoints ?? 0)).toFixed(1)} điểm để mở khóa thi thử
+                    </p>
+                  </div>
                 )}
                 {examUnlocked && (
                   <p className="text-xs font-bold text-emerald-600 mt-1">
@@ -3327,7 +3404,7 @@ export default function ToeicNodePracticePage() {
       <Header />
 
       <main className="flex-1 py-6 px-4">
-        <div className="max-w-2xl mx-auto space-y-5">
+        <div className="max-w-5xl mx-auto space-y-5">
           {/* Top bar: back + node label */}
           <div className="flex items-center justify-between">
             <button
@@ -3380,15 +3457,14 @@ export default function ToeicNodePracticePage() {
               {questions.map((_, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-full transition-all duration-300 ${
-                    idx === currentQuestionIndex
-                      ? `w-4 h-2 ${theme.bgStrong}`
-                      : solvedCorrectly.has(idx)
-                        ? firstAnswers[idx] === questions[idx].correctAnswer
-                          ? "w-2 h-2 bg-emerald-400"
-                          : "w-2 h-2 bg-amber-400"
-                        : "w-2 h-2 bg-slate-200"
-                  }`}
+                  className={`rounded-full transition-all duration-300 ${idx === currentQuestionIndex
+                    ? `w-4 h-2 ${theme.bgStrong}`
+                    : solvedCorrectly.has(idx)
+                      ? firstAnswers[idx] === questions[idx].correctAnswer
+                        ? "w-2 h-2 bg-emerald-400"
+                        : "w-2 h-2 bg-amber-400"
+                      : "w-2 h-2 bg-slate-200"
+                    }`}
                 />
               ))}
             </div>
@@ -3396,17 +3472,15 @@ export default function ToeicNodePracticePage() {
 
           {/* Question Card */}
           <div
-            className={`rounded-2xl border-2 shadow-md overflow-hidden bg-white transition-all duration-200 ${
-              animatingIn
-                ? "opacity-0 translate-y-2"
-                : "opacity-100 translate-y-0"
-            } ${
-              isCurrentSolved || isCurrentCorrect
+            className={`rounded-2xl border-2 shadow-md overflow-hidden bg-white transition-all duration-200 ${animatingIn
+              ? "opacity-0 translate-y-2"
+              : "opacity-100 translate-y-0"
+              } ${isCurrentSolved || isCurrentCorrect
                 ? "border-emerald-300"
                 : currentAttempt !== null && !isCurrentCorrect
                   ? "border-red-200"
                   : theme.border
-            }`}
+              }`}
           >
             {/* Card header */}
             <div
@@ -3439,7 +3513,7 @@ export default function ToeicNodePracticePage() {
                   accentClass={theme.textMuted}
                   bgClass={theme.bgMedium}
                   borderClass={theme.border}
-                  onPlay={() => {}}
+                  onPlay={() => { }}
                 />
               ) : (
                 <p className="text-sm text-slate-700 leading-relaxed italic whitespace-pre-line">
@@ -3448,207 +3522,247 @@ export default function ToeicNodePracticePage() {
               )}
             </div>
 
-            {/* Question text */}
-            <div className="px-5 pt-4 pb-2">
-              <p className="font-semibold text-slate-800 text-base leading-snug">
-                {currentQuestion.question}
-              </p>
-            </div>
+            <div className="flex flex-col lg:flex-row">
+              {/* Left Column: Question, Options, Script Reveal */}
+              <div className="flex-1 flex flex-col">
 
-            {/* Options */}
-            <div className="px-5 pb-5 space-y-2.5">
-              {currentQuestion.options.map((option) => {
-                const isThisSelected = currentAttempt === option.key;
-                const isCorrectOption =
-                  option.key === currentQuestion.correctAnswer;
-                // A wrong option that was just tried (and not the correct one)
-                const isWrongAttempt =
-                  isThisSelected && !isCorrectOption && currentAttempt !== null;
-
-                let optionStyle =
-                  "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
-
-                if (isCurrentSolved) {
-                  // Question solved: highlight correct green, grey others
-                  if (isCorrectOption) {
-                    optionStyle =
-                      "border-emerald-400 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200";
-                  } else {
-                    optionStyle = "border-slate-100 bg-slate-50 text-slate-400";
-                  }
-                } else if (currentAttempt !== null) {
-                  // Attempted but not yet correct
-                  if (isWrongAttempt) {
-                    optionStyle =
-                      "border-red-400 bg-red-50 text-red-700 ring-2 ring-red-100";
-                  } else {
-                    optionStyle =
-                      "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
-                  }
-                }
-
-                const isDisabled = isCurrentSolved;
-
-                return (
-                  <button
-                    key={option.key}
-                    onClick={() => handleSelectAnswer(option.key)}
-                    disabled={isDisabled}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all duration-150 ${optionStyle} ${
-                      !isDisabled
-                        ? "cursor-pointer active:scale-[0.99]"
-                        : "cursor-default"
-                    }`}
-                  >
-                    {/* Option key badge */}
-                    <span
-                      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border transition-all ${
-                        isCurrentSolved && isCorrectOption
-                          ? "bg-emerald-500 border-emerald-500 text-white"
-                          : isWrongAttempt
-                            ? "bg-red-400 border-red-400 text-white"
-                            : isCurrentSolved
-                              ? "bg-slate-100 border-slate-200 text-slate-400"
-                              : "bg-slate-100 border-slate-200 text-slate-500"
-                      }`}
-                    >
-                      {option.key}
-                    </span>
-
-                    <span className="flex-1 text-sm leading-snug">
-                      {option.text}
-                    </span>
-
-                    {/* Feedback icons */}
-                    {isCurrentSolved && isCorrectOption && (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                    )}
-                    {isWrongAttempt && (
-                      <XCircle className="w-5 h-5 text-red-400 shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Result / Explanation panel — shown after any attempt */}
-            {currentAttempt !== null && (
-              <div
-                className={`mx-5 mb-5 rounded-xl overflow-hidden border ${
-                  isCurrentCorrect || isCurrentSolved
-                    ? "border-emerald-200"
-                    : "border-red-200"
-                }`}
-              >
-                {/* Result banner */}
-                <div
-                  className={`px-4 py-2.5 flex items-center gap-2 ${
-                    isCurrentCorrect || isCurrentSolved
-                      ? "bg-emerald-500 text-white"
-                      : "bg-red-400 text-white"
-                  }`}
-                >
-                  {isCurrentCorrect || isCurrentSolved ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span className="font-semibold text-sm">
-                        {firstAttemptCorrect
-                          ? "Chính xác ngay lần đầu! 🎉 +điểm"
-                          : "Đúng rồi! ✓ (Không tính điểm vì đã thử sai)"}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-4 h-4" />
-                      <span className="font-semibold text-sm">
-                        Chưa đúng — Hãy thử lại! Chọn đáp án khác.
-                      </span>
-                    </>
-                  )}
+                {/* Question text */}
+                <div className="px-5 pt-4 pb-2">
+                  <p className="font-semibold text-slate-800 text-base leading-snug">
+                    {currentQuestion.question}
+                  </p>
                 </div>
 
-                {(isCurrentCorrect || isCurrentSolved) && (
-                  <div className="border-t border-sky-200">
-                    {/* ── Giải thích AI — nguồn duy nhất ───────────────────── */}
-                    <div className="bg-sky-50 px-4 py-3">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className="text-sm">🤖</span>
-                        <span className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
-                          Giải thích chi tiết
-                        </span>
-                      </div>
+                {/* Options */}
+                <div className="px-5 pb-5 space-y-2.5">
+                  {currentQuestion.options.map((option) => {
+                    const isThisSelected = currentAttempt === option.key;
+                    const isCorrectOption =
+                      option.key === currentQuestion.correctAnswer;
+                    // A wrong option that was just tried (and not the correct one)
+                    const isWrongAttempt =
+                      isThisSelected && !isCorrectOption && currentAttempt !== null;
 
-                      {/* AI đang load — chỉ hiện dots nhỏ, không che nội dung tĩnh */}
-                      {currentAttemptAiLoading && (
-                        <div className="flex items-center gap-1.5 py-1">
+                    let optionStyle =
+                      "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
+
+                    if (isCurrentSolved) {
+                      // Question solved: highlight correct green, grey others
+                      if (isCorrectOption) {
+                        optionStyle =
+                          "border-emerald-400 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200";
+                      } else {
+                        optionStyle = "border-slate-100 bg-slate-50 text-slate-400";
+                      }
+                    } else if (currentAttempt !== null) {
+                      // Attempted but not yet correct
+                      if (isWrongAttempt) {
+                        optionStyle =
+                          "border-red-400 bg-red-50 text-red-700 ring-2 ring-red-100";
+                      } else {
+                        optionStyle =
+                          "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
+                      }
+                    }
+
+                    const isDisabled = isCurrentSolved;
+
+                    return (
+                      <button
+                        key={option.key}
+                        onClick={() => handleSelectAnswer(option.key)}
+                        disabled={isDisabled}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all duration-150 ${optionStyle} ${!isDisabled
+                          ? "cursor-pointer active:scale-[0.99]"
+                          : "cursor-default"
+                          }`}
+                      >
+                        {/* Option key badge */}
+                        <span
+                          className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border transition-all ${isCurrentSolved && isCorrectOption
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : isWrongAttempt
+                              ? "bg-red-400 border-red-400 text-white"
+                              : isCurrentSolved
+                                ? "bg-slate-100 border-slate-200 text-slate-400"
+                                : "bg-slate-100 border-slate-200 text-slate-500"
+                            }`}
+                        >
+                          {option.key}
+                        </span>
+
+                        <span className="flex-1 text-sm leading-snug">
+                          {option.text}
+                        </span>
+
+                        {/* Feedback icons */}
+                        {isCurrentSolved && isCorrectOption && (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        )}
+                        {isWrongAttempt && (
+                          <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Translation Block - Chỉ hiển thị khi đã chọn đúng */}
+                {isCurrentSolved && (
+                  <div className="px-5 pb-5">
+                    {!translations[currentQuestion.id] && !translatingIds.has(currentQuestion.id.toString()) && (
+                      <button
+                        onClick={() => handleTranslateQuestion(currentQuestion)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors w-max"
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-wide">Dịch câu hỏi & đáp án</span>
+                      </button>
+                    )}
+
+                    {translatingIds.has(currentQuestion.id.toString()) && (
+                      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-sky-100 bg-sky-50/50">
+                        <div className="flex items-center gap-1">
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:0ms]" />
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:150ms]" />
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:300ms]" />
                         </div>
-                      )}
+                        <span className="text-sm font-medium text-sky-600 italic ml-1">Đang dịch...</span>
+                      </div>
+                    )}
 
-                      {/* AI đã xong — hiện kết quả */}
-                      {!currentAttemptAiLoading && currentAttemptAi && (
-                        <p className="text-sm text-sky-900 leading-relaxed whitespace-pre-line">
-                          {formatAiExplanationForDisplay(
-                            currentAttemptAi.answer,
-                            currentQuestion,
-                          )}
-                        </p>
-                      )}
+                    {translations[currentQuestion.id.toString()] && (
+                      <div className="rounded-xl border border-sky-200 bg-sky-50/60 shadow-sm overflow-hidden mt-1">
+                        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+                          <span className="text-sm font-bold text-blue-700">Dịch câu hỏi</span>
+                        </div>
+                        <div className="px-5 pb-5 pt-1 space-y-2.5">
+                          {translations[currentQuestion.id.toString()].split("\n").map((line, idx) => {
+                            const lineStr = line.trim();
+                            if (!lineStr) return null;
 
-                      {/* AI lỗi — hiện message + retry */}
-                      {!currentAttemptAiLoading &&
-                        !currentAttemptAi &&
-                        currentAttemptAiError && (
-                          <div className="space-y-2">
-                            <p className="text-xs text-slate-400 leading-relaxed">
-                              Phân tích AI chưa sẵn sàng.
-                            </p>
-                            <button
-                              onClick={handleRetryAiExplanation}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-300 bg-white text-sky-700 text-xs font-semibold hover:bg-sky-50 transition-colors"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              Thử lại AI
-                            </button>
-                          </div>
-                        )}
+                            const optionMatch = lineStr.match(/^([A-D])[.)]\s*(.*)$/i);
+                            if (optionMatch) {
+                              const optKey = optionMatch[1].toUpperCase();
+                              const isCorrectOption = optKey === currentQuestion.correctAnswer;
+                              const shouldHighlight = isCurrentSolved && isCorrectOption;
 
-                      {/* Chưa load gì — placeholder nhẹ */}
-                      {!currentAttemptAiLoading &&
-                        !currentAttemptAi &&
-                        !currentAttemptAiError && (
-                          <p className="text-xs text-sky-300 italic">
-                            Phân tích đang được chuẩn bị...
-                          </p>
-                        )}
-                    </div>
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`flex text-[15px] ${shouldHighlight ? "text-emerald-600 font-medium" : "text-slate-700 hover:text-slate-900 transition-colors"} ml-3`}
+                                >
+                                  <span className="w-6 shrink-0">{optKey}.</span>
+                                  <span>{optionMatch[2]}</span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <p
+                                key={idx}
+                                className="text-[15px] font-medium text-slate-800 mb-3"
+                              >
+                                {lineStr}
+                              </p>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Wrong attempt hint */}
-                {!isCurrentCorrect && !isCurrentSolved && (
-                  <div className="bg-red-50 px-4 py-3 text-xs text-red-700">
+                {!isCurrentCorrect && !isCurrentSolved && currentAttempt !== null && (
+                  <div className="mx-5 mb-5 bg-red-50 px-4 py-3 text-xs text-red-700 rounded-xl border border-red-200">
                     💡 Đáp án <strong>{currentAttempt}</strong> chưa đúng. Đọc
                     lại context và chọn đáp án khác để tiếp tục.
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Script reveal for listening — only after correct */}
-            {isListening &&
-              (isCurrentCorrect || isCurrentSolved) &&
-              currentQuestion.context && (
-                <div className="mx-5 mb-5">
-                  <ScriptReveal
-                    context={currentQuestion.context}
-                    accentClass={theme.textMuted}
-                    showScript={true}
-                  />
+                {/* Correct attempt hint */}
+                {(isCurrentCorrect || isCurrentSolved) && (
+                  <div className="mx-5 mb-5 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 rounded-xl border border-emerald-200 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                    <span className="font-semibold">
+                      {firstAttemptCorrect
+                        ? "Chính xác ngay lần đầu! 🎉 +điểm"
+                        : "Chính xác!  (Không tính điểm vì đã thử sai)"}
+                    </span>
+                  </div>
+                )}
+
+                {/* Script reveal for listening — only after correct */}
+                {isListening &&
+                  (isCurrentCorrect || isCurrentSolved) &&
+                  currentQuestion.context && (
+                    <div className="mx-5 mb-5 mt-auto">
+                      <ScriptReveal
+                        context={currentQuestion.context}
+                        accentClass={theme.textMuted}
+                        showScript={true}
+                      />
+                    </div>
+                  )}
+              </div>
+
+              {/* Right Column: Result / Explanation panel */}
+              {(isCurrentCorrect || isCurrentSolved) && (
+                <div
+                  className="w-full lg:w-[450px] shrink-0 border-t lg:border-t-0 lg:border-l border-emerald-100 flex flex-col"
+                >
+                  {/* Explanation Area */}
+                  <div className="p-6 lg:p-7 flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="flex items-center gap-2 mb-4 border-b border-emerald-50 pb-3">
+                      <span className="text-lg">💡</span>
+                      <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
+                        Giải thích chi tiết
+                      </span>
+                    </div>
+
+                    {/* AI đang load */}
+                    {currentAttemptAiLoading && (
+                      <div className="flex items-center gap-1.5 py-4 justify-center">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0ms]" />
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:150ms]" />
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:300ms]" />
+                      </div>
+                    )}
+
+                    {/* AI đã xong */}
+                    {!currentAttemptAiLoading && currentAttemptAi && (
+                      <p className="text-[15px] text-slate-700 leading-relaxed whitespace-pre-line">
+                        {formatAiExplanationForDisplay(
+                          currentAttemptAi.answer,
+                          currentQuestion,
+                        )}
+                      </p>
+                    )}
+
+                    {/* AI lỗi hoặc không có giải thích */}
+                    {!currentAttemptAiLoading &&
+                      !currentAttemptAi &&
+                      currentAttemptAiError && (
+                        <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+                          <span className="text-4xl">🥺</span>
+                          <p className="text-sm text-slate-500 font-medium leading-relaxed px-2">
+                            Hiện tại chưa có phần giải thích từng đáp án cho câu hỏi, bạn thông cảm nhé!
+                          </p>
+                        </div>
+                      )}
+
+                    {/* Chưa load gì */}
+                    {!currentAttemptAiLoading &&
+                      !currentAttemptAi &&
+                      !currentAttemptAiError && (
+                        <p className="text-sm text-emerald-400 italic text-center py-4">
+                          Phân tích đang được chuẩn bị...
+                        </p>
+                      )}
+                  </div>
                 </div>
               )}
+            </div>
           </div>
 
           {/* Next / Finish button — only enabled after correct */}

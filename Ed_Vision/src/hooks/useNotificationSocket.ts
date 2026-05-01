@@ -25,6 +25,9 @@ export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
+    const wsFlag = import.meta.env.VITE_ENABLE_WEBSOCKET;
+    const shouldConnect = wsFlag === 'true' || (wsFlag == null && !import.meta.env.DEV);
+    if (!shouldConnect) return;
     // Lấy thông tin user từ localStorage
     const userStr = localStorage.getItem('user');
     const token = TokenManager.getToken();
@@ -59,7 +62,6 @@ export function useNotificationSocket() {
     });
 
     socket.on('newNotification', (notification: NotificationPayload) => {
-      console.log('[WebSocket] Received new notification:', notification);
       setNewNotification(notification);
       
       // Phát âm thanh thông báo - với fallback
@@ -68,11 +70,7 @@ export function useNotificationSocket() {
         audio.volume = 0.5; // 50% volume
         
         audio.play()
-          .then(() => {
-            console.log('[Audio] Notification sound played successfully');
-          })
           .catch(err => {
-            console.warn('[Audio] MP3 play failed, trying beep sound:', err);
             // Fallback: Tạo beep sound bằng Web Audio API nếu file không tồn tại
             try {
               const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -91,19 +89,16 @@ export function useNotificationSocket() {
               
               oscillator.start(audioContext.currentTime);
               oscillator.stop(audioContext.currentTime + 0.3);
-              
-              console.log('[Audio] Fallback beep sound played');
             } catch (beepError) {
-              console.error('[Audio] Both notification sound and beep failed:', beepError);
+              // ignore audio fallback errors
             }
           });
       } catch (error) {
-        console.error('[Audio] Failed to initialize notification sound:', error);
+        // ignore audio init errors
       }
       
       // Fetch lại notifications từ API để cập nhật cache
       fetchNotifications().then(() => {
-        console.log('[Notification] Cache refreshed');
         // Dispatch event để các component khác cập nhật UI
         window.dispatchEvent(new CustomEvent('notificationChange'));
       });

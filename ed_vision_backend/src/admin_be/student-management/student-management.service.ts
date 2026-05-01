@@ -216,7 +216,8 @@ export class StudentManagementService {
   }
 
   async findOne(id: number): Promise<StudentResponse> {
-    const student = await this.prisma.student.findUnique({
+    // Try to find by student_id first, then by account_id
+    let student = await this.prisma.student.findUnique({
       where: { student_id: id },
       include: {
         account: {
@@ -231,6 +232,25 @@ export class StudentManagementService {
         },
       },
     });
+
+    // If not found by student_id, try account_id
+    if (!student) {
+      student = await this.prisma.student.findUnique({
+        where: { account_id: id },
+        include: {
+          account: {
+            include: {
+              profile: true,
+            },
+          },
+          classGroup: {
+            include: {
+              program: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!student) {
       throw new NotFoundException(`Student with ID ${id} not found`);

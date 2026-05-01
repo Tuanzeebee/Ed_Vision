@@ -75,6 +75,15 @@ export default function EditProfileModal({ isOpen, onClose, currentProfile, onSu
         throw new Error(t('common.updateError', { status: res.status }));
       }
 
+      // Dispatch event to notify Header to refetch profile (especially if gender changed)
+      // Pass gender in detail so Header can immediately update avatar without waiting for API
+      window.dispatchEvent(new CustomEvent('avatar-updated', { 
+        detail: { 
+          gender: formData.gender,
+          refetch: true // Signal to refetch full profile
+        } 
+      }));
+
       onSuccess();
       onClose();
     } catch (err: any) {

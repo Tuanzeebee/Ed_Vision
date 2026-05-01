@@ -10,6 +10,9 @@ export default function useWebSocketStats(): number {
   const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
+    const wsFlag = import.meta.env.VITE_ENABLE_WEBSOCKET;
+    const shouldConnect = wsFlag === 'true' || (wsFlag == null && !import.meta.env.DEV);
+    if (!shouldConnect) return;
     let studentSocket: ReturnType<typeof io>| null = null;
     let instructorSocket: ReturnType<typeof io>| null = null;
 
@@ -31,8 +34,8 @@ export default function useWebSocketStats(): number {
         studentSocket.on("connect_error", (_err) => {
           // ignore connection errors silently
         });
-      } catch (e) {
-        console.warn("Failed to initialize student WebSocket:", e);
+      } catch {
+        // fail silently
       }
 
       // Instructor socket

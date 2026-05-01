@@ -21,10 +21,8 @@ import {
   skipFoundation,
 } from "./toeicIntake";
 import { getSkills, getRadarData } from "./certificateData";
-import { askCertificateTutor } from "../../services/api/certificateService";
-import {
-  getToeicLeaderboard,
-} from "@/services/api/certificateService";
+import { askCertificateTutor, getPersonalScores, getToeicReservePoints } from "../../services/api/certificateService";
+import { getToeicLeaderboard } from "@/services/api/certificateService";
 import StudentLeaderboard from "./components/StudentLeaderboard";
 
 type Props = {
@@ -73,6 +71,8 @@ export default function ToeicRoadmapBoard({
   const navigate = useNavigate();
   const [hoveredMilestone, setHoveredMilestone] = useState<number | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [realReservePoints, setRealReservePoints] = useState<number | null>(null);
+  const [realCurrentScore, setRealCurrentScore] = useState<number | null>(null);
 
   const projectedScore = getToeicProjectedScore(profile);
 
@@ -80,31 +80,98 @@ export default function ToeicRoadmapBoard({
     (s) => s.id === "listening" || s.id === "reading"
   ), [profile.recommendedBand]);
 
-  const radarDataRaw = useMemo(() => getRadarData("toeic"), []);
-  const radarData = useMemo(() => [radarDataRaw[2] ?? 68, radarDataRaw[3] ?? 64], [radarDataRaw]);
+  const [aiFeedback, setAiFeedback] = useState<string>("Đang lấy dữ liệu phân tích...");
+  const [listeningAccuracy, setListeningAccuracy] = useState<number>(0);
+  const [readingAccuracy, setReadingAccuracy] = useState<number>(0);
+  const [hasListeningData, setHasListeningData] = useState(false);
+  const [hasReadingData, setHasReadingData] = useState(false);
+  const [isAccuracyLoaded, setIsAccuracyLoaded] = useState(false);
+
+  const radarData = useMemo(() => [listeningAccuracy, readingAccuracy], [listeningAccuracy, readingAccuracy]);
 
   const maxVal = radarData.length > 0 ? Math.max(...radarData) : 0;
   const minVal = radarData.length > 0 ? Math.min(...radarData) : 0;
-  const strongest = toeicSkills[radarData.indexOf(maxVal)]?.label ?? "Đọc";
-  const weakest = toeicSkills[radarData.indexOf(minVal)]?.label ?? "Nghe";
+  
+  // Custom logic to determine strongest/weakest when there's no data
+  const strongest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[radarData.indexOf(maxVal)]?.label ?? "Đọc";
+  const weakest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[radarData.indexOf(minVal)]?.label ?? "Nghe";
 
-  const [aiFeedback, setAiFeedback] = useState<string>("Đang phân tích dữ liệu...");
+  // Fetch accuracy from recent practice sessions
+  useEffect(() => {
+    getToeicReservePoints()
+      .then((data) => {
+        let listeningCorrect = 0;
+        let listeningTotal = 0;
+        let readingCorrect = 0;
+        let readingTotal = 0;
+
+        for (const session of data.part_sessions) {
+          if (session.toeic_part >= 1 && session.toeic_part <= 4) {
+            listeningCorrect += session.correct_count || 0;
+            listeningTotal += session.total_questions || 10;
+          } else if (session.toeic_part >= 5 && session.toeic_part <= 7) {
+            readingCorrect += session.correct_count || 0;
+            readingTotal += session.total_questions || 10;
+          }
+        }
+
+        const hasList = listeningTotal > 0;
+        const hasRead = readingTotal > 0;
+
+        setHasListeningData(hasList);
+        setHasReadingData(hasRead);
+
+        const lAcc = hasList ? Math.round((listeningCorrect / listeningTotal) * 100) : 0;
+        const rAcc = hasRead ? Math.round((readingCorrect / readingTotal) * 100) : 0;
+
+        setListeningAccuracy(lAcc);
+        setReadingAccuracy(rAcc);
+        setIsAccuracyLoaded(true);
+      })
+      .catch(() => {
+        setHasListeningData(false);
+        setHasReadingData(false);
+        setListeningAccuracy(0);
+        setReadingAccuracy(0);
+        setIsAccuracyLoaded(true);
+      });
+  }, []);
 
   useEffect(() => {
-    const listScore = radarData[0] ?? 0;
-    const readScore = radarData[1] ?? 0;
+    if (!isAccuracyLoaded) return;
+
+    if (!hasListeningData && !hasReadingData) {
+      setAiFeedback("Bạn chưa hoàn thành bất kỳ bài tập ôn luyện nào gần đây. Hãy bắt đầu ôn tập để hệ thống có thể phân tích năng lực và đưa ra nhận xét chính xác nhất!");
+      return;
+    }
+    
+    setAiFeedback("Trợ lý ảo đang phân tích...");
+    const listScore = listeningAccuracy;
+    const readScore = readingAccuracy;
     
     askCertificateTutor({
       cert_type: "toeic",
-      question: `Điểm đánh giá kỹ năng TOEIC hiện tại của tôi: Nghe đạt ${listScore}/100, Đọc đạt ${readScore}/100. Hãy đóng vai một chuyên gia giáo dục, phân tích ngắn gọn điểm mạnh yếu của tôi dựa trên 2 con số này và đưa ra 1 lời khuyên thực tế nhất để cải thiện điểm số. Không chào hỏi, đi thẳng vào vấn đề.`,
-      topic_key: "toeic_skill_analysis",
+      question: `Dựa trên dữ liệu ôn tập thực tế của tôi: kỹ năng Nghe đạt tỉ lệ đúng ${listScore}%, kỹ năng Đọc đạt tỉ lệ đúng ${readScore}%. Hãy đóng vai một chuyên gia giáo dục, phân tích ngắn gọn điểm mạnh yếu của tôi dựa trên 2 tỉ lệ phần trăm này và đưa ra 1 lời khuyên thực tế nhất để cải thiện. Không chào hỏi, đi thẳng vào vấn đề.`,
+      topic_key: `toeic_skill_analysis_${listScore}_${readScore}`,
       concise: true
     }).then(res => {
       setAiFeedback(res.answer);
     }).catch(err => {
       setAiFeedback("Hệ thống AI đang bận. Vui lòng thử lại sau.");
     });
-  }, [radarData]);
+  }, [isAccuracyLoaded, listeningAccuracy, readingAccuracy, hasListeningData, hasReadingData]);
+
+  // Fetch real Điểm Gốc and Điểm Ôn Tập from backend
+  useEffect(() => {
+    getPersonalScores()
+      .then((scores) => {
+        setRealCurrentScore(scores.current_score);
+        setRealReservePoints(scores.reserve_points);
+      })
+      .catch(() => {
+        // Non-critical — fall back to profile data
+      });
+  }, []);
 
   const milestones = useMemo(
     () =>
@@ -245,19 +312,29 @@ export default function ToeicRoadmapBoard({
             tăng điểm, kèm phần nền tảng khi cần.
           </p>
         </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-right self-end sm:self-auto">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Điểm dự phóng hiện tại
-          </p>
-          <p className="text-xl font-black text-emerald-700 sm:text-2xl">
-            {projectedScore}
-          </p>
+        {/* Điểm Gốc + Điểm Ôn Tập — compact, side by side */}
+        <div className="flex gap-2 self-end sm:self-auto">
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Điểm Gốc
+            </p>
+            <p className="text-lg font-black text-slate-700">
+              {realCurrentScore ?? profile.milestoneState.currentScore}
+            </p>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+              Điểm Ôn Tập
+            </p>
+            <p className="text-lg font-black text-emerald-700">
+              {realReservePoints !== null ? realReservePoints.toFixed(1) : projectedScore}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 sm:mt-5 sm:p-4">
         <div className="mb-2 flex items-center justify-between text-xs text-slate-600 sm:mb-3 sm:text-sm">
-          <span>Bắt đầu: {profile.milestoneState.currentScore}</span>
           <span className="flex items-center gap-1 text-cyan-700 font-semibold">
             <Flag className="h-4 w-4" /> Mục tiêu:{" "}
             {profile.milestoneState.targetScore}
@@ -399,6 +476,9 @@ export default function ToeicRoadmapBoard({
                   skill.id === "listening"
                     ? "from-cyan-500 to-sky-500"
                     : "from-emerald-500 to-teal-500";
+                
+                const hasData = skill.id === "listening" ? hasListeningData : hasReadingData;
+
                 return (
                   <div
                     key={skill.id}
@@ -410,23 +490,25 @@ export default function ToeicRoadmapBoard({
                         {skill.label}
                       </span>
                       <span className="font-bold text-slate-700">
-                        {value}/100
+                        {!hasData ? "- / 100" : `${value}/100`}
                       </span>
                     </div>
-                    <div className="h-2.5 w-full rounded-full bg-slate-200">
+                    <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
                       <div
-                        className={`h-2.5 rounded-full bg-gradient-to-r ${barColor}`}
+                        className={`h-2.5 rounded-full ${hasData ? `bg-gradient-to-r ${barColor}` : "bg-transparent"}`}
                         style={{
-                          width: `${Math.max(4, Math.min(100, value))}%`,
+                          width: hasData ? `${Math.max(4, Math.min(100, value))}%` : "0%",
                         }}
                       />
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      {value >= 75
-                        ? "Đang ổn định, tập trung tăng tốc độ."
-                        : value >= 55
-                          ? "Mức trung bình, nên luyện đều mỗi ngày."
-                          : "Cần ưu tiên luyện để tránh mất điểm phần này."}
+                      {!hasData
+                        ? "Chưa ôn tập lần nào. Bắt đầu luyện tập ngay!"
+                        : value >= 75
+                          ? "Đang ổn định, tập trung nâng cao tốc độ."
+                          : value >= 50
+                            ? "Mức trung bình, cần duy trì ôn luyện đều đặn."
+                            : "Đang yếu, ưu tiên luyện tập để tránh mất điểm!"}
                     </p>
                   </div>
                 );
@@ -434,13 +516,13 @@ export default function ToeicRoadmapBoard({
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2.5 bg-slate-50 rounded-xl text-center">
                   <p className="text-xs text-slate-400">Mạnh hơn</p>
-                  <p className="font-bold text-emerald-600 text-sm">
+                  <p className={`font-bold text-sm ${strongest === "Chưa rõ" ? "text-slate-400" : "text-emerald-600"}`}>
                     {strongest}
                   </p>
                 </div>
                 <div className="p-2.5 bg-slate-50 rounded-xl text-center">
                   <p className="text-xs text-slate-400">Cần ưu tiên</p>
-                  <p className="font-bold text-orange-500 text-sm">
+                  <p className={`font-bold text-sm ${weakest === "Chưa rõ" ? "text-slate-400" : "text-orange-500"}`}>
                     {weakest}
                   </p>
                 </div>

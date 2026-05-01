@@ -183,9 +183,19 @@ export default function CertificateDetail() {
   }, [cert.id]);
 
   // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
-  const realProgress = enrollment
-    ? Math.max(0, Math.min(100, Number(enrollment.progress_percent ?? 0)))
-    : cert.progress;
+  // Tiến độ = current_score / target_score (điểm gốc so với mục tiêu)
+  const realProgress = (() => {
+    if (enrollment && isToeic) {
+      const currentScore = enrollment.current_score ?? toeicProfile?.milestoneState.currentScore ?? 0;
+      const targetScore = enrollment.target_score ?? toeicProfile?.milestoneState.targetScore ?? 0;
+      if (targetScore > 0) {
+        return Math.max(0, Math.min(100, Math.round((currentScore / targetScore) * 100)));
+      }
+    }
+    return enrollment
+      ? Math.max(0, Math.min(100, Number(enrollment.progress_percent ?? 0)))
+      : cert.progress;
+  })();
   const realStatus: "active" | "not-started" | "in-progress" | "completed" =
     enrollment
       ? enrollment.learning_status === "completed"
@@ -413,55 +423,76 @@ export default function CertificateDetail() {
 
         {/* ── Cert Hero ── */}
         {isToeic ? (
-          /* ── TOEIC: luxury dark-navy hero ── */
+          /* ── TOEIC: warm brown + silver shimmer hero ── */
           <section
-            className="rounded-2xl overflow-hidden"
+            className="rounded-2xl overflow-hidden relative"
             style={{
               background:
-                "linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #0f172a 100%)",
+                "linear-gradient(135deg, #6b4f3a 0%, #8b6f5e 40%, #a08070 60%, #7a5c4a 100%)",
             }}
           >
-            <div className="p-5 sm:p-7">
+            {/* Silver shimmer overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%)",
+              }}
+            />
+            {/* Top-right gloss spot */}
+            <div
+              className="absolute top-0 right-0 w-64 h-32 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse at top right, rgba(255,255,255,0.22) 0%, transparent 70%)",
+              }}
+            />
+            <div className="relative p-5 sm:p-7">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
                 {/* Left: logo + info */}
                 <div className="flex items-center gap-5">
                   <div
                     className="rounded-2xl flex items-center justify-center shrink-0 px-5 h-16"
                     style={{
-                      background: "rgba(255,255,255,0.08)",
-                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "rgba(255,255,255,0.15)",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)",
                     }}
                   >
-                    <span className="text-3xl font-black text-white tracking-widest leading-none">
+                    <span className="text-3xl font-black text-white tracking-widest leading-none drop-shadow">
                       {cert.icon}
                     </span>
                   </div>
                   <div>
-                    <h1 className="text-2xl font-black text-white tracking-tight">
+                    <h1 className="text-2xl font-black text-white tracking-tight drop-shadow">
                       {cert.label}
                     </h1>
-                    <p className="text-slate-400 text-sm mt-0.5">
+                    <p className="text-white/70 text-sm mt-0.5">
                       {cert.sublabel}
                     </p>
                     <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                       <span
                         className="px-2.5 py-1 rounded-lg text-xs font-bold"
                         style={{
-                          background: "rgba(255,255,255,0.08)",
-                          color: "#94a3b8",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          background: "rgba(255,255,255,0.15)",
+                          color: "#ffffff",
+                          border: "1px solid rgba(255,255,255,0.25)",
                         }}
                       >
                         Tiến độ: {realProgress}%
                       </span>
                       {(realStatus === "active" ||
-                        realStatus === "in-progress") && (
+                        realStatus === "in-progress") &&
+                        !!(
+                          (enrollment?.current_score && enrollment.current_score > 0) ||
+                          (toeicProfile?.milestoneState.currentScore && toeicProfile.milestoneState.currentScore > 0)
+                        ) && (
                           <span
                             className="px-2.5 py-1 rounded-lg text-xs font-semibold"
                             style={{
-                              background: "rgba(16,185,129,0.15)",
-                              color: "#34d399",
-                              border: "1px solid rgba(16,185,129,0.2)",
+                              background: "rgba(16,185,129,0.2)",
+                              color: "#6ee7b7",
+                              border: "1px solid rgba(16,185,129,0.3)",
                             }}
                           >
                             Đang học
@@ -471,9 +502,9 @@ export default function CertificateDetail() {
                         <span
                           className="px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
                           style={{
-                            background: "rgba(217,119,6,0.15)",
-                            color: "#fbbf24",
-                            border: "1px solid rgba(217,119,6,0.25)",
+                            background: "rgba(255,255,255,0.15)",
+                            color: "#fde68a",
+                            border: "1px solid rgba(255,220,100,0.3)",
                           }}
                         >
                           Mục tiêu: {toeicProfile.milestoneState.targetScore}
@@ -487,43 +518,44 @@ export default function CertificateDetail() {
                 <div className="flex flex-col items-end gap-3 shrink-0">
                   <div className="hidden sm:block w-44">
                     <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-slate-500">Hoàn thành</span>
-                      <span className="text-slate-300 font-bold">
+                      <span className="text-white/60">Hoàn thành</span>
+                      <span className="text-white font-bold">
                         {realProgress}%
                       </span>
                     </div>
                     <div
                       className="w-full h-1.5 rounded-full"
-                      style={{ background: "rgba(255,255,255,0.1)" }}
+                      style={{ background: "rgba(255,255,255,0.15)" }}
                     >
                       <div
                         className="h-1.5 rounded-full transition-all"
                         style={{
                           width: `${realProgress}%`,
-                          background: "linear-gradient(90deg,#d97706,#fbbf24)",
+                          background: "linear-gradient(90deg, #fde68a, #ffffff)",
+                          boxShadow: "0 0 6px rgba(255,255,255,0.5)",
                         }}
                       />
                     </div>
                   </div>
                   <button
                     onClick={handleChangeBand}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                     style={{
-                      background: "rgba(255,255,255,0.06)",
-                      color: "#94a3b8",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(255,255,255,0.12)",
+                      color: "#ffffff",
+                      border: "1px solid rgba(255,255,255,0.25)",
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.color =
-                        "#fbbf24";
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "rgba(255,255,255,0.22)";
                       (e.currentTarget as HTMLButtonElement).style.borderColor =
-                        "rgba(217,119,6,0.4)";
+                        "rgba(255,255,255,0.45)";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.color =
-                        "#94a3b8";
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "rgba(255,255,255,0.12)";
                       (e.currentTarget as HTMLButtonElement).style.borderColor =
-                        "rgba(255,255,255,0.1)";
+                        "rgba(255,255,255,0.25)";
                     }}
                   >
                     Đổi mục tiêu
@@ -552,7 +584,8 @@ export default function CertificateDetail() {
                       Tiến độ: {realProgress}%
                     </span>
                     {(realStatus === "active" ||
-                      realStatus === "in-progress") && (
+                      realStatus === "in-progress") &&
+                      !!(enrollment?.current_score && enrollment.current_score > 0) && (
                         <span className="bg-white/20 px-2.5 py-1 rounded-lg text-sm">
                           Đang học
                         </span>
@@ -593,7 +626,7 @@ export default function CertificateDetail() {
         ══════════════════════════════════════════════════════════════════════ */}
         {isEnglish && (
           <>
-            <StudentPersonalStatistics />
+            <StudentPersonalStatistics enrollmentId={enrollment?.id ?? null} />
 
             {cert.id === "toeic" && toeicProfile && (
               <ToeicRoadmapBoard

@@ -73,6 +73,7 @@ export interface Certificate {
   status: "active" | "not-started" | "in-progress" | "completed";
   type: "english" | "mos" | "chinese";
   coverImg: string;
+  hasBaseScore?: boolean; // true khi đã làm khảo sát và có điểm gốc
 }
 
 export interface RoadmapStep {
@@ -2876,7 +2877,7 @@ export function CertCard({
         <div
           className={`absolute inset-0 bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} opacity-50`}
         />
-        {cert.status === "active" && (
+        {cert.status === "active" && cert.hasBaseScore && (
           <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-xs font-bold text-purple-700">
             Đang học
           </div>
@@ -2913,7 +2914,7 @@ export function CertCard({
           <button
             className={`w-full py-2 mt-1 text-sm font-medium rounded-xl cursor-pointer transition-colors ${
               cert.progress > 0
-                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600"
+                ? "bg-gradient-to-r from-lime-400 to-lime-500 text-white hover:from-lime-500 hover:to-lime-600"
                 : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
@@ -2985,7 +2986,7 @@ export function RoadmapView({ steps }: { steps: RoadmapStep[] }) {
                 />
               </div>
               <div className="mt-2.5 flex gap-2">
-                <button className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 cursor-pointer transition-colors">
+                <button className="text-xs bg-gradient-to-r from-lime-400 to-lime-500 text-white px-3 py-1.5 rounded-lg hover:from-lime-500 hover:to-lime-600 cursor-pointer transition-colors">
                   Tiếp tục
                 </button>
                 <button className="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">

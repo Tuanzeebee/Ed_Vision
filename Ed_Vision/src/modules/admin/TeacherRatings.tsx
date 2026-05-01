@@ -1,8 +1,5 @@
 import { useState } from "react";
-import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { Card, CardContent } from "../../components/ui/card";
-import TeacherProfileHeader from "@/components/ui/admin/TeacherProfileHeader";
-import TeacherTabNavigation from "@/components/ui/admin/TeacherTabNavigation";
 
 type Review = {
   id: string;
@@ -30,7 +27,11 @@ type RatingFilter = {
   keyword: string;
 };
 
-export default function TeacherRatings() {
+export interface TeacherRatingsProps {
+  teacherId?: string;
+}
+
+export default function TeacherRatings({ teacherId }: TeacherRatingsProps = {}) {
   const [filters, setFilters] = useState<RatingFilter>({
     stars: 'all',
     subject: 'all',
@@ -118,16 +119,8 @@ export default function TeacherRatings() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Teacher Profile Header */}
-        <TeacherProfileHeader />
-
-        {/* Tab Navigation */}
-        <TeacherTabNavigation activeTab="Đánh giá giảng dạy"/>
-
-        {/* Rating Statistics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Star Distribution */}
           <Card className="p-6">
             <CardContent>
@@ -347,5 +340,5 @@ export default function TeacherRatings() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>);
+    );
 }

@@ -1,8 +1,5 @@
 import { useState, useRef } from "react";
-import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { Card, CardContent } from "../../components/ui/card";
-import TeacherProfileHeader from "@/components/ui/admin/TeacherProfileHeader";
-import TeacherTabNavigation from "@/components/ui/admin/TeacherTabNavigation";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -47,8 +44,11 @@ type SupportFilter = {
   keyword: string;
 };
 
-const TeacherSupportHistory = () => {
-  console.log('TeacherSupportHistory component rendered');
+export interface TeacherSupportHistoryProps {
+  teacherId?: string;
+}
+
+const TeacherSupportHistory = ({ teacherId }: TeacherSupportHistoryProps = {}) => {
   const chartRef = useRef<ChartJS<'bar'>| null>(null);
 
   const [filters, setFilters] = useState<SupportFilter>({
@@ -202,13 +202,9 @@ const TeacherSupportHistory = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <TeacherProfileHeader />
-        <TeacherTabNavigation activeTab="Lịch sử hỗ trợ"/>
-        
-        {/* Filter Section */}
-        <Card>
+    <div className="space-y-6">
+      {/* Filter Section */}
+      <Card>
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-4 items-center justify-between">
               <div className="flex flex-wrap gap-4 items-center">
@@ -425,7 +421,7 @@ const TeacherSupportHistory = () => {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>);
+    );
 };
 
 export default TeacherSupportHistory;

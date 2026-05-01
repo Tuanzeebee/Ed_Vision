@@ -1,39 +1,21 @@
-import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Trophy, Search, HelpCircle } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Trophy, Search, HelpCircle, Crown, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useAuth } from "@/hooks/useAuth";
+import { getWeeklyLeaderboard, getTotalLeaderboard, getPersonalStats, type LeaderboardEntry } from "@/services/api/leaderboardService";
+import { getAvatarUrl } from "@/lib/avatarUtils";
 
-// Generate mock data for the full leaderboard
-const generateMockUsers = () => {
-  const users = [];
-  for (let i = 1; i <= 50; i++) {
-    users.push({
-      id: `user-${i}`,
-      name: `Người dùng ${i}`,
-      avatar: `https://i.pravatar.cc/150?u=${i}`,
-      score: Math.floor(Math.random() * 2000) + 10,
-      joinedAt: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).getTime(),
-      isCurrentUser: i === 12
-    });
-  }
-
-  // Sort by score descending. If score is equal, sort by joinedAt ascending (longest using)
-  users.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.joinedAt - b.joinedAt;
-  });
-
-  // Update names for realism after sorting
-  if (users.length > 0) users[0].name = "Joreii";
-  if (users.length > 1) users[1].name = "Linh Xinh";
-  if (users.length > 2) users[2].name = "Nguyễn Hoàng Anh";
-
-  return users;
+type DisplayUser = {
+  id: string;
+  name: string;
+  avatar: string;
+  score: number;
+  streak: number;
+  isCurrentUser: boolean;
+  isOnline: boolean;
 };
-
-const mockFullData = generateMockUsers();
 
 export default function ToeicFullLeaderboardPage() {
   const navigate = useNavigate();
@@ -42,10 +24,59 @@ export default function ToeicFullLeaderboardPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const [data, setData] = useState<DisplayUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
 
-  // Inject current user's real name from auth
-  const currentUserName = user?.fullName || user?.full_name || user?.name || "Bạn";
-  const data = mockFullData.map(u => u.isCurrentUser ? { ...u, name: currentUserName } : u);
+  // Fetch leaderboard data
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch all data for search/filter functionality
+        const fetchFn = tab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
+        const response = await fetchFn(100, 0); // Fetch up to 100 entries
+        
+        // Convert backend entries to display format
+        const displayUsers: DisplayUser[] = response.entries.map((entry) => ({
+          id: `user-${entry.accountId}`,
+          name: entry.username,
+          avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
+          score: entry.score,
+          streak: entry.currentStreak || 0,
+          isCurrentUser: entry.accountId === user?.id,
+          isOnline: entry.isOnline,
+        }));
+
+        setData(displayUsers);
+        setTotalEntries(response.pagination.total);
+
+        // Fetch user personal stats for exact rank
+        try {
+          const stats = await getPersonalStats();
+          if (tab === "week") {
+            setCurrentUserRank(stats.rankings.weeklyRank);
+          } else {
+            setCurrentUserRank(stats.rankings.totalRank);
+          }
+        } catch {
+          // Fallback to searching in current page
+          const userEntry = response.entries.find(e => e.accountId === user?.id);
+          setCurrentUserRank(userEntry?.rank || null);
+        }
+      } catch {
+        setError("Không thể tải bảng xếp hạng. Vui lòng thử lại sau.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [tab, user?.id]);
 
   const filteredData = useMemo(() => {
     return data.filter(u => u.name.toLowerCase().includes(search.toLowerCase()));
@@ -89,7 +120,16 @@ export default function ToeicFullLeaderboardPage() {
 
           <div className="bg-white/10 border border-white/20 rounded-xl p-4 w-full md:w-auto text-center backdrop-blur-sm">
             <p className="text-xs text-white/70 mb-1 uppercase font-bold tracking-widest">Hạng của bạn</p>
-            <p className="text-4xl font-black text-amber-300">12<span className="text-lg text-white/50 font-medium">/50</span></p>
+            {loading ? (
+              <p className="text-2xl font-black text-white/50">...</p>
+            ) : currentUserRank ? (
+              <p className="text-4xl font-black text-amber-300">
+                {currentUserRank}
+                <span className="text-lg text-white/50 font-medium">/{totalEntries}</span>
+              </p>
+            ) : (
+              <p className="text-lg font-bold text-white/70">Chưa xếp hạng</p>
+            )}
           </div>
         </section>
 
@@ -134,48 +174,50 @@ export default function ToeicFullLeaderboardPage() {
 
           {/* Table Body */}
           <div className="divide-y divide-slate-50 relative min-h-[400px]">
-            {currentData.length > 0 ? currentData.map((user, idx) => {
-              const actualIndex = data.findIndex(u => u.id === user.id);
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-slate-400">
+                  <div className="w-8 h-8 border-4 border-slate-200 border-t-sky-500 rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm font-medium">Đang tải...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-red-400 p-8 text-center">
+                <HelpCircle className="w-12 h-12 mb-3" />
+                <p className="font-semibold text-red-600">{error}</p>
+              </div>
+            ) : currentData.length > 0 ? currentData.map((user, idx) => {
+              const actualIndex = filteredData.findIndex(u => u.id === user.id);
               const rank = actualIndex + 1;
-              let rankBg = "bg-slate-100 text-slate-500 border border-slate-200";
-              if (rank === 1) rankBg = "bg-gradient-to-br from-red-400 to-rose-600 text-white shadow-sm border-none";
-              else if (rank === 2) rankBg = "bg-gradient-to-br from-emerald-400 to-green-600 text-white shadow-sm border-none";
-              else if (rank === 3) rankBg = "bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-sm border-none";
-
               return (
-                <div key={user.id} className={`grid grid-cols-12 gap-4 p-4 items-center transition-colors ${user.isCurrentUser ? "bg-amber-50/50" : "hover:bg-slate-50/80"}`}>
-                  <div className="col-span-2 sm:col-span-1 flex justify-center">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold ${rankBg}`}>
-                      {rank}
+                <div key={user.id} className={`flex items-center justify-between p-4 mb-3 rounded-2xl border transition-all ${user.isCurrentUser ? "bg-amber-50 border-amber-200 shadow-sm" : "bg-white border-slate-200 hover:border-sky-200 shadow-sm"}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 flex items-center justify-center shrink-0`}>
+                      {rank === 1 && <Crown className="w-8 h-8 text-amber-500 fill-amber-400" />}
+                      {rank === 2 && <Crown className="w-8 h-8 text-slate-400 fill-slate-300" />}
+                      {rank === 3 && <Crown className="w-8 h-8 text-orange-600 fill-orange-500" />}
+                      {rank > 3 && <span className="text-xl font-bold text-slate-500">{rank}</span>}
                     </div>
-                  </div>
-
-                  <div className="col-span-7 sm:col-span-5 flex items-center gap-3">
+                    
                     <div className="relative shrink-0">
-                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
-                      {user.isCurrentUser && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 border-2 border-white rounded-full flex items-center justify-center">
-                          <span className="text-[8px]">⭐</span>
-                        </div>
+                      <img src={user.avatar} alt={user.name} className="w-14 h-14 rounded-full object-cover" />
+                      {user.isOnline && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-700 truncate flex items-center gap-1.5">
-                        {user.name}
-                        {user.isCurrentUser && <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded font-semibold ml-1 shrink-0">(Bạn)</span>}
-                      </p>
+                    
+                    <div>
+                      <p className="text-base font-bold text-slate-800 leading-tight mb-1">{user.name}</p>
+                      <div className="flex items-center gap-1.5 text-sky-500 font-semibold text-sm">
+                        <Trophy className="w-4 h-4" />
+                        <span>{user.score.toLocaleString()} điểm</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="col-span-3 sm:col-span-3 text-right sm:text-left">
-                    <p className="text-base sm:text-lg font-black text-slate-800">{user.score.toLocaleString()}</p>
-                    <p className="text-[10px] text-slate-400 uppercase font-semibold">Điểm</p>
-                  </div>
-
-                  <div className="hidden sm:flex sm:col-span-3 justify-end">
-                    <button className="text-xs font-semibold text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-1.5 rounded-lg transition-colors border border-sky-100 cursor-pointer">
-                      Xem hồ sơ
-                    </button>
+                  
+                  <div className="shrink-0 flex items-center gap-1.5 bg-orange-50 px-4 py-2 rounded-full text-orange-500 font-bold text-sm">
+                    <Flame className={`w-5 h-5 ${user.streak > 0 ? "fill-orange-500" : "fill-none text-orange-300"}`} />
+                    <span className={user.streak > 0 ? "" : "text-orange-400"}>{user.streak}</span>
                   </div>
                 </div>
               );

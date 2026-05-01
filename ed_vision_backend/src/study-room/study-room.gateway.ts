@@ -31,6 +31,7 @@ import {
 import { StudyRoomAuthService } from './study-room-auth.service';
 import { StudyRoomService } from './study-room.service';
 import { StudyRoomSocketUser } from './study-room.types';
+import { OnlineStatusManagerService } from './services/online-status-manager.service';
 
 @WebSocketGateway({
   cors: buildSocketCorsOptions(),
@@ -45,6 +46,7 @@ export class StudyRoomGateway
   constructor(
     private readonly studyRoomAuthService: StudyRoomAuthService,
     private readonly studyRoomService: StudyRoomService,
+    private readonly onlineStatusManager: OnlineStatusManagerService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -72,6 +74,9 @@ export class StudyRoomGateway
     if (!user) {
       return;
     }
+
+    // Set user as offline
+    await this.onlineStatusManager.setOffline(user.accountId);
 
     const joinedRooms = this.getJoinedRooms(client);
     for (const roomId of joinedRooms) {
@@ -128,6 +133,9 @@ export class StudyRoomGateway
         payload.roomId,
         payload.userId,
       );
+
+      // Set user as online when joining a room
+      await this.onlineStatusManager.setOnline(user.accountId);
 
       client.join(this.getRoomChannel(payload.roomId));
       this.getJoinedRooms(client).add(payload.roomId);
@@ -231,6 +239,9 @@ export class StudyRoomGateway
         payload.userId,
         payload.roomId,
       );
+
+      // Set user as offline when leaving a room
+      await this.onlineStatusManager.setOffline(user.accountId);
 
       this.getJoinedRooms(client).delete(payload.roomId);
       client.leave(this.getRoomChannel(payload.roomId));
@@ -412,6 +423,9 @@ export class StudyRoomGateway
         payload,
       );
 
+      // Set user as online when joining a room
+      await this.onlineStatusManager.setOnline(user.accountId);
+
       client.join(this.getRoomChannel(payload.roomId));
       this.getJoinedRooms(client).add(payload.roomId);
 
@@ -457,6 +471,9 @@ export class StudyRoomGateway
           payload.roomId,
           user.accountId,
         );
+
+        // Set user as offline when leaving a room
+        await this.onlineStatusManager.setOffline(user.accountId);
 
         this.getJoinedRooms(client).delete(payload.roomId);
         client.leave(this.getRoomChannel(payload.roomId));
