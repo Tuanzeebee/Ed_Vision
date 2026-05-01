@@ -1154,9 +1154,9 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-violet-600",
     "bg-violet-50",
     [
-      { key: 'grammar.advanced_inversion',title: 'Đảo ngữ nâng cao', desc: 'Fronting, Emphatic inversion patterns', done: false },
-      { key: 'grammar.subjunctive',        title: 'Subjunctive Mood', desc: 'It is essential that…, If only…, Were it not…', done: false },
-      { key: 'grammar.complex_nominals',  title: 'Complex Sentence Control', desc: 'Mệnh đề phức linh hoạt, giảm lỗi ngữ pháp lặp lại', done: false },
+      { key: 'grammar.advanced_inversion', title: 'Đảo ngữ nâng cao', desc: 'Fronting, Emphatic inversion patterns', done: false },
+      { key: 'grammar.subjunctive', title: 'Subjunctive Mood', desc: 'It is essential that…, If only…, Were it not…', done: false },
+      { key: 'grammar.complex_nominals', title: 'Complex Sentence Control', desc: 'Mệnh đề phức linh hoạt, giảm lỗi ngữ pháp lặp lại', done: false },
       {
         key: "grammar.advanced_inversion",
         title: "Đảo ngữ nâng cao",
@@ -1185,8 +1185,8 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
-      { key: 'vocab.awl_advanced',      title: 'AWL nâng cao + Topic Lexicon', desc: 'Từ học thuật C1 theo chủ đề Education/Technology/Environment', done: false },
-      { key: 'vocab.metaphor_idiom',    title: 'Collocation & Nuance Control', desc: 'Dùng cụm từ tự nhiên, tránh idiom gượng ép trong Writing', done: false },
+      { key: 'vocab.awl_advanced', title: 'AWL nâng cao + Topic Lexicon', desc: 'Từ học thuật C1 theo chủ đề Education/Technology/Environment', done: false },
+      { key: 'vocab.metaphor_idiom', title: 'Collocation & Nuance Control', desc: 'Dùng cụm từ tự nhiên, tránh idiom gượng ép trong Writing', done: false },
       {
         key: "vocab.awl_advanced",
         title: "AWL nâng cao + Discipline vocab",
@@ -1247,8 +1247,8 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-orange-600",
     "bg-orange-50",
     [
-      { key: 'writing.sophisticated_arg',title: 'Task Response nâng cao', desc: 'Counterargument + refutation, lập luận nhất quán toàn bài', done: false },
-      { key: 'writing.native_style',     title: 'Style tự nhiên nhưng học thuật', desc: 'Natural phrasing, tránh template cứng và lỗi register', done: false },
+      { key: 'writing.sophisticated_arg', title: 'Task Response nâng cao', desc: 'Counterargument + refutation, lập luận nhất quán toàn bài', done: false },
+      { key: 'writing.native_style', title: 'Style tự nhiên nhưng học thuật', desc: 'Natural phrasing, tránh template cứng và lỗi register', done: false },
       {
         key: "writing.sophisticated_arg",
         title: "Lập luận tinh tế & thuyết phục",
@@ -1271,8 +1271,8 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-pink-600",
     "bg-pink-50",
     [
-      { key: 'speaking.fluency_strategy',title: 'Chiến lược Fluency', desc: 'Strategic pausing, repair strategies, fillers tự nhiên', done: false },
-      { key: 'speaking.pronunciation_adv',title: 'Pronunciation Band 7+', desc: 'Linking, weak forms, stress/intonation để tăng intelligibility', done: false },
+      { key: 'speaking.fluency_strategy', title: 'Chiến lược Fluency', desc: 'Strategic pausing, repair strategies, fillers tự nhiên', done: false },
+      { key: 'speaking.pronunciation_adv', title: 'Pronunciation Band 7+', desc: 'Linking, weak forms, stress/intonation để tăng intelligibility', done: false },
       {
         key: "speaking.fluency_strategy",
         title: "Chiến lược Fluency",
@@ -1321,8 +1321,8 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
-      { key: 'vocab.c1_precision',      title: 'C1 Precision & Flexibility', desc: 'Chọn từ/cụm từ chính xác theo ngữ cảnh học thuật', done: false },
-      { key: 'vocab.advanced_idioms',   title: 'Natural Collocations', desc: 'Ưu tiên collocation tự nhiên thay vì lạm dụng idioms', done: false },
+      { key: 'vocab.c1_precision', title: 'C1 Precision & Flexibility', desc: 'Chọn từ/cụm từ chính xác theo ngữ cảnh học thuật', done: false },
+      { key: 'vocab.advanced_idioms', title: 'Natural Collocations', desc: 'Ưu tiên collocation tự nhiên thay vì lạm dụng idioms', done: false },
       {
         key: "vocab.c1_precision",
         title: "C1 Precision & Style",
@@ -1378,8 +1378,8 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-orange-600",
     "bg-orange-50",
     [
-      { key: 'writing.persuasive_adv',  title: 'Band 8 Writing Control', desc: 'Task response sâu, cohesion tự nhiên, lỗi ngữ pháp tối thiểu', done: false },
-      { key: 'writing.register_mastery',title: 'Register Mastery', desc: 'Điều chỉnh giọng văn chuẩn học thuật cho từng dạng Task 1/2', done: false },
+      { key: 'writing.persuasive_adv', title: 'Band 8 Writing Control', desc: 'Task response sâu, cohesion tự nhiên, lỗi ngữ pháp tối thiểu', done: false },
+      { key: 'writing.register_mastery', title: 'Register Mastery', desc: 'Điều chỉnh giọng văn chuẩn học thuật cho từng dạng Task 1/2', done: false },
       {
         key: "writing.persuasive_adv",
         title: "Văn nghị luận thuyết phục cao",
@@ -1402,7 +1402,7 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-pink-600",
     "bg-pink-50",
     [
-      { key: 'speaking.natural_fluency',title: 'Band 8 Speaking Performance', desc: 'Fluency linh hoạt, lexical resource rộng, pronunciation rõ và tự nhiên', done: false },
+      { key: 'speaking.natural_fluency', title: 'Band 8 Speaking Performance', desc: 'Fluency linh hoạt, lexical resource rộng, pronunciation rõ và tự nhiên', done: false },
       {
         key: "speaking.natural_fluency",
         title: "Fluency tự nhiên",
@@ -2890,9 +2890,8 @@ export function CertCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
-        selected ? "border-purple-400 shadow-lg" : "border-slate-100 shadow-sm"
-      }`}
+      className={`bg-white rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${selected ? "border-purple-400 shadow-lg" : "border-slate-100 shadow-sm"
+        }`}
     >
       <div className="h-28 relative overflow-hidden">
         <img
@@ -2938,11 +2937,10 @@ export function CertCard({
             />
           </div>
           <button
-            className={`w-full py-2 mt-1 text-sm font-medium rounded-xl cursor-pointer transition-colors ${
-              cert.progress > 0
+            className={`w-full py-2 mt-1 text-sm font-medium rounded-xl cursor-pointer transition-colors ${cert.progress > 0
                 ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600"
                 : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
+              }`}
           >
             {cert.progress > 0 ? "Tiếp tục học" : "Bắt đầu học"}
           </button>
@@ -2961,13 +2959,12 @@ export function RoadmapView({ steps }: { steps: RoadmapStep[] }) {
           className={`relative ${step.status === "locked" ? "opacity-50" : ""}`}
         >
           <div
-            className={`absolute -left-[23px] top-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center ${
-              step.status === "completed"
+            className={`absolute -left-[23px] top-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center ${step.status === "completed"
                 ? "bg-emerald-500"
                 : step.status === "in-progress"
                   ? "bg-purple-500 ring-4 ring-purple-100"
                   : "bg-slate-300"
-            }`}
+              }`}
           >
             {step.status === "completed" && (
               <CheckCircle2 className="w-2.5 h-2.5 text-white" />
@@ -2982,13 +2979,12 @@ export function RoadmapView({ steps }: { steps: RoadmapStep[] }) {
               <p className="text-xs text-slate-500">{step.subtitle}</p>
             </div>
             <span
-              className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ml-3 ${
-                step.status === "completed"
+              className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ml-3 ${step.status === "completed"
                   ? "text-emerald-600 bg-emerald-50"
                   : step.status === "in-progress"
                     ? "text-purple-600 bg-purple-50"
                     : "text-slate-400 bg-slate-50"
-              }`}
+                }`}
             >
               {step.status === "completed"
                 ? "Hoàn thành"
@@ -3141,14 +3137,12 @@ export function SkillTopicCard({ section }: { section: SkillSection }) {
             {section.topics.map((topic, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2.5 p-2.5 rounded-xl ${
-                  topic.done ? "bg-emerald-50" : "bg-slate-50"
-                }`}
+                className={`flex items-start gap-2.5 p-2.5 rounded-xl ${topic.done ? "bg-emerald-50" : "bg-slate-50"
+                  }`}
               >
                 <div
-                  className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                    topic.done ? "bg-emerald-500" : "bg-slate-200"
-                  }`}
+                  className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${topic.done ? "bg-emerald-500" : "bg-slate-200"
+                    }`}
                 >
                   {topic.done && (
                     <CheckCircle2 className="w-3 h-3 text-white" />
@@ -3156,11 +3150,10 @@ export function SkillTopicCard({ section }: { section: SkillSection }) {
                 </div>
                 <div>
                   <div
-                    className={`text-sm font-semibold ${
-                      topic.done
+                    className={`text-sm font-semibold ${topic.done
                         ? "text-emerald-700 line-through"
                         : "text-slate-700"
-                    }`}
+                      }`}
                   >
                     {topic.title}
                   </div>
@@ -3226,17 +3219,15 @@ export function MosTaskPanel({
               <button
                 key={t.id}
                 onClick={() => setActiveTask(i)}
-                className={`w-full text-left p-3 rounded-xl transition-all border cursor-pointer ${
-                  activeTask === i
+                className={`w-full text-left p-3 rounded-xl transition-all border cursor-pointer ${activeTask === i
                     ? "bg-white border-purple-200 shadow-sm"
                     : "bg-transparent border-transparent hover:bg-white"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-2">
                   <div
-                    className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                      t.done ? "bg-emerald-500" : "bg-slate-200"
-                    }`}
+                    className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${t.done ? "bg-emerald-500" : "bg-slate-200"
+                      }`}
                   >
                     {t.done ? (
                       <CheckCircle2 className="w-3.5 h-3.5 text-white" />
@@ -3284,11 +3275,10 @@ export function MosTaskPanel({
             {task.steps.map((step, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    i === 0 && task.done
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i === 0 && task.done
                       ? "bg-emerald-500 text-white"
                       : "bg-purple-100 text-purple-700"
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </div>
@@ -3599,9 +3589,8 @@ export function BandSelector({
       {/* Hero */}
       <div className="text-center mt-8 mb-10">
         <div
-          className={`bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} mx-auto rounded-2xl flex items-center justify-center shadow-lg ${
-            isMos ? "w-16 h-16" : "w-16 h-16"
-          }`}
+          className={`bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} mx-auto rounded-2xl flex items-center justify-center shadow-lg ${isMos ? "w-16 h-16" : "w-16 h-16"
+            }`}
         >
           <span className="font-black text-white text-xl">{cert.icon}</span>
         </div>
@@ -3636,11 +3625,10 @@ export function BandSelector({
 
       {/* Band cards */}
       <div
-        className={`grid gap-4 ${
-          bands.length === 2
+        className={`grid gap-4 ${bands.length === 2
             ? "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto"
             : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-        }`}
+          }`}
       >
         {bands.map((band) => (
           <button
@@ -3648,11 +3636,10 @@ export function BandSelector({
             onMouseEnter={() => setHovered(band.value)}
             onMouseLeave={() => setHovered(null)}
             onClick={() => onSelect(band.value)}
-            className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-              hovered === band.value
+            className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${hovered === band.value
                 ? `${band.bg} ${band.borderActive}`
                 : `bg-white ${band.border}`
-            }`}
+              }`}
           >
             {band.recommended && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap shadow-sm">
@@ -3686,11 +3673,10 @@ export function BandSelector({
               ))}
             </ul>
             <div
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-colors ${
-                hovered === band.value
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-colors ${hovered === band.value
                   ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
                   : `${band.bg} ${band.color} border ${band.border}`
-              }`}
+                }`}
             >
               Chọn {isMos ? "cấp độ" : "mục tiêu"} này →
             </div>

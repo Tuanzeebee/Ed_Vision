@@ -7,6 +7,13 @@ export interface PlacementQuestionPayload {
   options: unknown
   timeLimitSec: number
   progress: { current: number; total: number }
+  contextType?: 'passage' | 'audio' | 'standalone'
+  passage?: {
+    id: string
+    title: string
+    content: string
+    audioUrl: string | null
+  } | null
 }
 
 export interface StartPlacementInput {
@@ -36,6 +43,12 @@ export interface PlacementResult {
   finalBand: number
   skillBands: Record<string, number>
   confidenceLevel: 'low' | 'medium' | 'high'
+  cefrLevel?: string
+  sem?: number
+  patterns?: {
+    strengths?: string[]
+    weaknesses?: string[]
+  }
 }
 
 export async function startPlacementTest(
