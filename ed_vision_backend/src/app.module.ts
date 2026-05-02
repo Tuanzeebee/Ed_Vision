@@ -36,6 +36,7 @@ import { RedisModule } from './redis/redis.module';
 import { StudyRoomModule } from './study-room/study-room.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { IeltsAdaptiveModule } from './ielts-adaptive/ielts-adaptive.module';
+import { PlacementModule } from './placement/placement.module';
 
 function resolveI18nPath(): string {
   const candidatePaths = [
@@ -85,6 +86,7 @@ function resolveI18nPath(): string {
     AttendanceModule,
     StudyRoomModule,
     IeltsAdaptiveModule,
+    PlacementModule,
     YouTubeMusicModule,
     TtsModule,
     SttModule

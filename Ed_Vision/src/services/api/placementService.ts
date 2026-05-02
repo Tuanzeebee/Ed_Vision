@@ -8,6 +8,7 @@ export interface PlacementQuestionPayload {
   timeLimitSec: number
   progress: { current: number; total: number }
   contextType?: 'passage' | 'audio' | 'standalone'
+  skill: string
   passage?: {
     id: string
     title: string
@@ -37,6 +38,11 @@ export interface SubmitPlacementResult {
   isCorrect: boolean
   nextQuestion: PlacementQuestionPayload | null
   progress: { current: number; total: number }
+  speakingResult?: {
+    band: number
+    feedback: string
+    transcript: string
+  }
 }
 
 export interface PlacementResult {
@@ -48,28 +54,30 @@ export interface PlacementResult {
   patterns?: {
     strengths?: string[]
     weaknesses?: string[]
+    balanced?: string[]
+    insights?: string[]
   }
 }
 
 export async function startPlacementTest(
   payload: StartPlacementInput,
 ): Promise<StartPlacementResult> {
-  const res = await apiClient.post<StartPlacementResult>('/placement-test/start', payload)
+  const res = await apiClient.post<StartPlacementResult>('/placement/start', payload)
   return res.data
 }
 
 export async function submitPlacementAnswer(
   payload: SubmitPlacementInput,
 ): Promise<SubmitPlacementResult> {
-  const res = await apiClient.post<SubmitPlacementResult>('/placement-test/answer', payload)
+  const res = await apiClient.post<SubmitPlacementResult>('/placement/answer', payload)
   return res.data
 }
 
 export async function abandonPlacementSession(sessionId: string): Promise<void> {
-  await apiClient.post('/placement-test/abandon', { sessionId })
+  await apiClient.post('/placement/abandon', { sessionId })
 }
 
 export async function getPlacementResult(sessionId: string): Promise<PlacementResult> {
-  const res = await apiClient.get<PlacementResult>(`/placement-test/result/${encodeURIComponent(sessionId)}`)
+  const res = await apiClient.get<PlacementResult>(`/placement/result/${encodeURIComponent(sessionId)}`)
   return res.data
 }

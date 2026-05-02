@@ -24,6 +24,8 @@ import {
   type PlacementQuestionPayload,
   type PlacementResult,
 } from "@/services/api/placementService";
+import { ListeningPlayer } from "@/components/ListeningPlayer";
+import { SpeakingRecorder } from "@/components/SpeakingRecorder";
 
 type ViewType = "intro" | "test";
 const IELTS_SURVEY_KEY = "ieltsSurveyCompleted";
@@ -372,6 +374,17 @@ const IELTSTestView: React.FC<{
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
+  const [audioDone, setAudioDone] = useState(false);
+  const [speakingResult, setSpeakingResult] = useState<{ band: number; feedback: string } | null>(null);
+
+  // DEBUG — xóa sau khi test xong
+  useEffect(() => {
+    console.log('[Speaking Debug]', {
+      skill: currentQuestion.skill,
+      questionType: currentQuestion.questionType,
+      contextType: currentQuestion.contextType,
+    })
+  }, [currentQuestion.id])
 
   const options = useMemo(() => {
     if (!Array.isArray(currentQuestion.options)) return [];
@@ -415,6 +428,8 @@ const IELTSTestView: React.FC<{
       setQuestionStartedAt(Date.now());
       setFreeTextAnswer("");
       setSelectedOption(null);
+      setAudioDone(false);
+      setSpeakingResult(null);
       setResetKey(k => k + 1);
     } catch (e) {
       setIsFinished(true);
@@ -531,8 +546,8 @@ const IELTSTestView: React.FC<{
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-[1400px] mx-auto px-6 py-10">
-        <div className={`grid ${currentQuestion.passage ? 'lg:grid-cols-2' : 'max-w-3xl mx-auto'} gap-10 items-start`}>
+      <main className="flex-1 w-full max-w-[1400px] mx-auto px-6 py-12">
+        <div className={`grid ${currentQuestion.passage ? 'lg:grid-cols-2' : 'max-w-4xl mx-auto w-full'} gap-10 items-start`}>
           {currentQuestion.passage && (
             <div className="bg-white rounded-[32px] border border-indigo-100 shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-180px)]">
               <div className="p-8 border-b border-indigo-50 bg-indigo-50/30 flex items-center justify-between">
@@ -544,14 +559,30 @@ const IELTSTestView: React.FC<{
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                {currentQuestion.passage.audioUrl && (
-                  <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                    <audio controls src={currentQuestion.passage.audioUrl} className="w-full" />
+                {currentQuestion.contextType === 'audio' && currentQuestion.passage.audioUrl ? (
+                  <>
+                    <ListeningPlayer
+                      audioUrl={currentQuestion.passage.audioUrl}
+                      onFinished={() => setAudioDone(true)}
+                    />
+                    {/* Transcript chỉ hiện SAU khi nghe xong hoặc user nhấn dừng */}
+                    {audioDone && (
+                      <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                          Transcript
+                        </p>
+                        <div className="text-base leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
+                          {currentQuestion.passage.content}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Reading passage — hiện luôn bình thường
+                  <div className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
+                    {currentQuestion.passage.content}
                   </div>
                 )}
-                <div className="text-lg leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
-                  {currentQuestion.passage.content}
-                </div>
               </div>
             </div>
           )}
@@ -583,42 +614,89 @@ const IELTSTestView: React.FC<{
                   <Button
                     onClick={() => void submitCurrentAnswer(freeTextAnswer)}
                     disabled={isSubmitting || !freeTextAnswer.trim()}
-                    className="w-full h-16 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl text-lg font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
+                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
                   >
                     {isSubmitting ? 'Processing...' : 'Xác nhận →'}
                   </Button>
                 </div>
+              ) : (currentQuestion.skill === 'speaking' || currentQuestion.questionType === 'speaking') ? (
+                <div className="space-y-6">
+                  <SpeakingRecorder
+                    sessionId={sessionId}
+                    questionId={currentQuestion.id}
+                    speakingPrompt={currentQuestion.questionText}
+                    onResult={(res) => {
+                      setSpeakingResult({ band: res.band, feedback: res.feedback });
+                      // Wait a bit to show result before moving next
+                      setTimeout(() => {
+                        if (!res.nextQuestion) {
+                          getPlacementResult(sessionId).then(final => {
+                            setResult(final);
+                            setIsFinished(true);
+                          });
+                        } else {
+                          setCurrentQuestion(res.nextQuestion);
+                          setTimeLeft(res.nextQuestion.timeLimitSec || 60);
+                          setQuestionStartedAt(Date.now());
+                          setAudioDone(false);
+                          setSpeakingResult(null);
+                          setResetKey(k => k + 1);
+                        }
+                      }, 3000);
+                    }}
+                  />
+                  {speakingResult && (
+                    <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[24px] animate-in slide-in-from-bottom duration-500">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Trophy className="w-5 h-5 text-emerald-600" />
+                        <span className="font-bold text-emerald-900">AI Band: {speakingResult.band}</span>
+                      </div>
+                      <p className="text-sm text-emerald-700 italic">"{speakingResult.feedback}"</p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid gap-3">
-                  {options.map((opt: any) => {
-                    const isSelected = selectedOption === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => setSelectedOption(opt.value)}
-                        className={`group flex items-center gap-6 p-6 rounded-3xl border-2 transition-all duration-300 ${isSelected
-                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-500/30 -translate-y-1'
-                          : 'bg-white border-indigo-50 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/30'
-                          }`}
+                  {(currentQuestion.contextType !== 'audio' || audioDone) ? (
+                    <>
+                      {options.map((opt: any) => {
+                        const isSelected = selectedOption === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            onClick={() => setSelectedOption(opt.value)}
+                            className={`group flex items-center gap-6 p-6 rounded-3xl border-2 transition-all duration-300 ${isSelected
+                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-500/30 -translate-y-1'
+                              : 'bg-white border-indigo-50 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/30'
+                              }`}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors ${isSelected ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100'
+                              }`}>
+                              {opt.badge}
+                            </div>
+                            <span className={`text-lg font-bold text-left flex-1 ${isSelected ? 'text-white' : 'text-slate-700'}`}>
+                              {opt.label}
+                            </span>
+                            {isSelected && <CheckCircle2 className="w-6 h-6 animate-in zoom-in duration-300" />}
+                          </button>
+                        );
+                      })}
+                      <Button
+                        onClick={() => void submitCurrentAnswer(selectedOption || "")}
+                        disabled={isSubmitting || !selectedOption}
+                        className="mt-6 w-full h-16 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl text-lg font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
                       >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black transition-colors ${isSelected ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100'
-                          }`}>
-                          {opt.badge}
-                        </div>
-                        <span className={`text-lg font-bold text-left flex-1 ${isSelected ? 'text-white' : 'text-slate-700'}`}>
-                          {opt.label}
-                        </span>
-                        {isSelected && <CheckCircle2 className="w-6 h-6 animate-in zoom-in duration-300" />}
-                      </button>
-                    );
-                  })}
-                  <Button
-                    onClick={() => void submitCurrentAnswer(selectedOption || "")}
-                    disabled={isSubmitting || !selectedOption}
-                    className="mt-6 w-full h-16 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl text-lg font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
-                  >
-                    {isSubmitting ? 'Processing...' : 'Xác nhận →'}
-                  </Button>
+                        {isSubmitting ? 'Processing...' : 'Xác nhận →'}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="p-12 text-center bg-slate-50 rounded-3xl border border-slate-100">
+                      <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <p className="text-slate-500 font-medium">Hãy nghe hết đoạn audio để hiện câu hỏi</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -1,101 +1,113 @@
-// ============================================================
-// STEP 5: src/placement/placement.controller.ts
-// Không thay đổi nhiều — chỉ thêm field sem vào response
-// ============================================================
-
-import { Router, Request, Response, NextFunction } from 'express'
 import {
-  startPlacementTest,
-  submitAnswer,
-  abandonSession,
-  getPlacementResult,
-} from './adaptive.service'
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+  Logger,
+} from '@nestjs/common'
+import { AdaptiveService } from './adaptive.service'
+import { SpeakingService } from './speaking.service'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { diskStorage } from 'multer'
+import * as path from 'path'
+import * as fs from 'fs'
 
-export const placementRouter = Router()
+@Controller('placement')
+export class PlacementController {
+  private readonly logger = new Logger(PlacementController.name)
 
-const VALID_SKILLS = ['vocabulary', 'reading', 'listening', 'writing', 'speaking']
+  constructor(
+    private readonly adaptiveService: AdaptiveService,
+    private readonly speakingService: SpeakingService,
+  ) {}
 
-// POST /placement-test/start
-placementRouter.post('/start', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { accountId, skillsToTest } = req.body ?? {}
-
-    if (!accountId || typeof accountId !== 'number') {
-      return res.status(400).json({ error: 'accountId (number) là bắt buộc' })
-    }
-
-    if (!Array.isArray(skillsToTest) || skillsToTest.length === 0) {
-      return res.status(400).json({ error: 'skillsToTest[] là bắt buộc' })
-    }
-
-    const invalid = skillsToTest.filter((s: string) => !VALID_SKILLS.includes(s))
-    if (invalid.length > 0) {
-      return res.status(400).json({ error: `Skill không hợp lệ: ${invalid.join(', ')}` })
-    }
-
-    const result = await startPlacementTest({ accountId, skillsToTest })
-    return res.status(201).json(result)
-  } catch (err) {
-    next(err)
+  @Post('start')
+  async start(@Body() body: { accountId: number; skillsToTest: string[] }) {
+    return this.adaptiveService.startPlacementTest(body)
   }
-})
 
-// POST /placement-test/answer
-placementRouter.post('/answer', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { sessionId, questionId, userAnswer, timeTakenSec } = req.body ?? {}
+  @Post('answer')
+  async answer(
+    @Body()
+    body: {
+      sessionId: string
+      questionId: string
+      userAnswer: string
+      timeTakenSec: number
+    },
+  ) {
+    return this.adaptiveService.submitAnswer(body)
+  }
 
-    if (!sessionId || !questionId || userAnswer === undefined || !timeTakenSec) {
-      return res.status(400).json({
-        error: 'sessionId, questionId, userAnswer, timeTakenSec là bắt buộc',
-      })
+  @Post('abandon')
+  async abandon(@Body() body: { sessionId: string }) {
+    await this.adaptiveService.abandonSession(body.sessionId)
+    return { message: 'Session đã huỷ.' }
+  }
+
+  @Get('result/:sessionId')
+  async getResult(@Param('sessionId') sessionId: string) {
+    return this.adaptiveService.getPlacementResult(sessionId)
+  }
+
+  @Post('speaking-submit')
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const dir = './uploads/audio/speaking'
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+          }
+          cb(null, dir)
+        },
+        filename: (req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`
+          cb(null, `${unique}${path.extname(file.originalname)}`)
+        },
+      }),
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+    }),
+  )
+  async submitSpeaking(
+    @UploadedFile() file: Express.Multer.File,
+    @Body()
+    body: {
+      sessionId: string
+      questionId: string
+      speakingPrompt: string
+      timeTakenSec: string
+    },
+  ) {
+    if (!file) {
+      throw new Error('Audio file is required')
     }
 
-    const result = await submitAnswer({
-      sessionId,
-      questionId,
-      userAnswer: String(userAnswer),
-      timeTakenSec: Number(timeTakenSec),
+    // 1. Whisper STT
+    const transcript = await this.speakingService.transcribe(file.path)
+
+    // 2. AI Scoring
+    const { band, feedback } = await this.speakingService.scoreSpeaking(
+      transcript,
+      body.speakingPrompt,
+      file.path,
+    )
+
+    // 3. Submit vào IRT — band >= 5.5 tính là "đúng" để update theta
+    const result = await this.adaptiveService.submitAnswer({
+      sessionId: body.sessionId,
+      questionId: body.questionId,
+      userAnswer: `speaking_band:${band}`,
+      timeTakenSec: Number(body.timeTakenSec),
     })
 
-    return res.status(200).json(result)
-  } catch (err: any) {
-    // Session đã kết thúc không phải lỗi nghiêm trọng — trả 409 thay vì 500
-    if (err?.code === 'SESSION_ENDED' || err?.statusCode === 409) {
-      return res.status(409).json({
-        error: 'SESSION_ENDED',
-        message: 'Session đã kết thúc.',
-      })
+    // 4. Trả về kèm transcript và feedback cho FE hiển thị
+    return {
+      ...result,
+      speakingResult: { band, feedback, transcript },
     }
-    next(err)
   }
-})
-
-// POST /placement-test/abandon
-placementRouter.post('/abandon', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { sessionId } = req.body ?? {}
-
-    if (!sessionId) {
-      return res.status(400).json({ error: 'sessionId là bắt buộc' })
-    }
-
-    await abandonSession(sessionId)
-    return res.status(200).json({ message: 'Session đã huỷ.' })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// GET /placement-test/result/:sessionId
-placementRouter.get(
-  '/result/:sessionId',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await getPlacementResult(String(req.params.sessionId));
-      return res.status(200).json(result);
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+}
