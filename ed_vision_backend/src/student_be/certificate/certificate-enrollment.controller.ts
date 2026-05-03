@@ -366,6 +366,18 @@ export class CertificateEnrollmentController {
   }
 
   /**
+   * POST /student/certificate/ai-tutor/groq-chat
+   * Chat with Groq AI Tutor for a specific TOEIC question
+   */
+  @Post('ai-tutor/groq-chat')
+  async chatGroqTutor(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: import('./dto/certificate.dto').ToeicChatGroqDto,
+  ) {
+    return this.service.chatGroqTutor(req.user.account_id, dto);
+  }
+
+  /**
    * GET /student/certificate/toeic/practice-questions/:part
    * Returns up to 10 questions for one TOEIC part in the learner score band.
    */

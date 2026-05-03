@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { IsObject, IsArray, IsNumber } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { encryptString, tryDecryptString } from '../../common/crypto.util';
 
@@ -7,7 +8,11 @@ export class GenerateDiagnosticDto {
 }
 
 export class SubmitDiagnosticDto {
+  @IsObject()
   answers!: Record<string, string>; // questionId -> optionKey
+
+  @IsArray()
+  @IsNumber({}, { each: true })
   question_ids!: number[];
 }
 
@@ -109,6 +114,7 @@ export class ToeicDiagnosticService {
       stem: q.stem, 
       reading_passage: q.reading_passage,
       media_audio_url: q.media_audio_url,
+      media_image_url: q.media_image_url,
       options: q.options.map(o => ({
         id: o.id,
         option_key: o.option_key,

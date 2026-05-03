@@ -76,6 +76,9 @@ interface OllamaGenerateRequest {
   options?: {
     num_predict?: number;
     temperature?: number;
+    num_ctx?: number;
+    top_k?: number;
+    top_p?: number;
   };
 }
 
@@ -98,6 +101,9 @@ export class PracticeExplanationService implements OnModuleInit {
   /** How many questions to explain per background cron run */
   private readonly BATCH_SIZE = 5;
 
+  /** Prevent overlapping cron executions */
+  private isProcessing = false;
+
   /** Ollama model (same as the rest of the AI pipeline) */
   private readonly MODEL = process.env.OLLAMA_MODEL ?? 'qwen3';
 
@@ -111,7 +117,7 @@ export class PracticeExplanationService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     // Migrate any explanations still sitting in the file-based JSON cache
-    // into the LearningRepositoryItem.ai_explanation column, then remove the files.
+    // into the ExamRepositoryItem.ai_explanation column, then remove the files.
     void this.migrateFileCacheToDb().catch((err) =>
       this.logger.warn(`File-cache migration skipped: ${String(err)}`),
     );
@@ -120,17 +126,29 @@ export class PracticeExplanationService implements OnModuleInit {
     void this.normalizeExistingPracticeExplanations().catch((err) =>
       this.logger.warn(`Practice explanation normalization skipped: ${String(err)}`),
     );
+
+    // Trigger one immediate pass on startup (after 30s delay) without waiting for cron
+    setTimeout(() => {
+      void this.explainPendingToeicPracticeQuestions().catch((err) =>
+        this.logger.warn(`Startup explanation pass failed: ${String(err)}`),
+      );
+    }, 30_000);
   }
 
   // ─── Background cron: explain un-explained practice questions ───────────────
 
   /**
-   * Runs every 2 minutes.  Fetches a small batch of ToeicPracticeQuestions
+   * Runs every 5 minutes. Fetches a batch of ToeicPracticeQuestions
    * that have no ai_explanation yet and asks Ollama to generate one.
    * The result is stored directly in the DB column — no file I/O.
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async explainPendingToeicPracticeQuestions(): Promise<void> {
+    if (this.isProcessing) {
+      this.logger.debug('Previous explanation job still running. Skipping this cycle.');
+      return;
+    }
+
     let available: boolean;
     try {
       available = await this.isOllamaAvailable();
@@ -138,6 +156,9 @@ export class PracticeExplanationService implements OnModuleInit {
       return; // Ollama not running — skip silently
     }
     if (!available) return;
+
+    this.isProcessing = true;
+    try {
 
     const pending = await this.prisma.toeicPracticeQuestion.findMany({
       where: {
@@ -167,33 +188,151 @@ export class PracticeExplanationService implements OnModuleInit {
       `Background AI: explaining ${pending.length} TOEIC practice question(s)...`,
     );
 
-    for (const q of pending) {
+    const groups = this.groupByPassage(pending);
+
+    for (const group of groups) {
       try {
-        const explanation = await this.generateToeicExplanation(q);
-        const normalizedExplanation = this.toNormalizedExplanationTemplate(
-          explanation,
-          q.options,
+        await this.explainGroup(group);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to explain group: ${String(err)}`,
         );
+      }
+      
+      // Nghỉ 1s giữa mỗi group để Ollama giải phóng GPU/RAM
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  private groupByPassage(questions: any[]) {
+    const groups = new Map<string, { passage: string | null; questions: any[] }>();
+    for (const q of questions) {
+      if (!q.reading_passage || (q.part !== 6 && q.part !== 7)) {
+        groups.set(`solo_${q.id}`, { passage: null, questions: [q] });
+        continue;
+      }
+      const key = q.reading_passage.slice(0, 50);
+      if (!groups.has(key)) {
+        groups.set(key, { passage: q.reading_passage, questions: [] });
+      }
+      groups.get(key)!.questions.push(q);
+    }
+    return Array.from(groups.values());
+  }
+
+  private parseGroupResponse(response: string, count: number): string[] {
+    const results: string[] = [];
+    for (let i = 1; i <= count; i++) {
+      const regex = new RegExp(`Q${i}:\\s*([\\s\\S]*?)(?=Q${i + 1}:|$)`);
+      const match = response.match(regex);
+      results.push(match?.[1]?.trim() ?? '');
+    }
+    return results;
+  }
+
+  private async explainGroup(group: { passage: string | null; questions: any[] }): Promise<void> {
+    if (!group.passage || group.questions.length === 1) {
+      // Fallback cho Part 5 hoặc passage bị tách lẻ 1 câu
+      for (const q of group.questions) {
+        const explanation = await this.generateToeicExplanation(q);
+        const normalized = this.toNormalizedExplanationTemplate(explanation, q.options);
         await this.prisma.toeicPracticeQuestion.update({
           where: { id: q.id },
           data: {
-            ai_explanation: normalizedExplanation,
+            ai_explanation: normalized,
             ai_explained_at: new Date(),
             ai_model: this.MODEL,
           },
         });
-      } catch (err) {
-        this.logger.warn(
-          `Failed to explain ToeicPracticeQuestion #${q.id}: ${String(err)}`,
-        );
       }
+      return;
+    }
+
+    const smartTruncate = (text: string, maxChars: number): string => {
+      if (!text || text.length <= maxChars) return text;
+      const truncated = text.slice(0, maxChars);
+      const lastPeriod = Math.max(truncated.lastIndexOf('. '), truncated.lastIndexOf('.\\n'));
+      return lastPeriod > maxChars * 0.6
+        ? truncated.slice(0, lastPeriod + 1) + ' [...]'
+        : truncated + ' [...]';
+    };
+
+    const maxChars = 800;
+    const passageSnippet = `\\n\\nReading Passage:\\n${smartTruncate(group.passage, maxChars)}`;
+
+    const questionBlock = group.questions.map((q, i) => {
+      const optionList = q.options
+        .map((o: any) => `  ${o.option_key}. ${o.option_text}${o.is_correct ? ' ✓' : ''}`)
+        .join('\\n');
+      const baseHint = q.explanation?.trim() ? `\\nHint: ${q.explanation}` : '';
+      return `Q${i + 1} (Part ${q.part ?? '?'} - #${q.id}):\\nStem: ${q.stem}\\nOptions:\\n${optionList}${baseHint}`;
+    }).join('\\n\\n');
+
+    const formatStr = group.questions.map((_, i) => `Q${i + 1}: [explanation]`).join('\\n');
+
+    const prompt =
+      `/no_think\n` +
+      `Bạn là gia sư TOEIC. Trả lời ngắn gọn. Giải thích bằng tiếng Việt.\n` +
+      `Với mỗi câu hỏi dưới đây, giải thích ngắn gọn TẠI SAO đáp án đúng là đúng và TẠI SAO các đáp án khác sai.\n` +
+      `${passageSnippet}\n\n` +
+      `Questions:\n${questionBlock}\n\n` +
+      `Respond in this EXACT format:\n${formatStr}`;
+
+    const body: OllamaGenerateRequest = {
+      model: this.MODEL,
+      prompt,
+      stream: false,
+      options: { 
+        num_predict: Math.max(200, group.questions.length * 200), 
+        temperature: 0.1,
+        num_ctx: 4096,
+        top_k: 40,
+        top_p: 0.9,
+      },
+    };
+
+    const res = await fetch(`${this.OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(600_000), // Increased from 300s to 600s
+    });
+
+    if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
+
+    const data = (await res.json()) as OllamaGenerateResponse;
+    const raw = (data.response ?? '').trim();
+    if (!raw) throw new Error('Empty Ollama response in grouped mode');
+
+    const explanations = this.parseGroupResponse(raw, group.questions.length);
+
+    for (let i = 0; i < group.questions.length; i++) {
+      const q = group.questions[i];
+      let exp = explanations[i];
+      if (!exp || exp.trim() === '') {
+        // Fallback: nếu parse xịt hoặc model lười biếng, chạy lại 1 câu
+        exp = await this.generateToeicExplanation(q);
+      }
+
+      const normalized = this.toNormalizedExplanationTemplate(exp, q.options);
+      await this.prisma.toeicPracticeQuestion.update({
+        where: { id: q.id },
+        data: {
+          ai_explanation: normalized,
+          ai_explained_at: new Date(),
+          ai_model: this.MODEL,
+        },
+      });
     }
   }
 
   // ─── Public: get explanation for an exam item (DB-first, Ollama fallback) ──
 
   /**
-   * Return an explanation for a LearningRepositoryItem.
+   * Return an explanation for a ExamRepositoryItem.
    *
    * Priority:
    *  1. `ai_explanation` already stored in DB  → return immediately (no AI call)
@@ -203,54 +342,7 @@ export class PracticeExplanationService implements OnModuleInit {
    * This replaces the old file-based `buildExplanationCachePath` approach.
    */
   async getOrGenerateExamItemExplanation(itemId: number): Promise<string> {
-    const item = await this.prisma.learningRepositoryItem.findUnique({
-      where: { id: itemId },
-      select: {
-        id: true,
-        stem: true,
-        reading_passage: true,
-        explanation: true,
-        ai_explanation: true,
-        options: {
-          select: { option_key: true, option_text: true, is_correct: true },
-          orderBy: { sort_order: 'asc' },
-        },
-      },
-    });
-
-    if (!item) return 'Không tìm thấy câu hỏi.';
-
-    // Fast path — already explained
-    if (item.ai_explanation?.trim()) return item.ai_explanation;
-    if (item.explanation?.trim()) return item.explanation;
-
-    // Generate via Ollama
-    try {
-      const generated = await this.generateToeicExplanation({
-        id: item.id,
-        skill_area: 'reading',
-        part: null,
-        stem: item.stem,
-        reading_passage: item.reading_passage ?? null,
-        explanation: item.explanation ?? null,
-        options: item.options,
-      });
-
-      const normalizedGenerated = this.toNormalizedExplanationTemplate(
-        generated,
-        item.options,
-      );
-
-      // Persist so next call is instant
-      await this.prisma.learningRepositoryItem.update({
-        where: { id: itemId },
-        data: { ai_explanation: normalizedGenerated },
-      });
-
-      return normalizedGenerated;
-    } catch {
-      return item.explanation ?? 'Chưa có giải thích cho câu này.';
-    }
+    return 'Không có giải thích cho đề thi.';
   }
 
   // ─── Public: compute difficulty score for a question at import time ─────────
@@ -346,88 +438,14 @@ export class PracticeExplanationService implements OnModuleInit {
 
   /**
    * One-time migration: reads every JSON file in uploads/certificate/ai-cache/
-   * and writes its content into LearningRepositoryItem.ai_explanation (matched
+   * and writes its content into ExamRepositoryItem.ai_explanation (matched
    * by item_id embedded in the filename hash).
    *
    * After a successful run the file cache becomes irrelevant — new explanations
    * are written directly to the DB column.
    */
   async migrateFileCacheToDb(): Promise<{ migrated: number; skipped: number }> {
-    const cacheDir = resolve(
-      join(process.cwd(), 'uploads', 'certificate', 'ai-cache'),
-    );
-    if (!existsSync(cacheDir)) return { migrated: 0, skipped: 0 };
-
-    const { readdir } = await import('fs/promises');
-    let files: string[];
-    try {
-      files = await readdir(cacheDir, { recursive: true } as any) as string[];
-    } catch {
-      return { migrated: 0, skipped: 0 };
-    }
-
-    const jsonFiles = files.filter(
-      (f) => typeof f === 'string' && f.endsWith('.json'),
-    );
-    if (jsonFiles.length === 0) return { migrated: 0, skipped: 0 };
-
-    let migrated = 0;
-    let skipped = 0;
-
-    for (const rel of jsonFiles) {
-      const fullPath = join(cacheDir, rel);
-      try {
-        const raw = await readFile(fullPath, 'utf8');
-        const parsed: unknown = JSON.parse(raw);
-        if (
-          typeof parsed !== 'object' ||
-          parsed === null ||
-          !('explanation' in parsed)
-        ) {
-          skipped++;
-          continue;
-        }
-
-        const record = parsed as {
-          explanation?: string;
-          item_id?: number;
-          created_at?: string;
-          model?: string;
-        };
-
-        if (!record.explanation?.trim() || !record.item_id) {
-          skipped++;
-          continue;
-        }
-
-        // Only update if the DB column is still empty
-        const existing = await this.prisma.learningRepositoryItem.findUnique({
-          where: { id: record.item_id },
-          select: { id: true, ai_explanation: true },
-        });
-
-        if (!existing) { skipped++; continue; }
-        if (existing.ai_explanation?.trim()) { skipped++; continue; }
-
-        await this.prisma.learningRepositoryItem.update({
-          where: { id: record.item_id },
-          data: {
-            ai_explanation: record.explanation,
-          },
-        });
-        migrated++;
-      } catch {
-        skipped++;
-      }
-    }
-
-    if (migrated > 0) {
-      this.logger.log(
-        `File-cache → DB migration complete: ${migrated} migrated, ${skipped} skipped.`,
-      );
-    }
-
-    return { migrated, skipped };
+    return { migrated: 0, skipped: 0 };
   }
 
   // ─── Private helpers ────────────────────────────────────────────────────────
@@ -460,37 +478,68 @@ export class PracticeExplanationService implements OnModuleInit {
       .join('\n');
 
     const baseHint = q.explanation?.trim()
-      ? `\n\nBase hint (from human author): ${q.explanation}`
+      ? `\n\nGợi ý từ giáo viên: ${q.explanation}`
       : '';
 
+    const smartTruncate = (text: string, maxChars: number): string => {
+      if (!text || text.length <= maxChars) return text;
+      const truncated = text.slice(0, maxChars);
+      const lastPeriod = Math.max(
+        truncated.lastIndexOf('. '),
+        truncated.lastIndexOf('.\n'),
+      );
+      return lastPeriod > maxChars * 0.6
+        ? truncated.slice(0, lastPeriod + 1) + ' [...]'
+        : truncated + ' [...]';
+    };
+
+    const maxChars = { 5: 0, 6: 400, 7: 500 }[q.part ?? 0] ?? 300;
     const passageSnippet = q.reading_passage
-      ? `\n\nReading passage:\n${q.reading_passage.slice(0, 600)}`
+      ? `\n\nĐoạn văn:\n${smartTruncate(q.reading_passage, maxChars)}`
       : '';
 
     const prompt =
-      `You are a concise TOEIC English tutor. ` +
-      `Explain in 2-3 sentences why the correct answer is correct ` +
-      `and briefly why each wrong option is incorrect. ` +
-      `Be specific about the grammar rule, vocabulary, or reasoning used. ` +
-      `Write in English, keep it under 120 words.` +
+      `/no_think\n` +
+      `Bạn là gia sư TOEIC. Trả lời ngắn gọn, tối đa 150 từ. ` +
+      `Giải thích TẠI SAO đáp án đúng là đúng, và TẠI SAO từng đáp án sai là sai. ` +
+      `Giải thích cụ thể về quy tắc ngữ pháp, từ vựng hoặc logic. ` +
+      `Viết bằng tiếng Việt.` +
       `${passageSnippet}` +
-      `\n\nQuestion (Part ${q.part ?? '?'} – ${q.skill_area}):\n${q.stem}` +
-      `\n\nOptions:\n${optionList}` +
+      `\n\nCâu hỏi (Part ${q.part ?? '?'} – ${q.skill_area}):\n${q.stem}` +
+      `\n\nCác đáp án:\n${optionList}` +
       `${baseHint}` +
-      `\n\nExplanation:`;
+      `\n\nĐáp án đúng là: ${correctOpt.option_key}. ${correctOpt.option_text}` +
+      `\n\nGiải thích:`;
+
+    const NUM_CTX_BY_PART: Record<number, number> = {
+      1: 2048,
+      2: 2048,
+      3: 2048,
+      4: 2048,
+      5: 2048,
+      6: 4096,
+      7: 4096,
+    };
+    const numCtx = q.part && NUM_CTX_BY_PART[q.part] ? NUM_CTX_BY_PART[q.part] : 2048;
 
     const body: OllamaGenerateRequest = {
       model: this.MODEL,
       prompt,
       stream: false,
-      options: { num_predict: 180, temperature: 0.3 },
+      options: {
+        num_predict: 400,
+        temperature: 0.2,
+        num_ctx: numCtx,
+        top_k: 40,
+        top_p: 0.9,
+      },
     };
 
     const res = await fetch(`${this.OLLAMA_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(600_000), // Increased from 300s to 600s
     });
 
     if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
@@ -498,7 +547,7 @@ export class PracticeExplanationService implements OnModuleInit {
     const data = (await res.json()) as OllamaGenerateResponse;
     const raw = (data.response ?? '').trim();
     if (!raw) throw new Error('Empty Ollama response');
-    return raw;
+    return this.normalizeExplanationWhitespace(raw);
   }
 
   private normalizeExplanationWhitespace(input: string): string {
@@ -511,120 +560,19 @@ export class PracticeExplanationService implements OnModuleInit {
       .trim();
   }
 
-  private extractOptionReasons(text: string): Map<string, string> {
-    const result = new Map<string, string>();
-    const lines = text.split('\n');
-
-    for (const line of lines) {
-      const match = line.match(
-        /^(?:[-*]\s*)?(?:option\s*)?([A-D])\s*[).:-]\s*(.+)$/i,
-      );
-      if (!match?.[1] || !match[2]) continue;
-
-      const key = match[1].toUpperCase();
-      const reason = match[2].trim();
-      if (!reason) continue;
-
-      const existing = result.get(key);
-      result.set(key, existing ? `${existing} ${reason}`.trim() : reason);
-    }
-
-    return result;
-  }
-
   private toNormalizedExplanationTemplate(
     raw: string,
-    options: ExplanationOption[],
+    _options: ExplanationOption[],
   ): string {
-    const cleaned = this.normalizeExplanationWhitespace(raw);
-    if (!cleaned) return cleaned;
-
-    const correctOption = options.find((opt) => opt.is_correct);
-    if (!correctOption) return cleaned;
-
-    const reasonsByOption = this.extractOptionReasons(cleaned);
-
-    const summary = cleaned
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .filter((line) => !/^correct\s*answer\s*[:\-]/i.test(line))
-      .filter((line) => !/^option\s*breakdown\s*[:\-]/i.test(line))
-      .filter((line) => !/^(?:[-*]\s*)?(?:option\s*)?[A-D]\s*[).:-]/i.test(line))
-      .map((line) => line.replace(/^summary\s*:\s*/i, '').trim())
-      .join(' ')
-      .replace(/[ ]{2,}/g, ' ')
-      .trim();
-
-    const sortedOptions = [...options].sort((a, b) =>
-      a.option_key.localeCompare(b.option_key),
-    );
-
-    const lines: string[] = [
-      `Correct answer: ${correctOption.option_key}. ${correctOption.option_text}`,
-    ];
-
-    if (summary) {
-      lines.push(`Summary: ${summary}`);
-    }
-
-    lines.push('Option breakdown:');
-
-    for (const option of sortedOptions) {
-      const key = option.option_key.toUpperCase();
-      const verdict = option.is_correct ? 'Correct' : 'Incorrect';
-      const reason = reasonsByOption.get(key);
-      lines.push(reason ? `${key}: ${verdict}. ${reason}` : `${key}: ${verdict}.`);
-    }
-
-    return this.normalizeExplanationWhitespace(lines.join('\n'));
+    // Simply clean whitespace — do NOT parse/reformat the AI output.
+    // Previous structured reformat was stripping all reasoning text.
+    return this.normalizeExplanationWhitespace(raw);
   }
 
   private async normalizeExistingPracticeExplanations(): Promise<void> {
-    const existing = await this.prisma.toeicPracticeQuestion.findMany({
-      where: {
-        ai_explanation: { not: null },
-        options: { some: { is_correct: true } },
-      },
-      select: {
-        id: true,
-        ai_explanation: true,
-        options: {
-          select: {
-            option_key: true,
-            option_text: true,
-            is_correct: true,
-          },
-        },
-      },
-      take: 1000,
-    });
-
-    let updated = 0;
-
-    for (const row of existing) {
-      const current = (row.ai_explanation ?? '').trim();
-      if (!current) continue;
-
-      const normalized = this.toNormalizedExplanationTemplate(
-        current,
-        row.options,
-      );
-
-      if (!normalized || normalized === current) continue;
-
-      await this.prisma.toeicPracticeQuestion.update({
-        where: { id: row.id },
-        data: { ai_explanation: normalized },
-      });
-      updated += 1;
-    }
-
-    if (updated > 0) {
-      this.logger.log(
-        `Normalized ${updated} existing TOEIC practice explanation(s) into a stable template.`,
-      );
-    }
+    // Disabled: this was overwriting existing AI explanations with a broken
+    // structured format that stripped all reasoning. Now a no-op.
+    return;
   }
 
   /**

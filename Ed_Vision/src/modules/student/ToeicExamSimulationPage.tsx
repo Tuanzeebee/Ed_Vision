@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -231,7 +231,7 @@ export default function ToeicExamSimulationPage() {
         setQuestions(mapped);
         if (mapped.length === 0) {
           setLoadError(
-            "Repository đã nạp nhưng chưa có câu hỏi hợp lệ để thi.",
+            "Hiện tại chưa có bộ đề thi thử mới đúng.",
           );
         }
       })

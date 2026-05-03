@@ -3,8 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { tryEncryptString, tryDecryptString } from '../common/crypto.util';
 
 const ENCRYPTED_MODELS = [
-  'LearningRepositoryItem',
-  'LearningRepositoryOption',
+  'ExamRepositoryItem',
+  'ExamRepositoryOption',
   'ToeicPracticeQuestion',
   'ToeicPracticeOption',
   'IeltsPracticeQuestion',

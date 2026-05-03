@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { tmpdir } from 'os';
 import type { Request as ExpressRequest } from 'express';
 import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 import { CertificateEnrollmentService } from '../../student_be/certificate/certificate-enrollment.service';
@@ -59,11 +60,7 @@ type AuthenticatedRequest = ExpressRequest & {
 
 const teacherToeicStorage = diskStorage({
   destination: (req, file, cb) => {
-    const destinationPath = './uploads/certificate';
-    if (!existsSync(destinationPath)) {
-      mkdirSync(destinationPath, { recursive: true });
-    }
-    cb(null, destinationPath);
+    cb(null, tmpdir());
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -74,11 +71,7 @@ const teacherToeicStorage = diskStorage({
 
 const teacherListeningAudioStorage = diskStorage({
   destination: (req, file, cb) => {
-    const destinationPath = './uploads/certificate/audio-staging';
-    if (!existsSync(destinationPath)) {
-      mkdirSync(destinationPath, { recursive: true });
-    }
-    cb(null, destinationPath);
+    cb(null, tmpdir());
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -89,9 +82,7 @@ const teacherListeningAudioStorage = diskStorage({
 
 const teacherAudioChunkStorage = diskStorage({
   destination: (req, file, cb) => {
-    const dest = './uploads/certificate/audio-staging';
-    if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
-    cb(null, dest);
+    cb(null, tmpdir());
   },
   filename: (req, file, cb) => {
     cb(null, `chunk-src-${Date.now()}${extname(file.originalname)}`);
@@ -107,7 +98,7 @@ export class TeacherToeicRepositoryController {
     private readonly practiceImportService: ToeicPracticeImportService,
     private readonly practiceSessionService: ToeicPracticeSessionService,
     private readonly diagnosticImportService: DiagnosticImportService,
-  ) {}
+  ) { }
 
   /**
    * GET /teacher/toeic-repository/list
@@ -213,6 +204,33 @@ export class TeacherToeicRepositoryController {
     }
 
     return this.diagnosticImportService.chunkDiagnosticAudio(accountId, dto, file);
+  }
+
+  /**
+   * POST /teacher/toeic-repository/import-diagnostic-answer-key
+   * Upload file đáp án cho đề Khảo sát đầu vào.
+   */
+  @Post('import-diagnostic-answer-key')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: teacherToeicStorage,
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  async importDiagnosticAnswerKey(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const accountId = Number(req.user?.account_id ?? 0);
+    if (!accountId) {
+      throw new BadRequestException('Không tìm thấy account_id trong token.');
+    }
+    if (!file) {
+      throw new BadRequestException('Vui lòng chọn file đáp án để upload.');
+    }
+
+    return this.diagnosticImportService.importDiagnosticAnswerKeyFromFile(accountId, dto, file, this.service);
   }
 
   /**

@@ -19,6 +19,8 @@ import {
   FileText,
   Play,
   Square,
+  Send,
+  Loader2,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
@@ -28,6 +30,8 @@ import {
   getToeicPracticeQuestions,
   submitToeicPracticeSession,
   getPersonalScores,
+  chatGroqTutor,
+  type ToeicChatGroqMessage,
 } from "../../services/api/certificateService";
 import {
   getToeicIntakeProfile,
@@ -1393,6 +1397,46 @@ export default function ToeicNodePracticePage() {
     number | null
   >(null);
   const [examUnlocked, setExamUnlocked] = useState(false);
+
+  // --- Groq Chat Tutor State ---
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatHistory, setChatHistory] = useState<ToeicChatGroqMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+
+  const handleSendChat = async () => {
+    if (!chatMessage.trim() || isChatLoading) return;
+    const currentMsg = chatMessage.trim();
+    setChatMessage("");
+    setChatHistory((prev) => [...prev, { role: "user", content: currentMsg }]);
+    setIsChatLoading(true);
+    setIsChatExpanded(true);
+
+    try {
+      const res = await chatGroqTutor({
+        question_id: parseInt(currentQuestion.id),
+        user_message: currentMsg,
+        chat_history: chatHistory,
+      });
+
+      setChatHistory((prev) => [...prev, { role: "assistant", content: res.answer }]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "assistant", content: "Đã có lỗi xảy ra. Vui lòng thử lại sau." },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setChatHistory([]);
+    setChatMessage("");
+    setIsChatExpanded(false);
+  }, [currentQuestionIndex]);
+
   const [submitResult, setSubmitResult] = useState<{
     correct_answers: Record<string, string>;
     explanations: Record<string, string | null>;
@@ -1452,41 +1496,6 @@ export default function ToeicNodePracticePage() {
     setDbLoading(true);
     setDbError(null);
 
-    if (practiceDraftStorageKey) {
-      const draft = loadPracticeRunDraft(practiceDraftStorageKey);
-      if (draft) {
-        setDbQuestions(draft.questions);
-        setSessionQuestionIds(draft.sessionQuestionIds);
-        setCurrentQuestionIndex(
-          Math.max(
-            0,
-            Math.min(draft.currentQuestionIndex ?? 0, draft.questions.length - 1),
-          ),
-        );
-        setFirstAnswers(draft.firstAnswers ?? {});
-        setSolvedCorrectly(new Set(draft.solvedCorrectly ?? []));
-        setCurrentAttempt(draft.currentAttempt ?? null);
-        setAiExplanationByAttempt(draft.aiExplanationByAttempt ?? {});
-        aiExplanationRef.current = draft.aiExplanationByAttempt ?? {};
-        setAiErrorByAttempt(draft.aiErrorByAttempt ?? {});
-        setAiLoadingByAttempt({});
-        aiLoadingRef.current = {};
-        setShowSummary(false);
-        setSubmitResult(null);
-        setEarnedThisSession(null);
-        setAttemptPointsThisSession(null);
-        setPartSummaryText(null);
-        setPartSummaryLoading(false);
-        setPartSummaryError(null);
-        partSummaryRequestedKeyRef.current = null;
-        setReservePoints(draft.reservePoints ?? null);
-        setUnlockThreshold(draft.unlockThreshold ?? 300);
-        setExamUnlocked(Boolean(draft.examUnlocked));
-        setDbLoading(false);
-        return;
-      }
-    }
-
     resetPracticeRunState();
     getToeicPracticeQuestions(toeicPart)
       .then((data) => {
@@ -1543,45 +1552,7 @@ export default function ToeicNodePracticePage() {
     resetPracticeRunState,
   ]);
 
-  useEffect(() => {
-    if (toeicPart === null || !practiceDraftStorageKey) return;
-    if (dbLoading || dbError || showSummary || submitResult) return;
-    if (questions.length === 0 || sessionQuestionIds.length !== questions.length)
-      return;
-
-    savePracticeRunDraft(practiceDraftStorageKey, {
-      questions,
-      sessionQuestionIds,
-      currentQuestionIndex,
-      firstAnswers,
-      solvedCorrectly: [...solvedCorrectly],
-      currentAttempt,
-      aiExplanationByAttempt,
-      aiErrorByAttempt,
-      reservePoints,
-      unlockThreshold,
-      examUnlocked,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [
-    aiErrorByAttempt,
-    aiExplanationByAttempt,
-    currentAttempt,
-    currentQuestionIndex,
-    dbError,
-    dbLoading,
-    examUnlocked,
-    firstAnswers,
-    practiceDraftStorageKey,
-    questions,
-    reservePoints,
-    sessionQuestionIds,
-    showSummary,
-    solvedCorrectly,
-    submitResult,
-    toeicPart,
-    unlockThreshold,
-  ]);
+    // Draft saving disabled for real-time practice.
 
   const isInvalidRoute =
     !nodeInfo || isNaN(parsedNodeIndex) || parsedNodeIndex < 0;
@@ -1713,28 +1684,9 @@ export default function ToeicNodePracticePage() {
   const shouldUseDbExplanationDirectly = useCallback(
     (text: string): boolean => {
       const normalized = text.trim();
-      if (normalized.length < 48) return false;
-
-      if (isLikelyEnglishAnswer(normalized)) return false;
-
-      if (
-        /^correct answer\s*:/i.test(normalized) ||
-        /\bsummary\s*:/i.test(normalized) ||
-        /\boption breakdown\s*:/i.test(normalized)
-      ) {
-        return false;
-      }
-
-      if (
-        /\bincorrect\.\s*incorrect\./i.test(normalized) ||
-        /\bcorrect\.\s*correct\./i.test(normalized)
-      ) {
-        return false;
-      }
-
-      return true;
+      return normalized.length > 10;
     },
-    [isLikelyEnglishAnswer],
+    [],
   );
 
   const buildAiUnavailableMessage = useCallback(
@@ -2297,37 +2249,35 @@ export default function ToeicNodePracticePage() {
           questionData,
         );
 
-        // Guard one more time after formatting to avoid showing English-like output.
-        if (!isLikelyEnglishAnswer(formattedDbExplanation)) {
-          const cachedFromDb: AiTutorExplanation = {
-            answer: formattedDbExplanation,
-            model: "toeic_practice_db",
-            source: "cache",
-          };
+        // Guard removed: Always accept DB explanation if it exists
+        const cachedFromDb: AiTutorExplanation = {
+          answer: formattedDbExplanation,
+          model: "toeic_practice_db",
+          source: "cache",
+        };
 
-          if (force || !aiExplanationRef.current[attemptKey]) {
-            setAiExplanationByAttempt((prev) => ({
-              ...prev,
-              [attemptKey]: cachedFromDb,
-            }));
-            aiExplanationRef.current = {
-              ...aiExplanationRef.current,
-              [attemptKey]: cachedFromDb,
-            };
-          }
-
-          aiLoadingRef.current = {
-            ...aiLoadingRef.current,
-            [attemptKey]: false,
+        if (force || !aiExplanationRef.current[attemptKey]) {
+          setAiExplanationByAttempt((prev) => ({
+            ...prev,
+            [attemptKey]: cachedFromDb,
+          }));
+          aiExplanationRef.current = {
+            ...aiExplanationRef.current,
+            [attemptKey]: cachedFromDb,
           };
-          setAiLoadingByAttempt((prev) => ({ ...prev, [attemptKey]: false }));
-          setAiErrorByAttempt((prev) => {
-            const next = { ...prev };
-            delete next[attemptKey];
-            return next;
-          });
-          return;
         }
+
+        aiLoadingRef.current = {
+          ...aiLoadingRef.current,
+          [attemptKey]: false,
+        };
+        setAiLoadingByAttempt((prev) => ({ ...prev, [attemptKey]: false }));
+        setAiErrorByAttempt((prev) => {
+          const next = { ...prev };
+          delete next[attemptKey];
+          return next;
+        });
+        return;
       }
 
       // Only analyze when learner reaches the correct option.
@@ -3404,7 +3354,7 @@ export default function ToeicNodePracticePage() {
       <Header />
 
       <main className="flex-1 py-6 px-4">
-        <div className="max-w-5xl mx-auto space-y-5">
+        <div className={`mx-auto space-y-5 transition-all duration-300 ${isChatExpanded ? "max-w-7xl" : "max-w-5xl"}`}>
           {/* Top bar: back + node label */}
           <div className="flex items-center justify-between">
             <button
@@ -3707,58 +3657,119 @@ export default function ToeicNodePracticePage() {
               </div>
 
               {/* Right Column: Result / Explanation panel */}
+              {/* Right Column: Result / Explanation panel */}
               {(isCurrentCorrect || isCurrentSolved) && (
                 <div
-                  className="w-full lg:w-[450px] shrink-0 border-t lg:border-t-0 lg:border-l border-emerald-100 flex flex-col"
+                  className={`shrink-0 border-t lg:border-t-0 lg:border-l border-emerald-100 flex flex-col transition-all duration-300 ${
+                    isChatExpanded ? "w-full lg:w-[800px]" : "w-full lg:w-[450px]"
+                  }`}
                 >
-                  {/* Explanation Area */}
-                  <div className="p-6 lg:p-7 flex-1 overflow-y-auto custom-scrollbar">
-                    <div className="flex items-center gap-2 mb-4 border-b border-emerald-50 pb-3">
-                      <span className="text-lg">💡</span>
-                      <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
-                        Giải thích chi tiết
-                      </span>
-                    </div>
-
-                    {/* AI đang load */}
-                    {currentAttemptAiLoading && (
-                      <div className="flex items-center gap-1.5 py-4 justify-center">
-                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0ms]" />
-                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:150ms]" />
-                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:300ms]" />
+                  <div className={`flex-1 flex flex-col ${isChatExpanded ? "lg:flex-row" : ""} overflow-hidden`}>
+                    {/* Explanation Area */}
+                    <div className={`p-6 lg:p-7 overflow-y-auto custom-scrollbar flex flex-col ${isChatExpanded ? "lg:w-1/2 lg:border-r border-emerald-100" : "flex-1"}`}>
+                      <div className="flex items-center gap-2 mb-4 border-b border-emerald-50 pb-3 shrink-0">
+                        <span className="text-lg">💡</span>
+                        <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
+                          Giải thích chi tiết
+                        </span>
                       </div>
-                    )}
 
-                    {/* AI đã xong */}
-                    {!currentAttemptAiLoading && currentAttemptAi && (
-                      <p className="text-[15px] text-slate-700 leading-relaxed whitespace-pre-line">
-                        {formatAiExplanationForDisplay(
-                          currentAttemptAi.answer,
-                          currentQuestion,
-                        )}
-                      </p>
-                    )}
-
-                    {/* AI lỗi hoặc không có giải thích */}
-                    {!currentAttemptAiLoading &&
-                      !currentAttemptAi &&
-                      currentAttemptAiError && (
-                        <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-                          <span className="text-4xl">🥺</span>
-                          <p className="text-sm text-slate-500 font-medium leading-relaxed px-2">
-                            Hiện tại chưa có phần giải thích từng đáp án cho câu hỏi, bạn thông cảm nhé!
-                          </p>
+                      {/* AI đang load */}
+                      {currentAttemptAiLoading && (
+                        <div className="flex items-center gap-1.5 py-4 justify-center">
+                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0ms]" />
+                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:150ms]" />
+                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:300ms]" />
                         </div>
                       )}
 
-                    {/* Chưa load gì */}
-                    {!currentAttemptAiLoading &&
-                      !currentAttemptAi &&
-                      !currentAttemptAiError && (
-                        <p className="text-sm text-emerald-400 italic text-center py-4">
-                          Phân tích đang được chuẩn bị...
+                      {/* AI đã xong */}
+                      {!currentAttemptAiLoading && currentAttemptAi && (
+                        <p className="text-[15px] text-slate-700 leading-relaxed whitespace-pre-line">
+                          {formatAiExplanationForDisplay(
+                            currentAttemptAi.answer,
+                            currentQuestion,
+                          )}
                         </p>
                       )}
+
+                      {/* AI lỗi hoặc không có giải thích */}
+                      {!currentAttemptAiLoading &&
+                        !currentAttemptAi &&
+                        currentAttemptAiError && (
+                          <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+                            <span className="text-4xl">🥺</span>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed px-2">
+                              Hiện tại chưa có phần giải thích từng đáp án cho câu hỏi, bạn thông cảm nhé!
+                            </p>
+                          </div>
+                        )}
+
+                      {/* Chưa load gì */}
+                      {!currentAttemptAiLoading &&
+                        !currentAttemptAi &&
+                        !currentAttemptAiError && (
+                          <p className="text-sm text-emerald-400 italic text-center py-4">
+                            Phân tích đang được chuẩn bị...
+                          </p>
+                        )}
+                    </div>
+
+                    {/* --- GROQ AI CHAT UI --- */}
+                    {!currentAttemptAiLoading && (
+                      <div className={`p-6 lg:p-7 flex flex-col gap-4 ${isChatExpanded ? "lg:w-1/2 overflow-y-auto custom-scrollbar" : "border-t border-emerald-100 mt-auto"}`}>
+                        <div className="flex items-center gap-2 mb-2 shrink-0">
+                          <span className="text-lg">🧑‍🏫</span>
+                          <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
+                            Trợ lý học tập
+                          </span>
+                        </div>
+                        
+                        {/* Chat History */}
+                        {chatHistory.length > 0 && (
+                          <div className="flex flex-col gap-3 mb-2 flex-1 overflow-y-auto custom-scrollbar">
+                            {chatHistory.map((msg, idx) => (
+                              <div
+                                key={idx}
+                                className={`p-3 rounded-2xl text-[14.5px] leading-relaxed max-w-[90%] ${
+                                  msg.role === "user"
+                                    ? "bg-emerald-500 text-white self-end rounded-tr-sm"
+                                    : "bg-slate-100 text-slate-700 self-start rounded-tl-sm whitespace-pre-line"
+                                }`}
+                              >
+                                {msg.content}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Input Area */}
+                        <div className="relative mt-auto shrink-0">
+                          <input
+                            type="text"
+                            value={chatMessage}
+                            onChange={(e) => setChatMessage(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSendChat();
+                            }}
+                            placeholder="Hỏi trợ lý nếu bạn chưa hiểu rõ..."
+                            disabled={isChatLoading}
+                            className="w-full bg-white border border-emerald-200 text-slate-700 text-sm rounded-full py-3.5 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent disabled:opacity-50 disabled:bg-slate-50 transition-all shadow-sm"
+                          />
+                          <button
+                            onClick={handleSendChat}
+                            disabled={!chatMessage.trim() || isChatLoading}
+                            className="absolute right-1.5 top-1.5 bottom-1.5 w-10 bg-emerald-500 text-white rounded-full flex items-center justify-center hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-sm"
+                          >
+                            {isChatLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Send className="w-4 h-4 ml-0.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

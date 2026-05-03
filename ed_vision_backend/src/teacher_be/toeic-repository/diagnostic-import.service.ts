@@ -18,10 +18,11 @@ const IMG_MIN_WIDTH = 80;
 const IMG_MIN_HEIGHT = 80;
 
 function surveyImagesRelDir(slug: string): string {
-  return join('TOEIC', 'toeic-listening-survey', slug, 'images');
+  return join('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'images');
 }
 
 import { IsOptional, IsString } from 'class-validator';
+import { CertificateEnrollmentService } from 'src/student_be/certificate/certificate-enrollment.service';
 
 export interface ParsedOption {
   optionKey: string;
@@ -49,7 +50,7 @@ export class DiagnosticImportResponseDto {
 export class DiagnosticImportService {
   private readonly logger = new Logger(DiagnosticImportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // ── Extract Text ─────────────────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ export class DiagnosticImportService {
   private extractAnswerKeyMap(rawText: string): Map<number, string> {
     const answerMap = new Map<number, string>();
     const lines = rawText.replace(/\r/g, '\n').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l.length > 0);
-    
+
     let inAnswerSection = false;
     for (const line of lines) {
       if (/\b(answer\s*key|đáp\s*án|dap\s*an)\b/i.test(line)) {
@@ -163,7 +164,7 @@ export class DiagnosticImportService {
       }
       const pairs = Array.from(line.matchAll(/\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi));
       if (pairs.length === 0) continue;
-      
+
       const residue = line.replace(/\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi, ' ').replace(/[\s,.;:()\-_/]+/g, '').trim();
       if (inAnswerSection || pairs.length >= 3 || (pairs.length >= 2 && line.length <= 90) || (pairs.length === 1 && residue.length === 0)) {
         for (const pair of pairs) {
@@ -320,7 +321,7 @@ export class DiagnosticImportService {
     difficulty_level: string;
   } | null {
     let score = 0; // 0 to 10
-    
+
     // 1. Part factor (0-4 pts)
     const part = question.detectedPart || 5;
     if (part === 1 || part === 2) score += 1;
@@ -398,10 +399,10 @@ export class DiagnosticImportService {
             : ['A', 'B', 'C', 'D'].map(k => ({ optionKey: k, optionText: `(${k})`, isCorrect: false })),
         });
       }
-      
+
       const repositorySlug = `diag-${Date.now()}-${randomUUID().slice(0, 8)}`;
       imageAssets = await this.extractImagesFromPdf(file.path, repositorySlug);
-      
+
       // Override để gán slug ngay tại đây
       body._pregeneratedSlug = repositorySlug;
     }
@@ -439,7 +440,7 @@ export class DiagnosticImportService {
     });
 
     let insertedCount = 0;
-    
+
     // Heuristic: Lọc ra các ảnh phù hợp nhất cho Part 1 (bỏ qua logo/watermark).
     // Ảnh Part 1 là ảnh chụp nên dung lượng lớn (> 10KB).
     const bestImages = [...imageAssets]
@@ -484,7 +485,7 @@ export class DiagnosticImportService {
           },
         },
       });
-      
+
       // Gán ảnh cho Part 1 nếu có
       if (q.detectedPart === 1 && bestImages.length > 0) {
         const img = bestImages[part1ItemsSoFar];
@@ -496,14 +497,76 @@ export class DiagnosticImportService {
         }
         part1ItemsSoFar++;
       }
-      
+
       insertedCount++;
     }
+
+    // Auto-sync any existing audio or images that might be in the folder
+    await this.autoSyncMediaFromDisk(repositorySlug);
 
     return {
       diagnostic_set_id: newRepo.slug,
       imported_count: insertedCount,
     };
+  }
+
+  private async autoSyncMediaFromDisk(slug: string): Promise<void> {
+    const repository = await this.prisma.diagnosticRepository.findUnique({
+      where: { slug },
+    });
+    if (!repository) return;
+
+    const items = await this.prisma.diagnosticRepositoryItem.findMany({
+      where: { repository_id: repository.id },
+    });
+
+    const qNumToItemId = new Map<number, number>();
+    for (const item of items) {
+      const metadata = item.metadata as any;
+      if (metadata && typeof metadata.question_number === 'number') {
+        qNumToItemId.set(metadata.question_number, item.id);
+      }
+    }
+
+    // Sync Audio
+    const audioDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'audio');
+    if (existsSync(audioDir)) {
+      const { readdirSync } = require('fs');
+      const audioFiles = readdirSync(audioDir);
+      for (const file of audioFiles) {
+        if (!file.endsWith('.mp3')) continue;
+        const match = file.match(/_part\d+_[qt](\d+)\.mp3/);
+        if (match) {
+          const qNum = parseInt(match[1], 10);
+          const itemId = qNumToItemId.get(qNum);
+          if (itemId) {
+            const url = `/uploads/certificate/TOEIC/toeic-listening-survey/${slug}/audio/${file}`;
+            await this.prisma.diagnosticRepositoryItem.update({
+              where: { id: itemId },
+              data: { media_audio_url: url },
+            });
+          }
+        }
+      }
+    }
+
+    // Sync Images
+    const imagesDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'images');
+    if (existsSync(imagesDir)) {
+      const { readdirSync } = require('fs');
+      const imageFiles = readdirSync(imagesDir).filter((f: string) => f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg')).sort();
+      for (let i = 0; i < Math.min(imageFiles.length, 6); i++) {
+        const qNum = i + 1;
+        const itemId = qNumToItemId.get(qNum);
+        if (itemId) {
+          const url = `certificate/TOEIC/toeic-listening-survey/${slug}/images/${imageFiles[i]}`;
+          await this.prisma.diagnosticRepositoryItem.update({
+            where: { id: itemId },
+            data: { media_image_url: `/uploads/${url}` },
+          });
+        }
+      }
+    }
   }
 
   // ── Extract Images (Python) ──────────────────────────────────────────────────
@@ -557,6 +620,7 @@ export class DiagnosticImportService {
     }
 
     const audioAbsDir = absoluteUploadsDir(
+      'certificate',
       'TOEIC',
       'toeic-listening-survey',
       slug,
@@ -643,6 +707,125 @@ export class DiagnosticImportService {
       slug: repository.slug,
       total_chunks: chunks.length,
       auto_mapped_count: autoMappedCount,
+    };
+  }
+
+  // ── Import Answer Key ────────────────────────────────────────────────────────
+  async importDiagnosticAnswerKeyFromFile(
+    accountId: number,
+    dto: any,
+    file: Express.Multer.File,
+    certService: CertificateEnrollmentService,
+  ): Promise<any> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng gửi file answer key.');
+    }
+
+    const repositorySlug = dto.repository_slug?.trim();
+    if (!repositorySlug) {
+      throw new BadRequestException('repository_slug là bắt buộc.');
+    }
+
+    const repository = await this.prisma.diagnosticRepository.findUnique({
+      where: { slug: repositorySlug },
+      select: {
+        id: true,
+        slug: true,
+        cert_type: true,
+      },
+    });
+
+    if (!repository || repository.cert_type !== 'toeic') {
+      throw new BadRequestException('Không tìm thấy repository khảo sát TOEIC cần cập nhật.');
+    }
+
+    // Call the public parse method from CertificateEnrollmentService
+    const answerKeyMap = await certService.parseToeicAnswerKeyFromFile(
+      file,
+      null, // skillArea is not strictly needed for the parser, or pass 'listening'/'reading' if needed
+    );
+
+    if (answerKeyMap.size === 0) {
+      throw new BadRequestException('Không tìm thấy cặp question_number + answer (A/B/C/D) hợp lệ trong file.');
+    }
+
+    const items = await this.prisma.diagnosticRepositoryItem.findMany({
+      where: { repository_id: repository.id },
+      select: {
+        id: true,
+        metadata: true,
+      },
+    });
+
+    if (items.length === 0) {
+      throw new BadRequestException('Repository hiện chưa có câu hỏi để gán đáp án.');
+    }
+
+    // Load options for all items
+    const itemIds = items.map(i => i.id);
+    const options = await this.prisma.diagnosticRepositoryOption.findMany({
+      where: { item_id: { in: itemIds } },
+    });
+
+    // Group options by item_id
+    const optionsByItemId = new Map<number, typeof options>();
+    for (const opt of options) {
+      if (!optionsByItemId.has(opt.item_id)) {
+        optionsByItemId.set(opt.item_id, []);
+      }
+      optionsByItemId.get(opt.item_id)!.push(opt);
+    }
+
+    let updatedCount = 0;
+    const optionUpdates: Promise<any>[] = [];
+
+    for (const item of items) {
+      const qNum = (item.metadata as any)?.question_number;
+      if (typeof qNum !== 'number') continue;
+
+      const correctAnsKey = answerKeyMap.get(qNum);
+      if (!correctAnsKey) continue;
+
+      const itemOptions = optionsByItemId.get(item.id) || [];
+      const correctOpt = itemOptions.find(o => o.option_key.toUpperCase() === correctAnsKey.toUpperCase());
+
+      if (correctOpt) {
+        // Reset all options for this item to false, then set correct to true
+        for (const opt of itemOptions) {
+          if (opt.is_correct && opt.id !== correctOpt.id) {
+            optionUpdates.push(
+              this.prisma.diagnosticRepositoryOption.update({
+                where: { id: opt.id },
+                data: { is_correct: false },
+              })
+            );
+          }
+        }
+
+        if (!correctOpt.is_correct) {
+          optionUpdates.push(
+            this.prisma.diagnosticRepositoryOption.update({
+              where: { id: correctOpt.id },
+              data: { is_correct: true },
+            })
+          );
+        }
+        updatedCount++;
+      }
+    }
+
+    if (optionUpdates.length > 0) {
+      // Execute updates in batches
+      const batchSize = 50;
+      for (let i = 0; i < optionUpdates.length; i += batchSize) {
+        await Promise.all(optionUpdates.slice(i, i + batchSize));
+      }
+    }
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      updated_count: updatedCount,
     };
   }
 }
