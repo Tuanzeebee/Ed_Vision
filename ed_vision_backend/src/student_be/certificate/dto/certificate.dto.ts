@@ -653,3 +653,29 @@ export class ToeicRepositoryDeleteResponseDto {
   deleted!: boolean;
   items_deleted!: number;
 }
+
+export class ToeicChatGroqMessageDto {
+  @IsString()
+  @IsIn(['user', 'assistant'])
+  role!: 'user' | 'assistant';
+
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+}
+
+export class ToeicChatGroqDto {
+  @IsInt()
+  @Min(1)
+  question_id!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  user_message!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ToeicChatGroqMessageDto)
+  chat_history?: ToeicChatGroqMessageDto[];
+}

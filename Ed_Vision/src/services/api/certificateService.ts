@@ -311,6 +311,31 @@ export async function askCertificateTutor(
   return res.data;
 }
 
+export interface ToeicChatGroqMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ToeicChatGroqPayload {
+  question_id: number;
+  user_message: string;
+  chat_history?: ToeicChatGroqMessage[];
+}
+
+export interface ToeicChatGroqResponse {
+  answer: string;
+}
+
+export async function chatGroqTutor(
+  payload: ToeicChatGroqPayload,
+): Promise<ToeicChatGroqResponse> {
+  const res = await apiClient.post<ToeicChatGroqResponse>(
+    "/student/certificate/ai-tutor/groq-chat",
+    payload,
+  );
+  return res.data;
+}
+
 export async function importToeicExamFromOcrFile(
   payload: ToeicOcrImportPayload,
   file: File,
@@ -364,6 +389,27 @@ export async function importToeicAnswerKeyFromFile(
 
   const res = await apiClient.post<ToeicAnswerKeyImportResponse>(
     "/teacher/toeic-repository/import-answer-key-file",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return res.data;
+}
+
+export async function importDiagnosticAnswerKey(
+  payload: { repository_slug: string },
+  file: File,
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", payload.repository_slug);
+
+  const res = await apiClient.post<any>(
+    "/teacher/toeic-repository/import-diagnostic-answer-key",
     formData,
     {
       headers: {
@@ -712,6 +758,7 @@ export interface PracticeManualSupplementItem {
   toeic_part: number;
   question_number?: number;
   stem: string;
+  reading_passage?: string;
   options: Array<{
     option_key: "A" | "B" | "C" | "D";
     option_text: string;
@@ -751,6 +798,7 @@ export interface PracticeQuestionListItem {
   question_number?: number | null;
   has_answer_key?: boolean;
   stem: string;
+  reading_passage?: string | null;
   score_band_min: number;
   score_band_max: number;
   difficulty_label: string;
@@ -1046,6 +1094,7 @@ export interface DiagnosticQuestion {
   stem: string;
   reading_passage: string | null;
   media_audio_url?: string | null;
+  media_image_url?: string | null;
   options: DiagnosticQuestionOption[];
 }
 

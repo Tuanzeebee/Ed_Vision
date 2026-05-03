@@ -383,7 +383,7 @@ export class IeltsImportService {
     }
 
     // ── Get or create repository ──────────────────────────────────────────
-    const repository = await this.prisma.learningRepository.upsert({
+    const repository = await this.prisma.examRepository.upsert({
       where: { slug: dto.repository_slug.trim() },
       create: {
         cert_type: 'ielts',
@@ -419,12 +419,12 @@ export class IeltsImportService {
 
     // ── Optionally wipe existing items ────────────────────────────────────
     if (dto.replace_existing !== false) {
-      await this.prisma.learningRepositoryItem.deleteMany({
+      await this.prisma.examRepositoryItem.deleteMany({
         where: { repository_id: repository.id },
       });
     }
 
-    const lastItem = await this.prisma.learningRepositoryItem.findFirst({
+    const lastItem = await this.prisma.examRepositoryItem.findFirst({
       where: { repository_id: repository.id },
       orderBy: { item_order: 'desc' },
       select: { item_order: true },
@@ -448,14 +448,13 @@ export class IeltsImportService {
             ? 60
             : 90;
 
-      const created = await this.prisma.learningRepositoryItem.create({
+      const created = await this.prisma.examRepositoryItem.create({
         data: {
           repository_id: repository.id,
           item_order: nextOrder,
           item_type: this.mapItemType(parsed.questionType),
           stem: parsed.stem,
           reading_passage: parsed.context ?? null,
-          explanation: parsed.explanation ?? null,
           score_weight: 1,
           estimated_seconds: estimatedSeconds,
           metadata: {
@@ -469,7 +468,7 @@ export class IeltsImportService {
         select: { id: true },
       });
 
-      await this.prisma.learningRepositoryOption.createMany({
+      await this.prisma.examRepositoryOption.createMany({
         data: parsed.options.map((opt, idx) => ({
           item_id: created.id,
           option_key: opt.optionKey,
@@ -485,11 +484,11 @@ export class IeltsImportService {
     }
 
     // ── Update total_items ────────────────────────────────────────────────
-    const totalItems = await this.prisma.learningRepositoryItem.count({
+    const totalItems = await this.prisma.examRepositoryItem.count({
       where: { repository_id: repository.id },
     });
 
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repository.id },
       data: {
         total_items: totalItems,
@@ -522,7 +521,7 @@ export class IeltsImportService {
   ): Promise<IeltsAnswerKeyImportResponseDto> {
     if (!file) throw new BadRequestException('File đáp án là bắt buộc.');
 
-    const repository = await this.prisma.learningRepository.findUnique({
+    const repository = await this.prisma.examRepository.findUnique({
       where: { slug: dto.repository_slug.trim() },
       select: { id: true, slug: true },
     });
@@ -543,7 +542,7 @@ export class IeltsImportService {
       );
     }
 
-    const items = await this.prisma.learningRepositoryItem.findMany({
+    const items = await this.prisma.examRepositoryItem.findMany({
       where: { repository_id: repository.id },
       select: {
         id: true,
@@ -574,7 +573,7 @@ export class IeltsImportService {
       }
 
       // Reset all options for this item
-      await this.prisma.learningRepositoryOption.updateMany({
+      await this.prisma.examRepositoryOption.updateMany({
         where: { item_id: item.id },
         data: { is_correct: false },
       });
@@ -585,7 +584,7 @@ export class IeltsImportService {
       );
 
       if (matchingOpt) {
-        await this.prisma.learningRepositoryOption.update({
+        await this.prisma.examRepositoryOption.update({
           where: { id: matchingOpt.id },
           data: { is_correct: true },
         });
@@ -595,7 +594,7 @@ export class IeltsImportService {
       }
     }
 
-    const totalConfigured = await this.prisma.learningRepositoryOption.count({
+    const totalConfigured = await this.prisma.examRepositoryOption.count({
       where: {
         item: { repository_id: repository.id },
         is_correct: true,
@@ -621,7 +620,7 @@ export class IeltsImportService {
   ): Promise<IeltsListeningAudioUploadResponseDto> {
     const slug = dto.repository_slug.trim();
 
-    const repository = await this.prisma.learningRepository.findFirst({
+    const repository = await this.prisma.examRepository.findFirst({
       where: { slug, cert_type: 'ielts' },
       select: { id: true, slug: true },
     });
@@ -676,7 +675,7 @@ export class IeltsImportService {
     const where: Record<string, unknown> = { cert_type: 'ielts' };
     if (skillArea) where.skill_area = skillArea;
 
-    const repos = await this.prisma.learningRepository.findMany({
+    const repos = await this.prisma.examRepository.findMany({
       where,
       orderBy: { created_at: 'desc' },
       take: 50,
@@ -708,7 +707,7 @@ export class IeltsImportService {
     slug: string,
     publish: boolean,
   ): Promise<{ slug: string; is_published: boolean }> {
-    const repo = await this.prisma.learningRepository.findFirst({
+    const repo = await this.prisma.examRepository.findFirst({
       where: { slug, cert_type: 'ielts' },
       select: { id: true },
     });
@@ -717,7 +716,7 @@ export class IeltsImportService {
       throw new BadRequestException(`Không tìm thấy IELTS repository: ${slug}`);
     }
 
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repo.id },
       data: { is_published: publish },
     });
@@ -728,7 +727,7 @@ export class IeltsImportService {
   // ─── Delete repository ────────────────────────────────────────────────────
 
   async deleteRepository(slug: string): Promise<IeltsRepositoryDeleteResponseDto> {
-    const repo = await this.prisma.learningRepository.findFirst({
+    const repo = await this.prisma.examRepository.findFirst({
       where: { slug, cert_type: 'ielts' },
       select: { id: true },
     });
@@ -737,17 +736,17 @@ export class IeltsImportService {
       throw new BadRequestException(`Không tìm thấy IELTS repository: ${slug}`);
     }
 
-    const itemCount = await this.prisma.learningRepositoryItem.count({
+    const itemCount = await this.prisma.examRepositoryItem.count({
       where: { repository_id: repo.id },
     });
 
-    await this.prisma.learningRepositoryOption.deleteMany({
+    await this.prisma.examRepositoryOption.deleteMany({
       where: { item: { repository_id: repo.id } },
     });
-    await this.prisma.learningRepositoryItem.deleteMany({
+    await this.prisma.examRepositoryItem.deleteMany({
       where: { repository_id: repo.id },
     });
-    await this.prisma.learningRepository.delete({ where: { id: repo.id } });
+    await this.prisma.examRepository.delete({ where: { id: repo.id } });
 
     return { slug, deleted: true, items_deleted: itemCount };
   }
@@ -829,7 +828,7 @@ export class IeltsImportService {
     _trackNumber: number,
     audioUrl: string,
   ): Promise<number[]> {
-    const items = await this.prisma.learningRepositoryItem.findMany({
+    const items = await this.prisma.examRepositoryItem.findMany({
       where: { repository_id: repositoryId },
       orderBy: { item_order: 'asc' },
       select: { id: true, metadata: true },
@@ -844,7 +843,7 @@ export class IeltsImportService {
 
     const ids = sectionItems.map((i) => i.id);
 
-    await this.prisma.learningRepositoryItem.updateMany({
+    await this.prisma.examRepositoryItem.updateMany({
       where: { id: { in: ids } },
       data: { media_audio_url: audioUrl },
     });

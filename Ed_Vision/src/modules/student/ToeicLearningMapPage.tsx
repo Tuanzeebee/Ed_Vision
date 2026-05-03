@@ -110,16 +110,16 @@ const LISTENING_NODES: NodeInfo[] = [
   },
   {
     id: 4,
-    title: "Advanced",
-    subtitle: "Đỉnh Listening",
-    difficulty: "Nâng cao",
-    difficultyColor: "text-red-600",
+    title: "Mock Exam",
+    subtitle: "Thi Thử Listening",
+    difficulty: "Thực tế",
+    difficultyColor: "text-purple-600",
     description:
-      "Tốc độ native, giọng đa dạng, câu hỏi suy luận ngầm — chuẩn bị thi thật",
-    partLabel: "ADVANCED",
-    icon: "🏔️",
-    questionsCount: 10,
-    scorePerCorrect: 3,
+      "Làm bài thi thử với cấu trúc chuẩn để đánh giá trình độ hiện tại",
+    partLabel: "MOCK EXAM",
+    icon: "🏆",
+    questionsCount: 100,
+    scorePerCorrect: 5,
     xPos: 170,
     yPos: 35,
   },
@@ -173,16 +173,16 @@ const READING_NODES: NodeInfo[] = [
   },
   {
     id: 3,
-    title: "Advanced",
-    subtitle: "Đỉnh Reading",
-    difficulty: "Nâng cao",
-    difficultyColor: "text-red-600",
+    title: "Mock Exam",
+    subtitle: "Thi Thử Reading",
+    difficulty: "Thực tế",
+    difficultyColor: "text-purple-600",
     description:
-      "Đa đoạn văn phức tạp — tổng hợp thông tin từ nhiều nguồn, suy luận nâng cao",
-    partLabel: "ADVANCED",
-    icon: "📚",
-    questionsCount: 10,
-    scorePerCorrect: 3,
+      "Làm bài thi thử với cấu trúc chuẩn để đánh giá trình độ hiện tại",
+    partLabel: "MOCK EXAM",
+    icon: "🏆",
+    questionsCount: 100,
+    scorePerCorrect: 5,
     xPos: 170,
     yPos: 45,
   },
@@ -1088,37 +1088,47 @@ export default function ToeicLearningMapPage() {
                   !isNodeCompleted(selectedNode) && (
                     <button
                       onClick={() =>
-                        navigate(
-                          `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
-                        )
+                        selectedNode === nodes.length - 1
+                          ? navigate(
+                              `/student/certificate-review/toeic/exam/${activeSkill}`,
+                            )
+                          : navigate(
+                              `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
+                            )
                       }
                       className={`flex-1 py-3 bg-linear-to-r ${accentCls.btn} text-white rounded-xl font-bold text-sm transition-all shadow-md active:scale-95`}
                     >
-                      🚀 Bắt đầu luyện tập
+                      {selectedNode === nodes.length - 1 ? "🏆 Bắt đầu thi thử" : "🚀 Bắt đầu luyện tập"}
                     </button>
                   )}
                 {isNodeCompleted(selectedNode) && (
                   <button
                     onClick={() =>
-                      navigate(
-                        `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
-                      )
+                      selectedNode === nodes.length - 1
+                        ? navigate(
+                            `/student/certificate-review/toeic/exam/${activeSkill}`,
+                          )
+                        : navigate(
+                            `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
+                          )
                     }
                     className="flex-1 py-3 bg-white border-2 border-emerald-200 text-emerald-600 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-all active:scale-95"
                   >
-                    🔄 Luyện tập lại
+                    {selectedNode === nodes.length - 1 ? "🔄 Thi lại" : "🔄 Luyện tập lại"}
                   </button>
                 )}
-                <button
-                  onClick={() =>
-                    navigate(
-                      `/student/certificate-review/toeic/exam/${activeSkill}`,
-                    )
-                  }
-                  className="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold text-sm hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-all"
-                >
-                  🏆 Thi thử
-                </button>
+                {selectedNode !== nodes.length - 1 && (
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/student/certificate-review/toeic/exam/${activeSkill}`,
+                      )
+                    }
+                    className="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold text-sm hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-all"
+                  >
+                    🏆 Thi thử
+                  </button>
+                )}
               </div>
             </div>
 

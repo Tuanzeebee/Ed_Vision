@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { encryptString, encryptRecord } from '../../common/crypto.util';
@@ -114,7 +115,7 @@ type EnrollmentWithTopicProgress = Prisma.CertificateEnrollmentGetPayload<{
   include: { topicProgress: { select: { topic_key: true } } };
 }>;
 
-type ToeicRepositoryWithItems = Prisma.LearningRepositoryGetPayload<{
+type ToeicRepositoryWithItems = Prisma.ExamRepositoryGetPayload<{
   include: {
     items: {
       orderBy: { item_order: 'asc' };
@@ -123,7 +124,7 @@ type ToeicRepositoryWithItems = Prisma.LearningRepositoryGetPayload<{
   };
 }>;
 
-type ToeicRepositoryWithItemsForSubmit = Prisma.LearningRepositoryGetPayload<{
+type ToeicRepositoryWithItemsForSubmit = Prisma.ExamRepositoryGetPayload<{
   include: {
     items: {
       include: { options: true };
@@ -132,15 +133,13 @@ type ToeicRepositoryWithItemsForSubmit = Prisma.LearningRepositoryGetPayload<{
 }>;
 
 type ToeicRepositoryItemForPregenerate =
-  Prisma.LearningRepositoryItemGetPayload<{
+  Prisma.ExamRepositoryItemGetPayload<{
     select: {
       id: true;
       item_order: true;
       title: true;
       stem: true;
       reading_passage: true;
-      explanation: true;
-      ai_explanation: true;
       metadata: true;
       updated_at: true;
       options: {
@@ -807,9 +806,7 @@ export class CertificateEnrollmentService {
     chunks.push(`Question: ${item.stem}`);
     chunks.push(`Options:\n${optionText}`);
 
-    if (item.explanation?.trim()) {
-      chunks.push(`Base hint: ${item.explanation.trim()}`);
-    }
+    // No explanation field available
 
     const query = [
       item.title ?? '',
@@ -890,10 +887,7 @@ export class CertificateEnrollmentService {
       options,
       correct_key: correctOption.option_key,
       correct_text: correctOption.option_text,
-      base_hint:
-        item.explanation && item.explanation.trim().length > 0
-          ? `Gợi ý bổ sung: ${item.explanation.trim()}`
-          : 'Gợi ý bổ sung: (không có)',
+      base_hint: 'Gợi ý bổ sung: (không có)',
     });
 
     const llm = new ChatOllama({
@@ -924,7 +918,6 @@ export class CertificateEnrollmentService {
     const fallbackPrompt = this.buildFullExplanationPrompt({
       stem: item.stem,
       reading_passage: item.reading_passage,
-      explanation: item.explanation,
       options: item.options.map((option) => ({
         option_key: option.option_key,
         option_text: option.option_text,
@@ -943,7 +936,7 @@ export class CertificateEnrollmentService {
   ): Promise<ToeicRepositoryPregenerateExplanationsResponseDto> {
     await this.getStudentId(accountId);
 
-    const repository = await this.prisma.learningRepository.findUnique({
+    const repository = await this.prisma.examRepository.findUnique({
       where: { slug },
       select: {
         id: true,
@@ -958,8 +951,6 @@ export class CertificateEnrollmentService {
             title: true,
             stem: true,
             reading_passage: true,
-            explanation: true,
-            ai_explanation: true,
             metadata: true,
             updated_at: true,
             options: {
@@ -1012,7 +1003,7 @@ export class CertificateEnrollmentService {
     const queued = phase1Eligible
       .filter((item) => {
         if (forceRegenerate) return true;
-        return !(item.ai_explanation && item.ai_explanation.trim().length > 20);
+        return true; // Force regenerate always or skip depending on logic since no ai_explanation exists
       })
       .slice(0, safeLimit);
 
@@ -1762,7 +1753,7 @@ export class CertificateEnrollmentService {
     const contentType = options?.contentType ?? 'exam_simulation';
     const source = options?.source ?? 'manual_import';
 
-    const repository = await this.prisma.learningRepository.upsert({
+    const repository = await this.prisma.examRepository.upsert({
       where: { slug },
       update: {
         cert_type: 'toeic',
@@ -1924,6 +1915,36 @@ export class CertificateEnrollmentService {
       );
     }
 
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        
+        const fileData = await readFile(file.path);
+        let mimeType = file.mimetype || 'image/jpeg';
+        if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
+
+        const prompt = 'Please extract all the text from this image exactly as it appears. Ensure you capture all columns. Output only the text, no markdown, no conversational filler.';
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: fileData.toString('base64'),
+              mimeType: mimeType
+            }
+          }
+        ]);
+        const response = await result.response;
+        const text = response.text();
+        if (text && text.trim().length > 0) {
+          return text.trim();
+        }
+      } catch (err: any) {
+        Logger.warn('Gemini OCR failed, falling back to Tesseract: ' + err.message, 'CertificateEnrollmentService');
+      }
+    }
+
     const { createWorker } = await import('tesseract.js');
     const worker = await createWorker('eng');
     try {
@@ -1951,7 +1972,7 @@ export class CertificateEnrollmentService {
       return false;
     }
 
-    const pairRegex = /\b\d{1,3}\s*[).:-]?\s*[A-D]\b/g;
+    const pairRegex = /\b\d{1,3}\s*[).:-]?\s*\(?\s*[A-D]\s*\)?\b/gi;
     const pairMatches = normalized.match(pairRegex) ?? [];
 
     // Answer-key lines should mostly contain only number-letter pairs and separators.
@@ -2030,7 +2051,7 @@ export class CertificateEnrollmentService {
         continue;
       }
 
-      const pairRegex = /\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi;
+      const pairRegex = /\b(\d{1,3})\s*[).:-]?\s*\(?\s*([A-D])\s*\)?\b/gi;
       const pairs = Array.from(line.matchAll(pairRegex));
       if (pairs.length === 0) continue;
 
@@ -2120,7 +2141,7 @@ export class CertificateEnrollmentService {
     return answerMap;
   }
 
-  private async parseToeicAnswerKeyFromFile(
+  public async parseToeicAnswerKeyFromFile(
     file: Express.Multer.File,
     skillArea: string | null | undefined,
   ): Promise<Map<number, ToeicOptionKey>> {
@@ -2153,9 +2174,10 @@ export class CertificateEnrollmentService {
         if (parsed.size > 0) {
           return parsed;
         }
-      } catch {
-        // Fallback to structured parsers below when OCR/text extraction fails.
+      } catch (err: any) {
+        throw new BadRequestException('Lỗi trích xuất chữ từ ảnh/PDF: ' + (err.message || 'Unknown error'));
       }
+      throw new BadRequestException('Không quét được đáp án (1A, 2B...) nào từ file ảnh/PDF.');
     }
 
     if (extension === '.json') {
@@ -2280,6 +2302,39 @@ export class CertificateEnrollmentService {
     );
   }
 
+  /**
+   * Extract the sentence/clause in a Part 6 passage that contains the inline
+   * blank marker (N) — used as the question stem.
+   */
+  private extractPart6BlankStem(passage: string, blankNumber: number): string {
+    if (!passage) return '';
+
+    const marker = `(${blankNumber})`;
+    const markerIdx = passage.indexOf(marker);
+    if (markerIdx === -1) return '';
+
+    // Walk backwards to find sentence start
+    let sentenceStart = 0;
+    for (let i = markerIdx - 1; i >= 0; i--) {
+      if (['.', '!', '?', '\n'].includes(passage[i])) {
+        sentenceStart = i + 1;
+        break;
+      }
+    }
+
+    // Walk forwards to find sentence end
+    let sentenceEnd = passage.length;
+    for (let i = markerIdx + marker.length; i < passage.length; i++) {
+      if (['.', '!', '?'].includes(passage[i])) {
+        sentenceEnd = i + 1;
+        break;
+      }
+    }
+
+    return passage.slice(sentenceStart, sentenceEnd).trim();
+  }
+
+
   private parseToeicQuestionsFromOcrText(
     rawText: string,
     skillArea: 'reading' | 'listening',
@@ -2312,6 +2367,13 @@ export class CertificateEnrollmentService {
     let activeRange: { start: number; end: number } | null = null;
     let rangeContextLines: string[] = [];
     let contextBuffer: string[] = [];
+    // Track Part 6 passage accumulation per group
+    let part6PassageLines: string[] = [];
+    let part6GroupRange: { start: number; end: number } | null = null;
+    // Buffer of Part 6 option blocks: each element = one question's options (in order A,B,C,D)
+    let part6OptionBlocks: Array<Map<'A' | 'B' | 'C' | 'D', string>> = [];
+    let part6CurrentOptionBlock: Map<'A' | 'B' | 'C' | 'D', string> | null = null;
+    let part6BlankNumbers: number[] = [];
 
     type WorkingQuestion = {
       questionNumber: number | null;
@@ -2336,7 +2398,7 @@ export class CertificateEnrollmentService {
 
       if (activeRange) {
         rangeContextLines.push(line);
-        if (rangeContextLines.length > 40) {
+        if (rangeContextLines.length > 120) {
           rangeContextLines.shift();
         }
       }
@@ -2465,6 +2527,43 @@ export class CertificateEnrollmentService {
         const parsedPart = this.mapToeicPartTokenToNumber(partMatch[1]);
         if (parsedPart) {
           flushQuestion();
+
+          // If we were in Part 6, flush remaining group before switching parts
+          if (currentPart === 6 && part6GroupRange && part6BlankNumbers.length > 0) {
+            if (part6CurrentOptionBlock && part6CurrentOptionBlock.size > 0) {
+              part6OptionBlocks.push(part6CurrentOptionBlock);
+              part6CurrentOptionBlock = null;
+            }
+            const passage = part6PassageLines.join('\n').trim();
+            for (let bi = 0; bi < part6BlankNumbers.length; bi++) {
+              const blankNum = part6BlankNumbers[bi];
+              const optBlock = part6OptionBlocks[bi];
+              if (!optBlock || optBlock.size < 2) continue;
+              const blankStem = this.extractPart6BlankStem(passage, blankNum);
+              const opts = (['A', 'B', 'C', 'D'] as const)
+                .filter((k) => optBlock.has(k))
+                .map((k) => ({
+                  optionKey: k,
+                  optionText: optBlock.get(k)!,
+                  isCorrect: answerKeyMap.get(blankNum) === k,
+                  rationale: null,
+                }));
+              if (opts.length < 2) continue;
+              questions.push({
+                questionNumber: blankNum,
+                part: 6,
+                stem: blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
+                context: passage || null,
+                options: opts,
+                explanation: null,
+              });
+            }
+            part6GroupRange = null;
+            part6PassageLines = [];
+            part6BlankNumbers = [];
+            part6OptionBlocks = [];
+          }
+
           currentPart = parsedPart;
           activeRange = null;
           rangeContextLines = [];
@@ -2478,19 +2577,108 @@ export class CertificateEnrollmentService {
       }
 
       const rangeMatch = line.match(
-        /Questions?\s*(\d{1,3})\s*-\s*(\d{1,3})\s*refer/i,
-      );
+        /Questions?\s*(\d{1,3})\s*(?:to|-|–|—)\s*(\d{1,3})\s*(?:refer|are based on|relate|correspond)/i,
+      ) ?? line.match(/Questions?\s*(\d{1,3})\s*-\s*(\d{1,3})/i);
       if (rangeMatch?.[1] && rangeMatch?.[2]) {
         flushQuestion();
-        activeRange = {
-          start: Number(rangeMatch[1]),
-          end: Number(rangeMatch[2]),
-        };
+        const rangeStart = Number(rangeMatch[1]);
+        const rangeEnd = Number(rangeMatch[2]);
+        activeRange = { start: rangeStart, end: rangeEnd };
         rangeContextLines = [];
         contextBuffer = [];
+
+        // Part 6 — flush previous group and start new one
+        if (currentPart === 6) {
+          // If there was a previous group, emit those questions now
+          if (part6GroupRange && part6BlankNumbers.length > 0) {
+            const passage = part6PassageLines.join('\n').trim();
+            for (let bi = 0; bi < part6BlankNumbers.length; bi++) {
+              const blankNum = part6BlankNumbers[bi];
+              const optBlock = part6OptionBlocks[bi];
+              if (!optBlock || optBlock.size < 2) continue;
+              // Extract the sentence containing the blank as stem
+              const blankStem = this.extractPart6BlankStem(passage, blankNum);
+              const opts = (['A', 'B', 'C', 'D'] as const)
+                .filter(k => optBlock.has(k))
+                .map(k => ({
+                  optionKey: k,
+                  optionText: optBlock.get(k)!,
+                  isCorrect: answerKeyMap.get(blankNum) === k,
+                  rationale: null,
+                }));
+              if (opts.length < 2) continue;
+              questions.push({
+                questionNumber: blankNum,
+                part: 6,
+                stem: blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
+                context: passage || null,
+                options: opts,
+                explanation: null,
+              });
+            }
+          }
+          // Reset for new Part 6 group
+          part6GroupRange = { start: rangeStart, end: rangeEnd };
+          part6PassageLines = [];
+          part6BlankNumbers = [];
+          part6OptionBlocks = [];
+          part6CurrentOptionBlock = null;
+        }
         continue;
       }
 
+      // ── Part 6: accumulate passage lines and detect inline blanks ────────
+      if (currentPart === 6 && part6GroupRange) {
+        // Detect inline blank markers like (141) anywhere in the line
+        const inlineBlankRe = /\((\d{1,3})\)/g;
+        let blankMatch: RegExpExecArray | null;
+        while ((blankMatch = inlineBlankRe.exec(line)) !== null) {
+          const bNum = Number(blankMatch[1]);
+          if (
+            bNum >= part6GroupRange.start &&
+            bNum <= part6GroupRange.end &&
+            !part6BlankNumbers.includes(bNum)
+          ) {
+            part6BlankNumbers.push(bNum);
+          }
+        }
+
+        // Detect start of an option block: line starting with A.
+        const optLineMatch = line.match(/^([A-D])[).:]\s*(.+)$/i);
+        if (optLineMatch) {
+          const optKey = optLineMatch[1].toUpperCase() as 'A' | 'B' | 'C' | 'D';
+          const optText = optLineMatch[2].trim();
+
+          if (optKey === 'A') {
+            // Starting a new option block
+            if (part6CurrentOptionBlock && part6CurrentOptionBlock.size > 0) {
+              part6OptionBlocks.push(part6CurrentOptionBlock);
+            }
+            part6CurrentOptionBlock = new Map();
+          }
+
+          if (part6CurrentOptionBlock) {
+            part6CurrentOptionBlock.set(optKey, optText);
+          } else {
+            part6CurrentOptionBlock = new Map([[optKey, optText]]);
+          }
+
+          // When we have all 4 options, push the block
+          if (part6CurrentOptionBlock.size === 4) {
+            part6OptionBlocks.push(part6CurrentOptionBlock);
+            part6CurrentOptionBlock = null;
+          }
+          continue;
+        }
+
+        // Non-option line → passage body
+        if (!this.isOcrNoiseLine(line) && !/^Directions?:/i.test(line)) {
+          part6PassageLines.push(line);
+        }
+        continue;
+      }
+
+      // ── Standard question detection (Parts 5, 7, listening) ──────────────
       const questionStart = line.match(
         /^(?:q(?:uestion)?\s*)?(\d{1,3})[).:-]\s*(.*)$/i,
       );
@@ -2638,6 +2826,38 @@ export class CertificateEnrollmentService {
 
     flushQuestion();
 
+    // ── Flush final Part 6 group ────────────────────────────────────────────
+    if (currentPart === 6 && part6GroupRange && part6BlankNumbers.length > 0) {
+      // Push any dangling option block
+      if (part6CurrentOptionBlock && part6CurrentOptionBlock.size > 0) {
+        part6OptionBlocks.push(part6CurrentOptionBlock);
+      }
+      const passage = part6PassageLines.join('\n').trim();
+      for (let bi = 0; bi < part6BlankNumbers.length; bi++) {
+        const blankNum = part6BlankNumbers[bi];
+        const optBlock = part6OptionBlocks[bi];
+        if (!optBlock || optBlock.size < 2) continue;
+        const blankStem = this.extractPart6BlankStem(passage, blankNum);
+        const opts = (['A', 'B', 'C', 'D'] as const)
+          .filter(k => optBlock.has(k))
+          .map(k => ({
+            optionKey: k,
+            optionText: optBlock.get(k)!,
+            isCorrect: answerKeyMap.get(blankNum) === k,
+            rationale: null,
+          }));
+        if (opts.length < 2) continue;
+        questions.push({
+          questionNumber: blankNum,
+          part: 6,
+          stem: blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
+          context: passage || null,
+          options: opts,
+          explanation: null,
+        });
+      }
+    }
+
     const numberedRatio =
       questions.length === 0
         ? 0
@@ -2712,12 +2932,12 @@ export class CertificateEnrollmentService {
 
     const shouldReplace = dto.replace_existing !== false;
     if (shouldReplace) {
-      await this.prisma.learningRepositoryItem.deleteMany({
+      await this.prisma.examRepositoryItem.deleteMany({
         where: { repository_id: repository.id },
       });
     }
 
-    const lastItem = await this.prisma.learningRepositoryItem.findFirst({
+    const lastItem = await this.prisma.examRepositoryItem.findFirst({
       where: { repository_id: repository.id },
       orderBy: { item_order: 'desc' },
       select: { item_order: true },
@@ -2733,14 +2953,13 @@ export class CertificateEnrollmentService {
         continue;
       }
 
-      const createdItem = await this.prisma.learningRepositoryItem.create({
+      const createdItem = await this.prisma.examRepositoryItem.create({
         data: {
           repository_id: repository.id,
           item_order: nextItemOrder,
           item_type: 'single_choice',
           stem: parsed.stem,
           reading_passage: parsed.context ?? null,
-          explanation: parsed.explanation ?? null,
           score_weight: 1,
           estimated_seconds: skillArea === 'listening' ? 40 : 60,
           metadata: {
@@ -2753,7 +2972,7 @@ export class CertificateEnrollmentService {
         select: { id: true },
       });
 
-      await this.prisma.learningRepositoryOption.createMany({
+      await this.prisma.examRepositoryOption.createMany({
         data: parsed.options.map((option, index) => ({
           item_id: createdItem.id,
           option_key: option.optionKey,
@@ -2768,11 +2987,11 @@ export class CertificateEnrollmentService {
       nextItemOrder += 1;
     }
 
-    const totalItems = await this.prisma.learningRepositoryItem.count({
+    const totalItems = await this.prisma.examRepositoryItem.count({
       where: { repository_id: repository.id },
     });
 
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repository.id },
       data: {
         total_items: totalItems,
@@ -2806,7 +3025,7 @@ export class CertificateEnrollmentService {
       throw new BadRequestException('repository_slug la bat buoc.');
     }
 
-    const repository = await this.prisma.learningRepository.findUnique({
+    const repository = await this.prisma.examRepository.findUnique({
       where: { slug: repositorySlug },
       select: {
         id: true,
@@ -2840,7 +3059,7 @@ export class CertificateEnrollmentService {
       );
     }
 
-    const items = await this.prisma.learningRepositoryItem.findMany({
+    const items = await this.prisma.examRepositoryItem.findMany({
       where: { repository_id: repository.id },
       orderBy: { item_order: 'asc' },
       select: {
@@ -2868,7 +3087,7 @@ export class CertificateEnrollmentService {
 
     if (clearExisting) {
       operations.push(
-        this.prisma.learningRepositoryOption.updateMany({
+        this.prisma.examRepositoryOption.updateMany({
           where: { item: { repository_id: repository.id } },
           data: { is_correct: false },
         }),
@@ -2901,11 +3120,11 @@ export class CertificateEnrollmentService {
       if (!matchedOption) continue;
 
       operations.push(
-        this.prisma.learningRepositoryOption.updateMany({
+        this.prisma.examRepositoryOption.updateMany({
           where: { item_id: item.id },
           data: { is_correct: false },
         }),
-        this.prisma.learningRepositoryOption.update({
+        this.prisma.examRepositoryOption.update({
           where: { id: matchedOption.id },
           data: { is_correct: true },
         }),
@@ -2919,7 +3138,7 @@ export class CertificateEnrollmentService {
       await this.prisma.$transaction(operations);
     }
 
-    const unansweredItems = await this.prisma.learningRepositoryItem.count({
+    const unansweredItems = await this.prisma.examRepositoryItem.count({
       where: {
         repository_id: repository.id,
         options: {
@@ -2935,7 +3154,7 @@ export class CertificateEnrollmentService {
       .sort((a, b) => a - b);
 
     const metadata = (repository.metadata ?? {}) as Prisma.JsonObject;
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repository.id },
       data: {
         metadata: {
@@ -2990,7 +3209,7 @@ export class CertificateEnrollmentService {
       'reading',
     );
 
-    const lastItem = await this.prisma.learningRepositoryItem.findFirst({
+    const lastItem = await this.prisma.examRepositoryItem.findFirst({
       where: { repository_id: repository.id },
       orderBy: { item_order: 'desc' },
       select: { item_order: true },
@@ -3039,7 +3258,7 @@ export class CertificateEnrollmentService {
         continue;
       }
 
-      const createdItem = await this.prisma.learningRepositoryItem.create({
+      const createdItem = await this.prisma.examRepositoryItem.create({
         data: {
           repository_id: repository.id,
           item_order: nextItemOrder,
@@ -3049,7 +3268,6 @@ export class CertificateEnrollmentService {
           reading_passage:
             this.rowValue(row, ['reading_passage', 'passage', 'paragraph']) ||
             null,
-          explanation: this.rowValue(row, ['explanation']) || null,
           metadata:
             sectionText || partNumber
               ? {
@@ -3065,7 +3283,7 @@ export class CertificateEnrollmentService {
         select: { id: true },
       });
 
-      await this.prisma.learningRepositoryOption.createMany({
+      await this.prisma.examRepositoryOption.createMany({
         data: options.map((option, index) => ({
           item_id: createdItem.id,
           option_key: option.optionKey,
@@ -3080,11 +3298,11 @@ export class CertificateEnrollmentService {
       nextItemOrder += 1;
     }
 
-    const totalItems = await this.prisma.learningRepositoryItem.count({
+    const totalItems = await this.prisma.examRepositoryItem.count({
       where: { repository_id: repository.id },
     });
 
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repository.id },
       data: {
         total_items: totalItems,
@@ -3190,7 +3408,7 @@ export class CertificateEnrollmentService {
     );
     const options = this.parseListeningOptionsFromDto(dto);
 
-    const existingLast = await this.prisma.learningRepositoryItem.findFirst({
+    const existingLast = await this.prisma.examRepositoryItem.findFirst({
       where: { repository_id: repository.id },
       orderBy: { item_order: 'desc' },
       select: { item_order: true },
@@ -3206,7 +3424,7 @@ export class CertificateEnrollmentService {
       ? `/uploads/certificate/${basename(imageFile.filename)}`
       : null;
 
-    const createdItem = await this.prisma.learningRepositoryItem.create({
+    const createdItem = await this.prisma.examRepositoryItem.create({
       data: {
         repository_id: repository.id,
         item_order: nextOrder,
@@ -3214,7 +3432,6 @@ export class CertificateEnrollmentService {
         title: dto.title?.trim() || null,
         stem: dto.stem.trim(),
         reading_passage: dto.reading_passage?.trim() || null,
-        explanation: dto.explanation?.trim() || null,
         estimated_seconds: Number(dto.estimated_seconds ?? 45),
         media_audio_url: audioUrl,
         media_image_url: imageUrl,
@@ -3223,7 +3440,7 @@ export class CertificateEnrollmentService {
       select: { id: true, item_order: true },
     });
 
-    await this.prisma.learningRepositoryOption.createMany({
+    await this.prisma.examRepositoryOption.createMany({
       data: options.map((option, index) => ({
         item_id: createdItem.id,
         option_key: option.optionKey,
@@ -3234,11 +3451,11 @@ export class CertificateEnrollmentService {
       })),
     });
 
-    const totalItems = await this.prisma.learningRepositoryItem.count({
+    const totalItems = await this.prisma.examRepositoryItem.count({
       where: { repository_id: repository.id },
     });
 
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repository.id },
       data: {
         total_items: totalItems,
@@ -3263,6 +3480,8 @@ export class CertificateEnrollmentService {
       process.cwd(),
       'uploads',
       'certificate',
+      'TOEIC',
+      'toeic-reading-practice',
       'ai-cache',
       `${hash}.json`,
     );
@@ -3293,7 +3512,7 @@ export class CertificateEnrollmentService {
     cachePath: string,
     payload: FileCacheExplanation,
   ): Promise<void> {
-    await mkdir(join(process.cwd(), 'uploads', 'certificate', 'ai-cache'), {
+    await mkdir(join(process.cwd(), 'uploads', 'certificate', 'TOEIC', 'toeic-reading-practice', 'ai-cache'), {
       recursive: true,
     });
     await writeFile(cachePath, JSON.stringify(payload), 'utf8');
@@ -3414,6 +3633,8 @@ export class CertificateEnrollmentService {
       process.cwd(),
       'uploads',
       'certificate',
+      'TOEIC',
+      'toeic-reading-practice',
       'ai-cache',
       'tutor',
       `${hash}.json`,
@@ -3446,7 +3667,7 @@ export class CertificateEnrollmentService {
     payload: FileCacheTutorAnswer,
   ): Promise<void> {
     await mkdir(
-      join(process.cwd(), 'uploads', 'certificate', 'ai-cache', 'tutor'),
+      join(process.cwd(), 'uploads', 'certificate', 'TOEIC', 'toeic-reading-practice', 'ai-cache', 'tutor'),
       {
         recursive: true,
       },
@@ -4129,6 +4350,106 @@ export class CertificateEnrollmentService {
     };
   }
 
+  async chatGroqTutor(
+    accountId: number,
+    dto: import('./dto/certificate.dto').ToeicChatGroqDto,
+  ) {
+    const question = await this.prisma.toeicPracticeQuestion.findUnique({
+      where: { id: dto.question_id },
+      include: { options: true },
+    });
+
+    if (!question) {
+      throw new BadRequestException('Question not found');
+    }
+
+    const qwenExplanation = question.ai_explanation || question.explanation || 'Chưa có giải thích chi tiết.';
+
+    const ragContext = question.reading_passage ? `Reading Passage:\n${question.reading_passage}` : 'None';
+
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      throw new Error('GROQ_API_KEY is missing in environment variables');
+    }
+
+    const sysPrompt = `ROLE:
+You are an English tutor helping a student understand a specific TOEIC/IELTS question.
+
+CONTEXT PRIORITY:
+Main Explanation (from Qwen3) -> highest priority
+Additional Context (from RAG) -> use if needed
+Your general knowledge (only if consistent)
+
+INPUT:
+Main Explanation: ${qwenExplanation}
+Additional Context: ${ragContext}
+
+INSTRUCTIONS:
+- Explain clearly and simply
+- Focus ONLY on the current question
+- Do NOT contradict the explanation
+- Do NOT go out of scope (no unrelated knowledge)
+- If student is confused: simplify explanation, give short examples
+- Keep response concise
+
+ASK-BACK RULE:
+- Only ask 1 short follow-up question IF the student seems confused (Example: "Bạn chưa rõ phần nào mình giải thích kỹ hơn nhé?")
+- Do NOT overuse this
+- Do NOT interrupt explanation flow
+
+LANGUAGE:
+- Vietnamese (primary)
+- Keep English grammar terms when needed
+
+OUTPUT:
+- Natural text
+- No markdown formatting (like asterisks or bold tags)
+- No system explanation`;
+
+    const messages: any[] = [
+      { role: 'system', content: sysPrompt },
+    ];
+
+    if (dto.chat_history && dto.chat_history.length > 0) {
+      const recentHistory = dto.chat_history.slice(-5).map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+      messages.push(...recentHistory);
+    }
+
+    messages.push({ role: 'user', content: dto.user_message });
+
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages,
+          temperature: 0.3,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Groq API error: ${res.status} - ${errText}`);
+      }
+
+      const data = (await res.json()) as any;
+      return {
+        answer: data.choices?.[0]?.message?.content || '',
+      };
+    } catch (error) {
+      console.error(`Groq Chat Tutor error: ${error}`);
+      throw new BadRequestException('Lỗi kết nối đến trợ lý AI. Vui lòng thử lại sau.');
+    }
+  }
+
   // ─── Item-level cache key (không phụ thuộc vào option được chọn) ──────────
   private buildItemLevelCacheKey(
     itemId: number,
@@ -4149,7 +4470,6 @@ export class CertificateEnrollmentService {
   private buildFullExplanationPrompt(item: {
     stem: string;
     reading_passage: string | null;
-    explanation: string | null;
     options: Array<{
       option_key: string;
       option_text: string;
@@ -4160,7 +4480,7 @@ export class CertificateEnrollmentService {
       stem: item.stem,
       readingPassage: item.reading_passage,
       options: item.options,
-      baseExplanation: item.explanation,
+      baseExplanation: null,
     });
   }
 
@@ -4221,10 +4541,10 @@ export class CertificateEnrollmentService {
     _cachePath: string, // kept for signature compatibility — file cache removed
     _model: string,
   ): Promise<void> {
-    await this.prisma.learningRepositoryItem
+    await this.prisma.examRepositoryItem
       .update({
         where: { id: itemId },
-        data: { ai_explanation: explanation },
+        data: {}, // removed ai_explanation update
       })
       .catch(() => { });
   }
@@ -4235,7 +4555,7 @@ export class CertificateEnrollmentService {
     slug: string,
   ): void {
     void (async () => {
-      const nextItems = await this.prisma.learningRepositoryItem.findMany({
+      const nextItems = await this.prisma.examRepositoryItem.findMany({
         where: {
           repository_id: repositoryId,
           item_order: { gt: currentItemOrder },
@@ -4247,8 +4567,6 @@ export class CertificateEnrollmentService {
           updated_at: true,
           stem: true,
           reading_passage: true,
-          explanation: true,
-          ai_explanation: true,
           options: {
             orderBy: { sort_order: 'asc' },
             select: {
@@ -4283,8 +4601,7 @@ export class CertificateEnrollmentService {
       updated_at: Date;
       stem: string;
       reading_passage: string | null;
-      explanation: string | null;
-      ai_explanation?: string | null; // DB cache field — optional (Prisma client may not yet have this field)
+
       options: Array<{
         option_key: string;
         option_text: string;
@@ -4296,10 +4613,7 @@ export class CertificateEnrollmentService {
     // Bỏ qua câu hỏi chưa có đáp án đúng
     if (!item.options.some((o) => o.is_correct)) return;
 
-    // ── 1. Đã có DB cache → bỏ qua hoàn toàn ────────────────────────────
-    const dbExisting = (item as { ai_explanation?: string | null })
-      .ai_explanation;
-    if (dbExisting && dbExisting.trim().length > 20) return;
+    // No db cache logic anymore since exams don't save AI explanations
 
     const model = this.resolveOllamaModel('toeic');
     const cacheKey = this.buildItemLevelCacheKey(
@@ -4316,12 +4630,6 @@ export class CertificateEnrollmentService {
       const normalized = this.normalizeExplanationForDisplay(
         fileCached.explanation,
       );
-      void this.prisma.learningRepositoryItem
-        .update({
-          where: { id: item.id },
-          data: { ai_explanation: normalized || fileCached.explanation },
-        })
-        .catch(() => { });
       return;
     }
 
@@ -4354,7 +4662,7 @@ export class CertificateEnrollmentService {
   ): Promise<ToeicExplainAnswerResponseDto> {
     await this.getStudentId(accountId);
 
-    const item = await this.prisma.learningRepositoryItem.findUnique({
+    const item = await this.prisma.examRepositoryItem.findUnique({
       where: { id: dto.item_id },
       include: {
         repository: true,
@@ -4411,21 +4719,7 @@ export class CertificateEnrollmentService {
     // ── User chọn đúng → trả explanation đủ 4 đáp án ──────────────────────
     const model = this.resolveOllamaModel('toeic');
 
-    // ── 1. DB cache (ai_explanation trên item) — nhanh nhất ──────────────
-    if (item.ai_explanation && item.ai_explanation.trim().length > 20) {
-      const normalized = this.normalizeExplanationForDisplay(
-        item.ai_explanation,
-      );
-      return {
-        item_id: item.id,
-        selected_option_id: selectedOption.id,
-        correct_option_id: correctOption.id,
-        is_correct: true,
-        explanation: encryptString(normalized || item.ai_explanation),
-        model,
-        source: 'cache',
-      };
-    }
+    // Removed DB cache check since exams don't save explanations
 
     // ── 2. File cache — secondary ─────────────────────────────────────────
     const cacheKey = this.buildItemLevelCacheKey(
@@ -4442,10 +4736,10 @@ export class CertificateEnrollmentService {
         cached.explanation,
       );
       // Đưa file-cache lên DB để lần sau dùng DB
-      void this.prisma.learningRepositoryItem
+      void this.prisma.examRepositoryItem
         .update({
           where: { id: item.id },
-          data: { ai_explanation: normalized || cached.explanation },
+          data: {}, // removed ai_explanation
         })
         .catch(() => { });
       return {
@@ -4463,7 +4757,6 @@ export class CertificateEnrollmentService {
     const prompt = this.buildFullExplanationPrompt({
       stem: item.stem,
       reading_passage: item.reading_passage,
-      explanation: item.explanation,
       options: item.options,
     });
 
@@ -4499,7 +4792,7 @@ export class CertificateEnrollmentService {
         selectedOption.option_text,
         correctOption.option_text,
         true,
-        item.explanation,
+        null,
       );
       const normalizedFallback = this.normalizeExplanationForDisplay(fallback);
 
@@ -4529,7 +4822,7 @@ export class CertificateEnrollmentService {
     await this.getStudentId(accountId);
 
     // Only fetch full exam repositories (imported by teachers)
-    const candidates = await this.prisma.learningRepository.findMany({
+    const candidates = await this.prisma.examRepository.findMany({
       where: {
         cert_type: 'toeic',
         is_published: true,
@@ -4545,7 +4838,7 @@ export class CertificateEnrollmentService {
 
     if (candidates.length === 0) {
       // Fallback: also try mock_test for backward compat
-      const fallback = await this.prisma.learningRepository.findFirst({
+      const fallback = await this.prisma.examRepository.findFirst({
         where: {
           cert_type: 'toeic',
           is_published: true,
@@ -4606,7 +4899,7 @@ export class CertificateEnrollmentService {
     );
     const effectiveScore = this.getEffectiveToeicScore(enrollment, planState);
 
-    const repositories = await this.prisma.learningRepository.findMany({
+    const repositories = await this.prisma.examRepository.findMany({
       where: { cert_type: 'toeic', is_published: true },
       orderBy: [
         { target_score_min: 'asc' },
@@ -4672,7 +4965,7 @@ export class CertificateEnrollmentService {
     await this.getStudentId(accountId);
 
     const repo: ToeicRepositoryWithItems | null =
-      await this.prisma.learningRepository.findUnique({
+      await this.prisma.examRepository.findUnique({
         where: { slug },
         include: {
           items: {
@@ -4719,7 +5012,6 @@ export class CertificateEnrollmentService {
           option_audio_url: opt.option_audio_url ?? null,
           sort_order: Number(opt.sort_order ?? 1),
         })),
-        explanation: item.explanation ? encryptString(item.explanation) : null,
       };
     });
 
@@ -4762,7 +5054,7 @@ export class CertificateEnrollmentService {
     const studentId = await this.getStudentId(accountId);
 
     const repository: ToeicRepositoryWithItemsForSubmit | null =
-      await this.prisma.learningRepository.findUnique({
+      await this.prisma.examRepository.findUnique({
         where: { slug },
         include: {
           items: {

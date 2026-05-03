@@ -17,6 +17,13 @@ import re
 import sys
 from io import BytesIO
 
+try:
+    import cv2
+    import numpy as np
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+
 # ── dependency checks ────────────────────────────────────────────────────────
 
 try:
@@ -262,9 +269,25 @@ def save_optimised_webp(
     if orig_w < min_width or orig_h < min_height:
         return None
 
+    from PIL import ImageStat
+    import numpy as np
+    # Filter out images that are just flat backgrounds, text (watermarks), or simple line-art.
+    # Real photos have high variance (stddev > 25) AND many mid-gray pixels (> 10%).
+    # Text/line-art are mostly pure black/white (low mid-gray). Flat gray boxes have low variance.
+    gray_arr = np.array(pil_img.convert("L"))
+    total_pixels = gray_arr.size
+    if total_pixels > 0:
+        mid_gray_count = np.sum((gray_arr > 40) & (gray_arr < 220))
+        std_dev = np.std(gray_arr)
+        
+        # Must pass BOTH tests to be considered a real photo
+        if mid_gray_count / total_pixels < 0.10 or std_dev < 25:
+            return None
+
+    # We remove the full-page scan skip from here because we handle it in extract_subimages_from_scan
     # Skip full-page scanned backgrounds (very tall portrait, likely a page scan)
-    if orig_h >= 800 and (orig_h / float(max(1, orig_w))) > 1.2:
-        return None
+    # if orig_h >= 800 and (orig_h / float(max(1, orig_w))) > 1.2:
+    #     return None
 
     # ── Watermark / text-strip filter ────────────────────────────────────────
     # Watermark images embedded in TOEIC PDFs (e.g. "Zenlish - Học TOEIC 1 lần
@@ -307,6 +330,87 @@ def save_optimised_webp(
         size_bytes = 0
 
     return new_w, new_h, size_bytes
+
+
+def extract_subimages_from_scan(raw_bytes: bytes, min_width: int, min_height: int) -> list[bytes]:
+    """Uses OpenCV to extract photos from a full-page scanned image."""
+    if not HAS_CV2:
+        return [raw_bytes]
+
+    try:
+        nparr = np.frombuffer(raw_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return [raw_bytes]
+
+        h, w = img.shape[:2]
+        
+        # Process any image large enough to be a scanned page or a very large merged block.
+        if h < 500 or w < 400:
+            return [raw_bytes]
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # 1. Edge detection to find complex regions
+        edges = cv2.Canny(gray, 50, 150)
+        
+        # 2. Morphological closing to group nearby edges
+        # We use a smaller kernel so we don't accidentally merge text lines with the photo.
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+        closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+        
+        # Erase the outer 3% of the image to break any continuous black page borders 
+        # that might connect all elements on the page into one giant contour.
+        margin_y = max(10, int(h * 0.03))
+        margin_x = max(10, int(w * 0.03))
+        closed[:margin_y, :] = 0
+        closed[-margin_y:, :] = 0
+        closed[:, :margin_x] = 0
+        closed[:, -margin_x:] = 0
+        
+        # 3. Find only EXTERNAL contours to avoid extracting nested sub-images (e.g. face inside photo)
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        sub_images = []
+        contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[1])
+        
+        for cnt in contours:
+            x, y, cw, ch = cv2.boundingRect(cnt)
+            
+            # Ignore contours that are basically the entire page (page borders)
+            if cw > w * 0.95 or ch > h * 0.95:
+                continue
+                
+            # 4. Size filter (must be reasonably large to be a photo)
+            if cw >= min_width and ch >= min_height:
+                if cw > w * 0.2 and ch > h * 0.1:
+                    aspect = cw / float(ch)
+                    # Aspect ratio filter (ignore tall columns or wide strips)
+                    if 0.5 < aspect < 2.5:
+                        
+                        # Mid-gray & StdDev filter to ensure the cropped region is a real photo
+                        roi_gray = gray[y:y+ch, x:x+cw]
+                        total_roi_pixels = roi_gray.size
+                        if total_roi_pixels > 0:
+                            mid_gray_count = np.sum((roi_gray > 40) & (roi_gray < 220))
+                            std_dev = np.std(roi_gray)
+                            
+                            # Real photos usually have > 50% mid-gray AND std_dev > 30.
+                            # We use 10% and 25 to be safe, but it perfectly kills text/logos/diagrams.
+                            if mid_gray_count / total_roi_pixels > 0.10 and std_dev > 25:
+                                sub_img = img[y:y+ch, x:x+cw]
+                                _, encoded = cv2.imencode('.png', sub_img)
+                                sub_images.append(encoded.tobytes())
+                        
+        if not sub_images:
+            # If it's a full-page scan but has no photos, discard it!
+            # We don't want to save pages full of text as images.
+            return []
+            
+        return sub_images
+    except Exception as e:
+        return []
+
 
 
 def extract_images(
@@ -391,32 +495,53 @@ def extract_images(
             if not raw_bytes:
                 continue
 
-            filename = f"{slug}_p{one_indexed:03d}_img{img_idx:02d}.webp"
-            abs_path = os.path.join(output_dir, filename)
+            # Attempt to extract sub-images if this is a full page scan
+            sub_bytes_list = extract_subimages_from_scan(raw_bytes, min_width, min_height)
+            
+            for sub_idx, sub_bytes in enumerate(sub_bytes_list):
+                if len(sub_bytes_list) > 1:
+                    filename = f"{slug}_p{one_indexed:03d}_img{img_idx:02d}_sub{sub_idx+1}.webp"
+                else:
+                    filename = f"{slug}_p{one_indexed:03d}_img{img_idx:02d}.webp"
+                    
+                abs_path = os.path.join(output_dir, filename)
 
-            result = save_optimised_webp(raw_bytes, abs_path, min_width, min_height)
-            if result is None:
-                continue  # too small, unreadable, text-only, or save failed
+                result = save_optimised_webp(sub_bytes, abs_path, min_width, min_height)
+                if result is None:
+                    continue  # too small, unreadable, text-only, or save failed
 
-            new_w, new_h, size_bytes = result
-            url_path = f"{rel_base}/{filename}"
+                new_w, new_h, size_bytes = result
+                url_path = f"{rel_base}/{filename}"
 
-            extracted.append(
-                {
-                    "filename": filename,
-                    "path": os.path.abspath(abs_path),
-                    "url_path": url_path,
-                    "page": one_indexed,
-                    "skill_area": skill_area,
-                    "width": new_w,
-                    "height": new_h,
-                    "size_bytes": size_bytes,
-                }
-            )
+                extracted.append(
+                    {
+                        "filename": filename,
+                        "path": os.path.abspath(abs_path),
+                        "url_path": url_path,
+                        "page": one_indexed,
+                        "skill_area": skill_area,
+                        "width": new_w,
+                        "height": new_h,
+                        "size_bytes": size_bytes,
+                    }
+                )
 
             img_idx += 1
 
     doc.close()
+
+    # Special handling for TOEIC Listening Part 1
+    # Part 1 has EXACTLY 6 photos. The first photo is often the "Example" photo from the instructions.
+    # If we extracted more than 6 photos, we safely assume the last 6 are the actual questions.
+    # We delete the extra photos from disk so the folder remains perfectly clean.
+    if skill_area == "listening" and len(extracted) > 6:
+        for img in extracted[:-6]:
+            try:
+                if os.path.exists(img["path"]):
+                    os.remove(img["path"])
+            except OSError:
+                pass
+        extracted = extracted[-6:]
 
     return {
         "status": "ok",

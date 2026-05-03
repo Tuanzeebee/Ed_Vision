@@ -243,9 +243,9 @@ def build_filename(slug: str, part: int, number: int, chunk_type: str) -> str:
 def build_url_path(slug: str, filename: str, skill_area: str) -> str:
     """
     Build the relative URL path expected by the front-end.
-    e.g. TOEIC/toeic-listening/my-slug/audio/my-slug_part1_q001.mp3
+    e.g. certificate/TOEIC/toeic-listening/my-slug/audio/my-slug_part1_q001.mp3
     """
-    return f"TOEIC/toeic-{skill_area}/{slug}/audio/{filename}"
+    return f"certificate/TOEIC/toeic-{skill_area}/{slug}/audio/{filename}"
 
 
 def map_chunks_to_toeic(

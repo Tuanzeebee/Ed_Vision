@@ -31,6 +31,7 @@ type ExamQuestion = {
   choices: string[];
   optionKeys?: string[];
   audioUrl?: string;
+  imageUrl?: string;
   correct?: number;
 };
 
@@ -375,6 +376,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
     setExamError(null);
     try {
       const questions = await generateDiagnosticTest(band);
+      console.log('Diagnostic API returned:', questions);
       
       const newParts: ExamPart[] = [];
       const grouped: Record<number, typeof questions> = {};
@@ -398,6 +400,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
             choices: q.options.map(o => o.option_text),
             optionKeys: q.options.map(o => o.option_key),
             audioUrl: q.media_audio_url || undefined,
+            imageUrl: q.media_image_url || undefined,
           }))
         });
       }
@@ -1168,14 +1171,42 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
                 >
                   {q.text}
                 </p>
+
+                {q.imageUrl ? (
+                  <div className="mb-5 flex justify-center">
+                    <img
+                      src={q.imageUrl.startsWith('http') ? q.imageUrl : `http://localhost:3000${q.imageUrl}`}
+                      alt="Question illustration"
+                      className="rounded-lg shadow-sm max-w-full h-auto object-contain border border-slate-200"
+                      style={{ maxHeight: '300px' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : part.partNumber === 1 && (
+                  <div className="mb-5 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 py-8 text-sm text-slate-500">
+                    <div className="flex flex-col items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-slate-400" />
+                      <span>Không tìm thấy hình ảnh cho câu hỏi này</span>
+                    </div>
+                  </div>
+                )}
                 
-                {q.audioUrl && (
+                {q.audioUrl ? (
                   <div className="mb-4">
                     <audio 
                       controls 
                       className="w-full h-10"
                       src={q.audioUrl.startsWith('http') ? q.audioUrl : `http://localhost:3000${q.audioUrl}`} 
                     />
+                  </div>
+                ) : part.skill === "listening" && (
+                  <div className="mb-4 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 py-3 text-sm text-slate-500">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-slate-400" />
+                      <span>Không tìm thấy file nghe cho câu hỏi này</span>
+                    </div>
                   </div>
                 )}
 

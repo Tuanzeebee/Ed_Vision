@@ -9,8 +9,12 @@ import {
   Music,
   Scissors,
   FileUp,
+  AlertTriangle,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
+import { useRef } from "react";
 import {
   importToeicPracticeQuestions,
   importToeicPracticeAnswerKey,
@@ -44,6 +48,7 @@ type ManualSupplementRow = {
   toeic_part: number;
   question_number: string;
   stem: string;
+  reading_passage: string;
   options: Record<ManualOptionKey, string>;
   correct_option_key: ManualOptionKey;
 };
@@ -105,6 +110,7 @@ function createManualRow(
     question_number:
       typeof questionNumber === "number" ? String(questionNumber) : "",
     stem: "",
+    reading_passage: "",
     options: {
       A: "",
       B: "",
@@ -128,6 +134,8 @@ export function ToeicPracticeQuestionImportBody({
 }: {
   certType?: "toeic" | "ielts";
 } = {}) {
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [practiceFile, setPracticeFile] = useState<File | null>(null);
   const [practicePartSelection, setPracticePartSelection] =
     useState<PracticePartSelection>(_externalCertType === "ielts" ? "speaking" : "5");
@@ -423,6 +431,10 @@ export function ToeicPracticeQuestionImportBody({
               ? Number(row.question_number)
               : undefined,
           stem: row.stem.trim(),
+          reading_passage:
+            row.reading_passage.trim().length > 0
+              ? row.reading_passage.trim()
+              : undefined,
           options,
           correct_option_key: row.correct_option_key,
         };
@@ -471,15 +483,8 @@ export function ToeicPracticeQuestionImportBody({
 
           <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-800 space-y-1">
             <p className="font-semibold">Định dạng chấp nhận:</p>
-            <p>
-              File câu hỏi: TXT, PDF, DOC, DOCX. Parser sẽ cố gắng nhận diện
-              câu hỏi, đáp án A/B/C/D, PART và số câu theo nhiều layout khác
-              nhau.
-            </p>
-            <p>
-              File đáp án: TXT, PDF, DOC/DOCX, ảnh (PNG/JPG/WEBP/BMP/TIF) với
-              pattern như 101 A, 102 C, hoặc 101. A, 102) C.
-            </p>
+            <p>File câu hỏi: PDF</p>
+            <p>File đáp án: Image, PDF</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -558,19 +563,29 @@ export function ToeicPracticeQuestionImportBody({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
-                File câu hỏi (TXT/PDF/DOC/DOCX)
+                File câu hỏi (PDF)
               </label>
               <input
                 type="file"
-                accept=".txt,.pdf,.doc,.docx"
-                onChange={(e) => setPracticeFile(e.target.files?.[0] ?? null)}
-                className={`${fieldClass} cursor-pointer file:mr-3 file:border-0 file:rounded-lg file:px-3 file:py-1 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200`}
+                accept=".pdf"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  setPracticeFile(e.target.files?.[0] ?? null);
+                }}
               />
-              {practiceFile && (
-                <p className="mt-1 text-[10px] text-gray-500">
-                  Đã chọn: {practiceFile.name}
-                </p>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowFormatModal(true)}
+                className={`${fieldClass} cursor-pointer w-full text-left flex items-center justify-between min-h-[42px]`}
+              >
+                <span className="truncate pr-2 text-gray-600">
+                  {practiceFile ? practiceFile.name : "Nhấn để chọn file PDF..."}
+                </span>
+                <span className="shrink-0 rounded-lg bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-200 transition-colors">
+                  Duyệt file
+                </span>
+              </button>
             </div>
 
             {(selectionConfig.importScope === "full_listening" ||
@@ -818,6 +833,28 @@ export function ToeicPracticeQuestionImportBody({
                       placeholder="Nhập nội dung câu hỏi..."
                     />
                   </div>
+
+                  {[6, 7].includes(row.toeic_part) && (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                        📄 Đoạn văn (Reading Passage) — Part {row.toeic_part}
+                      </label>
+                      <textarea
+                        value={row.reading_passage}
+                        onChange={(e) =>
+                          updateManualRow(row.id, (current) => ({
+                            ...current,
+                            reading_passage: e.target.value,
+                          }))
+                        }
+                        className={`${fieldClass} min-h-[100px]`}
+                        placeholder="Dán đoạn văn (passage) mà câu hỏi liên quan vào đây... Ví dụ: Questions 131-134 refer to the following email..."
+                      />
+                      <p className="mt-1 text-[10px] text-gray-400">
+                        Đoạn văn sẽ hiển thị cho sinh viên phía trên câu hỏi. Các câu cùng nhóm (ví dụ 131-134) nên dùng chung đoạn văn.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(["A", "B", "C", "D"] as ManualOptionKey[]).map(
@@ -1142,6 +1179,9 @@ export function ToeicPracticeQuestionImportBody({
                         <th className="px-3 py-2 text-left text-gray-500 font-semibold">
                           Câu hỏi
                         </th>
+                        <th className="px-3 py-2 text-left text-gray-500 font-semibold">
+                          Passage
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -1175,6 +1215,15 @@ export function ToeicPracticeQuestionImportBody({
                           <td className="px-3 py-2 text-gray-800 max-w-xs truncate">
                             {q.stem}
                           </td>
+                          <td className="px-3 py-2 text-gray-500 max-w-[200px]">
+                            {(q as any).reading_passage ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-700" title={(q as any).reading_passage}>
+                                Có passage
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-gray-300">—</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1188,6 +1237,81 @@ export function ToeicPracticeQuestionImportBody({
           )}
         </div>
       </div>
+
+      {showFormatModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Hướng Dẫn Định Dạng File Chuẩn
+              </h3>
+              <button onClick={() => setShowFormatModal(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4 text-sm text-gray-700 bg-gray-50/50">
+              <p className="font-medium text-gray-900 text-base">Để hệ thống nhận diện chính xác câu hỏi, file PDF của bạn CẦN tuân thủ các quy tắc sau:</p>
+              
+              <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs">1</div>
+                    <span className="font-bold text-gray-800">Số thứ tự câu hỏi rõ ràng:</span>
+                  </div>
+                  <ul className="list-disc ml-9 text-gray-600 space-y-2">
+                    <li>Mỗi câu hỏi <strong className="text-rose-500">bắt buộc</strong> phải bắt đầu bằng số thứ tự kèm dấu chấm hoặc ngoặc đơn ở đầu dòng.</li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold w-12 shrink-0">ĐÚNG:</span>
+                      <span><code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-mono text-[13px]">101. The manager...</code> hoặc <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-mono text-[13px]">101) The manager...</code></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-rose-600 font-bold w-12 shrink-0">SAI:</span>
+                      <span>Câu hỏi mất số thứ tự hoặc dính liền chữ (vd: <code className="bg-red-50 text-red-800 border border-red-100 px-1.5 py-0.5 rounded font-mono text-[13px]">101The manager...</code>).</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs">2</div>
+                    <span className="font-bold text-gray-800">Định dạng đáp án:</span>
+                  </div>
+                  <ul className="list-disc ml-9 text-gray-600 space-y-2">
+                    <li>Phải có đủ đáp án và bắt đầu bằng <strong className="text-gray-800">A, B, C, D</strong> in hoa kèm dấu chấm/ngoặc.</li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold w-12 shrink-0">ĐÚNG:</span>
+                      <span><code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-mono text-[13px]">A. report</code> hoặc <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-mono text-[13px]">(A) report</code></span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs">3</div>
+                    <span className="font-bold text-gray-800">Nội dung không hợp lệ:</span>
+                  </div>
+                  <ul className="list-disc ml-9 text-gray-600 space-y-1">
+                    <li>Không chứa các ký hiệu Toán học phức tạp (<code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-mono text-[13px]">∫, ∑, lim</code>) hay các môn học khác.</li>
+                    <li>Hệ thống sẽ <strong className="text-rose-600">từ chối hoàn toàn</strong> file nếu phát hiện rác hoặc cấu trúc dị thường.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50">
+              <button onClick={() => setShowFormatModal(false)} className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-bg-50 rounded-xl transition-colors shadow-sm">
+                Hủy thao tác
+              </button>
+              <button onClick={() => {
+                setShowFormatModal(false);
+                fileInputRef.current?.click();
+              }} className="px-6 py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition-all flex items-center gap-2 active:scale-95">
+                <CheckCircle2 className="h-4 w-4" /> Đã Hiểu & Chọn File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
