@@ -16,4 +16,3 @@ export const predictionProviders = [
     inject: ['DATABASE_CONNECTION'],
   },
 ];
- 

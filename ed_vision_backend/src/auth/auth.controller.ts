@@ -42,7 +42,7 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto) {
     try {
-      const result =  await this.authService.login(dto.email, dto.password);
+      const result = await this.authService.login(dto.email, dto.password);
 
       // Broadcast instructor online stats update
       await this.broadcastInstructorStats();

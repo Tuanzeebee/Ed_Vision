@@ -1,126 +1,152 @@
-import { Injectable, Logger } from '@nestjs/common'
-import { OpenRouter } from '@openrouter/sdk'
-import * as fs from 'fs'
+// src/placement/speaking.service.ts
+// STT: Gemini 2.0 Flash multimodal (audio → text) — miễn phí
+// Scoring: OpenRouter Gemini Flash — miễn phí
+
+import { Injectable, Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class SpeakingService {
-  private readonly logger = new Logger(SpeakingService.name)
-  private openrouter: OpenRouter
+  private readonly logger = new Logger(SpeakingService.name);
 
-  constructor() {
-    this.openrouter = new OpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY!,
-    })
-  }
-
-  // STT: file audio path → transcript text
+  // ── STT: Gemini multimodal audio → transcript ───────────
   async transcribe(audioPath: string): Promise<string> {
     try {
-      const audioBuffer = await fs.promises.readFile(audioPath)
-      const base64Audio = audioBuffer.toString('base64')
-      const ext = audioPath.split('.').pop()?.toLowerCase() ?? 'm4a'
-      const format = ext === 'm4a' ? 'mp4' : ext
+      const audioBuffer = fs.readFileSync(audioPath);
+      const base64Audio = audioBuffer.toString('base64');
 
-      try {
-        const result = await this.openrouter.stt.createTranscription({
-          sttRequest: {
-            model: 'openai/whisper-1',
-            inputAudio: {
-              data: base64Audio,
-              format: format as any,
-            },
-          },
-        })
-        this.logger.log(`[Speaking] Whisper Transcript: ${result.text}`)
-        return result.text ?? ''
-      } catch (sttError: any) {
-        this.logger.warn(`[Speaking] Whisper failed (${sttError.message}), falling back to Gemini...`)
-        
-        // Fallback to Gemini 1.5 Flash (often free/cheap) for multimodal transcription
-        const response = await this.openrouter.chat.send({
-          chatRequest: {
-            model: 'google/gemini-flash-1.5-8b',
-            messages: [
+      // Xác định mimeType từ đuôi file
+      const ext = audioPath.split('.').pop()?.toLowerCase() ?? 'webm';
+      const mimeType =
+        ext === 'webm'
+          ? 'audio/webm'
+          : ext === 'mp4' || ext === 'm4a'
+            ? 'audio/mp4'
+            : ext === 'wav'
+              ? 'audio/wav'
+              : 'audio/webm';
+
+      this.logger.log(
+        `[Speaking] Audio size: ${audioBuffer.length} bytes, mime: ${mimeType}`,
+      );
+      this.logger.log(`[Speaking] Base64 length: ${base64Audio.length}`);
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY_SPEAKING}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
               {
-                role: 'user',
-                content: [
-                  { type: 'text', text: 'Please transcribe the following audio clip exactly as spoken. Return only the transcript.' },
+                parts: [
                   {
-                    type: 'image_url', // OpenRouter uses image_url for any data URI sometimes, but let's check
-                    image_url: {
-                      url: `data:audio/${format};base64,${base64Audio}`
-                    }
-                  } as any
-                ]
-              }
-            ]
-          }
-        })
-        
-        const transcript = response.choices[0]?.message.content ?? ''
-        this.logger.log(`[Speaking] Gemini Fallback Transcript: ${transcript}`)
-        return transcript
+                    inline_data: {
+                      mime_type: mimeType,
+                      data: base64Audio,
+                    },
+                  },
+                  {
+                    text: 'Transcribe this audio recording exactly as spoken. Return only the transcript text, nothing else.',
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0,
+              maxOutputTokens: 1000,
+            },
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Gemini STT error: ${err}`);
       }
-    } catch (error) {
-      this.logger.error('[Speaking] All STT methods failed:', error)
-      throw new Error('Không thể chuyển đổi audio thành text')
+
+      const data = await res.json();
+      const transcript = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      this.logger.log(`[Speaking] Transcript: ${transcript}`);
+      return transcript.trim();
+    } catch (error: any) {
+      this.logger.error('[Speaking] Gemini STT failed:', error.message);
+      throw new Error('Không thể chuyển đổi audio thành text');
     }
   }
 
-  // AI Scoring: transcript + prompt → band + feedback
+  // ── AI Scoring: OpenRouter Gemini → IELTS band ──────────
   async scoreSpeaking(
     transcript: string,
     prompt: string,
-    audioPath: string,
+    audioPath: string, // Added audioPath to delete the file
   ): Promise<{ band: number; feedback: string }> {
     try {
-      const response = await this.openrouter.chat.send({
-        chatRequest: {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           model: 'google/gemini-2.0-flash-exp:free',
-          maxTokens: 500,
+          max_tokens: 300,
           messages: [
             {
               role: 'system',
-              content: `You are an IELTS examiner. Score speaking responses strictly.
-Return ONLY valid JSON, no markdown, no extra text outside JSON.`,
+              content:
+                'You are an IELTS examiner. Return ONLY valid JSON, no markdown, no explanation.',
             },
             {
               role: 'user',
-              content: `Speaking prompt: "${prompt}"
-
-Candidate transcript:
-"${transcript}"
-
-Score based on IELTS band scale (3.0 to 9.0, steps of 0.5).
-Criteria: Fluency & Coherence, Lexical Resource, Grammatical Range, Pronunciation.
-
-Return JSON only:
-{
-  "band": 5.5,
-  "feedback": "Nhận xét ngắn bằng tiếng Việt",
-  "fluency": 5.5,
-  "vocabulary": 6.0,
-  "grammar": 5.0
-}`,
+              content: `Speaking prompt: "${prompt}"\n\nCandidate transcript: "${transcript}"\n\nScore on IELTS band (3.0-9.0, steps of 0.5).\nReturn JSON only:\n{"band": 5.5, "feedback": "Nhận xét ngắn bằng tiếng Việt"}`,
             },
           ],
-        },
-      })
+        }),
+      });
 
-      const text = response.choices[0]?.message.content ?? ''
-      const clean = text.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
+      const rawText = await res.text();
+      this.logger.log(
+        `[Speaking] Scoring raw response: ${rawText.slice(0, 500)}`,
+      );
+
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        this.logger.error('[Speaking] Response is not JSON:', rawText);
+        return { band: 5.0, feedback: 'Không thể chấm điểm' };
+      }
+
+      const text = data?.choices?.[0]?.message?.content ?? '';
+      if (!text) {
+        this.logger.error(
+          '[Speaking] Empty content from OpenRouter, full response:',
+          JSON.stringify(data),
+        );
+        return { band: 5.0, feedback: 'Không thể chấm điểm' };
+      }
+
+      const clean = text.replace(/```json|```/g, '').trim();
+      let parsed: any;
+      try {
+        parsed = JSON.parse(clean);
+      } catch {
+        this.logger.error('[Speaking] Cannot parse JSON from:', clean);
+        return { band: 5.0, feedback: 'Không thể chấm điểm' };
+      }
 
       return {
         band: Number(parsed.band) || 5.0,
         feedback: parsed.feedback || '',
-      }
-    } catch (error) {
-      this.logger.error('[Speaking] AI scoring failed:', error)
-      return { band: 5.0, feedback: 'Không thể chấm điểm tự động' }
+      };
+    } catch (error: any) {
+      this.logger.error('[Speaking] Scoring failed:', error.message);
+      return { band: 5.0, feedback: 'Không thể chấm điểm tự động' };
     } finally {
-      // Xóa file audio tạm sau khi xử lý xong
-      fs.unlink(audioPath, () => { })
+      // Xóa file audio tạm
+      fs.unlink(audioPath, () => {});
     }
   }
 }

@@ -44,7 +44,9 @@ function resolveI18nPath(): string {
     path.join(__dirname, 'i18n'),
   ];
 
-  const found = candidatePaths.find((candidatePath) => existsSync(candidatePath));
+  const found = candidatePaths.find((candidatePath) =>
+    existsSync(candidatePath),
+  );
   return found ?? path.join(process.cwd(), 'src', 'i18n');
 }
 
@@ -89,7 +91,7 @@ function resolveI18nPath(): string {
     PlacementModule,
     YouTubeMusicModule,
     TtsModule,
-    SttModule
+    SttModule,
   ],
   controllers: [AppController],
   providers: [AppService, ReminderSchedulerService],

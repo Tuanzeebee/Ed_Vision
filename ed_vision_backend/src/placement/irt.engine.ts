@@ -8,21 +8,21 @@
 // ─────────────────────────────────────────────────────────────
 
 export interface IrtParams {
-  a: number   // discrimination: khả năng phân biệt giỏi/kém (lý tưởng ≥ 1.0)
-  b: number   // difficulty: -3.0 (rất dễ) → +3.0 (rất khó)
-  c: number   // guessing: xác suất đoán mò đúng (MCQ 4 đáp án = 0.25)
+  a: number; // discrimination: khả năng phân biệt giỏi/kém (lý tưởng ≥ 1.0)
+  b: number; // difficulty: -3.0 (rất dễ) → +3.0 (rất khó)
+  c: number; // guessing: xác suất đoán mò đúng (MCQ 4 đáp án = 0.25)
 }
 
 export interface ItemResponse {
-  params: IrtParams
-  correct: boolean
+  params: IrtParams;
+  correct: boolean;
 }
 
 export interface ThetaEstimate {
-  theta: number   // năng lực ước tính (-3.0 → +3.0)
-  band: number   // IELTS band (3.0 → 9.0)
-  sem: number   // Standard Error of Measurement — độ không chắc chắn
-  confidence: 'low' | 'medium' | 'high'
+  theta: number; // năng lực ước tính (-3.0 → +3.0)
+  band: number; // IELTS band (3.0 → 9.0)
+  sem: number; // Standard Error of Measurement — độ không chắc chắn
+  confidence: 'low' | 'medium' | 'high';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -32,12 +32,12 @@ export interface ThetaEstimate {
 export function icc(theta: number, p: IrtParams): number {
   // Item Characteristic Curve — xác suất trả lời đúng
   // P(θ) = c + (1 - c) × 1 / (1 + e^(-a(θ - b)))
-  const exponent = -p.a * (theta - p.b)
+  const exponent = -p.a * (theta - p.b);
 
   // Clamp exponent tránh overflow
-  const clampedExp = Math.min(Math.max(exponent, -30), 30)
+  const clampedExp = Math.min(Math.max(exponent, -30), 30);
 
-  return p.c + (1 - p.c) / (1 + Math.exp(clampedExp))
+  return p.c + (1 - p.c) / (1 + Math.exp(clampedExp));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -46,12 +46,12 @@ export function icc(theta: number, p: IrtParams): number {
 // ─────────────────────────────────────────────────────────────
 
 export function itemInformation(theta: number, p: IrtParams): number {
-  const prob = icc(theta, p)
-  const pStar = (prob - p.c) / (1 - p.c + 1e-10)  // loại bỏ guessing
-  const q = 1 - prob
+  const prob = icc(theta, p);
+  const pStar = (prob - p.c) / (1 - p.c + 1e-10); // loại bỏ guessing
+  const q = 1 - prob;
 
   // I(θ) = a² × (P* )² × Q / P
-  return (p.a ** 2) * (pStar ** 2) * q / (prob + 1e-10)
+  return (p.a ** 2 * pStar ** 2 * q) / (prob + 1e-10);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -65,52 +65,52 @@ export function estimateTheta(
   maxIter: number = 50,
   tol: number = 0.001,
 ): number {
-  if (responses.length === 0) return initialTheta
+  if (responses.length === 0) return initialTheta;
 
   // Edge case: toàn đúng hoặc toàn sai → dùng EAP thay MLE (tránh diverge)
-  const allCorrect = responses.every(r => r.correct)
-  const allWrong = responses.every(r => !r.correct)
+  const allCorrect = responses.every((r) => r.correct);
+  const allWrong = responses.every((r) => !r.correct);
 
   if (allCorrect) {
-    const n = responses.length
-    return Math.min(initialTheta + Math.log(n + 1) * 0.8, 2.5) // log scale, cap 2.5
+    const n = responses.length;
+    return Math.min(initialTheta + Math.log(n + 1) * 0.8, 2.5); // log scale, cap 2.5
   }
   if (allWrong) {
-    const n = responses.length
-    return Math.max(initialTheta - Math.log(n + 1) * 0.8, -2.5)
+    const n = responses.length;
+    return Math.max(initialTheta - Math.log(n + 1) * 0.8, -2.5);
   }
 
-  let theta = initialTheta
+  let theta = initialTheta;
 
   for (let iter = 0; iter < maxIter; iter++) {
-    let L1 = 0  // first derivative of log-likelihood
-    let L2 = 0  // second derivative (negative of Fisher information)
+    let L1 = 0; // first derivative of log-likelihood
+    let L2 = 0; // second derivative (negative of Fisher information)
 
     for (const r of responses) {
-      const p = icc(theta, r.params)
-      const q = 1 - p
-      const pStar = (p - r.params.c) / (1 - r.params.c + 1e-10)
-      const u = r.correct ? 1 : 0
+      const p = icc(theta, r.params);
+      const q = 1 - p;
+      const pStar = (p - r.params.c) / (1 - r.params.c + 1e-10);
+      const u = r.correct ? 1 : 0;
 
       // Tránh chia cho 0
-      const pq = p * q + 1e-10
+      const pq = p * q + 1e-10;
 
-      L1 += r.params.a * pStar * (u - p) / pq
-      L2 -= (r.params.a ** 2) * (pStar ** 2) * q / (p + 1e-10)
+      L1 += (r.params.a * pStar * (u - p)) / pq;
+      L2 -= (r.params.a ** 2 * pStar ** 2 * q) / (p + 1e-10);
     }
 
-    if (Math.abs(L2) < 1e-10) break
+    if (Math.abs(L2) < 1e-10) break;
 
-    const delta = L1 / L2
-    theta -= delta
+    const delta = L1 / L2;
+    theta -= delta;
 
     // Clamp theta trong [-3, +3]
-    theta = Math.min(Math.max(theta, -3.0), 3.0)
+    theta = Math.min(Math.max(theta, -3.0), 3.0);
 
-    if (Math.abs(delta) < tol) break
+    if (Math.abs(delta) < tol) break;
   }
 
-  return theta
+  return theta;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -124,37 +124,39 @@ export function estimateThetaEAP(
   priorSD: number = 1.2,
   quadPoints: number = 41,
 ): number {
-  if (responses.length === 0) return priorMean
+  if (responses.length === 0) return priorMean;
 
   // Adaptive: càng nhiều câu → prior càng chặt
-  const n = responses.length
-  const adaptiveSD = Math.max(0.6, priorSD - n * 0.04)
+  const n = responses.length;
+  const adaptiveSD = Math.max(0.6, priorSD - n * 0.04);
 
-  const step = 8 / (quadPoints - 1)
-  let numerator = 0
-  let denominator = 0
+  const step = 8 / (quadPoints - 1);
+  let numerator = 0;
+  let denominator = 0;
 
   for (let i = 0; i < quadPoints; i++) {
-    const theta = -4 + i * step
-    const prior = Math.exp(
-      -0.5 * Math.pow((theta - priorMean) / adaptiveSD, 2),  // dùng adaptiveSD
-    ) / (adaptiveSD * Math.sqrt(2 * Math.PI))
+    const theta = -4 + i * step;
+    const prior =
+      Math.exp(
+        -0.5 * Math.pow((theta - priorMean) / adaptiveSD, 2), // dùng adaptiveSD
+      ) /
+      (adaptiveSD * Math.sqrt(2 * Math.PI));
 
-    let likelihood = 1.0
+    let likelihood = 1.0;
     for (const r of responses) {
-      const p = icc(theta, r.params)
-      const prob = r.correct ? p : 1 - p
-      likelihood *= Math.max(prob, 1e-10)
+      const p = icc(theta, r.params);
+      const prob = r.correct ? p : 1 - p;
+      likelihood *= Math.max(prob, 1e-10);
     }
 
-    const posterior = likelihood * prior
-    numerator += theta * posterior
-    denominator += posterior
+    const posterior = likelihood * prior;
+    numerator += theta * posterior;
+    denominator += posterior;
   }
 
-  if (denominator < 1e-10) return priorMean
-  const eap = numerator / denominator
-  return Math.min(Math.max(eap, -3.0), 3.0)
+  if (denominator < 1e-10) return priorMean;
+  const eap = numerator / denominator;
+  return Math.min(Math.max(eap, -3.0), 3.0);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -166,11 +168,11 @@ export function computeSEM(theta: number, responses: ItemResponse[]): number {
   const totalInfo = responses.reduce(
     (sum, r) => sum + itemInformation(theta, r.params),
     0,
-  )
+  );
 
-  if (totalInfo <= 0) return 999
+  if (totalInfo <= 0) return 999;
 
-  return 1 / Math.sqrt(totalInfo)
+  return 1 / Math.sqrt(totalInfo);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -192,21 +194,21 @@ export function thetaToBand(theta: number): number {
     { theta: 2.0, band: 7.5 },
     { theta: 2.5, band: 8.0 },
     { theta: 3.0, band: 9.0 },
-  ]
+  ];
 
   // Interpolate giữa 2 điểm gần nhất
-  if (theta <= map[0].theta) return map[0].band
-  if (theta >= map[map.length - 1].theta) return map[map.length - 1].band
+  if (theta <= map[0].theta) return map[0].band;
+  if (theta >= map[map.length - 1].theta) return map[map.length - 1].band;
 
   for (let i = 0; i < map.length - 1; i++) {
     if (theta <= map[i + 1].theta) {
-      const t = (theta - map[i].theta) / (map[i + 1].theta - map[i].theta)
-      const raw = map[i].band + t * (map[i + 1].band - map[i].band)
+      const t = (theta - map[i].theta) / (map[i + 1].theta - map[i].theta);
+      const raw = map[i].band + t * (map[i + 1].band - map[i].band);
       // Round về bội số 0.5 gần nhất
-      return Math.round(raw * 2) / 2
+      return Math.round(raw * 2) / 2;
     }
   }
-  return 9.0
+  return 9.0;
 }
 
 export function bandToTheta(band: number): number {
@@ -223,16 +225,16 @@ export function bandToTheta(band: number): number {
     { band: 7.5, theta: 2.0 },
     { band: 8.0, theta: 2.5 },
     { band: 9.0, theta: 3.0 },
-  ]
-  if (band <= map[0].band) return map[0].theta
-  if (band >= map[map.length - 1].band) return map[map.length - 1].theta
+  ];
+  if (band <= map[0].band) return map[0].theta;
+  if (band >= map[map.length - 1].band) return map[map.length - 1].theta;
   for (let i = 0; i < map.length - 1; i++) {
     if (band <= map[i + 1].band) {
-      const t = (band - map[i].band) / (map[i + 1].band - map[i].band)
-      return map[i].theta + t * (map[i + 1].theta - map[i].theta)
+      const t = (band - map[i].band) / (map[i + 1].band - map[i].band);
+      return map[i].theta + t * (map[i + 1].theta - map[i].theta);
     }
   }
-  return 3.0
+  return 3.0;
 }
 // ─────────────────────────────────────────────────────────────
 // FULL ESTIMATE: Trả về theta + band + SEM + confidence
@@ -242,34 +244,32 @@ export function getFullEstimate(
   responses: ItemResponse[],
   initialTheta: number = 0.0,
 ): ThetaEstimate {
-  const theta = estimateTheta(responses, initialTheta)
-  const sem = computeSEM(theta, responses)
-  const band = thetaToBand(theta)
+  const theta = estimateTheta(responses, initialTheta);
+  const sem = computeSEM(theta, responses);
+  const band = thetaToBand(theta);
 
   // Confidence dựa trên SEM
   // SEM < 0.35 → high (band estimate ±0.5 band)
   // SEM < 0.55 → medium (±1.0 band)
   // SEM ≥ 0.55 → low (>±1.0 band)
   const confidence: 'low' | 'medium' | 'high' =
-    sem < 0.35 ? 'high' :
-      sem < 0.55 ? 'medium' : 'low'
+    sem < 0.35 ? 'high' : sem < 0.55 ? 'medium' : 'low';
 
-  return { theta, band, sem, confidence }
+  return { theta, band, sem, confidence };
 }
 
 export function getFullEstimateEAP(
   responses: ItemResponse[],
   priorMean: number = 0.0,
 ): ThetaEstimate {
-  const theta = estimateThetaEAP(responses, priorMean)
-  const sem = computeSEM(theta, responses)
-  const band = thetaToBand(theta)
+  const theta = estimateThetaEAP(responses, priorMean);
+  const sem = computeSEM(theta, responses);
+  const band = thetaToBand(theta);
 
   const confidence: 'low' | 'medium' | 'high' =
-    sem < 0.35 ? 'high' :
-      sem < 0.55 ? 'medium' : 'low'
+    sem < 0.35 ? 'high' : sem < 0.55 ? 'medium' : 'low';
 
-  return { theta, band, sem, confidence }
+  return { theta, band, sem, confidence };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -281,20 +281,20 @@ export function selectOptimalItem(
   currentTheta: number,
   candidates: Array<{ id: string; params: IrtParams }>,
 ): string | null {
-  if (candidates.length === 0) return null
+  if (candidates.length === 0) return null;
 
-  let bestId = candidates[0].id
-  let bestInfo = -Infinity
+  let bestId = candidates[0].id;
+  let bestInfo = -Infinity;
 
   for (const candidate of candidates) {
-    const info = itemInformation(currentTheta, candidate.params)
+    const info = itemInformation(currentTheta, candidate.params);
     if (info > bestInfo) {
-      bestInfo = info
-      bestId = candidate.id
+      bestInfo = info;
+      bestId = candidate.id;
     }
   }
 
-  return bestId
+  return bestId;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -308,8 +308,8 @@ export function shouldStop(
   minItems: number = 6,
   semTarget: number = 0.45,
 ): boolean {
-  if (responses.length < minItems) return false
+  if (responses.length < minItems) return false;
 
-  const sem = computeSEM(theta, responses)
-  return sem < semTarget
+  const sem = computeSEM(theta, responses);
+  return sem < semTarget;
 }

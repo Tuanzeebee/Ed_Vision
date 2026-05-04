@@ -41,10 +41,13 @@ export class SpotifyService {
 
   constructor(private configService: ConfigService) {
     this.clientId = this.configService.get<string>('SPOTIFY_CLIENT_ID') || '';
-    this.clientSecret = this.configService.get<string>('SPOTIFY_CLIENT_SECRET') || '';
+    this.clientSecret =
+      this.configService.get<string>('SPOTIFY_CLIENT_SECRET') || '';
 
     if (!this.clientId || !this.clientSecret) {
-      this.logger.warn('Spotify credentials not configured. Music search will be disabled.');
+      this.logger.warn(
+        'Spotify credentials not configured. Music search will be disabled.',
+      );
     }
   }
 
@@ -74,7 +77,7 @@ export class SpotifyService {
       );
 
       const { access_token, expires_in } = response.data;
-      
+
       // Cache token with 5 minutes buffer before expiry
       this.tokenCache = {
         access_token,
@@ -121,8 +124,9 @@ export class SpotifyService {
       // Map Spotify tracks to our format
       const tracks = items.map((track) => {
         // Get album cover (prefer medium size)
-        const albumImage = track.album.images.find((img) => img.height >= 300) || 
-                          track.album.images[0];
+        const albumImage =
+          track.album.images.find((img) => img.height >= 300) ||
+          track.album.images[0];
 
         // Format duration
         const durationMs = track.duration_ms;
@@ -145,7 +149,8 @@ export class SpotifyService {
         };
       });
 
-      const nextOffset = offset + items.length < total ? offset + items.length : null;
+      const nextOffset =
+        offset + items.length < total ? offset + items.length : null;
 
       return {
         tracks,
@@ -155,7 +160,7 @@ export class SpotifyService {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
-        
+
         if (status === 401) {
           this.logger.error('Spotify authentication failed');
           throw new HttpException(

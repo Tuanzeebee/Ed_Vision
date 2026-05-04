@@ -376,6 +376,7 @@ const IELTSTestView: React.FC<{
   const [isThinking, setIsThinking] = useState(false);
   const [audioDone, setAudioDone] = useState(false);
   const [speakingResult, setSpeakingResult] = useState<{ band: number; feedback: string } | null>(null);
+  const submittedRef = useRef(false);
 
   // DEBUG — xóa sau khi test xong
   useEffect(() => {
@@ -408,7 +409,8 @@ const IELTSTestView: React.FC<{
   }, [currentQuestion.id]);
 
   const submitCurrentAnswer = async (answer: string) => {
-    if (isSubmitting) return;
+    if (isSubmitting || submittedRef.current) return;
+    submittedRef.current = true;
     setIsSubmitting(true);
     try {
       const elapsedSec = Math.max(1, Math.round((Date.now() - questionStartedAt) / 1000));
@@ -431,6 +433,7 @@ const IELTSTestView: React.FC<{
       setAudioDone(false);
       setSpeakingResult(null);
       setResetKey(k => k + 1);
+      submittedRef.current = false;
     } catch (e) {
       setIsFinished(true);
     } finally {
@@ -560,25 +563,16 @@ const IELTSTestView: React.FC<{
               </div>
               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                 {currentQuestion.contextType === 'audio' && currentQuestion.passage.audioUrl ? (
-                  <>
-                    <ListeningPlayer
-                      audioUrl={currentQuestion.passage.audioUrl}
-                      onFinished={() => setAudioDone(true)}
-                    />
-                    {/* Transcript chỉ hiện SAU khi nghe xong hoặc user nhấn dừng */}
-                    {audioDone && (
-                      <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-                          Transcript
-                        </p>
-                        <div className="text-base leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
-                          {currentQuestion.passage.content}
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  // LISTENING: chỉ hiện audio player, KHÔNG hiện text
+                  <ListeningPlayer
+                    audioUrl={currentQuestion.passage.audioUrl}
+                    onFinished={() => setAudioDone(true)}
+                  />
+                ) : (currentQuestion.skill === 'speaking' || currentQuestion.questionType === 'speaking') ? (
+                  // SPEAKING: không cần passage, không hiện gì
+                  null
                 ) : (
-                  // Reading passage — hiện luôn bình thường
+                  // READING: hiện text bình thường
                   <div className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-wrap">
                     {currentQuestion.passage.content}
                   </div>
@@ -641,6 +635,7 @@ const IELTSTestView: React.FC<{
                           setAudioDone(false);
                           setSpeakingResult(null);
                           setResetKey(k => k + 1);
+                          submittedRef.current = false;
                         }
                       }, 3000);
                     }}

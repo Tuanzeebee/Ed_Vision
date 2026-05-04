@@ -9,7 +9,12 @@ import { PrismaService } from '../prisma/prisma.service';
 @Module({
   imports: [PrismaModule],
   controllers: [IeltsAdaptiveController],
-  providers: [IeltsAdaptiveService, BandEstimationService, EvaluationService, PrismaService],
+  providers: [
+    IeltsAdaptiveService,
+    BandEstimationService,
+    EvaluationService,
+    PrismaService,
+  ],
   exports: [IeltsAdaptiveService],
 })
 export class IeltsAdaptiveModule {}

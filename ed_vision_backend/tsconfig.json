@@ -15,7 +15,7 @@
     "downlevelIteration": true,
     "useDefineForClassFields": false,
     "sourceMap": true,
-    "rootDir": "./src",
+  "rootDir": "./",
     "outDir": "./dist",
     "baseUrl": "./",
     "ignoreDeprecations": "5.0",
@@ -29,5 +29,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "include": ["src", "scripts"]
 }

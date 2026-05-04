@@ -64,7 +64,9 @@ export class IeltsAdaptiveController {
   async getMyRoadmap(@Req() req: any): Promise<any> {
     const accountId = Number(req?.user?.account_id ?? req?.user?.id);
     if (!Number.isFinite(accountId) || accountId <= 0) {
-      throw new BadRequestException('Unable to resolve account id from JWT token');
+      throw new BadRequestException(
+        'Unable to resolve account id from JWT token',
+      );
     }
     return this.service.getOrCreateRoadmapForAccount(accountId);
   }
@@ -177,9 +179,12 @@ export class IeltsAdaptiveController {
 
   @UseGuards(DevAuthGuard)
   @Post('band-tests/:testId/apply')
-  async applyBandResult(
-    @Param('testId') testId: string,
-  ): Promise<{ applied: boolean; new_band: number; band_change: string; roadmap_regenerated: boolean }> {
+  async applyBandResult(@Param('testId') testId: string): Promise<{
+    applied: boolean;
+    new_band: number;
+    band_change: string;
+    roadmap_regenerated: boolean;
+  }> {
     return this.service.applyBandResult(testId);
   }
 
@@ -209,7 +214,9 @@ export class IeltsAdaptiveController {
 
   @UseGuards(DevAuthGuard)
   @Post('roadmap')
-  async createRoadmap(@Body() dto: CreateRoadmapDto): Promise<RoadmapResponseDto> {
+  async createRoadmap(
+    @Body() dto: CreateRoadmapDto,
+  ): Promise<RoadmapResponseDto> {
     return this.service.createRoadmap(dto);
   }
 

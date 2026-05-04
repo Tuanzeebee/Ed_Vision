@@ -70,6 +70,7 @@ export async function submitPlacementAnswer(
   payload: SubmitPlacementInput,
 ): Promise<SubmitPlacementResult> {
   const res = await apiClient.post<SubmitPlacementResult>('/placement/answer', payload)
+  console.log('[API] nextQuestion fields:', JSON.stringify(res.data.nextQuestion, null, 2))
   return res.data
 }
 

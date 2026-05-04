@@ -20,7 +20,6 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { GradeStructure } from '../../mongodb/schemas/grade-structure.schema';
 
-
 type ServiceResponse<T = any> = Promise<{
   success: boolean;
   message?: string;
@@ -427,7 +426,9 @@ export class PredictionService {
         query.teacher_id = teacherId;
       }
 
-      const gradeDocument = await this.studentGradeModel.findOne(query).lean<any>();
+      const gradeDocument = await this.studentGradeModel
+        .findOne(query)
+        .lean<any>();
       if (!gradeDocument) {
         throw new BadRequestException('Upload not found');
       }
@@ -495,10 +496,12 @@ export class PredictionService {
       }
 
       const uploads = await this.studentGradeModel
-      .find(query)
-      .sort({ upload_date: -1 })
-      .select('_id course_code class_code semester academic_year upload_date students')
-      .lean<any[]>();
+        .find(query)
+        .sort({ upload_date: -1 })
+        .select(
+          '_id course_code class_code semester academic_year upload_date students',
+        )
+        .lean<any[]>();
 
       // Add summary info
       const uploadsWithSummary = uploads.map((upload) => ({

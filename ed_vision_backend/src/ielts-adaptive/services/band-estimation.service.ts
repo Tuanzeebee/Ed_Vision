@@ -63,8 +63,9 @@ export class BandEstimationService {
 
     // Bước 1: Tính accuracy tổng quát
     const totalQuestions = input.questionResults.length;
-    const correctAnswers = input.questionResults.filter((r) => r.isCorrect)
-      .length;
+    const correctAnswers = input.questionResults.filter(
+      (r) => r.isCorrect,
+    ).length;
     const accuracy = (correctAnswers / totalQuestions) * 100;
 
     // Bước 2: Tính tỷ lệ thời gian thực tế / kỳ vọng (càng gần 1.0 càng tốt)
@@ -90,14 +91,17 @@ export class BandEstimationService {
     // Tạo danh sách cảnh báo
     const warnings: string[] = [];
     if (suspiciousFastAnswers > 0) {
-      const suspiciousCorrect = suspiciousFastList.filter((r) => r.isCorrect).length;
+      const suspiciousCorrect = suspiciousFastList.filter(
+        (r) => r.isCorrect,
+      ).length;
       const suspiciousWrong = suspiciousFastAnswers - suspiciousCorrect;
       warnings.push(
         `⚠️ ${suspiciousFastAnswers} câu trả lời quá nhanh (< 30% thời gian kỳ vọng): ` +
-        `${suspiciousCorrect} đúng, ${suspiciousWrong} sai – có thể đoán mò.`,
+          `${suspiciousCorrect} đúng, ${suspiciousWrong} sai – có thể đoán mò.`,
       );
     }
-    const suspiciousRatio = totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
+    const suspiciousRatio =
+      totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
     if (suspiciousRatio >= 0.2) {
       warnings.push(
         `🚨 Hơn ${Math.round(suspiciousRatio * 100)}% số câu làm quá nhanh – kết quả band không đáng tin cậy.`,
@@ -187,9 +191,7 @@ export class BandEstimationService {
    *
    * Kết quả cuối cùng được giới hạn trong [0.5 ; 1.2].
    */
-  private calculateResponseTimeFactor(
-    results: QuestionResult[],
-  ): number {
+  private calculateResponseTimeFactor(results: QuestionResult[]): number {
     if (!results.length) return 1.0;
 
     let factor = 1.0;
@@ -267,7 +269,8 @@ export class BandEstimationService {
     const accuracies = recentTests.map((t) => Number(t.accuracy_percent));
     const accMean = accuracies.reduce((s, v) => s + v, 0) / accuracies.length;
     const accStdDev = Math.sqrt(
-      accuracies.reduce((s, v) => s + Math.pow(v - accMean, 2), 0) / accuracies.length,
+      accuracies.reduce((s, v) => s + Math.pow(v - accMean, 2), 0) /
+        accuracies.length,
     );
     // stdDev 0 → 100%, stdDev 20 → 50%, stdDev 40+ → 0%
     const accConsistency = Math.max(0, Math.min(100, 100 - accStdDev * 2.5));
@@ -281,7 +284,8 @@ export class BandEstimationService {
     if (rtfValues.length >= 2) {
       const rtfMean = rtfValues.reduce((s, v) => s + v, 0) / rtfValues.length;
       const rtfStdDev = Math.sqrt(
-        rtfValues.reduce((s, v) => s + Math.pow(v - rtfMean, 2), 0) / rtfValues.length,
+        rtfValues.reduce((s, v) => s + Math.pow(v - rtfMean, 2), 0) /
+          rtfValues.length,
       );
       // stdDev 0 → 100%, stdDev 0.2 → 50%, stdDev 0.4+ → 0%
       rtfConsistency = Math.max(0, Math.min(100, 100 - rtfStdDev * 250));
@@ -466,15 +470,15 @@ export class BandEstimationService {
     let recommendation: Recommendation;
 
     if (bandChange === BandChange.UP) {
-      recommendation = Recommendation.ADVANCE;  // Tiến lên band cao hơn
+      recommendation = Recommendation.ADVANCE; // Tiến lên band cao hơn
     } else if (bandChange === BandChange.DOWN) {
       recommendation = Recommendation.REMEDIAL; // Cần nhắc lại kiến thức
     } else {
       // STABLE: xem xét thêm kỹ năng yếu
       if (weakSkills.length > 0) {
-        recommendation = Recommendation.MAINTAIN;  // Củng cố kỹ năng chưa vững
+        recommendation = Recommendation.MAINTAIN; // Củng cố kỹ năng chưa vững
       } else {
-        recommendation = Recommendation.ADVANCE;   // Ổn định, sẵn sàng vươn lên
+        recommendation = Recommendation.ADVANCE; // Ổn định, sẵn sàng vươn lên
       }
     }
 

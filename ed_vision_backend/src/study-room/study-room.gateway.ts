@@ -61,7 +61,9 @@ export class StudyRoomGateway
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to authenticate socket';
+        error instanceof Error
+          ? error.message
+          : 'Unable to authenticate socket';
       client.emit('room.error', { message });
       client.disconnect();
     }
@@ -162,14 +164,13 @@ export class StudyRoomGateway
         payload.enabled,
       );
 
-      this.server.to(this.getRoomChannel(payload.roomId)).emit(
-        'user_mic_updated',
-        {
+      this.server
+        .to(this.getRoomChannel(payload.roomId))
+        .emit('user_mic_updated', {
           roomId: payload.roomId,
           userId: user.accountId,
           enabled: payload.enabled,
-        },
-      );
+        });
 
       return {
         success: true,
@@ -196,14 +197,13 @@ export class StudyRoomGateway
         payload.enabled,
       );
 
-      this.server.to(this.getRoomChannel(payload.roomId)).emit(
-        'user_camera_updated',
-        {
+      this.server
+        .to(this.getRoomChannel(payload.roomId))
+        .emit('user_camera_updated', {
           roomId: payload.roomId,
           userId: user.accountId,
           enabled: payload.enabled,
-        },
-      );
+        });
 
       return {
         success: true,
@@ -277,10 +277,12 @@ export class StudyRoomGateway
         .in(this.getUserRoom(payload.targetUserId))
         .socketsLeave(this.getRoomChannel(payload.roomId));
 
-      this.server.to(this.getUserRoom(payload.targetUserId)).emit('force_leave', {
-        roomId: payload.roomId,
-        reason: 'kicked',
-      });
+      this.server
+        .to(this.getUserRoom(payload.targetUserId))
+        .emit('force_leave', {
+          roomId: payload.roomId,
+          reason: 'kicked',
+        });
 
       this.server.to(this.getRoomChannel(payload.roomId)).emit('user_left', {
         roomId: payload.roomId,
@@ -318,11 +320,13 @@ export class StudyRoomGateway
         .socketsLeave(this.getRoomChannel(payload.roomId));
 
       if (result.forcedLeave) {
-        this.server.to(this.getUserRoom(payload.targetUserId)).emit('force_leave', {
-          roomId: payload.roomId,
-          reason: 'banned',
-          banned_until: result.bannedUntil,
-        });
+        this.server
+          .to(this.getUserRoom(payload.targetUserId))
+          .emit('force_leave', {
+            roomId: payload.roomId,
+            reason: 'banned',
+            banned_until: result.bannedUntil,
+          });
       }
 
       this.server.to(this.getRoomChannel(payload.roomId)).emit('user_left', {
@@ -446,22 +450,22 @@ export class StudyRoomGateway
     @MessageBody() payload: { roomId: number },
   ) {
     const user = this.getSocketUser(client);
-      try {
-        const result = await this.studyRoomService.leaveRoom(
-          user.accountId,
-          client.id,
-          payload.roomId,
-          'left',
-        );
-        await this.studyRoomService.clearRealtimeMediaState(
-          payload.roomId,
-          user.accountId,
-        );
+    try {
+      const result = await this.studyRoomService.leaveRoom(
+        user.accountId,
+        client.id,
+        payload.roomId,
+        'left',
+      );
+      await this.studyRoomService.clearRealtimeMediaState(
+        payload.roomId,
+        user.accountId,
+      );
 
-        this.getJoinedRooms(client).delete(payload.roomId);
-        client.leave(this.getRoomChannel(payload.roomId));
-        const users = await this.studyRoomService.removeUserFromRoomSocketList(
-          payload.roomId,
+      this.getJoinedRooms(client).delete(payload.roomId);
+      client.leave(this.getRoomChannel(payload.roomId));
+      const users = await this.studyRoomService.removeUserFromRoomSocketList(
+        payload.roomId,
         user.accountId,
       );
 
@@ -578,40 +582,42 @@ export class StudyRoomGateway
     @MessageBody() payload: KickRoomParticipantDto,
   ) {
     const user = this.getSocketUser(client);
-      try {
-        const result = await this.studyRoomService.kickParticipant(
-          user.accountId,
-          payload,
-        );
-        await this.studyRoomService.clearRealtimeMediaState(
-          payload.roomId,
-          payload.targetAccountId,
-        );
-        const users = await this.studyRoomService.removeUserFromRoomSocketList(
-          payload.roomId,
-          payload.targetAccountId,
-        );
+    try {
+      const result = await this.studyRoomService.kickParticipant(
+        user.accountId,
+        payload,
+      );
+      await this.studyRoomService.clearRealtimeMediaState(
+        payload.roomId,
+        payload.targetAccountId,
+      );
+      const users = await this.studyRoomService.removeUserFromRoomSocketList(
+        payload.roomId,
+        payload.targetAccountId,
+      );
 
-        for (const socketId of result.socketIds) {
-          this.server.in(socketId).socketsLeave(this.getRoomChannel(payload.roomId));
-        }
-
+      for (const socketId of result.socketIds) {
         this.server
-          .to(this.getUserRoom(payload.targetAccountId))
-          .emit('room.participant.kicked', {
-            roomId: payload.roomId,
-            targetAccountId: payload.targetAccountId,
-          });
+          .in(socketId)
+          .socketsLeave(this.getRoomChannel(payload.roomId));
+      }
 
-        this.server.to(this.getRoomChannel(payload.roomId)).emit('user_left', {
+      this.server
+        .to(this.getUserRoom(payload.targetAccountId))
+        .emit('room.participant.kicked', {
           roomId: payload.roomId,
-          userId: payload.targetAccountId,
-          users,
+          targetAccountId: payload.targetAccountId,
         });
 
-        this.server
-          .to(this.getRoomChannel(payload.roomId))
-          .emit('room.participant.left', {
+      this.server.to(this.getRoomChannel(payload.roomId)).emit('user_left', {
+        roomId: payload.roomId,
+        userId: payload.targetAccountId,
+        users,
+      });
+
+      this.server
+        .to(this.getRoomChannel(payload.roomId))
+        .emit('room.participant.left', {
           roomId: payload.roomId,
           participant: result.participant,
           reason: 'kicked',
@@ -634,40 +640,42 @@ export class StudyRoomGateway
     @MessageBody() payload: BanRoomParticipantDto,
   ) {
     const user = this.getSocketUser(client);
-      try {
-        const result = await this.studyRoomService.banParticipant(
-          user.accountId,
-          payload,
-        );
-        await this.studyRoomService.clearRealtimeMediaState(
-          payload.roomId,
-          payload.targetAccountId,
-        );
-        const users = await this.studyRoomService.removeUserFromRoomSocketList(
-          payload.roomId,
-          payload.targetAccountId,
-        );
+    try {
+      const result = await this.studyRoomService.banParticipant(
+        user.accountId,
+        payload,
+      );
+      await this.studyRoomService.clearRealtimeMediaState(
+        payload.roomId,
+        payload.targetAccountId,
+      );
+      const users = await this.studyRoomService.removeUserFromRoomSocketList(
+        payload.roomId,
+        payload.targetAccountId,
+      );
 
-        for (const socketId of result.socketIds) {
-          this.server.in(socketId).socketsLeave(this.getRoomChannel(payload.roomId));
-        }
-
+      for (const socketId of result.socketIds) {
         this.server
-          .to(this.getUserRoom(payload.targetAccountId))
-          .emit('room.participant.banned', {
-            roomId: payload.roomId,
-            targetAccountId: payload.targetAccountId,
-            bannedUntil: result.bannedUntil,
-          });
+          .in(socketId)
+          .socketsLeave(this.getRoomChannel(payload.roomId));
+      }
 
-        this.server.to(this.getRoomChannel(payload.roomId)).emit('user_left', {
+      this.server
+        .to(this.getUserRoom(payload.targetAccountId))
+        .emit('room.participant.banned', {
           roomId: payload.roomId,
-          userId: payload.targetAccountId,
-          users,
+          targetAccountId: payload.targetAccountId,
+          bannedUntil: result.bannedUntil,
         });
 
-        if (result.participant) {
-          this.server
+      this.server.to(this.getRoomChannel(payload.roomId)).emit('user_left', {
+        roomId: payload.roomId,
+        userId: payload.targetAccountId,
+        users,
+      });
+
+      if (result.participant) {
+        this.server
           .to(this.getRoomChannel(payload.roomId))
           .emit('room.participant.left', {
             roomId: payload.roomId,

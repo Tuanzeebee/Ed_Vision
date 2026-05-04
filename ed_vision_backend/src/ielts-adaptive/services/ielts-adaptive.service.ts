@@ -74,7 +74,7 @@ export class IeltsAdaptiveService {
     currentBand: number;
     targetBand: number;
   } {
-    const planState = enrollment.toeic_plan_state as any;
+    const planState = enrollment.toeic_plan_state;
     const currentBand =
       this.readBandFromPlanState(planState, 'currentBand') ??
       this.getBandFromScore(enrollment.current_score) ??
@@ -103,7 +103,9 @@ export class IeltsAdaptiveService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student profile not found for current account');
+      throw new NotFoundException(
+        'Student profile not found for current account',
+      );
     }
 
     let enrollment = await this.prisma.certificateEnrollment.findFirst({
@@ -154,7 +156,8 @@ export class IeltsAdaptiveService {
     totalLessons: number,
     targetDate: Date | null | undefined,
   ): (Date | null)[] {
-    if (!targetDate || totalLessons === 0) return Array(totalLessons).fill(null);
+    if (!targetDate || totalLessons === 0)
+      return Array(totalLessons).fill(null);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -165,7 +168,9 @@ export class IeltsAdaptiveService {
     if (totalDays <= 0) return Array(totalLessons).fill(null);
 
     return Array.from({ length: totalLessons }, (_, i) => {
-      const offset = Math.round((i / Math.max(totalLessons - 1, 1)) * totalDays);
+      const offset = Math.round(
+        (i / Math.max(totalLessons - 1, 1)) * totalDays,
+      );
       const d = new Date(today);
       d.setDate(d.getDate() + offset);
       return d;
@@ -187,7 +192,9 @@ export class IeltsAdaptiveService {
       (lesson: any) => lesson.status === LessonStatus.COMPLETED,
     ).length;
     const progressPercent =
-      lessons.length > 0 ? Math.round((completedLessons / lessons.length) * 100) : 0;
+      lessons.length > 0
+        ? Math.round((completedLessons / lessons.length) * 100)
+        : 0;
 
     const skills = await this.getSkillProgress(roadmap.enrollment_id);
     const bandTestUnlocked = progressPercent >= 70;
@@ -250,7 +257,8 @@ export class IeltsAdaptiveService {
     });
 
     if (!roadmap) {
-      const { currentBand, targetBand } = this.resolveBandsFromEnrollment(enrollment);
+      const { currentBand, targetBand } =
+        this.resolveBandsFromEnrollment(enrollment);
       roadmap = await this.generateRoadmapForEnrollment(
         enrollment.id,
         currentBand,
@@ -300,22 +308,31 @@ export class IeltsAdaptiveService {
     const targetBand = payload?.target_band ?? enrollmentBands.targetBand;
 
     const generated = roadmap
-      ? await this.regenerateRoadmap(roadmap.id, currentBand, Recommendation.MAINTAIN)
-      : await this.generateRoadmapForEnrollment(enrollment.id, currentBand, targetBand);
+      ? await this.regenerateRoadmap(
+          roadmap.id,
+          currentBand,
+          Recommendation.MAINTAIN,
+        )
+      : await this.generateRoadmapForEnrollment(
+          enrollment.id,
+          currentBand,
+          targetBand,
+        );
 
-    const roadmapWithLessons = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
-      where: { id: generated.id },
-      include: {
-        lessons: {
-          orderBy: { lesson_order: 'asc' },
-          include: {
-            flashcardRepo: true,
-            practiceRepo: true,
-            miniTestRepo: true,
+    const roadmapWithLessons =
+      await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+        where: { id: generated.id },
+        include: {
+          lessons: {
+            orderBy: { lesson_order: 'asc' },
+            include: {
+              flashcardRepo: true,
+              practiceRepo: true,
+              miniTestRepo: true,
+            },
           },
         },
-      },
-    });
+      });
 
     if (!roadmapWithLessons) {
       throw new NotFoundException('Roadmap not found after generation');
@@ -358,12 +375,14 @@ export class IeltsAdaptiveService {
   ): Promise<any> {
     const { enrollment } = await this.getOrCreateStudentEnrollment(accountId);
 
-    const roadmap:any = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+    const roadmap: any = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
       where: { enrollment_id: enrollment.id },
     });
 
     if (!roadmap) {
-      throw new NotFoundException('Roadmap not found. Please generate a roadmap first.');
+      throw new NotFoundException(
+        'Roadmap not found. Please generate a roadmap first.',
+      );
     }
 
     const newTargetBand = dto.target_band ?? Number(roadmap.target_band);
@@ -390,7 +409,9 @@ export class IeltsAdaptiveService {
           ...existingPlanState,
           targetBand: newTargetBand,
           currentBand: newCurrentBand,
-          targetCompletionDate: dto.target_completion_date ?? existingPlanState.targetCompletionDate,
+          targetCompletionDate:
+            dto.target_completion_date ??
+            existingPlanState.targetCompletionDate,
         },
         target_score: Math.round(newTargetBand * 100),
         current_score: Math.round(newCurrentBand * 100),
@@ -398,7 +419,12 @@ export class IeltsAdaptiveService {
     });
 
     // Regenerate roadmap lessons with updated bands and new target date
-    await this.regenerateRoadmap(roadmap.id, newCurrentBand, Recommendation.MAINTAIN, newTargetDate);
+    await this.regenerateRoadmap(
+      roadmap.id,
+      newCurrentBand,
+      Recommendation.MAINTAIN,
+      newTargetDate,
+    );
 
     // Return full formatted roadmap
     const updated = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
@@ -450,14 +476,19 @@ export class IeltsAdaptiveService {
     });
 
     if (existing) {
-      throw new BadRequestException('Roadmap already exists for this enrollment');
+      throw new BadRequestException(
+        'Roadmap already exists for this enrollment',
+      );
     }
 
     // Xác định mức độ khó tương ứng với band hiện tại
     const difficulty = this.getDifficultyLevel(dto.current_band);
 
     // Tìm kiếm và chuẩn bị danh sách bài học từ repository
-    const lessons = await this.generateLessons(dto.current_band, dto.target_band);
+    const lessons = await this.generateLessons(
+      dto.current_band,
+      dto.target_band,
+    );
 
     if (lessons.length === 0) {
       throw new BadRequestException(
@@ -481,7 +512,9 @@ export class IeltsAdaptiveService {
     // Phân bổ ngày học đều từ hôm nay đến ngày thi
     const scheduledDates = this.computeScheduledDates(
       lessons.length,
-      (dto as any).target_completion_date ? new Date((dto as any).target_completion_date) : null,
+      (dto as any).target_completion_date
+        ? new Date((dto as any).target_completion_date)
+        : null,
     );
 
     // Lưu từng bài học: bài đầu mở khoá, còn lại khoá chờ mở tuần tự
@@ -513,7 +546,7 @@ export class IeltsAdaptiveService {
       ...roadmap,
       current_band: Number(roadmap.current_band),
       target_band: Number(roadmap.target_band),
-      lesson_sequence: roadmap.lesson_sequence as number[],
+      lesson_sequence: roadmap.lesson_sequence,
       lessons: createdLessons,
     };
   }
@@ -545,7 +578,7 @@ export class IeltsAdaptiveService {
       ...roadmap,
       current_band: Number(roadmap.current_band),
       target_band: Number(roadmap.target_band),
-      lesson_sequence: roadmap.lesson_sequence as number[],
+      lesson_sequence: roadmap.lesson_sequence,
     };
   }
 
@@ -614,7 +647,10 @@ export class IeltsAdaptiveService {
         ? targetCompletionDate
         : (roadmapAny.target_completion_date as Date | null);
 
-    const scheduledDates = this.computeScheduledDates(lessons.length, effectiveTargetDate);
+    const scheduledDates = this.computeScheduledDates(
+      lessons.length,
+      effectiveTargetDate,
+    );
 
     // Create new lessons
     const createdLessons: any[] = [];
@@ -642,7 +678,7 @@ export class IeltsAdaptiveService {
       ...updated,
       current_band: Number(updated.current_band),
       target_band: Number(updated.target_band),
-      lesson_sequence: updated.lesson_sequence as number[],
+      lesson_sequence: updated.lesson_sequence,
       lessons: createdLessons,
     };
   }
@@ -662,13 +698,28 @@ export class IeltsAdaptiveService {
       where: { id: lessonId },
       include: {
         flashcardRepo: {
-          include: { items: { include: { options: true }, orderBy: { item_order: 'asc' } } },
+          include: {
+            items: {
+              include: { options: true },
+              orderBy: { item_order: 'asc' },
+            },
+          },
         },
         practiceRepo: {
-          include: { items: { include: { options: true }, orderBy: { item_order: 'asc' } } },
+          include: {
+            items: {
+              include: { options: true },
+              orderBy: { item_order: 'asc' },
+            },
+          },
         },
         miniTestRepo: {
-          include: { items: { include: { options: true }, orderBy: { item_order: 'asc' } } },
+          include: {
+            items: {
+              include: { options: true },
+              orderBy: { item_order: 'asc' },
+            },
+          },
         },
       },
     });
@@ -901,7 +952,9 @@ export class IeltsAdaptiveService {
       correct_count: session.correct_count,
       accuracy_percent: Number(session.accuracy_percent),
       total_time_sec: session.total_time_sec ?? undefined,
-      avg_time_per_q: session.avg_time_per_q ? Number(session.avg_time_per_q) : undefined,
+      avg_time_per_q: session.avg_time_per_q
+        ? Number(session.avg_time_per_q)
+        : undefined,
       error_analysis: session.error_analysis as any,
       detailed_results: detailedResults,
     };
@@ -943,7 +996,9 @@ export class IeltsAdaptiveService {
    */
   async createBandTest(dto: CreateBandTestDto): Promise<BandTestResponseDto> {
     if (!dto.roadmap_id) {
-      throw new BadRequestException('roadmap_id is required to create band test');
+      throw new BadRequestException(
+        'roadmap_id is required to create band test',
+      );
     }
 
     this.logger.log(`Creating band test for roadmap ${dto.roadmap_id}`);
@@ -1011,7 +1066,9 @@ export class IeltsAdaptiveService {
       band_level: Number(bandTest.band_level),
       accuracy_percent: Number(bandTest.accuracy_percent),
       response_time_factor: Number(bandTest.response_time_factor),
-      consistency_score: bandTest.consistency_score ? Number(bandTest.consistency_score) : undefined,
+      consistency_score: bandTest.consistency_score
+        ? Number(bandTest.consistency_score)
+        : undefined,
       previous_band: Number(bandTest.previous_band),
       estimated_band: Number(bandTest.estimated_band),
       band_change: bandTest.band_change as BandChange,
@@ -1057,7 +1114,10 @@ export class IeltsAdaptiveService {
 
     // Chấm điểm và tổng hợp kết quả theo từng kỹ năng
     const questionResults: any[] = [];
-    const skillResults: Record<string, { correct: number; total: number; times: number[] }> = {};
+    const skillResults: Record<
+      string,
+      { correct: number; total: number; times: number[] }
+    > = {};
 
     for (const question of questions) {
       const studentAnswer = dto.answers[question.id];
@@ -1104,7 +1164,10 @@ export class IeltsAdaptiveService {
       skillBreakdown,
     });
 
-    const totalTime = Object.values(dto.time_per_question).reduce((a: number, b: number) => a + b, 0);
+    const totalTime = Object.values(dto.time_per_question).reduce(
+      (a: number, b: number) => a + b,
+      0,
+    );
 
     // Lưu kết quả hoàn chỉnh vào DB, đánh dấu status='completed'
     // Lưu ý: CHƯA áp dụng band mới vào lộ trình — chờ người dùng xác nhận (applyBandResult)
@@ -1150,7 +1213,9 @@ export class IeltsAdaptiveService {
       band_level: Number(updated.band_level),
       accuracy_percent: Number(updated.accuracy_percent),
       response_time_factor: Number(updated.response_time_factor),
-      consistency_score: updated.consistency_score ? Number(updated.consistency_score) : undefined,
+      consistency_score: updated.consistency_score
+        ? Number(updated.consistency_score)
+        : undefined,
       previous_band: Number(updated.previous_band),
       estimated_band: Number(updated.estimated_band),
       band_change: updated.band_change as BandChange,
@@ -1219,11 +1284,18 @@ export class IeltsAdaptiveService {
         .map((q) => q.skill ?? (bandTest.skills_tested[0] || 'reading'));
 
       if (wrongSkills.length) {
-        await this.evaluation.updateWeakPoints(bandTest.roadmap.enrollment_id, wrongSkills);
-        await this.evaluation.generateRecommendations(bandTest.roadmap.enrollment_id);
+        await this.evaluation.updateWeakPoints(
+          bandTest.roadmap.enrollment_id,
+          wrongSkills,
+        );
+        await this.evaluation.generateRecommendations(
+          bandTest.roadmap.enrollment_id,
+        );
       }
     } catch (err: any) {
-      this.logger.warn(`Evaluation update failed (non-critical): ${err?.message}`);
+      this.logger.warn(
+        `Evaluation update failed (non-critical): ${err?.message}`,
+      );
     }
 
     return {
@@ -1447,23 +1519,23 @@ export class IeltsAdaptiveService {
     enrollmentId: number,
   ): Promise<SkillProgressResponseDto[]> {
     const progressRecords = await this.prisma.ieltsSkillProgress.findMany({
-        where: { enrollment_id: enrollmentId },
-        orderBy: { skill_area: 'asc' },
+      where: { enrollment_id: enrollmentId },
+      orderBy: { skill_area: 'asc' },
     });
 
     return progressRecords.map((p) => ({
-        id: p.id,
-        enrollment_id: p.enrollment_id,
-        skill_area: p.skill_area as SkillArea,
-        current_band: Number(p.current_band),
-        lessons_completed: p.lessons_completed,
-        total_practice: p.total_practice,
-        accuracy_rate: Number(p.accuracy_rate),
-        recent_sessions: (p.recent_sessions as any[]) || [],
-        weak_topics: (p.weak_topics as any[]) || [],
-        last_practiced_at: p.last_practiced_at ?? undefined,
+      id: p.id,
+      enrollment_id: p.enrollment_id,
+      skill_area: p.skill_area as SkillArea,
+      current_band: Number(p.current_band),
+      lessons_completed: p.lessons_completed,
+      total_practice: p.total_practice,
+      accuracy_rate: Number(p.accuracy_rate),
+      recent_sessions: (p.recent_sessions as any[]) || [],
+      weak_topics: (p.weak_topics as any[]) || [],
+      last_practiced_at: p.last_practiced_at ?? undefined,
     }));
-    }
+  }
 
   /**
    * Wrapper: lấy tiến độ kỹ năng theo accountId (tự resolve enrollment).

@@ -5,9 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import * as express from 'express';
 import * as fs from 'fs';
-import {
-  getTrustedProxySetting,
-} from './common/config/network.config';
+import { getTrustedProxySetting } from './common/config/network.config';
 import { RedisIoAdapter } from './websocket/redis-io.adapter';
 
 async function bootstrap() {
@@ -22,15 +20,17 @@ async function bootstrap() {
   });
 
   // Create directories if they don't exist
-  const uploadsDir = join(__dirname, '..', 'uploads');
+  const uploadsDir = join(process.cwd(), 'uploads');
   const passagesDir = join(uploadsDir, 'audio', 'passages');
   const speakingDir = join(uploadsDir, 'audio', 'speaking');
-  
-  [uploadsDir, join(uploadsDir, 'audio'), passagesDir, speakingDir].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
+
+  [uploadsDir, join(uploadsDir, 'audio'), passagesDir, speakingDir].forEach(
+    (dir) => {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    },
+  );
 
   // Serve static audio files
   app.useStaticAssets(join(uploadsDir, 'audio'), {

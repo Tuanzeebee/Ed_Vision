@@ -1,6 +1,9 @@
 import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
-const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://localhost:3000'];
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
 
 export function getAllowedOrigins(): string[] {
   const rawOrigins = process.env.CORS_ORIGINS?.trim();

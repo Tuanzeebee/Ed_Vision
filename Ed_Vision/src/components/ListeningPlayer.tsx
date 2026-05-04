@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-
-const BACKEND_URL = 'http://localhost:3000'
+import { buildAssetUrl } from '@/services/api/config'
 
 interface Props {
   audioUrl: string       // "/audio/passages/xxx.mp3"
@@ -25,7 +24,8 @@ export function ListeningPlayer({ audioUrl, onFinished }: Props) {
     if (status !== 'idle') return
     setStatus('loading')
 
-    const audio = new Audio(`${BACKEND_URL}${audioUrl}`)
+  const resolvedUrl = buildAssetUrl(audioUrl)
+  const audio = new Audio(resolvedUrl)
     audioRef.current = audio
 
     audio.oncanplaythrough = () => {
@@ -40,7 +40,7 @@ export function ListeningPlayer({ audioUrl, onFinished }: Props) {
 
     audio.onerror = () => {
       setStatus('idle')
-      console.error('Audio load failed')
+      console.error('Audio load failed', { audioUrl, resolvedUrl })
     }
   }
 
