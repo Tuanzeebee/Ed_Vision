@@ -52,6 +52,8 @@ interface PracticeQuestion {
   options: QuestionOption[];
   correctAnswer: "A" | "B" | "C" | "D";
   explanation: string;
+  audioUrl?: string | null;
+  imageUrl?: string | null;
 }
 
 interface AiTutorExplanation {
@@ -1521,6 +1523,8 @@ export default function ToeicNodePracticePage() {
           correctAnswer: (q.options.find((o) => o.is_correct)?.option_key ??
             "A") as "A" | "B" | "C" | "D",
           explanation: (q.ai_explanation ?? "").trim(),
+          audioUrl: q.context_audio || null,
+          imageUrl: q.context_image || null,
         }));
         setDbQuestions(mapped.length > 0 ? mapped : null);
         setSessionQuestionIds(data.questions.map((q) => q.id));
@@ -3455,11 +3459,41 @@ export default function ToeicNodePracticePage() {
                   {nodeInfo.partLabel}
                 </span>
               </div>
-              {/* Audio play button for listening — single icon, no duplicate */}
-              {isListening && currentQuestion.context ? (
+              {/* Image for listening (Part 1 photos, Part 3/4 charts) */}
+              {isListening && currentQuestion.imageUrl && (
+                <div className="mb-3 flex justify-center">
+                  <img
+                    src={
+                      currentQuestion.imageUrl.startsWith("http")
+                        ? currentQuestion.imageUrl
+                        : `http://localhost:3000${currentQuestion.imageUrl}`
+                    }
+                    alt="Listening context"
+                    className="max-h-64 rounded-lg border border-slate-200 object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+              {/* Real audio player for listening when audio URL exists */}
+              {isListening && currentQuestion.audioUrl ? (
+                <audio
+                  key={currentQuestion.id + "-audio"}
+                  controls
+                  className="w-full"
+                  src={
+                    currentQuestion.audioUrl.startsWith("http")
+                      ? currentQuestion.audioUrl
+                      : `http://localhost:3000${currentQuestion.audioUrl}`
+                  }
+                >
+                  Trình duyệt của bạn không hỗ trợ audio.
+                </audio>
+              ) : isListening && currentQuestion.context ? (
                 <AudioPlayButton
                   text={currentQuestion.context}
-                  label="Phát Audio"
+                  label="Phát Audio (TTS)"
                   accentClass={theme.textMuted}
                   bgClass={theme.bgMedium}
                   borderClass={theme.border}

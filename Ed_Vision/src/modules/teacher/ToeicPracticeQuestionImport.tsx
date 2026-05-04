@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   X,
   CheckCircle2,
+  ImageIcon,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
 import { useRef } from "react";
@@ -21,11 +22,13 @@ import {
   importToeicPracticeManualSupplement,
   listToeicPracticeQuestions,
   importPracticeAudio,
+  importPracticeImages,
   type ImportPracticeQuestionsResponse,
   type ImportPracticeAnswerKeyResponse,
   type ImportPracticeManualSupplementResponse,
   type PracticeQuestionsListResponse,
   type ImportPracticeAudioResponse,
+  type ImportPracticeImagesResponse,
 } from "@/services/api/certificateService";
 
 type PracticePartSelection =
@@ -165,6 +168,13 @@ export function ToeicPracticeQuestionImportBody({
   const [audioChunkError, setAudioChunkError] = useState<string | null>(null);
   const [audioChunkResult, setAudioChunkResult] =
     useState<ImportPracticeAudioResponse | null>(null);
+
+  // Image PDF import state (Listening practice)
+  const [practiceImagePdf, setPracticeImagePdf] = useState<File | null>(null);
+  const [isImageImporting, setIsImageImporting] = useState(false);
+  const [imageImportError, setImageImportError] = useState<string | null>(null);
+  const [imageImportResult, setImageImportResult] =
+    useState<ImportPracticeImagesResponse | null>(null);
 
   const [practiceQuestionList, setPracticeQuestionList] =
     useState<PracticeQuestionsListResponse | null>(null);
@@ -356,6 +366,33 @@ export function ToeicPracticeQuestionImportBody({
       setAudioChunkError(String(msg));
     } finally {
       setIsAudioChunking(false);
+    }
+  };
+
+  const handlePracticeImageImport = async () => {
+    const sid = practiceSetId.trim() || practiceResult?.practice_set_id || "";
+    if (!sid) {
+      setImageImportError("Vui lòng nạp câu hỏi trước hoặc nhập mã bộ câu hỏi.");
+      return;
+    }
+    if (!practiceImagePdf) {
+      setImageImportError("Vui lòng chọn file PDF chứa hình ảnh.");
+      return;
+    }
+    setIsImageImporting(true);
+    setImageImportError(null);
+    setImageImportResult(null);
+    try {
+      const res = await importPracticeImages(sid, practiceImagePdf);
+      setImageImportResult(res);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        err?.message ??
+        "Không thể trích xuất hình ảnh. Vui lòng thử lại.";
+      setImageImportError(String(msg));
+    } finally {
+      setIsImageImporting(false);
     }
   };
 
@@ -647,6 +684,11 @@ export function ToeicPracticeQuestionImportBody({
                   {practiceResult.detected_parts.join(", ") || "(none)"}
                 </strong>
               </p>
+              {typeof practiceResult.extracted_image_count === 'number' && practiceResult.extracted_image_count > 0 && (
+                <p className="mt-1 text-xs text-emerald-600">
+                  Hình ảnh trích xuất từ PDF: <strong>{practiceResult.extracted_image_count}</strong> ảnh
+                </p>
+              )}
             </div>
           )}
 
@@ -1027,6 +1069,90 @@ export function ToeicPracticeQuestionImportBody({
                 <><RefreshCw className="h-4 w-4 animate-spin" /> Đang tách audio...</>
               ) : (
                 <><Music className="h-4 w-4" /> Tách Audio Listening</>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Image PDF Import (Listening only) ── */}
+      {(selectionConfig.importScope === "full_listening" || ["1", "2", "3", "4"].includes(practicePartSelection)) && (
+        <div className="rounded-2xl border border-violet-200 bg-white shadow-md overflow-hidden">
+          <div className="px-6 py-5 space-y-4">
+            <div className="flex items-center gap-3 pb-1 border-b border-violet-100">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                <ImageIcon className="h-5 w-5 text-violet-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Nạp Hình Ảnh Từ PDF (Listening)</h2>
+                <p className="text-xs text-gray-500">
+                  Upload file PDF chứa hình ảnh đề thi Listening — hệ thống sẽ trích xuất ảnh Part 1 và các biểu đồ/bản đồ Part 3-4 rồi tự động gắn vào câu hỏi.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-xs text-violet-800 space-y-1">
+              <p className="font-semibold">Lưu ý:</p>
+              <p>Bạn cần nạp câu hỏi listening trước để lấy mã bộ câu hỏi. Hình ảnh Part 1 sẽ tự gắn theo thứ tự. Hình ảnh Part 3/4 (biểu đồ, bản đồ, lịch trình...) sẽ được gắn khi tách audio bằng AI.</p>
+              <p>Nếu file câu hỏi PDF đã chứa hình ảnh, hệ thống đã tự trích xuất. Dùng chức năng này khi cần nạp hình từ file PDF riêng.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Mã bộ câu hỏi (practice_set_id)
+                </label>
+                <input
+                  value={practiceSetId}
+                  onChange={(e) => setPracticeSetId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500 transition-colors"
+                  placeholder={practiceResult?.practice_set_id || "Sẽ tự điền sau khi nạp câu hỏi"}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  File Hình Ảnh (PDF)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setPracticeImagePdf(e.target.files?.[0] ?? null)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white cursor-pointer file:mr-3 file:border-0 file:rounded-lg file:px-3 file:py-1 file:text-xs file:font-semibold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200"
+                />
+              </div>
+            </div>
+
+            {imageImportError && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{imageImportError}</span>
+              </div>
+            )}
+
+            {imageImportResult && (
+              <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+                <p className="font-semibold">Trích xuất hình ảnh thành công ✓</p>
+                <p className="mt-1 text-xs">
+                  Tổng ảnh trích xuất: <strong>{imageImportResult.extracted_count}</strong> | Đã gắn Part 1: <strong>{imageImportResult.part1_mapped}</strong> câu
+                </p>
+                <p className="mt-1 text-xs">Mã bộ: <strong>{imageImportResult.practice_set_id}</strong></p>
+                {imageImportResult.extracted_count > imageImportResult.part1_mapped && (
+                  <p className="mt-1 text-[11px] text-violet-600">
+                    Còn {imageImportResult.extracted_count - imageImportResult.part1_mapped} ảnh Part 3/4 sẽ được AI gắn tự động khi bạn tách audio.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={handlePracticeImageImport}
+              disabled={isImageImporting || !practiceImagePdf}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isImageImporting ? (
+                <><RefreshCw className="h-4 w-4 animate-spin" /> Đang trích xuất hình ảnh...</>
+              ) : (
+                <><ImageIcon className="h-4 w-4" /> Nạp Hình Ảnh Từ PDF</>
               )}
             </button>
           </div>

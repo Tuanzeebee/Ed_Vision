@@ -75,11 +75,6 @@ export class OpenRouterService {
     images: ImageAssetForMapping[],
     questions: QuestionContext[],
   ): Promise<ImageMappingResult> {
-    if (!this.apiKey) {
-      this.logger.warn('OPENROUTER_API_KEY not set — skipping image mapping.');
-      return { mappings: [], model_used: 'none', error: 'API key not configured' };
-    }
-
     if (images.length === 0) {
       return { mappings: [], model_used: this.model };
     }
@@ -112,22 +107,142 @@ export class OpenRouterService {
       .join('\n');
 
     const allMappings: ImageQuestionMapping[] = [];
+    const failedImages: ImageAssetForMapping[] = [];
+    let hitRateLimit = !this.apiKey; // Skip LLM entirely if no API key
 
-    // Process images one at a time to stay within token limits
-    for (const image of images) {
+    if (!this.apiKey) {
+      this.logger.warn('OPENROUTER_API_KEY not set — using page-based heuristic only.');
+    }
+
+    // Process images one at a time with inter-request delay to respect rate limits
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+
+      // If we already hit rate limit (or no API key), skip LLM and collect for fallback
+      if (hitRateLimit) {
+        failedImages.push(image);
+        continue;
+      }
+
       try {
+        // Delay between requests to avoid 429 on free tier (skip first)
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
         const mapping = await this.mapSingleImage(image, talkGroupsSummary, talkGroups);
         if (mapping) {
           allMappings.push(mapping);
         }
-      } catch (err) {
-        this.logger.warn(
-          `Failed to map image ${image.filename}: ${String(err)}`,
+      } catch (err: any) {
+        const is429 = String(err).includes('429') || err?.response?.status === 429;
+        if (is429) {
+          hitRateLimit = true;
+          this.logger.warn(
+            `Rate limit hit at image ${i + 1}/${images.length}. Switching to page-based heuristic for remaining images.`,
+          );
+        }
+        failedImages.push(image);
+      }
+    }
+
+    // Fallback: map failed images using page-based heuristic
+    if (failedImages.length > 0) {
+      const alreadyMappedFiles = new Set(allMappings.map(m => m.image_filename));
+      const heuristicMappings = this.mapImagesWithPageHeuristic(
+        failedImages.filter(img => !alreadyMappedFiles.has(img.filename)),
+        talkGroups,
+      );
+      allMappings.push(...heuristicMappings);
+      if (heuristicMappings.length > 0) {
+        this.logger.log(
+          `[Heuristic fallback] Mapped ${heuristicMappings.length} image(s) by page proximity.`,
         );
       }
     }
 
-    return { mappings: allMappings, model_used: this.model };
+    return {
+      mappings: allMappings,
+      model_used: hitRateLimit ? `${this.model}+heuristic` : this.model,
+    };
+  }
+
+  /**
+   * Page-based heuristic mapping (fallback when LLM is unavailable / rate-limited).
+   *
+   * Strategy:
+   *   - TOEIC Listening has 100 questions across ~15-20 pages.
+   *   - Part 3/4 graphics appear on the same page as their questions.
+   *   - We estimate which question group an image belongs to by comparing
+   *     the image's page number to the expected page range for each group.
+   *   - TOEIC Part 3 (Q32-70): ~13 groups, graphics usually in the last 3-5 groups.
+   *   - TOEIC Part 4 (Q71-100): ~10 groups, graphics usually in the last 2-4 groups.
+   */
+  private mapImagesWithPageHeuristic(
+    images: ImageAssetForMapping[],
+    talkGroups: Array<{ start: number; end: number; part: number; hints: string[] }>,
+  ): ImageQuestionMapping[] {
+    if (images.length === 0 || talkGroups.length === 0) return [];
+
+    // Find the total page range from images
+    const allPages = images.map(img => img.page).filter(p => p > 0);
+    if (allPages.length === 0) return [];
+    const maxPage = Math.max(...allPages);
+
+    // Estimate questions-per-page (TOEIC Listening = 100 questions)
+    const totalQuestions = 100;
+    // Assume ~2 pages for Part 1 photos + 1 instruction page
+    const contentStartPage = 3;
+    const effectivePages = Math.max(1, maxPage - contentStartPage + 1);
+    const qPerPage = totalQuestions / effectivePages;
+
+    // Sort images by page
+    const sortedImages = [...images].sort((a, b) => a.page - b.page);
+
+    const mappings: ImageQuestionMapping[] = [];
+    const usedGroupStarts = new Set<number>();
+
+    for (const image of sortedImages) {
+      // Estimate which question number this page corresponds to
+      const estimatedQ = Math.round((image.page - contentStartPage) * qPerPage);
+
+      // Find the closest un-assigned talk group
+      let bestGroup: (typeof talkGroups)[0] | null = null;
+      let bestDistance = Infinity;
+
+      for (const group of talkGroups) {
+        if (usedGroupStarts.has(group.start)) continue;
+        const midQ = (group.start + group.end) / 2;
+        const distance = Math.abs(estimatedQ - midQ);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestGroup = group;
+        }
+      }
+
+      // Only accept if reasonably close (within ~10 questions)
+      if (bestGroup && bestDistance < 12) {
+        usedGroupStarts.add(bestGroup.start);
+        const qNums: number[] = [];
+        for (let q = bestGroup.start; q <= bestGroup.end; q++) qNums.push(q);
+
+        mappings.push({
+          image_filename: image.filename,
+          question_numbers: qNums,
+          confidence: 0.5,
+          description: `[page-heuristic] page ${image.page} → ~Q${estimatedQ} → Q${bestGroup.start}-${bestGroup.end}`,
+        });
+
+        this.logger.debug(
+          `  Heuristic: ${image.filename} (page ${image.page}, ~Q${estimatedQ}) → Q${bestGroup.start}-${bestGroup.end}`,
+        );
+      } else {
+        this.logger.debug(
+          `  Heuristic: ${image.filename} (page ${image.page}, ~Q${estimatedQ}) — no close match (dist=${bestDistance.toFixed(0)})`,
+        );
+      }
+    }
+
+    return mappings;
   }
 
   private async mapSingleImage(
@@ -170,7 +285,7 @@ Respond with ONLY a JSON object in this exact format:
 If you cannot determine which group this image belongs to, respond with:
 { "question_start": 0, "question_end": 0, "confidence": 0, "description": "unrecognized" }`;
 
-    const maxRetries = 2;
+    const maxRetries = 4;
     let attempt = 0;
 
     while (attempt < maxRetries) {
@@ -256,12 +371,21 @@ If you cannot determine which group this image belongs to, respond with:
         const status = error.response?.status;
 
         if (status === 429 && attempt < maxRetries) {
-          const delay = 3000 * attempt;
+          // Exponential backoff: 5s, 10s, 20s, 40s
+          const delay = 5000 * Math.pow(2, attempt - 1);
           this.logger.warn(
             `OpenRouter 429 rate limit. Retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
           );
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
+        }
+
+        // If it's a 429 that exhausted all retries, re-throw so caller can fallback
+        if (status === 429) {
+          this.logger.error(
+            `OpenRouter 429 exhausted all ${maxRetries} retries for ${image.filename}.`,
+          );
+          throw error;
         }
 
         this.logger.error(

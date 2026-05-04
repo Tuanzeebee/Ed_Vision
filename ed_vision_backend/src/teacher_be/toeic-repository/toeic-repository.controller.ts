@@ -413,6 +413,7 @@ export class TeacherToeicRepositoryController {
       accountId,
       dto,
       file,
+      this.service,
     );
   }
 
@@ -500,6 +501,42 @@ export class TeacherToeicRepositoryController {
       skill_area: skillArea,
       practice_set_id: practiceSetId,
     });
+  }
+
+  /**
+   * POST /teacher/toeic-repository/import-practice-images
+   * Upload a PDF containing listening images (Part 1 photos, Part 3/4 charts)
+   * for an existing practice question set. Images will be extracted and mapped.
+   */
+  @Post('import-practice-images')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: teacherToeicStorage,
+      limits: { fileSize: 50 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase();
+        if (ext === '.pdf') {
+          cb(null, true);
+          return;
+        }
+        cb(
+          new BadRequestException('Chỉ hỗ trợ file PDF cho trích xuất hình ảnh.') as any,
+          false,
+        );
+      },
+    }),
+  )
+  async importPracticeImages(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const accountId = Number(req.user?.account_id ?? 0);
+    if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
+    if (!file) throw new BadRequestException('Vui lòng chọn file PDF chứa hình ảnh.');
+    const practiceSetId = dto?.practice_set_id?.trim?.() ?? '';
+    if (!practiceSetId) throw new BadRequestException('Vui lòng cung cấp practice_set_id.');
+    return this.practiceImportService.importPracticeImagesFromPdf(practiceSetId, file);
   }
 
   /**
