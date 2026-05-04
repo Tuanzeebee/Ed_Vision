@@ -1090,6 +1090,7 @@ export interface DiagnosticQuestionOption {
 
 export interface DiagnosticQuestion {
   id: number;
+  item_order: number;
   part: number;
   skill_area: string;
   stem: string;
