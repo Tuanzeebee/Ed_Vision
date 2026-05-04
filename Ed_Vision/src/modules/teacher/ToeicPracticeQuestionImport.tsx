@@ -668,7 +668,10 @@ export function ToeicPracticeQuestionImportBody({
             <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
               <p className="font-semibold">Tách audio thành công ✓</p>
               <p className="mt-1 text-xs">
-                Tổng chunks: <strong>{audioChunkResult.total_chunks}</strong> | Đã gắn tự động: <strong>{audioChunkResult.auto_mapped_count}</strong> câu
+                Tổng chunks: <strong>{audioChunkResult.total_chunks}</strong> | Đã gắn audio: <strong>{audioChunkResult.auto_mapped_count}</strong> câu
+                {typeof audioChunkResult.image_mapped_count === 'number' && audioChunkResult.image_mapped_count > 0 && (
+                  <> | Đã gắn hình ảnh (AI): <strong>{audioChunkResult.image_mapped_count}</strong> câu</>
+                )}
               </p>
             </div>
           )}

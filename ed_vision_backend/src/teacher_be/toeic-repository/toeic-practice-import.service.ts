@@ -1,10 +1,15 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { readFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { extname, join, resolve } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import {
+  OpenRouterService,
+  ImageAssetForMapping,
+  QuestionContext,
+} from '../../common/services/openrouter.service';
 
 const execFileAsync = promisify(execFile);
 const IMG_MIN_WIDTH = 80;
@@ -267,7 +272,10 @@ type ToeicOptionKey = 'A' | 'B' | 'C' | 'D';
 export class ToeicPracticeImportService {
   private readonly logger = new Logger(ToeicPracticeImportService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly openRouterService: OpenRouterService,
+  ) { }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1260,15 +1268,32 @@ export class ToeicPracticeImportService {
       reason: string;
     }> = [];
 
-    // Heuristic: Lọc ra các ảnh phù hợp nhất cho Part 1 (bỏ qua logo/watermark).
-    const bestImages = [...imageAssets]
-      .filter(img => (img.size_bytes || 0) > 10000)
-      .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
-      .slice(0, 6) // Part 1 luôn có tối đa 6 câu
+    // Separate Part 1 photos from Part 3/4 graphics using estimated_part from Python extractor
+    const part1Images = imageAssets
+      .filter(img => img.estimated_part === 1)
       .sort((a, b) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
+
+    const part34Images = imageAssets
+      .filter(img => img.estimated_part !== 1)
+      .sort((a, b) => {
+        if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+        return (a.filename || '').localeCompare(b.filename || '');
+      });
+
+    // Backward-compat: if estimated_part is missing (old extractor), use size heuristic
+    const bestImages = part1Images.length > 0
+      ? part1Images.slice(0, 6)
+      : [...imageAssets]
+          .filter(img => (img.size_bytes || 0) > 10000)
+          .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
+          .slice(0, 6)
+          .sort((a, b) => {
+            if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+            return (a.filename || '').localeCompare(b.filename || '');
+          });
 
     // ── Phase 1: Analyze file characteristics ──────────────────────────────────
     const fileInfo = this.analyzeFileCharacteristics(rawText, parsed);
@@ -1474,6 +1499,12 @@ export class ToeicPracticeImportService {
       return (parsed.images ?? []).map((img: any) => ({
         filename: img.filename,
         url: `TOEIC/toeic-listening-practice/${slug}/images/${img.filename}`,
+        url_path: `certificate/TOEIC/toeic-listening-practice/${slug}/images/${img.filename}`,
+        page: img.page,
+        width: img.width,
+        height: img.height,
+        size_bytes: img.size_bytes,
+        estimated_part: img.estimated_part ?? null,
         part_hint: img.part_hint,
         question_number: img.question_number,
       }));
@@ -1807,6 +1838,7 @@ export class ToeicPracticeImportService {
     practice_set_id: string;
     total_chunks: number;
     auto_mapped_count: number;
+    image_mapped_count: number;
   }> {
     const { practice_set_id } = dto;
 
@@ -1875,9 +1907,10 @@ export class ToeicPracticeImportService {
       url: `/uploads/${c.url_path}`,
       part: c.part,
       question_number: c.question_number,
+      transcript_hint: c.transcript_hint ?? '',
     }));
 
-    // Auto-map: update media_audio_url on ToeicPracticeQuestion rows
+    // Auto-map: update context_audio on ToeicPracticeQuestion rows
     let autoMappedCount = 0;
     if (chunks.length > 0) {
       const questions = await this.prisma.toeicPracticeQuestion.findMany({
@@ -1903,10 +1936,192 @@ export class ToeicPracticeImportService {
       }
     }
 
+    // ── LLM Image Mapping: map Part 3/4 images to questions ─────────────────
+    let imageMappedCount = 0;
+    try {
+      imageMappedCount = await this.mapPart34ImagesToQuestions(slug, chunks);
+    } catch (err) {
+      this.logger.warn(
+        `[chunkPracticeAudio] LLM image mapping failed (non-blocking): ${String(err)}`,
+      );
+    }
+
     return {
       practice_set_id: slug,
       total_chunks: chunks.length,
       auto_mapped_count: autoMappedCount,
+      image_mapped_count: imageMappedCount,
     };
+  }
+
+  // ── LLM Image-to-Question Mapping for Part 3/4 ─────────────────────────────
+
+  /**
+   * After audio chunking, use OpenRouter vision LLM to map Part 3/4 images
+   * (charts, maps, schedules, etc.) to the correct question groups.
+   *
+   * Flow:
+   *   1. Read existing images from the practice set's images/ folder
+   *   2. Build question context from DB (with transcript hints from chunks)
+   *   3. Call OpenRouter to analyze each Part 3/4 image
+   *   4. Update context_image on the matched ToeicPracticeQuestion rows
+   */
+  private async mapPart34ImagesToQuestions(
+    slug: string,
+    chunks: Array<{
+      filename: string;
+      url: string;
+      part: number;
+      question_number: number;
+      transcript_hint: string;
+    }>,
+  ): Promise<number> {
+    if (!this.openRouterService.isAvailable()) {
+      this.logger.debug('OpenRouter not configured — skipping Part 3/4 image mapping.');
+      return 0;
+    }
+
+    // 1. Find Part 3/4 images on disk
+    const imagesDir = absoluteUploadsDir(
+      'certificate', 'TOEIC', 'toeic-listening-practice', slug, 'images',
+    );
+
+    if (!existsSync(imagesDir)) {
+      this.logger.debug(`No images directory found for slug "${slug}".`);
+      return 0;
+    }
+
+    const allFiles: string[] = readdirSync(imagesDir)
+      .filter((f: string) => /\.(webp|png|jpg|jpeg)$/i.test(f))
+      .sort();
+
+    if (allFiles.length === 0) return 0;
+
+    // 2. Load questions from DB to know which have images already and which are Part 3/4
+    const questions = await this.prisma.toeicPracticeQuestion.findMany({
+      where: { source_slug: slug },
+      select: { id: true, source_item_id: true, part: true, stem: true, context_image: true },
+    });
+
+    const qNumToId = new Map<number, number>();
+    for (const q of questions) {
+      if (typeof q.source_item_id === 'number') {
+        qNumToId.set(q.source_item_id, q.id);
+      }
+    }
+
+    // Build transcript hint map from chunks
+    const transcriptByQNum = new Map<number, string>();
+    for (const chunk of chunks) {
+      if (chunk.transcript_hint) {
+        transcriptByQNum.set(chunk.question_number, chunk.transcript_hint);
+      }
+    }
+
+    // Build question context for LLM
+    const questionContexts: QuestionContext[] = questions
+      .filter(q => q.part === 3 || q.part === 4)
+      .map(q => ({
+        question_number: q.source_item_id ?? 0,
+        part: q.part ?? 3,
+        stem: q.stem,
+        transcript_hint: transcriptByQNum.get(q.source_item_id ?? 0) ?? '',
+      }))
+      .filter(q => q.question_number > 0);
+
+    if (questionContexts.length === 0) {
+      this.logger.debug('No Part 3/4 questions found — skipping image mapping.');
+      return 0;
+    }
+
+    // 3. Identify images that are NOT already mapped (Part 1 images are already assigned)
+    // Read a simple metadata file or infer from filename pattern
+    const unmappedImages: ImageAssetForMapping[] = [];
+    const imagesRelDir = `certificate/TOEIC/toeic-listening-practice/${slug}/images`;
+
+    // Questions that already have context_image set (Part 1)
+    const alreadyMappedFiles = new Set<string>();
+    for (const q of questions) {
+      if (q.context_image) {
+        const parts = q.context_image.replace(/\\/g, '/').split('/');
+        alreadyMappedFiles.add(parts[parts.length - 1]);
+      }
+    }
+
+    for (const filename of allFiles) {
+      if (alreadyMappedFiles.has(filename)) continue; // already assigned to Part 1
+
+      const absPath = join(imagesDir, filename);
+      let sizeBytes = 0;
+      try {
+        const stat = statSync(absPath);
+        sizeBytes = stat.size;
+      } catch { /* ignore */ }
+
+      // Extract page number from filename pattern: {slug}_p{NNN}_img{NN}.webp
+      const pageMatch = filename.match(/_p(\d+)_/);
+      const page = pageMatch ? parseInt(pageMatch[1], 10) : 0;
+
+      unmappedImages.push({
+        filename,
+        abs_path: absPath,
+        url_path: `${imagesRelDir}/${filename}`,
+        page,
+        width: 0,
+        height: 0,
+        size_bytes: sizeBytes,
+        estimated_part: 3,
+      });
+    }
+
+    if (unmappedImages.length === 0) {
+      this.logger.debug('No unmapped Part 3/4 images found.');
+      return 0;
+    }
+
+    this.logger.log(
+      `[ImageMapping] Found ${unmappedImages.length} unmapped image(s) for slug "${slug}". ` +
+      `Calling OpenRouter to map to ${questionContexts.length} Part 3/4 questions...`,
+    );
+
+    // 4. Call OpenRouter LLM
+    const result = await this.openRouterService.mapImagesToQuestions(
+      unmappedImages,
+      questionContexts,
+    );
+
+    if (result.error) {
+      this.logger.warn(`[ImageMapping] OpenRouter error: ${result.error}`);
+    }
+
+    // 5. Apply mappings to DB
+    let mappedCount = 0;
+    for (const mapping of result.mappings) {
+      if (mapping.question_numbers.length === 0 || mapping.confidence < 0.3) continue;
+
+      const imageUrl = `/uploads/certificate/TOEIC/toeic-listening-practice/${slug}/images/${mapping.image_filename}`;
+
+      for (const qNum of mapping.question_numbers) {
+        const questionId = qNumToId.get(qNum);
+        if (!questionId) continue;
+
+        await this.prisma.toeicPracticeQuestion.update({
+          where: { id: questionId },
+          data: { context_image: imageUrl },
+        });
+        mappedCount++;
+      }
+
+      this.logger.log(
+        `  ${mapping.image_filename} → Q${mapping.question_numbers.join(',')} ` +
+        `(${mapping.description}, confidence=${mapping.confidence})`,
+      );
+    }
+
+    this.logger.log(
+      `[ImageMapping] Mapped ${mappedCount} question(s) with Part 3/4 images via ${result.model_used}.`,
+    );
+
+    return mappedCount;
   }
 }

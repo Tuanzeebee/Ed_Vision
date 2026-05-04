@@ -922,6 +922,7 @@ export interface ImportPracticeAudioResponse {
   practice_set_id: string;
   total_chunks: number;
   auto_mapped_count: number;
+  image_mapped_count?: number;
 }
 
 export async function importPracticeAudio(

@@ -1,12 +1,17 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { readFile } from 'fs/promises';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { extname, join, resolve } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tryEncryptString } from '../../common/crypto.util';
+import {
+  OpenRouterService,
+  ImageAssetForMapping,
+  QuestionContext,
+} from '../../common/services/openrouter.service';
 
 const execFileAsync = promisify(execFile);
 
@@ -50,7 +55,10 @@ export class DiagnosticImportResponseDto {
 export class DiagnosticImportService {
   private readonly logger = new Logger(DiagnosticImportService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly openRouterService: OpenRouterService,
+  ) { }
 
   // ── Extract Text ─────────────────────────────────────────────────────────────
 
@@ -441,16 +449,36 @@ export class DiagnosticImportService {
 
     let insertedCount = 0;
 
-    // Heuristic: Lọc ra các ảnh phù hợp nhất cho Part 1 (bỏ qua logo/watermark).
-    // Ảnh Part 1 là ảnh chụp nên dung lượng lớn (> 10KB).
-    const bestImages = [...imageAssets]
-      .filter(img => (img.size_bytes || 0) > 10000)
-      .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
-      .slice(0, 6) // Part 1 luôn có tối đa 6 câu
+    // Separate Part 1 photos from Part 3/4 graphics using estimated_part
+    const part1Images = imageAssets
+      .filter(img => img.estimated_part === 1)
       .sort((a, b) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
+
+    const part34Images = imageAssets
+      .filter(img => img.estimated_part !== 1 && (img.size_bytes || 0) > 5000)
+      .sort((a, b) => {
+        if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+        return (a.filename || '').localeCompare(b.filename || '');
+      });
+
+    // Backward-compat: if estimated_part is missing (old extractor), use size heuristic
+    const bestImages = part1Images.length > 0
+      ? part1Images.slice(0, 6)
+      : [...imageAssets]
+          .filter(img => (img.size_bytes || 0) > 10000)
+          .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
+          .slice(0, 6)
+          .sort((a, b) => {
+            if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+            return (a.filename || '').localeCompare(b.filename || '');
+          });
+
+    this.logger.log(
+      `[Import] Images: ${imageAssets.length} total, ${bestImages.length} Part 1, ${part34Images.length} Part 3/4`,
+    );
 
     let part1ItemsSoFar = 0;
 
@@ -531,7 +559,6 @@ export class DiagnosticImportService {
     // Sync Audio
     const audioDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'audio');
     if (existsSync(audioDir)) {
-      const { readdirSync } = require('fs');
       const audioFiles = readdirSync(audioDir);
       for (const file of audioFiles) {
         if (!file.endsWith('.mp3')) continue;
@@ -553,7 +580,6 @@ export class DiagnosticImportService {
     // Sync Images
     const imagesDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'images');
     if (existsSync(imagesDir)) {
-      const { readdirSync } = require('fs');
       const imageFiles = readdirSync(imagesDir).filter((f: string) => f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg')).sort();
       for (let i = 0; i < Math.min(imageFiles.length, 6); i++) {
         const qNum = i + 1;
@@ -578,25 +604,57 @@ export class DiagnosticImportService {
     const pythonExe = process.platform === 'win32' ? 'python' : 'python3';
     const scriptPath = resolve(join(process.cwd(), '..', 'ml_service', 'pdf_image_extractor.py'));
 
-    if (!existsSync(scriptPath)) return [];
+    if (!existsSync(scriptPath)) {
+      this.logger.warn(`[extractImages] Script not found: ${scriptPath}`);
+      return [];
+    }
+
+    this.logger.log(`[extractImages] Running: ${pythonExe} "${scriptPath}" "${pdfPath}" "${outputDir}" ${slug}`);
+    this.logger.log(`[extractImages] Script exists: ${existsSync(scriptPath)}, PDF exists: ${existsSync(pdfPath)}`);
 
     let stdout = '';
     try {
       const result = await execFileAsync(pythonExe, [
         scriptPath, pdfPath, outputDir, slug, '--min-width', String(IMG_MIN_WIDTH),
         '--min-height', String(IMG_MIN_HEIGHT), '--skill-area', 'listening'
-      ], { timeout: 120_000 });
+      ], { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
       stdout = result.stdout;
-    } catch { return []; }
+      if (result.stderr) {
+        this.logger.debug(`[extractImages] stderr: ${result.stderr.substring(0, 500)}`);
+      }
+    } catch (err: any) {
+      const errMsg = err?.stderr || err?.stdout || err?.message || String(err);
+      this.logger.error(
+        `[extractImages] Python script failed (code=${err?.code}): ${errMsg}`,
+      );
+      // If script output JSON error to stdout before crashing, try to parse it
+      if (err?.stdout) {
+        this.logger.error(`[extractImages] stdout was: ${String(err.stdout).substring(0, 500)}`);
+      }
+      return [];
+    }
+
+    this.logger.debug(`[extractImages] stdout (first 500 chars): ${stdout.substring(0, 500)}`);
 
     try {
       const parsed = JSON.parse(stdout.trim());
-      return (parsed.images ?? []).map((img: any) => ({
+      const images = (parsed.images ?? []).map((img: any) => ({
         filename: img.filename,
         url: `TOEIC/toeic-listening-survey/${slug}/images/${img.filename}`,
+        url_path: `certificate/TOEIC/toeic-listening-survey/${slug}/images/${img.filename}`,
+        page: img.page,
+        width: img.width,
+        height: img.height,
+        size_bytes: img.size_bytes,
+        estimated_part: img.estimated_part ?? null,
         part_hint: img.part_hint,
       }));
-    } catch { return []; }
+      this.logger.log(`[extractImages] Extracted ${images.length} image(s) for slug "${slug}".`);
+      return images;
+    } catch (err) {
+      this.logger.error(`[extractImages] Failed to parse JSON: ${String(err)} — stdout: ${stdout.substring(0, 300)}`);
+      return [];
+    }
   }
 
   // ── Chunk Diagnostic Audio ───────────────────────────────────────────────────
@@ -702,12 +760,149 @@ export class DiagnosticImportService {
       }
     }
 
+    // ── LLM Image Mapping: map Part 3/4 images to questions ─────────────────
+    let imageMappedCount = 0;
+    try {
+      imageMappedCount = await this.mapDiagnosticPart34Images(slug, repository.id, chunks);
+    } catch (err) {
+      this.logger.warn(
+        `[chunkDiagnosticAudio] LLM image mapping failed (non-blocking): ${String(err)}`,
+      );
+    }
+
     return {
       repository_id: repository.id,
       slug: repository.slug,
       total_chunks: chunks.length,
       auto_mapped_count: autoMappedCount,
+      image_mapped_count: imageMappedCount,
     };
+  }
+
+  // ── LLM Image-to-Question Mapping for Part 3/4 (Diagnostic) ────────────────
+
+  private async mapDiagnosticPart34Images(
+    slug: string,
+    repositoryId: number,
+    chunks: Array<{
+      filename: string;
+      url: string;
+      part: number;
+      question_number: number;
+    }>,
+  ): Promise<number> {
+    if (!this.openRouterService.isAvailable()) {
+      this.logger.debug('OpenRouter not configured — skipping Part 3/4 image mapping.');
+      return 0;
+    }
+
+    const imagesDir = absoluteUploadsDir(
+      'certificate', 'TOEIC', 'toeic-listening-survey', slug, 'images',
+    );
+
+    if (!existsSync(imagesDir)) return 0;
+
+    const allFiles: string[] = readdirSync(imagesDir)
+      .filter((f: string) => /\.(webp|png|jpg|jpeg)$/i.test(f))
+      .sort();
+
+    if (allFiles.length === 0) return 0;
+
+    // Load items from DB
+    const items = await this.prisma.diagnosticRepositoryItem.findMany({
+      where: { repository_id: repositoryId },
+      select: { id: true, metadata: true, part: true, stem: true, media_image_url: true },
+    });
+
+    const qNumToItemId = new Map<number, number>();
+    for (const item of items) {
+      const qNum = (item.metadata as any)?.question_number;
+      if (typeof qNum === 'number') qNumToItemId.set(qNum, item.id);
+    }
+
+    // Find images already assigned (Part 1)
+    const alreadyMappedFiles = new Set<string>();
+    for (const item of items) {
+      if (item.media_image_url) {
+        const parts = item.media_image_url.replace(/\\/g, '/').split('/');
+        alreadyMappedFiles.add(parts[parts.length - 1]);
+      }
+    }
+
+    // Build question context for LLM
+    const questionContexts: QuestionContext[] = items
+      .filter(item => item.part === 3 || item.part === 4)
+      .map(item => ({
+        question_number: (item.metadata as any)?.question_number ?? 0,
+        part: item.part ?? 3,
+        stem: item.stem,
+      }))
+      .filter(q => q.question_number > 0);
+
+    if (questionContexts.length === 0) return 0;
+
+    // Collect unmapped images
+    const unmappedImages: ImageAssetForMapping[] = [];
+    const imagesRelDir = `certificate/TOEIC/toeic-listening-survey/${slug}/images`;
+
+    for (const filename of allFiles) {
+      if (alreadyMappedFiles.has(filename)) continue;
+
+      const absPath = join(imagesDir, filename);
+      let sizeBytes = 0;
+      try { sizeBytes = statSync(absPath).size; } catch { /* ignore */ }
+
+      const pageMatch = filename.match(/_p(\d+)_/);
+      const page = pageMatch ? parseInt(pageMatch[1], 10) : 0;
+
+      unmappedImages.push({
+        filename,
+        abs_path: absPath,
+        url_path: `${imagesRelDir}/${filename}`,
+        page,
+        width: 0,
+        height: 0,
+        size_bytes: sizeBytes,
+        estimated_part: 3,
+      });
+    }
+
+    if (unmappedImages.length === 0) return 0;
+
+    this.logger.log(
+      `[DiagImageMapping] Found ${unmappedImages.length} unmapped image(s). Calling OpenRouter...`,
+    );
+
+    const result = await this.openRouterService.mapImagesToQuestions(unmappedImages, questionContexts);
+
+    if (result.error) {
+      this.logger.warn(`[DiagImageMapping] OpenRouter error: ${result.error}`);
+    }
+
+    let mappedCount = 0;
+    for (const mapping of result.mappings) {
+      if (mapping.question_numbers.length === 0 || mapping.confidence < 0.3) continue;
+
+      const imageUrl = `/uploads/certificate/TOEIC/toeic-listening-survey/${slug}/images/${mapping.image_filename}`;
+
+      for (const qNum of mapping.question_numbers) {
+        const itemId = qNumToItemId.get(qNum);
+        if (!itemId) continue;
+
+        await this.prisma.diagnosticRepositoryItem.update({
+          where: { id: itemId },
+          data: { media_image_url: imageUrl },
+        });
+        mappedCount++;
+      }
+
+      this.logger.log(
+        `  ${mapping.image_filename} → Q${mapping.question_numbers.join(',')} (${mapping.description})`,
+      );
+    }
+
+    this.logger.log(`[DiagImageMapping] Mapped ${mappedCount} question(s) via ${result.model_used}.`);
+    return mappedCount;
   }
 
   // ── Import Answer Key ────────────────────────────────────────────────────────
