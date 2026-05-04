@@ -23,6 +23,9 @@ const MIN_QUESTIONS = 12;
 const SEM_TARGET = 0.45;
 const SKILL_QUOTA_MIN = 3;
 const SKILL_QUOTA_MAX = 6;
+const SPEAKING_QUOTA = 1; // Speaking chỉ hỏi đúng 1 câu/test
+const SPEAKING_SKILL = 'speaking';
+const IRT_SKILLS = ['reading', 'listening', 'writing', 'vocabulary'];
 const INITIAL_BAND = 5.0;
 const ALLOWED_TYPES = ['mcq', 'gap_fill', 'true_false_ng', 'speaking'];
 const STRENGTH_THRESHOLD = 0.75;
@@ -76,7 +79,7 @@ export interface AnswerResult {
 
 export interface TestResult {
   finalBand: number;
-  skillBands: Record<string, number>;
+  skillBands: Record<string, number | null>;
   confidenceLevel: 'low' | 'medium' | 'high';
   sem: number;
   patterns: {
@@ -143,6 +146,89 @@ export class AdaptiveService {
   }
 
   async submitAnswer(input: AnswerInput): Promise<AnswerResult> {
+    // ✅ Handle SPEAKING_SKIPPED — check ngay đầu hàm
+    if (input.userAnswer === 'SPEAKING_SKIPPED') {
+      const session = await this.prisma.ieltsPlacementSession.findUniqueOrThrow({
+        where: { id: input.sessionId },
+        include: {
+          answers: {
+            orderBy: { questionOrder: 'asc' },
+            include: { question: true },
+          },
+        },
+      });
+
+      const skillsAnsweredRaw = session.skillsAnswered;
+      const skillThetasRaw = session.skillThetas;
+      const prevSkillsAnswered: Record<string, number> =
+        skillsAnsweredRaw &&
+        typeof skillsAnsweredRaw === 'object' &&
+        !Array.isArray(skillsAnsweredRaw)
+          ? (skillsAnsweredRaw as Record<string, number>)
+          : {};
+      const prevSkillThetas: Record<string, number> =
+        skillThetasRaw &&
+        typeof skillThetasRaw === 'object' &&
+        !Array.isArray(skillThetasRaw)
+          ? (skillThetasRaw as Record<string, number>)
+          : {};
+
+      // Increment skillsAnswered for 'speaking'
+      const currentSkillsAnswered = { ...prevSkillsAnswered };
+      currentSkillsAnswered['speaking'] = (currentSkillsAnswered['speaking'] ?? 0) + 1;
+
+      // Optionally update skillThetas for 'speaking' (no answer, so just keep previous)
+      const currentSkillThetas = { ...prevSkillThetas };
+
+      const newTotal = session.totalQuestionsAsked + 1;
+      const usedIds = [...session.usedQuestionIds, input.questionId];
+
+      await this.prisma.ieltsPlacementSession.update({
+        where: { id: input.sessionId },
+        data: {
+          usedQuestionIds: usedIds,
+          totalQuestionsAsked: newTotal,
+          skillsAnswered: currentSkillsAnswered,
+          skillThetas: currentSkillThetas,
+        } as any,
+      });
+
+      const isLast = newTotal >= MAX_QUESTIONS;
+
+      if (isLast) {
+        const updatedSession = await this.prisma.ieltsPlacementSession.findUniqueOrThrow({
+          where: { id: input.sessionId },
+          include: { answers: true },
+        });
+        const estimate = getFullEstimateEAP([], bandToTheta(Number(updatedSession.currentEstimatedBand)));
+        await this.finalizeResult(input.sessionId, estimate, updatedSession.answers);
+        return {
+          isCorrect: false,
+          nextQuestion: null,
+          progress: { current: newTotal, total: MAX_QUESTIONS },
+          currentBand: Number(updatedSession.currentEstimatedBand),
+          actualTotal: newTotal,
+        };
+      }
+
+      const nextQuestion = await this.selectNextQuestion({
+        currentTheta: bandToTheta(Number(session.currentEstimatedBand)),
+        skillsTested: session.skillsTested as string[],
+        usedQuestionIds: usedIds,
+        questionOrder: newTotal + 1,
+        skillsAnswered: currentSkillsAnswered,
+        skillThetas: currentSkillThetas,
+      });
+
+      return {
+        isCorrect: false,
+        nextQuestion,
+        progress: { current: newTotal, total: MAX_QUESTIONS },
+        currentBand: Number(session.currentEstimatedBand),
+        actualTotal: MAX_QUESTIONS,
+      };
+    }
+
     const session = await this.prisma.ieltsPlacementSession.findUniqueOrThrow({
       where: { id: input.sessionId },
       include: {
@@ -171,10 +257,7 @@ export class AdaptiveService {
         : {};
 
     if (session.status !== 'in_progress') {
-      const err = new Error('Session đã kết thúc.') as Error & {
-        statusCode?: number;
-        code?: string;
-      };
+      const err = new Error('Session đã kết thúc.') as Error & { statusCode?: number; code?: string };
       err.statusCode = 409;
       err.code = 'SESSION_ENDED';
       throw err;
@@ -185,16 +268,10 @@ export class AdaptiveService {
     });
 
     if (!question.skill) {
-      throw new Error(
-        'Question skill is missing. Cannot evaluate skill-aware test.',
-      );
+      throw new Error('Question skill is missing. Cannot evaluate skill-aware test.');
     }
 
-    const isCorrect = this.checkAnswer(
-      question.correctAnswer,
-      input.userAnswer,
-      question.questionType,
-    );
+    const isCorrect = this.checkAnswer(question.correctAnswer, input.userAnswer, question.questionType);
     const questionOrder = session.totalQuestionsAsked + 1;
     const bandMid = (Number(question.bandMin) + Number(question.bandMax)) / 2;
 
@@ -241,23 +318,16 @@ export class AdaptiveService {
     ];
 
     const responseHistory = this.buildResponseHistory(allAnswersSoFar);
-    const estimate = getFullEstimateEAP(
-      responseHistory,
-      bandToTheta(Number(session.currentEstimatedBand)),
-    );
+    const estimate = getFullEstimateEAP(responseHistory, bandToTheta(Number(session.currentEstimatedBand)));
     const newBand = estimate.band;
     const newTotal = session.totalQuestionsAsked + 1;
     const usedIds = [...session.usedQuestionIds, input.questionId];
 
     const currentSkillsAnswered = { ...prevSkillsAnswered };
-    currentSkillsAnswered[question.skill] =
-      (currentSkillsAnswered[question.skill] ?? 0) + 1;
+    currentSkillsAnswered[question.skill] = (currentSkillsAnswered[question.skill] ?? 0) + 1;
 
     const currentSkillThetas = { ...prevSkillThetas };
-    const allAnswersIncludingCurrent = [
-      ...(session.answers as any[]),
-      currentAnswer,
-    ];
+    const allAnswersIncludingCurrent = [...(session.answers as any[]), currentAnswer];
 
     const skillResponses: ItemResponse[] = allAnswersIncludingCurrent
       .filter((a) => a.skill === question.skill && a.isCorrect !== null)
@@ -271,19 +341,11 @@ export class AdaptiveService {
       }));
 
     if (skillResponses.length > 0) {
-      const skillTheta = estimateThetaEAP(
-        skillResponses,
-        currentSkillThetas[question.skill] ?? 0,
-      );
+      const skillTheta = estimateThetaEAP(skillResponses, currentSkillThetas[question.skill] ?? 0);
       currentSkillThetas[question.skill] = skillTheta;
     }
 
-    const stopEarly = shouldStop(
-      responseHistory,
-      estimate.theta,
-      MIN_QUESTIONS,
-      SEM_TARGET,
-    );
+    const stopEarly = shouldStop(responseHistory, estimate.theta, MIN_QUESTIONS, SEM_TARGET);
     const isLast = newTotal >= MAX_QUESTIONS || stopEarly;
 
     await this.prisma.ieltsPlacementSession.update({
@@ -316,39 +378,31 @@ export class AdaptiveService {
     try {
       nextQuestion = await this.selectNextQuestion({
         currentTheta: estimate.theta,
-        skillsTested: session.skillsTested,
+        skillsTested: session.skillsTested as string[],
         usedQuestionIds: usedIds,
-        questionOrder: questionOrder + 1,
+        questionOrder: newTotal + 1,
         skillsAnswered: currentSkillsAnswered,
         skillThetas: currentSkillThetas,
       });
-    } catch (poolErr: any) {
-      if (
-        poolErr?.message?.includes('Pool placement') ||
-        poolErr?.message?.includes('Tất cả skills')
-      ) {
-        if (newTotal >= MIN_QUESTIONS) {
-          await this.prisma.ieltsPlacementSession.update({
-            where: { id: input.sessionId },
-            data: {
-              status: 'completed',
-              completedAt: new Date(),
-            } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
-          });
-          await this.finalizeResult(input.sessionId, estimate, allAnswersSoFar);
-          return {
-            isCorrect,
-            nextQuestion: null,
-            progress: { current: newTotal, total: newTotal },
-            currentBand: newBand,
-            actualTotal: newTotal,
-          };
-        }
-        throw new Error(
-          `Pool cạn sau ${newTotal} câu — cần thêm câu is_placement=true. ${poolErr.message}`,
-        );
+    } catch (err) {
+      const error = err as Error;
+      if (error.message === 'SPEAKING_SKIP') {
+        currentSkillsAnswered[SPEAKING_SKILL] = SPEAKING_QUOTA;
+        await this.prisma.ieltsPlacementSession.update({
+          where: { id: input.sessionId },
+          data: { skillsAnswered: currentSkillsAnswered } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
+        });
+        await this.finalizeResult(input.sessionId, estimate, allAnswersSoFar);
+        return {
+          isCorrect,
+          nextQuestion: null,
+          progress: { current: newTotal, total: MAX_QUESTIONS },
+          currentBand: newBand,
+          actualTotal: newTotal,
+        };
       }
-      throw poolErr;
+      this.logger.error('Error selecting next question:', error.message);
+      throw error;
     }
 
     return {
@@ -370,41 +424,28 @@ export class AdaptiveService {
   async getPlacementResult(sessionId: string): Promise<TestResult> {
     const session = await this.prisma.ieltsPlacementSession.findUniqueOrThrow({
       where: { id: sessionId },
-      include: {
-        answers: {
-          orderBy: { questionOrder: 'asc' },
-          include: { question: true },
-        },
-      },
     });
 
-    if (session.status !== 'completed') {
-      throw new Error('Test chưa hoàn thành.');
-    }
+    const rawSkillBands = session.skillBands as any;
+    const patterns = rawSkillBands?._patterns as SkillPattern;
+    const sem = Number(rawSkillBands?._sem) || 0;
 
-    const skillBandsRaw = (session.skillBands ?? {}) as Record<string, any>;
-    const patterns = skillBandsRaw._patterns as SkillPattern | undefined;
+    const skillBands: Record<string, number | null> = {};
+    if (rawSkillBands) {
+      for (const [k, v] of Object.entries(rawSkillBands)) {
+        if (!k.startsWith('_')) {
+          skillBands[k] = v === null ? null : Number(v);
+        }
+      }
+    }
 
     return {
       finalBand: Number(session.finalBand),
-      skillBands: {
-        reading: skillBandsRaw.reading,
-        listening: skillBandsRaw.listening,
-        writing: skillBandsRaw.writing,
-        speaking: skillBandsRaw.speaking,
-      },
+      skillBands,
       confidenceLevel: session.confidenceLevel as 'low' | 'medium' | 'high',
-      sem: Number(skillBandsRaw._sem ?? 0.5),
-      patterns: patterns ?? {
-        strengths: [],
-        weaknesses: [],
-        balanced: [],
-        insights: [],
-      },
-      note: {
-        writing: 'Estimated via grammar & cohesion proxy items',
-        speaking: 'Estimated via vocabulary & register proxy items',
-      },
+      sem,
+      patterns: patterns || { strengths: [], weaknesses: [], balanced: [], insights: [] },
+      note: {},
     };
   }
 
@@ -416,80 +457,72 @@ export class AdaptiveService {
     skillsAnswered: Record<string, number>;
     skillThetas: Record<string, number>;
   }): Promise<QuestionPayload> {
-    const {
-      currentTheta,
-      skillsTested,
-      usedQuestionIds,
-      questionOrder,
-      skillsAnswered,
-      skillThetas,
-    } = params;
+    const { currentTheta, skillsTested, usedQuestionIds, questionOrder, skillsAnswered, skillThetas } = params;
 
     const allowedSkills = skillsTested.filter((skill) => {
       const count = skillsAnswered[skill] ?? 0;
+
+      if (skill === SPEAKING_SKILL) {
+        return count < SPEAKING_QUOTA;
+      }
+
       return count >= SKILL_QUOTA_MIN ? count < SKILL_QUOTA_MAX : true;
     });
 
-    if (allowedSkills.length === 0) {
-      throw new Error('Tất cả skills đã đủ quota tối đa.');
+    if (allowedSkills.length === 0) throw new Error('Tất cả skills đã đủ quota tối đa.');
+
+    const prioritySkills = allowedSkills.filter((s) => (skillsAnswered[s] ?? 0) < SKILL_QUOTA_MIN);
+    const targetSkills = prioritySkills.length > 0 ? prioritySkills : allowedSkills;
+
+    const speakingDue = targetSkills.includes(SPEAKING_SKILL)
+      && (skillsAnswered[SPEAKING_SKILL] ?? 0) < SPEAKING_QUOTA;
+
+    if (speakingDue && targetSkills.length === 1 && targetSkills[0] === SPEAKING_SKILL) {
+      return this.selectSpeakingQuestion({
+        currentTheta,
+        usedQuestionIds,
+        questionOrder,
+      });
     }
 
-    const prioritySkills = allowedSkills.filter(
-      (s) => (skillsAnswered[s] ?? 0) < SKILL_QUOTA_MIN,
-    );
-    const targetSkills =
-      prioritySkills.length > 0 ? prioritySkills : allowedSkills;
+    const irtTargetSkills = targetSkills.filter((s) => s !== SPEAKING_SKILL);
+    const finalTargetSkills = irtTargetSkills.length > 0 ? irtTargetSkills : targetSkills;
 
-    let candidates: any[];
-    if (usedQuestionIds.length === 0) {
-      candidates = await this.prisma.$queryRaw<any[]>`
-        SELECT id, question_text, question_type, options, expected_time_sec, band_min, band_max, irt_a, irt_b, irt_c, passage_id, context_type
+    let candidates: any[] = [];
+    const nonSpeakingSkills = finalTargetSkills.filter((s) => s !== SPEAKING_SKILL);
+
+    if (nonSpeakingSkills.length > 0) {
+      const rows = await this.prisma.$queryRaw<any[]>`
+        SELECT id, question_text, question_type, options, expected_time_sec,
+               band_min, band_max, irt_a, irt_b, irt_c, passage_id, context_type, skill
         FROM ielts_questions
-        WHERE skill = ANY(${targetSkills}::text[]) AND status = 'approved' AND is_placement = true AND question_type = ANY(${ALLOWED_TYPES}::text[]) AND irt_a IS NOT NULL AND irt_b IS NOT NULL
+        WHERE skill = ANY(${nonSpeakingSkills}::text[])
+          AND status = 'approved' AND is_placement = true
+          AND question_type = ANY(${['mcq', 'gap_fill', 'true_false_ng']}::text[])
+          AND irt_a IS NOT NULL AND irt_b IS NOT NULL
+          AND id != ALL(${usedQuestionIds}::uuid[])
       `;
-    } else {
-      candidates = await this.prisma.$queryRaw<any[]>`
-        SELECT id, question_text, question_type, options, expected_time_sec, band_min, band_max, irt_a, irt_b, irt_c, passage_id, context_type
-        FROM ielts_questions
-        WHERE skill = ANY(${targetSkills}::text[]) AND status = 'approved' AND is_placement = true AND question_type = ANY(${ALLOWED_TYPES}::text[]) AND irt_a IS NOT NULL AND irt_b IS NOT NULL AND id != ALL(${usedQuestionIds}::uuid[])
-      `;
+      candidates.push(...rows);
     }
 
     if (candidates.length === 0) {
-      throw new Error(
-        `Pool placement không đủ câu cho theta=${currentTheta.toFixed(2)}, skills=${targetSkills.join(',')}.`,
-      );
+      throw new Error(`Pool placement không đủ câu cho theta=${currentTheta.toFixed(2)}, skills=${finalTargetSkills.join(',')}.`);
     }
 
     const candidatesWithParams = candidates.map((q) => ({
       id: q.id,
-      params: {
-        a: Number(q.irt_a ?? 1.0),
-        b: Number(q.irt_b ?? 0.0),
-        c: Number(q.irt_c ?? 0.25),
-      } as IrtParams,
+      params: { a: Number(q.irt_a ?? 1.0), b: Number(q.irt_b ?? 0.0), c: Number(q.irt_c ?? 0.25) } as IrtParams,
       raw: q,
     }));
 
-    const bestId = selectOptimalItem(
-      currentTheta,
-      candidatesWithParams.map((c) => ({ id: c.id, params: c.params })),
-    );
+    const bestId = selectOptimalItem(currentTheta, candidatesWithParams.map((c) => ({ id: c.id, params: c.params })));
     const selected = candidatesWithParams.find((c) => c.id === bestId)!;
     const q = selected.raw;
     const band = thetaToBand(currentTheta);
-    const timeLimitSec =
-      band <= 5.0
-        ? Number(q.expected_time_sec) || 90
-        : Number(q.expected_time_sec) || 60;
+    const timeLimitSec = band <= 5.0 ? Number(q.expected_time_sec) || 90 : Number(q.expected_time_sec) || 60;
 
     let passageData: QuestionPayload['passage'] = null;
-    const contextType: QuestionPayload['contextType'] =
-      q.context_type === 'audio'
-        ? 'audio'
-        : q.context_type === 'passage'
-          ? 'passage'
-          : 'standalone';
+    const contextType: QuestionPayload['contextType'] = q.context_type === 'audio' ? 'audio' : q.context_type === 'passage' ? 'passage' : 'standalone';
 
     if (q.passage_id) {
       const passage = await this.prisma.$queryRaw<any[]>`
@@ -497,12 +530,7 @@ export class AdaptiveService {
       `;
       if (passage.length > 0) {
         const p = passage[0];
-        passageData = {
-          id: p.id,
-          title: p.title,
-          content: p.content,
-          audioUrl: p.audio_url ?? null,
-        };
+        passageData = { id: p.id, title: p.title, content: p.content, audioUrl: p.audio_url ?? null };
       }
     }
 
@@ -519,26 +547,100 @@ export class AdaptiveService {
     };
   }
 
+  private async selectSpeakingQuestion(params: {
+    currentTheta: number;
+    usedQuestionIds: string[];
+    questionOrder: number;
+  }): Promise<QuestionPayload> {
+    const { currentTheta, usedQuestionIds, questionOrder } = params;
+
+    const band = thetaToBand(currentTheta);
+    const tolerance = 1.5;
+
+    let candidates: any[] = [];
+
+    if (usedQuestionIds.length === 0) {
+      candidates = await this.prisma.$queryRaw<any[]>`
+        SELECT id, question_text, question_type, options,
+               expected_time_sec, band_min, band_max,
+               context_type, passage_id, skill
+        FROM   ielts_questions
+        WHERE  skill         = ${SPEAKING_SKILL}
+          AND  status        = 'approved'
+          AND  is_placement  = true
+          AND  band_min     <= ${band + tolerance}
+          AND  band_max     >= ${band - tolerance}
+        ORDER BY RANDOM()
+        LIMIT 1
+      `;
+    } else {
+      candidates = await this.prisma.$queryRaw<any[]>`
+        SELECT id, question_text, question_type, options,
+               expected_time_sec, band_min, band_max,
+               context_type, passage_id, skill
+        FROM   ielts_questions
+        WHERE  skill         = ${SPEAKING_SKILL}
+          AND  status        = 'approved'
+          AND  is_placement  = true
+          AND  band_min     <= ${band + tolerance}
+          AND  band_max     >= ${band - tolerance}
+          AND  id           != ALL(${usedQuestionIds}::uuid[])
+        ORDER BY RANDOM()
+        LIMIT 1
+      `;
+    }
+
+    if (candidates.length === 0) {
+      candidates = await this.prisma.$queryRaw<any[]>`
+        SELECT id, question_text, question_type, options,
+               expected_time_sec, band_min, band_max,
+               context_type, passage_id, skill
+        FROM   ielts_questions
+        WHERE  skill        = ${SPEAKING_SKILL}
+          AND  status       = 'approved'
+          AND  is_placement = true
+          AND  id          != ALL(${usedQuestionIds.length > 0 ? usedQuestionIds : ['']}::uuid[])
+        ORDER BY RANDOM()
+        LIMIT 1
+      `;
+    }
+
+    if (candidates.length === 0) {
+      throw new Error('SPEAKING_SKIP');
+    }
+
+    const q = candidates[0];
+
+    return {
+      id: q.id,
+      skill: q.skill,
+      questionText: q.question_text,
+      questionType: q.question_type,
+      options: q.options,
+      timeLimitSec: Number(q.expected_time_sec) || 90,
+      progress: { current: questionOrder, total: MAX_QUESTIONS },
+      contextType: 'standalone',
+      passage: null,
+    };
+  }
+
   private buildResponseHistory(answers: any[]): ItemResponse[] {
     return answers
       .filter((a) => a.isCorrect !== null)
-      .map((a) => ({
-        correct: a.isCorrect as boolean,
-        params: {
-          a: Number(a.irtASnapshot ?? a.irtA) || 1.0,
-          b: Number(a.irtBSnapshot ?? a.irtB) || 0.0,
-          c: Number(a.irtCSnapshot ?? a.irtC) || 0.25,
-        },
-      }));
+      .map((a) => {
+        const isSpeak = a.skill === 'speaking';
+        return {
+          correct: a.isCorrect as boolean,
+          params: {
+            a: isSpeak ? 1.0 : Number(a.irtASnapshot ?? a.irtA) || 1.0,
+            b: isSpeak ? 0.0 : Number(a.irtBSnapshot ?? a.irtB) || 0.0,
+            c: isSpeak ? 0.25 : Number(a.irtCSnapshot ?? a.irtC) || 0.25,
+          },
+        };
+      });
   }
 
-  private detectPatterns(
-    skillEstimates: Record<
-      string,
-      { theta: number; band: number; sem: number }
-    >,
-    allAnswers: any[],
-  ): SkillPattern {
+  private detectPatterns(skillEstimates: Record<string, { theta: number; band: number; sem: number }>, allAnswers: any[]): SkillPattern {
     const strengths: string[] = [];
     const weaknesses: string[] = [];
     const balanced: string[] = [];
@@ -549,60 +651,36 @@ export class AdaptiveService {
       else balanced.push(skill);
     }
 
-    const accuracyBySkill: Record<string, { correct: number; total: number }> =
-      {};
+    const accuracyBySkill: Record<string, { correct: number; total: number }> = {};
     for (const ans of allAnswers) {
       if (!ans.skill) continue;
-      if (!accuracyBySkill[ans.skill])
-        accuracyBySkill[ans.skill] = { correct: 0, total: 0 };
+      if (!accuracyBySkill[ans.skill]) accuracyBySkill[ans.skill] = { correct: 0, total: 0 };
       accuracyBySkill[ans.skill].total++;
       if (ans.isCorrect) accuracyBySkill[ans.skill].correct++;
     }
 
     const insights: string[] = [];
-    const skillLabels: Record<string, string> = {
-      reading: 'Reading',
-      listening: 'Listening',
-      writing: 'Writing',
-      speaking: 'Speaking',
-    };
+    const skillLabels: Record<string, string> = { reading: 'Reading', listening: 'Listening', writing: 'Writing', speaking: 'Speaking' };
 
     for (const skill of strengths) {
       const acc = accuracyBySkill[skill];
       const pct = acc ? Math.round((acc.correct / acc.total) * 100) : 0;
-      insights.push(
-        `${skillLabels[skill]}: Tốt (${pct}% chính xác — band ~${skillEstimates[skill].band})`,
-      );
+      insights.push(`${skillLabels[skill]}: Tốt (${pct}% chính xác — band ~${skillEstimates[skill].band})`);
     }
-
     for (const skill of weaknesses) {
       const acc = accuracyBySkill[skill];
       const pct = acc ? Math.round((acc.correct / acc.total) * 100) : 0;
-      insights.push(
-        `${skillLabels[skill]}: Cần cải thiện (${pct}% chính xác — band ~${skillEstimates[skill].band})`,
-      );
+      insights.push(`${skillLabels[skill]}: Cần cải thiện (${pct}% chính xác — band ~${skillEstimates[skill].band})`);
     }
-
     for (const skill of balanced) {
-      insights.push(
-        `${skillLabels[skill]}: Trung bình (band ~${skillEstimates[skill].band})`,
-      );
+      insights.push(`${skillLabels[skill]}: Trung bình (band ~${skillEstimates[skill].band})`);
     }
 
     return { strengths, weaknesses, balanced, insights };
   }
 
-  private async finalizeResult(
-    sessionId: string,
-    estimate: ThetaEstimate,
-    allAnswers: any[],
-  ): Promise<void> {
-    const bySkill: Record<string, ItemResponse[]> = {
-      reading: [],
-      listening: [],
-      writing: [],
-      speaking: [],
-    };
+  private async finalizeResult(sessionId: string, estimate: ThetaEstimate, allAnswers: any[]): Promise<void> {
+    const bySkill: Record<string, ItemResponse[]> = { reading: [], listening: [], writing: [], speaking: [] };
 
     for (const ans of allAnswers) {
       if (!ans.skill) continue;
@@ -612,44 +690,28 @@ export class AdaptiveService {
       if (irtA == null) continue;
       bySkill[ans.skill]?.push({
         correct: ans.isCorrect ?? false,
-        params: {
-          a: Number(irtA) || 1.0,
-          b: Number(irtB) || 0.0,
-          c: Number(irtC) || 0.25,
-        },
+        params: { a: Number(irtA) || 1.0, b: Number(irtB) || 0.0, c: Number(irtC) || 0.25 },
       });
     }
 
-    const skillEstimates: Record<
-      string,
-      { theta: number; band: number; sem: number }
-    > = {};
+    const skillEstimates: Record<string, { theta: number; band: number; sem: number }> = {};
     for (const [skill, responses] of Object.entries(bySkill)) {
       if (responses.length === 0) {
         skillEstimates[skill] = { theta: 0, band: thetaToBand(0), sem: 0.99 };
         continue;
       }
       const est = getFullEstimateEAP(responses, 0);
-      skillEstimates[skill] = {
-        theta: est.theta,
-        band: est.band,
-        sem: est.sem,
-      };
+      skillEstimates[skill] = { theta: est.theta, band: est.band, sem: est.sem };
     }
 
-    const skillBands = {
-      reading: skillEstimates.reading.band,
-      listening: skillEstimates.listening.band,
-      writing: skillEstimates.writing.band,
-      speaking: skillEstimates.speaking.band,
+    const skillBands: Record<string, number | null> = {
+      reading: bySkill.reading.length > 0 ? skillEstimates.reading.band : null,
+      listening: bySkill.listening.length > 0 ? skillEstimates.listening.band : null,
+      writing: bySkill.writing.length > 0 ? skillEstimates.writing.band : null,
+      speaking: bySkill.speaking.length > 0 ? skillEstimates.speaking.band : null,
     };
 
-    const skillWeights: Record<string, number> = {
-      reading: 0.3,
-      listening: 0.3,
-      writing: 0.2,
-      speaking: 0.2,
-    };
+    const skillWeights: Record<string, number> = { reading: 0.3, listening: 0.3, writing: 0.2, speaking: 0.2 };
     let totalWeight = 0;
     let weightedTheta = 0;
 
@@ -668,24 +730,21 @@ export class AdaptiveService {
       where: { id: sessionId },
       data: {
         finalBand,
-        skillBands: {
-          ...skillBands,
-          _patterns: patterns,
-          _sem: estimate.sem,
-        } as any,
+        skillBands: { ...skillBands, _patterns: patterns, _sem: estimate.sem } as any,
         confidenceLevel: estimate.confidence,
       } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
     });
   }
 
-  private checkAnswer(
-    correct: string,
-    userAnswer: string,
-    type: string,
-  ): boolean {
+  private checkAnswer(correct: string, userAnswer: string, type: string): boolean {
+    if (type === 'speaking') {
+      const band = parseFloat(userAnswer);
+      if (!isNaN(band)) return band >= 5.0;
+      return true;
+    }
+
     const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
-    if (type === 'mcq' || type === 'true_false_ng')
-      return norm(correct) === norm(userAnswer);
+    if (type === 'mcq' || type === 'true_false_ng') return norm(correct) === norm(userAnswer);
     if (type === 'gap_fill') {
       const dist = this.levenshtein(norm(correct), norm(userAnswer));
       return dist <= (correct.length <= 5 ? 0 : 1);
@@ -694,17 +753,11 @@ export class AdaptiveService {
   }
 
   private levenshtein(a: string, b: string): number {
-    const m = a.length,
-      n = b.length;
-    const dp = Array.from({ length: m + 1 }, (_, i) =>
-      Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
-    );
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
     for (let i = 1; i <= m; i++)
       for (let j = 1; j <= n; j++)
-        dp[i][j] =
-          a[i - 1] === b[j - 1]
-            ? dp[i - 1][j - 1]
-            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     return dp[m][n];
   }
 }

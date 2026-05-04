@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
     ChevronLeft,
     Target,
@@ -92,11 +92,13 @@ const normalizeBand = (v: string) => {
 
 export default function IeltsRoadmapPage() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeSkill, setActiveSkill] = useState<string | null>(null);
+    const [showPlacementSuccess, setShowPlacementSuccess] = useState(false);
 
     // target modal
     const [showTargetModal, setShowTargetModal] = useState(false);
@@ -111,11 +113,49 @@ export default function IeltsRoadmapPage() {
         try {
             setLoading(true);
             setError(null);
+
+            // Kiểm tra xem có dữ liệu currentBand từ placement test không
+            const placementBand = location.state?.currentBand;
+            
+            // Nếu có currentBand từ placement test, tạo roadmap mới hoặc cập nhật
+            if (placementBand && typeof placementBand === 'number') {
+                try {
+                    // Thử lấy roadmap hiện tại trước
+                    const existingRoadmap = await ieltsAdaptiveApi.getMyRoadmap();
+                    
+                    if (existingRoadmap?.roadmap) {
+                        // Nếu đã có roadmap, cập nhật current_band
+                        await ieltsAdaptiveApi.updateMyTargets({
+                            current_band: placementBand,
+                            target_band: existingRoadmap.roadmap.target_band || placementBand + 1,
+                        });
+                    } else {
+                        // Nếu chưa có roadmap, tạo mới
+                        await ieltsAdaptiveApi.generateMyRoadmap({
+                            current_band: placementBand,
+                            target_band: placementBand + 1, // Mặc định target cao hơn 1 band
+                        });
+                    }
+                    
+                    // Hiển thị thông báo thành công
+                    setShowPlacementSuccess(true);
+                    setTimeout(() => setShowPlacementSuccess(false), 5000);
+                    
+                    // Xóa state để tránh tạo lại roadmap khi reload
+                    window.history.replaceState({}, document.title);
+                } catch (err) {
+                    console.error('Error creating/updating roadmap with placement result:', err);
+                }
+            }
+
+            // Tải roadmap (mới hoặc đã cập nhật)
             const myRoadmap = await ieltsAdaptiveApi.getMyRoadmap();
             if (myRoadmap?.roadmap) {
                 setRoadmap({ ...myRoadmap.roadmap, lessons: myRoadmap.lessons || [] });
                 return;
             }
+            
+            // Fallback: nếu không có roadmap, tạo mới với band mặc định
             const data = await ieltsAdaptiveApi.getRoadmap(0);
             setRoadmap(data);
         } catch (err: any) {
@@ -123,7 +163,7 @@ export default function IeltsRoadmapPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [location.state]);
 
     useEffect(() => { loadRoadmap(); }, [loadRoadmap]);
 
@@ -266,6 +306,32 @@ export default function IeltsRoadmapPage() {
                     <span className="text-slate-300">/</span>
                     <span className="font-semibold text-slate-700">IELTS</span>
                 </nav>
+
+                {/* Success notification from placement test */}
+                {showPlacementSuccess && (
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-5 flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+                        <div className="flex-shrink-0 w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-md">
+                            <CheckCircle2 className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-emerald-900 font-bold text-base mb-1">
+                                🎉 Lộ trình đã được tạo dựa trên kết quả placement test!
+                            </h3>
+                            <p className="text-emerald-700 text-sm leading-relaxed">
+                                Chúng tôi đã phân tích kết quả kiểm tra đầu vào của bạn và tạo lộ trình học tập cá nhân hóa. 
+                                Band hiện tại của bạn là <span className="font-bold">{roadmap.current_band.toFixed(1)}</span>, 
+                                và mục tiêu là <span className="font-bold">{roadmap.target_band.toFixed(1)}</span>. 
+                                Hãy bắt đầu hành trình chinh phục IELTS ngay hôm nay! 💪
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setShowPlacementSuccess(false)}
+                            className="flex-shrink-0 text-emerald-600 hover:text-emerald-800 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
 
                 {/* ── Hero banner ─────────────────────────────────────────────── */}
                 <section className="relative overflow-hidden rounded-3xl bg-linear-to-r from-[#1b1230] via-[#281d52] to-[#472669] p-8 text-white">

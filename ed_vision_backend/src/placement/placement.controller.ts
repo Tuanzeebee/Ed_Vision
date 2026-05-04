@@ -90,13 +90,24 @@ export class PlacementController {
     const transcript = await this.speakingService.transcribe(file.path);
 
     // 2. AI Scoring
-    const { band, feedback } = await this.speakingService.scoreSpeaking(
+    const { band, feedback, skipped } = await this.speakingService.scoreSpeaking(
       transcript,
       body.speakingPrompt,
       file.path,
     );
 
-    // 3. Submit vào IRT — band >= 5.5 tính là "đúng" để update theta
+    // ⚠️ CHÚ Ý: Với logic mới, skipped sẽ LUÔN là false
+    // Vì nếu có audio gửi lên (đã qua check blob.size ở FE) thì PHẢI chấm điểm
+    // Giữ lại check này để đảm bảo backward compatibility
+    if (skipped) {
+      return {
+        speakingSkipped: true,
+        speakingResult: null,
+        nextQuestion: null,
+      };
+    }
+
+    // 3. Submit vào IRT
     const result = await this.adaptiveService.submitAnswer({
       sessionId: body.sessionId,
       questionId: body.questionId,
@@ -106,6 +117,7 @@ export class PlacementController {
 
     // 4. Trả về kèm transcript và feedback cho FE hiển thị
     return {
+      speakingSkipped: false,
       ...result,
       speakingResult: { band, feedback, transcript },
     };

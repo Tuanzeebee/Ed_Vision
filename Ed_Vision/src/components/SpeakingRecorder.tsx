@@ -4,10 +4,11 @@ const BACKEND_URL = 'http://localhost:3000'
 const MAX_SECONDS = 60
 
 interface SpeakingResult {
-  band:         number
-  feedback:     string
-  transcript:   string
-  nextQuestion: any
+  band: number | null;
+  feedback: string;
+  transcript: string;
+  skipped: boolean;
+  nextQuestion: any;
 }
 
 interface Props {
@@ -25,8 +26,11 @@ export function SpeakingRecorder({
 }: Props) {
   const [status, setStatus]       = useState<'idle' | 'recording' | 'submitting' | 'done'>('idle')
   const statusRef = useRef<'idle' | 'recording' | 'submitting' | 'done'>('idle')
-  const [secondsLeft, setSeconds] = useState(MAX_SECONDS)
-  const [error, setError]         = useState<string | null>(null)
+  const [secondsLeft, setSeconds] = useState(MAX_SECONDS);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isSkipped, setIsSkipped] = useState(false);
+  const MAX_RETRIES = 1; // cho phép retry 1 lần
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef        = useRef<Blob[]>([])
@@ -79,39 +83,78 @@ export function SpeakingRecorder({
     if (!recorder) return
 
     recorder.onstop = async () => {
-      const blob      = new Blob(chunksRef.current, { type: 'audio/webm' })
-      const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000);
 
-      recorder.stream.getTracks().forEach(t => t.stop())
+      // ✅ Detect audio rỗng tại FE luôn — không cần gọi server
+      if (blob.size < 5000) {
+        recorder.stream.getTracks().forEach((t) => t.stop());
 
-      updateStatus('submitting')
+        if (retryCount < MAX_RETRIES) {
+          // Lần 1: cho retry
+          setRetryCount((prev) => prev + 1);
+          setError('Không phát hiện giọng nói. Hãy thử lại và nói rõ hơn.');
+          updateStatus('idle');
+          return;
+        } else {
+          // Lần 2: bỏ qua câu
+          setIsSkipped(true);
+          updateStatus('done');
+          onResult({
+            band: null,
+            feedback: '',
+            transcript: '',
+            skipped: true,
+            nextQuestion: null, // FE tự fetch câu tiếp
+          });
+          return;
+        }
+      }
+
+      recorder.stream.getTracks().forEach((t) => t.stop());
+
+      updateStatus('submitting');
 
       try {
-        const formData = new FormData()
-        formData.append('audio',          blob, 'speaking.webm')
-        formData.append('sessionId',      sessionId)
-        formData.append('questionId',     questionId)
-        formData.append('speakingPrompt', speakingPrompt)
-        formData.append('timeTakenSec',   String(timeTaken))
+        const formData = new FormData();
+        formData.append('audio', blob, 'speaking.webm');
+        formData.append('sessionId', sessionId);
+        formData.append('questionId', questionId);
+        formData.append('speakingPrompt', speakingPrompt);
+        formData.append('timeTakenSec', String(timeTaken));
 
-        const res  = await fetch(`${BACKEND_URL}/placement/speaking-submit`, {
+        const res = await fetch(`${BACKEND_URL}/placement/speaking-submit`, {
           method: 'POST',
-          body:   formData,
-        })
-        const data = await res.json()
+          body: formData,
+        });
+        const data = await res.json();
 
-        updateStatus('done')
+        if (data.speakingSkipped) {
+          setIsSkipped(true);
+          updateStatus('done');
+          onResult({
+            band: null,
+            feedback: '',
+            transcript: '',
+            skipped: true,
+            nextQuestion: null,
+          });
+          return;
+        }
+
+        updateStatus('done');
         onResult({
-          band:         data.speakingResult.band,
-          feedback:     data.speakingResult.feedback,
-          transcript:   data.speakingResult.transcript,
+          band: data.speakingResult.band,
+          feedback: data.speakingResult.feedback,
+          transcript: data.speakingResult.transcript,
+          skipped: false,
           nextQuestion: data.nextQuestion,
-        })
+        });
       } catch (err) {
-        setError('Lỗi khi nộp bài. Vui lòng thử lại.')
-        updateStatus('idle')
+        setError('Lỗi khi nộp bài. Vui lòng thử lại.');
+        updateStatus('idle');
       }
-    }
+    };
 
     recorder.stop()
   }
@@ -140,13 +183,20 @@ export function SpeakingRecorder({
       )}
 
       {status === 'idle' && (
-        <button
-          onClick={startRecording}
-          className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-200 transition-all active:scale-90 group relative"
-        >
-          <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20 group-hover:hidden"></div>
-          <span className="text-2xl">🎤</span>
-        </button>
+        <div className="flex flex-col items-center">
+          {retryCount > 0 && (
+            <p className="text-amber-500 text-sm mb-4 font-medium">
+              ⚠️ Lần thử {retryCount + 1}/2 — hãy nói rõ ràng hơn
+            </p>
+          )}
+          <button
+            onClick={startRecording}
+            className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-200 transition-all active:scale-90 group relative"
+          >
+            <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20 group-hover:hidden"></div>
+            <span className="text-2xl">🎤</span>
+          </button>
+        </div>
       )}
 
       {status === 'recording' && (
@@ -197,10 +247,39 @@ export function SpeakingRecorder({
 
       {status === 'done' && (
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mb-4">
-            ✓
-          </div>
-          <p className="text-emerald-600 font-black text-xl">Submission Successful!</p>
+          {isSkipped ? (
+            <div className="text-center p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-4">
+              <p className="text-slate-500 font-medium flex items-center justify-center gap-2">
+                ⏭ Câu Speaking đã được bỏ qua
+              </p>
+              <p className="text-slate-400 text-xs mt-1">
+                Kỹ năng Speaking sẽ hiển thị "Chưa đánh giá"
+              </p>
+              <button
+                onClick={() =>
+                  onResult({
+                    band: null,
+                    feedback: '',
+                    transcript: '',
+                    skipped: true,
+                    nextQuestion: null,
+                  })
+                }
+                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-all active:scale-95"
+              >
+                Tiếp tục →
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mb-4">
+                ✓
+              </div>
+              <p className="text-emerald-600 font-black text-xl">
+                Submission Successful!
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
