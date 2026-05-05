@@ -100,32 +100,36 @@ export default function ToeicRoadmapBoard({
   useEffect(() => {
     getToeicReservePoints()
       .then((data) => {
-        let listeningCorrect = 0;
-        let listeningTotal = 0;
-        let readingCorrect = 0;
-        let readingTotal = 0;
+        // Prefer server aggregate (counts ALL sessions, not just the 20 recent).
+        let listeningTotal = Number(data.listening_total ?? NaN);
+        let readingTotal = Number(data.reading_total ?? NaN);
+        let listeningAcc = Number(data.listening_accuracy ?? NaN);
+        let readingAcc = Number(data.reading_accuracy ?? NaN);
 
-        for (const session of data.part_sessions) {
-          if (session.toeic_part >= 1 && session.toeic_part <= 4) {
-            listeningCorrect += session.correct_count || 0;
-            listeningTotal += session.total_questions || 10;
-          } else if (session.toeic_part >= 5 && session.toeic_part <= 7) {
-            readingCorrect += session.correct_count || 0;
-            readingTotal += session.total_questions || 10;
+        // Fallback: derive from part_sessions (last 20) for older backends.
+        if (!Number.isFinite(listeningTotal) || !Number.isFinite(readingTotal)) {
+          let lCorrect = 0, lTotal = 0, rCorrect = 0, rTotal = 0;
+          for (const s of data.part_sessions ?? []) {
+            if (s.toeic_part >= 1 && s.toeic_part <= 4) {
+              lCorrect += s.correct_count || 0;
+              lTotal += s.total_questions || 0;
+            } else if (s.toeic_part >= 5 && s.toeic_part <= 7) {
+              rCorrect += s.correct_count || 0;
+              rTotal += s.total_questions || 0;
+            }
           }
+          if (!Number.isFinite(listeningTotal)) listeningTotal = lTotal;
+          if (!Number.isFinite(readingTotal)) readingTotal = rTotal;
+          if (!Number.isFinite(listeningAcc))
+            listeningAcc = lTotal > 0 ? Math.round((lCorrect / lTotal) * 100) : 0;
+          if (!Number.isFinite(readingAcc))
+            readingAcc = rTotal > 0 ? Math.round((rCorrect / rTotal) * 100) : 0;
         }
 
-        const hasList = listeningTotal > 0;
-        const hasRead = readingTotal > 0;
-
-        setHasListeningData(hasList);
-        setHasReadingData(hasRead);
-
-        const lAcc = hasList ? Math.round((listeningCorrect / listeningTotal) * 100) : 0;
-        const rAcc = hasRead ? Math.round((readingCorrect / readingTotal) * 100) : 0;
-
-        setListeningAccuracy(lAcc);
-        setReadingAccuracy(rAcc);
+        setHasListeningData(listeningTotal > 0);
+        setHasReadingData(readingTotal > 0);
+        setListeningAccuracy(listeningAcc || 0);
+        setReadingAccuracy(readingAcc || 0);
         setIsAccuracyLoaded(true);
       })
       .catch(() => {

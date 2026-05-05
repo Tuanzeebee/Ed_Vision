@@ -1399,6 +1399,9 @@ export default function ToeicNodePracticePage() {
     number | null
   >(null);
   const [examUnlocked, setExamUnlocked] = useState(false);
+  // Track whether the backend session has been successfully recorded so we
+  // can retry on handleComplete if the initial submit fails/skipped.
+  const [submitSucceeded, setSubmitSucceeded] = useState(false);
 
   // --- Groq Chat Tutor State ---
   const [chatMessage, setChatMessage] = useState("");
@@ -1505,7 +1508,7 @@ export default function ToeicNodePracticePage() {
           setDbQuestions(null);
           setSessionQuestionIds([]);
           setDbError(
-            `Part ${toeicPart} hiện chưa đủ 10 câu hỏi mới trong band điểm của bạn. Vui lòng liên hệ giáo viên để bổ sung bộ câu hỏi.`,
+            `Part ${toeicPart} hiện chưa có câu hỏi nào trong kho. Vui lòng liên hệ giáo viên để bổ sung bộ câu hỏi.`,
           );
           return;
         }
@@ -2531,7 +2534,7 @@ export default function ToeicNodePracticePage() {
               .join("\n");
 
         const summaryQuestion = [
-          `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau 10 câu vừa làm.`,
+          `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau ${questions.length} câu vừa làm.`,
           "BẮT BUỘC trả lời 100% bằng tiếng Việt (giữ nguyên thuật ngữ TOEIC nếu cần).",
           "BẮT BUỘC đúng format 5 dòng:",
           `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
@@ -2546,7 +2549,7 @@ export default function ToeicNodePracticePage() {
           `Skill: ${activeSkill}`,
           `Part: ${toeicPart}`,
           `Đúng lần đầu: ${correctCount}/${questions.length}`,
-          "Dữ liệu RAG - 10 câu vừa làm:",
+          `Dữ liệu RAG - ${questions.length} câu vừa làm:`,
           sessionRows.join("\n\n"),
           "Dữ liệu RAG - lịch sử sai của user:",
           historyText,
@@ -2628,7 +2631,7 @@ export default function ToeicNodePracticePage() {
               Đang chuẩn bị bộ câu hỏi luyện tập...
             </p>
             <p className="text-sm text-slate-500">
-              Hệ thống đang ghép bộ 10 câu phù hợp với node hiện tại.
+              Hệ thống đang ghép bộ câu hỏi phù hợp với node hiện tại.
             </p>
           </div>
         </main>
@@ -2930,8 +2933,26 @@ export default function ToeicNodePracticePage() {
             if (practiceDraftStorageKey) {
               clearPracticeRunDraft(practiceDraftStorageKey);
             }
+            setSubmitSucceeded(true);
           })
-          .catch(() => { });
+          .catch((err) => {
+            console.error(
+              "[ToeicNodePractice] submitToeicPracticeSession failed:",
+              err?.response?.status,
+              err?.response?.data,
+              "payload:",
+              {
+                toeic_part: toeicPart,
+                question_ids: sessionQuestionIds,
+                answers: answersPayload,
+              },
+            );
+          });
+      } else {
+        console.warn(
+          "[ToeicNodePractice] Skip submit — toeicPart or sessionQuestionIds missing",
+          { toeicPart, sessionQuestionIdsLength: sessionQuestionIds.length },
+        );
       }
       setShowSummary(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2946,6 +2967,31 @@ export default function ToeicNodePracticePage() {
   };
 
   const handleComplete = () => {
+    // 0. Safety net — if the per-question submit was skipped or failed,
+    // retry sending the practice session to the backend so DB stays in sync
+    // with localStorage (fixes: listening page shows "Đã hoàn thành" but
+    // detail page counts 0).
+    if (!submitSucceeded && toeicPart !== null && sessionQuestionIds.length > 0) {
+      const answersPayload: Record<string, string> = {};
+      sessionQuestionIds.forEach((qId, idx) => {
+        if (firstAnswers[idx]) answersPayload[String(qId)] = firstAnswers[idx];
+      });
+      submitToeicPracticeSession({
+        toeic_part: toeicPart,
+        question_ids: sessionQuestionIds,
+        answers: answersPayload,
+      })
+        .then(() => {
+          setSubmitSucceeded(true);
+        })
+        .catch((err) => {
+          console.error(
+            "[ToeicNodePractice] retry submitToeicPracticeSession failed:",
+            err,
+          );
+        });
+    }
+
     // 1. Update map state in localStorage
     const mapState = loadMapState();
     const skillState = mapState[activeSkill];
@@ -3296,7 +3342,7 @@ export default function ToeicNodePracticePage() {
 
                 {partSummaryLoading && !partSummaryText ? (
                   <p className="text-sm text-slate-500">
-                    AI đang tổng hợp tóm tắt từ 10 câu vừa làm và lịch sử sai...
+                    AI đang tổng hợp tóm tắt từ các câu vừa làm và lịch sử sai...
                   </p>
                 ) : (
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">

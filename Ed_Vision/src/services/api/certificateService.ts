@@ -272,6 +272,101 @@ export async function getToeicExamRepositoryDetail(
   return decryptRepositoryDetail(res.data);
 }
 
+// ── TOEIC Exam Simulation Session (server-driven countdown + resume) ─────────
+
+export interface ExamSessionAnswer {
+  question_id: number;
+  selected_key: "A" | "B" | "C" | "D" | null;
+  is_flagged: boolean;
+}
+
+export interface ExamSessionState {
+  session_id: number;
+  repository_id: number;
+  repository_slug: string;
+  repository_title: string;
+  started_at: string;
+  duration_sec: number;
+  remaining_sec: number;
+  submitted_at: string | null;
+  auto_submitted: boolean;
+  current_index: number;
+  total_questions: number;
+  answers: ExamSessionAnswer[];
+}
+
+export interface ExamSubmitResult {
+  session_id: number;
+  correct_count: number;
+  total_count: number;
+  total_score: number;
+  auto_submitted: boolean;
+  submitted_at: string;
+  question_results: Array<{
+    question_id: number;
+    selected_key: string | null;
+    correct_key: string | null;
+    is_correct: boolean;
+  }>;
+}
+
+export async function startExamSession(
+  repositorySlug: string,
+  durationSecHint?: number,
+): Promise<ExamSessionState> {
+  const res = await apiClient.post<ExamSessionState>(
+    `/student/certificate/toeic-exam/start`,
+    { repository_slug: repositorySlug, duration_sec_hint: durationSecHint },
+  );
+  return res.data;
+}
+
+export async function getExamSession(
+  sessionId: number,
+): Promise<ExamSessionState> {
+  const res = await apiClient.get<ExamSessionState>(
+    `/student/certificate/toeic-exam/${sessionId}`,
+  );
+  return res.data;
+}
+
+export async function upsertExamAnswer(
+  sessionId: number,
+  payload: {
+    question_id: number;
+    selected_key: "A" | "B" | "C" | "D" | null;
+    is_flagged?: boolean;
+  },
+): Promise<{ ok: true; remaining_sec: number }> {
+  const res = await apiClient.patch<{ ok: true; remaining_sec: number }>(
+    `/student/certificate/toeic-exam/${sessionId}/answer`,
+    payload,
+  );
+  return res.data;
+}
+
+export async function updateExamCursor(
+  sessionId: number,
+  currentIndex: number,
+): Promise<{ ok: true }> {
+  const res = await apiClient.patch<{ ok: true }>(
+    `/student/certificate/toeic-exam/${sessionId}/cursor`,
+    { current_index: currentIndex },
+  );
+  return res.data;
+}
+
+export async function submitExamSession(
+  sessionId: number,
+  reason: "manual" | "timeout" = "manual",
+): Promise<ExamSubmitResult> {
+  const res = await apiClient.post<ExamSubmitResult>(
+    `/student/certificate/toeic-exam/${sessionId}/submit`,
+    { reason },
+  );
+  return res.data;
+}
+
 export async function explainToeicAnswer(
   slug: string,
   payload: ToeicExplainAnswerPayload,
@@ -677,6 +772,16 @@ export interface ToeicReservePointsResponse {
   exam_unlocked: boolean;
   unlock_threshold: number;
   part_sessions: ToeicReservePointsPartSession[];
+  // Aggregate stats across ALL practice sessions (not just the 20 recent).
+  listening_sessions_count?: number;
+  reading_sessions_count?: number;
+  listening_correct?: number;
+  listening_total?: number;
+  reading_correct?: number;
+  reading_total?: number;
+  listening_accuracy?: number;
+  reading_accuracy?: number;
+  completed_parts?: number[];
 }
 
 export async function getToeicPracticeQuestions(

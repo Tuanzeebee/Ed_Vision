@@ -32,9 +32,19 @@ async function bootstrap() {
     },
   );
 
-  // Serve static audio files
+  // Serve static audio files (legacy prefix)
   app.useStaticAssets(join(uploadsDir, 'audio'), {
     prefix: '/audio',
+  });
+
+  // Serve the entire uploads directory (images, audio, certificates, etc.)
+  app.useStaticAssets(uploadsDir, {
+    prefix: '/uploads',
+    setHeaders: (res) => {
+      // Cache static media aggressively; file names are content-hashed/unique.
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    },
   });
 
   app.set('trust proxy', getTrustedProxySetting());

@@ -6,6 +6,7 @@ import { ToeicExplanationPrefetchService } from './toeic-explanation-prefetch.se
 import { PracticeExplanationService } from './practice-explanation.service';
 import { ToeicPracticeSessionService } from './toeic-practice-session.service';
 import { ToeicDiagnosticService } from './toeic-diagnostic.service';
+import { ToeicExamSessionService } from './toeic-exam-session.service';
 import { StudyRoomModule } from '../../study-room/study-room.module';
 
 @Module({
@@ -17,12 +18,14 @@ import { StudyRoomModule } from '../../study-room/study-room.module';
     PracticeExplanationService,
     ToeicPracticeSessionService,
     ToeicDiagnosticService,
+    ToeicExamSessionService,
   ],
   exports: [
     CertificateEnrollmentService,
     PracticeExplanationService,
     ToeicPracticeSessionService,
     ToeicDiagnosticService,
+    ToeicExamSessionService,
   ],
 })
 export class CertificateModule {}

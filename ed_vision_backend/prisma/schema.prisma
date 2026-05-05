@@ -42,6 +42,7 @@ model Account {
   createdSurveys             Survey[]                        @relation("AccountCreatedSurveys")
   surveyResponses            SurveyResponse[]
   prismaplacements           IeltsPlacementSession[]
+  toeicExamSessions          ToeicExamSession[]
 
   @@map("Account")
 }
@@ -1350,7 +1351,8 @@ model ExamRepository {
   created_at        DateTime @default(now()) @db.Timestamptz(6)
   updated_at        DateTime @updatedAt @db.Timestamptz(6)
 
-  items ExamRepositoryItem[]
+  items    ExamRepositoryItem[]
+  sessions ToeicExamSession[]
 
   @@index([cert_type, content_type, is_published])
   @@index([skill_area, topic_group])
@@ -1376,8 +1378,9 @@ model ExamRepositoryItem {
   created_at        DateTime @default(now()) @db.Timestamptz(6)
   updated_at        DateTime @updatedAt @db.Timestamptz(6)
 
-  repository ExamRepository         @relation(fields: [repository_id], references: [id], onDelete: Cascade)
-  options    ExamRepositoryOption[]
+  repository  ExamRepository         @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  options     ExamRepositoryOption[]
+  examAnswers ToeicExamAnswer[]
 
   @@unique([repository_id, item_order])
   @@index([repository_id])
@@ -1465,6 +1468,70 @@ model DiagnosticRepositoryOption {
   @@unique([item_id, option_key])
   @@index([item_id, sort_order])
   @@map("DiagnosticRepositoryOption")
+}
+
+/// Phiên thi thử TOEIC (mock exam) của một học viên cho một đề trong `ExamRepository`.
+/// Dùng để phục hồi tiến độ khi user F5 trình duyệt và tính countdown dựa trên
+/// `started_at` ở server (chống gian lận thời gian).
+///
+/// Quy ước:
+/// - Một học viên chỉ có tối đa 1 session đang mở (submitted_at = NULL) cho mỗi
+///   đề (repository_id). Khi bấm "Bắt đầu thi", backend sẽ tìm session active
+///   có sẵn để resume, nếu không tạo mới.
+/// - `duration_sec` được snapshot lúc start để đổi config đề sau không làm lệch
+///   countdown của session đang mở.
+/// - `current_index` lưu vị trí câu đang xem để F5 scroll đúng chỗ.
+model ToeicExamSession {
+  id             Int       @id @default(autoincrement())
+  account_id     Int
+  repository_id  Int
+  repository_slug String   @db.VarChar(120)
+
+  started_at     DateTime  @default(now()) @db.Timestamptz(6)
+  duration_sec   Int
+  submitted_at   DateTime? @db.Timestamptz(6)
+  auto_submitted Boolean   @default(false)
+
+  current_index  Int       @default(0)
+
+  /// Tổng số câu đúng (điền khi submit để không phải tính lại).
+  correct_count  Int?
+  total_count    Int?
+  /// Điểm quy đổi cuối cùng (nullable khi chưa submit).
+  total_score    Int?
+  /// Metadata bổ sung: agent, ip, reasons auto-submit, ...
+  metadata       Json?
+
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @updatedAt @db.Timestamptz(6)
+
+  account    Account            @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  repository ExamRepository     @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  answers    ToeicExamAnswer[]
+
+  @@index([account_id, repository_id])
+  @@index([account_id, submitted_at])
+  @@index([repository_slug])
+  @@map("ToeicExamSession")
+}
+
+/// Đáp án của từng câu trong một `ToeicExamSession`. Upsert mỗi lần user chọn
+/// đáp án hoặc flag câu để review. Một câu = một row (unique session+question).
+model ToeicExamAnswer {
+  id           Int      @id @default(autoincrement())
+  session_id   Int
+  question_id  Int
+  selected_key String?  @db.VarChar(4)
+  is_flagged   Boolean  @default(false)
+  answered_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @updatedAt @db.Timestamptz(6)
+
+  session  ToeicExamSession   @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  question ExamRepositoryItem @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@unique([session_id, question_id])
+  @@index([session_id])
+  @@map("ToeicExamAnswer")
 }
 
 /// TOEIC practice questions — study bank with AI explanations and difficulty.

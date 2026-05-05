@@ -34,6 +34,13 @@ import {
 } from './toeic-practice-session.service';
 import { ToeicDiagnosticService, SubmitDiagnosticDto } from './toeic-diagnostic.service';
 import {
+  ToeicExamSessionService,
+  StartExamSessionDto,
+  UpsertExamAnswerDto,
+  UpdateCursorDto,
+  SubmitExamSessionDto,
+} from './toeic-exam-session.service';
+import {
   CreateEnrollmentDto,
   CompleteTopicDto,
   EnrollmentResponseDto,
@@ -84,6 +91,7 @@ export class CertificateEnrollmentController {
     private readonly service: CertificateEnrollmentService,
     private readonly practiceSessionService: ToeicPracticeSessionService,
     private readonly diagnosticService: ToeicDiagnosticService,
+    private readonly examSessionService: ToeicExamSessionService,
   ) {}
 
   @Get('toeic-diagnostic/generate')
@@ -428,5 +436,81 @@ export class CertificateEnrollmentController {
     return this.practiceSessionService.getReservePointsStatus(
       req.user.account_id,
     );
+  }
+
+  // ── TOEIC Exam Simulation Session ──────────────────────────────────────────
+  // Lưu tiến độ thi thử + countdown server-driven, hỗ trợ resume khi F5.
+
+  /**
+   * POST /student/certificate/toeic-exam/start
+   * Body: { repository_slug, duration_sec_hint? }
+   * Tạo mới HOẶC trả lại session đang mở (resume).
+   */
+  @Post('toeic-exam/start')
+  async startExamSession(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: StartExamSessionDto,
+  ) {
+    return this.examSessionService.startOrResume(req.user.account_id, dto);
+  }
+
+  /**
+   * GET /student/certificate/toeic-exam/:sessionId
+   * Hydrate state khi reload (F5).
+   */
+  @Get('toeic-exam/:sessionId')
+  async getExamSession(
+    @Request() req: AuthenticatedRequest,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+  ) {
+    return this.examSessionService.getState(req.user.account_id, sessionId);
+  }
+
+  /**
+   * PATCH /student/certificate/toeic-exam/:sessionId/answer
+   * Upsert đáp án 1 câu (debounced ở frontend).
+   */
+  @Patch('toeic-exam/:sessionId/answer')
+  async upsertExamAnswer(
+    @Request() req: AuthenticatedRequest,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Body() dto: UpsertExamAnswerDto,
+  ) {
+    return this.examSessionService.upsertAnswer(
+      req.user.account_id,
+      sessionId,
+      dto,
+    );
+  }
+
+  /**
+   * PATCH /student/certificate/toeic-exam/:sessionId/cursor
+   * Lưu vị trí câu đang xem để F5 scroll lại đúng.
+   */
+  @Patch('toeic-exam/:sessionId/cursor')
+  async updateExamCursor(
+    @Request() req: AuthenticatedRequest,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Body() dto: UpdateCursorDto,
+  ) {
+    return this.examSessionService.updateCursor(
+      req.user.account_id,
+      sessionId,
+      dto,
+    );
+  }
+
+  /**
+   * POST /student/certificate/toeic-exam/:sessionId/submit
+   * Nộp bài. Idempotent — nếu đã nộp sẽ trả lại kết quả cũ.
+   */
+  @Post('toeic-exam/:sessionId/submit')
+  @HttpCode(HttpStatus.OK)
+  async submitExamSession(
+    @Request() req: AuthenticatedRequest,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+    @Body() dto: SubmitExamSessionDto,
+  ) {
+    return this.examSessionService.submit(req.user.account_id, sessionId, dto);
   }
 }

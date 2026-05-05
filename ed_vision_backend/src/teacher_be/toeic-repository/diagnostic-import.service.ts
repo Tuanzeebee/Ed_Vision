@@ -28,6 +28,7 @@ function surveyImagesRelDir(slug: string): string {
 
 import { IsOptional, IsString } from 'class-validator';
 import { CertificateEnrollmentService } from 'src/student_be/certificate/certificate-enrollment.service';
+import { ToeicPracticeImportService } from './toeic-practice-import.service';
 
 export interface ParsedOption {
   optionKey: string;
@@ -40,6 +41,7 @@ export interface ParsedDiagnosticQuestion {
   stem: string;
   options: ParsedOption[];
   detectedPart: number | null;
+  readingPassage?: string | null;
 }
 
 export class DiagnosticImportDto {
@@ -58,6 +60,7 @@ export class DiagnosticImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly openRouterService: OpenRouterService,
+    private readonly practiceImportService: ToeicPracticeImportService,
   ) { }
 
   // ── Extract Text ─────────────────────────────────────────────────────────────
@@ -327,7 +330,7 @@ export class DiagnosticImportService {
     score_band_min: number;
     score_band_max: number;
     difficulty_level: string;
-  } | null {
+  } {
     let score = 0; // 0 to 10
 
     // 1. Part factor (0-4 pts)
@@ -353,21 +356,20 @@ export class DiagnosticImportService {
     const matches = question.stem.match(advancedSuffixes);
     if (matches && matches.length > 1) score += 1;
 
-    // Đề khảo sát chỉ giới hạn max 500 điểm.
-    // Nếu câu hỏi quá khó (score > 8), lược bỏ (return null) vì nó không phù hợp để khảo sát.
-    if (score > 8) {
-      return null;
-    }
-
-    // Phân bổ dải điểm khảo sát (0 - 500)
+    // Phân bổ dải điểm khảo sát (0 - 990).
+    // Trước đây nếu score > 8 sẽ bị lược bỏ (return null) khiến nhiều câu Part 7
+    // có stem dài / vocab khó bị mất. Nay giữ lại toàn bộ, các câu rất khó được
+    // gom vào band expert (700-990) để đảm bảo đủ số câu nạp vào kho khảo sát.
     if (score <= 3) {
       return { score_band_min: 0, score_band_max: 150, difficulty_level: 'easy' };
     } else if (score <= 5) {
       return { score_band_min: 150, score_band_max: 300, difficulty_level: 'medium' };
     } else if (score <= 7) {
       return { score_band_min: 300, score_band_max: 450, difficulty_level: 'hard' };
-    } else {
+    } else if (score <= 8) {
       return { score_band_min: 450, score_band_max: 500, difficulty_level: 'expert' };
+    } else {
+      return { score_band_min: 700, score_band_max: 990, difficulty_level: 'expert_plus' };
     }
   }
 
@@ -383,7 +385,27 @@ export class DiagnosticImportService {
       throw new BadRequestException('Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.');
     }
 
-    let allParsedQuestions = this.parseQuestionsFromText(rawText);
+    // Dùng chung parser với module Nạp Câu Hỏi Ôn Luyện để đảm bảo Reading 100 câu
+    // (Part 5/6/7) được nhận diện đầy đủ; trước đây parser cũ của diagnostic
+    // bỏ sót ~12 câu so với pipeline practice.
+    const practiceParsed = this.practiceImportService.parsePracticeQuestionsFromText(rawText);
+    let allParsedQuestions: ParsedDiagnosticQuestion[] = practiceParsed.map((q) => ({
+      questionNumber: q.questionNumber,
+      stem: q.stem,
+      options: q.options.map((opt) => ({
+        optionKey: opt.optionKey,
+        optionText: opt.optionText,
+        isCorrect: opt.isCorrect,
+      })),
+      detectedPart: q.detectedPart,
+      readingPassage: q.readingPassage ?? null,
+    }));
+
+    // Fallback parser cũ phòng khi pipeline practice trả 0 (vd: file Listening
+    // toàn ảnh, không có text) — giữ logic placeholder bên dưới hoạt động.
+    if (allParsedQuestions.length === 0) {
+      allParsedQuestions = this.parseQuestionsFromText(rawText);
+    }
     const certType = body.cert_type || 'toeic';
     const selectedSkillArea = body.skill_area || 'reading';
     const isPdf = extname(file.originalname || file.path).toLowerCase() === '.pdf';
@@ -486,11 +508,6 @@ export class DiagnosticImportService {
       const q = parsedQuestions[i];
       const difficulty = this.calculateHeuristicDifficulty(q);
 
-      // Bỏ qua câu hỏi quá khó (difficulty = null)
-      if (!difficulty) {
-        continue;
-      }
-
       const createdItem = await this.prisma.diagnosticRepositoryItem.create({
         data: {
           repository_id: newRepo.id,
@@ -499,6 +516,9 @@ export class DiagnosticImportService {
           skill_area: selectedSkillArea,
           part: q.detectedPart,
           stem: tryEncryptString(q.stem) ?? q.stem,
+          reading_passage: q.readingPassage
+            ? tryEncryptString(q.readingPassage) ?? q.readingPassage
+            : null,
           difficulty_level: difficulty.difficulty_level,
           score_band_min: difficulty.score_band_min,
           score_band_max: difficulty.score_band_max,
