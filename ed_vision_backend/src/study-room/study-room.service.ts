@@ -186,7 +186,9 @@ export class StudyRoomService {
     });
 
     const participantCountMap = new Map(
-      participantCounts.map((entry) => [entry.room_id, entry._count._all] as const),
+      participantCounts.map(
+        (entry) => [entry.room_id, entry._count._all] as const,
+      ),
     );
 
     return rooms.map((room) => ({
@@ -441,7 +443,9 @@ export class StudyRoomService {
   ): Promise<RoomTimerState | null> {
     await this.getRoomOrThrow(roomId);
     await this.assertActiveRoomParticipant(roomId, accountId);
-    return this.redisService.getJson<RoomTimerState>(this.getRoomTimerKey(roomId));
+    return this.redisService.getJson<RoomTimerState>(
+      this.getRoomTimerKey(roomId),
+    );
   }
 
   async clearRoomTimer(roomId: number): Promise<void> {
@@ -570,7 +574,10 @@ export class StudyRoomService {
     await this.redisService.removeFromSet(key, String(accountId));
   }
 
-  async clearRealtimeMediaState(roomId: number, accountId: number): Promise<void> {
+  async clearRealtimeMediaState(
+    roomId: number,
+    accountId: number,
+  ): Promise<void> {
     await Promise.all([
       this.redisService.removeFromSet(
         this.getRoomAudioPublishersKey(roomId),
@@ -639,11 +646,7 @@ export class StudyRoomService {
     };
   }
 
-  async verifyRoomAccess(
-    accountId: number,
-    roomId: number,
-    password?: string,
-  ) {
+  async verifyRoomAccess(accountId: number, roomId: number, password?: string) {
     const room = await this.ensureRoomAccess(accountId, roomId, password);
     const snapshot = await this.buildRoomSnapshot(roomId);
 
@@ -657,7 +660,11 @@ export class StudyRoomService {
   }
 
   async joinRoom(accountId: number, socketId: string, dto: JoinStudyRoomDto) {
-    const room = await this.ensureRoomAccess(accountId, dto.roomId, dto.password);
+    const room = await this.ensureRoomAccess(
+      accountId,
+      dto.roomId,
+      dto.password,
+    );
     const existingState = await this.studyRoomState.getParticipantState(
       room.room_id,
       accountId,
@@ -802,7 +809,10 @@ export class StudyRoomService {
       );
     }
 
-    await this.redisService.addToSet(this.getRoomUsersKey(roomId), String(userId));
+    await this.redisService.addToSet(
+      this.getRoomUsersKey(roomId),
+      String(userId),
+    );
     return this.getRoomSocketUsers(roomId);
   }
 
@@ -831,26 +841,27 @@ export class StudyRoomService {
       return [];
     }
 
-    const [room, accounts, audioPublishers, videoPublishers] = await Promise.all([
-      this.prisma.room.findUnique({
-        where: { room_id: roomId },
-        select: {
-          host_id: true,
-        },
-      }),
-      this.prisma.account.findMany({
-        where: {
-          account_id: {
-            in: userIds,
+    const [room, accounts, audioPublishers, videoPublishers] =
+      await Promise.all([
+        this.prisma.room.findUnique({
+          where: { room_id: roomId },
+          select: {
+            host_id: true,
           },
-        },
-        include: {
-          profile: true,
-        },
-      }),
-      this.redisService.getSetMembers(this.getRoomAudioPublishersKey(roomId)),
-      this.redisService.getSetMembers(this.getRoomVideoPublishersKey(roomId)),
-    ]);
+        }),
+        this.prisma.account.findMany({
+          where: {
+            account_id: {
+              in: userIds,
+            },
+          },
+          include: {
+            profile: true,
+          },
+        }),
+        this.redisService.getSetMembers(this.getRoomAudioPublishersKey(roomId)),
+        this.redisService.getSetMembers(this.getRoomVideoPublishersKey(roomId)),
+      ]);
 
     const accountMap = new Map(
       accounts.map((account) => [account.account_id, account] as const),
@@ -880,7 +891,11 @@ export class StudyRoomService {
     });
   }
 
-  async refreshPresence(accountId: number, socketId: string, roomIds: number[]) {
+  async refreshPresence(
+    accountId: number,
+    socketId: string,
+    roomIds: number[],
+  ) {
     const refreshedRooms: number[] = [];
 
     for (const roomId of roomIds) {
@@ -908,7 +923,9 @@ export class StudyRoomService {
       dto.cameraOn === undefined &&
       dto.handRaised === undefined
     ) {
-      throw new BadRequestException('No participant state changes were provided');
+      throw new BadRequestException(
+        'No participant state changes were provided',
+      );
     }
 
     const state = await this.studyRoomState.updateParticipantState(
@@ -943,7 +960,9 @@ export class StudyRoomService {
     );
 
     if (!state) {
-      throw new NotFoundException('Target participant is not currently in the room');
+      throw new NotFoundException(
+        'Target participant is not currently in the room',
+      );
     }
 
     await this.prisma.roomAction.create({
@@ -970,7 +989,9 @@ export class StudyRoomService {
     );
 
     if (!removed.state) {
-      throw new NotFoundException('Target participant is not currently in the room');
+      throw new NotFoundException(
+        'Target participant is not currently in the room',
+      );
     }
 
     await this.prisma.roomAction.create({
@@ -1004,7 +1025,11 @@ export class StudyRoomService {
 
     const bannedUntil = this.resolveBannedUntil(dto);
     const now = new Date();
-    const activeBan = await this.findActiveBan(dto.roomId, dto.targetAccountId, now);
+    const activeBan = await this.findActiveBan(
+      dto.roomId,
+      dto.targetAccountId,
+      now,
+    );
 
     if (activeBan) {
       await this.prisma.roomBan.update({
@@ -1073,8 +1098,11 @@ export class StudyRoomService {
     this.ensureRoomHostAccess(room, actorAccountId);
 
     const closedAt = new Date();
-    const liveParticipants = await this.studyRoomState.listRoomParticipants(roomId);
-    const realtimeAccountIds = liveParticipants.map((participant) => participant.accountId);
+    const liveParticipants =
+      await this.studyRoomState.listRoomParticipants(roomId);
+    const realtimeAccountIds = liveParticipants.map(
+      (participant) => participant.accountId,
+    );
 
     const activeParticipants = await this.prisma.roomParticipant.findMany({
       where: {
@@ -1509,7 +1537,9 @@ export class StudyRoomService {
     targetAccountId: number,
   ) {
     if (room.host_id !== actorAccountId) {
-      throw new ForbiddenException('Only the room host can moderate participants');
+      throw new ForbiddenException(
+        'Only the room host can moderate participants',
+      );
     }
 
     if (actorAccountId === targetAccountId) {
@@ -1519,7 +1549,9 @@ export class StudyRoomService {
 
   private ensureRoomHostAccess(room: RoomWithHost, actorAccountId: number) {
     if (room.host_id !== actorAccountId) {
-      throw new ForbiddenException('Only the room host can perform this action');
+      throw new ForbiddenException(
+        'Only the room host can perform this action',
+      );
     }
   }
 
@@ -1569,7 +1601,9 @@ export class StudyRoomService {
     });
 
     if (!activeParticipant) {
-      throw new ForbiddenException('User is not an active participant in this room');
+      throw new ForbiddenException(
+        'User is not an active participant in this room',
+      );
     }
   }
 
@@ -1830,11 +1864,7 @@ export class StudyRoomService {
     // which is called asynchronously in completeActiveStudySession
   }
 
-  private async findActiveBan(
-    roomId: number,
-    accountId: number,
-    now: Date,
-  ) {
+  private async findActiveBan(roomId: number, accountId: number, now: Date) {
     return this.prisma.roomBan.findFirst({
       where: {
         room_id: roomId,

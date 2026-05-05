@@ -37,7 +37,9 @@ export class SpotifyController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const typeArray = types ? types.split(',') : ['track', 'artist', 'album', 'show', 'episode'];
+    const typeArray = types
+      ? types.split(',')
+      : ['track', 'artist', 'album', 'show', 'episode'];
     const limitNum = limit ? parseInt(limit, 10) : 10;
     const offsetNum = offset ? parseInt(offset, 10) : 0;
 

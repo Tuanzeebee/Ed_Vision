@@ -4,6 +4,7 @@ import {
   Route,
   Navigate,
   Outlet,
+  useParams,
 } from "react-router-dom";
 import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
@@ -70,12 +71,29 @@ import ToeicPracticeQuestionImport from "./modules/teacher/ToeicPracticeQuestion
 import ExamPracticeImport from "./modules/teacher/ExamPracticeImport";
 import StudentSurvey from "./modules/survey/StudentSurvey";
 import SettingGradeTable from "./modules/teacher/SettingGradeTable";
+import IELTSAssessment from "@/modules/student/IELTSAssessment";
 import CertificateReview from "./modules/student/CertificateReview";
 import CertificateDetail from "./modules/student/CertificateDetail";
+import IeltsRoadmapPage from "./modules/student/IeltsRoadmapPage";
 import ToeicLearningMapPage from "./modules/student/ToeicLearningMapPage";
 import ToeicNodePracticePage from "./modules/student/ToeicNodePracticePage";
 import ToeicFoundationStudyPage from "./modules/student/ToeicFoundationStudyPage";
 import ToeicExamSimulationPage from "./modules/student/ToeicExamSimulationPage";
+import RoadmapPage from "./modules/ielts-adaptive/RoadmapPage";
+import { LessonPage } from "./modules/ielts-adaptive/LessonPage";
+import { BandTestPage } from "./modules/ielts-adaptive/BandTestPage";
+
+function RoadmapRouteWrapper() {
+  const { enrollmentId } = useParams<{ enrollmentId: string }>();
+  const parsedEnrollmentId = Number.parseInt(enrollmentId ?? "1", 10);
+
+  return (
+    <RoadmapPage
+      enrollmentId={Number.isNaN(parsedEnrollmentId) ? 1 : parsedEnrollmentId}
+    />
+  );
+}
+
 import ToeicFullLeaderboardPage from "./modules/student/ToeicFullLeaderboardPage";
 
 function App() {
@@ -97,62 +115,78 @@ function App() {
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-      <Router>
-        {/* Session timeout warning removed - feature deleted */}
-        <Routes>
-          {/* Default route redirect to student landing */}
-          <Route path="/" element={<AuthRedirectWrapper><Navigate to="/student/landing" replace /></AuthRedirectWrapper>} />
+      <SeasonalEffectProvider forceEvent="CHRISTMAS">
+        <Router>
+          {/* Seasonal Effects Toggle Button */}
+          <SeasonalToggleButton />
+          {/* Session timeout warning removed - feature deleted */}
+          <Routes>
+            {/* Default route redirect to student landing */}
+            <Route path="/" element={<AuthRedirectWrapper><Navigate to="/student/landing" replace /></AuthRedirectWrapper>} />
 
-          {/* Student routes */}
-          <Route path="/student/landing" element={<GradeForecastLanding />} />
+            {/* Student routes */}
+            <Route path="/student/landing" element={<GradeForecastLanding />} />
+            <Route path="/student/ielts-assessment" element={<IELTSAssessment />} />
+
+            {/* IELTS Adaptive demo routes */}
+            <Route path="/demo/ielts-adaptive/roadmap" element={<RoadmapPage enrollmentId={1} />} />
+            <Route path="/demo/ielts-adaptive/roadmap/:enrollmentId" element={<RoadmapRouteWrapper />} />
+            <Route path="/demo/ielts-adaptive/lesson/:lessonId" element={<LessonPage />} />
+            <Route path="/demo/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
+
+            {/* IELTS Adaptive direct routes for in-page navigation */}
+            <Route path="/ielts-adaptive/roadmap" element={<RoadmapPage enrollmentId={1} />} />
+            <Route path="/ielts-adaptive/roadmap/:enrollmentId" element={<RoadmapRouteWrapper />} />
+            <Route path="/ielts-adaptive/lesson/:lessonId" element={<LessonPage />} />
+            <Route path="/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
 
 
-          {/* Auth routes (used by updated components) */}
-          <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
-          <Route path="/auth/register" element={<AuthRedirectWrapper><AuthStudentRegister /></AuthRedirectWrapper>} />
+            {/* Auth routes (used by updated components) */}
+            <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
+            <Route path="/auth/register" element={<AuthRedirectWrapper><AuthStudentRegister /></AuthRedirectWrapper>} />
 
-          <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
-          <Route path="/auth/forgot-password" element={<AuthRedirectWrapper><AuthForgotPassword /></AuthRedirectWrapper>} />
-          <Route path="/auth/reset-password" element={<AuthRedirectWrapper><AuthResetPassword /></AuthRedirectWrapper>} />
-          <Route path="/student" element={<RequireInputSurvey><Outlet /></RequireInputSurvey>}>
-            <Route path="course-overview" element={<ProtectedRoute permission="student_course_overview"><StudentCourseOverview /></ProtectedRoute>} />
-            <Route path="upload-transcript" element={<ProtectedRoute permission="student_upload_transcript"><UploadTranscript /></ProtectedRoute>} />
-            <Route path="instructions" element={<ProtectedRoute permission="student_course_overview"><InstructionsPage /></ProtectedRoute>} />
-            <Route path="adjust-parameters" element={<ProtectedRoute permission="student_adjust_parameters"><AdjustParameters /></ProtectedRoute>} />
-            <Route path="academic-planning" element={<ProtectedRoute permission="student_academic_planning"><AcademicPlanningDashboard /></ProtectedRoute>} />
-            <Route path="course-detail" element={<ProtectedRoute permission="student_course_detail"><CourseDetailView /></ProtectedRoute>} />
-            <Route path="financial-survey/step/1" element={<ProtectedRoute permission="student_financial_survey"><FinancialSurveyStep1 /></ProtectedRoute>} />
-            <Route path="choose-mascot" element={<ProtectedRoute permission="student_choose_mascot"><ChooseMascot /></ProtectedRoute>} />
-            <Route path="learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
-            <Route path="chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
-            <Route path="learning-space" element={<ProtectedRoute permission="student_learning_space"><LearningSpace /></ProtectedRoute>} />
-            <Route path="student-notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
-            <Route path="profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
-            <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
-            <Route path="leaderboard" element={<ProtectedRoute permission="student_course_overview"><ToeicFullLeaderboardPage /></ProtectedRoute>} />
-            <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
-            <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
-            <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
-            <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
-            <Route path="certificate-review/toeic/foundation/:tab" element={<ProtectedRoute permission="student_course_overview"><ToeicFoundationStudyPage /></ProtectedRoute>} />
-            <Route path="certificate-review/toeic/exam/:examType" element={<ProtectedRoute permission="student_course_overview"><ToeicExamSimulationPage /></ProtectedRoute>} />
-          </Route>
+            <Route path="/auth/otp-verification" element={<AuthRedirectWrapper><AuthStudentOTPVerification /></AuthRedirectWrapper>} />
+            <Route path="/auth/forgot-password" element={<AuthRedirectWrapper><AuthForgotPassword /></AuthRedirectWrapper>} />
+            <Route path="/auth/reset-password" element={<AuthRedirectWrapper><AuthResetPassword /></AuthRedirectWrapper>} />
+            <Route path="/student" element={<RequireInputSurvey><Outlet /></RequireInputSurvey>}>
+              <Route path="course-overview" element={<ProtectedRoute permission="student_course_overview"><StudentCourseOverview /></ProtectedRoute>} />
+              <Route path="upload-transcript" element={<ProtectedRoute permission="student_upload_transcript"><UploadTranscript /></ProtectedRoute>} />
+              <Route path="instructions" element={<ProtectedRoute permission="student_course_overview"><InstructionsPage /></ProtectedRoute>} />
+              <Route path="adjust-parameters" element={<ProtectedRoute permission="student_adjust_parameters"><AdjustParameters /></ProtectedRoute>} />
+              <Route path="academic-planning" element={<ProtectedRoute permission="student_academic_planning"><AcademicPlanningDashboard /></ProtectedRoute>} />
+              <Route path="course-detail" element={<ProtectedRoute permission="student_course_detail"><CourseDetailView /></ProtectedRoute>} />
+              <Route path="financial-survey/step/1" element={<ProtectedRoute permission="student_financial_survey"><FinancialSurveyStep1 /></ProtectedRoute>} />
+              <Route path="choose-mascot" element={<ProtectedRoute permission="student_choose_mascot"><ChooseMascot /></ProtectedRoute>} />
+              <Route path="learning-adventure" element={<ProtectedRoute permission="student_learning_adventure"><LearningAdventure /></ProtectedRoute>} />
+              <Route path="chat-student" element={<ProtectedRoute permission="student_chat_student"><ChatStudent /></ProtectedRoute>} />
+              <Route path="learning-space" element={<ProtectedRoute permission="student_learning_space"><LearningSpace /></ProtectedRoute>} />
+              <Route path="student-notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
+              <Route path="profile" element={<ProtectedRoute permission="student_profile"><StudentProfilePage /></ProtectedRoute>} />
+              <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
+              <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
+              <Route path="certificate-review/ielts" element={<ProtectedRoute permission="student_course_overview"><IeltsRoadmapPage /></ProtectedRoute>} />
+              <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
+              <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
+              <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
+              <Route path="certificate-review/toeic/foundation/:tab" element={<ProtectedRoute permission="student_course_overview"><ToeicFoundationStudyPage /></ProtectedRoute>} />
+              <Route path="certificate-review/toeic/exam/:examType" element={<ProtectedRoute permission="student_course_overview"><ToeicExamSimulationPage /></ProtectedRoute>} />
+            </Route>
 
-          {/* Route cho parent */}
-          <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
-          <Route path="/parent/book-appointment/step/:stepNumber" element={<ProtectedRoute permission="parent_book_appointment"><BookAppointmentStepWrapper /></ProtectedRoute>} />
-          <Route path="/parent/book-appointment" element={<ProtectedRoute permission="parent_book_appointment"><Navigate to="/parent/book-appointment/step/1" replace /></ProtectedRoute>} />
-          <Route path="/appointments" element={<ProtectedRoute permission="appointments"><AllAppointments /></ProtectedRoute>} />
-          <Route path="/parent/student-details" element={<ProtectedRoute permission="parent_student_details"><StudentDetails /></ProtectedRoute>} />
-          <Route path="/parent/chat" element={<ProtectedRoute permission="parent_chat"><ChatWithTeachers /></ProtectedRoute>} />
-          <Route path="/parent/notifications" element={<ProtectedRoute permission="parent_dashboard"><NotificationPage userRole="parent" /></ProtectedRoute>} />
-
-          {/* Student notifications - Đường dẫn dạng /student/notifications */}
-          <Route path="/student/notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
-
-          {/* Admin routes - Dashboard (protected by permission) */}
-          <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
-          <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
+                                        {/* Route cho parent */}
+                                        <Route path="/parent/dashboard" element={<ProtectedRoute permission="parent_dashboard"><ParentDashboard /></ProtectedRoute>} />
+                                        <Route path="/parent/book-appointment/step/:stepNumber" element={<ProtectedRoute permission="parent_book_appointment"><BookAppointmentStepWrapper /></ProtectedRoute>} />
+                                        <Route path="/parent/book-appointment" element={<ProtectedRoute permission="parent_book_appointment"><Navigate to="/parent/book-appointment/step/1" replace /></ProtectedRoute>} />
+                                        <Route path="/appointments" element={<ProtectedRoute permission="appointments"><AllAppointments /></ProtectedRoute>} />
+                                        <Route path="/parent/student-details" element={<ProtectedRoute permission="parent_student_details"><StudentDetails /></ProtectedRoute>} />
+                                        <Route path="/parent/chat" element={<ProtectedRoute permission="parent_chat"><ChatWithTeachers /></ProtectedRoute>} />
+                                        <Route path="/parent/notifications" element={<ProtectedRoute permission="parent_dashboard"><NotificationPage userRole="parent" /></ProtectedRoute>} />
+                                        
+                                        {/* Student notifications - Đường dẫn dạng /student/notifications */}
+                                        <Route path="/student/notifications" element={<ProtectedRoute permission="student_notification"><NotificationPage userRole="student" /></ProtectedRoute>} />
+                                        
+                                        {/* Admin routes - Dashboard (protected by permission) */}
+                                        <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
+                                        <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
 
           {/* Admin routes - Management (protected by permission) */}
           <Route path="/admin/users" element={<ProtectedRoute permission="admin_users"><AccountManagement /></ProtectedRoute>} />
@@ -206,13 +240,14 @@ function App() {
           <Route path="/student/profile" element={<ProtectedRoute permission="student_profile"><RequireInputSurvey><StudentProfilePage /></RequireInputSurvey></ProtectedRoute>} />
           <Route path="/parent/profile" element={<ProtectedRoute permission="parent_profile"><ParentProfilePage /></ProtectedRoute>} />
 
-          {/* Global fallback */}
-          <Route path="*" element={<Navigate to="/student/landing" replace />} />
+                                        {/* Global fallback */}
+                                        <Route path="*" element={<Navigate to="/student/landing" replace />} />
 
-        </Routes>
-      </Router>
-    </Suspense>
-  );
+                                </Routes>
+                        </Router>
+                        </SeasonalEffectProvider>
+                </Suspense>
+        );
 }
 
 export default App;

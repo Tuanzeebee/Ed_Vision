@@ -1125,6 +1125,7 @@ export class CertificateEnrollmentService {
       })(),
       include: { topicProgress: { select: { topic_key: true } } },
     });
+
     return this.toDto(created);
   }
 

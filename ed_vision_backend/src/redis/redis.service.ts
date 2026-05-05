@@ -42,7 +42,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.client = null;
       const message =
-        error instanceof Error ? error.message : 'Unknown Redis connection error';
+        error instanceof Error
+          ? error.message
+          : 'Unknown Redis connection error';
 
       if (this.redisRequired) {
         throw error;

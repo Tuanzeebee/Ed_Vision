@@ -88,7 +88,9 @@ export class NotificationGateway
     }
 
     targetRoles.forEach((role) => {
-      this.server.to(this.getRoleRoom(role)).emit('newNotification', notification);
+      this.server
+        .to(this.getRoleRoom(role))
+        .emit('newNotification', notification);
     });
 
     return targetRoles.length;

@@ -550,10 +550,7 @@ const IELTS_SKILLS_4: SkillSection[] = [
         done: false,
       },
     ],
-    [
-      "Nghe BBC World Service 15 phút/ngày.",
-      "Luyện dự đoán đáp án trước khi nghe.",
-    ],
+    ["Flashcard 10 từ mới mỗi ngày với Anki.", "Nghe podcast hằng ngày."],
   ),
   mk(
     "reading",
@@ -1145,6 +1142,9 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-violet-600",
     "bg-violet-50",
     [
+      { key: 'grammar.advanced_inversion', title: 'Đảo ngữ nâng cao', desc: 'Fronting, Emphatic inversion patterns', done: false },
+      { key: 'grammar.subjunctive', title: 'Subjunctive Mood', desc: 'It is essential that…, If only…, Were it not…', done: false },
+      { key: 'grammar.complex_nominals', title: 'Complex Sentence Control', desc: 'Mệnh đề phức linh hoạt, giảm lỗi ngữ pháp lặp lại', done: false },
       {
         key: "grammar.advanced_inversion",
         title: "Đảo ngữ nâng cao",
@@ -1173,6 +1173,8 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
+      { key: 'vocab.awl_advanced', title: 'AWL nâng cao + Topic Lexicon', desc: 'Từ học thuật C1 theo chủ đề Education/Technology/Environment', done: false },
+      { key: 'vocab.metaphor_idiom', title: 'Collocation & Nuance Control', desc: 'Dùng cụm từ tự nhiên, tránh idiom gượng ép trong Writing', done: false },
       {
         key: "vocab.awl_advanced",
         title: "AWL nâng cao + Discipline vocab",
@@ -1233,6 +1235,8 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-orange-600",
     "bg-orange-50",
     [
+      { key: 'writing.sophisticated_arg', title: 'Task Response nâng cao', desc: 'Counterargument + refutation, lập luận nhất quán toàn bài', done: false },
+      { key: 'writing.native_style', title: 'Style tự nhiên nhưng học thuật', desc: 'Natural phrasing, tránh template cứng và lỗi register', done: false },
       {
         key: "writing.sophisticated_arg",
         title: "Lập luận tinh tế & thuyết phục",
@@ -1255,6 +1259,8 @@ const IELTS_SKILLS_7: SkillSection[] = [
     "text-pink-600",
     "bg-pink-50",
     [
+      { key: 'speaking.fluency_strategy', title: 'Chiến lược Fluency', desc: 'Strategic pausing, repair strategies, fillers tự nhiên', done: false },
+      { key: 'speaking.pronunciation_adv', title: 'Pronunciation Band 7+', desc: 'Linking, weak forms, stress/intonation để tăng intelligibility', done: false },
       {
         key: "speaking.fluency_strategy",
         title: "Chiến lược Fluency",
@@ -1303,6 +1309,8 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-blue-600",
     "bg-blue-50",
     [
+      { key: 'vocab.c1_precision', title: 'C1 Precision & Flexibility', desc: 'Chọn từ/cụm từ chính xác theo ngữ cảnh học thuật', done: false },
+      { key: 'vocab.advanced_idioms', title: 'Natural Collocations', desc: 'Ưu tiên collocation tự nhiên thay vì lạm dụng idioms', done: false },
       {
         key: "vocab.c1_precision",
         title: "C1 Precision & Style",
@@ -1341,6 +1349,7 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-emerald-600",
     "bg-emerald-50",
     [
+      { key: 'reading.speed_retention', title: 'Timed Reading Accuracy', desc: 'Giữ độ chính xác cao dưới áp lực thời gian bài thi thật', done: false },
       {
         key: "reading.speed_retention",
         title: "Tốc độ đọc & Ghi nhớ",
@@ -1357,6 +1366,8 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-orange-600",
     "bg-orange-50",
     [
+      { key: 'writing.persuasive_adv', title: 'Band 8 Writing Control', desc: 'Task response sâu, cohesion tự nhiên, lỗi ngữ pháp tối thiểu', done: false },
+      { key: 'writing.register_mastery', title: 'Register Mastery', desc: 'Điều chỉnh giọng văn chuẩn học thuật cho từng dạng Task 1/2', done: false },
       {
         key: "writing.persuasive_adv",
         title: "Văn nghị luận thuyết phục cao",
@@ -1379,6 +1390,7 @@ const IELTS_SKILLS_75: SkillSection[] = [
     "text-pink-600",
     "bg-pink-50",
     [
+      { key: 'speaking.natural_fluency', title: 'Band 8 Speaking Performance', desc: 'Fluency linh hoạt, lexical resource rộng, pronunciation rõ và tự nhiên', done: false },
       {
         key: "speaking.natural_fluency",
         title: "Fluency tự nhiên",
@@ -1398,6 +1410,159 @@ export const IELTS_SKILLS_BY_BAND: Record<IeltsBand, SkillSection[]> = {
   "7.0": IELTS_SKILLS_7,
   "7.5+": IELTS_SKILLS_75,
 };
+
+// ── Temporary runtime source for CertificateDetail (IELTS, 4 core skills) ───
+// This replaces old mixed mock tracks (grammar/vocabulary) while backend skill APIs
+// are being finalized.
+export const IELTS_SKILL_TRACKS_TEMP_BY_BAND: Record<IeltsBand, SkillSection[]> = {
+  '4.0': [
+    mk('listening', 'Listening', <Headphones className="w-4 h-4" />, 'text-cyan-600', 'bg-cyan-50', [
+      { key: 'listening.sec1_form', title: 'Section 1 Form Completion', desc: 'Thông tin cá nhân, spelling, số liệu cơ bản', done: false },
+      { key: 'listening.sec2_note', title: 'Section 2 Note Completion', desc: 'Monologue xã hội + định hướng thông tin chính', done: false },
+    ], ['Luyện nghe theo transcript rồi bỏ transcript.', 'Tập bắt keyword trước khi nghe.']),
+    mk('reading', 'Reading', <Eye className="w-4 h-4" />, 'text-emerald-600', 'bg-emerald-50', [
+      { key: 'reading.skim_scan', title: 'Skimming & Scanning', desc: 'Đọc nhanh để lấy ý chính và tìm dữ liệu cụ thể', done: false },
+      { key: 'reading.tfng', title: 'True/False/Not Given', desc: 'Phân biệt đúng theo evidence trong bài', done: false },
+    ], ['Không dịch từng từ khi làm bài.', 'Đọc câu hỏi trước rồi vào passage.']),
+    mk('writing', 'Writing', <PenLine className="w-4 h-4" />, 'text-orange-600', 'bg-orange-50', [
+      { key: 'writing.task1_basic', title: 'Task 1 Basics', desc: 'Mô tả biểu đồ đơn giản có overview', done: false },
+      { key: 'writing.task2_intro', title: 'Task 2 Introduction', desc: 'Paraphrase đề + thesis rõ ràng', done: false },
+    ], ['Giữ đúng thời gian: 20 phút Task 1, 40 phút Task 2.', 'Ưu tiên rõ ý trước khi dùng từ khó.']),
+    mk('speaking', 'Speaking', <Mic className="w-4 h-4" />, 'text-pink-600', 'bg-pink-50', [
+      { key: 'speaking.part1_basics', title: 'Part 1 Foundation', desc: 'Trả lời tự nhiên chủ đề quen thuộc', done: false },
+      { key: 'speaking.pronunciation', title: 'Pronunciation Foundation', desc: 'Stress + intonation để dễ hiểu', done: false },
+    ], ['Ghi âm mỗi ngày 2–3 câu trả lời ngắn.', 'Trả lời đủ 2–3 câu cho mỗi câu hỏi.']),
+  ],
+  '5.0': [
+    mk('listening', 'Listening', <Headphones className="w-4 h-4" />, 'text-cyan-600', 'bg-cyan-50', [
+      { key: 'listening.sec3_conv', title: 'Section 3 Academic Discussion', desc: '2–3 speakers, matching/MCQ', done: false },
+      { key: 'listening.paraphrase', title: 'Paraphrase Matching', desc: 'Nhận diện cách nói lại từ khóa câu hỏi', done: false },
+    ], ['Dự đoán dạng từ trước khoảng trống.', 'Chú ý distractor words trong audio.']),
+    mk('reading', 'Reading', <Eye className="w-4 h-4" />, 'text-emerald-600', 'bg-emerald-50', [
+      { key: 'reading.match_headings', title: 'Matching Headings', desc: 'Nắm main idea từng đoạn', done: false },
+      { key: 'reading.summary_fill', title: 'Summary Completion', desc: 'Điền từ dựa theo giới hạn số từ', done: false },
+    ], ['Khoanh vùng đoạn chứa keyword.', 'Kiểm tra grammar khi điền từ.']),
+    mk('writing', 'Writing', <PenLine className="w-4 h-4" />, 'text-orange-600', 'bg-orange-50', [
+      { key: 'writing.task1_trend', title: 'Task 1 Trend & Comparison', desc: 'So sánh dữ liệu + xu hướng rõ ràng', done: false },
+      { key: 'writing.task2_4para', title: 'Task 2 4-Paragraph Structure', desc: 'Mở-thân-thân-kết mạch lạc', done: false },
+    ], ['Mỗi đoạn thân có 1 luận điểm chính.', 'Không học thuộc template dài.']),
+    mk('speaking', 'Speaking', <Mic className="w-4 h-4" />, 'text-pink-600', 'bg-pink-50', [
+      { key: 'speaking.part2_cuecard', title: 'Part 2 Cue Card', desc: '1 phút chuẩn bị, nói đủ 2 phút', done: false },
+      { key: 'speaking.extend_answers', title: 'Answer Expansion', desc: 'Why-Example-Result để tăng coherence', done: false },
+    ], ['Dùng từ nối tự nhiên khi chuyển ý.', 'Giữ tốc độ nói ổn định, không quá nhanh.']),
+  ],
+  '6.0': [
+    mk('listening', 'Listening', <Headphones className="w-4 h-4" />, 'text-cyan-600', 'bg-cyan-50', [
+      { key: 'listening.sec4_lecture', title: 'Section 4 Lecture', desc: 'Bài giảng học thuật tốc độ cao', done: false },
+      { key: 'listening.map_plan', title: 'Map/Plan/Diagram', desc: 'Theo dõi hướng đi và mốc vị trí chính xác', done: false },
+    ], ['Làm full section theo thời gian thật.', 'Review lỗi theo từng dạng câu.']),
+    mk('reading', 'Reading', <Eye className="w-4 h-4" />, 'text-emerald-600', 'bg-emerald-50', [
+      { key: 'reading.match_info', title: 'Matching Information', desc: 'Ghép thông tin với đoạn phù hợp', done: false },
+      { key: 'reading.writer_views', title: "Writer's Views (Yes/No/NG)", desc: 'Phân biệt quan điểm tác giả chính xác', done: false },
+    ], ['Mỗi passage tối đa ~20 phút.', 'Không suy diễn ngoài văn bản.']),
+    mk('writing', 'Writing', <PenLine className="w-4 h-4" />, 'text-orange-600', 'bg-orange-50', [
+      { key: 'writing.task2_balanced', title: 'Task 2 Balanced Argument', desc: 'Trình bày hai mặt + opinion rõ', done: false },
+      { key: 'writing.cohesion_adv', title: 'Coherence & Cohesion', desc: 'Liên kết ý tự nhiên, tránh máy móc', done: false },
+    ], ['Đối chiếu bài với 4 tiêu chí chấm IELTS.', 'Ưu tiên clarity trước lexical complexity.']),
+    mk('speaking', 'Speaking', <Mic className="w-4 h-4" />, 'text-pink-600', 'bg-pink-50', [
+      { key: 'speaking.part3_abstract', title: 'Part 3 Abstract Questions', desc: 'Phân tích và so sánh quan điểm', done: false },
+      { key: 'speaking.develop_ideas', title: 'Develop Ideas Deeply', desc: 'Point-Reason-Example-Result', done: false },
+    ], ['Tập trả lời câu hỏi “tại sao” liên tiếp.', 'Luôn có ví dụ thực tế ngắn.']),
+  ],
+  '6.5': [
+    mk('listening', 'Listening', <Headphones className="w-4 h-4" />, 'text-cyan-600', 'bg-cyan-50', [
+      { key: 'listening.attitude', title: 'Speaker Attitude', desc: 'Nhận diện thái độ, mức độ đồng thuận', done: false },
+      { key: 'listening.multi_level', title: 'Multi-level Inference', desc: 'Suy luận ý không nói trực tiếp', done: false },
+    ], ['Gạch chân dấu hiệu attitude trong transcript.', 'Review lỗi inference ngay sau mỗi test.']),
+    mk('reading', 'Reading', <Eye className="w-4 h-4" />, 'text-emerald-600', 'bg-emerald-50', [
+      { key: 'reading.inference', title: 'Inference Questions', desc: 'Suy luận hợp lý theo bằng chứng', done: false },
+      { key: 'reading.purpose_tone', title: 'Purpose & Tone', desc: 'Xác định mục đích và giọng điệu tác giả', done: false },
+    ], ['Luyện đọc opinion/editorial passages.', 'Tách fact và opinion khi đọc.']),
+    mk('writing', 'Writing', <PenLine className="w-4 h-4" />, 'text-orange-600', 'bg-orange-50', [
+      { key: 'writing.adv_linkers', title: 'Advanced Cohesive Devices', desc: 'Dùng cohesive devices linh hoạt, tự nhiên', done: false },
+      { key: 'writing.precision_vocab', title: 'Lexical Precision', desc: 'Tăng độ chính xác từ vựng theo ngữ cảnh', done: false },
+    ], ['Giảm lỗi collocation sai.', 'Kiểm tra từng đoạn có main point rõ.']),
+    mk('speaking', 'Speaking', <Mic className="w-4 h-4" />, 'text-pink-600', 'bg-pink-50', [
+      { key: 'speaking.lexical_variety', title: 'Lexical Variety', desc: 'Mở rộng range từ vựng không gượng ép', done: false },
+      { key: 'speaking.cohesion', title: 'Long-turn Cohesion', desc: 'Giữ mạch ý trong câu trả lời dài', done: false },
+    ], ['Hạn chế lặp từ khóa quá nhiều.', 'Tập paraphrase ngay khi bí từ.']),
+  ],
+  '7.0': [
+    mk('listening', 'Listening', <Headphones className="w-4 h-4" />, 'text-cyan-600', 'bg-cyan-50', [
+      { key: 'listening.nuanced_attitude', title: 'Nuanced Attitude', desc: 'Nhận ra thái độ tinh tế qua intonation/word choice', done: false },
+      { key: 'listening.sec4_lecture', title: 'Advanced Section 4 Timing', desc: 'Giữ accuracy ở tốc độ cao', done: false },
+    ], ['Tập full listening test định kỳ.', 'Phân tích lỗi theo 4 sections.']),
+    mk('reading', 'Reading', <Eye className="w-4 h-4" />, 'text-emerald-600', 'bg-emerald-50', [
+      { key: 'reading.critical_analysis', title: 'Critical Analysis', desc: 'Đánh giá logic và độ tin cậy lập luận', done: false },
+      { key: 'reading.implicit_argument', title: 'Implicit Argument', desc: 'Nhận diện luận điểm ẩn và presupposition', done: false },
+    ], ['Luyện passage khó Cambridge với timer.', 'Đọc lại sai lầm theo question type.']),
+    mk('writing', 'Writing', <PenLine className="w-4 h-4" />, 'text-orange-600', 'bg-orange-50', [
+      { key: 'writing.sophisticated_arg', title: 'Sophisticated Argument', desc: 'Lập luận sâu, có phản biện và phản bác', done: false },
+      { key: 'writing.native_style', title: 'Natural Academic Style', desc: 'Văn phong học thuật tự nhiên, không template', done: false },
+    ], ['Đảm bảo consistency thesis toàn bài.', 'Rà lỗi grammar range trước khi nộp.']),
+    mk('speaking', 'Speaking', <Mic className="w-4 h-4" />, 'text-pink-600', 'bg-pink-50', [
+      { key: 'speaking.fluency_strategy', title: 'Fluency Strategy', desc: 'Kiểm soát nhịp nói, pause và self-repair', done: false },
+      { key: 'speaking.pronunciation_adv', title: 'Advanced Pronunciation', desc: 'Stress/intonation rõ, tự nhiên, dễ hiểu', done: false },
+    ], ['Tập part 3 theo chủ đề xã hội rộng.', 'Nghe lại recording để sửa hesitation.']),
+  ],
+  '7.5+': [
+    mk('listening', 'Listening', <Headphones className="w-4 h-4" />, 'text-cyan-600', 'bg-cyan-50', [
+      { key: 'listening.rapid_accents', title: 'Rapid Accents', desc: 'Làm quen đa accent ở tốc độ native', done: false },
+      { key: 'listening.nuanced_attitude', title: 'High-level Nuance', desc: 'Suy luận tầng nghĩa và thái độ tinh tế', done: false },
+    ], ['Nghe nguồn không script để tăng phản xạ.', 'Đánh giá lỗi theo keyword missed.']),
+    mk('reading', 'Reading', <Eye className="w-4 h-4" />, 'text-emerald-600', 'bg-emerald-50', [
+      { key: 'reading.speed_retention', title: 'Timed Reading Accuracy', desc: 'Giữ tốc độ + accuracy ổn định toàn bài', done: false },
+      { key: 'reading.critical_analysis', title: 'Advanced Critical Reading', desc: 'Phân tích lập luận sâu ở passage khó', done: false },
+    ], ['Mỗi tuần 2 full reading tests.', 'Review theo rubric cá nhân.']),
+    mk('writing', 'Writing', <PenLine className="w-4 h-4" />, 'text-orange-600', 'bg-orange-50', [
+      { key: 'writing.persuasive_adv', title: 'Band 8 Writing Control', desc: 'Task response sâu + coherence tự nhiên', done: false },
+      { key: 'writing.register_mastery', title: 'Register Mastery', desc: 'Điều chỉnh giọng văn linh hoạt theo task', done: false },
+    ], ['Giảm lỗi grammar nhỏ xuống mức tối thiểu.', 'Đảm bảo lexical choices chính xác và tự nhiên.']),
+    mk('speaking', 'Speaking', <Mic className="w-4 h-4" />, 'text-pink-600', 'bg-pink-50', [
+      { key: 'speaking.natural_fluency', title: 'Band 8 Speaking Performance', desc: 'Fluency linh hoạt, mở rộng ý thuyết phục', done: false },
+      { key: 'speaking.pronunciation_adv', title: 'Pronunciation Consistency', desc: 'Nhất quán clarity trong mọi part', done: false },
+    ], ['Mô phỏng thi thật 3 part liên tục.', 'Tập phản biện nhanh với câu hỏi bất ngờ.']),
+  ],
+}
+
+export const IELTS_ROADMAP_TEMP_BY_BAND: Record<IeltsBand, RoadmapStep[]> = {
+  '4.0': [
+    { title: 'Listening Foundation', subtitle: 'Section 1-2 + thông tin chi tiết cơ bản', status: 'in-progress', progress: 25 },
+    { title: 'Reading Foundation', subtitle: 'Skimming/scanning + TFNG', status: 'locked' },
+    { title: 'Writing Foundation', subtitle: 'Task 1 cơ bản + Task 2 intro', status: 'locked' },
+    { title: 'Speaking Foundation', subtitle: 'Part 1 + pronunciation dễ hiểu', status: 'locked' },
+  ],
+  '5.0': [
+    { title: 'Listening Development', subtitle: 'Section 3 + paraphrase/distractor control', status: 'in-progress', progress: 20 },
+    { title: 'Reading Development', subtitle: 'Matching headings + summary completion', status: 'locked' },
+    { title: 'Writing Development', subtitle: 'Task 1 trends + Task 2 4-paragraph', status: 'locked' },
+    { title: 'Speaking Development', subtitle: 'Part 2 cue card + idea expansion', status: 'locked' },
+  ],
+  '6.0': [
+    { title: 'Listening Core', subtitle: 'Section 4 + map/diagram under time pressure', status: 'in-progress', progress: 15 },
+    { title: 'Reading Core', subtitle: "Matching info + writer's views", status: 'locked' },
+    { title: 'Writing Core', subtitle: 'Balanced argument + coherence control', status: 'locked' },
+    { title: 'Speaking Core', subtitle: 'Part 3 abstract reasoning', status: 'locked' },
+  ],
+  '6.5': [
+    { title: 'Listening Upgrade', subtitle: 'Attitude + multi-level inference', status: 'in-progress', progress: 12 },
+    { title: 'Reading Upgrade', subtitle: 'Inference + author purpose/tone', status: 'locked' },
+    { title: 'Writing Upgrade', subtitle: 'Lexical precision + cohesive devices', status: 'locked' },
+    { title: 'Speaking Upgrade', subtitle: 'Lexical variety + long-turn cohesion', status: 'locked' },
+  ],
+  '7.0': [
+    { title: 'Listening Advanced', subtitle: 'Nuanced attitude at high speed', status: 'in-progress', progress: 10 },
+    { title: 'Reading Advanced', subtitle: 'Critical analysis + implicit argument', status: 'locked' },
+    { title: 'Writing Advanced', subtitle: 'Sophisticated argument + natural style', status: 'locked' },
+    { title: 'Speaking Advanced', subtitle: 'Fluency strategy + pronunciation control', status: 'locked' },
+  ],
+  '7.5+': [
+    { title: 'Listening Expert', subtitle: 'Rapid accents + layered inference', status: 'in-progress', progress: 8 },
+    { title: 'Reading Expert', subtitle: 'Timed high-accuracy performance', status: 'locked' },
+    { title: 'Writing Expert', subtitle: 'Band 8 control + register mastery', status: 'locked' },
+    { title: 'Speaking Expert', subtitle: 'Band 8 natural fluency consistency', status: 'locked' },
+  ],
+}
 
 // ── TOEIC ──────────────────────────────────────────────────────────────────────
 // Band 350–495 — Foundation.
@@ -2280,209 +2445,58 @@ export const MOS_LEVELS: BandOption[] = [
 
 // ── IELTS per-band roadmaps ───────────────────────────────────────────────────
 export const IELTS_ROADMAP_40: RoadmapStep[] = [
-  {
-    title: "Ngữ pháp cơ bản",
-    subtitle: "12 thì, mạo từ, câu đơn/ghép, so sánh cơ bản",
-    status: "completed",
-  },
-  {
-    title: "Từ vựng đời thường (2,500 từ)",
-    subtitle: "Chủ đề gia đình, du lịch, môi trường, sức khỏe",
-    status: "in-progress",
-    progress: 45,
-  },
-  {
-    title: "Nghe Section 1 & 2",
-    subtitle: "Form completion, Note completion, kỹ thuật ghi chú",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Skimming & True/False/NG",
-    subtitle: "Đọc lướt, tìm thông tin cụ thể, phân biệt T/F/NG",
-    status: "locked",
-  },
-  {
-    title: "Viết Task 1 cơ bản & cấu trúc đoạn",
-    subtitle: "Mô tả biểu đồ đơn giản, Topic-Point paragraph",
-    status: "locked",
-  },
-  {
-    title: "Nói Part 1 & phát âm cơ bản",
-    subtitle: "Chủ đề quen thuộc, word stress, vowel sounds",
-    status: "locked",
-  },
-];
+  { title: 'Ngữ pháp cơ bản', subtitle: '12 thì, mạo từ, câu đơn/ghép, so sánh cơ bản', status: 'completed' },
+  { title: 'Từ vựng đời thường (2,500 từ)', subtitle: 'Chủ đề gia đình, du lịch, môi trường, sức khỏe', status: 'in-progress', progress: 45 },
+  { title: 'Listening Sections 1–2', subtitle: 'Form/Note completion, spelling-number-date accuracy, xử lý distractors', status: 'locked' },
+  { title: 'Reading foundations', subtitle: 'Skimming/scanning, True-False-Not Given, multiple choice cơ bản', status: 'locked' },
+  { title: 'Writing core', subtitle: 'Task 1 biểu đồ đơn giản + Task 2 opinion mở bài/kết bài', status: 'locked' },
+  { title: 'Speaking Part 1 baseline', subtitle: 'Fluency cơ bản + pronunciation dễ hiểu theo tiêu chí IELTS', status: 'locked' },
+]
 
 export const IELTS_ROADMAP_50: RoadmapStep[] = [
-  {
-    title: "Ngữ pháp trung cấp",
-    subtitle: "Bị động, điều kiện 1&2, mệnh đề quan hệ, câu gián tiếp",
-    status: "completed",
-  },
-  {
-    title: "Phrasal Verbs & Collocations cơ bản",
-    subtitle: "100 phrasal verbs, verb-noun & adj-noun collocations",
-    status: "in-progress",
-    progress: 40,
-  },
-  {
-    title: "Nghe Section 3 & nhận diện paraphrase",
-    subtitle: "Hội thoại học thuật 2–3 người, Multiple choice",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Matching Headings & Summary",
-    subtitle: "Tóm tắt ý chính, điền từ vào đoạn tóm tắt",
-    status: "locked",
-  },
-  {
-    title: "Viết Task 2 cấu trúc 4 đoạn & linking words",
-    subtitle: "Intro-Body1-Body2-Conclusion, từ nối cơ bản",
-    status: "locked",
-  },
-  {
-    title: "Nói Part 2 – Cue Card (2 phút)",
-    subtitle: "Ghi chú 1 phút, mở rộng câu trả lời bằng PEEL",
-    status: "locked",
-  },
-];
+  { title: 'Ngữ pháp trung cấp', subtitle: 'Bị động, điều kiện 1&2, mệnh đề quan hệ, câu gián tiếp', status: 'completed' },
+  { title: 'Phrasal Verbs & Collocations cơ bản', subtitle: '100 phrasal verbs, verb-noun & adj-noun collocations', status: 'in-progress', progress: 40 },
+  { title: 'Listening Section 3', subtitle: 'Academic discussion, nhận diện paraphrase và bẫy đáp án', status: 'locked' },
+  { title: 'Reading task types mở rộng', subtitle: 'Matching Headings, Summary Completion, speed + accuracy', status: 'locked' },
+  { title: 'Writing structure control', subtitle: 'Task 2 4 đoạn + cohesion cơ bản theo tiêu chí CC/TR', status: 'locked' },
+  { title: 'Speaking Part 2 development', subtitle: 'Cue Card 2 phút: idea expansion + discourse markers', status: 'locked' },
+]
 
 export const IELTS_ROADMAP_60: RoadmapStep[] = [
-  {
-    title: "Ngữ pháp nâng cao",
-    subtitle: "Điều kiện 3/mixed, bị động phức, mệnh đề trạng ngữ, đảo ngữ",
-    status: "completed",
-  },
-  {
-    title: "AWL 570 từ & Paraphrase",
-    subtitle: "Academic Word List cốt lõi, kỹ thuật rewrite câu",
-    status: "in-progress",
-    progress: 35,
-  },
-  {
-    title: "Nghe Section 4 & Map/Plan",
-    subtitle: "Academic lecture tốc độ cao, bài điền nhãn bản đồ",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Matching Info & Yes/No/NG",
-    subtitle: "Quan điểm tác giả, sentence endings, reading 3 passages",
-    status: "locked",
-  },
-  {
-    title: "Viết Task 2 lập luận cân bằng",
-    subtitle: "Discussion essay, cohesion nâng cao, văn phong học thuật",
-    status: "locked",
-  },
-  {
-    title: "Nói Part 3 – câu hỏi trừu tượng",
-    subtitle: "Lập luận có ví dụ, cấu trúc POINT-REASON-EXAMPLE",
-    status: "locked",
-  },
-];
+  { title: 'Ngữ pháp nâng cao', subtitle: 'Điều kiện 3/mixed, bị động phức, mệnh đề trạng ngữ, đảo ngữ', status: 'completed' },
+  { title: 'AWL 570 từ & Paraphrase', subtitle: 'Academic Word List cốt lõi, kỹ thuật rewrite câu', status: 'in-progress', progress: 35 },
+  { title: 'Listening Section 4 mastery', subtitle: 'Academic lecture + map/plan/diagram dưới áp lực thời gian', status: 'locked' },
+  { title: 'Reading high-frequency forms', subtitle: 'Matching Information, Y/N/NG, sentence endings, 3 passages/60 phút', status: 'locked' },
+  { title: 'Writing criteria upgrade', subtitle: 'Task Response rõ, Coherence tốt, Lexical Resource học thuật, Grammar range', status: 'locked' },
+  { title: 'Speaking Part 3 reasoning', subtitle: 'Mở rộng lập luận trừu tượng với ví dụ và so sánh quan điểm', status: 'locked' },
+]
 
 export const IELTS_ROADMAP_65: RoadmapStep[] = [
-  {
-    title: "Cleft sentences & Nominalization",
-    subtitle: "It is… that…, What… is…, chuyển động từ thành danh từ",
-    status: "completed",
-  },
-  {
-    title: "Idioms 100 cụm & Register nuance",
-    subtitle: "Idiom cho Speaking Part 3, formal/informal phân biệt",
-    status: "in-progress",
-    progress: 30,
-  },
-  {
-    title: "Nghe: Thái độ speaker & multi-level inference",
-    subtitle: "Agreement/disagreement, đọc vị điều speaker không nói thẳng",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Inference & Author purpose/tone",
-    subtitle: "Implied meaning, nhận ra mục đích và giọng điệu",
-    status: "locked",
-  },
-  {
-    title: "Viết: Linkers nâng cao & Precision vocab",
-    subtitle: "Nevertheless, Conversely…, tránh vague words",
-    status: "locked",
-  },
-  {
-    title: "Nói: Lexical variety & Cohesion",
-    subtitle: "Tránh lặp từ, kết nối ý mượt mà với discourse markers",
-    status: "locked",
-  },
-];
+  { title: 'Cleft sentences & Nominalization', subtitle: 'It is… that…, What… is…, chuyển động từ thành danh từ', status: 'completed' },
+  { title: 'Idioms 100 cụm & Register nuance', subtitle: 'Idiom cho Speaking Part 3, formal/informal phân biệt', status: 'in-progress', progress: 30 },
+  { title: 'Listening inference control', subtitle: 'Theo dõi thái độ/quan điểm speaker và câu trả lời hàm ý', status: 'locked' },
+  { title: 'Reading inference & tone', subtitle: 'Implied meaning, purpose, author stance với độ chính xác ổn định', status: 'locked' },
+  { title: 'Writing lexical precision', subtitle: 'Cohesive devices nâng cao + lựa chọn từ/collocation chính xác', status: 'locked' },
+  { title: 'Speaking coherence upgrade', subtitle: 'Lexical variety tự nhiên, ý liền mạch giữa Part 2 và Part 3', status: 'locked' },
+]
 
 export const IELTS_ROADMAP_70: RoadmapStep[] = [
-  {
-    title: "Đảo ngữ nâng cao & Subjunctive",
-    subtitle: "Emphatic inversion, It is essential that…, Were it not…",
-    status: "completed",
-  },
-  {
-    title: "AWL nâng cao & Metaphor học thuật",
-    subtitle: "Từ chuyên ngành C1, academic metaphors chấp nhận trong writing",
-    status: "in-progress",
-    progress: 25,
-  },
-  {
-    title: "Nghe: Thái độ tinh tế qua intonation",
-    subtitle: "Scepticism, enthusiasm, concern – BBC In Our Time",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Critical analysis & Implicit argument",
-    subtitle: "Đánh giá độ tin cậy, tìm luận điểm ẩn, journal articles",
-    status: "locked",
-  },
-  {
-    title: "Viết: Lập luận tinh tế gần native",
-    subtitle:
-      "Counterargument + refutation, conditional hedging, natural phrasing",
-    status: "locked",
-  },
-  {
-    title: "Nói: Fluency strategy & Phát âm nâng cao",
-    subtitle: "Strategic pausing, linking, weak forms, thought groups",
-    status: "locked",
-  },
-];
+  { title: 'Đảo ngữ nâng cao & Subjunctive', subtitle: 'Emphatic inversion, It is essential that…, Were it not…', status: 'completed' },
+  { title: 'AWL nâng cao & Topic Lexicon', subtitle: 'C1 vocabulary theo chủ đề, collocation chính xác theo ngữ cảnh', status: 'in-progress', progress: 25 },
+  { title: 'Listening nuance', subtitle: 'Nhận diện thái độ tinh tế qua intonation và lexical cues', status: 'locked' },
+  { title: 'Đọc: Critical analysis & Implicit argument', subtitle: 'Đánh giá độ tin cậy, tìm luận điểm ẩn, journal articles', status: 'locked' },
+  { title: 'Writing Band 7 criteria', subtitle: 'Task response sâu, cohesion tự nhiên, lexical flexibility, grammar accuracy', status: 'locked' },
+  { title: 'Speaking Band 7 criteria', subtitle: 'Fluency ổn định, câu phức linh hoạt, pronunciation rõ và tự nhiên', status: 'locked' },
+]
 
 export const IELTS_ROADMAP_75: RoadmapStep[] = [
-  {
-    title: "Discourse organisation & Pragmatic language",
-    subtitle: "Macro-structure học thuật, hedging, modality, stance markers",
-    status: "completed",
-  },
-  {
-    title: "C1 Precision & Advanced idioms",
-    subtitle: "Chọn từ chính xác nhất, low-frequency impressive expressions",
-    status: "in-progress",
-    progress: 20,
-  },
-  {
-    title: "Nghe: Accent đa dạng tốc độ cao",
-    subtitle: "Native-speed British, Australian, Scottish, Irish unscripted",
-    status: "locked",
-  },
-  {
-    title: "Đọc: Tốc độ ≥ 300 wpm & Ghi nhớ cao",
-    subtitle: "Cambridge IELTS 18–19 full timed practice",
-    status: "locked",
-  },
-  {
-    title: "Viết: Văn nghị luận thuyết phục + Register mastery",
-    subtitle: "Ethos/logos/pathos, điều chỉnh giọng văn linh hoạt",
-    status: "locked",
-  },
-  {
-    title: "Nói: Fluency tự nhiên như native",
-    subtitle: "Rhythm, speed, idiomatic use – conversation exchange",
-    status: "locked",
-  },
-];
+  { title: 'Discourse organisation & Pragmatic language', subtitle: 'Macro-structure học thuật, hedging, modality, stance markers', status: 'completed' },
+  { title: 'C1 Precision & Natural Collocations', subtitle: 'Chọn từ chính xác, collocation tự nhiên, tránh overuse idiom', status: 'in-progress', progress: 20 },
+  { title: 'Nghe: Accent đa dạng tốc độ cao', subtitle: 'Native-speed British, Australian, Scottish, Irish unscripted', status: 'locked' },
+  { title: 'Đọc: Timed accuracy cao', subtitle: 'Giữ độ chính xác ổn định trong full test Cambridge timed practice', status: 'locked' },
+  { title: 'Viết: Band 8 control + Register mastery', subtitle: 'Ít lỗi ngữ pháp, phát triển luận điểm sâu, giọng văn học thuật linh hoạt', status: 'locked' },
+  { title: 'Nói: Band 8 performance', subtitle: 'Fluency linh hoạt, lexical range rộng, pronunciation nhất quán dễ hiểu', status: 'locked' },
+]
 
 // ── TOEIC per-band roadmaps ───────────────────────────────────────────────────
 export const TOEIC_ROADMAP_350: RoadmapStep[] = [
@@ -2597,6 +2611,11 @@ export const TOEIC_ROADMAP_700: RoadmapStep[] = [
   {
     title: "Reading: Triple Passage & Văn bản phức tạp",
     subtitle: "Cross-reference 3 văn bản, annual report, legal memo, RFP",
+    status: "locked",
+  },
+  {
+    title: "SW: Email cơ bản & Describe Photo",
+    subtitle: "Trả lời 3 câu hỏi trong email, mô tả ảnh 45 giây",
     status: "locked",
   },
   {
@@ -2764,10 +2783,11 @@ export function getPracticeTests(id: CertId): PracticeTest[] {
 }
 
 export function getSkills(id: CertId, band?: CertBand): SkillSection[] {
-  if (id === "ielts") {
-    if (band && band in IELTS_SKILLS_BY_BAND)
-      return IELTS_SKILLS_BY_BAND[band as IeltsBand];
-    return IELTS_SKILLS;
+  if (id === 'ielts') {
+    const resolvedBand: IeltsBand = band && band in IELTS_SKILL_TRACKS_TEMP_BY_BAND
+      ? (band as IeltsBand)
+      : '6.0'
+    return IELTS_SKILL_TRACKS_TEMP_BY_BAND[resolvedBand]
   }
   if (id === "toeic") {
     if (band && band in TOEIC_SKILLS_BY_BAND)
@@ -2864,9 +2884,8 @@ export function CertCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
-        selected ? "border-purple-400 shadow-lg" : "border-slate-100 shadow-sm"
-      }`}
+      className={`bg-white rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${selected ? "border-purple-400 shadow-lg" : "border-slate-100 shadow-sm"
+        }`}
     >
       <div className="h-28 relative overflow-hidden">
         <img
@@ -2912,11 +2931,10 @@ export function CertCard({
             />
           </div>
           <button
-            className={`w-full py-2 mt-1 text-sm font-medium rounded-xl cursor-pointer transition-colors ${
-              cert.progress > 0
-                ? "bg-gradient-to-r from-lime-400 to-lime-500 text-white hover:from-lime-500 hover:to-lime-600"
+            className={`w-full py-2 mt-1 text-sm font-medium rounded-xl cursor-pointer transition-colors ${cert.progress > 0
+                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600"
                 : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
+              }`}
           >
             {cert.progress > 0 ? "Tiếp tục học" : "Bắt đầu học"}
           </button>
@@ -2935,13 +2953,12 @@ export function RoadmapView({ steps }: { steps: RoadmapStep[] }) {
           className={`relative ${step.status === "locked" ? "opacity-50" : ""}`}
         >
           <div
-            className={`absolute -left-[23px] top-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center ${
-              step.status === "completed"
+            className={`absolute -left-[23px] top-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center ${step.status === "completed"
                 ? "bg-emerald-500"
                 : step.status === "in-progress"
                   ? "bg-purple-500 ring-4 ring-purple-100"
                   : "bg-slate-300"
-            }`}
+              }`}
           >
             {step.status === "completed" && (
               <CheckCircle2 className="w-2.5 h-2.5 text-white" />
@@ -2956,13 +2973,12 @@ export function RoadmapView({ steps }: { steps: RoadmapStep[] }) {
               <p className="text-xs text-slate-500">{step.subtitle}</p>
             </div>
             <span
-              className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ml-3 ${
-                step.status === "completed"
+              className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ml-3 ${step.status === "completed"
                   ? "text-emerald-600 bg-emerald-50"
                   : step.status === "in-progress"
                     ? "text-purple-600 bg-purple-50"
                     : "text-slate-400 bg-slate-50"
-              }`}
+                }`}
             >
               {step.status === "completed"
                 ? "Hoàn thành"
@@ -3115,14 +3131,12 @@ export function SkillTopicCard({ section }: { section: SkillSection }) {
             {section.topics.map((topic, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2.5 p-2.5 rounded-xl ${
-                  topic.done ? "bg-emerald-50" : "bg-slate-50"
-                }`}
+                className={`flex items-start gap-2.5 p-2.5 rounded-xl ${topic.done ? "bg-emerald-50" : "bg-slate-50"
+                  }`}
               >
                 <div
-                  className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                    topic.done ? "bg-emerald-500" : "bg-slate-200"
-                  }`}
+                  className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${topic.done ? "bg-emerald-500" : "bg-slate-200"
+                    }`}
                 >
                   {topic.done && (
                     <CheckCircle2 className="w-3 h-3 text-white" />
@@ -3130,11 +3144,10 @@ export function SkillTopicCard({ section }: { section: SkillSection }) {
                 </div>
                 <div>
                   <div
-                    className={`text-sm font-semibold ${
-                      topic.done
+                    className={`text-sm font-semibold ${topic.done
                         ? "text-emerald-700 line-through"
                         : "text-slate-700"
-                    }`}
+                      }`}
                   >
                     {topic.title}
                   </div>
@@ -3200,17 +3213,15 @@ export function MosTaskPanel({
               <button
                 key={t.id}
                 onClick={() => setActiveTask(i)}
-                className={`w-full text-left p-3 rounded-xl transition-all border cursor-pointer ${
-                  activeTask === i
+                className={`w-full text-left p-3 rounded-xl transition-all border cursor-pointer ${activeTask === i
                     ? "bg-white border-purple-200 shadow-sm"
                     : "bg-transparent border-transparent hover:bg-white"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-2">
                   <div
-                    className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                      t.done ? "bg-emerald-500" : "bg-slate-200"
-                    }`}
+                    className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${t.done ? "bg-emerald-500" : "bg-slate-200"
+                      }`}
                   >
                     {t.done ? (
                       <CheckCircle2 className="w-3.5 h-3.5 text-white" />
@@ -3258,11 +3269,10 @@ export function MosTaskPanel({
             {task.steps.map((step, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    i === 0 && task.done
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i === 0 && task.done
                       ? "bg-emerald-500 text-white"
                       : "bg-purple-100 text-purple-700"
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </div>
@@ -3573,9 +3583,8 @@ export function BandSelector({
       {/* Hero */}
       <div className="text-center mt-8 mb-10">
         <div
-          className={`bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} mx-auto rounded-2xl flex items-center justify-center shadow-lg ${
-            isMos ? "w-16 h-16" : "w-16 h-16"
-          }`}
+          className={`bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} mx-auto rounded-2xl flex items-center justify-center shadow-lg ${isMos ? "w-16 h-16" : "w-16 h-16"
+            }`}
         >
           <span className="font-black text-white text-xl">{cert.icon}</span>
         </div>
@@ -3610,11 +3619,10 @@ export function BandSelector({
 
       {/* Band cards */}
       <div
-        className={`grid gap-4 ${
-          bands.length === 2
+        className={`grid gap-4 ${bands.length === 2
             ? "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto"
             : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-        }`}
+          }`}
       >
         {bands.map((band) => (
           <button
@@ -3622,11 +3630,10 @@ export function BandSelector({
             onMouseEnter={() => setHovered(band.value)}
             onMouseLeave={() => setHovered(null)}
             onClick={() => onSelect(band.value)}
-            className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-              hovered === band.value
+            className={`relative text-left p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${hovered === band.value
                 ? `${band.bg} ${band.borderActive}`
                 : `bg-white ${band.border}`
-            }`}
+              }`}
           >
             {band.recommended && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap shadow-sm">
@@ -3660,11 +3667,10 @@ export function BandSelector({
               ))}
             </ul>
             <div
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-colors ${
-                hovered === band.value
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-colors ${hovered === band.value
                   ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
                   : `${band.bg} ${band.color} border ${band.border}`
-              }`}
+                }`}
             >
               Chọn {isMos ? "cấp độ" : "mục tiêu"} này →
             </div>
