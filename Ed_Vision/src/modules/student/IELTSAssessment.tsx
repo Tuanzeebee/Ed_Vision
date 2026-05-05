@@ -563,23 +563,57 @@ const IELTSTestView: React.FC<{
   const submittedRef = useRef(false);
 
   useEffect(() => {
-    console.log("[Speaking Debug]", {
+    console.log("[Question Debug]", {
       skill: currentQuestion.skill,
       questionType: currentQuestion.questionType,
       contextType: currentQuestion.contextType,
+      options: currentQuestion.options,
+      questionText: currentQuestion.questionText?.slice(0, 50),
     });
   }, [currentQuestion.id]);
 
   const options = useMemo(() => {
     if (!Array.isArray(currentQuestion.options)) return [];
-    return currentQuestion.options.map((item: any, idx: number) => {
+    
+    // ✅ Deduplicate options by value to prevent duplicate buttons
+    const uniqueOptions = new Map<string, any>();
+    
+    currentQuestion.options.forEach((item: any, idx: number) => {
+      let parsed: { value: string; label: string; badge: string };
+      
       if (typeof item === "string") {
+        // Match A-D format: "A. Answer text"
         const m = item.match(/^([A-D])\.\s*(.*)$/i);
-        if (m) return { value: m[1].toUpperCase(), label: m[2], badge: m[1].toUpperCase() };
-        return { value: item, label: item, badge: String.fromCharCode(65 + idx) };
+        if (m) {
+          parsed = { value: m[1].toUpperCase(), label: m[2], badge: m[1].toUpperCase() };
+        }
+        // ✅ Handle TRUE/FALSE/NOT GIVEN explicitly
+        else if (item.toUpperCase() === "TRUE" || item.toUpperCase() === "FALSE" || item.toUpperCase() === "NOT GIVEN") {
+          parsed = { value: item.toUpperCase(), label: item.toUpperCase(), badge: item.toUpperCase() };
+        }
+        // Default fallback
+        else {
+          parsed = { value: item, label: item, badge: String.fromCharCode(65 + idx) };
+        }
       }
-      return { value: String(idx), label: String(item), badge: String.fromCharCode(65 + idx) };
+      else if (typeof item === "object" && item !== null) {
+        parsed = {
+          value: item.key ?? String(idx),
+          label: item.text ?? String(idx),
+          badge: item.key ?? String.fromCharCode(65 + idx),
+        };
+      }
+      else {
+        parsed = { value: String(idx), label: String(idx), badge: String.fromCharCode(65 + idx) };
+      }
+      
+      // Only add if not already exists (deduplicate by value)
+      if (!uniqueOptions.has(parsed.value)) {
+        uniqueOptions.set(parsed.value, parsed);
+      }
     });
+    
+    return Array.from(uniqueOptions.values());
   }, [currentQuestion.options]);
 
   useEffect(() => {
@@ -782,7 +816,10 @@ const IELTSTestView: React.FC<{
     );
   }
 
-  const isGapFill = currentQuestion.questionType === "gap_fill";
+  // ✅ FIX: Check speaking TRƯỚC gap_fill để tránh speaking bị render thành text input
+  const isSpeaking = currentQuestion.skill?.toLowerCase() === "speaking";
+  const isGapFill = currentQuestion.questionType === "gap_fill" && !isSpeaking;
+  
   const skillLabel: any = {
     reading: "Reading",
     listening: "Listening",
@@ -959,8 +996,7 @@ const IELTSTestView: React.FC<{
                     {isSubmitting ? "Đang xử lý..." : "Xác nhận →"}
                   </button>
                 </div>
-              ) : currentQuestion.skill === "speaking" ||
-                currentQuestion.questionType === "speaking" ? (
+              ) : isSpeaking ? (
                 <div className="space-y-5">
                   <SpeakingRecorder
                     sessionId={sessionId}

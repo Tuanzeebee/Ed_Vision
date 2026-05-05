@@ -919,12 +919,39 @@ model IeltsQuestion {
   irtA             Decimal?               @default(1.0) @map("irt_a") @db.Decimal(4, 3)
   irtB             Decimal?               @map("irt_b") @db.Decimal(4, 3)
   irtC             Decimal?               @map("irt_c") @db.Decimal(4, 3)
-  
+  contextType String? @map("context_type")
+  isPlacement Boolean? @map("is_placement")
+   passage_id       String?   @map("passage_id") @db.Uuid
+  passage          IeltsPassage? @relation(fields: [passage_id], references: [id])
 
   @@index([skill, status], map: "idx_ielts_q_skill_status")
   @@index([bandMin, bandMax], map: "idx_ielts_q_band")
   @@index([errorTag], map: "idx_ielts_q_error_tag")
   @@map("ielts_questions")
+}
+model IeltsPassage {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skill            String
+  title            String
+  content          String
+ band_min         Decimal   @db.Decimal(5, 2)  // thay @db.Numeric
+  band_max         Decimal   @db.Decimal(5, 2)  // thay @db.Numeric
+  topic_tags       String[]  @default([])
+  section_type     Int?      @db.SmallInt
+  is_ai_generated  Boolean   @default(false)
+  is_paraphrased   Boolean   @default(false)
+  status           String    @default("draft")
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+  audio_url        String?
+  audio_duration_s  Int?   @map("audio_duration_sec")
+  accent_type      String?
+  tts_generated    Boolean?
+
+  // Thêm back-relation
+  questions        IeltsQuestion[]
+
+  @@map("ielts_passages")
 }
 
 model IeltsPlacementSession {
