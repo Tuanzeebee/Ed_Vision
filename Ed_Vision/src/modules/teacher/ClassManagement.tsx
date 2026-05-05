@@ -82,7 +82,7 @@ export default function ClassManagement() {
             const data = await classManagementAPI.getClasses()
             setClassData(data)
         } catch (error) {
-            console.error('Error fetching classes:', error)
+            // Error fetching classes
         } finally {
             setLoading(false)
         }
@@ -93,7 +93,7 @@ export default function ClassManagement() {
             const data = await classManagementAPI.getStatistics()
             setStatistics(data)
         } catch (error) {
-            console.error('Error fetching statistics:', error)
+            // Error fetching statistics
         }
     }
 
@@ -128,7 +128,6 @@ export default function ClassManagement() {
             })
             setStudentsData(merged)
         } catch (error) {
-            console.error('Error fetching students:', error)
             toast.error(t('classManagement.loadStudentsError'))
         } finally {
             setLoading(false)
@@ -140,7 +139,6 @@ export default function ClassManagement() {
             const data = await classManagementAPI.getClasses()
             setAvailableClasses(data)
         } catch (error) {
-            console.error('Error fetching available classes:', error)
             toast.error(t('classManagement.loadError'))
         }
     }
@@ -148,7 +146,6 @@ export default function ClassManagement() {
     const handleRefresh = async () => {
         try {
             setLoading(true)
-            console.log(' Refreshing data...')
             
             // Clear cache
             classManagementAPI.clearCache()
@@ -166,7 +163,6 @@ export default function ClassManagement() {
             
             toast.success(t('classManagement.refreshSuccess'))
         } catch (error) {
-            console.error('Error refreshing:', error)
             toast.error(t('classManagement.refreshError'))
         } finally {
             setLoading(false)
@@ -192,9 +188,7 @@ export default function ClassManagement() {
             formData.append('file', uploadFile)
             formData.append('class_code', uploadClassCode)
 
-            console.log('Uploading:', { class_code: uploadClassCode, file: uploadFile.name })
             const result = await classManagementAPI.uploadClassList(formData)
-            console.log('Upload result:', result)
 
             if (result.success) {
                 toast.success(result.message || t('classManagement.uploadSuccess', { count: result.data?.length || 0 }))
@@ -208,8 +202,6 @@ export default function ClassManagement() {
                 toast.error(result.message || t('classManagement.uploadError'))
             }
         } catch (error: any) {
-            console.error('Upload error:', error)
-            console.error('Error response:', error.response?.data)
             const errorMessage = error.response?.data?.message || error.message || 'Upload failed'
             toast.error(errorMessage)
         } finally {

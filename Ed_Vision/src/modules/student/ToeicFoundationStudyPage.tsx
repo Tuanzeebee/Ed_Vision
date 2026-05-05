@@ -2,8 +2,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Archive,
   BookOpen,
   Brain,
+  Sparkles,
+  PenLine,
   Tag,
   CheckCircle2,
   ChevronDown,
@@ -12,11 +15,26 @@ import {
   Lightbulb,
   Target,
   ChevronLeft,
+  ChevronRight,
   RotateCcw,
+  Volume2,
+  Settings2,
+  X,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
+import {
+  useVocabTopics,
+  useVocabWords,
+  useVocabStats,
+  apiToggleKnown,
+  apiGetKnownWords,
+  type VocabWordApi,
+  type VocabTopicApi,
+} from "../../hooks/useVocab";
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -51,13 +69,21 @@ interface GrammarTopic {
   quiz: QuizQuestion[];
 }
 
+interface VocabWordDefinition {
+  pos: string;
+  meaning: string;
+  example: GrammarExample;
+}
+
 interface VocabWord {
   id: string;
   word: string;
-  meaning: string;
-  pos: string;
-  example: GrammarExample;
+  level?: string;
   freq: 1 | 2 | 3;
+  meaning?: string;
+  pos?: string;
+  example?: GrammarExample;
+  definitions?: VocabWordDefinition[];
 }
 
 interface VocabTopic {
@@ -66,6 +92,7 @@ interface VocabTopic {
   title: string;
   titleVI: string;
   count: number;
+  level: "Cơ bản" | "Trung bình" | "Nâng cao";
   words: VocabWord[];
   isPremiumPreview?: boolean;
 }
@@ -745,1041 +772,1491 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v1-1",
         word: "regarding",
-        meaning: "liên quan đến",
-        pos: "prep.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "prep.",
+            meaning: "liên quan đến",
+            example: {
           en: "I am writing regarding the meeting scheduled for Monday.",
           vi: "Tôi viết thư liên quan đến cuộc họp dự kiến vào thứ Hai.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-2",
         word: "attached",
-        meaning: "đính kèm",
-        pos: "adj.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "đính kèm",
+            example: {
           en: "Please find the attached document for your review.",
           vi: "Vui lòng xem tài liệu đính kèm để xem xét.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-3",
         word: "pursuant",
-        meaning: "theo, căn cứ vào",
-        pos: "adj.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "theo, căn cứ vào",
+            example: {
           en: "Pursuant to our agreement, payment is due on the 15th.",
           vi: "Theo thỏa thuận của chúng ta, thanh toán đến hạn vào ngày 15.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-4",
         word: "agenda",
-        meaning: "chương trình nghị sự",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "chương trình nghị sự",
+            example: {
           en: "Please review the agenda before the meeting.",
           vi: "Vui lòng xem lại chương trình nghị sự trước cuộc họp.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-5",
         word: "correspondence",
-        meaning: "thư từ giao dịch",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "thư từ giao dịch",
+            example: {
           en: "All correspondence should be directed to the HR department.",
           vi: "Mọi thư từ giao dịch cần gửi đến bộ phận Nhân sự.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-6",
         word: "acknowledge",
-        meaning: "xác nhận, thừa nhận",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "xác nhận, thừa nhận",
+            example: {
           en: "Please acknowledge receipt of this email.",
           vi: "Vui lòng xác nhận đã nhận được email này.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-7",
         word: "facilitate",
-        meaning: "tạo điều kiện thuận lợi",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "tạo điều kiện thuận lợi",
+            example: {
           en: "The new software will facilitate communication between teams.",
           vi: "Phần mềm mới sẽ tạo điều kiện giao tiếp giữa các nhóm.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-8",
         word: "inquiry",
-        meaning: "sự hỏi han, thắc mắc",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "sự hỏi han, thắc mắc",
+            example: {
           en: "Thank you for your inquiry about our services.",
           vi: "Cảm ơn bạn đã hỏi về dịch vụ của chúng tôi.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-9",
         word: "notify",
-        meaning: "thông báo",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "thông báo",
+            example: {
           en: "Please notify all staff of the schedule change.",
           vi: "Vui lòng thông báo cho tất cả nhân viên về sự thay đổi lịch.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-10",
         word: "confirm",
-        meaning: "xác nhận",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "xác nhận",
+            example: {
           en: "I am writing to confirm our appointment on Thursday.",
           vi: "Tôi viết để xác nhận cuộc hẹn của chúng ta vào thứ Năm.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-11",
         word: "postpone",
-        meaning: "hoãn lại",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "hoãn lại",
+            example: {
           en: "The meeting has been postponed to next week.",
           vi: "Cuộc họp đã bị hoãn đến tuần sau.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-12",
         word: "available",
-        meaning: "sẵn sàng, có thể liên lạc",
-        pos: "adj.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "sẵn sàng, có thể liên lạc",
+            example: {
           en: "I am available for a call after 2 PM.",
           vi: "Tôi có thể nghe gọi sau 2 giờ chiều.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-13",
         word: "forward",
-        meaning: "chuyển tiếp",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "chuyển tiếp",
+            example: {
           en: "I will forward your request to the relevant department.",
           vi: "Tôi sẽ chuyển yêu cầu của bạn đến bộ phận liên quan.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-14",
         word: "update",
-        meaning: "cập nhật",
-        pos: "v./n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v./n.",
+            meaning: "cập nhật",
+            example: {
           en: "Please provide an update on the project status.",
           vi: "Vui lòng cập nhật tình trạng dự án.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-15",
         word: "deadline",
-        meaning: "hạn chót",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hạn chót",
+            example: {
           en: "The submission deadline is this Friday.",
           vi: "Hạn nộp là thứ Sáu này.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-16",
         word: "draft",
-        meaning: "bản thảo / soạn thảo",
-        pos: "n./v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n./v.",
+            meaning: "bản thảo / soạn thảo",
+            example: {
           en: "The team is working on the draft proposal.",
           vi: "Nhóm đang làm việc trên bản đề xuất thảo.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-17",
         word: "circulate",
-        meaning: "lưu hành, phân phát",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "lưu hành, phân phát",
+            example: {
           en: "Please circulate the minutes to all members.",
           vi: "Vui lòng phân phát biên bản cho tất cả thành viên.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-18",
         word: "minutes",
-        meaning: "biên bản cuộc họp",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "biên bản cuộc họp",
+            example: {
           en: "Who will take the minutes at today's meeting?",
           vi: "Ai sẽ ghi biên bản trong cuộc họp hôm nay?",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-19",
         word: "confidential",
-        meaning: "bí mật, mật",
-        pos: "adj.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "bí mật, mật",
+            example: {
           en: "This document is strictly confidential.",
           vi: "Tài liệu này hoàn toàn bí mật.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-20",
         word: "reference",
-        meaning: "tài liệu tham khảo / mã số",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "tài liệu tham khảo / mã số",
+            example: {
           en: "Please use the above reference number in your reply.",
           vi: "Vui lòng sử dụng số mã tham chiếu ở trên trong câu trả lời.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-21",
         word: "schedule",
-        meaning: "lên lịch / lịch trình",
-        pos: "v./n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v./n.",
+            meaning: "lên lịch / lịch trình",
+            example: {
           en: "The interview is scheduled for 10 AM on Monday.",
           vi: "Buổi phỏng vấn được lên lịch vào 10 giờ sáng thứ Hai.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-22",
         word: "revise",
-        meaning: "sửa đổi, chỉnh sửa",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "sửa đổi, chỉnh sửa",
+            example: {
           en: "Please revise the proposal and resubmit it by Friday.",
           vi: "Vui lòng sửa lại đề xuất và gửi lại trước thứ Sáu.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-23",
         word: "submit",
-        meaning: "nộp, gửi",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "nộp, gửi",
+            example: {
           en: "Please submit the completed form to HR.",
           vi: "Vui lòng nộp mẫu đã điền cho bộ phận Nhân sự.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v1-24",
         word: "clarify",
-        meaning: "làm rõ",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "làm rõ",
+            example: {
           en: "Could you clarify the requirements for this position?",
           vi: "Bạn có thể làm rõ các yêu cầu cho vị trí này không?",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v1-25",
         word: "urgent",
-        meaning: "khẩn cấp",
-        pos: "adj.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "khẩn cấp",
+            example: {
           en: "This is an urgent matter that requires immediate attention.",
           vi: "Đây là vấn đề khẩn cấp cần được chú ý ngay lập tức.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
     ],
   },
   {
     id: 2,
     emoji: "💼",
-    title: "Contract & Business",
-    titleVI: "Hợp đồng & Kinh doanh",
-    count: 25,
+    title: "Contracts & Agreements",
+    titleVI: "Hợp đồng & Thỏa thuận",
+    count: 30,
     words: [
       {
         id: "v2-1",
         word: "contract",
-        meaning: "hợp đồng",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hợp đồng",
+            example: {
           en: "Both parties must sign the contract before work begins.",
           vi: "Cả hai bên phải ký hợp đồng trước khi công việc bắt đầu.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-2",
         word: "negotiate",
-        meaning: "đàm phán",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "đàm phán",
+            example: {
           en: "The two companies will negotiate the terms of the deal.",
           vi: "Hai công ty sẽ đàm phán các điều khoản của thỏa thuận.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-3",
         word: "clause",
-        meaning: "điều khoản",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "điều khoản",
+            example: {
           en: "Please review clause 5 of the contract carefully.",
           vi: "Vui lòng xem xét kỹ điều khoản 5 của hợp đồng.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-4",
         word: "vendor",
-        meaning: "nhà cung cấp, người bán",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "nhà cung cấp, người bán",
+            example: {
           en: "We need to select a reliable vendor for this project.",
           vi: "Chúng ta cần chọn một nhà cung cấp đáng tin cậy cho dự án này.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-5",
         word: "proposal",
-        meaning: "đề xuất, bản đề nghị",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "đề xuất, bản đề nghị",
+            example: {
           en: "The team submitted a proposal to the client.",
           vi: "Nhóm đã gửi một đề xuất cho khách hàng.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-6",
         word: "invoice",
-        meaning: "hóa đơn",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hóa đơn",
+            example: {
           en: "The invoice must be paid within 30 days.",
           vi: "Hóa đơn phải được thanh toán trong vòng 30 ngày.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-7",
         word: "comply",
-        meaning: "tuân thủ",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "tuân thủ",
+            example: {
           en: "All contractors must comply with safety regulations.",
           vi: "Tất cả nhà thầu phải tuân thủ các quy định an toàn.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-8",
         word: "incentive",
-        meaning: "khuyến khích, phần thưởng",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "khuyến khích, phần thưởng",
+            example: {
           en: "The company offers incentives for high-performing employees.",
           vi: "Công ty cung cấp các phần thưởng cho nhân viên có hiệu suất cao.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-9",
         word: "merger",
-        meaning: "sáp nhập",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "sáp nhập",
+            example: {
           en: "The merger between the two companies was announced last week.",
           vi: "Việc sáp nhập giữa hai công ty được công bố tuần trước.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-10",
         word: "acquisition",
-        meaning: "sự thâu tóm, mua lại",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "sự thâu tóm, mua lại",
+            example: {
           en: "The acquisition was valued at $50 million.",
           vi: "Thương vụ mua lại được định giá 50 triệu đô la.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-11",
         word: "revenue",
-        meaning: "doanh thu",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "doanh thu",
+            example: {
           en: "The company's revenue increased by 15% this quarter.",
           vi: "Doanh thu của công ty tăng 15% trong quý này.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-12",
         word: "profit",
-        meaning: "lợi nhuận",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "lợi nhuận",
+            example: {
           en: "Net profit for the year exceeded expectations.",
           vi: "Lợi nhuận ròng trong năm vượt quá kỳ vọng.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-13",
         word: "budget",
-        meaning: "ngân sách",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "ngân sách",
+            example: {
           en: "We need to stay within the allocated budget.",
           vi: "Chúng ta cần duy trì trong giới hạn ngân sách được phân bổ.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-14",
         word: "expenditure",
-        meaning: "chi tiêu, khoản chi",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "chi tiêu, khoản chi",
+            example: {
           en: "All expenditures must be approved by management.",
           vi: "Tất cả chi tiêu phải được ban quản lý phê duyệt.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-15",
         word: "reimburse",
-        meaning: "hoàn trả, bồi hoàn",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "hoàn trả, bồi hoàn",
+            example: {
           en: "Employees will be reimbursed for travel expenses.",
           vi: "Nhân viên sẽ được hoàn trả chi phí đi lại.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-16",
         word: "audit",
-        meaning: "kiểm toán",
-        pos: "n./v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n./v.",
+            meaning: "kiểm toán",
+            example: {
           en: "The annual audit will take place next month.",
           vi: "Cuộc kiểm toán hàng năm sẽ diễn ra vào tháng tới.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-17",
         word: "liability",
-        meaning: "trách nhiệm pháp lý",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "trách nhiệm pháp lý",
+            example: {
           en: "The company accepts no liability for damages.",
           vi: "Công ty không chịu trách nhiệm pháp lý về thiệt hại.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-18",
         word: "stakeholder",
-        meaning: "các bên liên quan",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "các bên liên quan",
+            example: {
           en: "All stakeholders were informed of the decision.",
           vi: "Tất cả các bên liên quan đã được thông báo về quyết định.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-19",
         word: "priority",
-        meaning: "ưu tiên",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "ưu tiên",
+            example: {
           en: "Customer satisfaction is our top priority.",
           vi: "Sự hài lòng của khách hàng là ưu tiên hàng đầu của chúng tôi.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-20",
         word: "launch",
-        meaning: "ra mắt",
-        pos: "v./n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v./n.",
+            meaning: "ra mắt",
+            example: {
           en: "The new product will be launched next quarter.",
           vi: "Sản phẩm mới sẽ được ra mắt vào quý tới.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-21",
         word: "implement",
-        meaning: "thực hiện, áp dụng",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "thực hiện, áp dụng",
+            example: {
           en: "The new policy will be implemented starting next month.",
           vi: "Chính sách mới sẽ được thực hiện bắt đầu từ tháng tới.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-22",
         word: "terminate",
-        meaning: "chấm dứt",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "chấm dứt",
+            example: {
           en: "The contract may be terminated with 30 days' notice.",
           vi: "Hợp đồng có thể bị chấm dứt với thông báo 30 ngày.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v2-23",
         word: "prior",
-        meaning: "trước đó",
-        pos: "adj.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "trước đó",
+            example: {
           en: "Prior approval is required for all purchases over $500.",
           vi: "Cần có sự phê duyệt trước cho tất cả giao dịch mua trên 500 đô.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-24",
         word: "loss",
-        meaning: "thua lỗ, mất mát",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "thua lỗ, mất mát",
+            example: {
           en: "The company reported a loss of $2 million last year.",
           vi: "Công ty báo cáo khoản lỗ 2 triệu đô la năm ngoái.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v2-25",
         word: "compliance",
-        meaning: "sự tuân thủ",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "sự tuân thủ",
+            example: {
           en: "All employees must ensure compliance with company policies.",
           vi: "Tất cả nhân viên phải đảm bảo tuân thủ các chính sách công ty.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
     ],
   },
   {
     id: 3,
     emoji: "📊",
-    title: "Finance & Accounting",
-    titleVI: "Tài chính & Kế toán",
-    count: 25,
+    title: "Finance & Banking",
+    titleVI: "Tài chính & Ngân hàng",
+    count: 45,
     isPremiumPreview: true,
     words: [
       {
         id: "v3-1",
         word: "budget",
-        meaning: "ngân sách",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "ngân sách",
+            example: {
           en: "The project was completed within budget.",
           vi: "Dự án đã hoàn thành trong ngân sách.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v3-2",
         word: "revenue",
-        meaning: "doanh thu",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "doanh thu",
+            example: {
           en: "Annual revenue grew by 20%.",
           vi: "Doanh thu hàng năm tăng 20%.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v3-3",
         word: "profit",
-        meaning: "lợi nhuận",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "lợi nhuận",
+            example: {
           en: "The company reported record profits this year.",
           vi: "Công ty báo cáo lợi nhuận kỷ lục năm nay.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v3-4",
         word: "expenditure",
-        meaning: "chi tiêu",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "chi tiêu",
+            example: {
           en: "Capital expenditure increased by 10%.",
           vi: "Chi tiêu vốn tăng 10%.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v3-5",
         word: "reimburse",
-        meaning: "hoàn tiền",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "hoàn tiền",
+            example: {
           en: "Submit receipts to be reimbursed.",
           vi: "Nộp biên lai để được hoàn tiền.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v3-6",
         word: "audit",
-        meaning: "kiểm toán",
-        pos: "n./v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n./v.",
+            meaning: "kiểm toán",
+            example: {
           en: "The accounts were audited last quarter.",
           vi: "Tài khoản đã được kiểm toán quý trước.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v3-7",
         word: "liability",
-        meaning: "nợ phải trả",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "nợ phải trả",
+            example: {
           en: "Current liabilities include short-term loans.",
           vi: "Nợ ngắn hạn bao gồm các khoản vay ngắn hạn.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v3-8",
         word: "quarterly",
-        meaning: "hàng quý",
-        pos: "adj./adv.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "adj./adv.",
+            meaning: "hàng quý",
+            example: {
           en: "Quarterly reports are due on the 15th.",
           vi: "Báo cáo hàng quý đến hạn vào ngày 15.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v3-9",
         word: "fiscal",
-        meaning: "thuộc tài chính/ngân sách",
-        pos: "adj.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "adj.",
+            meaning: "thuộc tài chính/ngân sách",
+            example: {
           en: "The fiscal year ends in December.",
           vi: "Năm tài chính kết thúc vào tháng 12.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v3-10",
         word: "dividend",
-        meaning: "cổ tức",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "cổ tức",
+            example: {
           en: "Shareholders will receive an annual dividend.",
           vi: "Cổ đông sẽ nhận cổ tức hàng năm.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
     ],
   },
   {
     id: 4,
     emoji: "🏭",
-    title: "Manufacturing & Logistics",
-    titleVI: "Sản xuất & Logistics",
-    count: 25,
+    title: "Manufacturing & Production",
+    titleVI: "Sản xuất",
+    count: 35,
     isPremiumPreview: true,
     words: [
       {
         id: "v4-1",
         word: "shipment",
-        meaning: "lô hàng",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "lô hàng",
+            example: {
           en: "The shipment arrived two days early.",
           vi: "Lô hàng đến sớm hai ngày.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v4-2",
         word: "inventory",
-        meaning: "hàng tồn kho",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hàng tồn kho",
+            example: {
           en: "Inventory levels are currently very low.",
           vi: "Mức tồn kho hiện đang rất thấp.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v4-3",
         word: "dispatch",
-        meaning: "gửi đi, điều phối",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "gửi đi, điều phối",
+            example: {
           en: "Orders are dispatched within 24 hours.",
           vi: "Đơn hàng được gửi đi trong vòng 24 giờ.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v4-4",
         word: "warehouse",
-        meaning: "kho hàng",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "kho hàng",
+            example: {
           en: "The warehouse stores over 10,000 items.",
           vi: "Kho hàng lưu trữ hơn 10.000 mặt hàng.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v4-5",
         word: "freight",
-        meaning: "hàng hóa vận chuyển",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hàng hóa vận chuyển",
+            example: {
           en: "Freight costs have increased this year.",
           vi: "Chi phí vận chuyển đã tăng năm nay.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v4-6",
         word: "cargo",
-        meaning: "hàng hóa",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hàng hóa",
+            example: {
           en: "The cargo ship arrived at port.",
           vi: "Tàu hàng đã cập cảng.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v4-7",
         word: "consignment",
-        meaning: "lô hàng gửi",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "lô hàng gửi",
+            example: {
           en: "The consignment was damaged in transit.",
           vi: "Lô hàng bị hỏng trong quá trình vận chuyển.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v4-8",
         word: "customs",
-        meaning: "hải quan",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hải quan",
+            example: {
           en: "The goods are currently held at customs.",
           vi: "Hàng hóa hiện đang bị giữ tại hải quan.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v4-9",
         word: "delivery",
-        meaning: "giao hàng",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "giao hàng",
+            example: {
           en: "Delivery is expected within 5 business days.",
           vi: "Dự kiến giao hàng trong vòng 5 ngày làm việc.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v4-10",
         word: "tracking",
-        meaning: "theo dõi",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "theo dõi",
+            example: {
           en: "Use the tracking number to follow your order.",
           vi: "Sử dụng số theo dõi để theo dõi đơn hàng.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
     ],
   },
   {
     id: 5,
     emoji: "👥",
-    title: "HR & Recruitment",
-    titleVI: "Nhân sự & Tuyển dụng",
-    count: 25,
+    title: "Human Resources",
+    titleVI: "Nhân sự",
+    count: 40,
     isPremiumPreview: true,
     words: [
       {
         id: "v5-1",
         word: "recruit",
-        meaning: "tuyển dụng",
-        pos: "v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "tuyển dụng",
+            example: {
           en: "We are recruiting for several positions.",
           vi: "Chúng tôi đang tuyển dụng cho nhiều vị trí.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v5-2",
         word: "candidate",
-        meaning: "ứng viên",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "ứng viên",
+            example: {
           en: "The candidate impressed us during the interview.",
           vi: "Ứng viên đã gây ấn tượng với chúng tôi trong buổi phỏng vấn.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v5-3",
         word: "vacancy",
-        meaning: "vị trí còn trống",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "vị trí còn trống",
+            example: {
           en: "There is a vacancy in the marketing department.",
           vi: "Có một vị trí còn trống trong bộ phận marketing.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v5-4",
         word: "onboard",
-        meaning: "tiếp nhận nhân viên mới",
-        pos: "v.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "v.",
+            meaning: "tiếp nhận nhân viên mới",
+            example: {
           en: "We will onboard three new employees next week.",
           vi: "Chúng ta sẽ tiếp nhận ba nhân viên mới tuần tới.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v5-5",
         word: "performance",
-        meaning: "hiệu suất, thành tích",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hiệu suất, thành tích",
+            example: {
           en: "Employee performance is reviewed annually.",
           vi: "Hiệu suất nhân viên được xem xét hàng năm.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v5-6",
         word: "appraisal",
-        meaning: "đánh giá",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "đánh giá",
+            example: {
           en: "Your appraisal meeting is scheduled for next Friday.",
           vi: "Cuộc họp đánh giá của bạn được lên lịch vào thứ Sáu tới.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v5-7",
         word: "resignation",
-        meaning: "từ chức, thôi việc",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "từ chức, thôi việc",
+            example: {
           en: "She submitted her resignation letter yesterday.",
           vi: "Cô ấy đã nộp đơn từ chức hôm qua.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v5-8",
         word: "benefits",
-        meaning: "phúc lợi",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "phúc lợi",
+            example: {
           en: "The company offers competitive benefits.",
           vi: "Công ty cung cấp phúc lợi cạnh tranh.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v5-9",
         word: "payroll",
-        meaning: "bảng lương",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "bảng lương",
+            example: {
           en: "Payroll is processed on the last working day.",
           vi: "Bảng lương được xử lý vào ngày làm việc cuối cùng.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v5-10",
         word: "reference",
-        meaning: "người/thư giới thiệu",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "người/thư giới thiệu",
+            example: {
           en: "Please provide two professional references.",
           vi: "Vui lòng cung cấp hai người giới thiệu chuyên nghiệp.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
     ],
   },
   {
     id: 6,
     emoji: "🏨",
-    title: "Travel & Hospitality",
-    titleVI: "Du lịch & Khách sạn",
-    count: 25,
+    title: "Travel & Transportation",
+    titleVI: "Du lịch & Vận tải",
+    count: 20,
     isPremiumPreview: true,
     words: [
       {
         id: "v6-1",
         word: "reservation",
-        meaning: "đặt chỗ, đặt phòng",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "đặt chỗ, đặt phòng",
+            example: {
           en: "I would like to make a reservation for two.",
           vi: "Tôi muốn đặt chỗ cho hai người.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-2",
         word: "itinerary",
-        meaning: "lịch trình chuyến đi",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "lịch trình chuyến đi",
+            example: {
           en: "Please send the final itinerary by email.",
           vi: "Vui lòng gửi lịch trình cuối cùng qua email.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-3",
         word: "accommodation",
-        meaning: "chỗ ở",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "chỗ ở",
+            example: {
           en: "Accommodation is included in the package.",
           vi: "Chỗ ở đã được bao gồm trong gói.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-4",
         word: "check-in",
-        meaning: "làm thủ tục",
-        pos: "n./v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n./v.",
+            meaning: "làm thủ tục",
+            example: {
           en: "Check-in time is 3 PM.",
           vi: "Giờ làm thủ tục là 3 giờ chiều.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-5",
         word: "departure",
-        meaning: "khởi hành, xuất phát",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "khởi hành, xuất phát",
+            example: {
           en: "The departure gate is B12.",
           vi: "Cổng khởi hành là B12.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-6",
         word: "arrival",
-        meaning: "đến nơi, đáp",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "đến nơi, đáp",
+            example: {
           en: "The arrival time is 6:30 PM.",
           vi: "Giờ đến nơi là 6:30 chiều.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-7",
         word: "transit",
-        meaning: "trung chuyển",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "trung chuyển",
+            example: {
           en: "Passengers in transit must go to Gate C.",
           vi: "Hành khách trung chuyển phải đến Cổng C.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v6-8",
         word: "baggage",
-        meaning: "hành lý",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "hành lý",
+            example: {
           en: "Baggage allowance is 23 kg per person.",
           vi: "Hành lý cho phép là 23 kg mỗi người.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-9",
         word: "confirmation",
-        meaning: "xác nhận",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "xác nhận",
+            example: {
           en: "You will receive a booking confirmation by email.",
           vi: "Bạn sẽ nhận được xác nhận đặt phòng qua email.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v6-10",
         word: "hospitality",
-        meaning: "lòng hiếu khách, dịch vụ",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "lòng hiếu khách, dịch vụ",
+            example: {
           en: "The hotel is known for its excellent hospitality.",
           vi: "Khách sạn nổi tiếng với dịch vụ xuất sắc.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
     ],
   },
@@ -1794,232 +2271,332 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v7-1",
         word: "appointment",
-        meaning: "cuộc hẹn, lịch khám",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "cuộc hẹn, lịch khám",
+            example: {
           en: "I have a doctor's appointment on Wednesday.",
           vi: "Tôi có lịch khám bác sĩ vào thứ Tư.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v7-2",
         word: "prescription",
-        meaning: "đơn thuốc",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "đơn thuốc",
+            example: {
           en: "The doctor issued a prescription for antibiotics.",
           vi: "Bác sĩ đã kê đơn thuốc kháng sinh.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v7-3",
         word: "insurance",
-        meaning: "bảo hiểm",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "bảo hiểm",
+            example: {
           en: "Does your insurance cover dental care?",
           vi: "Bảo hiểm của bạn có bao gồm chăm sóc răng miệng không?",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v7-4",
         word: "diagnosis",
-        meaning: "chẩn đoán",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "chẩn đoán",
+            example: {
           en: "The test results confirmed the diagnosis.",
           vi: "Kết quả xét nghiệm xác nhận chẩn đoán.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v7-5",
         word: "treatment",
-        meaning: "điều trị",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "điều trị",
+            example: {
           en: "The treatment plan was discussed with the patient.",
           vi: "Kế hoạch điều trị đã được thảo luận với bệnh nhân.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v7-6",
         word: "referral",
-        meaning: "giới thiệu đến bác sĩ/chuyên gia",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "giới thiệu đến bác sĩ/chuyên gia",
+            example: {
           en: "Your GP will provide a referral to a specialist.",
           vi: "Bác sĩ gia đình sẽ giới thiệu bạn đến chuyên gia.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v7-7",
         word: "clinic",
-        meaning: "phòng khám",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "phòng khám",
+            example: {
           en: "The clinic opens at 8 AM on weekdays.",
           vi: "Phòng khám mở cửa lúc 8h sáng vào các ngày trong tuần.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v7-8",
         word: "symptom",
-        meaning: "triệu chứng",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "triệu chứng",
+            example: {
           en: "Report any unusual symptoms to your doctor.",
           vi: "Báo cáo bất kỳ triệu chứng bất thường nào cho bác sĩ.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v7-9",
         word: "physician",
-        meaning: "bác sĩ",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "bác sĩ",
+            example: {
           en: "Consult your physician before starting any new medication.",
           vi: "Tham khảo bác sĩ trước khi bắt đầu bất kỳ loại thuốc mới nào.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v7-10",
         word: "coverage",
-        meaning: "phạm vi bảo hiểm",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "phạm vi bảo hiểm",
+            example: {
           en: "Check your coverage before visiting a specialist.",
           vi: "Kiểm tra phạm vi bảo hiểm trước khi gặp chuyên gia.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
     ],
   },
   {
     id: 8,
     emoji: "💻",
-    title: "Technology & IT",
-    titleVI: "Công nghệ & IT",
-    count: 20,
+    title: "Technology & Equipment",
+    titleVI: "Công nghệ & Thiết bị",
+    count: 30,
     isPremiumPreview: true,
     words: [
       {
         id: "v8-1",
         word: "software",
-        meaning: "phần mềm",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "phần mềm",
+            example: {
           en: "The software update will be released tomorrow.",
           vi: "Bản cập nhật phần mềm sẽ được phát hành vào ngày mai.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-2",
         word: "upgrade",
-        meaning: "nâng cấp",
-        pos: "v./n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "v./n.",
+            meaning: "nâng cấp",
+            example: {
           en: "We need to upgrade our database system.",
           vi: "Chúng ta cần nâng cấp hệ thống cơ sở dữ liệu.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-3",
         word: "maintenance",
-        meaning: "bảo trì",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "bảo trì",
+            example: {
           en: "Scheduled maintenance will occur on Sunday.",
           vi: "Bảo trì theo lịch sẽ diễn ra vào Chủ nhật.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-4",
         word: "network",
-        meaning: "mạng lưới",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "mạng lưới",
+            example: {
           en: "The network will be unavailable during maintenance.",
           vi: "Mạng sẽ không khả dụng trong quá trình bảo trì.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-5",
         word: "security",
-        meaning: "bảo mật",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "bảo mật",
+            example: {
           en: "Data security is a top priority.",
           vi: "Bảo mật dữ liệu là ưu tiên hàng đầu.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-6",
         word: "database",
-        meaning: "cơ sở dữ liệu",
-        pos: "n.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "cơ sở dữ liệu",
+            example: {
           en: "The database stores all customer information.",
           vi: "Cơ sở dữ liệu lưu trữ tất cả thông tin khách hàng.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-7",
         word: "server",
-        meaning: "máy chủ",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "máy chủ",
+            example: {
           en: "The server will be restarted at midnight.",
           vi: "Máy chủ sẽ được khởi động lại vào lúc nửa đêm.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v8-8",
         word: "interface",
-        meaning: "giao diện",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "giao diện",
+            example: {
           en: "The user interface has been redesigned.",
           vi: "Giao diện người dùng đã được thiết kế lại.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
       {
         id: "v8-9",
         word: "backup",
-        meaning: "sao lưu",
-        pos: "n./v.",
-        example: {
+        level: "Cơ bản",
+        definitions: [
+          {
+            pos: "n./v.",
+            meaning: "sao lưu",
+            example: {
           en: "Always back up your files before updating.",
           vi: "Luôn sao lưu các tập tin của bạn trước khi cập nhật.",
-        },
-        freq: 3,
+        }
+          }
+        ],
+        freq: 3
       },
       {
         id: "v8-10",
         word: "installation",
-        meaning: "cài đặt",
-        pos: "n.",
-        example: {
+        level: "Trung bình",
+        definitions: [
+          {
+            pos: "n.",
+            meaning: "cài đặt",
+            example: {
           en: "The installation process takes about 10 minutes.",
           vi: "Quá trình cài đặt mất khoảng 10 phút.",
-        },
-        freq: 2,
+        }
+          }
+        ],
+        freq: 2
       },
     ],
   },
@@ -2028,11 +2605,30 @@ const VOCAB_TOPICS: VocabTopic[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 // LOCAL STORAGE
 // ─────────────────────────────────────────────────────────────────────────────
-const KNOWN_WORDS_KEY = "edvision.toeic.foundation.known";
+const KNOWN_WORDS_KEY_PREFIX = "edvision.toeic.foundation.known";
+
+function resolveLocalAccountId(): string | null {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { account_id?: number; accountId?: number; id?: number };
+    const id = parsed.account_id ?? parsed.accountId ?? parsed.id;
+    if (!id) return null;
+    return String(id);
+  } catch {
+    return null;
+  }
+}
+
+function getKnownWordsKey() {
+  const accountId = resolveLocalAccountId();
+  if (accountId) return `${KNOWN_WORDS_KEY_PREFIX}:${accountId}`;
+  return `${KNOWN_WORDS_KEY_PREFIX}:anonymous`;
+}
 
 function loadKnownWords(): Set<string> {
   try {
-    const raw = localStorage.getItem(KNOWN_WORDS_KEY);
+    const raw = localStorage.getItem(getKnownWordsKey());
     if (!raw) return new Set();
     return new Set(JSON.parse(raw) as string[]);
   } catch {
@@ -2041,7 +2637,7 @@ function loadKnownWords(): Set<string> {
 }
 
 function saveKnownWords(words: Set<string>) {
-  localStorage.setItem(KNOWN_WORDS_KEY, JSON.stringify(Array.from(words)));
+  localStorage.setItem(getKnownWordsKey(), JSON.stringify(Array.from(words)));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2096,7 +2692,7 @@ function DifficultyBadge({
 function PosBadge({ pos }: { pos: string }) {
   const colorMap: Record<string, string> = {
     "n.": "bg-blue-100 text-blue-700",
-    "v.": "bg-violet-100 text-violet-700",
+    "v.": "bg-violet-100 text-[#8B6346]",
     "adj.": "bg-teal-100 text-teal-700",
     "adv.": "bg-amber-100 text-amber-700",
     "prep.": "bg-pink-100 text-pink-700",
@@ -2113,6 +2709,35 @@ function PosBadge({ pos }: { pos: string }) {
   );
 }
 
+function resolveWordDefinitions(word: VocabWord): VocabWordDefinition[] {
+  if (word.definitions && word.definitions.length > 0) return word.definitions;
+  if (word.meaning && word.pos && word.example) {
+    return [{ pos: word.pos, meaning: word.meaning, example: word.example }];
+  }
+  return [];
+}
+
+function normalizeMeaningText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isMeaningCorrect(input: string, definitions: VocabWordDefinition[]): boolean {
+  const cleaned = normalizeMeaningText(input);
+  if (!cleaned) return false;
+  return definitions.some((def) => {
+    const meaning = normalizeMeaningText(def.meaning);
+    if (!meaning) return false;
+    return meaning.includes(cleaned) || cleaned.includes(meaning);
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GRAMMAR QUIZ COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2127,7 +2752,7 @@ function GrammarQuiz({
 }) {
   return (
     <div className="space-y-4 mt-4">
-      <h4 className="text-sm font-bold text-violet-700 flex items-center gap-1.5">
+      <h4 className="text-sm font-bold text-[#8B6346] flex items-center gap-1.5">
         <Target size={14} />
         Mini Quiz — Kiểm tra nhanh
       </h4>
@@ -2137,10 +2762,10 @@ function GrammarQuiz({
         return (
           <div
             key={q.id}
-            className="bg-violet-50 border border-violet-100 rounded-xl p-4"
+            className="bg-[#FCFAF8] border border-[#E8DCCF] rounded-xl p-4"
           >
             <p className="text-sm font-semibold text-slate-800 mb-3">
-              <span className="text-violet-500 font-bold mr-2">{qi + 1}.</span>
+              <span className="text-[#B88B67] font-bold mr-2">{qi + 1}.</span>
               {q.sentence}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -2149,7 +2774,7 @@ function GrammarQuiz({
                   "text-left text-sm px-3 py-2 rounded-lg border font-medium transition-all duration-200 ";
                 if (!isAnswered) {
                   btnCls +=
-                    "border-slate-200 bg-white hover:border-violet-400 hover:bg-violet-50 text-slate-700 cursor-pointer";
+                    "border-slate-200 bg-white hover:border-[#A67B5B] hover:bg-[#FCFAF8] text-slate-700 cursor-pointer";
                 } else if (opt.key === q.correct) {
                   btnCls += "border-emerald-400 bg-emerald-50 text-emerald-700";
                 } else if (opt.key === selected) {
@@ -2180,13 +2805,13 @@ function GrammarQuiz({
               })}
             </div>
             {isAnswered && (
-              <div className="mt-3 p-3 bg-white border border-violet-100 rounded-lg flex items-start gap-2">
+              <div className="mt-3 p-3 bg-white border border-[#E8DCCF] rounded-lg flex items-start gap-2">
                 <Lightbulb
                   size={14}
                   className="text-amber-500 mt-0.5 shrink-0"
                 />
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  <span className="font-bold text-violet-700">
+                  <span className="font-bold text-[#8B6346]">
                     Giải thích:{" "}
                   </span>
                   {q.explanation}
@@ -2207,11 +2832,28 @@ function WordCard({
   word,
   isKnown,
   onToggleKnown,
+  audioSettings,
+  knownLabel,
 }: {
   word: VocabWord;
   isKnown: boolean;
   onToggleKnown: (id: string) => void;
+  audioSettings: { volume: number; rate: number };
+  knownLabel?: string;
 }) {
+  const definitions = resolveWordDefinitions(word);
+  const knownText = knownLabel ?? "Đã biết";
+  const handlePlayAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(word.word);
+      utterance.lang = 'en-US';
+      utterance.volume = audioSettings.volume;
+      utterance.rate = audioSettings.rate;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   return (
     <div
       className={`bg-white rounded-2xl border shadow-sm p-4 transition-all duration-200 ${
@@ -2220,14 +2862,32 @@ function WordCard({
           : "border-slate-100 hover:border-teal-200 hover:shadow-md"
       }`}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-start gap-2 flex-wrap">
-          <span
-            className={`text-lg font-bold ${isKnown ? "text-teal-700" : "text-slate-800"}`}
-          >
-            {word.word}
-          </span>
-          <PosBadge pos={word.pos} />
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`text-lg font-bold ${isKnown ? "text-teal-700" : "text-slate-800"}`}
+            >
+              {word.word}
+            </span>
+            <button 
+              onClick={handlePlayAudio}
+              className="text-slate-400 hover:text-teal-500 transition-colors p-1 rounded-full hover:bg-slate-100"
+              title="Nghe phát âm"
+            >
+              <Volume2 size={16} />
+            </button>
+            {word.level && (
+              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                word.level === "Cơ bản" ? "bg-green-50 text-green-600 border-green-200" :
+                word.level === "Trung bình" ? "bg-yellow-50 text-yellow-600 border-yellow-200" :
+                "bg-red-50 text-red-600 border-red-200"
+              }`}>
+                {word.level}
+              </span>
+            )}
+          </div>
+          <FreqStars freq={word.freq} />
         </div>
         <button
           onClick={() => onToggleKnown(word.id)}
@@ -2238,24 +2898,343 @@ function WordCard({
           }`}
         >
           <CheckCircle2 size={12} />
-          {isKnown ? "Đã biết" : "Đánh dấu"}
+          {isKnown ? knownText : "Đánh dấu"}
         </button>
       </div>
 
-      <p className="text-sm font-medium text-slate-600 mb-2">{word.meaning}</p>
-
-      <div className="mb-3">
-        <FreqStars freq={word.freq} />
+      <div className="space-y-4 mt-4">
+        {definitions.map((def, idx) => (
+          <div key={idx} className="space-y-2">
+            <div className="flex items-start gap-2">
+              <PosBadge pos={def.pos} />
+              <p className="text-sm font-medium text-slate-600">{def.meaning}</p>
+            </div>
+            <div className="bg-[#FDFBF7] rounded-xl p-3 border border-[#E8DCCF] space-y-1">
+              <p
+                className="text-sm text-slate-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: def.example.en }}
+              />
+              <p className="text-xs text-slate-500 italic leading-relaxed">
+                {def.example.vi}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
+    </div>
+  );
+}
 
-      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1">
-        <p
-          className="text-sm text-slate-700 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: word.example.en }}
-        />
-        <p className="text-xs text-slate-500 italic leading-relaxed">
-          {word.example.vi}
-        </p>
+// ─────────────────────────────────────────────────────────────────────────────
+// FLASHCARD STUDY COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+function FlashcardStudy({
+  topic,
+  knownWords,
+  onToggleKnown,
+  onClose,
+  audioSettings,
+}: {
+  topic: VocabTopic;
+  knownWords: Set<string>;
+  onToggleKnown: (id: string) => void;
+  onClose: () => void;
+  audioSettings: { volume: number; rate: number };
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const words = topic.words;
+  if (words.length === 0) return null;
+
+  const currentWord = words[currentIndex];
+  const isKnown = knownWords.has(currentWord.id);
+  const definitions = resolveWordDefinitions(currentWord);
+
+  const handlePlayAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(currentWord.word);
+      utterance.lang = 'en-US';
+      utterance.volume = audioSettings.volume;
+      utterance.rate = audioSettings.rate;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleNext = () => {
+    setIsFlipped(false);
+    if (currentIndex < words.length - 1) {
+      setCurrentIndex((curr) => curr + 1);
+    } else {
+      onClose(); // End of list
+    }
+  };
+
+  const handleMarkKnown = () => {
+    if (!isKnown) onToggleKnown(currentWord.id);
+    handleNext();
+  };
+
+  const handleMarkUnknown = () => {
+    if (isKnown) onToggleKnown(currentWord.id);
+    handleNext();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-50 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">
+        <div className="p-4 flex justify-between items-center bg-white border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <span className="font-bold text-slate-700">{topic.titleVI}</span>
+          </div>
+          <span className="text-sm font-semibold text-slate-500">
+            {currentIndex + 1} / {words.length}
+          </span>
+        </div>
+
+        <div className="flex-1 p-6 flex flex-col items-center justify-center min-h-[400px]">
+          <div
+            className="w-full h-full min-h-[300px] bg-white rounded-2xl shadow-sm border border-slate-200 cursor-pointer flex flex-col items-center justify-center p-8 transition-all duration-300 hover:shadow-md hover:border-teal-200"
+            onClick={() => setIsFlipped(!isFlipped)}
+          >
+            {!isFlipped ? (
+              <div className="text-center animate-in fade-in zoom-in duration-200">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className="text-4xl font-black text-slate-800 block">
+                    {currentWord.word}
+                  </span>
+                  <button 
+                    onClick={handlePlayAudio}
+                    className="text-slate-400 hover:text-teal-500 transition-colors p-2 rounded-full hover:bg-slate-100"
+                    title="Nghe phát âm"
+                  >
+                    <Volume2 size={24} />
+                  </button>
+                </div>
+                <p className="text-sm text-slate-400 font-medium">
+                  (Nhấn để lật thẻ)
+                </p>
+              </div>
+            ) : (
+              <div className="text-center animate-in fade-in zoom-in duration-200 w-full">
+                <div className="space-y-4 w-full mt-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                  {definitions.length === 0 ? (
+                    <div className="text-sm text-slate-500 text-center">Chưa có định nghĩa.</div>
+                  ) : definitions.map((def, idx) => (
+                    <div key={idx} className="bg-white text-left p-4 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="flex items-start gap-2 mb-2">
+                        <PosBadge pos={def.pos} />
+                        <p className="text-lg font-bold text-teal-600">{def.meaning}</p>
+                      </div>
+                      <div className="bg-[#FDFBF7] p-3 rounded-lg border border-[#E8DCCF]">
+                        <p
+                          className="text-sm text-slate-700 font-medium mb-1 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: def.example.en }}
+                        />
+                        <p className="text-xs text-slate-500 italic leading-relaxed">
+                          {def.example.vi}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 bg-white border-t border-slate-100 grid grid-cols-2 gap-3">
+          <button
+            onClick={handleMarkUnknown}
+            className="py-3 rounded-xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+          >
+            Chưa thuộc
+          </button>
+          <button
+            onClick={handleMarkKnown}
+            className="py-3 rounded-xl font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors"
+          >
+            Đã thuộc
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WRITE MEANING STUDY COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+function WriteMeaningStudy({
+  title,
+  words,
+  onClose,
+  audioSettings,
+}: {
+  title: string;
+  words: VocabWord[];
+  onClose: () => void;
+  audioSettings: { volume: number; rate: number };
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [userInput, setUserInput] = useState('');
+  const [isChecked, setIsChecked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+
+  if (words.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6 text-center">
+          <p className="text-sm text-slate-600">Không có từ vựng để luyện.</p>
+          <button
+            onClick={onClose}
+            className="mt-4 px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentWord = words[currentIndex];
+  const definitions = resolveWordDefinitions(currentWord);
+  const expectedText = definitions.map((d) => d.meaning).join(' • ');
+
+  const handlePlayAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(currentWord.word);
+      utterance.lang = 'en-US';
+      utterance.volume = audioSettings.volume;
+      utterance.rate = audioSettings.rate;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleCheck = () => {
+    if (isChecked) return;
+    const correct = definitions.length > 0
+      ? isMeaningCorrect(userInput, definitions)
+      : false;
+    setIsCorrect(correct);
+    setIsChecked(true);
+  };
+
+  const handleNext = () => {
+    if (currentIndex >= words.length - 1) {
+      onClose();
+      return;
+    }
+    setCurrentIndex((prev) => prev + 1);
+    setUserInput('');
+    setIsChecked(false);
+    setIsCorrect(null);
+  };
+
+  const handleRetry = () => {
+    setIsChecked(false);
+    setIsCorrect(null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-50 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">
+        <div className="p-4 flex justify-between items-center bg-white border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+            >
+              <X size={18} />
+            </button>
+            <span className="font-bold text-slate-700">{title}</span>
+          </div>
+          <span className="text-sm font-semibold text-slate-500">
+            {currentIndex + 1} / {words.length}
+          </span>
+        </div>
+
+        <div className="flex-1 p-6 flex flex-col gap-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-black text-slate-800">{currentWord.word}</span>
+                <button
+                  onClick={handlePlayAudio}
+                  className="text-slate-400 hover:text-teal-500 transition-colors p-2 rounded-full hover:bg-slate-100"
+                  title="Nghe phát âm"
+                >
+                  <Volume2 size={18} />
+                </button>
+              </div>
+              <FreqStars freq={currentWord.freq} />
+            </div>
+
+            <label className="text-xs font-semibold text-slate-500">Viết lại nghĩa</label>
+            <textarea
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder="Nhập nghĩa tiếng Việt của từ này..."
+              className="mt-2 w-full min-h-[90px] rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+              disabled={isChecked}
+            />
+
+            {isChecked && (
+              <div className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${
+                isCorrect
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-amber-50 border-amber-200 text-amber-700'
+              }`}>
+                {isCorrect ? '✅ Đúng rồi!' : '⚠️ Chưa chính xác.'}
+                {expectedText && (
+                  <div className="mt-2 text-xs font-medium text-slate-600">
+                    Đáp án gợi ý: <span className="font-semibold">{expectedText}</span>
+                  </div>
+                )}
+                {!expectedText && (
+                  <div className="mt-2 text-xs font-medium text-slate-500">
+                    Chưa có định nghĩa để đối chiếu.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 bg-white border-t border-slate-100 flex items-center gap-3">
+          {!isChecked ? (
+            <button
+              onClick={handleCheck}
+              disabled={userInput.trim().length === 0}
+              className="flex-1 py-3 rounded-xl font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Kiểm tra
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleRetry}
+                className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Làm lại
+              </button>
+              <button
+                onClick={handleNext}
+                className="flex-1 py-3 rounded-xl font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition-colors"
+              >
+                Tiếp theo
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2277,12 +3256,29 @@ function VocabWordList({
   onBack: () => void;
   onMarkAll: (topicWords: VocabWord[], markAll: boolean) => void;
 }) {
+  const [isFlashcardOpen, setIsFlashcardOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [audioSettings, setAudioSettings] = useState({ volume: 1, rate: 1 });
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const itemsPerPage = 10;
+
   const knownCount = topic.words.filter((w) => knownWords.has(w.id)).length;
   const progress = Math.round((knownCount / topic.words.length) * 100);
   const allKnown = topic.words.every((w) => knownWords.has(w.id));
+  const totalPages = Math.ceil(topic.words.length / itemsPerPage);
+  const currentWords = topic.words.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-4">
+      {isFlashcardOpen && (
+        <FlashcardStudy
+          topic={topic}
+          knownWords={knownWords}
+          onToggleKnown={onToggleKnown}
+          onClose={() => setIsFlashcardOpen(false)}
+          audioSettings={audioSettings}
+        />
+      )}
       {/* Back + header */}
       <div className="flex items-start gap-3">
         <button
@@ -2298,11 +3294,63 @@ function VocabWordList({
           </h2>
           <p className="text-sm text-slate-500">{topic.title}</p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-sm font-bold text-teal-600">
-            {knownCount}/{topic.words.length}
-          </p>
-          <p className="text-xs text-slate-500">đã học</p>
+        <div className="shrink-0 flex items-center gap-3 relative">
+          {/* Audio Settings button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowAudioSettings(!showAudioSettings)}
+              className="p-2 text-slate-500 hover:bg-slate-100 hover:text-teal-600 rounded-xl transition-colors border border-transparent hover:border-slate-200 bg-white"
+              title="Cài đặt phát âm"
+            >
+              <Settings2 size={20} />
+            </button>
+            {showAudioSettings && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-[#E8DCCF] shadow-xl rounded-2xl p-4 z-50">
+                <h3 className="text-sm font-bold text-slate-700 mb-4 border-b border-slate-100 pb-2">Cài đặt Phát âm</h3>
+                <div className="space-y-5">
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold text-slate-600 mb-2">
+                      <span>Âm lượng</span>
+                      <span className="text-[#A67B5B]">{Math.round(audioSettings.volume * 100)}%</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="1" step="0.1"
+                      value={audioSettings.volume}
+                      onChange={(e) => setAudioSettings(s => ({ ...s, volume: parseFloat(e.target.value) }))}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#A67B5B]"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold text-slate-600 mb-2">
+                      <span>Tốc độ</span>
+                      <span className="text-[#A67B5B]">{audioSettings.rate}x</span>
+                    </div>
+                    <input
+                      type="range" min="0.5" max="2" step="0.25"
+                      value={audioSettings.rate}
+                      onChange={(e) => setAudioSettings(s => ({ ...s, rate: parseFloat(e.target.value) }))}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#A67B5B]"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                      <span>Chậm</span><span>Bình thường</span><span>Nhanh</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-bold text-teal-600">{knownCount}/{topic.words.length}</p>
+            <p className="text-xs text-slate-500">đã học</p>
+          </div>
+          <button
+            onClick={() => setIsFlashcardOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md"
+          >
+            <Brain size={16} />
+            Học Flashcard
+          </button>
         </div>
       </div>
 
@@ -2338,15 +3386,51 @@ function VocabWordList({
 
       {/* Word cards grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {topic.words.map((word) => (
+        {currentWords.map((word) => (
           <WordCard
             key={word.id}
             word={word}
             isKnown={knownWords.has(word.id)}
             onToggleKnown={onToggleKnown}
+            audioSettings={audioSettings}
           />
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="p-2 rounded-xl border border-[#E8DCCF] text-slate-500 hover:text-[#A67B5B] hover:bg-[#FDFBF7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }).map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentPage(idx + 1)}
+                className={`w-8 h-8 rounded-xl text-sm font-bold transition-colors ${
+                  currentPage === idx + 1
+                    ? "bg-[#A67B5B] text-white shadow-sm"
+                    : "text-slate-500 hover:bg-[#FDFBF7] hover:text-[#A67B5B]"
+                }`}
+              >
+                {idx + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-xl border border-[#E8DCCF] text-slate-500 hover:text-[#A67B5B] hover:bg-[#FDFBF7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
 
       {/* Premium preview notice */}
       {topic.isPremiumPreview && (
@@ -2366,16 +3450,335 @@ function VocabWordList({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// VOCAB WORD LIST — API-driven (replaces old hardcoded VocabWordList usage)
+// ─────────────────────────────────────────────────────────────────────────────
+function VocabWordListApi({
+  topicId,
+  enrollmentId,
+  onBack,
+}: {
+  topicId: number;
+  enrollmentId: number | null;
+  onBack: () => void;
+}) {
+  const [page, setPage] = useState(1);
+  const [isFlashcardOpen, setIsFlashcardOpen] = useState(false);
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isLearnMenuOpen, setIsLearnMenuOpen] = useState(false);
+  const [audioSettings, setAudioSettings] = useState({ volume: 1, rate: 1 });
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  // Local known state — synced to API on toggle
+  const [knownSet, setKnownSet] = useState<Set<number>>(new Set());
+  const [knownWordsData, setKnownWordsData] = useState<VocabWordApi[]>([]);
+  const [knownLoading, setKnownLoading] = useState(false);
+  const [activeShelf, setActiveShelf] = useState<'unknown' | 'known'>('unknown');
+
+  const { result, loading, refetch } = useVocabWords(enrollmentId, topicId, page, 10);
+
+  useEffect(() => {
+    setActiveShelf('unknown');
+    setPage(1);
+    setIsLearnMenuOpen(false);
+    setIsFlashcardOpen(false);
+    setIsWriteOpen(false);
+    setKnownWordsData([]);
+    setKnownSet(new Set());
+  }, [topicId]);
+
+  const fetchKnownWords = useCallback(async () => {
+    if (!enrollmentId) return;
+    setKnownLoading(true);
+    try {
+      const rows = await apiGetKnownWords(enrollmentId, topicId);
+      setKnownWordsData(rows);
+      setKnownSet(new Set(rows.map((r) => r.id)));
+    } catch {
+      // silent fail
+    } finally {
+      setKnownLoading(false);
+    }
+  }, [enrollmentId, topicId]);
+
+  useEffect(() => {
+    fetchKnownWords();
+  }, [fetchKnownWords]);
+
+  const handleToggleKnown = async (wordId: number) => {
+    if (!enrollmentId) return;
+    const willBeKnown = !knownSet.has(wordId);
+    setKnownSet((prev) => {
+      const next = new Set(prev);
+      if (willBeKnown) next.add(wordId); else next.delete(wordId);
+      return next;
+    });
+    setKnownWordsData((prev) => {
+      if (willBeKnown) {
+        if (prev.some((w) => w.id === wordId)) return prev;
+        const fromPage = result?.data.find((w) => w.id === wordId);
+        return fromPage ? [...prev, fromPage] : prev;
+      }
+      return prev.filter((w) => w.id !== wordId);
+    });
+    try {
+      await apiToggleKnown(enrollmentId, wordId, willBeKnown);
+    } finally {
+      fetchKnownWords();
+    }
+  };
+
+  if (loading && !result) {
+    return (
+      <div className="space-y-4">
+        <div className="h-10 bg-slate-100 rounded-xl animate-pulse w-1/3" />
+        {[1,2,3].map(i => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 animate-pulse space-y-3">
+            <div className="h-5 bg-slate-100 rounded w-1/4"/>
+            <div className="h-4 bg-slate-100 rounded w-3/4"/>
+            <div className="h-16 bg-slate-50 rounded-xl"/>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!result) return null;
+
+  const { topic: topicMeta, data: words, meta } = result;
+  const knownCount = knownWordsData.length;
+  const unknownCount = Math.max(0, meta.total - knownCount);
+  const progress = meta.total > 0 ? Math.round((knownCount / meta.total) * 100) : 0;
+  const unknownWords = words.filter((w) => !knownSet.has(w.id));
+
+  const mapApiWordToVocabWord = (w: VocabWordApi): VocabWord => ({
+    id: String(w.id),
+    word: w.word,
+    level: w.level,
+    freq: w.freq as 1 | 2 | 3,
+    definitions: w.definitions.map((d) => ({
+      pos: d.pos,
+      meaning: d.meaning,
+      example: { en: d.exampleEn, vi: d.exampleVi },
+    })),
+  });
+
+  const unknownWordCards = unknownWords.map(mapApiWordToVocabWord);
+  const knownWordCards = knownWordsData.map(mapApiWordToVocabWord);
+  const learnSourceWords = activeShelf === 'known' ? knownWordsData : unknownWords;
+  const learnWordCards = learnSourceWords.map(mapApiWordToVocabWord);
+  const learnDisabled = learnWordCards.length === 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <button onClick={onBack} className="flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 font-semibold bg-white border border-teal-200 hover:border-teal-300 px-3 py-2 rounded-xl transition-all shrink-0">
+          <ChevronLeft size={16} />Chủ đề
+        </button>
+        <div className="flex-1">
+          <h2 className="text-lg font-bold text-slate-800">{topicMeta.emoji} {topicMeta.titleVI}</h2>
+          <p className="text-sm text-slate-500">{topicMeta.titleEN}</p>
+        </div>
+        <div className="shrink-0 flex items-center gap-3 relative">
+          {/* Audio settings */}
+          <div className="relative">
+            <button onClick={() => setShowAudioSettings(!showAudioSettings)} className="p-2 text-slate-500 hover:bg-slate-100 hover:text-teal-600 rounded-xl transition-colors border border-transparent hover:border-slate-200 bg-white" title="Cài đặt phát âm">
+              <Settings2 size={20} />
+            </button>
+            {showAudioSettings && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-[#E8DCCF] shadow-xl rounded-2xl p-4 z-50">
+                <h3 className="text-sm font-bold text-slate-700 mb-4 border-b border-slate-100 pb-2">Cài đặt Phát âm</h3>
+                <div className="space-y-5">
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold text-slate-600 mb-2"><span>Âm lượng</span><span className="text-[#A67B5B]">{Math.round(audioSettings.volume * 100)}%</span></div>
+                    <input type="range" min="0" max="1" step="0.1" value={audioSettings.volume} onChange={(e) => setAudioSettings(s => ({ ...s, volume: parseFloat(e.target.value) }))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#A67B5B]" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold text-slate-600 mb-2"><span>Tốc độ</span><span className="text-[#A67B5B]">{audioSettings.rate}x</span></div>
+                    <input type="range" min="0.5" max="2" step="0.25" value={audioSettings.rate} onChange={(e) => setAudioSettings(s => ({ ...s, rate: parseFloat(e.target.value) }))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#A67B5B]" />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>Chậm</span><span>Bình thường</span><span>Nhanh</span></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-bold text-teal-600">{knownCount}/{meta.total}</p>
+            <p className="text-xs text-slate-500">đã học</p>
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setIsLearnMenuOpen((prev) => !prev)}
+              disabled={learnDisabled}
+              className={`flex items-center gap-2 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md ${
+                learnDisabled
+                  ? 'bg-slate-300 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600'
+              }`}
+            >
+              <Sparkles size={16} />Learn Vocab
+            </button>
+            {isLearnMenuOpen && (
+              <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 shadow-xl rounded-2xl p-2 z-50">
+                <button
+                  onClick={() => { setIsLearnMenuOpen(false); setIsFlashcardOpen(true); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <Brain size={16} />Flashcard
+                </button>
+                <button
+                  onClick={() => { setIsLearnMenuOpen(false); setIsWriteOpen(true); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <PenLine size={16} />Viết nghĩa
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-slate-700">Tiến độ chủ đề</span>
+          <span className="text-sm font-bold text-teal-600">{progress}%</span>
+        </div>
+        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <p className="text-xs text-slate-400 mt-2">{meta.total} từ vựng · Trang {meta.page}/{meta.totalPages}</p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-2 flex items-center gap-2">
+        <button
+          onClick={() => setActiveShelf('unknown')}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
+            activeShelf === 'unknown'
+              ? 'bg-teal-50 text-teal-700 border border-teal-200'
+              : 'text-slate-500 hover:text-teal-600 hover:bg-slate-50'
+          }`}
+        >
+          <BookOpen size={16} />Chưa thuộc ({unknownCount})
+        </button>
+        <button
+          onClick={() => setActiveShelf('known')}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
+            activeShelf === 'known'
+              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+              : 'text-slate-500 hover:text-amber-600 hover:bg-slate-50'
+          }`}
+        >
+          <Archive size={16} />Kho đã thuộc ({knownCount})
+        </button>
+      </div>
+
+      {/* Word cards */}
+      {activeShelf === 'unknown' ? (
+        unknownWordCards.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {unknownWordCards.map((word) => (
+              <WordCard
+                key={word.id}
+                word={word}
+                isKnown={false}
+                onToggleKnown={(id) => handleToggleKnown(Number(id))}
+                audioSettings={audioSettings}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+            <p className="text-3xl mb-2">🎉</p>
+            <p className="text-sm font-semibold text-slate-700">Bạn đã thuộc hết từ ở trang này.</p>
+            <p className="text-xs text-slate-500 mt-1">Chuyển sang kho đã thuộc hoặc chuyển trang tiếp theo.</p>
+          </div>
+        )
+      ) : (
+        knownLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 animate-pulse space-y-3">
+                <div className="h-5 bg-slate-100 rounded w-1/3" />
+                <div className="h-4 bg-slate-100 rounded w-2/3" />
+                <div className="h-16 bg-slate-50 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : knownWordCards.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {knownWordCards.map((word) => (
+              <WordCard
+                key={word.id}
+                word={word}
+                isKnown={true}
+                knownLabel="Bỏ đánh dấu"
+                onToggleKnown={(id) => handleToggleKnown(Number(id))}
+                audioSettings={audioSettings}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+            <p className="text-3xl mb-2">🗂️</p>
+            <p className="text-sm font-semibold text-slate-700">Kho đã thuộc đang trống.</p>
+            <p className="text-xs text-slate-500 mt-1">Hãy đánh dấu từ đã thuộc để chuyển vào kho.</p>
+          </div>
+        )
+      )}
+
+      {/* Pagination */}
+      {activeShelf === 'unknown' && meta.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button onClick={() => { setPage(p => Math.max(p - 1, 1)); }} disabled={page === 1} className="p-2 rounded-xl border border-[#E8DCCF] text-slate-500 hover:text-[#A67B5B] hover:bg-[#FDFBF7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={18} /></button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: meta.totalPages }).map((_, idx) => (
+              <button key={idx} onClick={() => { setPage(idx + 1); }} className={`w-8 h-8 rounded-xl text-sm font-bold transition-colors ${page === idx + 1 ? "bg-[#A67B5B] text-white shadow-sm" : "text-slate-500 hover:bg-[#FDFBF7] hover:text-[#A67B5B]"}`}>{idx + 1}</button>
+            ))}
+          </div>
+          <button onClick={() => { setPage(p => Math.min(p + 1, meta.totalPages)); }} disabled={page === meta.totalPages} className="p-2 rounded-xl border border-[#E8DCCF] text-slate-500 hover:text-[#A67B5B] hover:bg-[#FDFBF7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><ChevronRight size={18} /></button>
+        </div>
+      )}
+
+      {/* Flashcard modal */}
+      {isFlashcardOpen && learnWordCards.length > 0 && (
+        <FlashcardStudy
+          topic={{ id: topicId, titleVI: topicMeta.titleVI, emoji: topicMeta.emoji, words: learnWordCards } as any}
+          knownWords={knownSet as any}
+          onToggleKnown={(id: string) => handleToggleKnown(Number(id))}
+          onClose={() => { setIsFlashcardOpen(false); refetch(); }}
+          audioSettings={audioSettings}
+        />
+      )}
+      {isWriteOpen && (
+        <WriteMeaningStudy
+          title={`${topicMeta.titleVI} · Learn Vocab`}
+          words={learnWordCards}
+          onClose={() => { setIsWriteOpen(false); refetch(); }}
+          audioSettings={audioSettings}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ToeicFoundationStudyPage() {
-  const { subject } = useParams<{ subject: string }>();
+  const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
 
   useToeicScrollReset();
 
-  const activeTab: "grammar" | "vocab" =
-    subject === "vocab" ? "vocab" : "grammar";
+  const activeTab: "grammar" | "vocab" = tab === "vocab" ? "vocab" : "grammar";
+
+  // ── Enrollment ID (auto-resolved: localStorage → API) ──────────────────────
+  const [enrollmentId] = useState<number | null>(null);
+
+  // ── Vocab API data ───────────────────────────────────────────────────────────
+  const { topics: apiTopics, loading: topicsLoading, refetch: refetchTopics, resolvedId: activeEnrollmentId } =
+    useVocabTopics(enrollmentId);
+  const vocabStats = useVocabStats(activeEnrollmentId);
 
   const [expandedGrammar, setExpandedGrammar] = useState<Set<number>>(
     new Set([1]),
@@ -2441,7 +3844,7 @@ export default function ToeicFoundationStudyPage() {
     setGrammarQuizAnswers({});
   };
 
-  const totalKnown = knownWords.size;
+  const totalKnown = vocabStats?.knownWords ?? knownWords.size;
 
   // Resolve selected topic (always defined when selectedVocabTopicId is not null)
   const selectedTopic =
@@ -2475,13 +3878,7 @@ export default function ToeicFoundationStudyPage() {
 
         {/* ── Header Banner ── */}
         <div className="rounded-2xl overflow-hidden shadow-md">
-          <div
-            className={`px-6 py-6 ${
-              activeTab === "grammar"
-                ? "bg-linear-to-r from-violet-500 via-purple-500 to-blue-500"
-                : "bg-linear-to-r from-teal-500 via-cyan-500 to-blue-500"
-            }`}
-          >
+          <div className="px-6 py-6 bg-gradient-to-r from-[#A67B5B] to-[#C69C6D]">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {/* TOEIC badge */}
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
@@ -2535,8 +3932,8 @@ export default function ToeicFoundationStudyPage() {
             onClick={() => handleTabSwitch("grammar")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-200 ${
               activeTab === "grammar"
-                ? "bg-linear-to-r from-violet-500 to-purple-500 text-white shadow-md shadow-violet-200"
-                : "text-slate-500 hover:text-violet-600 hover:bg-violet-50"
+                ? "bg-gradient-to-r from-[#A67B5B] to-[#C69C6D] text-white shadow-md shadow-[#C69C6D]/50"
+                : "text-slate-500 hover:text-[#A67B5B] hover:bg-[#FDFBF7]"
             }`}
           >
             <Brain size={18} />
@@ -2546,8 +3943,8 @@ export default function ToeicFoundationStudyPage() {
             onClick={() => handleTabSwitch("vocab")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-200 ${
               activeTab === "vocab"
-                ? "bg-linear-to-r from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-200"
-                : "text-slate-500 hover:text-teal-600 hover:bg-teal-50"
+                ? "bg-gradient-to-r from-[#A67B5B] to-[#C69C6D] text-white shadow-md shadow-[#C69C6D]/50"
+                : "text-slate-500 hover:text-[#A67B5B] hover:bg-[#FDFBF7]"
             }`}
           >
             <BookOpen size={18} />
@@ -2573,7 +3970,7 @@ export default function ToeicFoundationStudyPage() {
               </div>
               <button
                 onClick={handleResetQuiz}
-                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-violet-600 font-semibold px-3 py-2 bg-white rounded-xl border border-slate-200 hover:border-violet-200 transition-all"
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#A67B5B] font-semibold px-3 py-2 bg-white rounded-xl border border-slate-200 hover:border-violet-200 transition-all"
               >
                 <RotateCcw size={12} />
                 Reset Quiz
@@ -2607,8 +4004,8 @@ export default function ToeicFoundationStudyPage() {
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-base ${
                         isExpanded
-                          ? "bg-violet-500 text-white"
-                          : "bg-violet-100 text-violet-600"
+                          ? "bg-[#FCFAF8]0 text-white"
+                          : "bg-violet-100 text-[#A67B5B]"
                       }`}
                     >
                       {topic.id}
@@ -2619,7 +4016,7 @@ export default function ToeicFoundationStudyPage() {
                         {topic.title}
                       </h3>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 text-xs font-bold px-2 py-0.5 rounded-full border border-violet-200">
+                        <span className="inline-flex items-center gap-1 bg-violet-100 text-[#8B6346] text-xs font-bold px-2 py-0.5 rounded-full border border-violet-200">
                           <Tag size={10} />
                           {topic.toeicPart}
                         </span>
@@ -2643,7 +4040,7 @@ export default function ToeicFoundationStudyPage() {
 
                     <div className="shrink-0">
                       {isExpanded ? (
-                        <ChevronUp size={20} className="text-violet-500" />
+                        <ChevronUp size={20} className="text-[#B88B67]" />
                       ) : (
                         <ChevronDown size={20} className="text-slate-400" />
                       )}
@@ -2652,7 +4049,7 @@ export default function ToeicFoundationStudyPage() {
 
                   {/* Expanded content */}
                   {isExpanded && (
-                    <div className="px-5 pb-5 space-y-4 border-t border-violet-50">
+                    <div className="px-5 pb-5 space-y-4 border-t border-[#FCFAF8]">
                       {/* Rules */}
                       <div className="space-y-3 pt-4">
                         {topic.rules.map((rule, ri) => (
@@ -2664,7 +4061,7 @@ export default function ToeicFoundationStudyPage() {
                               {rule.title}
                             </p>
                             {rule.signal && (
-                              <span className="text-xs text-violet-600 bg-violet-50 px-2 py-1 rounded-lg mb-2 inline-block border border-violet-100">
+                              <span className="text-xs text-[#A67B5B] bg-[#FCFAF8] px-2 py-1 rounded-lg mb-2 inline-block border border-[#E8DCCF]">
                                 🔑 Signal:{" "}
                                 <span className="font-semibold">
                                   {rule.signal}
@@ -2721,17 +4118,19 @@ export default function ToeicFoundationStudyPage() {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {activeTab === "vocab" && (
           <div className="space-y-4">
-            {selectedTopic !== null ? (
-              /* ── Word list view ── */
-              <VocabWordList
-                topic={selectedTopic}
-                knownWords={knownWords}
-                onToggleKnown={handleToggleKnown}
-                onBack={() => setSelectedVocabTopicId(null)}
-                onMarkAll={handleMarkAll}
+            {selectedVocabTopicId !== null ? (
+              /* ── Word list view (uses API data) ── */
+              <VocabWordListApi
+                topicId={selectedVocabTopicId}
+                enrollmentId={activeEnrollmentId}
+                onBack={() => {
+                  setSelectedVocabTopicId(null);
+                  refetchTopics();
+                }}
               />
+
             ) : (
-              /* ── Topic selector grid ── */
+              /* ── Topic selector grid (API data) ── */
               <>
                 <div>
                   <h2 className="text-lg font-bold text-slate-800">
@@ -2742,91 +4141,83 @@ export default function ToeicFoundationStudyPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {VOCAB_TOPICS.map((topic) => {
-                    const knownCount = topic.words.filter((w) =>
-                      knownWords.has(w.id),
-                    ).length;
-                    const progress = Math.round(
-                      (knownCount / topic.words.length) * 100,
-                    );
-
-                    return (
+                {topicsLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1,2,3,4,5,6,7,8].map(i => (
+                      <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 animate-pulse">
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl mb-3"/>
+                        <div className="h-4 bg-slate-100 rounded w-3/4 mb-2"/>
+                        <div className="h-3 bg-slate-100 rounded w-1/2 mb-4"/>
+                        <div className="h-1.5 bg-slate-100 rounded-full"/>
+                      </div>
+                    ))}
+                  </div>
+                ) : apiTopics.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-[#E8DCCF] p-12 text-center">
+                    <p className="text-4xl mb-3">📭</p>
+                    <h3 className="font-bold text-slate-700 mb-1">Chưa có từ vựng nào</h3>
+                    <p className="text-sm text-slate-500">Giảng viên chưa nạp từ vựng vào hệ thống. Vui lòng chờ!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {apiTopics.map((topic: VocabTopicApi) => (
                       <button
                         key={topic.id}
                         onClick={() => setSelectedVocabTopicId(topic.id)}
                         className="group bg-white rounded-2xl border border-slate-100 hover:border-teal-300 shadow-sm hover:shadow-md p-5 text-left transition-all duration-200 relative overflow-hidden"
                       >
-                        {topic.isPremiumPreview && (
-                          <span className="absolute top-3 right-3 text-xs font-bold bg-amber-100 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">
-                            Top 10
-                          </span>
-                        )}
                         <div className="text-3xl mb-3">{topic.emoji}</div>
                         <h3 className="text-sm font-bold text-slate-800 leading-tight">
                           {topic.titleVI}
                         </h3>
                         <p className="text-xs text-slate-500 mt-0.5 mb-3 line-clamp-1">
-                          {topic.title}
+                          {topic.titleEN}
                         </p>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-slate-500 font-medium">
-                            {knownCount}/{topic.words.length} từ
+                            {topic.knownCount}/{topic.wordCount} từ
                           </span>
                           <span className="text-xs font-bold text-teal-600">
-                            {progress}%
+                            {topic.progress}%
                           </span>
                         </div>
-                        {/* Progress bar */}
                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-linear-to-r from-teal-400 to-cyan-400 rounded-full transition-all duration-500"
-                            style={{ width: `${progress}%` }}
+                            style={{ width: `${topic.progress}%` }}
                           />
                         </div>
                       </button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
 
-                {/* Stats row */}
+                {/* Stats row — from API */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                     <div>
                       <p className="text-2xl font-black text-teal-600">
-                        {totalKnown}
+                        {vocabStats?.knownWords ?? 0}
                       </p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Từ đã học
-                      </p>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Từ đã học</p>
                     </div>
                     <div>
                       <p className="text-2xl font-black text-slate-700">
-                        {VOCAB_TOPICS.reduce((s, t) => s + t.words.length, 0)}
+                        {vocabStats?.totalWords ?? 0}
                       </p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Tổng từ vựng
-                      </p>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Tổng từ vựng</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-black text-violet-600">
-                        {VOCAB_TOPICS.length}
+                      <p className="text-2xl font-black text-[#A67B5B]">
+                        {vocabStats?.topics ?? 0}
                       </p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Chủ đề
-                      </p>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Chủ đề</p>
                     </div>
                     <div>
                       <p className="text-2xl font-black text-amber-500">
-                        {VOCAB_TOPICS.reduce(
-                          (s, t) =>
-                            s + t.words.filter((w) => w.freq === 3).length,
-                          0,
-                        )}
+                        {vocabStats?.highFreqKnown ?? 0}
                       </p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Từ rất hay ra ⭐⭐⭐
-                      </p>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Từ rất hay ra ⭐⭐⭐</p>
                     </div>
                   </div>
                 </div>

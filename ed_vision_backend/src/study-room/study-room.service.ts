@@ -34,6 +34,10 @@ import {
   StudyRoomParticipantPresence,
   StudyRoomSnapshot,
 } from './study-room.types';
+import { ExpCalculatorService } from './services/exp-calculator.service';
+import { StreakTrackerService } from './services/streak-tracker.service';
+import { RankingEngineService } from './services/ranking-engine.service';
+import { getWeekStart } from './leaderboard.constants';
 
 type RoomWithHost = Prisma.RoomGetPayload<{
   include: {
@@ -95,6 +99,9 @@ export class StudyRoomService {
     private readonly redisService: RedisService,
     private readonly studyRoomState: StudyRoomStateService,
     private readonly configService: ConfigService,
+    private readonly expCalculator: ExpCalculatorService,
+    private readonly streakTracker: StreakTrackerService,
+    private readonly rankingEngine: RankingEngineService,
   ) {}
 
   async createRoom(accountId: number, dto: CreateStudyRoomDto) {
@@ -1733,6 +1740,7 @@ export class StudyRoomService {
     );
     const durationMinutes = Math.max(rawDurationMinutes, 1);
 
+    // Update study session
     await client.studySession.update({
       where: { id: activeSession.id },
       data: {
@@ -1741,30 +1749,34 @@ export class StudyRoomService {
       },
     });
 
-    const stats = await client.studyStat.upsert({
-      where: { account_id: accountId },
-      create: {
-        account_id: accountId,
-        total_minutes: durationMinutes,
-        total_sessions: 1,
-        updated_at: safeEndedAt,
-      },
-      update: {
-        total_minutes: {
-          increment: durationMinutes,
-        },
-        total_sessions: {
-          increment: 1,
-        },
-        updated_at: safeEndedAt,
-      },
-    });
+    // NOTE: EXP is no longer awarded based on study time.
+    // EXP is now awarded when students answer practice questions correctly.
+    // See QuestionExpCalculatorService for the new EXP logic.
 
+    // Update streak if session is long enough
     if (durationMinutes >= this.minMinutesForStreak) {
-      await this.updateDailyStreak(client, accountId, safeEndedAt);
+      await this.streakTracker.updateStreak(accountId, safeEndedAt, client);
     }
 
-    await this.updateLeaderboard(client, accountId, stats, safeEndedAt);
+    // Recalculate rankings (async, don't block)
+    // Note: We use setImmediate to avoid blocking the transaction
+    setImmediate(async () => {
+      try {
+        const weekStart = getWeekStart(safeEndedAt);
+        
+        // Recalculate weekly ranking
+        await this.rankingEngine.calculateWeeklyRanking(weekStart);
+        
+        // Recalculate total ranking
+        await this.rankingEngine.calculateTotalRanking();
+        
+        // Invalidate caches to force refresh
+        await this.rankingEngine.invalidateAllCaches();
+      } catch (error) {
+        // Log error but don't fail the session completion
+        console.error('Failed to update rankings:', error);
+      }
+    });
 
     return durationMinutes;
   }
@@ -1844,28 +1856,12 @@ export class StudyRoomService {
     stats: StudyStat,
     updatedAt: Date,
   ) {
-    const higherScoreCount = await client.studyStat.count({
-      where: {
-        total_minutes: {
-          gt: stats.total_minutes,
-        },
-      },
-    });
-
-    await client.leaderboard.upsert({
-      where: { account_id: accountId },
-      create: {
-        account_id: accountId,
-        score: stats.total_minutes,
-        rank: higherScoreCount + 1,
-        updated_at: updatedAt,
-      },
-      update: {
-        score: stats.total_minutes,
-        rank: higherScoreCount + 1,
-        updated_at: updatedAt,
-      },
-    });
+    // Legacy method - kept for backward compatibility
+    // The new leaderboard system is handled in completeActiveStudySession
+    // This method is now a no-op but kept to avoid breaking existing code
+    
+    // Note: The actual leaderboard update is now done by RankingEngineService
+    // which is called asynchronously in completeActiveStudySession
   }
 
   private async findActiveBan(roomId: number, accountId: number, now: Date) {

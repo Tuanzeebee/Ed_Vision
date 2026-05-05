@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/ui/admin/AdminLayout";
 import LoadingSpinner from "../../components/ui/admin/LoadingSpinner";
 import ConfirmDialog from "../../components/ui/admin/ConfirmDialog";
+import TabNavigation, { type Tab } from "../../components/ui/admin/TabNavigation";
+import ProfileTabContent from "./ProfileTabContent";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../lib/useToast";
 import { accountService, type AccountData } from "../../services/api/accountService";
@@ -23,7 +25,8 @@ const RoleBadge = ({ role }: { role: string }) => {
     'Giảng viên': 'bg-green-100 text-green-800',
     'Sinh viên': 'bg-blue-100 text-blue-800',
     'Phụ huynh': 'bg-purple-100 text-purple-800',
-    'Quản trị viên': 'bg-orange-100 text-orange-800'};
+    'Quản trị viên': 'bg-orange-100 text-orange-800'
+  };
 
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${roleClasses[role] || 'bg-gray-100 text-gray-800'}`}>
@@ -32,11 +35,11 @@ const RoleBadge = ({ role }: { role: string }) => {
 };
 
 // Status badge
-const StatusBadge = ({ status }: { status: 'active'| 'inactive'| 'blocked'}) => {
+const StatusBadge = ({ status }: { status: 'active' | 'inactive' | 'blocked' }) => {
   const statusConfig = {
-    active: { color: 'bg-green-100 text-green-800', icon: 'fa-check-circle', text: 'Hoạt động'},
-    inactive: { color: 'bg-yellow-100 text-yellow-800', icon: 'fa-pause-circle', text: 'Vắng mặt'},
-    blocked: { color: 'bg-red-100 text-red-800', icon: 'fa-ban', text: 'Đã khóa'}
+    active: { color: 'bg-green-100 text-green-800', icon: 'fa-check-circle', text: 'Hoạt động' },
+    inactive: { color: 'bg-yellow-100 text-yellow-800', icon: 'fa-pause-circle', text: 'Vắng mặt' },
+    blocked: { color: 'bg-red-100 text-red-800', icon: 'fa-ban', text: 'Đã khóa' }
   };
 
   const config = statusConfig[status];
@@ -49,38 +52,40 @@ const StatusBadge = ({ status }: { status: 'active'| 'inactive'| 'blocked'}) => 
 };
 
 // Card component
-const Card = ({ children, className = ""}: { children: React.ReactNode; className?: string }) =>(
+const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
     {children}
   </div>);
 
 // Button component
-const Button = ({ 
-  children, 
-  variant = "primary", 
-  size = "md", 
-  className = "", 
-  ...props 
-}: { 
-  children: React.ReactNode; 
-  variant?: "primary"| "secondary"| "danger";
-  size?: "sm"| "md"| "lg";
+const Button = ({
+  children,
+  variant = "primary",
+  size = "md",
+  className = "",
+  ...props
+}: {
+  children: React.ReactNode;
+  variant?: "primary" | "secondary" | "danger";
+  size?: "sm" | "md" | "lg";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   const baseClasses = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
-  
+
   const variants = {
     primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
     secondary: "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 focus:ring-blue-500",
-    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"};
-  
+    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"
+  };
+
   const sizes = {
     sm: "px-3 py-2 text-sm",
-    md: "px-4 py-2 text-sm", 
-    lg: "px-6 py-3 text-base"};
-  
+    md: "px-4 py-2 text-sm",
+    lg: "px-6 py-3 text-base"
+  };
+
   return (
-    <button 
+    <button
       className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
@@ -96,19 +101,21 @@ const getRoleDisplayName = (roleCode?: string, roleName?: string): string => {
     'leader': 'Lãnh đạo',
     'teacher': 'Giảng viên',
     'student': 'Sinh viên',
-    'parent': 'Phụ huynh'};
+    'parent': 'Phụ huynh'
+  };
   return roleCode ? roleMap[roleCode] || roleCode : 'N/A';
 };
 
 const formatDateWithTime = (dateString?: string): string => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
-  return date.toLocaleDateString('vi-VN', { 
-    day: '2-digit', 
-    month: '2-digit', 
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'});
+    minute: '2-digit'
+  });
 };
 
 export default function AccountDetailPage() {
@@ -116,6 +123,10 @@ export default function AccountDetailPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { confirm, confirmState } = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Tab state management
+  const [activeTab, setActiveTab] = useState<'account' | 'profile'>('account');
 
   const [isLoading, setIsLoading] = useState(true);
   const [account, setAccount] = useState<AccountData | null>(null);
@@ -123,7 +134,7 @@ export default function AccountDetailPage() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   // Editable form data
   const [formData, setFormData] = useState({
     fullName: '',
@@ -141,19 +152,13 @@ export default function AccountDetailPage() {
   useEffect(() => {
     const fetchAccountData = async () => {
       if (!id) return;
-      
+
       setIsLoading(true);
       try {
         // Fetch real data from API
         const data = await accountService.getAccountById(parseInt(id));
         setAccount(data);
-        
-        console.log('=== ACCOUNT DATA LOADED ===');
-        console.log('Full account data:', data);
-        console.log('Profile:', data.profile);
-        console.log('Instructor:', data.instructor);
-        console.log('Date of birth raw:', data.profile?.dateOfBirth);
-        
+
         // Initialize form data
         setFormData({
           fullName: data.profile?.fullName || '',
@@ -166,20 +171,9 @@ export default function AccountDetailPage() {
           position: data.instructor?.position || '',
           departmentId: data.instructor?.departmentId
         });
-        
-        console.log('Form data initialized:', {
-          fullName: data.profile?.fullName || '',
-          dateOfBirth: data.profile?.dateOfBirth?.split('T')[0] || '',
-          address: data.profile?.address || '',
-          employeeCode: data.instructor?.employeeCode || '',
-          academicTitle: data.instructor?.academicTitle || '',
-          position: data.instructor?.position || '',
-          departmentId: data.instructor?.departmentId
-        });
-        
+
         setIsLoading(false);
       } catch (error) {
-        console.error('Failed to fetch account:', error);
         showToast('Không thể tải thông tin tài khoản', 'error');
         setIsLoading(false);
       }
@@ -187,6 +181,29 @@ export default function AccountDetailPage() {
 
     fetchAccountData();
   }, [id, showToast]);
+
+  // Sync tab with URL parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'profile') {
+      setActiveTab('profile');
+    } else {
+      setActiveTab('account');
+    }
+  }, [searchParams]);
+
+  // Handle tab change
+  const handleTabChange = (tabKey: string) => {
+    const newTab = tabKey as 'account' | 'profile';
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
+
+  // Define tabs
+  const tabs: Tab[] = [
+    { key: 'account', label: 'Tài Khoản', icon: 'fas fa-user' },
+    { key: 'profile', label: 'Hồ Sơ', icon: 'fas fa-id-card' }
+  ];
 
   // Handle edit mode
   const handleEditClick = () => {
@@ -217,7 +234,8 @@ export default function AccountDetailPage() {
       message: 'Bạn có chắc chắn muốn lưu các thay đổi này?',
       confirmText: 'Đồng ý',
       cancelText: 'Hủy bỏ',
-      type: 'info'});
+      type: 'info'
+    });
 
     if (confirmed) {
       try {
@@ -234,26 +252,19 @@ export default function AccountDetailPage() {
           updateData.academicTitle = formData.academicTitle;
           // position is read-only, don't send it
           updateData.departmentId = formData.departmentId;
-          
-          console.log('=== INSTRUCTOR UPDATE DEBUG ===');
-          console.log('Account has instructor:', account.instructor);
-          console.log('Form data:', formData);
-          console.log('Update data being sent:', updateData);
         }
 
         // Call API to update account
-        console.log('Calling updateAccount API with:', { id: parseInt(id!), updateData });
         await accountService.updateAccount(parseInt(id!), updateData);
-        
+
         setIsEditing(false);
         setSuccessMessage('Cập nhật thông tin tài khoản thành công!');
         setShowSuccessModal(true);
-        
+
         // Refresh account data
         const updatedData = await accountService.getAccountById(parseInt(id!));
         setAccount(updatedData);
       } catch (error) {
-        console.error('Failed to update account:', error);
         showToast('Không thể cập nhật thông tin', 'error');
       }
     }
@@ -270,7 +281,7 @@ export default function AccountDetailPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-screen">
-          <LoadingSpinner text="Đang tải thông tin tài khoản..."size="lg"/>
+          <LoadingSpinner text="Đang tải thông tin tài khoản..." size="lg" />
         </div>
       </AdminLayout>);
   }
@@ -282,7 +293,7 @@ export default function AccountDetailPage() {
           <div className="text-center">
             <i className="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
             <p className="text-gray-600 text-lg">Không tìm thấy tài khoản</p>
-            <Button variant="secondary"onClick={() =>navigate('/admin/accounts')} className="mt-4">
+            <Button variant="secondary" onClick={() => navigate('/admin/accounts')} className="mt-4">
               <i className="fas fa-arrow-left mr-2"></i>
               <span>Quay lại</span>
             </Button>
@@ -296,24 +307,24 @@ export default function AccountDetailPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Chi tiết tài khoản</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Chi tiết</h1>
           <div className="flex items-center space-x-3">
             {isEditing ? (
               <>
-                <Button variant="secondary"onClick={handleCancelEdit} className="cursor-pointer">
+                <Button variant="secondary" onClick={handleCancelEdit} className="cursor-pointer">
                   <i className="fas fa-times mr-2"></i>Hủy bỏ
                 </Button>
-                <Button variant="primary"onClick={handleSaveEdit} className="cursor-pointer">
+                <Button variant="primary" onClick={handleSaveEdit} className="cursor-pointer">
                   <SaveIcon />
                   <span className="ml-2">Lưu chỉnh sửa</span>
                 </Button>
               </>) : (
               <>
-                <Button variant="secondary"onClick={handleEditClick} className="cursor-pointer">
+                <Button variant="secondary" onClick={handleEditClick} className="cursor-pointer">
                   <EditIcon />
                   <span className="ml-2">Chỉnh sửa</span>
                 </Button>
-                <Button variant="danger"onClick={() =>setShowResetPasswordModal(true)} className="cursor-pointer">
+                <Button variant="danger" onClick={() => setShowResetPasswordModal(true)} className="cursor-pointer">
                   <KeyIcon />
                   <span className="ml-2">Đặt lại mật khẩu</span>
                 </Button>
@@ -321,8 +332,22 @@ export default function AccountDetailPage() {
           </div>
         </div>
 
-        {/* Account Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Tab Navigation */}
+        <TabNavigation 
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+
+        {/* Tab Content */}
+        {activeTab === 'account' ? (
+          <div 
+            role="tabpanel"
+            id="account-panel"
+            aria-labelledby="account-tab"
+          >
+            {/* Account Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Basic Info */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="p-6">
@@ -330,7 +355,7 @@ export default function AccountDetailPage() {
                 <UserIcon />
                 <span className="ml-2">Thông tin cơ bản</span>
               </h2>
-              
+
               <div className="space-y-4">
                 {/* Email DTU */}
                 <div className="flex items-start">
@@ -340,9 +365,9 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="flex-1">
                     <input
-                      type="text"value={account.email}
+                      type="text" value={account.email}
                       disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed" />
                   </div>
                 </div>
 
@@ -354,8 +379,8 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="flex-1">
                     <input
-                      type="password"value="••••••••••••"disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"/>
+                      type="password" value="••••••••••••" disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed" />
                     <p className="text-xs text-gray-500 mt-1">
                       <i className="fas fa-lock mr-1"></i>Mật khẩu được mã hóa và không thể xem
                     </p>
@@ -368,11 +393,10 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="flex-1">
                     <input
-                      type="text"value={isEditing ? formData.fullName : (account.profile?.fullName || 'N/A')}
+                      type="text" value={isEditing ? formData.fullName : (account.profile?.fullName || 'N/A')}
                       disabled={!isEditing}
-                      onChange={(e) =>setFormData({ ...formData, fullName: e.target.value })}
-                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                        isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                     />
                   </div>
                 </div>
@@ -384,11 +408,10 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="date"value={isEditing ? formData.dateOfBirth : (account.profile?.dateOfBirth?.split('T')[0] || '')}
+                        type="date" value={isEditing ? formData.dateOfBirth : (account.profile?.dateOfBirth?.split('T')[0] || '')}
                         disabled={!isEditing}
-                        onChange={(e) =>setFormData({ ...formData, dateOfBirth: e.target.value })}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
+                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                       />
                     </div>
                   </div>)}
@@ -399,11 +422,10 @@ export default function AccountDetailPage() {
                   </div>
                   <div className="flex-1">
                     <input
-                      type="text"value={isEditing ? formData.address : (account.profile?.address || '')}
+                      type="text" value={isEditing ? formData.address : (account.profile?.address || '')}
                       disabled={!isEditing}
-                      onChange={(e) =>setFormData({ ...formData, address: e.target.value })}
-                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                        isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                     />
                   </div>
                 </div>
@@ -415,9 +437,9 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={account.student.studentCode}
+                        type="text" value={account.student.studentCode}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed" />
                     </div>
                   </div>)}
 
@@ -428,11 +450,10 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={isEditing ? formData.employeeCode : account.instructor.employeeCode}
-                        onChange={(e) =>setFormData({ ...formData, employeeCode: e.target.value })}
+                        type="text" value={isEditing ? formData.employeeCode : account.instructor.employeeCode}
+                        onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
                         disabled={!isEditing}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                       />
                     </div>
                   </div>)}
@@ -444,9 +465,9 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={account.student.departmentName}
+                        type="text" value={account.student.departmentName}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed" />
                     </div>
                   </div>)}
 
@@ -457,9 +478,9 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={account.instructor.departmentName}
+                        type="text" value={account.instructor.departmentName}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed" />
                     </div>
                   </div>)}
 
@@ -470,9 +491,9 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={account.student.programName}
+                        type="text" value={account.student.programName}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed" />
                     </div>
                   </div>)}
 
@@ -483,11 +504,10 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={isEditing ? formData.academicTitle : (account.instructor.academicTitle || '')}
-                        onChange={(e) =>setFormData({ ...formData, academicTitle: e.target.value })}
+                        type="text" value={isEditing ? formData.academicTitle : (account.instructor.academicTitle || '')}
+                        onChange={(e) => setFormData({ ...formData, academicTitle: e.target.value })}
                         disabled={!isEditing}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          isEditing ? 'bg-white text-gray-900': 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${isEditing ? 'bg-white text-gray-900' : 'bg-gray-50 text-gray-700 cursor-not-allowed'}`}
                       />
                     </div>
                   </div>)}
@@ -499,9 +519,9 @@ export default function AccountDetailPage() {
                     </div>
                     <div className="flex-1">
                       <input
-                        type="text"value={account.instructor.position || ''}
+                        type="text" value={account.instructor.position || ''}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"/>
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed" />
                     </div>
                   </div>)}
               </div>
@@ -515,13 +535,13 @@ export default function AccountDetailPage() {
                 <ShieldIcon />
                 <span className="ml-2">Trạng thái & Vai trò</span>
               </h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-2">Trạng thái</p>
-                  <StatusBadge status={account.status as 'active'| 'inactive'| 'blocked'} />
+                  <StatusBadge status={account.status as 'active' | 'inactive' | 'blocked'} />
                 </div>
-                
+
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-2">Vai trò</p>
                   <RoleBadge role={getRoleDisplayName(account.role?.code, account.role?.name)} />
@@ -548,6 +568,13 @@ export default function AccountDetailPage() {
             </Card>
           </div>
         </div>
+          </div>
+        ) : (
+          <ProfileTabContent 
+            account={account}
+            role={getRoleDisplayName(account.role?.code, account.role?.name)}
+          />
+        )}
 
         {/* Reset Password Modal */}
         {showResetPasswordModal && (
@@ -560,9 +587,9 @@ export default function AccountDetailPage() {
                   Mật khẩu mới sẽ được gửi qua email.
                 </p>
                 <div className="flex justify-end space-x-3">
-                  <Button variant="secondary"onClick={() =>setShowResetPasswordModal(false)}>Hủy
+                  <Button variant="secondary" onClick={() => setShowResetPasswordModal(false)}>Hủy
                   </Button>
-                  <Button variant="danger"onClick={handleResetPassword}>Đặt lại mật khẩu
+                  <Button variant="danger" onClick={handleResetPassword}>Đặt lại mật khẩu
                   </Button>
                 </div>
               </div>
@@ -595,7 +622,7 @@ export default function AccountDetailPage() {
                   {successMessage}
                 </p>
                 <div className="flex justify-center">
-                  <Button variant="primary"onClick={() =>setShowSuccessModal(false)}>Đóng
+                  <Button variant="primary" onClick={() => setShowSuccessModal(false)}>Đóng
                   </Button>
                 </div>
               </div>

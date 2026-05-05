@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import AdminLayout from '@/components/ui/admin/AdminLayout';
-import TeacherProfileHeader from '@/components/ui/admin/TeacherProfileHeader';
-import TeacherTabNavigation from '@/components/ui/admin/TeacherTabNavigation';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -64,8 +60,12 @@ type DaySchedule = {
   slots: ScheduleSlot[];
 };
 
-export default function TeacherSchedule(): React.JSX.Element {
-  const { teacherId } = useParams();
+export interface TeacherScheduleProps {
+  teacherId?: string;
+}
+
+export default function TeacherSchedule({ teacherId: teacherIdProp }: TeacherScheduleProps = {}): React.JSX.Element {
+  const teacherId = teacherIdProp;
   const [currentWeek, setCurrentWeek] = useState<WeekInfo>(getCurrentWeek());
   const [weekSchedule, setWeekSchedule] = useState<DaySchedule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -160,7 +160,6 @@ export default function TeacherSchedule(): React.JSX.Element {
 
       setWeekSchedule(schedule);
     } catch (error) {
-      console.error('Failed to fetch schedule:', error);
       // Create empty schedule structure
       const weekDates = getDatesInWeek(currentWeek);
       const today = new Date();
@@ -196,7 +195,6 @@ export default function TeacherSchedule(): React.JSX.Element {
         setAppointmentStatuses(response.data.statuses || ['pending', 'confirmed', 'completed', 'cancelled']);
       }
     } catch (error) {
-      console.error('Failed to fetch filter options:', error);
       // Default values
       setMeetingTypes(['online', 'offline', 'both']);
       setAppointmentStatuses(['pending', 'confirmed', 'completed', 'cancelled']);
@@ -204,9 +202,10 @@ export default function TeacherSchedule(): React.JSX.Element {
   }, [teacherId]);
 
   useEffect(() => {
+    if (!teacherId) return;
     fetchScheduleData();
     fetchFilterOptions();
-  }, [fetchScheduleData, fetchFilterOptions]);
+  }, [teacherId, fetchScheduleData, fetchFilterOptions]);
 
   // Fetch upcoming appointments
   const fetchUpcomingAppointments = useCallback(async (page: number = 1) => {
@@ -222,7 +221,6 @@ export default function TeacherSchedule(): React.JSX.Element {
       setUpcomingTotalPages(response.data.meta?.totalPages || 0);
       setUpcomingPage(page);
     } catch (error) {
-      console.error('Failed to fetch upcoming appointments:', error);
       setUpcomingAppointments([]);
     } finally {
       setIsLoadingUpcoming(false);
@@ -243,7 +241,6 @@ export default function TeacherSchedule(): React.JSX.Element {
       setHistoryTotalPages(response.data.meta?.totalPages || 0);
       setHistoryPage(page);
     } catch (error) {
-      console.error('Failed to fetch appointment history:', error);
       setAppointmentHistory([]);
     } finally {
       setIsLoadingHistory(false);
@@ -260,7 +257,6 @@ export default function TeacherSchedule(): React.JSX.Element {
       );
       setChartData(response.data);
     } catch (error) {
-      console.error('Failed to fetch chart data:', error);
       setChartData(null);
     } finally {
       setIsLoadingChart(false);
@@ -269,10 +265,11 @@ export default function TeacherSchedule(): React.JSX.Element {
 
   // Load appointments and chart on mount
   useEffect(() => {
+    if (!teacherId) return;
     fetchUpcomingAppointments();
     fetchAppointmentHistory();
     fetchChartData();
-  }, [fetchUpcomingAppointments, fetchAppointmentHistory, fetchChartData]);
+  }, [teacherId, fetchUpcomingAppointments, fetchAppointmentHistory, fetchChartData]);
 
   // Navigation handlers
   const handlePreviousWeek = () => {
@@ -494,16 +491,9 @@ export default function TeacherSchedule(): React.JSX.Element {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Teacher Profile Header */}
-        <TeacherProfileHeader />
-
-        {/* Navigation Tabs */}
-        <TeacherTabNavigation activeTab="schedule"/>
-
-        {/* Week Navigation */}
-        <Card>
+    <div className="space-y-6">
+      {/* Week Navigation */}
+      <Card>
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
               <div className="flex items-center gap-4">
@@ -966,6 +956,5 @@ export default function TeacherSchedule(): React.JSX.Element {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
-  );
+    );
 }

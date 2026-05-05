@@ -349,7 +349,7 @@ export default function ToeicExamPracticePanel({ repository, currentScore, onLiv
                 : 'Fallback'
 
           detailFromDb = [
-            aiExplanation.explanation,
+            aiExplanation.explanation ?? 'AI chưa trả về lời giải chi tiết.',
             `Nguồn phân tích: ${sourceLabel}${aiExplanation.model ? ` (${aiExplanation.model})` : ''}.`,
           ]
         } catch {

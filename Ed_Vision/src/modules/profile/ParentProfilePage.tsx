@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { buildAssetUrl, buildUrl } from "@/services/api/config";
 import { TokenManager } from "@/lib/tokenManager";
 import { useTranslation } from 'react-i18next';
+import { getAvatarUrl } from "@/lib/avatarUtils";
 
 type Props = {
   // Add any specific props if needed
@@ -108,7 +109,6 @@ export default function ParentProfilePage({}: Props) {
         }
 
         const { url } = await uploadRes.json();
-        console.log('Uploaded avatar URL:', url);
 
         // Update profile with new avatar URL
         const updateRes = await fetch(buildUrl('/profile/me'), {
@@ -147,7 +147,6 @@ export default function ParentProfilePage({}: Props) {
         // Refetch profile to show new avatar
         await refetchProfile();
       } catch (error: any) {
-        console.error('Error uploading avatar:', error);
         alert(error?.message || t('common.uploadError'));
       } finally {
         setUploadingAvatar(false);
@@ -182,19 +181,11 @@ export default function ParentProfilePage({}: Props) {
 
   // Map API data to component props expected by UserProfile and children
   const profile = parent?.profile || {};
-  console.log('Profile avatar URL:', profile.avatarUrl);
-  
-  // Convert relative avatar URL to full URL if needed
-  const getFullAvatarUrl = (url: string | null | undefined): string => {
-    if (!url) return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop";
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return buildAssetUrl(url);
-  };
   
   const mappedUser = {
     name: profile.fullName || "Phụ huynh",
     age: undefined as number | undefined,
-    avatar: getFullAvatarUrl(profile.avatarUrl),
+    avatar: getAvatarUrl(profile.avatarUrl, profile.gender),
     status: ("active"as "active"| "inactive"),
     statusLabel: "Hoạt động",
     personalInfo: {

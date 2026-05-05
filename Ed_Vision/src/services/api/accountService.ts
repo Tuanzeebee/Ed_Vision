@@ -26,6 +26,7 @@ export interface ProfileInfo {
 }
 
 export interface StudentInfo {
+  studentId?: number; // Added to support fetching student details
   studentCode: string;
   programId?: number;
   programName?: string;
@@ -35,6 +36,7 @@ export interface StudentInfo {
 }
 
 export interface InstructorInfo {
+  instructorId?: number; // Added to support fetching instructor details
   employeeCode: string;
   academicTitle?: string;
   position?: string;

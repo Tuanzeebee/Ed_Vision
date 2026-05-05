@@ -6,15 +6,15 @@
     "gradeTable": "Bảng điểm",
     "viewPredictions": "Xem dự đoán",
     "predictionV2": "Dự đoán v2",
-    "progressTracking": "Theo dõi tiến độ",
     "surveyManagement": "Khảo sát sinh viên",
+    "examImport": "Nạp đề",
+    "practiceQuestionImport": "Nạp câu hỏi",
+    "examPracticeImport": "Nạp & Quản lý dữ liệu CC",
     "reportsAlerts": "Báo cáo & Cảnh báo",
-    "messages": "Tin nhắn/Thông báo",
     "appointmentManagement": "Quản lý lịch hẹn",
     "calendarOverview": "Tổng quan lịch hẹn",
     "scheduleSetup": "Thiết lập lịch rảnh",
-    "appointmentList": "Quản lý lịch hẹn",
-    "accountSettings": "Cài đặt tài khoản"
+    "appointmentList": "Quản lý lịch hẹn"
   },
   "classes": {
     "title": "Lớp học",

@@ -6,15 +6,15 @@
     "gradeTable": "Grade Table",
     "viewPredictions": "View Predictions",
     "predictionV2": "Prediction v2",
-    "progressTracking": "Progress Tracking",
     "surveyManagement": "Student Survey",
+    "examImport": "Exam Import",
+    "practiceQuestionImport": "Question Import",
+    "examPracticeImport": "Exam/Practice Import",
     "reportsAlerts": "Reports & Alerts",
-    "messages": "Messages/Notifications",
     "appointmentManagement": "Appointment Management",
     "calendarOverview": "Calendar Overview",
     "scheduleSetup": "Setup Availability",
-    "appointmentList": "Manage Appointments",
-    "accountSettings": "Account Settings"
+    "appointmentList": "Manage Appointments"
   },
   "classes": {
     "title": "Classes",

@@ -62,6 +62,7 @@ export class EnrollmentResponseDto {
   progress_percent!: number;
   current_score?: number | null;
   target_score?: number | null;
+  exam_score?: number | null;
   enrolled_at!: Date;
   completed_at?: Date | null;
   completed_topics!: string[]; // array of topic_key strings
@@ -163,17 +164,20 @@ export class ToeicRepositoryOptionDto {
   option_text!: string;
   is_correct!: boolean;
   rationale?: string | null;
+  option_audio_url?: string | null;
   sort_order!: number;
 }
 
 export class ToeicRepositoryItemDto {
   id!: number;
   item_order!: number;
+  part?: number | null;
   item_type!: string;
   title?: string | null;
   stem!: string;
   reading_passage?: string | null;
   media_audio_url?: string | null;
+  media_image_url?: string | null;
   explanation?: string | null;
   estimated_seconds?: number | null;
   score_weight!: number;
@@ -190,6 +194,9 @@ export class ToeicRepositoryDetailResponseDto {
   estimated_minutes!: number;
   pass_score!: number;
   total_items!: number;
+  answer_key_configured_items!: number;
+  answer_key_missing_items!: number;
+  answer_key_ready!: boolean;
   items!: ToeicRepositoryItemDto[];
 }
 
@@ -225,6 +232,8 @@ export class ToeicRepositorySubmitResponseDto {
   pass_score!: number;
   is_passed!: boolean;
   gained_score!: number;
+  exam_score!: number; // raw scaled score from this exam attempt
+  can_change_target!: boolean; // true when exam_score >= target_score
   projected_score!: number;
   updated_plan!: ToeicPlanSyncResponseDto;
 }
@@ -273,6 +282,83 @@ export class ToeicReadingImportResponseDto {
   imported_count!: number;
   skipped_count!: number;
   total_rows!: number;
+}
+
+export class ToeicOcrImportDto {
+  @IsOptional()
+  @IsString()
+  repository_slug?: string;
+
+  @IsOptional()
+  @IsString()
+  repository_title?: string;
+
+  @IsOptional()
+  @IsString()
+  repository_description?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['listening', 'reading'])
+  skill_area?: 'listening' | 'reading';
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  replace_existing?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(300)
+  @Max(990)
+  milestone_score?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(300)
+  @Max(990)
+  unlock_score?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  exam_year?: number;
+}
+
+export class ToeicOcrImportResponseDto {
+  repository_id!: number;
+  slug!: string;
+  skill_area!: 'listening' | 'reading';
+  imported_count!: number;
+  skipped_count!: number;
+  total_detected!: number;
+  source_filename!: string;
+}
+
+export class ToeicAnswerKeyImportDto {
+  @IsString()
+  @IsNotEmpty()
+  repository_slug!: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  clear_existing?: boolean;
+}
+
+export class ToeicAnswerKeyImportResponseDto {
+  repository_id!: number;
+  slug!: string;
+  skill_area!: 'listening' | 'reading';
+  source_filename!: string;
+  total_answers_detected!: number;
+  applied_items!: number;
+  unanswered_items!: number;
+  unknown_question_numbers!: number[];
 }
 
 export class ToeicManualListeningCreateDto {
@@ -382,6 +468,36 @@ export class ToeicExplainAnswerResponseDto {
   source!: 'cache' | 'ollama' | 'fallback' | 'skipped';
 }
 
+export class ToeicRepositoryPregenerateExplanationsDto {
+  @IsOptional()
+  @IsBoolean()
+  force_regenerate?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  limit?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(8)
+  batch_size?: number;
+}
+
+export class ToeicRepositoryPregenerateExplanationsResponseDto {
+  repository_id!: number;
+  slug!: string;
+  model!: string;
+  total_items!: number;
+  queued_items!: number;
+  generated_count!: number;
+  skipped_count!: number;
+  failed_count!: number;
+  sample_failed_item_ids!: number[];
+}
+
 export class CertificateTutorAskDto {
   @IsString()
   @IsNotEmpty()
@@ -410,4 +526,171 @@ export class CertificateTutorAskResponseDto {
   answer!: string;
   model!: string;
   source!: 'cache' | 'ollama' | 'fallback';
+}
+
+export class ToeicListeningImportDto {
+  @IsOptional()
+  @IsString()
+  repository_slug?: string;
+
+  @IsOptional()
+  @IsString()
+  repository_title?: string;
+
+  @IsOptional()
+  @IsString()
+  repository_description?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  replace_existing?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(300)
+  @Max(990)
+  milestone_score?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(300)
+  @Max(990)
+  unlock_score?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  exam_year?: number;
+}
+
+export class ToeicListeningImageAssetDto {
+  filename!: string;
+  url!: string;
+  page!: number;
+  part_hint!: number;
+  width!: number;
+  height!: number;
+  size_bytes!: number;
+}
+
+export class ToeicListeningImportResponseDto {
+  repository_id!: number;
+  slug!: string;
+  skill_area!: 'listening';
+  imported_count!: number;
+  skipped_count!: number;
+  total_detected!: number;
+  source_filename!: string;
+  image_assets!: ToeicListeningImageAssetDto[];
+  image_extract_error?: string;
+}
+
+export class ToeicListeningAudioUploadDto {
+  @IsString()
+  @IsNotEmpty()
+  repository_slug!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  part?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  track_number?: number;
+}
+
+export class ToeicListeningAudioUploadResponseDto {
+  repository_id!: number;
+  slug!: string;
+  audio_url!: string;
+  filename!: string;
+  part?: number;
+  track_number?: number;
+  mapped_item_ids!: number[];
+}
+
+export class ToeicAudioChunkDto {
+  filename!: string;
+  url!: string;
+  part!: number;
+  question_number!: number;
+  type!: 'question' | 'talk';
+  duration_seconds!: number;
+  transcript_hint?: string;
+}
+
+export class ToeicAudioChunkRequestDto {
+  @IsString()
+  @IsNotEmpty()
+  repository_slug!: string;
+
+  @IsOptional()
+  @IsIn(['whisper', 'silence', 'both'])
+  method?: 'whisper' | 'silence' | 'both';
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  auto_map?: boolean;
+}
+
+export class ToeicAudioChunkResponseDto {
+  repository_id!: number;
+  slug!: string;
+  method_used!: string;
+  total_chunks!: number;
+  chunks!: ToeicAudioChunkDto[];
+  auto_mapped_count!: number;
+}
+
+export class ToeicRepositoryListItemDto {
+  id!: number;
+  slug!: string;
+  title!: string;
+  skill_area!: string;
+  total_items!: number;
+  is_published!: boolean;
+  created_at!: Date;
+}
+
+export class ToeicRepositoryDeleteResponseDto {
+  slug!: string;
+  deleted!: boolean;
+  items_deleted!: number;
+}
+
+export class ToeicChatGroqMessageDto {
+  @IsString()
+  @IsIn(['user', 'assistant'])
+  role!: 'user' | 'assistant';
+
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+}
+
+export class ToeicChatGroqDto {
+  @IsInt()
+  @Min(1)
+  question_id!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  user_message!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ToeicChatGroqMessageDto)
+  chat_history?: ToeicChatGroqMessageDto[];
 }

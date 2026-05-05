@@ -51,7 +51,8 @@ export type CertId =
   | "toeic"
   | "mos-word"
   | "mos-excel"
-  | "mos-powerpoint";
+  | "mos-powerpoint"
+  | "hsk-2";
 export type EnglishSkill =
   | "grammar"
   | "vocabulary"
@@ -70,8 +71,9 @@ export interface Certificate {
   icon: string;
   progress: number;
   status: "active" | "not-started" | "in-progress" | "completed";
-  type: "english" | "mos";
+  type: "english" | "mos" | "chinese";
   coverImg: string;
+  hasBaseScore?: boolean; // true khi đã làm khảo sát và có điểm gốc
 }
 
 export interface RoadmapStep {
@@ -158,20 +160,6 @@ export const CERTIFICATES: Certificate[] = [
       "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=500&q=80",
   },
   {
-    id: "mos-word",
-    label: "MOS Word",
-    sublabel: "Microsoft Office",
-    color: "text-blue-700",
-    bgFrom: "from-blue-600",
-    bgTo: "to-blue-400",
-    icon: "W",
-    progress: 0,
-    status: "not-started",
-    type: "mos",
-    coverImg:
-      "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=500&q=80",
-  },
-  {
     id: "mos-excel",
     label: "MOS Excel",
     sublabel: "Data & Spreadsheets",
@@ -186,18 +174,18 @@ export const CERTIFICATES: Certificate[] = [
       "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=500&q=80",
   },
   {
-    id: "mos-powerpoint",
-    label: "MOS PowerPoint",
-    sublabel: "Presentations",
-    color: "text-orange-600",
-    bgFrom: "from-orange-500",
-    bgTo: "to-red-400",
-    icon: "P",
+    id: "hsk-2",
+    label: "HSK 2",
+    sublabel: "Tiếng Trung cơ bản",
+    color: "text-rose-600",
+    bgFrom: "from-rose-500",
+    bgTo: "to-amber-400",
+    icon: "汉",
     progress: 0,
     status: "not-started",
-    type: "mos",
+    type: "chinese",
     coverImg:
-      "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=500&q=80",
+      "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?auto=format&fit=crop&w=500&q=80",
   },
 ];
 
@@ -2742,8 +2730,8 @@ export function getProgressColor(cert: Certificate): string {
       return "bg-blue-600";
     case "mos-excel":
       return "bg-green-600";
-    case "mos-powerpoint":
-      return "bg-orange-500";
+    case "hsk-2":
+      return "bg-rose-500";
     default:
       return "bg-purple-500";
   }
@@ -2852,15 +2840,21 @@ export function StatCard({
   value,
   sub,
   accent,
+  cardClassName,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub: string;
   accent: string;
+  cardClassName?: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-3">
+    <div
+      className={`rounded-2xl shadow-sm border p-5 flex flex-col ${
+        cardClassName ?? 'bg-white border-slate-100'
+      }`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
@@ -2872,7 +2866,7 @@ export function StatCard({
           {icon}
         </div>
       </div>
-      <p className="text-xs text-slate-400">{sub}</p>
+      <p className="text-xs text-slate-400 mt-auto">{sub}</p>
     </div>
   );
 }
@@ -2902,7 +2896,7 @@ export function CertCard({
         <div
           className={`absolute inset-0 bg-gradient-to-br ${cert.bgFrom} ${cert.bgTo} opacity-50`}
         />
-        {cert.status === "active" && (
+        {cert.status === "active" && cert.hasBaseScore && (
           <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-xs font-bold text-purple-700">
             Đang học
           </div>
@@ -3008,7 +3002,7 @@ export function RoadmapView({ steps }: { steps: RoadmapStep[] }) {
                 />
               </div>
               <div className="mt-2.5 flex gap-2">
-                <button className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 cursor-pointer transition-colors">
+                <button className="text-xs bg-gradient-to-r from-lime-400 to-lime-500 text-white px-3 py-1.5 rounded-lg hover:from-lime-500 hover:to-lime-600 cursor-pointer transition-colors">
                   Tiếp tục
                 </button>
                 <button className="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">

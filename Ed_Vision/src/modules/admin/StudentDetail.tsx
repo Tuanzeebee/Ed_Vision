@@ -1,6 +1,4 @@
-import AdminLayout from "@/components/ui/admin/AdminLayout";
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
 import { studentService, type StudentData } from "@/services/api/studentService";
 import { useToast } from "@/lib/useToast";
 import LoadingSpinner from "@/components/ui/admin/LoadingSpinner";
@@ -462,10 +460,13 @@ const studyHistoryData: {
   }
 };
 
-export default function StudentDetail() {
+export interface StudentDetailProps {
+  studentId: string;
+}
+
+export default function StudentDetail({ studentId }: StudentDetailProps) {
   const [selectedYear, setSelectedYear] = useState("2024-2025");
   const [selectedSemester, setSelectedSemester] = useState("Kỳ 1");
-  const { studentId } = useParams<{ studentId: string }>();
   const { showToast } = useToast();
   
   const [student, setStudent] = useState<StudentData | null>(null);
@@ -484,7 +485,6 @@ export default function StudentDetail() {
         const data = await studentService.getStudentById(parseInt(studentId));
         setStudent(data);
       } catch (error) {
-        console.error('Failed to fetch student:', error);
         showToast('Không thể tải thông tin sinh viên', 'error');
       } finally {
         setIsLoading(false);
@@ -577,22 +577,23 @@ export default function StudentDetail() {
   };
 
   if (isLoading) {
-    return (
-      <AdminLayout>
-        <LoadingSpinner text="Đang tải thông tin sinh viên..." size="lg" />
-      </AdminLayout>
-    );
+    return <LoadingSpinner text="Đang tải thông tin sinh viên..." size="lg" />;
   }
 
   if (!student) {
     return (
-      <AdminLayout>
-        <div className="flex flex-col items-center justify-center h-64">
-          <i className="fas fa-exclamation-triangle text-gray-400 text-5xl mb-4"></i>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Không tìm thấy sinh viên</h3>
-          <p className="text-gray-600">Sinh viên không tồn tại hoặc đã bị xóa</p>
+      <div className="flex flex-col items-center justify-center h-64">
+        <i className="fas fa-exclamation-triangle text-yellow-500 text-5xl mb-4"></i>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Không thể tải thông tin sinh viên</h3>
+        <p className="text-gray-600 mb-4">
+          {studentId ? `Không tìm thấy sinh viên với ID: ${studentId}` : 'ID sinh viên không hợp lệ'}
+        </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md">
+          <p className="text-sm text-blue-800">
+            <strong>Lưu ý:</strong> Backend cần trả về <code className="bg-blue-100 px-1 rounded">studentId</code> trong response của <code className="bg-blue-100 px-1 rounded">/admin/accounts/:id</code>
+          </p>
         </div>
-      </AdminLayout>
+      </div>
     );
   }
 
@@ -739,15 +740,14 @@ export default function StudentDetail() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-4">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 mb-2">Chi tiết sinh viên</h1>
-            <p className="text-base text-gray-600">Chi tiết thông tin sinh viên và tiến độ học tập</p>
-          </div>
+    <div className="space-y-4">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Chi tiết sinh viên</h1>
+          <p className="text-base text-gray-600">Chi tiết thông tin sinh viên và tiến độ học tập</p>
         </div>
+      </div>
 
         {/* Student Personal Information */}
         <Card className="bg-white border border-gray-200 shadow-md">
@@ -1063,9 +1063,6 @@ export default function StudentDetail() {
             </div>
           </CardContent>
         </Card>
-
-
       </div>
-    </AdminLayout>
   );
 }

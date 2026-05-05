@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { buildUrl } from '@/services/api/config'
 import { useAuth } from '@/hooks/useAuth'
 import NotificationDropdown from './NotificationDropdown'
+import { getAvatarUrl } from '@/lib/avatarUtils'
 
 type Props = {
   className?: string
@@ -86,11 +87,12 @@ export default function Header({
         if (response.ok) {
           const profileData = await response.json()
           const avatar = profileData?.profile?.avatarUrl || profileData?.avatarUrl || null
+          const gender = profileData?.profile?.gender || null
           const fullName = profileData?.profile?.fullName || profileData?.profile?.full_name || profileData?.fullName || null
 
-          if (avatar) {
-            setAvatarUrl(avatar)
-          }
+          // Use getAvatarUrl to get gender-based default if no avatar uploaded
+          const finalAvatar = getAvatarUrl(avatar, gender)
+          setAvatarUrl(finalAvatar)
 
           if (fullName) {
             setDisplayName(fullName)
@@ -101,14 +103,15 @@ export default function Header({
           if (userStr) {
             try {
               const userObj = JSON.parse(userStr)
-              if (avatar) {
-                userObj.avatarUrl = avatar
-                userObj.avatar = avatar
-              }
+              userObj.avatarUrl = finalAvatar
+              userObj.avatar = finalAvatar
               if (fullName) {
                 userObj.fullName = fullName
                 userObj.full_name = fullName
                 userObj.name = fullName
+              }
+              if (gender) {
+                userObj.gender = gender
               }
               localStorage.setItem('user', JSON.stringify(userObj))
             } catch (e) {
@@ -125,11 +128,13 @@ export default function Header({
 
     // Listen for avatar-updated event from profile pages
     const handleAvatarUpdated = (e: Event) => {
-      const customEvent = e as CustomEvent<{ url: string }>
+      const customEvent = e as CustomEvent<{ url?: string; gender?: string; refetch?: boolean }>
+      
       if (customEvent.detail?.url) {
+        // If URL is provided, use it directly (user uploaded new avatar)
         setAvatarUrl(customEvent.detail.url)
-      } else {
-        // Refetch profile if no URL provided
+      } else if (customEvent.detail?.refetch || customEvent.detail?.gender !== undefined) {
+        // Refetch profile if gender changed or refetch flag is set
         fetchProfile(true)
       }
     }
