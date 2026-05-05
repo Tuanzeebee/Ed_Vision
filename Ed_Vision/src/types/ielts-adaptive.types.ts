@@ -151,6 +151,14 @@ export interface QuestionResult {
   time_taken: number;
   expected_time: number;
   explanation?: string;
+  /** Present for speaking/writing items graded by AI */
+  ai_grading?: {
+    bandScore: number;
+    overallFeedback: string;
+    suggestions: string[];
+    criteria: { code: string; name: string; score: number; feedback: string }[];
+    wordCount?: number;
+  };
 }
 
 export interface BandTest {

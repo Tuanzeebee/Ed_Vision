@@ -99,6 +99,29 @@ export const ieltsAdaptiveApi = {
     );
     return response.data;
   },
+
+  gradeSpeaking: async (payload: {
+    transcript: string;
+    item_prompt: string;
+    target_band: number;
+    part_type?: string;
+    lesson_id?: number;
+  }) => {
+    const response = await apiClient.post(`${API_PREFIX}/grade/speaking`, payload);
+    return response.data;
+  },
+
+  gradeWriting: async (payload: {
+    essay: string;
+    task_prompt: string;
+    task_type: 'task1' | 'task2';
+    target_band: number;
+    word_count?: number;
+    lesson_id?: number;
+  }) => {
+    const response = await apiClient.post(`${API_PREFIX}/grade/writing`, payload);
+    return response.data;
+  },
 };
 
 export default ieltsAdaptiveApi;

@@ -376,12 +376,28 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
             </div>
 
             {/* ── Band test CTA ─────────────────────────────────────────────────────── */}
-            {progressPercent >= 70 && (
+            {progressPercent < 100 ? (
+                <div className="rounded-3xl bg-linear-to-r from-indigo-500 via-violet-500 to-purple-600 p-6 text-white text-center shadow-xl">
+                    <Trophy className="w-10 h-10 mx-auto mb-3 text-yellow-200" />
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold mb-2">Làm thử</div>
+                    <h2 className="text-xl font-black mb-1">Luyện tập với Band Test</h2>
+                    <p className="text-white/80 text-sm mb-4">
+                        {completedLessons}/{totalLessons} bài hoàn thành ({progressPercent}%). Kết quả chỉ hiển thị, chưa áp dụng vào lộ trình.
+                    </p>
+                    <button
+                        onClick={() => navigate(`/ielts-adaptive/band-test/${roadmap.id}`)}
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-indigo-600 font-bold text-sm hover:bg-white/90 transition-colors"
+                    >
+                        <Trophy className="w-4 h-4" /> Làm thử Band Test
+                    </button>
+                </div>
+            ) : (
                 <div className="rounded-3xl bg-linear-to-r from-rose-500 via-pink-500 to-fuchsia-500 p-6 text-white text-center shadow-xl">
                     <Trophy className="w-10 h-10 mx-auto mb-3 text-yellow-200" />
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold mb-2">Thi thật</div>
                     <h2 className="text-xl font-black mb-1">Sẵn sàng kiểm tra Band?</h2>
                     <p className="text-white/80 text-sm mb-4">
-                        Bạn đã hoàn thành {completedLessons}/{totalLessons} bài. Làm bài kiểm tra toàn diện để xác nhận level!
+                        Bạn đã hoàn thành toàn bộ {totalLessons} bài! Kết quả sẽ được áp dụng vào lộ trình.
                     </p>
                     <button
                         onClick={() => navigate(`/ielts-adaptive/band-test/${roadmap.id}`)}

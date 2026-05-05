@@ -1,0 +1,212 @@
+// content-template.json - Template để thêm nội dung mới cho 1 band level
+// Copy template này và thay đổi nội dung cho band level cần thêm
+{
+  "bandXX": {
+    "reading": {
+      "passage": "YOUR_READING_PASSAGE_HERE. Should be progressively longer and more complex. Band 4.0: 100 words. Band 5.0: 200 words. Band 6.0: 350+ words.",
+      "flashcards": [
+        {
+          "term": "vocabulary_term",
+          "definition": "simple definition appropriate for this band level",
+          "hint": "context or example usage"
+        },
+        {
+          "term": "another_term",
+          "definition": "...",
+          "hint": "..."
+        }
+        // Add 5-10 flashcards per skill per band
+      ],
+      "practice": [
+        {
+          "type": "single_choice",
+          "stem": "Question about the passage?",
+          "options": [
+            { "key": "A", "text": "First option", "isCorrect": true },
+            { "key": "B", "text": "Second option", "isCorrect": false },
+            { "key": "C", "text": "Third option", "isCorrect": false },
+            { "key": "D", "text": "Fourth option", "isCorrect": false }
+          ],
+          "explanation": "Explanation why A is correct and others are wrong",
+          "estimatedSeconds": 45,
+          "errorType": "Đọc hiểu chi tiết"
+        },
+        {
+          "type": "true_false_ng",
+          "stem": "Statement to verify",
+          "options": [
+            { "key": "True", "text": "True", "isCorrect": true },
+            { "key": "False", "text": "False", "isCorrect": false },
+            { "key": "NG", "text": "Not Given", "isCorrect": false }
+          ],
+          "explanation": "Why this is True",
+          "estimatedSeconds": 30,
+          "errorType": "Xác định True/False/NG"
+        }
+        // Add 5-8 practice questions
+      ],
+      "miniTest": [
+        {
+          "type": "single_choice",
+          "stem": "More challenging question for mini-test?",
+          "options": [...],
+          "explanation": "...",
+          "estimatedSeconds": 60,
+          "errorType": "Suy luận"
+        }
+        // Add 3-5 mini-test questions (harder than practice)
+      ]
+    },
+    "listening": {
+      "audioScript": "[Part 1 - Dialogue/Monologue]\nSpeaker A: ... \nSpeaker B: ...",
+      "mediaAudioUrl": "https://your-audio-cdn.com/band40-listening-1.mp3",
+      "flashcards": [
+        {
+          "term": "listening_vocabulary",
+          "definition": "...",
+          "hint": "..."
+        }
+      ],
+      "practice": [
+        {
+          "type": "single_choice",
+          "stem": "What did the speaker say about...?",
+          "mediaAudioUrl": "https://your-audio-cdn.com/band40-listening-1.mp3",
+          "options": [...],
+          "explanation": "...",
+          "estimatedSeconds": 30,
+          "errorType": "Nghe hiểu chính"
+        }
+      ],
+      "miniTest": [...]
+    },
+    "grammar": {
+      "flashcards": [
+        {
+          "term": "Simple Present Tense",
+          "definition": "Used for habits, facts, and general truths. Form: Subject + verb (base form)",
+          "hint": "Example: I eat breakfast every day."
+        },
+        {
+          "term": "Articles: a/an/the",
+          "definition": "a/an = indefinite (first mention). the = definite (specific or mentioned before)",
+          "hint": "I saw a cat. The cat was black."
+        }
+      ],
+      "practice": [
+        {
+          "type": "single_choice",
+          "stem": "Choose the correct verb form: 'She ___ to school every day.'",
+          "options": [
+            { "key": "A", "text": "go", "isCorrect": false },
+            { "key": "B", "text": "goes", "isCorrect": true },
+            { "key": "C", "text": "went", "isCorrect": false },
+            { "key": "D", "text": "going", "isCorrect": false }
+          ],
+          "explanation": "With 'she' (3rd person singular), add '-s' to the verb in Simple Present.",
+          "estimatedSeconds": 30,
+          "errorType": "Chia động từ"
+        },
+        {
+          "type": "gap_fill",
+          "stem": "Fill in the blank: 'I saw ___ dog in the park. ___ dog was very friendly.'",
+          "options": [
+            { "key": "a, The", "text": "a, The", "isCorrect": true },
+            { "key": "the, A", "text": "the, A", "isCorrect": false },
+            { "key": "a, A", "text": "a, A", "isCorrect": false },
+            { "key": "the, The", "text": "the, The", "isCorrect": false }
+          ],
+          "explanation": "First mention: 'a dog'. Second mention (specific): 'the dog'.",
+          "estimatedSeconds": 45,
+          "errorType": "Mạo từ"
+        }
+      ],
+      "miniTest": [...]
+    },
+    "vocabulary": {
+      "flashcards": [
+        {
+          "term": "essential",
+          "definition": "absolutely necessary; extremely important",
+          "hint": "Water is essential for life."
+        },
+        {
+          "term": "maintain",
+          "definition": "to keep something in good condition; to continue",
+          "hint": "maintain a healthy lifestyle"
+        }
+      ],
+      "practice": [
+        {
+          "type": "single_choice",
+          "stem": "Choose the word that best completes the sentence: 'Regular exercise is ___ for good health.'",
+          "options": [
+            { "key": "A", "text": "essential", "isCorrect": true },
+            { "key": "B", "text": "optional", "isCorrect": false },
+            { "key": "C", "text": "unnecessary", "isCorrect": false },
+            { "key": "D", "text": "harmful", "isCorrect": false }
+          ],
+          "explanation": "'Essential' means absolutely necessary, which fits the context.",
+          "estimatedSeconds": 30,
+          "errorType": "Chọn từ đồng nghĩa"
+        }
+      ],
+      "miniTest": [...]
+    }
+  }
+}
+
+// ============================================
+// GUIDELINES
+// ============================================
+
+// 1. BAND LEVELS & DIFFICULTY:
+// - band40 (Band 4.0): Basic English, everyday topics, simple sentences
+// - band45 (Band 4.5): Upper beginner, familiar topics, simple-to-intermediate grammar
+// - band50 (Band 5.0): Intermediate, general academic topics, varied sentence structures
+// - band55 (Band 5.5): Upper intermediate, abstract topics, complex sentences
+// - band60 (Band 6.0+): Advanced, academic/professional topics, sophisticated language
+
+// 2. CONTENT TYPES:
+// - flashcards: Key vocabulary/grammar concepts to memorize
+// - practice: Basic exercises to apply knowledge (easier, more scaffolding)
+// - miniTest: Assessment questions (harder, less support, more realistic exam)
+
+// 3. QUESTION TYPES:
+// - single_choice: Multiple choice with 4 options (A/B/C/D)
+// - true_false_ng: True/False/Not Given (IELTS Reading style)
+// - gap_fill: Fill in the blank (can have multiple blanks)
+
+// 4. PROGRESSION TIPS:
+// Reading:
+//   - Band 4.0: Daily life (shopping, family, hobbies) - 100-150 words
+//   - Band 5.0: Social issues (health, education) - 200-250 words
+//   - Band 6.0: Abstract concepts (technology, environment) - 350+ words
+
+// Grammar:
+//   - Band 4.0: Simple tenses, basic prepositions, articles
+//   - Band 5.0: Present perfect, modals, comparatives
+//   - Band 6.0: Passive voice, conditionals, reported speech
+
+// Vocabulary:
+//   - Band 4.0: High-frequency words (1000 most common)
+//   - Band 5.0: Academic Word List Level 1
+//   - Band 6.0: Academic Word List Level 2-3
+
+// 5. ESTIMATED SECONDS:
+// - Flashcard: 15-20s
+// - Practice (easy): 30-45s
+// - Practice (medium): 45-60s
+// - Mini-test (hard): 60-90s
+
+// 6. ERROR TYPES (Vietnamese):
+// - "Đọc hiểu chính" - Main idea comprehension
+// - "Đọc hiểu chi tiết" - Detail comprehension
+// - "Suy luận" - Inference
+// - "Xác định True/False/NG" - T/F/NG identification
+// - "Chia động từ" - Verb conjugation
+// - "Mạo từ" - Articles
+// - "Giới từ" - Prepositions
+// - "Chọn từ đồng nghĩa" - Synonym selection
+// - "Nghe hiểu chính" - Listening main idea
+// - "Nghe chi tiết" - Listening details

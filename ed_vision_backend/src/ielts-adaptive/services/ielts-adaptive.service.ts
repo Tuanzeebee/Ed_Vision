@@ -492,7 +492,7 @@ export class IeltsAdaptiveService {
 
     if (lessons.length === 0) {
       throw new BadRequestException(
-        'No IELTS learning repositories found. Please run seed first.',
+        'No IELTS learning repositories found. Please run: node prisma/seedIeltsAdaptive.js',
       );
     }
 
@@ -527,7 +527,7 @@ export class IeltsAdaptiveService {
           skill_area: lesson.skill_area,
           lesson_title: lesson.lesson_title,
           lesson_order: i,
-          band_level: dto.current_band,
+          band_level: lesson.band_level ?? dto.current_band,
           flashcard_repo_id: lesson.flashcard_repo_id,
           practice_repo_id: lesson.practice_repo_id,
           mini_test_repo_id: lesson.mini_test_repo_id,
@@ -693,9 +693,34 @@ export class IeltsAdaptiveService {
    * (bao gồm các items và options của từng item).
    * Ném NotFoundException nếu không tìm thấy bài.
    */
-  async getLesson(lessonId: number): Promise<LessonResponseDto> {
-    const lesson = await this.prisma.ieltsLesson.findUnique({
-      where: { id: lessonId },
+  async getLesson(lessonId: number, accountId?: number): Promise<LessonResponseDto> {
+    // If accountId is provided, scope the lookup to lessons that belong to the user's roadmap
+    let roadmapId: number | undefined;
+    if (accountId) {
+      const student = await this.prisma.student.findUnique({
+        where: { account_id: accountId },
+        select: { student_id: true },
+      });
+      if (student) {
+        const enrollment = await this.prisma.certificateEnrollment.findFirst({
+          where: { student_id: student.student_id, cert_type: 'ielts', status: 'active' },
+          orderBy: { id: 'desc' },
+          select: { id: true },
+        });
+        if (enrollment) {
+          const roadmap = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+            where: { enrollment_id: enrollment.id },
+            select: { id: true },
+          });
+          roadmapId = roadmap?.id;
+        }
+      }
+    }
+
+    const lesson = await this.prisma.ieltsLesson.findFirst({
+      where: roadmapId
+        ? { id: lessonId, roadmap_id: roadmapId }
+        : { id: lessonId },
       include: {
         flashcardRepo: {
           include: {
@@ -728,14 +753,59 @@ export class IeltsAdaptiveService {
       throw new NotFoundException('Lesson not found');
     }
 
+    // ── Build structured content for the frontend ──────────────────────────────
+    const buildRepoContent = (repo: any) => {
+      if (!repo) return null;
+      const meta: any = repo.metadata ?? {};
+      return {
+        id: repo.id,
+        slug: repo.slug,
+        title: repo.title,
+        content_type: repo.content_type,
+        skill_area: repo.skill_area,
+        estimated_minutes: repo.estimated_minutes,
+        pass_score: repo.pass_score,
+        // Structured content from metadata
+        passage: meta.content?.passage ?? null,
+        audio: meta.content?.audio ?? null,
+        writing_prompt: meta.content?.writingPrompt ?? null,
+        speaking_prompt: meta.content?.speakingPrompt ?? null,
+        lesson_template: meta.lessonTemplate ?? null,
+        // Items mapped with clean structure
+        items: (repo.items ?? []).map((item: any) => ({
+          id: item.id,
+          item_order: item.item_order,
+          item_type: item.item_type,
+          title: item.title,
+          stem: item.stem,
+          reading_passage: item.reading_passage,
+          media_audio_url: item.media_audio_url,
+          media_image_url: item.media_image_url,
+          hint: item.hint,
+          explanation: item.explanation,
+          estimated_seconds: item.estimated_seconds,
+          score_weight: item.score_weight,
+          metadata: item.metadata,
+          options: (item.options ?? []).map((opt: any) => ({
+            id: opt.id,
+            option_key: opt.option_key,
+            option_text: opt.option_text,
+            is_correct: opt.is_correct,
+            rationale: opt.rationale,
+            sort_order: opt.sort_order,
+          })),
+        })),
+      };
+    };
+
     return {
       ...lesson,
       flashcard_repo_id: lesson.flashcard_repo_id ?? undefined,
       practice_repo_id: lesson.practice_repo_id ?? undefined,
       mini_test_repo_id: lesson.mini_test_repo_id ?? undefined,
-      flashcardRepo: lesson.flashcardRepo ?? undefined,
-      practiceRepo: lesson.practiceRepo ?? undefined,
-      miniTestRepo: lesson.miniTestRepo ?? undefined,
+      flashcardRepo: buildRepoContent(lesson.flashcardRepo) ?? undefined,
+      practiceRepo: buildRepoContent(lesson.practiceRepo) ?? undefined,
+      miniTestRepo: buildRepoContent(lesson.miniTestRepo) ?? undefined,
       skill_area: lesson.skill_area as SkillArea,
       status: lesson.status as LessonStatus,
       band_level: Number(lesson.band_level),
@@ -845,7 +915,20 @@ export class IeltsAdaptiveService {
       `Submitting ${dto.session_type} practice for lesson ${dto.lesson_id}`,
     );
 
-    // Tải repository kèm toàn bộ câu hỏi và lựa chọn
+    // Normalise answers into Record<string, string> regardless of input format
+    let answersMap: Record<string, string> = {};
+    let timeMap: Record<string, number> = dto.time_per_question ?? {};
+
+    if (Array.isArray(dto.answers)) {
+      for (const a of dto.answers) {
+        answersMap[String(a.question_id)] = String(a.answer ?? '');
+        if (a.time_taken_sec != null) timeMap[String(a.question_id)] = a.time_taken_sec;
+      }
+    } else {
+      answersMap = (dto.answers as Record<string, string>) ?? {};
+    }
+
+    // Load repository with items + options
     const repo = await this.prisma.learningRepository.findUnique({
       where: { id: dto.repository_id },
       include: {
@@ -860,57 +943,78 @@ export class IeltsAdaptiveService {
       throw new NotFoundException('Repository not found');
     }
 
-    // Chấm điểm từng câu: so sánh câu trả lời với đáp án đúng
+    // Grade each item
     let correctCount = 0;
     let totalTime = 0;
     const detailedResults: any[] = [];
+    const feedbackList: any[] = [];
     const errorAnalysis: Record<string, number> = {};
 
     for (const item of repo.items) {
-      const studentAnswer = dto.answers[item.id.toString()];
+      const key = item.id.toString();
+      const studentAnswer = (answersMap[key] ?? '').trim().toLowerCase();
       const correctOption = item.options.find((opt) => opt.is_correct);
 
-      if (!correctOption) continue;
+      // For gap_fill / short_answer: check correct_answer in metadata or option
+      const meta: any = item.metadata ?? {};
+      const acceptedAnswers: string[] = (meta.acceptedAnswers ?? []).map((a: string) =>
+        a.trim().toLowerCase(),
+      );
+      const correctKey = correctOption?.option_key?.toLowerCase() ?? '';
+      const correctText = correctOption?.option_text?.trim().toLowerCase() ?? '';
+      const metaCorrect = String(meta.correctAnswer ?? '').trim().toLowerCase();
 
-      // Chấp nhận cả option_key (A/B/C/D) hoặc option_text
       const isCorrect =
-        studentAnswer === correctOption.option_key ||
-        studentAnswer === correctOption.option_text;
+        studentAnswer.length > 0 &&
+        (studentAnswer === correctKey ||
+          studentAnswer === correctText ||
+          (metaCorrect && studentAnswer === metaCorrect) ||
+          (acceptedAnswers.length > 0 && acceptedAnswers.includes(studentAnswer)));
 
       if (isCorrect) correctCount++;
 
-      const timeTaken = dto.time_per_question?.[item.id.toString()] || 0;
+      const timeTaken = timeMap[key] ?? 0;
       totalTime += timeTaken;
+
+      const displayCorrect = correctOption?.option_key ?? meta.correctAnswer ?? '';
 
       detailedResults.push({
         item_id: item.id,
         question: item.stem,
-        student_answer: studentAnswer,
-        correct_answer: correctOption.option_key,
+        student_answer: answersMap[key],
+        correct_answer: displayCorrect,
         is_correct: isCorrect,
         time_taken: timeTaken,
-        expected_time: item.estimated_seconds || 60,
-        explanation: item.explanation || item.ai_explanation,
+        expected_time: item.estimated_seconds ?? 60,
+        explanation: item.explanation ?? item.ai_explanation,
       });
 
-      // Phân loại loại lỗi (ví dụ: skimming, vocabulary) từ metadata câu hỏi
+      feedbackList.push({
+        question_id: key,
+        is_correct: isCorrect,
+        correct_answer: displayCorrect,
+        explanation: item.explanation ?? item.ai_explanation,
+        time_taken_sec: timeTaken,
+      });
+
       if (!isCorrect) {
-        const errorType = item.metadata?.['errorType'] || 'general';
-        errorAnalysis[errorType] = (errorAnalysis[errorType] || 0) + 1;
+        const errorType = meta.errorTag ?? meta.errorType ?? 'general';
+        errorAnalysis[errorType] = (errorAnalysis[errorType] ?? 0) + 1;
       }
     }
 
     const totalQuestions = repo.items.length;
-    const accuracy = (correctCount / totalQuestions) * 100;
+    const accuracy = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
     const avgTimePerQ = totalQuestions > 0 ? totalTime / totalQuestions : 0;
+    const passScore = repo.pass_score ?? 60;
+    const passed = accuracy >= passScore;
 
-    // Lưu kết quả phiên luyện tập vào DB
     const session = await this.prisma.ieltsPracticeSession.create({
       data: {
         lesson_id: dto.lesson_id,
         session_type: dto.session_type,
         repository_id: dto.repository_id,
-        answers: dto.answers as any,
+        answers: answersMap as any,
         total_questions: totalQuestions,
         correct_count: correctCount,
         accuracy_percent: accuracy,
@@ -920,7 +1024,6 @@ export class IeltsAdaptiveService {
       },
     });
 
-    // Cập nhật tiến độ kỹ năng: accuracy trung bình, số câu đã luyện
     const lesson = await this.prisma.ieltsLesson.findUnique({
       where: { id: dto.lesson_id },
       include: { roadmap: true },
@@ -935,11 +1038,46 @@ export class IeltsAdaptiveService {
       );
     }
 
-    // Mini test: hoàn thành bài học và mở khoá bài tiếp theo
-    if (dto.session_type === SessionType.MINI_TEST) {
+    // Mini test → complete lesson and unlock next (regardless of pass/fail, student progresses)
+    let unlockedLessonId: number | undefined;
+    const isMiniTest =
+      dto.session_type === SessionType.MINI_TEST ||
+      repo.content_type === 'mini-test';
+
+    if (isMiniTest) {
       await this.completeLesson(dto.lesson_id);
       if (lesson) {
         await this.unlockNextLesson(lesson.roadmap_id);
+        // Find the newly unlocked lesson
+        const nextLesson = await this.prisma.ieltsLesson.findFirst({
+          where: {
+            roadmap_id: lesson.roadmap_id,
+            lesson_order: lesson.lesson_order + 1,
+          },
+        });
+        unlockedLessonId = nextLesson?.id;
+      }
+    } else if (lesson && lesson.status === LessonStatus.LOCKED) {
+      // Mark in_progress
+      await this.prisma.ieltsLesson.update({
+        where: { id: dto.lesson_id },
+        data: { status: LessonStatus.IN_PROGRESS },
+      });
+    }
+
+    // Roadmap progress
+    let roadmapProgressPercent: number | undefined;
+    if (lesson) {
+      const roadmapWithLessons = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+        where: { id: lesson.roadmap_id },
+        include: { lessons: { select: { status: true } } },
+      });
+      if (roadmapWithLessons) {
+        const total = roadmapWithLessons.lessons.length;
+        const done = roadmapWithLessons.lessons.filter(
+          (l) => l.status === LessonStatus.COMPLETED,
+        ).length;
+        roadmapProgressPercent = total > 0 ? Math.round((done / total) * 100) : 0;
       }
     }
 
@@ -951,12 +1089,19 @@ export class IeltsAdaptiveService {
       total_questions: session.total_questions,
       correct_count: session.correct_count,
       accuracy_percent: Number(session.accuracy_percent),
+      passed,
       total_time_sec: session.total_time_sec ?? undefined,
       avg_time_per_q: session.avg_time_per_q
         ? Number(session.avg_time_per_q)
         : undefined,
       error_analysis: session.error_analysis as any,
+      feedback: feedbackList,
       detailed_results: detailedResults,
+      next: {
+        unlocked_lesson_id: unlockedLessonId,
+        lesson_completed: isMiniTest,
+        roadmap_progress_percent: roadmapProgressPercent,
+      },
     };
   }
 
@@ -1013,27 +1158,82 @@ export class IeltsAdaptiveService {
 
     const questionsPerSkill = dto.questions_per_skill || 20;
     const questionIds: string[] = [];
+    const currentBand = Number(roadmap.current_band);
 
-    // Chọn câu hỏi cho từng kỹ năng: phù hợp band, ít dùng nhất
+    /**
+     * Cơ chế trộn câu hỏi theo tỷ lệ band:
+     *   40% câu ở mức band hiện tại (core):    bandMin ≤ band ≤ bandMax, bandMax ≤ band+0.5
+     *   35% câu ở mức band thấp hơn (review):  bandMax < band
+     *   25% câu ở mức band cao hơn (challenge): bandMin > band
+     *
+     * Mỗi nhóm được random shuffle trước khi lấy → mỗi lần test khác nhau.
+     * Ưu tiên câu ít được dùng nhất (usedCount asc) trong từng nhóm.
+     */
+    const shuffle = <T>(arr: T[]): T[] => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+
     for (const skill of dto.skills_to_test) {
-      const questions = await this.prisma.ieltsQuestion.findMany({
+      const coreCount = Math.round(questionsPerSkill * 0.4);
+      const reviewCount = Math.round(questionsPerSkill * 0.35);
+      const challengeCount = questionsPerSkill - coreCount - reviewCount;
+
+      // Core: câu ở mức band hiện tại
+      const coreQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill: skill,
-          bandMin: { lte: roadmap.current_band },
-          bandMax: { gte: roadmap.current_band },
+          skill,
+          bandMin: { lte: currentBand + 0.5 },
+          bandMax: { gte: currentBand - 0.5 },
           status: 'active',
         },
-        take: questionsPerSkill,
-        orderBy: { usedCount: 'asc' }, // Ưu tiên câu chưa/ít được dùng để đa dạng đề
+        orderBy: { usedCount: 'asc' },
+        take: coreCount * 3, // Lấy dư để shuffle
       });
 
-      questionIds.push(...questions.map((q) => q.id));
+      // Review: câu dễ hơn (band thấp hơn)
+      const reviewQ = await this.prisma.ieltsQuestion.findMany({
+        where: {
+          skill,
+          bandMax: { lt: currentBand - 0.4 },
+          status: 'active',
+        },
+        orderBy: { usedCount: 'asc' },
+        take: reviewCount * 3,
+      });
+
+      // Challenge: câu khó hơn (band cao hơn)
+      const challengeQ = await this.prisma.ieltsQuestion.findMany({
+        where: {
+          skill,
+          bandMin: { gt: currentBand + 0.4 },
+          status: 'active',
+        },
+        orderBy: { usedCount: 'asc' },
+        take: challengeCount * 3,
+      });
+
+      const selected = [
+        ...shuffle(coreQ).slice(0, coreCount),
+        ...shuffle(reviewQ).slice(0, reviewCount),
+        ...shuffle(challengeQ).slice(0, challengeCount),
+      ];
+
+      // Shuffle kết quả cuối trước khi đưa vào đề (không lộ thứ tự nhóm)
+      const finalSelection = shuffle(selected);
+      questionIds.push(...finalSelection.map((q) => q.id));
 
       // Cập nhật usedCount để lần sau ưu tiên câu hỏi khác
-      await this.prisma.ieltsQuestion.updateMany({
-        where: { id: { in: questions.map((q) => q.id) } },
-        data: { usedCount: { increment: 1 } },
-      });
+      if (finalSelection.length > 0) {
+        await this.prisma.ieltsQuestion.updateMany({
+          where: { id: { in: finalSelection.map((q) => q.id) } },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
     }
 
     const bandTest = await this.prisma.ieltsBandTest.create({
@@ -1048,7 +1248,10 @@ export class IeltsAdaptiveService {
         correct_count: 0,
         accuracy_percent: 0,
         total_time_sec: 0,
-        expected_time_sec: questionIds.length * 60,
+        // expected_time_sec: tính từ expectedTimeSec của từng câu hỏi đã chọn
+        expected_time_sec: await this.prisma.ieltsQuestion
+          .findMany({ where: { id: { in: questionIds } }, select: { expectedTimeSec: true } })
+          .then((qs) => qs.reduce((s, q) => s + q.expectedTimeSec, 0)),
         response_time_factor: 0,
         previous_band: roadmap.current_band,
         estimated_band: roadmap.current_band,
@@ -1073,6 +1276,75 @@ export class IeltsAdaptiveService {
       estimated_band: Number(bandTest.estimated_band),
       band_change: bandTest.band_change as BandChange,
       recommendation: bandTest.recommendation as Recommendation,
+    };
+  }
+
+  /**
+   * Lấy chi tiết Band Test kèm danh sách câu hỏi (không trả đáp án đúng).
+   */
+  async getBandTestWithQuestions(testId: string): Promise<{
+    bandTest: BandTestResponseDto;
+    questions: {
+      id: string;
+      skill: string;
+      questionText: string;
+      questionType: string;
+      options: Record<string, string>;
+      expectedTimeSec: number;
+    }[];
+  }> {
+    const bandTest = await this.prisma.ieltsBandTest.findUnique({
+      where: { id: testId },
+    });
+
+    if (!bandTest) {
+      throw new NotFoundException('Band test not found');
+    }
+
+    const questions = await this.prisma.ieltsQuestion.findMany({
+      where: { id: { in: bandTest.question_ids } },
+    });
+
+    const orderMap = new Map<string, number>(
+      bandTest.question_ids.map((id, index) => [id, index]),
+    );
+
+    const mapOptions = (options: any): Record<string, string> => {
+      if (!Array.isArray(options)) return {};
+      return options.reduce((acc: Record<string, string>, opt: any) => {
+        const key = String(opt?.key ?? opt?.option_key ?? opt?.label ?? '').trim();
+        if (!key) return acc;
+        acc[key] = String(opt?.text ?? opt?.option_text ?? '').trim();
+        return acc;
+      }, {});
+    };
+
+    const orderedQuestions = [...questions].sort((a, b) => {
+      const ai = orderMap.get(a.id) ?? 0;
+      const bi = orderMap.get(b.id) ?? 0;
+      return ai - bi;
+    });
+
+    return {
+      bandTest: {
+        ...bandTest,
+        band_level: Number(bandTest.band_level),
+        accuracy_percent: Number(bandTest.accuracy_percent),
+        response_time_factor: Number(bandTest.response_time_factor),
+        consistency_score: bandTest.consistency_score ? Number(bandTest.consistency_score) : undefined,
+        previous_band: Number(bandTest.previous_band),
+        estimated_band: Number(bandTest.estimated_band),
+        band_change: bandTest.band_change as BandChange,
+        recommendation: bandTest.recommendation as Recommendation,
+      },
+      questions: orderedQuestions.map((q) => ({
+        id: q.id,
+        skill: q.skill,
+        questionText: q.questionText,
+        questionType: q.questionType,
+        options: mapOptions(q.options),
+        expectedTimeSec: q.expectedTimeSec,
+      })),
     };
   }
 
@@ -1120,8 +1392,28 @@ export class IeltsAdaptiveService {
     > = {};
 
     for (const question of questions) {
-      const studentAnswer = dto.answers[question.id];
-      const isCorrect = studentAnswer === question.correctAnswer;
+      const rawAnswer = dto.answers[question.id];
+      let studentAnswer = rawAnswer;
+      let aiBandScore: number | null = null;
+
+      if (typeof rawAnswer === 'string' && rawAnswer.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(rawAnswer);
+          if (parsed?.bandScore != null) {
+            const parsedScore = Number(parsed.bandScore);
+            if (Number.isFinite(parsedScore)) {
+              aiBandScore = parsedScore;
+            }
+          }
+        } catch (_) {
+          // Ignore parse errors, treat as normal answer string.
+        }
+      }
+
+      const isAiSkill = question.skill === 'writing' || question.skill === 'speaking';
+      const isCorrect = isAiSkill && aiBandScore != null
+        ? aiBandScore >= Number(bandTest.previous_band)
+        : studentAnswer === question.correctAnswer;
       const timeTaken = dto.time_per_question[question.id] || 60;
 
       questionResults.push({
@@ -1343,41 +1635,46 @@ export class IeltsAdaptiveService {
     targetBand: number,
     recommendation?: string,
   ): Promise<any[]> {
+    // ── 4 core IELTS skills only ──────────────────────────────────────────────
     const skills: SkillArea[] = [
       SkillArea.READING,
       SkillArea.LISTENING,
-      SkillArea.GRAMMAR,
-      SkillArea.VOCABULARY,
+      SkillArea.WRITING,
+      SkillArea.SPEAKING,
     ];
 
     const lessons: any[] = [];
-    const difficulty = this.getDifficultyLevel(currentBand);
-    const currentScore = Math.round(currentBand * 100);
 
-    /**
-     * Tìm repository phù hợp nhất:
-     *   - Ưu tiên: đúng difficulty + nằm trong range target_score.
-     *   - Fallback: bất kỳ repo đã publish của kỹ năng và content type đó.
-     */
-    const findRepository = async (skill: SkillArea, contentType: string) => {
+    // Build band steps from currentBand up to (but not including) targetBand
+    const bandSteps: number[] = [];
+    let b = Math.round(currentBand * 10) / 10;
+    while (b < targetBand - 0.01) {
+      bandSteps.push(b);
+      b = Math.round((b + 0.5) * 10) / 10;
+    }
+    if (bandSteps.length === 0) bandSteps.push(currentBand);
+
+    const findRepository = async (
+      skill: SkillArea,
+      contentType: string,
+      scoreMin: number,
+      scoreMax: number,
+    ) => {
+      // Exact match: skill + contentType + score range
       const exact = await this.prisma.learningRepository.findFirst({
         where: {
           cert_type: 'ielts',
           skill_area: skill,
           content_type: contentType,
-          difficulty_level: difficulty,
           is_published: true,
-          target_score_min: { lte: currentScore },
-          target_score_max: { gte: currentScore },
+          target_score_min: { lte: scoreMin },
+          target_score_max: { gte: scoreMin },
         },
         orderBy: { updated_at: 'desc' },
       });
+      if (exact) return exact;
 
-      if (exact) {
-        return exact;
-      }
-
-      // Fallback: không lọc theo score range, chỉ cần đúng skill + content type
+      // Fallback: ignore score range, match skill + contentType
       return this.prisma.learningRepository.findFirst({
         where: {
           cert_type: 'ielts',
@@ -1389,27 +1686,34 @@ export class IeltsAdaptiveService {
       });
     };
 
-    for (const skill of skills) {
-      const flashcardRepo = await findRepository(skill, 'lesson');
-      const practiceRepo = await findRepository(skill, 'practice_set');
-      const miniTestRepo = await findRepository(skill, 'mini_test');
+    for (const bandStep of bandSteps) {
+      const scoreMin = Math.round(bandStep * 100);
+      const scoreMax = Math.round((bandStep + 0.5) * 100);
 
-      if (!flashcardRepo && !practiceRepo && !miniTestRepo) {
-        this.logger.warn(
-          `No repositories found for skill ${skill} at band ${currentBand}. Skipping lesson.`,
-        );
-        continue;
+      for (const skill of skills) {
+        const flashcardRepo = await findRepository(skill, 'flashcards', scoreMin, scoreMax);
+        const practiceRepo = await findRepository(skill, 'practice', scoreMin, scoreMax);
+        const miniTestRepo = await findRepository(skill, 'mini-test', scoreMin, scoreMax);
+
+        if (!flashcardRepo && !practiceRepo && !miniTestRepo) {
+          this.logger.warn(
+            `No IELTS repositories found for skill=${skill} band=${bandStep}. ` +
+              'Run: node prisma/seedIeltsAdaptive.js',
+          );
+          continue;
+        }
+
+        lessons.push({
+          id: lessons.length + 1,
+          skill_area: skill,
+          lesson_title: `${skill.charAt(0).toUpperCase() + skill.slice(1)} — Band ${bandStep}→${Math.round((bandStep + 0.5) * 10) / 10}`,
+          flashcard_repo_id: flashcardRepo?.id ?? null,
+          practice_repo_id: practiceRepo?.id ?? null,
+          mini_test_repo_id: miniTestRepo?.id ?? null,
+          estimated_minutes: flashcardRepo?.estimated_minutes ?? practiceRepo?.estimated_minutes ?? 30,
+          band_level: bandStep,
+        });
       }
-
-      lessons.push({
-        id: lessons.length + 1,
-        skill_area: skill,
-        lesson_title: `${skill.charAt(0).toUpperCase() + skill.slice(1)} - Band ${currentBand}`,
-        flashcard_repo_id: flashcardRepo?.id,
-        practice_repo_id: practiceRepo?.id,
-        mini_test_repo_id: miniTestRepo?.id,
-        estimated_minutes: 30,
-      });
     }
 
     return lessons;

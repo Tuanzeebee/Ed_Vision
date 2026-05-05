@@ -1,0 +1,1469 @@
+{
+  "_instructions": "Xem file INSTRUCTIONS.md để biết cách thêm câu hỏi. Mỗi câu có id duy nhất dạng bt_<skill>_<number>. Khối generationTemplates bên dưới dùng làm template để AI sinh thêm đề theo band, skill và 10 bộ đề chủ đề.",
+  "_totalQuestions": 83,
+  "_templateSchemaVersion": "2.0",
+  "_bandCoverage": "1.0-9.0",
+  "_supportedBandSteps": [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0],
+  "_skillsCovered": ["reading", "listening", "grammar", "vocabulary", "writing", "speaking"],
+  "_templateSetCount": 10,
+  "generationTemplates": {
+    "overview": "Template bank for AI-generated IELTS band tests. Use one thematic set plus one or more adjacent band profiles to generate fresh items that still preserve the same skill shape, difficulty, distractor quality, and expected answer behaviour.",
+    "mixRules": {
+      "defaultCoreRatio": 0.45,
+      "defaultReviewRatio": 0.30,
+      "defaultChallengeRatio": 0.25,
+      "allowNeighborBandMixing": true,
+      "allowCrossSetTopicReuse": true,
+      "rotateNamesNumbersPlaces": true,
+      "rotateDistractorPatterns": true,
+      "avoidExactStemReuseInSameRun": true
+    },
+    "setTemplates": [
+      {
+        "setId": "template_set_01",
+        "title": "Campus and Study",
+        "themes": ["education", "classroom life", "study habits"],
+        "rotationHint": "Use student, teacher, timetable, course, library, assignment scenarios."
+      },
+      {
+        "setId": "template_set_02",
+        "title": "City and Transport",
+        "themes": ["urban life", "transport", "public services"],
+        "rotationHint": "Use maps, transport notices, ticket prices, commuting, city planning contexts."
+      },
+      {
+        "setId": "template_set_03",
+        "title": "Work and Economy",
+        "themes": ["employment", "money", "business routines"],
+        "rotationHint": "Use office tasks, job interviews, productivity, customer service, spending trends."
+      },
+      {
+        "setId": "template_set_04",
+        "title": "Health and Lifestyle",
+        "themes": ["health", "food", "exercise"],
+        "rotationHint": "Use sleep, diet, fitness, hospital, wellbeing, daily habit scenarios."
+      },
+      {
+        "setId": "template_set_05",
+        "title": "Technology and Media",
+        "themes": ["technology", "media", "online behaviour"],
+        "rotationHint": "Use apps, devices, news, social media, digital communication, privacy contexts."
+      },
+      {
+        "setId": "template_set_06",
+        "title": "Environment and Sustainability",
+        "themes": ["environment", "energy", "climate"],
+        "rotationHint": "Use recycling, pollution, transport policy, energy use, conservation, climate response."
+      },
+      {
+        "setId": "template_set_07",
+        "title": "Culture and Society",
+        "themes": ["culture", "identity", "community"],
+        "rotationHint": "Use festivals, customs, neighbourhood, social change, language, family roles."
+      },
+      {
+        "setId": "template_set_08",
+        "title": "Science and Innovation",
+        "themes": ["science", "research", "innovation"],
+        "rotationHint": "Use experiments, discoveries, data summaries, inventions, research methods."
+      },
+      {
+        "setId": "template_set_09",
+        "title": "Travel and Globalisation",
+        "themes": ["travel", "migration", "global links"],
+        "rotationHint": "Use airports, tourism, cultural exchange, study abroad, international business."
+      },
+      {
+        "setId": "template_set_10",
+        "title": "Policy and Future",
+        "themes": ["policy", "ethics", "future scenarios"],
+        "rotationHint": "Use public policy, technology ethics, long-term planning, social consequences."
+      }
+    ],
+    "skillPromptTemplates": {
+      "reading": "Generate 1 IELTS reading item for band {{band}} using set {{setTitle}} and topic {{topic}}. Keep difficulty {{difficulty}}. Question types allowed: {{types}}. Passage length: {{inputProfile}}. Reasoning target: {{focus}}. Return stem, optional readingPassage, options if needed, correctAnswer or correct option, explanation, and errorType.",
+      "listening": "Generate 1 IELTS listening item for band {{band}} using set {{setTitle}} and topic {{topic}}. Keep difficulty {{difficulty}}. Use transcript profile {{inputProfile}}. Focus on {{focus}}. Question types allowed: {{types}}. Return a transcript-driven stem, optional mediaAudioUrl null, answer data, explanation, and errorType.",
+      "grammar": "Generate 1 IELTS grammar item for band {{band}} using set {{setTitle}} and topic {{topic}}. Keep difficulty {{difficulty}}. Grammar targets: {{focus}}. Sentence complexity: {{inputProfile}}. Return 4 options, one correct answer, explanation, and errorType.",
+      "vocabulary": "Generate 1 IELTS vocabulary item for band {{band}} using set {{setTitle}} and topic {{topic}}. Keep difficulty {{difficulty}}. Lexical target: {{focus}}. Distractor distance: {{inputProfile}}. Return 4 options, one correct answer, explanation, and errorType.",
+      "writing": "Generate 1 IELTS writing prompt for band {{band}} using set {{setTitle}} and topic {{topic}}. Keep difficulty {{difficulty}}. Task profile: {{inputProfile}}. Evaluation target: {{focus}}. Return a gap_fill style task with correctAnswer WRITING_TASK and a rubric-oriented explanation.",
+      "speaking": "Generate 1 IELTS speaking prompt for band {{band}} using set {{setTitle}} and topic {{topic}}. Keep difficulty {{difficulty}}. Speaking profile: {{inputProfile}}. Assessment focus: {{focus}}. Return a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+    },
+    "bandSkillTemplates": {
+      "band10": {
+        "band": 1.0,
+        "difficulty": "starter",
+        "mixWith": { "review": [], "challenge": [1.5, 2.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng"], "inputProfile": "single words, signs, labels, one-line notices", "focus": "literal matching and obvious detail" },
+          "listening": { "types": ["gap_fill"], "inputProfile": "single names, numbers, places, repeated key words", "focus": "literal detail only" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "single clause", "focus": "be verb, pronouns, articles" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "large semantic distance", "focus": "basic synonym, antonym, classroom word" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "sentence completion and very short guided writing", "focus": "task completion and basic sentence control" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 only with fixed familiar prompts", "focus": "one-clause answers and basic comprehensibility" }
+        }
+      },
+      "band15": {
+        "band": 1.5,
+        "difficulty": "starter_plus",
+        "mixWith": { "review": [1.0], "challenge": [2.0, 2.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng"], "inputProfile": "single sentences and short notices", "focus": "obvious detail matching" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "very short dialogues with repeated information", "focus": "literal detail and simple choice" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "single clause", "focus": "be verb, simple present, articles" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "large semantic distance", "focus": "basic family, food, school vocabulary" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "guided sentence pairs", "focus": "basic meaning transfer" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 with very short supported answers", "focus": "basic personal response with one reason" }
+        }
+      },
+      "band20": {
+        "band": 2.0,
+        "difficulty": "basic",
+        "mixWith": { "review": [1.0, 1.5], "challenge": [2.5, 3.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng"], "inputProfile": "short notices, messages, timetables", "focus": "literal meaning and basic gist" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "2 to 3 turn everyday exchanges", "focus": "names, dates, prices, times" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "single clause or very short sentence", "focus": "simple present, simple past, there is and there are" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "large semantic distance", "focus": "basic routine and travel vocabulary" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "guided short paragraph", "focus": "sentence order and basic idea completion" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 with short follow-up", "focus": "short familiar answers with simple examples" }
+        }
+      },
+      "band25": {
+        "band": 2.5,
+        "difficulty": "basic_plus",
+        "mixWith": { "review": [1.5, 2.0], "challenge": [3.0, 3.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng"], "inputProfile": "short paragraphs and simple notices", "focus": "literal detail plus simple paraphrase" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "short service conversations", "focus": "detail capture with one paraphrase step" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "simple sentence with short modifier", "focus": "prepositions, comparatives, present continuous" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "medium semantic distance", "focus": "topic words for food, transport, places" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "guided simple comparison paragraph", "focus": "basic paragraphing and linkers" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 with simple why questions", "focus": "personal explanation in 2 to 3 short sentences" }
+        }
+      },
+      "band30": {
+        "band": 3.0,
+        "difficulty": "elementary",
+        "mixWith": { "review": [2.0, 2.5], "challenge": [3.5, 4.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng"], "inputProfile": "everyday texts and short factual paragraphs", "focus": "main idea and simple comparison" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "everyday announcements and conversations", "focus": "literal detail with simple inference" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "simple plus joined clauses", "focus": "present and past simple, frequency adverbs, comparatives" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "medium semantic distance", "focus": "common collocations and daily life vocabulary" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "short task 1 style description or opinion paragraph", "focus": "basic organisation and sentence accuracy" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 and brief cue-card style answer", "focus": "simple extended answers" }
+        }
+      },
+      "band35": {
+        "band": 3.5,
+        "difficulty": "elementary_plus",
+        "mixWith": { "review": [2.5, 3.0], "challenge": [4.0, 4.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng"], "inputProfile": "two short paragraphs with clear organisation", "focus": "detail and gist balance" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "4 to 5 turn everyday dialogues", "focus": "details, reasons, next-step inference" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "simple subordinate clauses", "focus": "basic conditionals, passive basics, count and non-count nouns" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "medium semantic distance", "focus": "topic vocabulary, word families, common paraphrase" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "guided paragraph plus short opinion", "focus": "clear topic sentence and support" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 plus short part 2 cue card", "focus": "basic reasons and examples" }
+        }
+      },
+      "band40": {
+        "band": 4.0,
+        "difficulty": "pre_intermediate",
+        "mixWith": { "review": [3.0, 3.5], "challenge": [4.5, 5.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "multi-paragraph everyday text", "focus": "clear inference, scanning, skimming" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "service dialogues and short talks", "focus": "detail, numbers, and paraphrase recognition" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "simple plus subordinate clause", "focus": "verb tense control, articles, passive, conditionals" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "medium semantic distance", "focus": "core synonyms, collocations, word forms" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "basic task 1 summary and simple task 2 opinion", "focus": "task achievement and basic cohesion" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 with short extended answer", "focus": "2 to 4 sentence response with simple reason" }
+        }
+      },
+      "band45": {
+        "band": 4.5,
+        "difficulty": "pre_intermediate_plus",
+        "mixWith": { "review": [3.5, 4.0], "challenge": [5.0, 5.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "multi-source detail text with clear paragraphing", "focus": "paraphrase recognition and writer purpose" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "short monologue or longer everyday conversation", "focus": "detail, sequence, and basic speaker intention" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "sentence with distractor phrase", "focus": "relative clauses, modal verbs, comparative structures" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "medium semantic distance", "focus": "topic paraphrase, phrasal verbs, collocations" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 overview plus short opinion essay", "focus": "cohesion, paragraphing, and idea coverage" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "part 1 and guided part 2", "focus": "extended turns with basic organisation" }
+        }
+      },
+      "band50": {
+        "band": 5.0,
+        "difficulty": "intermediate",
+        "mixWith": { "review": [4.0, 4.5], "challenge": [5.5, 6.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "standard IELTS-style short article or report", "focus": "detail plus writer purpose" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "everyday lecture or consultation excerpt", "focus": "detail plus paraphrase" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "complex sentence with one clause change", "focus": "conditionals, passives, reported speech" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "medium semantic distance", "focus": "academic word choice, collocation, paraphrase" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 report and task 2 position essay", "focus": "clear viewpoint and paragraph control" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with everyday topics", "focus": "topic extension and connected speech" }
+        }
+      },
+      "band55": {
+        "band": 5.5,
+        "difficulty": "intermediate_plus",
+        "mixWith": { "review": [4.5, 5.0], "challenge": [6.0, 6.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "more abstract article with clearer argument", "focus": "contrast, cause-effect, simple attitude" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "lecture extract or interview", "focus": "detail plus relationship among ideas" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "complex sentence with tense or clause trap", "focus": "future perfect, modal nuance, clause linking" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "smaller semantic distance", "focus": "precision paraphrase and phrasal verbs" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 comparison and task 2 causes effects essay", "focus": "balanced development and clearer cohesion" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with causes and effects", "focus": "longer connected answers and simple speculation" }
+        }
+      },
+      "band60": {
+        "band": 6.0,
+        "difficulty": "upper_intermediate",
+        "mixWith": { "review": [5.0, 5.5], "challenge": [6.5, 7.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "dense academic-style passage", "focus": "multi-step inference and paragraph logic" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "lecture or expert talk with compressed wording", "focus": "inference, attitude, and detail selection" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "complex sentence with distractor phrase", "focus": "reported speech, passives, clause control, modality" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "small semantic distance", "focus": "academic lexis and formal collocation" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 detailed summary and task 2 discussion", "focus": "argument development, cohesion, lexical precision" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with abstract discussion", "focus": "developed ideas and range of grammar" }
+        }
+      },
+      "band65": {
+        "band": 6.5,
+        "difficulty": "upper_intermediate_plus",
+        "mixWith": { "review": [5.5, 6.0], "challenge": [7.0, 7.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "academic or policy text with nuance", "focus": "nuanced comparison and stance" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "fast lecture or analytical discussion", "focus": "speaker attitude, implication, detailed reasoning" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "dense complex sentence", "focus": "advanced clause control, emphasis, inversion basics" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "small semantic distance", "focus": "precise academic lexis and register choice" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 process or map and task 2 multi-idea argument", "focus": "cohesive progression and accurate complex sentences" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with speculation and evaluation", "focus": "controlled speculation and coherent abstraction" }
+        }
+      },
+      "band70": {
+        "band": 7.0,
+        "difficulty": "advanced",
+        "mixWith": { "review": [6.0, 6.5], "challenge": [7.5, 8.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "high lexical density article or research text", "focus": "attitude, stance, synthesis" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "expert talk or extended lecture", "focus": "inference, nuance, and argument structure" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "dense academic sentence", "focus": "inversion, subjunctive, mixed conditionals" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "small semantic distance and register trap", "focus": "abstract academic lexis and stance words" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "complex task 1 comparison and nuanced task 2 argument", "focus": "argument precision and register control" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with policy and society themes", "focus": "abstract fluency and well-supported position" }
+        }
+      },
+      "band75": {
+        "band": 7.5,
+        "difficulty": "advanced_plus",
+        "mixWith": { "review": [6.5, 7.0], "challenge": [8.0, 8.5] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "specialised text with layered implication", "focus": "subtle implication and synthesis" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "specialist lecture with compressed logic", "focus": "nuance, implication, and fine detail" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "dense formal sentence with subtle trap", "focus": "advanced emphasis, reduced clauses, register precision" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "small semantic distance with subtle register difference", "focus": "discipline-neutral formal collocation and precision" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 mixed visuals and task 2 concession rebuttal essay", "focus": "precise register and efficient cohesion" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with nuanced trade-offs", "focus": "well-supported speculation and flexible coherence" }
+        }
+      },
+      "band80": {
+        "band": 8.0,
+        "difficulty": "expert",
+        "mixWith": { "review": [7.0, 7.5], "challenge": [8.5, 9.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "near-authentic difficulty academic or editorial text", "focus": "fine distinction and synthesis" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "long expert discussion or high-density lecture", "focus": "fine nuance and argument synthesis" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "high-density formal sentence", "focus": "complex clause control and near-native accuracy" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "very small semantic distance", "focus": "high-precision academic vocabulary and rhetoric" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "task 1 synthesis and sophisticated task 2 argument", "focus": "efficient concise sophistication" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with subtle abstract themes", "focus": "flexible abstract response with accurate nuance" }
+        }
+      },
+      "band85": {
+        "band": 8.5,
+        "difficulty": "expert_plus",
+        "mixWith": { "review": [7.5, 8.0], "challenge": [9.0] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "very high lexical precision text with ambiguous distractors", "focus": "rhetorical stance and synthesis" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "specialist discourse with rapid implication shifts", "focus": "subtle attitude and detail under compression" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "tight academic control", "focus": "advanced register control and rare error patterns" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "very small semantic distance with register trap", "focus": "high-level nuance and rhetorical collocation" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "concise high-control task 1 and nuanced critique essay", "focus": "tight academic control and subtle lexical precision" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "full test with near-native flexibility", "focus": "spontaneous nuanced argument" }
+        }
+      },
+      "band90": {
+        "band": 9.0,
+        "difficulty": "mastery",
+        "mixWith": { "review": [8.0, 8.5], "challenge": [] },
+        "skills": {
+          "reading": { "types": ["single_choice", "true_false_ng", "gap_fill"], "inputProfile": "native-like academic or editorial complexity", "focus": "subtle rhetoric, synthesis, and evaluative judgement" },
+          "listening": { "types": ["gap_fill", "single_choice"], "inputProfile": "native-speed expert discourse", "focus": "full synthesis of implication, stance, and detail" },
+          "grammar": { "types": ["single_choice"], "inputProfile": "fully flexible formal and semi-formal sentence control", "focus": "native-like grammatical precision" },
+          "vocabulary": { "types": ["single_choice"], "inputProfile": "minimal semantic distance with rhetorical trap", "focus": "authoritative lexical precision" },
+          "writing": { "types": ["gap_fill"], "inputProfile": "expert synthesis for task 1 and fully developed task 2 essay", "focus": "fully flexible task control and concise authority" },
+          "speaking": { "types": ["gap_fill"], "inputProfile": "expert-level full speaking test", "focus": "authoritative fluent response with exact nuance" }
+        }
+      }
+    }
+  },
+  "questions": [
+
+    // ═══════════════════════════════════════════════════════
+    // READING – Band 4.0–5.0 (Easy) – 40 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_r_001",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "skimming",
+      "stem": "What is the main topic of the following passage?\n\n'Libraries are important centres of knowledge. They provide books, digital resources, and quiet spaces for study. Many people visit libraries every day to borrow books or use the internet.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "The history of books", "isCorrect": false },
+        { "key": "B", "text": "Libraries as knowledge centres", "isCorrect": true },
+        { "key": "C", "text": "How to use the internet", "isCorrect": false },
+        { "key": "D", "text": "Daily routines of students", "isCorrect": false }
+      ],
+      "explanation": "The passage focuses on libraries as centres of knowledge."
+    },
+    {
+      "id": "bt_r_002",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "true_false_ng", "estimatedSeconds": 40, "errorType": "detail",
+      "stem": "Libraries only provide books.",
+      "readingPassage": "Libraries are important centres of knowledge. They provide books, digital resources, and quiet spaces for study.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": false },
+        { "key": "FALSE", "text": "False", "isCorrect": true },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": false }
+      ],
+      "explanation": "Libraries also provide digital resources and quiet spaces, not only books."
+    },
+    {
+      "id": "bt_r_003",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "scanning",
+      "stem": "According to the passage, what do community gardens help create?\n\n'Urban farming is the practice of cultivating food in or around cities. Community gardens and rooftop farms create green spaces and improve access to fresh produce for city residents.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Traffic-free zones", "isCorrect": false },
+        { "key": "B", "text": "Green spaces and fresh produce access", "isCorrect": true },
+        { "key": "C", "text": "Employment for farmers", "isCorrect": false },
+        { "key": "D", "text": "New transport routes", "isCorrect": false }
+      ],
+      "explanation": "The passage explicitly states community gardens create green spaces and improve access to fresh produce."
+    },
+    {
+      "id": "bt_r_004",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "true_false_ng", "estimatedSeconds": 40, "errorType": "detail",
+      "stem": "All city residents use urban farms regularly.",
+      "readingPassage": "Urban farming is the practice of cultivating food in or around cities. Community gardens and rooftop farms create green spaces and improve access to fresh produce for city residents.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": false },
+        { "key": "FALSE", "text": "False", "isCorrect": false },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": true }
+      ],
+      "explanation": "The passage does not state how often residents use urban farms."
+    },
+    {
+      "id": "bt_r_005",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "vocabulary",
+      "stem": "The word 'cultivating' is closest in meaning to:",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "selling", "isCorrect": false },
+        { "key": "B", "text": "growing", "isCorrect": true },
+        { "key": "C", "text": "studying", "isCorrect": false },
+        { "key": "D", "text": "building", "isCorrect": false }
+      ],
+      "explanation": "Cultivating means growing or raising crops."
+    },
+    {
+      "id": "bt_r_006",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "skimming",
+      "stem": "What is the passage mainly about?\n\n'Recycling helps protect the environment. When people recycle paper, plastic, and glass, they reduce the amount of waste sent to landfills. This saves energy and reduces pollution.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Types of plastic", "isCorrect": false },
+        { "key": "B", "text": "Benefits of recycling", "isCorrect": true },
+        { "key": "C", "text": "How landfills work", "isCorrect": false },
+        { "key": "D", "text": "Energy production methods", "isCorrect": false }
+      ],
+      "explanation": "The passage focuses on benefits of recycling: reducing waste and pollution."
+    },
+    {
+      "id": "bt_r_007",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "true_false_ng", "estimatedSeconds": 40, "errorType": "detail",
+      "stem": "Recycling paper reduces waste sent to landfills.",
+      "readingPassage": "Recycling helps protect the environment. When people recycle paper, plastic, and glass, they reduce the amount of waste sent to landfills.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": true },
+        { "key": "FALSE", "text": "False", "isCorrect": false },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": false }
+      ],
+      "explanation": "The passage states recycling paper reduces waste sent to landfills."
+    },
+    {
+      "id": "bt_r_008",
+      "skill": "reading", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "scanning",
+      "stem": "According to the passage, which materials can be recycled?\n\n'Recycling helps protect the environment. When people recycle paper, plastic, and glass, they reduce the amount of waste sent to landfills.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Paper, metal, and wood", "isCorrect": false },
+        { "key": "B", "text": "Paper, plastic, and glass", "isCorrect": true },
+        { "key": "C", "text": "Plastic, rubber, and stone", "isCorrect": false },
+        { "key": "D", "text": "Glass, fabric, and clay", "isCorrect": false }
+      ],
+      "explanation": "The passage specifically mentions paper, plastic, and glass."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // READING – Band 5.0–6.0 (Medium) – 40 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_r_041",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 70, "errorType": "inference",
+      "stem": "What can be inferred about the author's attitude towards social media?\n\n'Social media platforms have transformed the way people communicate. While they enable instant connection across continents, research suggests excessive use correlates with increased anxiety and reduced attention spans among teenagers. Policymakers are beginning to consider age restrictions.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Wholly enthusiastic about social media", "isCorrect": false },
+        { "key": "B", "text": "Concerned about negative effects on youth", "isCorrect": true },
+        { "key": "C", "text": "Opposed to all digital communication", "isCorrect": false },
+        { "key": "D", "text": "Indifferent to the topic", "isCorrect": false }
+      ],
+      "explanation": "The author highlights research on anxiety and attention spans, signalling concern for youth."
+    },
+    {
+      "id": "bt_r_042",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "true_false_ng", "estimatedSeconds": 55, "errorType": "detail",
+      "stem": "Research shows a link between excessive social media use and anxiety in teenagers.",
+      "readingPassage": "Social media platforms have transformed the way people communicate. While they enable instant connection across continents, research suggests excessive use correlates with increased anxiety and reduced attention spans among teenagers.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": true },
+        { "key": "FALSE", "text": "False", "isCorrect": false },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": false }
+      ],
+      "explanation": "The passage explicitly states 'research suggests excessive use correlates with increased anxiety'."
+    },
+    {
+      "id": "bt_r_043",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 70, "errorType": "vocabulary",
+      "stem": "The word 'correlates' in the passage most nearly means:",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "conflicts with", "isCorrect": false },
+        { "key": "B", "text": "is related to", "isCorrect": true },
+        { "key": "C", "text": "prevents", "isCorrect": false },
+        { "key": "D", "text": "contradicts", "isCorrect": false }
+      ],
+      "explanation": "To correlate means to be related or connected to something else."
+    },
+    {
+      "id": "bt_r_044",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 70, "errorType": "inference",
+      "stem": "What is the likely purpose of the following passage?\n\n'The Amazon rainforest produces approximately 20% of the world's oxygen and houses over 10% of all known species. Deforestation rates have accelerated in recent years due to agricultural expansion, threatening both biodiversity and global climate stability.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "To promote tourism to South America", "isCorrect": false },
+        { "key": "B", "text": "To highlight environmental concerns about deforestation", "isCorrect": true },
+        { "key": "C", "text": "To explain agricultural practices in Brazil", "isCorrect": false },
+        { "key": "D", "text": "To describe types of species in rainforests", "isCorrect": false }
+      ],
+      "explanation": "The passage emphasises threats from deforestation to both biodiversity and climate."
+    },
+    {
+      "id": "bt_r_045",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "true_false_ng", "estimatedSeconds": 55, "errorType": "detail",
+      "stem": "Agricultural expansion is a cause of deforestation in the Amazon.",
+      "readingPassage": "Deforestation rates have accelerated in recent years due to agricultural expansion, threatening both biodiversity and global climate stability.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": true },
+        { "key": "FALSE", "text": "False", "isCorrect": false },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": false }
+      ],
+      "explanation": "The passage explicitly links deforestation to agricultural expansion."
+    },
+    {
+      "id": "bt_r_046",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 70, "errorType": "skimming",
+      "stem": "What does the passage suggest about renewable energy?\n\n'Renewable energy sources such as solar and wind power are increasingly competitive with fossil fuels. In many regions, the cost of generating electricity from solar panels has dropped by more than 80% over the last decade, making it the cheapest form of new electricity generation in history.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Renewable energy is still more expensive than fossil fuels everywhere", "isCorrect": false },
+        { "key": "B", "text": "Solar power costs have fallen dramatically, making it highly competitive", "isCorrect": true },
+        { "key": "C", "text": "Wind power is the cheapest energy source", "isCorrect": false },
+        { "key": "D", "text": "Fossil fuels are being phased out globally", "isCorrect": false }
+      ],
+      "explanation": "The passage states solar costs dropped over 80%, making it the cheapest new electricity generation."
+    },
+    {
+      "id": "bt_r_047",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "true_false_ng", "estimatedSeconds": 55, "errorType": "detail",
+      "stem": "Wind power costs have also dropped by 80% in the last decade.",
+      "readingPassage": "The cost of generating electricity from solar panels has dropped by more than 80% over the last decade, making it the cheapest form of new electricity generation in history.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": false },
+        { "key": "FALSE", "text": "False", "isCorrect": false },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": true }
+      ],
+      "explanation": "The passage only mentions solar panel cost reduction, not wind power specifically."
+    },
+    {
+      "id": "bt_r_048",
+      "skill": "reading", "bandMin": 5.0, "bandMax": 6.0, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 70, "errorType": "inference",
+      "stem": "What can be inferred from the following?\n\n'Despite advances in medical technology, antibiotic resistance is emerging as one of the greatest threats to global health. Bacteria that were once easily treated are now surviving exposure to multiple antibiotics, leaving doctors with fewer treatment options.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Antibiotics are no longer produced", "isCorrect": false },
+        { "key": "B", "text": "Medical advances have solved most health problems", "isCorrect": false },
+        { "key": "C", "text": "Antibiotic-resistant infections may become harder to treat in the future", "isCorrect": true },
+        { "key": "D", "text": "Doctors prefer not to use antibiotics", "isCorrect": false }
+      ],
+      "explanation": "Fewer treatment options for resistant bacteria implies future infections will be harder to treat."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // READING – Band 6.0–7.0 (Hard) – 32 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_r_081",
+      "skill": "reading", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 90, "errorType": "inference",
+      "stem": "The author's primary argument in the following passage is:\n\n'The notion that economic growth is invariably beneficial has come under scrutiny. While GDP growth correlates with improvements in material living standards, it frequently masks widening inequality, environmental degradation, and the erosion of social capital. Alternative metrics such as the Human Development Index or Genuine Progress Indicator offer more nuanced assessments of societal wellbeing.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "GDP is the most reliable measure of national progress", "isCorrect": false },
+        { "key": "B", "text": "Economic growth is always harmful to society", "isCorrect": false },
+        { "key": "C", "text": "GDP alone is insufficient to measure societal wellbeing", "isCorrect": true },
+        { "key": "D", "text": "The Human Development Index should replace all economic measures", "isCorrect": false }
+      ],
+      "explanation": "The author argues GDP masks inequality and degradation, and alternative metrics are more nuanced."
+    },
+    {
+      "id": "bt_r_082",
+      "skill": "reading", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "true_false_ng", "estimatedSeconds": 70, "errorType": "detail",
+      "stem": "The author claims that GDP growth always improves equality.",
+      "readingPassage": "While GDP growth correlates with improvements in material living standards, it frequently masks widening inequality, environmental degradation, and the erosion of social capital.",
+      "mediaAudioUrl": null,
+      "options": [
+        { "key": "TRUE", "text": "True", "isCorrect": false },
+        { "key": "FALSE", "text": "False", "isCorrect": true },
+        { "key": "NOT_GIVEN", "text": "Not Given", "isCorrect": false }
+      ],
+      "explanation": "The passage states GDP frequently masks widening inequality — the opposite of the statement."
+    },
+    {
+      "id": "bt_r_083",
+      "skill": "reading", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 90, "errorType": "vocabulary",
+      "stem": "The word 'invariably' in the passage most closely means:",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "occasionally", "isCorrect": false },
+        { "key": "B", "text": "always", "isCorrect": true },
+        { "key": "C", "text": "rarely", "isCorrect": false },
+        { "key": "D", "text": "partially", "isCorrect": false }
+      ],
+      "explanation": "Invariably means in every case, without exception — always."
+    },
+    {
+      "id": "bt_r_084",
+      "skill": "reading", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 90, "errorType": "inference",
+      "stem": "What is implied by the following academic passage?\n\n'Cognitive load theory posits that working memory has a finite capacity. When instructional material exceeds this capacity, learners experience cognitive overload, which impairs comprehension and retention. Effective instructional design therefore prioritises minimising extraneous load while optimising germane load to facilitate schema formation.'",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "All learners have unlimited working memory", "isCorrect": false },
+        { "key": "B", "text": "Poor instruction design can hinder learning by overloading memory", "isCorrect": true },
+        { "key": "C", "text": "Schema formation is irrelevant to learning", "isCorrect": false },
+        { "key": "D", "text": "Cognitive load cannot be measured", "isCorrect": false }
+      ],
+      "explanation": "The passage implies that exceeding working memory capacity impairs learning, so design should manage cognitive load."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // LISTENING – Band 4.0–5.0 (Easy) – 35 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_l_001",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 35, "errorType": "listening_detail",
+      "stem": "The student's name is ___ Johnson. (Listen: 'Could I take your name? Sarah Johnson.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "Sarah",
+      "explanation": "The student says her name is Sarah Johnson."
+    },
+    {
+      "id": "bt_l_002",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 35, "errorType": "listening_detail",
+      "stem": "What type of accommodation is the student looking for? (Listen: 'Are you looking for a single room or a shared flat? A shared flat, if possible.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "A single room", "isCorrect": false },
+        { "key": "B", "text": "A shared flat", "isCorrect": true },
+        { "key": "C", "text": "A studio apartment", "isCorrect": false },
+        { "key": "D", "text": "A house", "isCorrect": false }
+      ],
+      "explanation": "The student specifically asks for a shared flat."
+    },
+    {
+      "id": "bt_l_003",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 35, "errorType": "listening_number",
+      "stem": "The student's budget is ___ pounds per month. (Listen: 'My budget is around 450 pounds per month.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "450",
+      "explanation": "The student states her budget is 450 pounds per month."
+    },
+    {
+      "id": "bt_l_004",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 35, "errorType": "listening_detail",
+      "stem": "What street is the flat located on? (Listen: 'We have a three-bedroom flat on Maple Street.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Oak Street", "isCorrect": false },
+        { "key": "B", "text": "Maple Street", "isCorrect": true },
+        { "key": "C", "text": "Cedar Avenue", "isCorrect": false },
+        { "key": "D", "text": "Birch Lane", "isCorrect": false }
+      ],
+      "explanation": "The agent says the flat is on Maple Street."
+    },
+    {
+      "id": "bt_l_005",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 35, "errorType": "listening_number",
+      "stem": "The monthly rent per person is ___ pounds. (Listen: 'The monthly rent is 420 pounds per person.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "420",
+      "explanation": "The agent states the rent is 420 pounds per person per month."
+    },
+    {
+      "id": "bt_l_006",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 35, "errorType": "listening_detail",
+      "stem": "The flat includes which appliance? (Listen: 'It also includes a washing machine.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Dishwasher", "isCorrect": false },
+        { "key": "B", "text": "Dryer", "isCorrect": false },
+        { "key": "C", "text": "Washing machine", "isCorrect": true },
+        { "key": "D", "text": "Refrigerator", "isCorrect": false }
+      ],
+      "explanation": "The agent mentions a washing machine is included."
+    },
+    {
+      "id": "bt_l_007",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 35, "errorType": "listening_date",
+      "stem": "The flat will be available from the ___ of September. (Listen: 'From the first of September.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "first",
+      "explanation": "The agent says the flat is available from the first of September."
+    },
+    {
+      "id": "bt_l_008",
+      "skill": "listening", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 35, "errorType": "listening_detail",
+      "stem": "What time does the student want to arrange a viewing? (Listen: 'Is next Tuesday at 2 pm possible?')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "10 am", "isCorrect": false },
+        { "key": "B", "text": "12 pm", "isCorrect": false },
+        { "key": "C", "text": "2 pm", "isCorrect": true },
+        { "key": "D", "text": "4 pm", "isCorrect": false }
+      ],
+      "explanation": "The student asks about Tuesday at 2 pm."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // LISTENING – Band 5.0–6.5 (Medium) – 35 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_l_041",
+      "skill": "listening", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "listening_inference",
+      "stem": "Why does the speaker say 'That sounds great'? (Context: Agent describes a fully furnished flat at 420 pounds. Student replies: 'That sounds great.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "She is politely ending the conversation", "isCorrect": false },
+        { "key": "B", "text": "She is expressing satisfaction with the offer", "isCorrect": true },
+        { "key": "C", "text": "She is asking for more information", "isCorrect": false },
+        { "key": "D", "text": "She is rejecting the flat", "isCorrect": false }
+      ],
+      "explanation": "'That sounds great' expresses positive reaction to the offered accommodation."
+    },
+    {
+      "id": "bt_l_042",
+      "skill": "listening", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "gap_fill", "estimatedSeconds": 50, "errorType": "listening_detail",
+      "stem": "The agent says 'I'll send you a confirmation ___.' Complete the sentence.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "email",
+      "explanation": "The agent says 'I'll send you a confirmation email'."
+    },
+    {
+      "id": "bt_l_043",
+      "skill": "listening", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "listening_inference",
+      "stem": "A lecturer says: 'The deadline is Friday — no exceptions.' What does this imply?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Students can submit late if they have a good reason", "isCorrect": false },
+        { "key": "B", "text": "The deadline is flexible", "isCorrect": false },
+        { "key": "C", "text": "Late submissions will not be accepted", "isCorrect": true },
+        { "key": "D", "text": "Friday is optional for submission", "isCorrect": false }
+      ],
+      "explanation": "'No exceptions' clearly implies late submissions will not be accepted."
+    },
+    {
+      "id": "bt_l_044",
+      "skill": "listening", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "gap_fill", "estimatedSeconds": 50, "errorType": "listening_number",
+      "stem": "The conference starts at ___ am on Monday. (Listen: 'The conference starts promptly at nine am on Monday morning.')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "9",
+      "explanation": "The speaker says nine am — i.e., 9."
+    },
+    {
+      "id": "bt_l_045",
+      "skill": "listening", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 50, "errorType": "listening_inference",
+      "stem": "A tourist guide says: 'This cathedral was completed in 1456 after nearly a century of construction.' What can we infer?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Construction began around 1356", "isCorrect": true },
+        { "key": "B", "text": "Construction began in 1556", "isCorrect": false },
+        { "key": "C", "text": "It took exactly 100 years", "isCorrect": false },
+        { "key": "D", "text": "The cathedral was built in the 20th century", "isCorrect": false }
+      ],
+      "explanation": "Completed 1456, nearly a century of construction → started around 1356–1366."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // LISTENING – Band 6.0–7.5 (Hard) – 20 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_l_081",
+      "skill": "listening", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 65, "errorType": "listening_inference",
+      "stem": "A professor says: 'The data, while compelling, must be interpreted with caution given the limited sample size and potential confounding variables.' What does this suggest?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "The data is completely unreliable", "isCorrect": false },
+        { "key": "B", "text": "The findings are interesting but not definitive", "isCorrect": true },
+        { "key": "C", "text": "The research should be abandoned", "isCorrect": false },
+        { "key": "D", "text": "The sample size is large enough", "isCorrect": false }
+      ],
+      "explanation": "'Compelling but must be interpreted with caution' implies interesting but not conclusive results."
+    },
+    {
+      "id": "bt_l_082",
+      "skill": "listening", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "gap_fill", "estimatedSeconds": 65, "errorType": "listening_detail",
+      "stem": "The researcher recommends a ___ approach to data collection to improve validity. (Listen: '...recommends a multi-method approach to data collection...')",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "multi-method",
+      "explanation": "The researcher specifically recommends a multi-method approach."
+    },
+    {
+      "id": "bt_l_083",
+      "skill": "listening", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 65, "errorType": "listening_inference",
+      "stem": "A business speaker says: 'Our Q3 revenue exceeded projections by 12%, yet we remain cautious about Q4 given geopolitical headwinds.' What does this imply about Q4?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "Q4 will definitely be stronger than Q3", "isCorrect": false },
+        { "key": "B", "text": "External political factors may negatively affect Q4 performance", "isCorrect": true },
+        { "key": "C", "text": "The company plans to reduce revenue targets for Q4", "isCorrect": false },
+        { "key": "D", "text": "Q4 projections have already been revised upward", "isCorrect": false }
+      ],
+      "explanation": "'Geopolitical headwinds' implies external political challenges that may hurt Q4 performance."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // GRAMMAR – Band 4.0–5.0 (Easy) – 30 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_g_001",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "verb_tense",
+      "stem": "She ___ to school every day.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "go", "isCorrect": false },
+        { "key": "B", "text": "goes", "isCorrect": true },
+        { "key": "C", "text": "going", "isCorrect": false },
+        { "key": "D", "text": "gone", "isCorrect": false }
+      ],
+      "explanation": "Third-person singular present simple: she/he/it + verb+s → goes."
+    },
+    {
+      "id": "bt_g_002",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "article",
+      "stem": "I saw ___ elephant at the zoo yesterday.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "a", "isCorrect": false },
+        { "key": "B", "text": "an", "isCorrect": true },
+        { "key": "C", "text": "the", "isCorrect": false },
+        { "key": "D", "text": "some", "isCorrect": false }
+      ],
+      "explanation": "Use 'an' before words starting with a vowel sound: an elephant."
+    },
+    {
+      "id": "bt_g_003",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "verb_tense",
+      "stem": "They ___ TV when I called them.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "watch", "isCorrect": false },
+        { "key": "B", "text": "watched", "isCorrect": false },
+        { "key": "C", "text": "were watching", "isCorrect": true },
+        { "key": "D", "text": "are watching", "isCorrect": false }
+      ],
+      "explanation": "Past continuous for an action in progress when another action interrupted: were watching."
+    },
+    {
+      "id": "bt_g_004",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "preposition",
+      "stem": "He is good ___ playing the guitar.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "in", "isCorrect": false },
+        { "key": "B", "text": "on", "isCorrect": false },
+        { "key": "C", "text": "at", "isCorrect": true },
+        { "key": "D", "text": "for", "isCorrect": false }
+      ],
+      "explanation": "'Good at' is the correct collocation: good at + gerund."
+    },
+    {
+      "id": "bt_g_005",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "verb_tense",
+      "stem": "I have ___ eaten breakfast.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "yet", "isCorrect": false },
+        { "key": "B", "text": "already", "isCorrect": true },
+        { "key": "C", "text": "just now", "isCorrect": false },
+        { "key": "D", "text": "ago", "isCorrect": false }
+      ],
+      "explanation": "'Already' is used with present perfect for completed actions: have already eaten."
+    },
+    {
+      "id": "bt_g_006",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "passive",
+      "stem": "The letter ___ yesterday.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "sent", "isCorrect": false },
+        { "key": "B", "text": "was sent", "isCorrect": true },
+        { "key": "C", "text": "is sent", "isCorrect": false },
+        { "key": "D", "text": "sends", "isCorrect": false }
+      ],
+      "explanation": "Past simple passive: was + past participle → was sent."
+    },
+    {
+      "id": "bt_g_007",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "article",
+      "stem": "___ sun rises in the east.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "A", "isCorrect": false },
+        { "key": "B", "text": "An", "isCorrect": false },
+        { "key": "C", "text": "The", "isCorrect": true },
+        { "key": "D", "text": "(no article)", "isCorrect": false }
+      ],
+      "explanation": "Use 'the' for unique things: the sun, the moon, the earth."
+    },
+    {
+      "id": "bt_g_008",
+      "skill": "grammar", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 30, "errorType": "conditional",
+      "stem": "If it ___ tomorrow, we will cancel the picnic.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "will rain", "isCorrect": false },
+        { "key": "B", "text": "rains", "isCorrect": true },
+        { "key": "C", "text": "rained", "isCorrect": false },
+        { "key": "D", "text": "is raining", "isCorrect": false }
+      ],
+      "explanation": "Type 1 conditional: If + present simple, will + base verb."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // GRAMMAR – Band 5.0–6.5 (Medium) – 28 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_g_041",
+      "skill": "grammar", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 45, "errorType": "conditional",
+      "stem": "If I ___ more time, I would have studied abroad.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "had", "isCorrect": false },
+        { "key": "B", "text": "would have had", "isCorrect": false },
+        { "key": "C", "text": "had had", "isCorrect": true },
+        { "key": "D", "text": "have had", "isCorrect": false }
+      ],
+      "explanation": "Type 3 conditional (past unreal): If + past perfect, would have + past participle."
+    },
+    {
+      "id": "bt_g_042",
+      "skill": "grammar", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 45, "errorType": "relative_clause",
+      "stem": "The book ___ I bought last week is very interesting.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "who", "isCorrect": false },
+        { "key": "B", "text": "which", "isCorrect": true },
+        { "key": "C", "text": "where", "isCorrect": false },
+        { "key": "D", "text": "whom", "isCorrect": false }
+      ],
+      "explanation": "Use 'which' (or 'that') for things in relative clauses: the book which I bought."
+    },
+    {
+      "id": "bt_g_043",
+      "skill": "grammar", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 45, "errorType": "passive",
+      "stem": "The new bridge ___ by the end of next year.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "will complete", "isCorrect": false },
+        { "key": "B", "text": "will be completed", "isCorrect": true },
+        { "key": "C", "text": "will have complete", "isCorrect": false },
+        { "key": "D", "text": "is completing", "isCorrect": false }
+      ],
+      "explanation": "Future passive: will be + past participle → will be completed."
+    },
+    {
+      "id": "bt_g_044",
+      "skill": "grammar", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 45, "errorType": "verb_tense",
+      "stem": "By the time she arrives, we ___ dinner.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "will finish", "isCorrect": false },
+        { "key": "B", "text": "finish", "isCorrect": false },
+        { "key": "C", "text": "will have finished", "isCorrect": true },
+        { "key": "D", "text": "finished", "isCorrect": false }
+      ],
+      "explanation": "Future perfect: will have + past participle for action completed before a future time."
+    },
+    {
+      "id": "bt_g_045",
+      "skill": "grammar", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 45, "errorType": "reported_speech",
+      "stem": "She said that she ___ to the concert the previous night.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "goes", "isCorrect": false },
+        { "key": "B", "text": "went", "isCorrect": false },
+        { "key": "C", "text": "had gone", "isCorrect": true },
+        { "key": "D", "text": "would go", "isCorrect": false }
+      ],
+      "explanation": "Reported speech backshift: past simple → past perfect: had gone."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // GRAMMAR – Band 6.0–7.5 (Hard) – 22 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_g_081",
+      "skill": "grammar", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 60, "errorType": "inversion",
+      "stem": "Not only ___ the report late, but he also forgot to include the appendix.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "he submitted", "isCorrect": false },
+        { "key": "B", "text": "did he submit", "isCorrect": true },
+        { "key": "C", "text": "he did submit", "isCorrect": false },
+        { "key": "D", "text": "submitted he", "isCorrect": false }
+      ],
+      "explanation": "Negative inversion after 'Not only': Not only + auxiliary + subject + verb."
+    },
+    {
+      "id": "bt_g_082",
+      "skill": "grammar", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 60, "errorType": "subjunctive",
+      "stem": "The committee recommended that the proposal ___ reconsidered.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "is", "isCorrect": false },
+        { "key": "B", "text": "was", "isCorrect": false },
+        { "key": "C", "text": "be", "isCorrect": true },
+        { "key": "D", "text": "were", "isCorrect": false }
+      ],
+      "explanation": "Mandative subjunctive after recommend/suggest/insist: that + subject + base verb (be, not is/was)."
+    },
+    {
+      "id": "bt_g_083",
+      "skill": "grammar", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 60, "errorType": "mixed_conditional",
+      "stem": "If she ___ harder at school, she would be in a better position today.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "worked", "isCorrect": false },
+        { "key": "B", "text": "has worked", "isCorrect": false },
+        { "key": "C", "text": "had worked", "isCorrect": true },
+        { "key": "D", "text": "would work", "isCorrect": false }
+      ],
+      "explanation": "Mixed conditional: If + past perfect (past cause), would + base (present result)."
+    },
+    {
+      "id": "bt_g_084",
+      "skill": "grammar", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 60, "errorType": "cleft_sentence",
+      "stem": "It ___ the excessive workload that caused the team to fail the deadline.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "was", "isCorrect": true },
+        { "key": "B", "text": "is", "isCorrect": false },
+        { "key": "C", "text": "has been", "isCorrect": false },
+        { "key": "D", "text": "had been", "isCorrect": false }
+      ],
+      "explanation": "Cleft sentence for past emphasis: It was + [noun phrase] + that + past tense."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // VOCABULARY – Band 4.0–5.0 (Easy) – 30 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_v_001",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "synonym",
+      "stem": "Choose the word closest in meaning to 'big':",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "tiny", "isCorrect": false },
+        { "key": "B", "text": "large", "isCorrect": true },
+        { "key": "C", "text": "narrow", "isCorrect": false },
+        { "key": "D", "text": "flat", "isCorrect": false }
+      ],
+      "explanation": "Large is a synonym of big."
+    },
+    {
+      "id": "bt_v_002",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "synonym",
+      "stem": "The word 'happy' is closest in meaning to:",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "angry", "isCorrect": false },
+        { "key": "B", "text": "sad", "isCorrect": false },
+        { "key": "C", "text": "joyful", "isCorrect": true },
+        { "key": "D", "text": "tired", "isCorrect": false }
+      ],
+      "explanation": "Joyful is a synonym of happy."
+    },
+    {
+      "id": "bt_v_003",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "collocation",
+      "stem": "Which collocation is correct?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "make a mistake", "isCorrect": true },
+        { "key": "B", "text": "do a mistake", "isCorrect": false },
+        { "key": "C", "text": "take a mistake", "isCorrect": false },
+        { "key": "D", "text": "have a mistake", "isCorrect": false }
+      ],
+      "explanation": "The standard collocation is 'make a mistake', not 'do' or 'take' a mistake."
+    },
+    {
+      "id": "bt_v_004",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "synonym",
+      "stem": "Choose the antonym (opposite) of 'fast':",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "quick", "isCorrect": false },
+        { "key": "B", "text": "rapid", "isCorrect": false },
+        { "key": "C", "text": "slow", "isCorrect": true },
+        { "key": "D", "text": "speedy", "isCorrect": false }
+      ],
+      "explanation": "Slow is the antonym (opposite) of fast."
+    },
+    {
+      "id": "bt_v_005",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "word_form",
+      "stem": "The noun form of 'educate' is:",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "educated", "isCorrect": false },
+        { "key": "B", "text": "educating", "isCorrect": false },
+        { "key": "C", "text": "education", "isCorrect": true },
+        { "key": "D", "text": "educationally", "isCorrect": false }
+      ],
+      "explanation": "Education is the noun form of the verb educate."
+    },
+    {
+      "id": "bt_v_006",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "collocation",
+      "stem": "Which phrase is correct?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "do homework", "isCorrect": true },
+        { "key": "B", "text": "make homework", "isCorrect": false },
+        { "key": "C", "text": "take homework", "isCorrect": false },
+        { "key": "D", "text": "have homework", "isCorrect": false }
+      ],
+      "explanation": "The correct collocation is 'do homework', not make/take/have homework."
+    },
+    {
+      "id": "bt_v_007",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "synonym",
+      "stem": "Which word means 'to begin'?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "stop", "isCorrect": false },
+        { "key": "B", "text": "finish", "isCorrect": false },
+        { "key": "C", "text": "start", "isCorrect": true },
+        { "key": "D", "text": "end", "isCorrect": false }
+      ],
+      "explanation": "Start means to begin."
+    },
+    {
+      "id": "bt_v_008",
+      "skill": "vocabulary", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "single_choice", "estimatedSeconds": 25, "errorType": "word_form",
+      "stem": "The adjective form of 'beauty' is:",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "beautifully", "isCorrect": false },
+        { "key": "B", "text": "beautify", "isCorrect": false },
+        { "key": "C", "text": "beautiful", "isCorrect": true },
+        { "key": "D", "text": "beautiness", "isCorrect": false }
+      ],
+      "explanation": "Beautiful is the adjective derived from the noun beauty."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // VOCABULARY – Band 5.0–6.5 (Medium) – 28 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_v_041",
+      "skill": "vocabulary", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 40, "errorType": "academic_word",
+      "stem": "The government plans to ___ new regulations on carbon emissions.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "implement", "isCorrect": true },
+        { "key": "B", "text": "imply", "isCorrect": false },
+        { "key": "C", "text": "impose", "isCorrect": false },
+        { "key": "D", "text": "improve", "isCorrect": false }
+      ],
+      "explanation": "'Implement regulations' is the correct collocation — to put regulations into effect."
+    },
+    {
+      "id": "bt_v_042",
+      "skill": "vocabulary", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 40, "errorType": "phrasal_verb",
+      "stem": "The meeting was ___ due to the storm.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "called off", "isCorrect": true },
+        { "key": "B", "text": "called in", "isCorrect": false },
+        { "key": "C", "text": "called up", "isCorrect": false },
+        { "key": "D", "text": "called out", "isCorrect": false }
+      ],
+      "explanation": "'Called off' means cancelled — the correct phrasal verb here."
+    },
+    {
+      "id": "bt_v_043",
+      "skill": "vocabulary", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 40, "errorType": "academic_word",
+      "stem": "The study ___ a strong relationship between diet and mental health.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "demonstrates", "isCorrect": true },
+        { "key": "B", "text": "demolishes", "isCorrect": false },
+        { "key": "C", "text": "declares", "isCorrect": false },
+        { "key": "D", "text": "deflects", "isCorrect": false }
+      ],
+      "explanation": "'Demonstrates' means shows clearly — a standard academic verb."
+    },
+    {
+      "id": "bt_v_044",
+      "skill": "vocabulary", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 40, "errorType": "collocation",
+      "stem": "She made a significant ___ to the field of neuroscience.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "contribution", "isCorrect": true },
+        { "key": "B", "text": "contribution's", "isCorrect": false },
+        { "key": "C", "text": "contribute", "isCorrect": false },
+        { "key": "D", "text": "contributing", "isCorrect": false }
+      ],
+      "explanation": "'Make a contribution' is the correct noun collocation."
+    },
+    {
+      "id": "bt_v_045",
+      "skill": "vocabulary", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "single_choice", "estimatedSeconds": 40, "errorType": "phrasal_verb",
+      "stem": "Scientists are trying to ___ a solution to climate change.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "come up with", "isCorrect": true },
+        { "key": "B", "text": "come down with", "isCorrect": false },
+        { "key": "C", "text": "come across", "isCorrect": false },
+        { "key": "D", "text": "come through", "isCorrect": false }
+      ],
+      "explanation": "'Come up with' means to think of or produce an idea or solution."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // VOCABULARY – Band 6.0–7.5 (Hard) – 22 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_v_081",
+      "skill": "vocabulary", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 55, "errorType": "academic_word",
+      "stem": "The researcher's findings ___ the conventional wisdom about memory formation.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "refute", "isCorrect": true },
+        { "key": "B", "text": "refuse", "isCorrect": false },
+        { "key": "C", "text": "reflect", "isCorrect": false },
+        { "key": "D", "text": "regard", "isCorrect": false }
+      ],
+      "explanation": "'Refute' means to prove something is wrong — appropriate for findings that challenge conventional wisdom."
+    },
+    {
+      "id": "bt_v_082",
+      "skill": "vocabulary", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 55, "errorType": "academic_word",
+      "stem": "The policy's ___ effects on low-income households were not anticipated.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "detrimental", "isCorrect": true },
+        { "key": "B", "text": "developmental", "isCorrect": false },
+        { "key": "C", "text": "determined", "isCorrect": false },
+        { "key": "D", "text": "deliberate", "isCorrect": false }
+      ],
+      "explanation": "'Detrimental' means causing harm or damage — fits the context of unanticipated negative effects."
+    },
+    {
+      "id": "bt_v_083",
+      "skill": "vocabulary", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 55, "errorType": "academic_word",
+      "stem": "The author uses ___ language to persuade readers without clear evidence.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "rhetorical", "isCorrect": true },
+        { "key": "B", "text": "rhythmical", "isCorrect": false },
+        { "key": "C", "text": "rational", "isCorrect": false },
+        { "key": "D", "text": "reflexive", "isCorrect": false }
+      ],
+      "explanation": "'Rhetorical' refers to language designed to persuade, often without strict logical evidence."
+    },
+    {
+      "id": "bt_v_084",
+      "skill": "vocabulary", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "single_choice", "estimatedSeconds": 55, "errorType": "collocation",
+      "stem": "The evidence ___ support for the hypothesis that early intervention improves outcomes.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "options": [
+        { "key": "A", "text": "lends", "isCorrect": true },
+        { "key": "B", "text": "gives", "isCorrect": false },
+        { "key": "C", "text": "takes", "isCorrect": false },
+        { "key": "D", "text": "makes", "isCorrect": false }
+      ],
+      "explanation": "'Lend support' is the correct academic collocation: evidence lends support to a hypothesis."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // WRITING – Band 4.0–5.0 (short task evaluation) – 10 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_w_001",
+      "skill": "writing", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 600, "errorType": "task_achievement",
+      "stem": "WRITING TASK 1 (Band 4–5): The chart shows the number of students enrolled in three university courses from 2010 to 2020. Write at least 150 words describing the main trends.\n\n[Chart data: Engineering: 200→350; Business: 350→300; Arts: 150→180]\n\nYour response will be evaluated on: task completion, key trends identified, basic sentence structure.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "WRITING_TASK",
+      "explanation": "Band 4–5 criteria: Identify all three courses, describe general trends (increase/decrease), use basic comparison language (more than, less than, higher than)."
+    },
+    {
+      "id": "bt_w_002",
+      "skill": "writing", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 600, "errorType": "task_achievement",
+      "stem": "WRITING TASK 2 (Band 4–5): Some people think that children should spend more time on physical activities rather than studying. To what extent do you agree or disagree?\n\nWrite at least 250 words. Give your opinion and reasons.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "WRITING_TASK",
+      "explanation": "Band 4–5 criteria: Clear position stated, at least 2 reasons given, basic paragraph structure, simple connectives used (because, however, but)."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // WRITING – Band 5.0–6.5 (Medium) – 8 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_w_041",
+      "skill": "writing", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "gap_fill", "estimatedSeconds": 900, "errorType": "coherence",
+      "stem": "WRITING TASK 1 (Band 5–6.5): The graph below shows the percentage of households with internet access in four countries (UK, Germany, Spain, Greece) between 2005 and 2015.\n\nData: UK 60%→93%, Germany 55%→88%, Spain 35%→77%, Greece 25%→64%.\n\nSummarise the information by selecting and reporting the main features. Write at least 150 words.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "WRITING_TASK",
+      "explanation": "Band 5–6.5 criteria: Overall trend identified, specific data cited with accuracy, cohesive devices used (while, whereas, in contrast, notably), overview paragraph present."
+    },
+    {
+      "id": "bt_w_042",
+      "skill": "writing", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "gap_fill", "estimatedSeconds": 900, "errorType": "task_achievement",
+      "stem": "WRITING TASK 2 (Band 5–6.5): In many countries, people are living longer. What are the causes of this trend and what are the effects on society? Give reasons for your answer and include any relevant examples.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "WRITING_TASK",
+      "explanation": "Band 5–6.5 criteria: Both causes AND effects addressed, balanced discussion, topic sentences clear, range of vocabulary (longevity, demographic shift, healthcare advances), mostly accurate grammar."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // WRITING – Band 6.0–7.5 (Hard) – 6 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_w_081",
+      "skill": "writing", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "gap_fill", "estimatedSeconds": 1200, "errorType": "lexical_resource",
+      "stem": "WRITING TASK 2 (Band 6–7.5): 'Governments should invest more in public transport rather than expanding road networks for private vehicles.' To what extent do you agree or disagree? Provide a well-structured argument with evidence and examples. Write at least 250 words.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "WRITING_TASK",
+      "explanation": "Band 6–7.5 criteria: Sophisticated argument structure (concession + rebuttal), precise academic vocabulary (infrastructure, congestion, emissions, sustainable mobility), complex sentences with accurate grammar, clear cohesion throughout."
+    },
+    {
+      "id": "bt_w_082",
+      "skill": "writing", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "gap_fill", "estimatedSeconds": 1200, "errorType": "grammatical_range",
+      "stem": "WRITING TASK 1 (Band 6–7.5): The diagrams below show the water cycle and how water treatment plants process water for domestic use. Summarise the information and make comparisons where relevant. Write at least 150 words.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "WRITING_TASK",
+      "explanation": "Band 6–7.5 criteria: Both diagrams described, passive voice used for process description, sequencing language (firstly, subsequently, finally), precise technical vocabulary, concise overview."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // SPEAKING – Band 4.0–5.0 (Easy) – 12 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_s_001",
+      "skill": "speaking", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 60, "errorType": "fluency",
+      "stem": "SPEAKING Part 1 (Band 4–5): Answer this question in 2–3 sentences:\n\nDo you enjoy cooking? Why or why not?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 4–5 criteria: Gives a direct yes/no answer, provides 1–2 basic reasons, uses simple connectives (because, and, but), minimal hesitation or self-correction."
+    },
+    {
+      "id": "bt_s_002",
+      "skill": "speaking", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 60, "errorType": "fluency",
+      "stem": "SPEAKING Part 1 (Band 4–5): Answer this question in 2–3 sentences:\n\nWhat kind of music do you like? Why?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 4–5: Names a genre, gives a simple reason (I like it because...), uses basic vocabulary."
+    },
+    {
+      "id": "bt_s_003",
+      "skill": "speaking", "bandMin": 4.0, "bandMax": 5.0, "difficulty": "easy",
+      "type": "gap_fill", "estimatedSeconds": 60, "errorType": "fluency",
+      "stem": "SPEAKING Part 1 (Band 4–5): What do you usually do on weekends?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 4–5: Describes 1–2 activities, uses present simple correctly, basic time expressions (in the morning, at night)."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // SPEAKING – Band 5.0–6.5 (Medium) – 10 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_s_041",
+      "skill": "speaking", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "gap_fill", "estimatedSeconds": 120, "errorType": "fluency",
+      "stem": "SPEAKING Part 2 (Band 5–6.5): Speak for 1–2 minutes about a memorable trip you have taken.\n\nYou should say:\n• Where you went\n• Who you went with\n• What you did\n• Why it was memorable",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 5–6.5 criteria: Covers all 4 bullet points, maintains flow for ~1 minute, uses past tenses correctly, uses some descriptive vocabulary (breathtaking, fascinating, remarkable)."
+    },
+    {
+      "id": "bt_s_042",
+      "skill": "speaking", "bandMin": 5.0, "bandMax": 6.5, "difficulty": "medium",
+      "type": "gap_fill", "estimatedSeconds": 120, "errorType": "fluency",
+      "stem": "SPEAKING Part 3 (Band 5–6.5): Discussion question:\n\nSome people believe technology has made our lives easier. Others think it has made life more complicated. What is your view?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 5–6.5: Presents a clear view, acknowledges both sides, uses discourse markers (on the one hand, however, in my opinion), speaks for at least 1 minute."
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // SPEAKING – Band 6.0–7.5 (Hard) – 8 câu
+    // ═══════════════════════════════════════════════════════
+
+    {
+      "id": "bt_s_081",
+      "skill": "speaking", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "gap_fill", "estimatedSeconds": 120, "errorType": "fluency",
+      "stem": "SPEAKING Part 3 (Band 6–7.5): Abstract discussion:\n\nTo what extent do you think globalisation has affected cultural identity? Give specific examples to support your views.",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 6–7.5: Explores multiple dimensions (positive/negative), uses sophisticated vocabulary (homogenisation, cultural erosion, hybridisation), speaks fluently with minimal hesitation, uses hypothetical language (one could argue that...)."
+    },
+    {
+      "id": "bt_s_082",
+      "skill": "speaking", "bandMin": 6.0, "bandMax": 7.5, "difficulty": "hard",
+      "type": "gap_fill", "estimatedSeconds": 120, "errorType": "fluency",
+      "stem": "SPEAKING Part 3 (Band 6–7.5): Speculative discussion:\n\nIf artificial intelligence continues to develop at its current rate, what do you think the implications will be for employment over the next 20 years?",
+      "readingPassage": null, "mediaAudioUrl": null,
+      "correctAnswer": "SPEAKING_TASK",
+      "explanation": "Band 6–7.5: Uses future speculative language (is likely to, could potentially, there is a risk that), considers multiple sectors, demonstrates broad vocabulary range, coherent argument structure."
+    }
+  ]
+}

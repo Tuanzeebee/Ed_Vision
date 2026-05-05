@@ -71,6 +71,7 @@ export class BandEstimationService {
     // Bước 2: Tính tỷ lệ thời gian thực tế / kỳ vọng (càng gần 1.0 càng tốt)
     const responseTimeFactor = this.calculateResponseTimeFactor(
       input.questionResults,
+      input.currentBand,
     );
 
     // Bước 3: Độ ổn định (consistency) từ lịch sử 5 lần thi gần nhất
@@ -82,36 +83,36 @@ export class BandEstimationService {
     ).length;
 
     // Bước 5: Câu trả lời quá nhanh bất thường (< 30% thời gian kỳ vọng)
-    // Phân loại từng câu để tạo cảnh báo chi tiết
-    const suspiciousFastList = input.questionResults.filter(
-      (r) => r.timeTaken < r.expectedTime * 0.3,
-    );
+    // Với band < 4.0: giảm chặt chẽ chống đoán mò (không cảnh báo)
+    const isBelowBand4 = input.currentBand < 4.0;
+    const suspiciousFastList = isBelowBand4
+      ? []
+      : input.questionResults.filter((r) => r.timeTaken < r.expectedTime * 0.3);
     const suspiciousFastAnswers = suspiciousFastList.length;
 
     // Tạo danh sách cảnh báo
     const warnings: string[] = [];
-    if (suspiciousFastAnswers > 0) {
-      const suspiciousCorrect = suspiciousFastList.filter(
-        (r) => r.isCorrect,
-      ).length;
+    if (!isBelowBand4 && suspiciousFastAnswers > 0) {
+      const suspiciousCorrect = suspiciousFastList.filter((r) => r.isCorrect).length;
       const suspiciousWrong = suspiciousFastAnswers - suspiciousCorrect;
       warnings.push(
         `⚠️ ${suspiciousFastAnswers} câu trả lời quá nhanh (< 30% thời gian kỳ vọng): ` +
           `${suspiciousCorrect} đúng, ${suspiciousWrong} sai – có thể đoán mò.`,
       );
     }
-    const suspiciousRatio =
-      totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
-    if (suspiciousRatio >= 0.2) {
+    const suspiciousRatio = totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
+    if (!isBelowBand4 && suspiciousRatio >= 0.2) {
       warnings.push(
         `🚨 Hơn ${Math.round(suspiciousRatio * 100)}% số câu làm quá nhanh – kết quả band không đáng tin cậy.`,
       );
     }
 
     // Bước 6: Quyết định hướng band thay đổi
+    // Với band < 4.0: dùng responseTimeFactor trung lập (1.0) để không bị phạt vì tốc độ
+    const rtfForBandChange = isBelowBand4 ? 1.0 : responseTimeFactor;
     const bandChange = this.determineBandChange(
       accuracy,
-      responseTimeFactor,
+      rtfForBandChange,
       consistencyScore,
       severeErrorCount,
       totalQuestions,
@@ -191,8 +192,15 @@ export class BandEstimationService {
    *
    * Kết quả cuối cùng được giới hạn trong [0.5 ; 1.2].
    */
-  private calculateResponseTimeFactor(results: QuestionResult[]): number {
+  private calculateResponseTimeFactor(
+    results: QuestionResult[],
+    currentBand: number,
+  ): number {
     if (!results.length) return 1.0;
+
+    const isBelowBand4 = currentBand < 4.0;
+    const fastPenaltyScale = isBelowBand4 ? 0.4 : 1.0;
+    const fastBonusScale = isBelowBand4 ? 0.6 : 1.0;
 
     let factor = 1.0;
 
@@ -202,13 +210,21 @@ export class BandEstimationService {
 
       // 1) Quá nhanh bất thường: < 30% thời gian kỳ vọng
       if (ratio < 0.3) {
-        factor += result.isCorrect ? -0.02 : -0.12;
+        if (result.isCorrect) {
+          factor += -0.02 * fastPenaltyScale;
+        } else {
+          factor += -0.12 * fastPenaltyScale;
+        }
         continue;
       }
 
       // 2) Nhanh: 30%–60%
       if (ratio < 0.6) {
-        factor += result.isCorrect ? +0.02 : -0.06;
+        if (result.isCorrect) {
+          factor += +0.02 * fastBonusScale;
+        } else {
+          factor += -0.06 * fastPenaltyScale;
+        }
         continue;
       }
 
@@ -228,7 +244,8 @@ export class BandEstimationService {
       factor += result.isCorrect ? -0.03 : -0.08;
     }
 
-    return Math.max(0.5, Math.min(1.2, factor));
+    const minFactor = isBelowBand4 ? 0.7 : 0.5;
+    return Math.max(minFactor, Math.min(1.2, factor));
   }
 
   /**
@@ -424,7 +441,8 @@ export class BandEstimationService {
     suspiciousFastAnswers: number,
     totalQuestions: number,
   ): 'low' | 'medium' | 'high' {
-    // Câu trả lời ngầm quá nhiều → kém tin cậy
+    // Câu trả lời ngầm quá nhiều → kém tin cậy (chỉ áp dụng với band >= 5.0)
+    // Với band thấp hơn, suspicious answers không ảnh hưởng đến confidence
     if (suspiciousFastAnswers >= totalQuestions * 0.2) {
       return 'low';
     }

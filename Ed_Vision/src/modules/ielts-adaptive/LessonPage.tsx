@@ -12,6 +12,7 @@ import type {
     PracticeSession,
 } from '../../types/ielts-adaptive.types';
 import { SessionType } from '../../types/ielts-adaptive.types';
+import { QuestionRenderer, FlashcardItem } from './components/QuestionRenderer';
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
     reading: { icon: <BookOpen className="w-4 h-4" />, color: 'text-blue-600', bg: 'bg-blue-100', label: 'Reading' },
@@ -21,6 +22,11 @@ const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: str
     grammar: { icon: <BookMarked className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-100', label: 'Grammar' },
     vocabulary: { icon: <Layers className="w-4 h-4" />, color: 'text-indigo-600', bg: 'bg-indigo-100', label: 'Vocabulary' },
 };
+
+// Types that bypass the "Kiểm tra" step — AI grades them internally
+const WRITING_TYPES = new Set(['writing', 'writing_task', 'sentence_rewrite', 'planning_task', 'essay_task']);
+const SPEAKING_TYPES = new Set(['speaking', 'speaking_prompt', 'speaking_task']);
+const isAiGradedType = (t?: string) => WRITING_TYPES.has(t ?? '') || SPEAKING_TYPES.has(t ?? '');
 
 const PHASE_LABEL: Record<string, string> = {
     flashcards: 'Flashcards',
@@ -44,6 +50,8 @@ export const LessonPage: React.FC = () => {
     const [results, setResults] = useState<PracticeSession | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    // practice feedback state
+    const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         if (lessonId) {
@@ -106,6 +114,12 @@ export const LessonPage: React.FC = () => {
         setTimePerQuestion((prev) => ({ ...prev, [itemId.toString()]: timeTaken }));
     };
 
+    const handleCheck = () => {
+        const item = getCurrentItems()[currentItemIndex];
+        if (!item) return;
+        setCheckedItems((prev) => ({ ...prev, [item.id.toString()]: true }));
+    };
+
     const handleNext = () => {
         const items = getCurrentItems();
 
@@ -119,6 +133,7 @@ export const LessonPage: React.FC = () => {
     };
 
     const handlePhaseComplete = async () => {
+        setCheckedItems({});
         if (phase === 'flashcards') {
             // Move to practice
             if ((lesson?.practiceRepo?.items?.length ?? 0) > 0) {
@@ -271,19 +286,30 @@ export const LessonPage: React.FC = () => {
                                             <span className={`text-xs font-semibold ${r.is_correct ? 'text-emerald-700' : 'text-rose-700'}`}>
                                                 Câu {i + 1} — {r.is_correct ? 'Đúng' : 'Sai'}
                                             </span>
+                                            {r.ai_grading?.bandScore != null && (
+                                                <span className="ml-auto text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                                                    Band {(r.ai_grading.bandScore as number).toFixed(1)}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-sm text-slate-700 mb-2">{r.question}</p>
-                                        <p className="text-sm text-slate-600">
-                                            <span className="font-medium">Bạn chọn:</span>{' '}
-                                            <span className={r.is_correct ? 'text-emerald-700' : 'text-rose-700'}>
-                                                {r.student_answer || '(không trả lời)'}
-                                            </span>
-                                        </p>
-                                        {!r.is_correct && (
-                                            <p className="text-sm text-slate-600 mt-1">
-                                                <span className="font-medium">Đáp án:</span>{' '}
-                                                <span className="text-emerald-700">{r.correct_answer}</span>
-                                            </p>
+                                        {r.ai_grading?.overallFeedback ? (
+                                            <p className="text-xs text-slate-600 italic">{r.ai_grading.overallFeedback}</p>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm text-slate-600">
+                                                    <span className="font-medium">Bạn chọn:</span>{' '}
+                                                    <span className={r.is_correct ? 'text-emerald-700' : 'text-rose-700'}>
+                                                        {r.student_answer || '(không trả lời)'}
+                                                    </span>
+                                                </p>
+                                                {!r.is_correct && (
+                                                    <p className="text-sm text-slate-600 mt-1">
+                                                        <span className="font-medium">Đáp án:</span>{' '}
+                                                        <span className="text-emerald-700">{r.correct_answer}</span>
+                                                    </p>
+                                                )}
+                                            </>
                                         )}
                                         {r.explanation && (
                                             <div className="mt-2 pt-2 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
@@ -364,20 +390,14 @@ export const LessonPage: React.FC = () => {
 
                 {/* Content */}
                 {currentItem && (
-                    <>
+                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
                         {phase === 'flashcards' ? (
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                            <>
                                 <div className="flex items-center gap-2 mb-4">
                                     <FlipHorizontal className="w-4 h-4 text-indigo-400" />
                                     <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">Flashcard</span>
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-800 mb-3">{currentItem.title}</h2>
-                                <p className="text-slate-600 leading-relaxed mb-4">{currentItem.stem}</p>
-                                {currentItem.explanation && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-700 leading-relaxed">
-                                        💡 {currentItem.explanation}
-                                    </div>
-                                )}
+                                <FlashcardItem item={currentItem} onNext={handleNext} />
                                 <button
                                     onClick={handleNext}
                                     className="mt-6 w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
@@ -388,54 +408,153 @@ export const LessonPage: React.FC = () => {
                                         <>Bắt đầu luyện tập <Zap className="w-4 h-4" /></>
                                     )}
                                 </button>
-                            </div>
-                        ) : (
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                                <p className="text-slate-800 font-medium text-base leading-relaxed mb-4">{currentItem.stem}</p>
-                                {currentItem.hint && (
-                                    <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-sm text-blue-600 mb-4">
-                                        💡 {currentItem.hint}
-                                    </div>
-                                )}
-                                <div className="flex flex-col gap-2.5 mb-6">
-                                    {currentItem.options?.map((option) => {
-                                        const selected = answers[currentItem.id.toString()] === option.option_key;
-                                        return (
-                                            <button
-                                                key={option.id}
-                                                onClick={() => handleAnswer(currentItem.id, option.option_key)}
-                                                className={`w-full text-left px-4 py-3 rounded-2xl border-2 text-sm transition-all flex items-center gap-3 ${selected
-                                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
-                                                    : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'
-                                                    }`}
-                                            >
-                                                <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${selected ? 'bg-indigo-500 text-white' : 'bg-white border border-slate-300 text-slate-500'
-                                                    }`}>
-                                                    {option.option_key}
-                                                </span>
-                                                <span>{option.option_text}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <button
-                                    onClick={handleNext}
-                                    disabled={!answers[currentItem.id.toString()] || submitting}
-                                    className="w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {submitting ? (
-                                        <><Loader2 className="w-4 h-4 animate-spin" /> Đang nộp…</>
-                                    ) : currentItemIndex < items.length - 1 ? (
-                                        <>Tiếp theo <ChevronRight className="w-4 h-4" /></>
-                                    ) : phase === 'practice' ? (
-                                        <>Tiếp tục Mini Test <Zap className="w-4 h-4" /></>
-                                    ) : (
-                                        <>Nộp bài <CheckCircle2 className="w-4 h-4" /></>
+                            </>
+                        ) : (() => {
+                            const itemKey = currentItem.id.toString();
+                            const selectedAnswer = answers[itemKey];
+                            const isChecked = !!checkedItems[itemKey];
+                            const isMatchingType = currentItem.item_type === 'matching';
+                            const isOpenEnded = currentItem.item_type === 'gap_fill' || currentItem.item_type === 'short_answer' || currentItem.item_type === 'sentence_completion';
+                            const isAiGraded = isAiGradedType(currentItem.item_type);
+                            const correctOption = currentItem.options?.find((o) => o.is_correct) ?? currentItem.options?.[0];
+                            const correctKey = correctOption?.option_key ?? '';
+                            // For gap_fill: correct answer from option_text (same logic as GapFillItem)
+                            const correctAnswerText = correctOption?.option_text ?? correctOption?.option_key ?? (currentItem.metadata as any)?.correctAnswer ?? '';
+
+                            // AI-graded items: answer is JSON with bandScore from SpeakingItem/WritingItem
+                            let aiGradingResult: any = null;
+                            if (isAiGraded && selectedAnswer) {
+                                try { aiGradingResult = JSON.parse(selectedAnswer); } catch { /* raw text */ }
+                            }
+
+                            // isCorrect / isWrong
+                            let isCorrect: boolean;
+                            let isWrong: boolean;
+                            if (isAiGraded) {
+                                isCorrect = aiGradingResult?.bandScore != null ? aiGradingResult.bandScore >= 4.0 : false;
+                                isWrong = false; // AI items: no "wrong", just show band
+                            } else if (isMatchingType && isChecked) {
+                                try {
+                                    const a: Record<string, string> = JSON.parse(selectedAnswer ?? '{}');
+                                    isCorrect = (currentItem.options ?? []).every((opt) => a[opt.option_key] === opt.option_text);
+                                } catch { isCorrect = false; }
+                                isWrong = !isCorrect;
+                            } else if (isOpenEnded && isChecked) {
+                                isCorrect = (selectedAnswer ?? '').trim().toLowerCase() === correctAnswerText.trim().toLowerCase();
+                                isWrong = !isCorrect;
+                            } else {
+                                isCorrect = isChecked && selectedAnswer === correctKey;
+                                isWrong = isChecked && selectedAnswer !== correctKey;
+                            }
+
+                            // AI-graded: hasAnswer when bandScore present; others unchanged
+                            const hasAnswer = isAiGraded
+                                ? aiGradingResult?.bandScore != null
+                                : isMatchingType
+                                    ? (() => { try { const a = JSON.parse(selectedAnswer ?? '{}'); return (currentItem.options ?? []).length > 0 && (currentItem.options ?? []).every((opt) => !!a[opt.option_key]); } catch { return false; } })()
+                                    : isOpenEnded ? !!selectedAnswer?.trim() : !!selectedAnswer;
+                            // AI-graded items skip "Kiểm tra" — they self-grade
+                            const showCheck = phase === 'practice' && !isChecked && !isAiGraded;
+                            const showNext = phase !== 'practice' || isChecked || isAiGraded;
+
+                            return (
+                                <>
+                                    <QuestionRenderer
+                                        key={currentItem.id}
+                                        item={currentItem}
+                                        selectedAnswer={selectedAnswer}
+                                        showResult={phase === 'practice' ? isChecked : isAiGraded && aiGradingResult?.bandScore != null}
+                                        onAnswer={(ans) => {
+                                            if (isAiGraded || !isChecked) handleAnswer(currentItem.id, ans);
+                                        }}
+                                        readingPassage={
+                                            (lesson?.practiceRepo?.metadata as any)?.content?.passage ??
+                                            (lesson?.miniTestRepo?.metadata as any)?.content?.passage
+                                        }
+                                        audioScript={
+                                            (lesson?.practiceRepo?.metadata as any)?.content?.audio?.script ??
+                                            (lesson?.miniTestRepo?.metadata as any)?.content?.audio?.script
+                                        }
+                                        lessonId={lesson.id}
+                                        targetBand={lesson.band_level ? lesson.band_level / 10 : 5.0}
+                                        skillArea={lesson.skill_area}
+                                    />
+
+                                    {/* AI grading result banner (shown when graded) */}
+                                    {phase === 'practice' && isAiGraded && aiGradingResult?.bandScore != null && (
+                                        <div className="mt-4 rounded-2xl p-3 border bg-indigo-50 border-indigo-200 flex items-center gap-3">
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0 ${aiGradingResult.bandScore >= 7 ? 'bg-emerald-500' : aiGradingResult.bandScore >= 5 ? 'bg-amber-500' : 'bg-rose-500'
+                                                }`}>{aiGradingResult.bandScore.toFixed(1)}</div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-indigo-700">Band {aiGradingResult.bandScore.toFixed(1)} — đã chấm xong</p>
+                                                <p className="text-xs text-indigo-500 line-clamp-2">{aiGradingResult.overallFeedback}</p>
+                                            </div>
+                                        </div>
                                     )}
-                                </button>
-                            </div>
-                        )}
-                    </>
+
+                                    {/* Feedback block shown after checking in practice */}
+                                    {phase === 'practice' && isChecked && !isAiGraded && (
+                                        <div className={`mt-4 rounded-2xl p-4 border ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {isCorrect
+                                                    ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                    : <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+                                                <span className={`text-sm font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                                    {isCorrect ? 'Chính xác!' : 'Chưa đúng'}
+                                                </span>
+                                            </div>
+                                            {isWrong && !isMatchingType && (
+                                                <p className="text-sm text-slate-700 mb-1">
+                                                    <span className="font-medium">Đáp án đúng:</span>{' '}
+                                                    <span className="text-emerald-700 font-semibold">
+                                                        {isOpenEnded
+                                                            ? correctAnswerText
+                                                            : `${correctOption?.option_key} — ${correctOption?.option_text}`}
+                                                    </span>
+                                                </p>
+                                            )}
+                                            {currentItem.explanation && (
+                                                <p className="text-xs text-slate-500 leading-relaxed mt-1">
+                                                    💡 {currentItem.explanation}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+
+                                    <div className="mt-6 flex gap-3">
+                                        {showCheck && (
+                                            <button
+                                                onClick={handleCheck}
+                                                disabled={!hasAnswer}
+                                                className="flex-1 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <CheckCircle2 className="w-4 h-4" /> Kiểm tra
+                                            </button>
+                                        )}
+                                        {showNext && (
+                                            <button
+                                                onClick={handleNext}
+                                                disabled={!hasAnswer || submitting}
+                                                className="flex-1 py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                {submitting ? (
+                                                    <><Loader2 className="w-4 h-4 animate-spin" /> Đang nộp…</>
+                                                ) : currentItemIndex < items.length - 1 ? (
+                                                    <>Tiếp theo <ChevronRight className="w-4 h-4" /></>
+                                                ) : phase === 'practice' ? (
+                                                    <>Tiếp tục Mini Test <Zap className="w-4 h-4" /></>
+                                                ) : (
+                                                    <>Nộp bài <CheckCircle2 className="w-4 h-4" /></>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
+                            );
+                        })()}
+
+                    </div>
                 )}
             </div>
         </div>

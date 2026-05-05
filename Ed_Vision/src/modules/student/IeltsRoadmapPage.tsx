@@ -609,12 +609,28 @@ export default function IeltsRoadmapPage() {
                 </section>
 
                 {/* ── Band test CTA ─────────────────────────────────────────── */}
-                {progressPercent >= 70 && (
+                {progressPercent < 100 ? (
+                    <section className="rounded-3xl bg-linear-to-r from-indigo-500 via-violet-500 to-purple-600 p-8 text-white text-center shadow-xl">
+                        <Trophy className="w-12 h-12 mx-auto mb-3 text-yellow-200" />
+                        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold mb-3">Làm thử</div>
+                        <h2 className="text-2xl font-black mb-2">Luyện tập với Band Test</h2>
+                        <p className="text-white/80 text-sm mb-5 max-w-md mx-auto">
+                            Bạn đã hoàn thành {completedLessons}/{totalLessons} bài học ({progressPercent}%). Làm thử để biết trình độ hiện tại — kết quả sẽ được áp dụng khi bạn hoàn thành 100% chương trình.
+                        </p>
+                        <button
+                            onClick={() => navigate(`/ielts-adaptive/band-test/${roadmap.id}`)}
+                            className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl bg-white text-indigo-600 font-bold text-sm hover:bg-white/90 transition-colors"
+                        >
+                            <Trophy className="w-4 h-4" /> Làm thử Band Test
+                        </button>
+                    </section>
+                ) : (
                     <section className="rounded-3xl bg-linear-to-r from-rose-500 via-pink-500 to-fuchsia-500 p-8 text-white text-center shadow-xl">
                         <Trophy className="w-12 h-12 mx-auto mb-3 text-yellow-200" />
+                        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold mb-3">Thi thật</div>
                         <h2 className="text-2xl font-black mb-2">Sẵn sàng kiểm tra Band?</h2>
                         <p className="text-white/80 text-sm mb-5 max-w-md mx-auto">
-                            Bạn đã hoàn thành {completedLessons}/{totalLessons} bài học. Làm bài kiểm tra toàn diện để xác nhận trình độ thực tế!
+                            Bạn đã hoàn thành toàn bộ {totalLessons} bài học! Làm bài kiểm tra để xác nhận trình độ và cập nhật lộ trình của bạn.
                         </p>
                         <button
                             onClick={() => navigate(`/ielts-adaptive/band-test/${roadmap.id}`)}

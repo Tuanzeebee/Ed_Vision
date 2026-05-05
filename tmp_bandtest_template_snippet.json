@@ -1,0 +1,1974 @@
+{
+  "_templateSchemaVersion": "2.0",
+  "_bandCoverage": "1.0-9.0",
+  "_supportedBandSteps": [
+    1,
+    1.5,
+    2,
+    2.5,
+    3,
+    3.5,
+    4,
+    4.5,
+    5,
+    5.5,
+    6,
+    6.5,
+    7,
+    7.5,
+    8,
+    8.5,
+    9
+  ],
+  "_templateSetCount": 10,
+  "_supportsMixedGeneration": true,
+  "generationTemplates": {
+    "overview": "Template bank for generating reusable IELTS band test items across 10 test sets, 6 skills, and all official half-band levels from 1.0 to 9.0.",
+    "usageNotes": [
+      "Use setTemplates to choose a thematic pack before generation.",
+      "Use skillBandTemplates to control difficulty, prompt style, and distractor quality.",
+      "When generating a full band test, mix 45 percent core, 30 percent review, and 25 percent challenge items unless the runtime overrides the ratio.",
+      "Always randomise topics, numbers, names, and surface wording so the same template can be reused many times.",
+      "Keep explanations short enough for storage but specific enough for remediation tags."
+    ],
+    "setTemplates": [
+      {
+        "setId": "template_set_01",
+        "title": "Campus and Study",
+        "primaryTopics": [
+          "education",
+          "daily routines",
+          "learning habits"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-1-alpha",
+          "set-1-beta",
+          "set-1-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_02",
+        "title": "City and Transport",
+        "primaryTopics": [
+          "urban life",
+          "mobility",
+          "public services"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-2-alpha",
+          "set-2-beta",
+          "set-2-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_03",
+        "title": "Work and Economy",
+        "primaryTopics": [
+          "employment",
+          "finance",
+          "productivity"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-3-alpha",
+          "set-3-beta",
+          "set-3-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_04",
+        "title": "Health and Lifestyle",
+        "primaryTopics": [
+          "health",
+          "food",
+          "exercise"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-4-alpha",
+          "set-4-beta",
+          "set-4-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_05",
+        "title": "Technology and Media",
+        "primaryTopics": [
+          "technology",
+          "media",
+          "online behaviour"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-5-alpha",
+          "set-5-beta",
+          "set-5-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_06",
+        "title": "Environment and Sustainability",
+        "primaryTopics": [
+          "environment",
+          "energy",
+          "climate"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-6-alpha",
+          "set-6-beta",
+          "set-6-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_07",
+        "title": "Culture and Society",
+        "primaryTopics": [
+          "culture",
+          "identity",
+          "community"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-7-alpha",
+          "set-7-beta",
+          "set-7-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_08",
+        "title": "Science and Innovation",
+        "primaryTopics": [
+          "science",
+          "research",
+          "innovation"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-8-alpha",
+          "set-8-beta",
+          "set-8-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_09",
+        "title": "Travel and Globalisation",
+        "primaryTopics": [
+          "travel",
+          "migration",
+          "global links"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-9-alpha",
+          "set-9-beta",
+          "set-9-gamma"
+        ]
+      },
+      {
+        "setId": "template_set_10",
+        "title": "Policy and Future",
+        "primaryTopics": [
+          "policy",
+          "ethics",
+          "future scenarios"
+        ],
+        "mixPolicy": {
+          "core": 0.45,
+          "review": 0.3,
+          "challenge": 0.25,
+          "allowNeighborBands": true,
+          "allowCrossSetReuse": true,
+          "rotateDistractorStyleEveryRun": true
+        },
+        "skillTargets": {
+          "reading": "rotate passage genre among notice, article, report, opinion, data summary",
+          "listening": "rotate script genre among conversation, announcement, lecture, consultation",
+          "grammar": "rotate focus among tense, clause, agreement, reference, inversion, conditionals",
+          "vocabulary": "rotate synonym, collocation, academic word, word form, paraphrase trap",
+          "writing": "rotate task1 and task2 prompts with different data and viewpoints",
+          "speaking": "rotate part 1, part 2, part 3 themes while preserving target band behaviours"
+        },
+        "aiGenerationGuardrails": [
+          "Do not repeat the same stem inside one test run",
+          "Keep question type balance aligned with the selected skill",
+          "Use fresh named entities, places, numbers, and scenarios each generation",
+          "Keep distractors plausible but separable by the target band",
+          "When mixing bands, preserve the target skill profile rather than only changing topic words"
+        ],
+        "randomisationSeeds": [
+          "set-10-alpha",
+          "set-10-beta",
+          "set-10-gamma"
+        ]
+      }
+    ],
+    "skillBandTemplates": {
+      "band10": {
+        "band": 1,
+        "difficulty": "starter",
+        "topicFamilies": [
+          "daily life",
+          "school routines",
+          "family habits",
+          "signs and labels"
+        ],
+        "mixingWindow": {
+          "reviewBands": [],
+          "challengeBands": [
+            1.5,
+            2
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng"
+            ],
+            "inputLength": "single words and labels",
+            "reasoningFocus": "isolated facts",
+            "distractorStyle": "obvious lexical contrast",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "scriptLength": "1 to 3 turns",
+            "listeningFocus": "literal detail, names, dates, prices",
+            "distractorStyle": "clear phonetic distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "be verb",
+              "subject pronouns",
+              "articles"
+            ],
+            "sentenceComplexity": "single clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "basic synonym",
+              "basic antonym",
+              "common collocation"
+            ],
+            "distractorDistance": "large semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "sentence completion and guided paragraph",
+            "responseExpectations": "very short guided output",
+            "scoringFocus": [
+              "task completion",
+              "basic grammar",
+              "simple cohesion"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "part 1 only with fixed prompts",
+            "fluencyTarget": "one-clause answers",
+            "scoringFocus": [
+              "basic direct answers",
+              "simple reason",
+              "comprehensibility"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band15": {
+        "band": 1.5,
+        "difficulty": "starter_plus",
+        "topicFamilies": [
+          "travel basics",
+          "food",
+          "weather",
+          "shopping"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            1
+          ],
+          "challengeBands": [
+            2,
+            2.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng"
+            ],
+            "inputLength": "single sentences",
+            "reasoningFocus": "obvious detail matching",
+            "distractorStyle": "obvious lexical contrast",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "scriptLength": "1 to 3 turns",
+            "listeningFocus": "literal detail, names, dates, prices",
+            "distractorStyle": "clear phonetic distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "be verb",
+              "subject pronouns",
+              "articles"
+            ],
+            "sentenceComplexity": "single clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "basic synonym",
+              "basic antonym",
+              "common collocation"
+            ],
+            "distractorDistance": "large semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "guided paragraph and short opinion",
+            "responseExpectations": "very short guided output",
+            "scoringFocus": [
+              "task completion",
+              "basic grammar",
+              "simple cohesion"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "part 1 only with familiar prompts",
+            "fluencyTarget": "one-clause answers with support",
+            "scoringFocus": [
+              "basic direct answers",
+              "simple reason",
+              "comprehensibility"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band20": {
+        "band": 2,
+        "difficulty": "basic",
+        "topicFamilies": [
+          "housing",
+          "local transport",
+          "friends",
+          "free time"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            1,
+            1.5
+          ],
+          "challengeBands": [
+            2.5,
+            3
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng"
+            ],
+            "inputLength": "short notices and dialogues",
+            "reasoningFocus": "literal meaning",
+            "distractorStyle": "obvious lexical contrast",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "1 to 3 turns",
+            "listeningFocus": "literal detail, names, dates, prices",
+            "distractorStyle": "clear phonetic distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "be verb",
+              "subject pronouns",
+              "articles"
+            ],
+            "sentenceComplexity": "single clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "basic synonym",
+              "basic antonym",
+              "common collocation"
+            ],
+            "distractorDistance": "large semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "short process and short opinion",
+            "responseExpectations": "controlled sentence building",
+            "scoringFocus": [
+              "task completion",
+              "basic grammar",
+              "simple cohesion"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "part 1 with short follow-up",
+            "fluencyTarget": "short familiar answers",
+            "scoringFocus": [
+              "basic direct answers",
+              "simple reason",
+              "comprehensibility"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band25": {
+        "band": 2.5,
+        "difficulty": "basic_plus",
+        "topicFamilies": [
+          "study habits",
+          "technology basics",
+          "health",
+          "public places"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            1.5,
+            2
+          ],
+          "challengeBands": [
+            3,
+            3.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng"
+            ],
+            "inputLength": "short paragraphs",
+            "reasoningFocus": "literal plus simple paraphrase",
+            "distractorStyle": "obvious lexical contrast",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "1 to 3 turns",
+            "listeningFocus": "literal detail, names, dates, prices",
+            "distractorStyle": "clear phonetic distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "present and past simple",
+              "prepositions",
+              "basic comparatives"
+            ],
+            "sentenceComplexity": "single clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "basic synonym",
+              "basic antonym",
+              "common collocation"
+            ],
+            "distractorDistance": "large semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "simple comparison and short opinion",
+            "responseExpectations": "sentence pairs",
+            "scoringFocus": [
+              "task completion",
+              "basic grammar",
+              "simple cohesion"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "part 1 with simple why questions",
+            "fluencyTarget": "short personal explanations",
+            "scoringFocus": [
+              "basic direct answers",
+              "simple reason",
+              "comprehensibility"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band30": {
+        "band": 3,
+        "difficulty": "elementary",
+        "topicFamilies": [
+          "education",
+          "community",
+          "simple environment",
+          "work routines"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            2,
+            2.5
+          ],
+          "challengeBands": [
+            3.5,
+            4
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng"
+            ],
+            "inputLength": "everyday texts",
+            "reasoningFocus": "simple comparison",
+            "distractorStyle": "paraphrase and detail trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "4 to 8 turns or short monologue",
+            "listeningFocus": "literal detail, names, dates, prices",
+            "distractorStyle": "near-miss detail and paraphrase",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "present and past simple",
+              "prepositions",
+              "basic comparatives"
+            ],
+            "sentenceComplexity": "simple plus subordinate clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "word family",
+              "topic vocabulary",
+              "frequent collocation"
+            ],
+            "distractorDistance": "medium semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "basic task 1 summary and short opinion",
+            "responseExpectations": "basic paragraphing",
+            "scoringFocus": [
+              "clear structure",
+              "accurate overview or opinion",
+              "controlled vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "part 1 and short part 2 cue card",
+            "fluencyTarget": "simple extended answers",
+            "scoringFocus": [
+              "extended answers",
+              "basic organisation",
+              "topic vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band35": {
+        "band": 3.5,
+        "difficulty": "elementary_plus",
+        "topicFamilies": [
+          "city life",
+          "media",
+          "fitness",
+          "services"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            2.5,
+            3
+          ],
+          "challengeBands": [
+            4,
+            4.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng"
+            ],
+            "inputLength": "two-paragraph texts",
+            "reasoningFocus": "detail and gist balance",
+            "distractorStyle": "paraphrase and detail trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "4 to 8 turns or short monologue",
+            "listeningFocus": "detail plus paraphrase recognition",
+            "distractorStyle": "near-miss detail and paraphrase",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "present and past simple",
+              "prepositions",
+              "basic comparatives"
+            ],
+            "sentenceComplexity": "simple plus subordinate clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "word family",
+              "topic vocabulary",
+              "frequent collocation"
+            ],
+            "distractorDistance": "medium semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 trend selection and basic opinion essay",
+            "responseExpectations": "guided paragraphing",
+            "scoringFocus": [
+              "clear structure",
+              "accurate overview or opinion",
+              "controlled vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "part 1 and part 2 with basic story line",
+            "fluencyTarget": "basic reasons and examples",
+            "scoringFocus": [
+              "extended answers",
+              "basic organisation",
+              "topic vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band40": {
+        "band": 4,
+        "difficulty": "pre_intermediate",
+        "topicFamilies": [
+          "consumer habits",
+          "learning methods",
+          "work-life balance",
+          "public services"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            3,
+            3.5
+          ],
+          "challengeBands": [
+            4.5,
+            5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "multi-paragraph texts",
+            "reasoningFocus": "clear inference",
+            "distractorStyle": "paraphrase and detail trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "4 to 8 turns or short monologue",
+            "listeningFocus": "detail plus paraphrase recognition",
+            "distractorStyle": "near-miss detail and paraphrase",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "conditionals",
+              "relative clauses",
+              "passive"
+            ],
+            "sentenceComplexity": "simple plus subordinate clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "word family",
+              "topic vocabulary",
+              "frequent collocation"
+            ],
+            "distractorDistance": "medium semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 overview plus task 2 opinion",
+            "responseExpectations": "task structure control",
+            "scoringFocus": [
+              "clear structure",
+              "accurate overview or opinion",
+              "controlled vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full part 1 to part 3 sequence",
+            "fluencyTarget": "topic development",
+            "scoringFocus": [
+              "extended answers",
+              "basic organisation",
+              "topic vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band45": {
+        "band": 4.5,
+        "difficulty": "pre_intermediate_plus",
+        "topicFamilies": [
+          "digital life",
+          "tourism",
+          "culture",
+          "health choices"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            3.5,
+            4
+          ],
+          "challengeBands": [
+            5,
+            5.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "multi-source detail tracking",
+            "reasoningFocus": "paraphrase recognition",
+            "distractorStyle": "paraphrase and detail trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "4 to 8 turns or short monologue",
+            "listeningFocus": "detail plus paraphrase recognition",
+            "distractorStyle": "near-miss detail and paraphrase",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "conditionals",
+              "relative clauses",
+              "passive"
+            ],
+            "sentenceComplexity": "simple plus subordinate clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "word family",
+              "topic vocabulary",
+              "frequent collocation"
+            ],
+            "distractorDistance": "medium semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 overview plus balanced discussion",
+            "responseExpectations": "better cohesion",
+            "scoringFocus": [
+              "clear structure",
+              "accurate overview or opinion",
+              "controlled vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with clearer follow-up probes",
+            "fluencyTarget": "extended turns",
+            "scoringFocus": [
+              "extended answers",
+              "basic organisation",
+              "topic vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band50": {
+        "band": 5,
+        "difficulty": "intermediate",
+        "topicFamilies": [
+          "education policy",
+          "urban living",
+          "employment",
+          "environment"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            4,
+            4.5
+          ],
+          "challengeBands": [
+            5.5,
+            6
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "standard IELTS style input",
+            "reasoningFocus": "detail plus writer purpose",
+            "distractorStyle": "paraphrase and detail trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "4 to 8 turns or short monologue",
+            "listeningFocus": "detail plus paraphrase recognition",
+            "distractorStyle": "near-miss detail and paraphrase",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "conditionals",
+              "relative clauses",
+              "passive"
+            ],
+            "sentenceComplexity": "simple plus subordinate clause",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "academic word choice",
+              "phrasal verb",
+              "precision paraphrase"
+            ],
+            "distractorDistance": "medium semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 report and task 2 position essay",
+            "responseExpectations": "balanced argument and summary",
+            "scoringFocus": [
+              "clear structure",
+              "accurate overview or opinion",
+              "controlled vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with everyday abstract topics",
+            "fluencyTarget": "topic extension",
+            "scoringFocus": [
+              "extended answers",
+              "basic organisation",
+              "topic vocabulary"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band55": {
+        "band": 5.5,
+        "difficulty": "intermediate_plus",
+        "topicFamilies": [
+          "global trends",
+          "social media",
+          "public health",
+          "transport"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            4.5,
+            5
+          ],
+          "challengeBands": [
+            6,
+            6.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "more abstract input",
+            "reasoningFocus": "contrast and cause-effect",
+            "distractorStyle": "paraphrase and detail trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "4 to 8 turns or short monologue",
+            "listeningFocus": "detail plus paraphrase recognition",
+            "distractorStyle": "near-miss detail and paraphrase",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "reported speech",
+              "future perfect",
+              "modality"
+            ],
+            "sentenceComplexity": "complex clause with distractor phrase",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "academic word choice",
+              "phrasal verb",
+              "precision paraphrase"
+            ],
+            "distractorDistance": "medium semantic distance",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 comparison and task 2 causes effects",
+            "responseExpectations": "clear viewpoint control",
+            "scoringFocus": [
+              "argument development",
+              "cohesion",
+              "lexical precision"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with causes effects and opinions",
+            "fluencyTarget": "longer connected speech",
+            "scoringFocus": [
+              "development and examples",
+              "speculation",
+              "range of grammar"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band60": {
+        "band": 6,
+        "difficulty": "upper_intermediate",
+        "topicFamilies": [
+          "science and society",
+          "technology ethics",
+          "migration",
+          "lifestyle"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            5,
+            5.5
+          ],
+          "challengeBands": [
+            6.5,
+            7
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "dense academic style",
+            "reasoningFocus": "multi-step inference",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "detail plus paraphrase recognition",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "reported speech",
+              "future perfect",
+              "modality"
+            ],
+            "sentenceComplexity": "complex clause with distractor phrase",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "academic word choice",
+              "phrasal verb",
+              "precision paraphrase"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 detailed summary and task 2 discussion",
+            "responseExpectations": "cohesive and accurate responses",
+            "scoringFocus": [
+              "argument development",
+              "cohesion",
+              "lexical precision"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with abstract discussion",
+            "fluencyTarget": "developed abstraction",
+            "scoringFocus": [
+              "development and examples",
+              "speculation",
+              "range of grammar"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band65": {
+        "band": 6.5,
+        "difficulty": "upper_intermediate_plus",
+        "topicFamilies": [
+          "economics",
+          "innovation",
+          "media influence",
+          "behaviour"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            5.5,
+            6
+          ],
+          "challengeBands": [
+            7,
+            7.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "faster reasoning load",
+            "reasoningFocus": "nuanced comparison",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "inference, attitude, implication, and fine detail",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "reported speech",
+              "future perfect",
+              "modality"
+            ],
+            "sentenceComplexity": "complex clause with distractor phrase",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "academic word choice",
+              "phrasal verb",
+              "precision paraphrase"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 process or map and task 2 multi-idea argument",
+            "responseExpectations": "controlled complex grammar",
+            "scoringFocus": [
+              "argument development",
+              "cohesion",
+              "lexical precision"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with speculation and evaluation",
+            "fluencyTarget": "speculative discussion",
+            "scoringFocus": [
+              "development and examples",
+              "speculation",
+              "range of grammar"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band70": {
+        "band": 7,
+        "difficulty": "advanced",
+        "topicFamilies": [
+          "globalisation",
+          "sustainability",
+          "public policy",
+          "culture"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            6,
+            6.5
+          ],
+          "challengeBands": [
+            7.5,
+            8
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "high lexical density",
+            "reasoningFocus": "attitude and stance",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "inference, attitude, implication, and fine detail",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "inversion",
+              "subjunctive",
+              "mixed conditionals"
+            ],
+            "sentenceComplexity": "complex clause with distractor phrase",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "abstract academic lexis",
+              "stance vocabulary",
+              "discipline-neutral formal collocation"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 complex comparison and task 2 nuanced argument",
+            "responseExpectations": "argument precision",
+            "scoringFocus": [
+              "argument development",
+              "cohesion",
+              "lexical precision"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with policy and society themes",
+            "fluencyTarget": "abstract fluency",
+            "scoringFocus": [
+              "development and examples",
+              "speculation",
+              "range of grammar"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band75": {
+        "band": 7.5,
+        "difficulty": "advanced_plus",
+        "topicFamilies": [
+          "geopolitics",
+          "research methods",
+          "social inequality",
+          "urban planning"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            6.5,
+            7
+          ],
+          "challengeBands": [
+            8,
+            8.5
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "specialised topics",
+            "reasoningFocus": "subtle implication",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "inference, attitude, implication, and fine detail",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "inversion",
+              "subjunctive",
+              "mixed conditionals"
+            ],
+            "sentenceComplexity": "dense academic sentence",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "abstract academic lexis",
+              "stance vocabulary",
+              "discipline-neutral formal collocation"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 mixed visuals and task 2 concession rebuttal",
+            "responseExpectations": "precise register control",
+            "scoringFocus": [
+              "nuanced reasoning",
+              "register control",
+              "concise sophistication"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with nuanced trade-offs",
+            "fluencyTarget": "well-supported speculation",
+            "scoringFocus": [
+              "nuanced abstraction",
+              "precision",
+              "spontaneous coherence"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band80": {
+        "band": 8,
+        "difficulty": "expert",
+        "topicFamilies": [
+          "academic research",
+          "innovation systems",
+          "cultural identity",
+          "climate strategy"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            7,
+            7.5
+          ],
+          "challengeBands": [
+            8.5,
+            9
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "near-authentic difficulty",
+            "reasoningFocus": "fine distinction and synthesis",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "inference, attitude, implication, and fine detail",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "inversion",
+              "subjunctive",
+              "mixed conditionals"
+            ],
+            "sentenceComplexity": "dense academic sentence",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "abstract academic lexis",
+              "stance vocabulary",
+              "discipline-neutral formal collocation"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 synthesis and task 2 sophisticated argument",
+            "responseExpectations": "efficient concise sophistication",
+            "scoringFocus": [
+              "nuanced reasoning",
+              "register control",
+              "concise sophistication"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with subtle abstraction",
+            "fluencyTarget": "flexible abstract response",
+            "scoringFocus": [
+              "nuanced abstraction",
+              "precision",
+              "spontaneous coherence"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band85": {
+        "band": 8.5,
+        "difficulty": "expert_plus",
+        "topicFamilies": [
+          "regulation",
+          "bioethics",
+          "institutional trust",
+          "future of work"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            7.5,
+            8
+          ],
+          "challengeBands": [
+            9
+          ]
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "very high lexical precision",
+            "reasoningFocus": "ambiguous distractors",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "inference, attitude, implication, and fine detail",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "cleft sentences",
+              "reduced clauses",
+              "advanced register control"
+            ],
+            "sentenceComplexity": "dense academic sentence",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "abstract academic lexis",
+              "stance vocabulary",
+              "discipline-neutral formal collocation"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 concise precision and task 2 nuanced critique",
+            "responseExpectations": "tight academic control",
+            "scoringFocus": [
+              "nuanced reasoning",
+              "register control",
+              "concise sophistication"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with near-native flexibility",
+            "fluencyTarget": "spontaneous nuanced argument",
+            "scoringFocus": [
+              "nuanced abstraction",
+              "precision",
+              "spontaneous coherence"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      },
+      "band90": {
+        "band": 9,
+        "difficulty": "mastery",
+        "topicFamilies": [
+          "philosophy of progress",
+          "governance",
+          "social cohesion",
+          "complex systems"
+        ],
+        "mixingWindow": {
+          "reviewBands": [
+            8,
+            8.5
+          ],
+          "challengeBands": []
+        },
+        "skills": {
+          "reading": {
+            "questionTypes": [
+              "single_choice",
+              "true_false_ng",
+              "gap_fill"
+            ],
+            "inputLength": "native-like control",
+            "reasoningFocus": "subtle rhetoric and synthesis",
+            "distractorStyle": "nuance, stance, and synthesis trap",
+            "aiTemplate": "Generate 1 IELTS reading item for BAND {{band}} using topic {{topic}}. Keep difficulty at {{difficulty}}. Use question types {{questionTypes}}. Passage style should match {{inputLength}}. Target reasoning: {{reasoningFocus}}. Return stem, optional passage, options if needed, correct answer, explanation, and errorType."
+          },
+          "listening": {
+            "questionTypes": [
+              "gap_fill",
+              "single_choice"
+            ],
+            "scriptLength": "dense lecture or expert discussion excerpt",
+            "listeningFocus": "inference, attitude, implication, and fine detail",
+            "distractorStyle": "compressed wording and attitude distractors",
+            "aiTemplate": "Generate 1 IELTS listening item for BAND {{band}} using topic {{topic}}. Keep script profile {{scriptLength}} and focus {{listeningFocus}}. Use question types {{questionTypes}} and provide transcript text inside the stem or metadata, plus answer and explanation."
+          },
+          "grammar": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "grammarFocus": [
+              "cleft sentences",
+              "reduced clauses",
+              "advanced register control"
+            ],
+            "sentenceComplexity": "dense academic sentence",
+            "aiTemplate": "Generate 1 IELTS grammar item for BAND {{band}} on topic {{topic}}. Focus on {{grammarFocus}} with {{sentenceComplexity}}. Provide 4 options, one correct answer, concise explanation, and an errorType that can be tracked for remediation."
+          },
+          "vocabulary": {
+            "questionTypes": [
+              "single_choice"
+            ],
+            "lexicalFocus": [
+              "abstract academic lexis",
+              "stance vocabulary",
+              "discipline-neutral formal collocation"
+            ],
+            "distractorDistance": "small semantic distance with subtle register difference",
+            "aiTemplate": "Generate 1 IELTS vocabulary item for BAND {{band}} using topic {{topic}}. Target {{lexicalFocus}}. Distractors should have {{distractorDistance}}. Output stem, options, key, explanation, and errorType."
+          },
+          "writing": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "taskProfile": "task 1 expert synthesis and task 2 fully developed essay",
+            "responseExpectations": "fully flexible task control",
+            "scoringFocus": [
+              "nuanced reasoning",
+              "register control",
+              "concise sophistication"
+            ],
+            "aiTemplate": "Generate 1 IELTS writing prompt for BAND {{band}} using topic {{topic}}. Task profile: {{taskProfile}}. State minimum word count, what the answer must cover, and evaluation focus {{scoringFocus}}. Return as a gap_fill style task with correctAnswer WRITING_TASK."
+          },
+          "speaking": {
+            "questionTypes": [
+              "gap_fill"
+            ],
+            "testProfile": "full test with expert-level abstraction",
+            "fluencyTarget": "authoritative fluent response",
+            "scoringFocus": [
+              "nuanced abstraction",
+              "precision",
+              "spontaneous coherence"
+            ],
+            "aiTemplate": "Generate 1 IELTS speaking prompt for BAND {{band}} using topic {{topic}}. Test profile {{testProfile}}. Require behaviour matching {{fluencyTarget}} and assess {{scoringFocus}}. Return as a gap_fill style task with correctAnswer SPEAKING_TASK and a rubric-oriented explanation."
+          }
+        }
+      }
+    }
+  }
+}

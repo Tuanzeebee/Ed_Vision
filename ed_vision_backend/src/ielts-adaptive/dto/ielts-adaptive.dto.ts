@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  Allow,
   IsArray,
   IsDateString,
   IsDecimal,
@@ -37,6 +38,8 @@ export enum LessonStatus {
 
 export enum SessionType {
   WARMUP = 'warmup',
+  FLASHCARD = 'flashcard',
+  PRACTICE_SET = 'practice_set',
   MINI_TEST = 'mini_test',
 }
 
@@ -71,6 +74,10 @@ export class CreateRoadmapDto {
   @Min(1.0)
   @Max(9.0)
   target_band: number;
+
+  @IsOptional()
+  @IsDateString()
+  target_completion_date?: string;
 }
 
 // DTO to update target band + target completion date and optionally regenerate roadmap
@@ -157,6 +164,18 @@ export class UnlockLessonDto {
 // DTOs for Practice Sessions
 // ============================================
 
+export class AnswerItemDto {
+  @IsString()
+  question_id: string;
+
+  @Allow()
+  answer: any;
+
+  @IsOptional()
+  @IsNumber()
+  time_taken_sec?: number;
+}
+
 export class SubmitPracticeDto {
   @IsInt()
   lesson_id: number;
@@ -167,12 +186,21 @@ export class SubmitPracticeDto {
   @IsInt()
   repository_id: number;
 
-  @IsObject()
-  answers: Record<string, string>;
+  /**
+   * Accepts EITHER:
+   *   - Array format (new): { question_id, answer, time_taken_sec }[]
+   *   - Object format (legacy): Record<itemId, answerString>
+   */
+  @Allow()
+  answers: AnswerItemDto[] | Record<string, string>;
 
   @IsOptional()
   @IsObject()
   time_per_question?: Record<string, number>;
+
+  @IsOptional()
+  @IsNumber()
+  total_time_sec?: number;
 }
 
 export class PracticeSessionResponseDto {
@@ -190,13 +218,31 @@ export class PracticeSessionResponseDto {
 
   accuracy_percent: number;
 
+  passed: boolean;
+
   total_time_sec?: number;
 
   avg_time_per_q?: number;
 
   error_analysis?: any;
 
-  detailed_results: any; // Question-by-question breakdown
+  /** Per-question feedback */
+  feedback: {
+    question_id: string;
+    is_correct: boolean;
+    correct_answer: string;
+    explanation?: string;
+    time_taken_sec?: number;
+  }[];
+
+  detailed_results: any;
+
+  /** Lesson/progression info after submit */
+  next?: {
+    unlocked_lesson_id?: number;
+    lesson_completed: boolean;
+    roadmap_progress_percent?: number;
+  };
 }
 
 // ============================================
@@ -315,4 +361,82 @@ export class SkillProgressResponseDto {
   weak_topics: string[];
 
   last_practiced_at?: Date;
+}
+
+// ============================================
+// DTOs for AI Grading (Speaking / Writing)
+// ============================================
+
+export class GradeSpeakingDto {
+  @IsString()
+  @IsNotEmpty()
+  transcript: string;
+
+  @IsString()
+  @IsNotEmpty()
+  item_prompt: string;
+
+  @IsNumber()
+  @Min(0)
+  @Max(9)
+  target_band: number;
+
+  @IsOptional()
+  @IsString()
+  part_type?: 'part1' | 'part2' | 'part3';
+
+  @IsOptional()
+  @IsInt()
+  lesson_id?: number;
+}
+
+export class GradeWritingDto {
+  @IsString()
+  @IsNotEmpty()
+  essay: string;
+
+  @IsString()
+  @IsNotEmpty()
+  task_prompt: string;
+
+  @IsString()
+  task_type: 'task1' | 'task2';
+
+  @IsNumber()
+  @Min(0)
+  @Max(9)
+  target_band: number;
+
+  @IsOptional()
+  @IsInt()
+  word_count?: number;
+
+  @IsOptional()
+  @IsInt()
+  lesson_id?: number;
+}
+
+export class IeltsCriterionDto {
+  name: string;
+  score: number;
+  feedback: string;
+}
+
+export class CorrectedExampleDto {
+  original: string;
+  suggestion: string;
+  explanation: string;
+}
+
+export class IeltsGradingResultDto {
+  skill: 'speaking' | 'writing';
+  bandScore: number;
+  criteria: IeltsCriterionDto[];
+  overallFeedback: string;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+  correctedExamples?: CorrectedExampleDto[];
+  estimatedCefrLevel: string;
+  confidence: 'low' | 'medium' | 'high';
 }

@@ -9,21 +9,26 @@ import {
 import { ieltsAdaptiveApi } from '@/services/ielts-adaptive/api';
 import type { BandTest, Roadmap, LearningAnalysis, QuestionResult } from '../../types/ielts-adaptive.types';
 import { SkillArea, BandChange, Recommendation } from '../../types/ielts-adaptive.types';
+import BandTestSpeakingRecorder from './components/BandTestSpeakingRecorder';
+import AudioPlayer from './components/AudioPlayer';
+import type { AiGradingResult } from './components/AiScoreCard';
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string; label: string }> = {
     [SkillArea.READING]: { icon: <BookOpen className="w-5 h-5" />, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', label: 'Reading' },
     [SkillArea.LISTENING]: { icon: <Headphones className="w-5 h-5" />, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', label: 'Listening' },
     [SkillArea.WRITING]: { icon: <PenLine className="w-5 h-5" />, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Writing' },
-    [SkillArea.SPEAKING]: { icon: <Mic2 className="w-5 h-5" />, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', label: 'Speaking' },
-    [SkillArea.GRAMMAR]: { icon: <BookMarked className="w-5 h-5" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Grammar' },
-    [SkillArea.VOCABULARY]: { icon: <Layers className="w-5 h-5" />, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200', label: 'Vocabulary' },
+    [SkillArea.SPEAKING]: { icon: <Mic2 className="w-5 h-5" />, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', label: 'Speaking' }
+    // [SkillArea.GRAMMAR]: { icon: <BookMarked className="w-5 h-5" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Grammar' },
+    // [SkillArea.VOCABULARY]: { icon: <Layers className="w-5 h-5" />, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200', label: 'Vocabulary' },
 };
+
 
 export const BandTestPage: React.FC = () => {
     const { roadmapId } = useParams<{ roadmapId: string }>();
     const navigate = useNavigate();
 
     const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+    const [progressPercent, setProgressPercent] = useState<number>(0);
     const [bandTest, setBandTest] = useState<BandTest | null>(null);
     const [questions, setQuestions] = useState<any[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -39,12 +44,25 @@ export const BandTestPage: React.FC = () => {
     const [bandApplied, setBandApplied] = useState(false);
     const [applyResult, setApplyResult] = useState<{ new_band: number; roadmap_regenerated: boolean } | null>(null);
     const [showQuestionErrors, setShowQuestionErrors] = useState(false);
+    const [aiGrades, setAiGrades] = useState<Record<string, any>>({});
+    const [aiGrading, setAiGrading] = useState<Record<string, boolean>>({});
+    const [aiGradeErrors, setAiGradeErrors] = useState<Record<string, string>>({});
+    // Developer mode: tap result hero 5 times to reveal accept button
+    const [devTapCount, setDevTapCount] = useState(0);
+    const [showDevAccept, setShowDevAccept] = useState(false);
+    // isPracticeMode = true when not all lessons are unlocked/completed
+    const isPracticeMode = progressPercent < 100;
+
+    const ALL_SKILLS = Object.values(SkillArea);
     const [selectedSkills, setSelectedSkills] = useState<SkillArea[]>([
         SkillArea.READING,
         SkillArea.LISTENING,
-        SkillArea.GRAMMAR,
-        SkillArea.VOCABULARY,
+        SkillArea.WRITING,
+        SkillArea.SPEAKING,
     ]);
+
+    // In real test mode, always use all skills
+    const activeSkills = isPracticeMode ? selectedSkills : ALL_SKILLS;
 
     useEffect(() => {
         loadRoadmap();
@@ -52,12 +70,22 @@ export const BandTestPage: React.FC = () => {
 
     const loadRoadmap = async () => {
         if (!roadmapId) return;
-
         try {
-            // Assuming we can get roadmap by ID or from enrollment
-            // For now, we'll create the test directly
+            const data = await ieltsAdaptiveApi.getMyRoadmap();
+            // API returns { roadmap: {...}, lessons: [...], ... }
+            const roadmapObj = data?.roadmap ?? data;
+            setRoadmap(roadmapObj);
+            setProgressPercent(roadmapObj?.progress_percent ?? 0);
         } catch (err) {
             console.error('Failed to load roadmap:', err);
+        }
+    };
+
+    const handleDevTap = () => {
+        const next = devTapCount + 1;
+        setDevTapCount(next);
+        if (next >= 5) {
+            setShowDevAccept(true);
         }
     };
 
@@ -68,26 +96,16 @@ export const BandTestPage: React.FC = () => {
             setLoading(true);
             const test = await ieltsAdaptiveApi.createBandTest({
                 roadmap_id: parseInt(roadmapId),
-                skills_to_test: selectedSkills,
+                skills_to_test: activeSkills,
                 questions_per_skill: 5,
             });
 
-            setBandTest(test);
-            // In real implementation, fetch actual questions from backend
-            // For now, simulate with test questions
-            setQuestions(
-                Array.from({ length: test.total_questions }, (_, i) => ({
-                    id: test.question_ids[i] || `q-${i}`,
-                    skill: selectedSkills[Math.floor(i / 5)],
-                    questionText: `Question ${i + 1} about ${selectedSkills[Math.floor(i / 5)]}`,
-                    options: {
-                        A: `Option A for question ${i + 1}`,
-                        B: `Option B for question ${i + 1}`,
-                        C: `Option C for question ${i + 1}`,
-                        D: `Option D for question ${i + 1}`,
-                    },
-                })),
-            );
+            const detail = await ieltsAdaptiveApi.getBandTest(test.id);
+            const resolvedTest = detail?.bandTest ?? test;
+            const resolvedQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
+
+            setBandTest(resolvedTest);
+            setQuestions(resolvedQuestions);
 
             setPhase('testing');
             setQuestionStartTime(Date.now());
@@ -104,6 +122,48 @@ export const BandTestPage: React.FC = () => {
 
         setAnswers((prev) => ({ ...prev, [questionId]: answer }));
         setTimePerQuestion((prev) => ({ ...prev, [questionId]: timeTaken }));
+    };
+
+    const handleAiGrade = async (question: any) => {
+        const input = (answers[question.id] ?? '').trim();
+        if (!input) {
+            setAiGradeErrors((prev) => ({ ...prev, [question.id]: 'Vui lòng nhập câu trả lời trước khi chấm điểm.' }));
+            return;
+        }
+
+        const targetBand = bandTest?.band_level ?? roadmap?.current_band ?? 5;
+        setAiGradeErrors((prev) => ({ ...prev, [question.id]: '' }));
+        setAiGrading((prev) => ({ ...prev, [question.id]: true }));
+
+        try {
+            if (question.skill === SkillArea.WRITING) {
+                const taskType = /task\s*1/i.test(question.questionText) ? 'task1' : 'task2';
+                const wordCount = input.split(/\s+/).filter(Boolean).length;
+                const result = await ieltsAdaptiveApi.gradeWriting({
+                    essay: input,
+                    task_prompt: question.questionText,
+                    task_type: taskType,
+                    target_band: targetBand,
+                    word_count: wordCount,
+                });
+                setAiGrades((prev) => ({ ...prev, [question.id]: result }));
+            } else {
+                const partTypeMatch = question.questionText.match(/part\s*(1|2|3)/i);
+                const partType = partTypeMatch ? (`part${partTypeMatch[1]}` as 'part1' | 'part2' | 'part3') : undefined;
+                const result = await ieltsAdaptiveApi.gradeSpeaking({
+                    transcript: input,
+                    item_prompt: question.questionText,
+                    target_band: targetBand,
+                    part_type: partType,
+                });
+                setAiGrades((prev) => ({ ...prev, [question.id]: result }));
+            }
+        } catch (err) {
+            console.error('Failed to grade with AI:', err);
+            setAiGradeErrors((prev) => ({ ...prev, [question.id]: 'Chấm điểm thất bại. Vui lòng thử lại.' }));
+        } finally {
+            setAiGrading((prev) => ({ ...prev, [question.id]: false }));
+        }
     };
 
     const handleNext = () => {
@@ -134,9 +194,16 @@ export const BandTestPage: React.FC = () => {
 
         try {
             setSubmitting(true);
+            const answersPayload: Record<string, string> = { ...answers };
+            questions.forEach((q) => {
+                const ai = aiGrades[q.id];
+                if (ai?.bandScore != null) {
+                    answersPayload[q.id] = JSON.stringify({ bandScore: ai.bandScore });
+                }
+            });
             const result = await ieltsAdaptiveApi.submitBandTest({
                 test_id: bandTest.id,
-                answers,
+                answers: answersPayload,
                 time_per_question: timePerQuestion,
             });
 
@@ -161,6 +228,9 @@ export const BandTestPage: React.FC = () => {
         setCurrentQuestionIndex(0);
         setQuestionStartTime(Date.now());
         setFastWarning(null);
+        setAiGrades({});
+        setAiGrading({});
+        setAiGradeErrors({});
     };
 
     const handleApplyBand = async () => {
@@ -198,63 +268,113 @@ export const BandTestPage: React.FC = () => {
                     {/* Hero */}
                     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center">
                         <Trophy className="w-14 h-14 text-amber-400 mx-auto mb-4" />
-                        <h1 className="text-2xl font-bold text-slate-800 mb-2">Bài Kiểm Tra Band</h1>
-                        <p className="text-slate-500 text-sm leading-relaxed max-w-md mx-auto">
-                            Kiểm tra toàn diện để đánh giá band hiện tại và xác định bạn có sẵn sàng lên cấp độ cao hơn không.
-                        </p>
-                    </div>
-
-                    {/* Skill selection */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                        <h2 className="text-base font-bold text-slate-800 mb-4">Chọn kỹ năng kiểm tra</h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {Object.values(SkillArea).map((skill) => {
-                                const meta = SKILL_META[skill];
-                                const selected = selectedSkills.includes(skill);
-                                if (!meta) return null;
-                                return (
-                                    <button
-                                        key={skill}
-                                        onClick={() => setSelectedSkills((prev) =>
-                                            prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
-                                        )}
-                                        className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${selected
-                                            ? `${meta.bg} ${meta.border} ${meta.color}`
-                                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                                            }`}
-                                    >
-                                        <span className={selected ? meta.color : 'text-slate-400'}>{meta.icon}</span>
-                                        <span>{meta.label}</span>
-                                        {selected && (
-                                            <CheckCircle2 className={`w-4 h-4 absolute top-2 right-2 ${meta.color}`} />
-                                        )}
-                                    </button>
-                                );
-                            })}
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <h1 className="text-2xl font-bold text-slate-800">Bài Kiểm Tra Band</h1>
+                            {isPracticeMode ? (
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">Làm thử</span>
+                            ) : (
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">Thi thật</span>
+                            )}
+                        </div>
+                        {isPracticeMode ? (
+                            <p className="text-slate-500 text-sm leading-relaxed max-w-md mx-auto">
+                                Bạn đang ở <strong>chế độ làm thử</strong>. Kết quả sẽ được hiển thị nhưng chưa áp dụng vào lộ trình.
+                                Hoàn thành 100% bài học để mở khoá bài thi thật.
+                            </p>
+                        ) : (
+                            <p className="text-slate-500 text-sm leading-relaxed max-w-md mx-auto">
+                                Bạn đã hoàn thành toàn bộ chương trình. Kết quả bài thi này sẽ được <strong>áp dụng</strong> vào lộ trình học của bạn.
+                            </p>
+                        )}
+                        {/* Progress bar */}
+                        <div className="mt-4 max-w-xs mx-auto">
+                            <div className="flex justify-between text-xs text-slate-400 mb-1">
+                                <span>Tiến độ bài học</span>
+                                <span>{progressPercent}%</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-700 ${progressPercent >= 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`}
+                                    style={{ width: `${progressPercent}%` }}
+                                />
+                            </div>
                         </div>
                     </div>
+
+                    {/* Skill selection — only in practice mode */}
+                    {isPracticeMode ? (
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                            <h2 className="text-base font-bold text-slate-800 mb-4">Chọn kỹ năng kiểm tra</h2>
+                            <div className="grid sm:grid-cols-2 gap-3">
+                                {Object.values(SkillArea).map((skill) => {
+                                    const meta = SKILL_META[skill];
+                                    const selected = selectedSkills.includes(skill);
+                                    if (!meta) return null;
+                                    return (
+                                        <button
+                                            key={skill}
+                                            onClick={() => setSelectedSkills((prev) =>
+                                                prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+                                            )}
+                                            className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${selected
+                                                ? `${meta.bg} ${meta.border} ${meta.color}`
+                                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                                                }`}
+                                        >
+                                            <span className={selected ? meta.color : 'text-slate-400'}>{meta.icon}</span>
+                                            <span>{meta.label}</span>
+                                            {selected && (
+                                                <CheckCircle2 className={`w-4 h-4 absolute top-2 right-2 ${meta.color}`} />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                            <h2 className="text-base font-bold text-slate-800 mb-3">Kỹ năng kiểm tra</h2>
+                            <p className="text-xs text-slate-400 mb-4">Bài thi thật kiểm tra toàn bộ 6 kỹ năng</p>
+                            <div className="grid sm:grid-cols-2 gap-3">
+                                {ALL_SKILLS.map((skill) => {
+                                    const meta = SKILL_META[skill];
+                                    if (!meta) return null;
+                                    return (
+                                        <div
+                                            key={skill}
+                                            className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-semibold ${meta.bg} ${meta.border} ${meta.color}`}
+                                        >
+                                            <span>{meta.icon}</span>
+                                            <span>{meta.label}</span>
+                                            <CheckCircle2 className={`w-4 h-4 absolute top-2 right-2 ${meta.color}`} />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Info */}
                     <div className="bg-indigo-50 rounded-2xl border border-indigo-100 px-5 py-4 flex items-center gap-6">
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-indigo-600">{selectedSkills.length * 5}</p>
+                            <p className="text-2xl font-bold text-indigo-600">{activeSkills.length * 5}</p>
                             <p className="text-xs text-indigo-400 font-medium">Câu hỏi</p>
                         </div>
                         <div className="w-px h-10 bg-indigo-200" />
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-indigo-600">~{selectedSkills.length * 5}</p>
+                            <p className="text-2xl font-bold text-indigo-600">~{activeSkills.length * 5}</p>
                             <p className="text-xs text-indigo-400 font-medium">Phút</p>
                         </div>
                         <div className="w-px h-10 bg-indigo-200" />
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-indigo-600">{selectedSkills.length}</p>
+                            <p className="text-2xl font-bold text-indigo-600">{activeSkills.length}</p>
                             <p className="text-xs text-indigo-400 font-medium">Kỹ năng</p>
                         </div>
                     </div>
 
                     <button
                         onClick={handleStartTest}
-                        disabled={selectedSkills.length === 0 || loading}
+                        disabled={activeSkills.length === 0 || loading}
                         className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
                     >
                         {loading ? (
@@ -273,6 +393,13 @@ export const BandTestPage: React.FC = () => {
         const currentQuestion = questions[currentQuestionIndex];
         const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
         const skillMeta = SKILL_META[currentQuestion.skill?.toLowerCase()] ?? SKILL_META[SkillArea.READING];
+        const optionsEntries = Object.entries(currentQuestion.options || {});
+        const isChoiceQuestion = optionsEntries.length > 0;
+        const isAiQuestion = currentQuestion.skill === SkillArea.WRITING || currentQuestion.skill === SkillArea.SPEAKING;
+        const aiResult = aiGrades[currentQuestion.id];
+        const aiBusy = !!aiGrading[currentQuestion.id];
+        const aiError = aiGradeErrors[currentQuestion.id];
+        const canProceed = isAiQuestion ? !!aiResult : !!answers[currentQuestion.id];
 
         return (
             <div className="min-h-screen bg-slate-50 py-6 px-4">
@@ -319,33 +446,97 @@ export const BandTestPage: React.FC = () => {
 
                     {/* Question card */}
                     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                        {/* Listening audio player */}
+                        {currentQuestion.skill === SkillArea.LISTENING && (
+                            <AudioPlayer
+                                key={currentQuestion.id}
+                                url={currentQuestion.mediaAudioUrl}
+                                autoPlay
+                            />
+                        )}
                         <p className="text-slate-800 font-medium text-base leading-relaxed mb-5">
                             {currentQuestion.questionText}
                         </p>
-                        <div className="flex flex-col gap-2.5 mb-6">
-                            {Object.entries(currentQuestion.options).map(([key, text]) => {
-                                const selected = answers[currentQuestion.id] === key;
-                                return (
-                                    <button
-                                        key={key}
-                                        onClick={() => handleAnswer(currentQuestion.id, key)}
-                                        className={`w-full text-left px-4 py-3 rounded-2xl border-2 text-sm transition-all flex items-center gap-3 ${selected
-                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
-                                            : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'
-                                            }`}
-                                    >
-                                        <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${selected ? 'bg-indigo-500 text-white' : 'bg-white border border-slate-300 text-slate-500'
-                                            }`}>
-                                            {key}
-                                        </span>
-                                        <span>{text as string}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        {isChoiceQuestion ? (
+                            <div className="flex flex-col gap-2.5 mb-6">
+                                {optionsEntries.map(([key, text]) => {
+                                    const selected = answers[currentQuestion.id] === key;
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => handleAnswer(currentQuestion.id, key)}
+                                            className={`w-full text-left px-4 py-3 rounded-2xl border-2 text-sm transition-all flex items-center gap-3 ${selected
+                                                ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
+                                                : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'
+                                                }`}
+                                        >
+                                            <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${selected ? 'bg-indigo-500 text-white' : 'bg-white border border-slate-300 text-slate-500'
+                                                }`}>
+                                                {key}
+                                            </span>
+                                            <span>{text as string}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : currentQuestion.skill === SkillArea.SPEAKING ? (
+                            <div className="mb-6">
+                                <BandTestSpeakingRecorder
+                                    key={currentQuestion.id}
+                                    questionText={currentQuestion.questionText}
+                                    targetBand={bandTest?.band_level ?? roadmap?.current_band ?? 5}
+                                    partType={(() => {
+                                        const m = currentQuestion.questionText.match(/part\s*(1|2|3)/i);
+                                        return m ? (`part${m[1]}` as 'part1' | 'part2' | 'part3') : 'part1';
+                                    })()}
+                                    onGraded={(result: AiGradingResult) => {
+                                        setAiGrades((prev) => ({ ...prev, [currentQuestion.id]: result }));
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="mb-6">
+                                <label className="block text-xs font-semibold text-slate-500 mb-2">
+                                    {isAiQuestion ? 'Câu trả lời của bạn' : 'Điền đáp án'}
+                                </label>
+                                <textarea
+                                    value={answers[currentQuestion.id] ?? ''}
+                                    onChange={(e) => handleAnswer(currentQuestion.id, e.target.value)}
+                                    placeholder={isAiQuestion ? 'Nhập bài viết hoặc transcript...' : 'Nhập đáp án...'}
+                                    className="w-full min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                />
+
+                                {isAiQuestion && (
+                                    <div className="mt-4">
+                                        <button
+                                            onClick={() => handleAiGrade(currentQuestion)}
+                                            disabled={aiBusy}
+                                            className="w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            {aiBusy ? (
+                                                <><Loader2 className="w-4 h-4 animate-spin" /> Đang chấm điểm…</>
+                                            ) : (
+                                                <>Chấm điểm AI</>
+                                            )}
+                                        </button>
+                                        {aiError && (
+                                            <p className="mt-2 text-xs text-rose-600">{aiError}</p>
+                                        )}
+                                        {aiResult && (
+                                            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                                                <p className="text-sm font-semibold text-emerald-700">Band AI: {aiResult.bandScore?.toFixed?.(1) ?? aiResult.bandScore}</p>
+                                                {aiResult.overallFeedback && (
+                                                    <p className="text-xs text-emerald-700 mt-1">{aiResult.overallFeedback}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <button
                             onClick={handleNext}
-                            disabled={!answers[currentQuestion.id] || submitting}
+                            disabled={!canProceed || submitting}
                             className="w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
                         >
                             {submitting ? (
@@ -370,9 +561,17 @@ export const BandTestPage: React.FC = () => {
         return (
             <div className="min-h-screen bg-slate-50 py-8 px-4">
                 <div className="max-w-2xl mx-auto flex flex-col gap-5">
-                    {/* Band comparison hero */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center">
-                        <Trophy className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                    {/* Band comparison hero — tap 5x in dev mode to unlock accept button */}
+                    <div
+                        className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center cursor-default select-none"
+                        onClick={handleDevTap}
+                    >
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                            <Trophy className="w-12 h-12 text-amber-400" />
+                            {isPracticeMode && (
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">Làm thử</span>
+                            )}
+                        </div>
                         <h1 className="text-2xl font-bold text-slate-800 mb-5">Kết quả Band Test</h1>
 
                         <div className="flex items-center justify-center gap-6">
@@ -583,88 +782,135 @@ export const BandTestPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Upgrade roadmap suggestion (band UP) */}
-                    {bandTest.band_change === BandChange.UP && !bandApplied && (
-                        <div className="rounded-3xl border-2 border-emerald-200 bg-emerald-50 p-5">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                    <TrendingUp className="w-5 h-5 text-emerald-600" />
+                    {/* Practice mode notice OR real-test apply section */}
+                    {isPracticeMode ? (
+                        <div className="rounded-3xl border-2 border-amber-200 bg-amber-50 p-5">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                                    <AlertTriangle className="w-5 h-5 text-amber-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-emerald-800">🎉 Band của bạn đã tăng lên {bandTest.estimated_band.toFixed(1)}!</h3>
-                                    <p className="text-xs text-emerald-700 mt-1">
-                                        Hệ thống sẽ cập nhật band hiện tại và tự động điều chỉnh lộ trình học phù hợp với trình độ mới của bạn.
+                                    <h3 className="text-sm font-bold text-amber-800">Chế độ làm thử</h3>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                        Kết quả sẽ được áp dụng khi bạn học hết chương trình. Hãy tiếp tục hoàn thành các bài học còn lại ({progressPercent}% đã xong).
                                     </p>
                                 </div>
                             </div>
-                            <button
-                                onClick={handleApplyBand}
-                                disabled={applying}
-                                className="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                            >
-                                {applying ? (
-                                    <><Loader2 className="w-4 h-4 animate-spin" /> Đang cập nhật lộ trình…</>
-                                ) : (
-                                    <><RefreshCw className="w-4 h-4" /> Nâng cấp lộ trình & cập nhật band</>
-                                )}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-3">
-                        {/* Apply band button for DOWN or STABLE changes */}
-                        {bandTest.band_change !== BandChange.UP && bandTest.band_change !== BandChange.STABLE && (
-                            bandApplied ? (
-                                <div className="w-full py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm flex items-center justify-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    Đã cập nhật năng lực thành công — Band {bandTest.estimated_band.toFixed(1)}
+                            {/* Developer mode: show accept button after 5 taps */}
+                            {showDevAccept && !bandApplied && (
+                                <div className="mt-4 border-t border-amber-200 pt-4">
+                                    <p className="text-xs text-amber-600 font-mono mb-2">🛠 Developer mode</p>
+                                    <button
+                                        onClick={handleApplyBand}
+                                        disabled={applying}
+                                        className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {applying ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Đang áp dụng…</>
+                                        ) : (
+                                            <>✅ Chấp nhận kết quả (Band {bandTest.estimated_band.toFixed(1)})</>
+                                        )}
+                                    </button>
                                 </div>
-                            ) : (
-                                <button
-                                    onClick={handleApplyBand}
-                                    disabled={applying}
-                                    className="w-full py-3.5 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {applying ? (
-                                        <><Loader2 className="w-4 h-4 animate-spin" /> Đang cập nhật…</>
-                                    ) : (
-                                        <><RefreshCw className="w-4 h-4" /> Cập nhật năng lực (Band {bandTest.estimated_band.toFixed(1)})</>
-                                    )}
-                                </button>
-                            )
-                        )}
-
-                        {/* Applied success state for UP */}
-                        {bandTest.band_change === BandChange.UP && bandApplied && (
-                            <div className="w-full py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm flex items-center justify-center gap-2">
-                                <CheckCircle2 className="w-4 h-4" />
-                                {applyResult?.roadmap_regenerated
-                                    ? `Đã nâng cấp lộ trình thành công — Band ${(applyResult?.new_band ?? bandTest.estimated_band).toFixed(1)}`
-                                    : `Đã cập nhật band thành công — Band ${bandTest.estimated_band.toFixed(1)}`
-                                }
-                            </div>
-                        )}
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => navigate('/student/certificate-review/ielts')}
-                                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                            >
-                                <ArrowLeft className="w-4 h-4" /> Về lộ trình
-                            </button>
+                            )}
                             {bandApplied && (
-                                <button
-                                    onClick={() => navigate('/student/certificate-review/ielts')}
-                                    className="flex-1 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {applyResult?.roadmap_regenerated ? 'Xem lộ trình mới' : 'Về lộ trình'} <ChevronRight className="w-4 h-4" />
-                                </button>
+                                <div className="mt-4 border-t border-amber-200 pt-4">
+                                    <div className="w-full py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm flex items-center justify-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        {applyResult?.roadmap_regenerated
+                                            ? `Đã nâng cấp lộ trình — Band ${(applyResult?.new_band ?? bandTest.estimated_band).toFixed(1)}`
+                                            : `Đã cập nhật band — Band ${bandTest.estimated_band.toFixed(1)}`
+                                        }
+                                    </div>
+                                </div>
                             )}
                         </div>
+                    ) : (
+                        <>
+                            {/* Upgrade roadmap suggestion (band UP) */}
+                            {bandTest.band_change === BandChange.UP && !bandApplied && (
+                                <div className="rounded-3xl border-2 border-emerald-200 bg-emerald-50 p-5">
+                                    <div className="flex items-start gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                            <TrendingUp className="w-5 h-5 text-emerald-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-emerald-800">🎉 Band của bạn đã tăng lên {bandTest.estimated_band.toFixed(1)}!</h3>
+                                            <p className="text-xs text-emerald-700 mt-1">
+                                                Hệ thống sẽ cập nhật band hiện tại và tự động điều chỉnh lộ trình học phù hợp với trình độ mới của bạn.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleApplyBand}
+                                        disabled={applying}
+                                        className="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {applying ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Đang cập nhật lộ trình…</>
+                                        ) : (
+                                            <><RefreshCw className="w-4 h-4" /> Nâng cấp lộ trình & cập nhật band</>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Apply band for DOWN or STABLE */}
+                            {bandTest.band_change !== BandChange.UP && (
+                                bandApplied ? (
+                                    <div className="w-full py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm flex items-center justify-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Đã cập nhật năng lực thành công — Band {bandTest.estimated_band.toFixed(1)}
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleApplyBand}
+                                        disabled={applying}
+                                        className="w-full py-3.5 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {applying ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Đang cập nhật…</>
+                                        ) : (
+                                            <><RefreshCw className="w-4 h-4" /> Cập nhật năng lực (Band {bandTest.estimated_band.toFixed(1)})</>
+                                        )}
+                                    </button>
+                                )
+                            )}
+
+                            {/* Applied success state for UP */}
+                            {bandTest.band_change === BandChange.UP && bandApplied && (
+                                <div className="w-full py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm flex items-center justify-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    {applyResult?.roadmap_regenerated
+                                        ? `Đã nâng cấp lộ trình thành công — Band ${(applyResult?.new_band ?? bandTest.estimated_band).toFixed(1)}`
+                                        : `Đã cập nhật band thành công — Band ${bandTest.estimated_band.toFixed(1)}`
+                                    }
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* Navigation buttons */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => navigate('/student/certificate-review/ielts')}
+                            className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                        >
+                            <ArrowLeft className="w-4 h-4" /> Về lộ trình
+                        </button>
+                        {bandApplied && (
+                            <button
+                                onClick={() => navigate('/student/certificate-review/ielts')}
+                                className="flex-1 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                            >
+                                {applyResult?.roadmap_regenerated ? 'Xem lộ trình mới' : 'Về lộ trình'} <ChevronRight className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
+
+
         );
     }
 
