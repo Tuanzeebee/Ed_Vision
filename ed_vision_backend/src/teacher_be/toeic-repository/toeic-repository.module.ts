@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CertificateModule } from '../../student_be/certificate/certificate.module';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { OpenRouterModule } from '../../common/services/openrouter.module';
 import { TeacherToeicRepositoryController } from './toeic-repository.controller';
 import { ToeicListeningImportService } from './toeic-listening-import.service';
 import { ToeicPracticeImportService } from './toeic-practice-import.service';
@@ -9,7 +10,7 @@ import { VocabImportController } from './vocab-import.controller';
 import { VocabImportService } from './vocab-import.service';
 
 @Module({
-  imports: [CertificateModule, PrismaModule],
+  imports: [CertificateModule, PrismaModule, OpenRouterModule],
   controllers: [TeacherToeicRepositoryController, VocabImportController],
   providers: [
     ToeicListeningImportService,

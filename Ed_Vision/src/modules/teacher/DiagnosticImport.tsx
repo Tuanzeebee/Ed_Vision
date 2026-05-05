@@ -172,6 +172,9 @@ export function DiagnosticImportBody({ certType }: { certType: "toeic" | "ielts"
             {result.audioResult && (
               <p className="mt-1 text-xs text-emerald-600">
                 Audio đã xử lý: <strong>{result.audioResult.total_chunks}</strong> chunks, auto-mapped <strong>{result.audioResult.auto_mapped_count}</strong>.
+                {typeof result.audioResult.image_mapped_count === 'number' && result.audioResult.image_mapped_count > 0 && (
+                  <> | Hình ảnh (AI): <strong>{result.audioResult.image_mapped_count}</strong> câu</>
+                )}
               </p>
             )}
           </div>

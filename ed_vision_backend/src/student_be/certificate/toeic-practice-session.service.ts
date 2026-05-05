@@ -324,7 +324,19 @@ export class ToeicPracticeSessionService {
     const enrollment = await this.findActiveEnrollment(accountId);
     const learnerScore = this.resolveLearnerBandScore(enrollment);
     const skillArea = this.deriveSkillArea(part);
-    const fixedCount = 10;
+
+    // TOEIC standard question counts per part
+    const PART_QUESTION_COUNT: Record<number, number> = {
+      1: 6,   // Photographs
+      2: 25,  // Question-Response
+      3: 39,  // Conversations (13 groups × 3)
+      4: 30,  // Talks (10 groups × 3)
+      5: 30,  // Incomplete Sentences
+      6: 16,  // Text Completion (4 groups × 4)
+      7: 54,  // Reading Comprehension
+    };
+    const fixedCount = PART_QUESTION_COUNT[part] ?? 10;
+
     const usedQuestionIds = await this.getUsedQuestionIdSet(enrollment.id, part);
     const usedQuestionIdList = [...usedQuestionIds];
 

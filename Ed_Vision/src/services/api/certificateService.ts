@@ -626,6 +626,8 @@ export interface ToeicPracticeQuestion {
   id: number;
   stem: string;
   reading_passage?: string | null;
+  context_image?: string | null;
+  context_audio?: string | null;
   ai_explanation?: string | null;
   options: ToeicPracticeQuestionOption[];
 }
@@ -741,6 +743,7 @@ export interface ImportPracticeQuestionsResponse {
   score_band_max: number;
   practice_set_id: string;
   detected_parts: number[];
+  extracted_image_count?: number;
   skipped_duplicates: Array<{
     question_number: number;
     part: number;
@@ -922,6 +925,7 @@ export interface ImportPracticeAudioResponse {
   practice_set_id: string;
   total_chunks: number;
   auto_mapped_count: number;
+  image_mapped_count?: number;
 }
 
 export async function importPracticeAudio(
@@ -939,6 +943,29 @@ export async function importPracticeAudio(
   return res.data;
 }
 
+
+// ── Practice Listening Image Import ──────────────────────────────────────────
+
+export interface ImportPracticeImagesResponse {
+  practice_set_id: string;
+  extracted_count: number;
+  part1_mapped: number;
+}
+
+export async function importPracticeImages(
+  practiceSetId: string,
+  file: File,
+): Promise<ImportPracticeImagesResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("practice_set_id", practiceSetId);
+  const res = await apiClient.post<ImportPracticeImagesResponse>(
+    "/teacher/toeic-repository/import-practice-images",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
 
 export async function resetToeicPracticeProgress(
   resetReservePoints = true,
@@ -1089,6 +1116,7 @@ export interface DiagnosticQuestionOption {
 
 export interface DiagnosticQuestion {
   id: number;
+  item_order: number;
   part: number;
   skill_area: string;
   stem: string;
