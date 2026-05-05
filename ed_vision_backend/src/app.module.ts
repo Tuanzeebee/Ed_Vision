@@ -34,6 +34,9 @@ import { TtsModule } from './tts/tts.module';
 import { SttModule } from './stt/stt.module';
 import { RedisModule } from './redis/redis.module';
 import { StudyRoomModule } from './study-room/study-room.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { IeltsAdaptiveModule } from './ielts-adaptive/ielts-adaptive.module';
+import { PlacementModule } from './placement/placement.module';
 
 function resolveI18nPath(): string {
   const candidatePaths = [
@@ -41,7 +44,9 @@ function resolveI18nPath(): string {
     path.join(__dirname, 'i18n'),
   ];
 
-  const found = candidatePaths.find((candidatePath) => existsSync(candidatePath));
+  const found = candidatePaths.find((candidatePath) =>
+    existsSync(candidatePath),
+  );
   return found ?? path.join(process.cwd(), 'src', 'i18n');
 }
 
@@ -82,6 +87,8 @@ function resolveI18nPath(): string {
     StudentChatModule,
     AttendanceModule,
     StudyRoomModule,
+    IeltsAdaptiveModule,
+    PlacementModule,
     YouTubeMusicModule,
     TtsModule,
     SttModule,

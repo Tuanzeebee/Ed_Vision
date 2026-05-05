@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef , useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Header from '../../components/layout/Header'
@@ -15,6 +15,7 @@ const BACKGROUND_VIDEO_URL =
 export default function CertificateReview() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const IELTS_SURVEY_KEY = 'ieltsSurveyCompleted'
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const frameRef = useRef<number | null>(null)
   const replayTimeoutRef = useRef<number | null>(null)
@@ -22,8 +23,14 @@ export default function CertificateReview() {
 
   // ── Load dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
+  const [isLoaded, setIsLoaded] = useState(false)
   useEffect(() => {
-    getAllEnrollments().then(setEnrollments).catch(() => {})
+    getAllEnrollments().then((data) => {
+      setEnrollments(data)
+      setIsLoaded(true)
+    }).catch(() => {
+      setIsLoaded(true)
+    })
   }, [])
 
   useEffect(() => {
@@ -154,7 +161,33 @@ export default function CertificateReview() {
   const streak = 5
 
   const displayName = user?.fullName || user?.full_name || user?.name || 'Sinh viên'
+
+  const hasCompletedIeltsSurvey = useMemo(() => {
+    if (!isLoaded) return true; // Wait for load to avoid accidental triggers
+
+    const enrollment = enrollments.find((e) => e.cert_type === 'ielts')
+
+    // Nếu backend đã lưu target_score thì chắc chắn đã hoàn thành setup
+    if (enrollment && enrollment.target_score) return true;
+
+    // Nếu chưa có enrollment hoặc chưa có target_score (chưa hoàn thành bước chọn mục tiêu), 
+    // bắt buộc người dùng phải làm bài test (hoặc chọn mục tiêu lại). 
+    // Xóa bộ nhớ đệm cục bộ để tránh bị vướng state cũ dẫn đến skip test.
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(IELTS_SURVEY_KEY);
+      window.localStorage.removeItem('ieltsGoalBand');
+      window.localStorage.removeItem('ieltsCurrentBand');
+      window.localStorage.removeItem('ieltsExamDate');
+    }
+    return false;
+  }, [enrollments, isLoaded])
+
   const handleCertClick = (id: CertId) => {
+    if (!isLoaded) return;
+    if (id === 'ielts' && !hasCompletedIeltsSurvey) {
+      navigate('/student/ielts-assessment?next=/student/certificate-review/ielts')
+      return
+    }
     navigate(`/student/certificate-review/${id}`)
   }
 

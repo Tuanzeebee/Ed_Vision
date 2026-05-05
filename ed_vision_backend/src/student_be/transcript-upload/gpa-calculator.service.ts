@@ -274,7 +274,7 @@ export class GPACalculatorService {
         },
       });
 
-      //  Log tổng tín chỉ TRƯỚC KHI loại bỏ DEM và ES 100
+      // ✅ Log tổng tín chỉ TRƯỚC KHI loại bỏ DEM và ES 100
       const totalCreditsBeforeExclusion = auditCompleted.reduce(
         (sum, r) => sum + (r.course?.credits_unit || 0),
         0,

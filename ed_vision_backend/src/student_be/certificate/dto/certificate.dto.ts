@@ -19,6 +19,21 @@ const CERT_TYPES = [
   'mos-excel',
   'mos-powerpoint',
 ] as const;
+const ALL_BANDS = [
+  '4.0',
+  '5.0',
+  '6.0',
+  '6.5',
+  '7.0',
+  '7.5+', // IELTS
+  '350-495',
+  '500-599',
+  '600-699',
+  '700-799',
+  '800+', // TOEIC
+  'associate',
+  'expert', // MOS
+] as const;
 
 export class CreateEnrollmentDto {
   @IsString()

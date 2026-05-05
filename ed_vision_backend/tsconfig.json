@@ -10,9 +10,12 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "downlevelIteration": true,
+    "useDefineForClassFields": false,
     "sourceMap": true,
-    "rootDir": "./src",
+  "rootDir": "./",
     "outDir": "./dist",
     "baseUrl": "./",
     "ignoreDeprecations": "5.0",
@@ -26,5 +29,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "include": ["src", "scripts"]
 }
