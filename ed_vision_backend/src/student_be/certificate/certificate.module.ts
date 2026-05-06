@@ -8,9 +8,10 @@ import { ToeicPracticeSessionService } from './toeic-practice-session.service';
 import { ToeicDiagnosticService } from './toeic-diagnostic.service';
 import { ToeicExamSessionService } from './toeic-exam-session.service';
 import { StudyRoomModule } from '../../study-room/study-room.module';
+import { OpenRouterModule } from '../../common/services/openrouter.module';
 
 @Module({
-  imports: [PrismaModule, StudyRoomModule],
+  imports: [PrismaModule, StudyRoomModule, OpenRouterModule],
   controllers: [CertificateEnrollmentController],
   providers: [
     CertificateEnrollmentService,

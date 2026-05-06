@@ -19,6 +19,7 @@ import * as XLSX from 'xlsx';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OpenRouterService } from '../../common/services/openrouter.service';
 import { QuestionPointsCalculatorService } from '../../study-room/services/question-points-calculator.service';
 import { getWeekStart } from '../../study-room/leaderboard.constants';
 import {
@@ -280,6 +281,7 @@ export class CertificateEnrollmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly questionPointsCalculator: QuestionPointsCalculatorService,
+    private readonly openRouter: OpenRouterService,
   ) { }
 
   private readonly inFlightExplanationGenerations = new Map<
@@ -4146,10 +4148,37 @@ export class CertificateEnrollmentService {
     return false;
   }
 
+  /**
+   * Primary: OpenRouter (fast, no local dependency)
+   * Fallback: Ollama (local, khi OpenRouter unavailable)
+   * Toggle: AI_TUTOR_PROVIDER=openrouter|ollama (default: openrouter)
+   */
   private async callOllamaTutorAnswer(
     prompt: string,
     model: string,
   ): Promise<string> {
+    const provider = (process.env.AI_TUTOR_PROVIDER ?? 'openrouter').trim().toLowerCase();
+
+    // ── Try OpenRouter first (unless explicitly set to ollama-only) ──
+    if (provider !== 'ollama' && this.openRouter.isAvailable()) {
+      try {
+        const result = await this.openRouter.chatCompletion(prompt, {
+          temperature: 0.2,
+          max_tokens: 600,
+        });
+        const answer = this.extractTutorAnswerFromRaw(result.answer);
+        const finalAnswer = answer.length > 0 ? answer : result.answer.trim();
+        if (finalAnswer.length >= 5) {
+          return finalAnswer;
+        }
+      } catch (err) {
+        // OpenRouter failed — fall through to Ollama
+        const logger = new Logger('CertificateEnrollmentService');
+        logger.warn(`OpenRouter tutor failed, falling back to Ollama: ${String(err)}`);
+      }
+    }
+
+    // ── Fallback: Ollama local ──
     const baseUrl =
       process.env.OLLAMA_BASE_URL?.trim() ||
       'http://127.0.0.1:11434/api/generate';

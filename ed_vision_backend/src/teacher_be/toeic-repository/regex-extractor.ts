@@ -38,11 +38,13 @@ export class RegexExtractor {
   extract(rawText: string): ExtractedWord[] {
     const lines = rawText.split(/\n/).map((l) => l.trim()).filter(Boolean);
     const merged = this.mergeLines(lines);
+    // Pre-split: tách các dòng chứa nhiều entry (OCR merge adjacent entries)
+    const split = this.splitMultiEntry(merged);
 
     const results: ExtractedWord[] = [];
     const seen = new Set<string>();
 
-    for (const line of merged) {
+    for (const line of split) {
       // Bỏ qua dòng header/footer
       if (/^(từ vựng|toeic|phần|page|\d{3,}$)/i.test(line) && line.length < 80) continue;
 
@@ -57,7 +59,7 @@ export class RegexExtractor {
       // 2. Dừng tại từ tiếng Anh có dạng " Word (pos)" hoặc " Word (pos):"
       // 3. Xóa các dấu câu thừa ở đầu nghĩa (vd: ": khả năng" -> "khả năng")
       let cleanMeaning = meaning
-        .replace(/\s*[^a-z0-9]*\d+[\.\)]\s*[A-Z][a-z].*$/i, '') // " 2. Word" or " Š. 2. Word"
+        .replace(/\s*[^a-z0-9]*\d+[\.\'\)]\s*[A-Z][a-z].*$/i, '') // " 2. Word" or " Š. 2. Word"
         .replace(/\s*[^a-z0-9]*[A-Z][a-z]{2,}\s*\([a-z.]+\).*$/i, '') // " Š. Able (adj)"
         .replace(/^[:;.,\-\s]+/, '') // Strip leading punctuations
         .trim();
@@ -80,18 +82,47 @@ export class RegexExtractor {
   private mergeLines(lines: string[]): string[] {
     const merged: string[] = [];
     for (const line of lines) {
-      // isNew nếu: bắt đầu số thứ tự + chữ Anh, HOẶC chữ hoa Anh không phải continuation tiếng Việt
-      const isNew =
-        /^\d+[\.\)]\s*[A-Za-z]/.test(line) ||   // "1. Word..." hoặc "1) Word..."
-        /^[A-Z][a-z]{2,}/.test(line);            // "Abandon..." "Abide..."
+      // isNew nếu: bắt đầu số thứ tự + chữ Anh
+      const startsWithNumber = /^\d+[\.\'\)]\s*[A-Za-z]/.test(line);
 
-      if (!isNew && merged.length > 0) {
+      // Chữ hoa Anh chỉ tính là "new" nếu:
+      // - Dòng chứa separator (: ; –) hoặc (pos) → khả năng cao là entry mới
+      // - VÀ không phải continuation tiếng Việt (có dấu, ngắn)
+      const startsWithCapital = /^[A-Z][a-z]{2,}/.test(line);
+      const looksLikeEntry = startsWithCapital && (/\([a-zA-Z.&\/ ]{1,15}\)/.test(line) || /[:;–]/.test(line));
+
+      // Nếu dòng ngắn (<30 ký tự) và bắt đầu bằng chữ hoa nhưng KHÔNG có dấu hiệu entry → continuation
+      const isViContinuation = startsWithCapital && !looksLikeEntry && line.length < 50;
+
+      const isNew = startsWithNumber || (startsWithCapital && looksLikeEntry);
+
+      if ((!isNew || isViContinuation) && merged.length > 0) {
         merged[merged.length - 1] += ' ' + line;
       } else {
         merged.push(line);
       }
     }
     return merged;
+  }
+
+  // ── splitMultiEntry: tách dòng chứa nhiều entry (OCR merge liền nhau) ──────
+  // VD: "...tới được.23. Accommodate (v) : thích ứng" → 2 dòng riêng
+  private splitMultiEntry(lines: string[]): string[] {
+    const result: string[] = [];
+    for (const line of lines) {
+      // Tìm vị trí "số. Chữ" xuất hiện GIỮA dòng (không phải đầu dòng)
+      const parts = line.split(/(?<=\S)\s*(?=\d+[\.)']\s*[A-Z][a-z])/);
+      if (parts.length > 1) {
+        // Phần đầu có thể là continuation hoặc entry, push tất cả
+        for (const p of parts) {
+          const trimmed = p.trim();
+          if (trimmed) result.push(trimmed);
+        }
+      } else {
+        result.push(line);
+      }
+    }
+    return result;
   }
 
   // ── parseLine: thử nhiều pattern, kể cả OCR-noisy ─────────────────────────
@@ -102,7 +133,7 @@ export class RegexExtractor {
 
     // ── Pattern A: "1. Word (pos) : meaning"  (chuẩn nhất) ────────────────
     const pA = line.match(
-      /^\d+[\.\)]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*\(([^)]{1,20})\)\s*[:;–\-]+\s*(.{2,})$/,
+      /^\d+[\.\'\)]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*\(([^)]{1,20})\)\s*[:;–\-]+\s*(.{2,})$/,
     );
     if (pA) { word = pA[1]; pos = pA[2]; meaning = pA[3]; }
 
@@ -117,7 +148,7 @@ export class RegexExtractor {
     // ── Pattern C: "1. Word : meaning"  (không có pos) ────────────────────
     if (!word) {
       const pC = line.match(
-        /^\d+[\.\)]\s*([A-Za-z][A-Za-z\s\-']{1,40}?)\s*[:;–\-]+\s*(.{2,})$/,
+        /^\d+[\.\'\)]\s*([A-Za-z][A-Za-z\s\-']{1,40}?)\s*[:;–\-]+\s*(.{2,})$/,
       );
       if (pC) { word = pC[1]; meaning = pC[2]; }
     }
@@ -125,7 +156,7 @@ export class RegexExtractor {
     // ── Pattern D: OCR-noisy — "1.Word(pos):meaning" (thiếu khoảng trắng) ─
     if (!word) {
       const pD = line.match(
-        /^\d+[\.\)]\s*([A-Za-z][A-Za-z\-']{1,30})\s*\(([a-zA-Z\s&\/]{1,15})\)\s*[:\-;]+\s*(.{2,})$/,
+        /^\d+[\.\'\)]\s*([A-Za-z][A-Za-z\-']{1,30})\s*\(([a-zA-Z\s&\/]{1,15})\)\s*[:\-;]+\s*(.{2,})$/,
       );
       if (pD) { word = pD[1]; pos = pD[2]; meaning = pD[3]; }
     }
@@ -134,9 +165,30 @@ export class RegexExtractor {
     // VD: "3. Abeyance (n) . sự đình chỉ" hoặc "3. Abeyance (n). sự đình chỉ"
     if (!word) {
       const pE = line.match(
-        /^\d+[\.\)]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*\(([^)]{1,20})\)\s*[\.]\s+(.{2,})$/,
+        /^\d+[\.\'\)]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*\(([^)]{1,20})\)\s*[\.']\s+(.{2,})$/,
       );
       if (pE) { word = pE[1]; pos = pE[2]; meaning = pE[3]; }
+    }
+
+    // ── Pattern F: OCR bỏ mất separator — chỉ có space sau ")" ──────────────
+    // VD: "18. Accept (v) chấp thuận" (colon bị mất hoàn toàn)
+    if (!word) {
+      const pF = line.match(
+        /^\d+[\.\'\)]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*\(([^)]{1,20})\)\s{1,4}([^\d\(A-Z].{1,})$/,
+      );
+      if (pF) { word = pF[1]; pos = pF[2]; meaning = pF[3]; }
+    }
+
+    // ── Pattern G: không có POS, không có separator rõ ràng ─────────────────
+    // VD: "14. Abstract bản tóm tắt" (OCR mất cả POS lẫn colon)
+    // Chỉ khớp nếu phần nghĩa chứa ký tự tiếng Việt (dấu)
+    if (!word) {
+      const pG = line.match(
+        /^\d+[\.\'\)]\s*([A-Za-z][A-Za-z\-']{1,30})\s+([^\(A-Z].{1,})$/,
+      );
+      if (pG && /[\u00C0-\u024F\u1E00-\u1EFF]/.test(pG[2])) {
+        word = pG[1]; meaning = pG[2];
+      }
     }
 
     if (!word || !meaning) return null;

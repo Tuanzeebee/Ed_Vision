@@ -399,6 +399,71 @@ If you cannot determine which group this image belongs to, respond with:
     return null;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Generic text chat completion (non-vision) — for AI Tutor, explanations, etc.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Send a text-only chat completion to OpenRouter.
+   * Uses a fast/cheap model suitable for tutor responses.
+   * 
+   * @param prompt  - The full prompt (system + user combined or user-only)
+   * @param options - Optional overrides for model, temperature, max_tokens
+   * @returns The assistant's text response
+   * @throws Error on API failure or empty response
+   */
+  async chatCompletion(
+    prompt: string,
+    options?: {
+      model?: string;
+      temperature?: number;
+      max_tokens?: number;
+      systemPrompt?: string;
+    },
+  ): Promise<{ answer: string; model: string }> {
+    if (!this.apiKey) {
+      throw new Error('OPENROUTER_API_KEY not configured');
+    }
+
+    const chatModel =
+      options?.model ||
+      process.env.OPENROUTER_TUTOR_MODEL ||
+      'google/gemma-4-26b-a4b-it:free';
+
+    const messages: Array<{ role: string; content: string }> = [];
+    if (options?.systemPrompt) {
+      messages.push({ role: 'system', content: options.systemPrompt });
+    }
+    messages.push({ role: 'user', content: prompt });
+
+    const response = await axios.post(
+      this.apiUrl,
+      {
+        model: chatModel,
+        messages,
+        temperature: options?.temperature ?? 0.2,
+        max_tokens: options?.max_tokens ?? 600,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://ed-vision.app',
+          'X-Title': 'Ed Vision AI Tutor',
+        },
+        timeout: 30_000,
+      },
+    );
+
+    const content =
+      response.data?.choices?.[0]?.message?.content?.trim() ?? '';
+    if (!content) {
+      throw new Error('OpenRouter returned empty content');
+    }
+
+    return { answer: content, model: chatModel };
+  }
+
   private imageToBase64(absPath: string): string | null {
     try {
       const buffer = readFileSync(absPath);
