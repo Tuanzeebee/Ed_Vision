@@ -76,11 +76,13 @@ export interface ToeicRepositoryDetailResponse {
   title: string;
   description?: string | null;
   skill_area: "listening" | "reading" | "grammar" | string;
+  full_audio_url?: string | null;
   total_items: number;
   pass_score: number;
   answer_key_configured_items?: number;
   answer_key_missing_items?: number;
   answer_key_ready?: boolean;
+  active_session_id?: number | null;
   items: Array<{
     id: number;
     item_order: number;
@@ -641,6 +643,26 @@ export async function chunkListeningAudio(
     formData.append("auto_map", String(payload.auto_map));
   const res = await apiClient.post<ToeicAudioChunkResponse>(
     "/teacher/toeic-repository/chunk-listening-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+export interface FullAudioUploadResponse {
+  slug: string;
+  full_audio_url: string;
+}
+
+export async function uploadFullListeningAudio(
+  repositorySlug: string,
+  file: File,
+): Promise<FullAudioUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", repositorySlug);
+  const res = await apiClient.post<FullAudioUploadResponse>(
+    "/teacher/toeic-repository/upload-full-audio",
     formData,
     { headers: { "Content-Type": "multipart/form-data" } },
   );

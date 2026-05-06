@@ -149,6 +149,27 @@ export class TeacherToeicRepositoryController {
       throw new BadRequestException('Vui lòng chọn file để upload.');
     }
 
+    // For reading skill area, use the practice import parser (same logic as Diagnostic)
+    const skillArea = dto.skill_area || 'reading';
+    if (skillArea === 'reading') {
+      const practiceParsed = await this.practiceImportService.extractAndParseFromFile(file);
+      if (practiceParsed.length > 0) {
+        const externalParsed = practiceParsed.map((q) => ({
+          questionNumber: q.questionNumber,
+          part: q.detectedPart,
+          stem: q.stem,
+          context: q.readingPassage ?? null,
+          options: q.options.map((opt) => ({
+            optionKey: opt.optionKey,
+            optionText: opt.optionText,
+            isCorrect: opt.isCorrect,
+            rationale: null as string | null,
+          })),
+        }));
+        return this.service.importToeicExamFromOcrFile(accountId, dto, file, externalParsed);
+      }
+    }
+
     return this.service.importToeicExamFromOcrFile(accountId, dto, file);
   }
 
@@ -311,6 +332,30 @@ export class TeacherToeicRepositoryController {
     if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
     if (!file) throw new BadRequestException('Vui lòng chọn file audio.');
     return this.listeningService.chunkListeningAudio(accountId, dto, file);
+  }
+
+  /**
+   * POST /teacher/toeic-repository/upload-full-audio
+   * Upload full TOEIC Listening audio (no chunking). The file is saved as-is
+   * and the URL is stored in repository metadata for continuous exam playback.
+   */
+  @Post('upload-full-audio')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: teacherAudioChunkStorage,
+      limits: { fileSize: 200 * 1024 * 1024 },
+    }),
+  )
+  async uploadFullAudio(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { repository_slug: string },
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<{ slug: string; full_audio_url: string }> {
+    const accountId = Number(req.user?.account_id ?? 0);
+    if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
+    if (!file) throw new BadRequestException('Vui lòng chọn file audio.');
+    if (!body.repository_slug?.trim()) throw new BadRequestException('repository_slug là bắt buộc.');
+    return this.listeningService.uploadFullAudio(body.repository_slug, file);
   }
 
   /**

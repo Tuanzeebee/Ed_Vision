@@ -8,8 +8,10 @@ import {
   Headphones,
   Lock,
   Map as MapIcon,
+  PlayCircle,
   RotateCcw,
   Trophy,
+  Volume2,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
@@ -197,6 +199,9 @@ export default function ToeicExamSimulationPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [repositorySlug, setRepositorySlug] = useState("");
   const [repositoryTitle, setRepositoryTitle] = useState("");
+  const [fullAudioUrl, setFullAudioUrl] = useState<string | null>(null);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [audioConfirmed, setAudioConfirmed] = useState(false);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
 
   // ── Server-driven session state ──
@@ -292,6 +297,8 @@ export default function ToeicExamSimulationPage() {
         const mapped = toExamQuestions(detail, resolvedExamType);
         setRepositorySlug(detail.slug);
         setRepositoryTitle(detail.title);
+        setFullAudioUrl(detail.full_audio_url ?? null);
+        setHasActiveSession(!!detail.active_session_id);
         setQuestions(mapped);
         if (mapped.length === 0) {
           setLoadError("Hiện tại chưa có bộ đề thi thử mới đúng.");
@@ -450,7 +457,6 @@ export default function ToeicExamSimulationPage() {
 
   const handleSelectAnswer = useCallback(
     (key: AnswerKey) => {
-      if (answers[currentIndex] !== undefined) return;
       setAnswers((prev) => ({ ...prev, [currentIndex]: key }));
 
       // Persist lên server. Fire-and-forget; nếu lỗi mạng UI vẫn giữ lựa chọn,
@@ -535,6 +541,7 @@ export default function ToeicExamSimulationPage() {
     setSessionId(null);
     setServerStartedAt(null);
     setServerDurationSec(0);
+    setAudioConfirmed(false);
     setSearchParams({}, { replace: true });
   }, [setSearchParams]);
 
@@ -695,7 +702,7 @@ export default function ToeicExamSimulationPage() {
               disabled={totalQuestions === 0}
               className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold disabled:opacity-50 hover:bg-teal-500 transition-colors shadow-sm"
             >
-              Bắt đầu thi
+              {hasActiveSession ? "Tiếp tục bài thi" : "Bắt đầu thi"}
             </button>
           </div>
         </main>
@@ -1000,7 +1007,51 @@ export default function ToeicExamSimulationPage() {
             {formatTime(timeLeft)}
           </div>
         </div>
+
+        {/* Continuous audio player for Listening exam */}
+        {isListening && fullAudioUrl && (
+          <div className="max-w-5xl mx-auto px-4 py-2 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <Headphones className="w-4 h-4 text-teal-600 shrink-0" />
+              <span className="text-xs font-semibold text-teal-700 shrink-0">LISTENING</span>
+              <div className="flex-1">
+                <NoSeekAudioPlayer
+                  src={`http://localhost:3000${fullAudioUrl}`}
+                  autoPlay={audioConfirmed}
+                  noPause={audioConfirmed}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Audio confirmation overlay for Listening */}
+      {isListening && fullAudioUrl && !audioConfirmed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 text-center">
+            <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Volume2 className="w-8 h-8 text-teal-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Sẵn sàng bắt đầu phần Listening?
+            </h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Audio sẽ phát <span className="font-semibold text-gray-800">liên tục và không thể dừng lại</span>, giống như bài thi TOEIC thật.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Hãy đảm bảo bạn đã đeo tai nghe và sẵn sàng trước khi bấm nút bên dưới.
+            </p>
+            <button
+              onClick={() => setAudioConfirmed(true)}
+              className="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition-colors shadow-sm inline-flex items-center justify-center gap-2"
+            >
+              <PlayCircle className="w-5 h-5" />
+              Bắt đầu phát audio
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         {currentQuestion && (
@@ -1026,8 +1077,9 @@ export default function ToeicExamSimulationPage() {
                 />
               </div>
             )}
-            {/* Audio player for Listening parts 1-4 (no-seek, speed only) */}
-            {currentQuestion.part !== undefined &&
+            {/* Per-question audio player (only when NO full audio is available) */}
+            {!fullAudioUrl &&
+              currentQuestion.part !== undefined &&
               currentQuestion.part <= 4 &&
               currentQuestion.audioUrl && (
                 <div className="mb-4">
@@ -1044,18 +1096,14 @@ export default function ToeicExamSimulationPage() {
               {currentQuestion.options.map((opt) => {
                 const selected = answers[currentIndex];
                 const isSelected = selected === opt.key;
-                const isDisabled = selected !== undefined;
                 return (
                   <button
                     key={opt.key}
-                    disabled={isDisabled}
                     onClick={() => handleSelectAnswer(opt.key)}
                     className={`text-left px-4 py-3 rounded-xl border transition-colors ${
                       isSelected
                         ? "bg-teal-600 border-teal-600 text-white shadow-sm"
-                        : isDisabled
-                          ? "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-white border-gray-300 text-gray-800 hover:border-teal-500 hover:bg-teal-50"
+                        : "bg-white border-gray-300 text-gray-800 hover:border-teal-500 hover:bg-teal-50"
                     }`}
                   >
                     <span className="font-bold mr-2">{opt.key}.</span>
@@ -1067,8 +1115,8 @@ export default function ToeicExamSimulationPage() {
             {hasAnswered && (
               <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400" />
-                Bạn đã chọn đáp án {answers[currentIndex]}. Không thể thay đổi
-                đáp án.
+                Bạn đã chọn đáp án {answers[currentIndex]}. Bạn có thể đổi đáp án
+                trước khi nộp bài.
               </p>
             )}
           </div>

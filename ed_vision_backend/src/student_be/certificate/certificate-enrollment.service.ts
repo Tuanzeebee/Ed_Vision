@@ -2880,6 +2880,13 @@ export class CertificateEnrollmentService {
     accountId: number,
     dto: ToeicOcrImportDto,
     file: Express.Multer.File,
+    externalParsed?: Array<{
+      questionNumber: number | null;
+      part: number | null;
+      stem: string;
+      context?: string | null;
+      options: Array<{ optionKey: string; optionText: string; isCorrect: boolean; rationale?: string | null }>;
+    }>,
   ): Promise<ToeicOcrImportResponseDto> {
     if (!file) {
       throw new BadRequestException('Vui lòng gửi file để OCR import.');
@@ -2889,28 +2896,47 @@ export class CertificateEnrollmentService {
       dto.skill_area,
       file.originalname || '',
     );
-    const rawText = await this.extractRawTextFromOcrImportFile(file);
 
-    const allowEmpty = (dto as any).allow_empty_parsing === true;
+    let parsedQuestions: ParsedOcrQuestion[];
 
-    if (!rawText || rawText.length < 40) {
-      if (!allowEmpty) {
-        throw new BadRequestException(
-          'OCR không trích xuất đủ text để tạo bộ câu hỏi.',
-        );
+    if (externalParsed && externalParsed.length > 0) {
+      // Use externally-parsed questions (e.g. from ToeicPracticeImportService)
+      parsedQuestions = externalParsed.map((q) => ({
+        questionNumber: q.questionNumber,
+        part: q.part,
+        stem: q.stem,
+        context: q.context ?? null,
+        options: q.options.map((opt) => ({
+          optionKey: opt.optionKey,
+          optionText: opt.optionText,
+          isCorrect: opt.isCorrect,
+          rationale: opt.rationale ?? null,
+        })),
+      }));
+    } else {
+      const rawText = await this.extractRawTextFromOcrImportFile(file);
+
+      const allowEmpty = (dto as any).allow_empty_parsing === true;
+
+      if (!rawText || rawText.length < 40) {
+        if (!allowEmpty) {
+          throw new BadRequestException(
+            'OCR không trích xuất đủ text để tạo bộ câu hỏi.',
+          );
+        }
       }
-    }
 
-    const parsedQuestions = this.parseToeicQuestionsFromOcrText(
-      rawText,
-      skillArea,
-    );
+      parsedQuestions = this.parseToeicQuestionsFromOcrText(
+        rawText,
+        skillArea,
+      );
 
-    if (parsedQuestions.length === 0) {
-      if (!allowEmpty) {
-        throw new BadRequestException(
-          'Không parse được câu hỏi hợp lệ từ nội dung OCR.',
-        );
+      if (parsedQuestions.length === 0) {
+        if (!allowEmpty) {
+          throw new BadRequestException(
+            'Không parse được câu hỏi hợp lệ từ nội dung OCR.',
+          );
+        }
       }
     }
 
@@ -4980,6 +5006,17 @@ OUTPUT:
       throw new NotFoundException('Không tìm thấy bộ đề TOEIC.');
     }
 
+    // Check for an active (unsubmitted) exam session for this user + repo.
+    const activeSession = await this.prisma.toeicExamSession.findFirst({
+      where: {
+        account_id: accountId,
+        repository_id: repo.id,
+        submitted_at: null,
+      },
+      orderBy: { started_at: 'desc' },
+      select: { id: true },
+    });
+
     const metadata = (repo.metadata ?? {}) as Prisma.JsonObject;
 
     const totalItems = Number(repo.total_items ?? repo.items?.length ?? 0);
@@ -5030,6 +5067,7 @@ OUTPUT:
       title: String(repo.title),
       description: repo.description ?? null,
       skill_area: repo.skill_area ?? null,
+      full_audio_url: (metadata.full_audio_url as string) ?? null,
       milestone_score: Number(
         metadata.milestone_score ?? repo.target_score_min ?? 0,
       ),
@@ -5043,6 +5081,7 @@ OUTPUT:
       answer_key_configured_items: answerKeyConfiguredItems,
       answer_key_missing_items: answerKeyMissingItems,
       answer_key_ready: items.length > 0 && answerKeyMissingItems === 0,
+      active_session_id: activeSession?.id ?? null,
       items,
     };
   }

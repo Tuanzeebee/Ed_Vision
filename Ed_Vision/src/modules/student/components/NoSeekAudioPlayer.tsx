@@ -20,6 +20,10 @@ type NoSeekAudioPlayerProps = {
   className?: string;
   /** Auto-load metadata to display total duration. Default true. */
   preload?: "none" | "metadata" | "auto";
+  /** Auto-play when mounted. Default false. */
+  autoPlay?: boolean;
+  /** Hide play/pause button — audio cannot be paused once started. Default false. */
+  noPause?: boolean;
 };
 
 function formatTime(seconds: number): string {
@@ -33,6 +37,8 @@ export default function NoSeekAudioPlayer({
   src,
   className,
   preload = "metadata",
+  autoPlay = false,
+  noPause = false,
 }: NoSeekAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -47,6 +53,13 @@ export default function NoSeekAudioPlayer({
     setDuration(0);
     setSpeed(1);
   }, [src]);
+
+  // Auto-play on mount if requested.
+  useEffect(() => {
+    if (autoPlay && audioRef.current) {
+      void audioRef.current.play();
+    }
+  }, [autoPlay, src]);
 
   // Keep playbackRate in sync with state.
   useEffect(() => {
@@ -101,18 +114,20 @@ export default function NoSeekAudioPlayer({
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      <button
-        type="button"
-        onClick={togglePlay}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-white shadow hover:bg-teal-700 active:scale-95 transition"
-        aria-label={isPlaying ? "Tạm dừng" : "Phát"}
-      >
-        {isPlaying ? (
-          <Pause className="h-4 w-4" />
-        ) : (
-          <Play className="h-4 w-4" />
-        )}
-      </button>
+      {!noPause && (
+        <button
+          type="button"
+          onClick={togglePlay}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-white shadow hover:bg-teal-700 active:scale-95 transition"
+          aria-label={isPlaying ? "Tạm dừng" : "Phát"}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </button>
+      )}
 
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <Volume2 className="h-4 w-4 text-slate-400 shrink-0" />
