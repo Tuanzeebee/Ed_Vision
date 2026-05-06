@@ -7,6 +7,12 @@ type Language = {
   flagUrl: string;
 };
 
+type LanguageSwitcherProps = {
+  variant?: 'default' | 'minimal';
+  buttonClassName?: string;
+  iconClassName?: string;
+};
+
 const languages: Language[] = [
   {
     code: 'en',
@@ -18,7 +24,11 @@ const languages: Language[] = [
     flagUrl: 'https://flagcdn.com/w40/vn.png'},
 ];
 
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({
+  variant = 'default',
+  buttonClassName = '',
+  iconClassName = ''
+}: LanguageSwitcherProps) {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -47,18 +57,30 @@ export default function LanguageSwitcher() {
     };
   }, [isOpen]);
 
+  const isMinimal = variant === 'minimal';
+
+  const buttonClassNameComputed = isMinimal
+    ? `flex items-center gap-2 px-2 py-1 rounded-full transition-colors ${buttonClassName}`
+    : `flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-purple-400 transition-all duration-200 hover:shadow-sm ${buttonClassName}`;
+
+  const caretClassName = isMinimal
+    ? `w-3 h-3 transition-transform duration-200 ${iconClassName}`
+    : `w-3 h-3 text-gray-500 transition-transform duration-200 ${iconClassName}`;
+
   return (
     <div className="relative"ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         onClick={() =>setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-purple-400 transition-all duration-200 hover:shadow-sm">
+        className={buttonClassNameComputed}
+        aria-label={currentLanguage.name}
+      >
         <img
           src={currentLanguage.flagUrl}
           alt={currentLanguage.name}
           className="w-5 h-4 object-cover rounded-sm"/>
         <svg
-          className={`w-3 h-3 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180': ''}`}
+          className={`${caretClassName} ${isOpen ? 'rotate-180': ''}`}
           fill="currentColor"viewBox="0 0 20 20">
           <path fillRule="evenodd"d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"clipRule="evenodd"/>
         </svg>

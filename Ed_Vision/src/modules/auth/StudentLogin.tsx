@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next"
 import { buildUrl } from '@/services/api/config'
 import { useToast } from '@/lib/useToast'
 import { TokenManager } from '@/lib/tokenManager'
-import { checkInputSurveyCompleted } from '@/hooks/useInputSurveyCheck'
 type Props = {
   onGoogleLogin?: () =>void
   onEmailLogin?: (email: string, password: string) =>void
@@ -108,18 +107,7 @@ const password = (formData.get('password') as string) || ''
         const role = (typeof roleCode === 'string') ? roleCode.toLowerCase() : ''
 // Navigate based on role
         if (role === 'student'|| role === 'student_role'|| role === '') {
-          // Check if student has completed input survey
-          try {
-            const surveyStatus = await checkInputSurveyCompleted();
-            if (!surveyStatus.completed) {
-              // Chưa làm survey input → bắt buộc làm survey trước
-              navigate('/student/survey', { state: { mandatory: true } });
-              return;
-            }
-          } catch (err) {
-            console.warn('Could not check survey status, proceeding to instructions');
-          }
-          navigate('/student/instructions')
+          navigate('/student/landing')
         } else if (role === 'teacher') {
           navigate('/teacher/dashboard')
         } else if (role === 'admin'|| role === 'administrator') {
