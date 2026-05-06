@@ -17,6 +17,13 @@ import re
 import sys
 from io import BytesIO
 
+try:
+    import cv2
+    import numpy as np
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+
 # ── dependency checks ────────────────────────────────────────────────────────
 
 try:
@@ -239,6 +246,7 @@ def save_optimised_webp(
     min_height: int,
     max_width: int = 1200,
     skip_text_images: bool = True,
+    skip_photo_filter: bool = False,
 ) -> tuple[int, int, int] | None:
     """
     Open *raw_bytes* as an image, apply quality optimisations, save as WebP.
@@ -262,9 +270,26 @@ def save_optimised_webp(
     if orig_w < min_width or orig_h < min_height:
         return None
 
+    from PIL import ImageStat
+    import numpy as np
+    # Filter out images that are just flat backgrounds, text (watermarks), or simple line-art.
+    # Real photos have high variance (stddev > 25) AND many mid-gray pixels (> 10%).
+    # Text/line-art are mostly pure black/white (low mid-gray). Flat gray boxes have low variance.
+    if not skip_photo_filter:
+        gray_arr = np.array(pil_img.convert("L"))
+        total_pixels = gray_arr.size
+        if total_pixels > 0:
+            mid_gray_count = np.sum((gray_arr > 40) & (gray_arr < 220))
+            std_dev = np.std(gray_arr)
+            
+            # Must pass BOTH tests to be considered a real photo
+            if mid_gray_count / total_pixels < 0.10 or std_dev < 25:
+                return None
+
+    # We remove the full-page scan skip from here because we handle it in extract_subimages_from_scan
     # Skip full-page scanned backgrounds (very tall portrait, likely a page scan)
-    if orig_h >= 800 and (orig_h / float(max(1, orig_w))) > 1.2:
-        return None
+    # if orig_h >= 800 and (orig_h / float(max(1, orig_w))) > 1.2:
+    #     return None
 
     # ── Watermark / text-strip filter ────────────────────────────────────────
     # Watermark images embedded in TOEIC PDFs (e.g. "Zenlish - Học TOEIC 1 lần
@@ -309,6 +334,111 @@ def save_optimised_webp(
     return new_w, new_h, size_bytes
 
 
+def extract_subimages_from_scan(
+    raw_bytes: bytes, min_width: int, min_height: int, relaxed: bool = False,
+) -> list[bytes]:
+    """
+    Uses OpenCV to extract photos from a full-page scanned image.
+
+    When *relaxed* is True (used for rasterized scan PDFs), the aspect-ratio
+    and size thresholds are loosened so we can capture charts/maps/schedules
+    in addition to photos.
+    """
+    if not HAS_CV2:
+        return [raw_bytes]
+
+    try:
+        nparr = np.frombuffer(raw_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return [raw_bytes]
+
+        h, w = img.shape[:2]
+        
+        # Process any image large enough to be a scanned page or a very large merged block.
+        if h < 500 or w < 400:
+            return [raw_bytes]
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # 1. Edge detection to find complex regions
+        edges = cv2.Canny(gray, 50, 150)
+        
+        # 2. Morphological closing to group nearby edges
+        kernel_size = 15 if relaxed else 9
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
+        closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+        
+        # Erase the outer 3% of the image to break any continuous black page borders 
+        # that might connect all elements on the page into one giant contour.
+        margin_y = max(10, int(h * 0.03))
+        margin_x = max(10, int(w * 0.03))
+        closed[:margin_y, :] = 0
+        closed[-margin_y:, :] = 0
+        closed[:, :margin_x] = 0
+        closed[:, -margin_x:] = 0
+        
+        # 3. Find only EXTERNAL contours to avoid extracting nested sub-images (e.g. face inside photo)
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        sub_images = []
+        contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[1])
+
+        # Thresholds (relaxed = more permissive for scan PDFs)
+        min_w_ratio = 0.12 if relaxed else 0.2
+        min_h_ratio = 0.06 if relaxed else 0.1
+        aspect_lo = 0.3 if relaxed else 0.5
+        aspect_hi = 3.5 if relaxed else 2.5
+        min_std_dev = 20 if relaxed else 25
+        
+        for cnt in contours:
+            x, y, cw, ch = cv2.boundingRect(cnt)
+            
+            # Ignore contours that are basically the entire page (page borders)
+            if cw > w * 0.95 or ch > h * 0.95:
+                continue
+                
+            # 4. Size filter (must be reasonably large to be a photo)
+            if cw >= min_width and ch >= min_height:
+                if cw > w * min_w_ratio and ch > h * min_h_ratio:
+                    aspect = cw / float(ch)
+                    # Aspect ratio filter (ignore tall columns or wide strips)
+                    if aspect_lo < aspect < aspect_hi:
+                        
+                        # Mid-gray & StdDev filter to ensure the cropped region is a real photo
+                        roi_gray = gray[y:y+ch, x:x+cw]
+                        total_roi_pixels = roi_gray.size
+                        if total_roi_pixels > 0:
+                            mid_gray_count = np.sum((roi_gray > 40) & (roi_gray < 220))
+                            std_dev = np.std(roi_gray)
+                            
+                            if mid_gray_count / total_roi_pixels > 0.10 and std_dev > min_std_dev:
+                                sub_img = img[y:y+ch, x:x+cw]
+                                _, encoded = cv2.imencode('.png', sub_img)
+                                sub_images.append(encoded.tobytes())
+                        
+        if not sub_images:
+            # If it's a full-page scan but has no photos, discard it!
+            # We don't want to save pages full of text as images.
+            return []
+            
+        return sub_images
+    except Exception as e:
+        return []
+
+
+def rasterize_page_to_bytes(page, dpi: int = 300) -> bytes | None:
+    """Render a fitz.Page to PNG bytes at the given DPI (for scan PDFs)."""
+    try:
+        zoom = dpi / 72.0
+        mat = fitz.Matrix(zoom, zoom)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        return pix.tobytes("png")
+    except Exception:
+        return None
+
+
+
 def extract_images(
     pdf_path: str,
     output_dir: str,
@@ -350,6 +480,17 @@ def extract_images(
     in_target = True
     highest_seen_part = 0
 
+    # Detect scan PDF: check if the first few pages have any text at all
+    is_scan_pdf = True
+    for probe_idx in range(min(3, total_pages)):
+        try:
+            probe_text = doc[probe_idx].get_text().strip()
+            if len(probe_text) > 20:
+                is_scan_pdf = False
+                break
+        except Exception:
+            pass
+
     for page_idx in range(total_pages):
         page = doc[page_idx]
         one_indexed = page_idx + 1
@@ -365,6 +506,7 @@ def extract_images(
         )
 
         # Skip pages that don't belong to our target skill section
+        # For scan PDFs (no text), in_target stays True for all pages
         if not in_target:
             continue
 
@@ -372,8 +514,9 @@ def extract_images(
         try:
             image_list = page.get_images(full=True)
         except Exception:
-            continue
+            image_list = []
 
+        page_extracted_count = 0
         img_idx = 1  # 1-indexed per page
 
         for img_info in image_list:
@@ -391,32 +534,136 @@ def extract_images(
             if not raw_bytes:
                 continue
 
-            filename = f"{slug}_p{one_indexed:03d}_img{img_idx:02d}.webp"
-            abs_path = os.path.join(output_dir, filename)
+            # Attempt to extract sub-images if this is a full page scan
+            sub_bytes_list = extract_subimages_from_scan(raw_bytes, min_width, min_height)
+            
+            for sub_idx, sub_bytes in enumerate(sub_bytes_list):
+                if len(sub_bytes_list) > 1:
+                    filename = f"{slug}_p{one_indexed:03d}_img{img_idx:02d}_sub{sub_idx+1}.webp"
+                else:
+                    filename = f"{slug}_p{one_indexed:03d}_img{img_idx:02d}.webp"
+                    
+                abs_path = os.path.join(output_dir, filename)
 
-            result = save_optimised_webp(raw_bytes, abs_path, min_width, min_height)
-            if result is None:
-                continue  # too small, unreadable, text-only, or save failed
+                result = save_optimised_webp(sub_bytes, abs_path, min_width, min_height)
+                if result is None:
+                    continue  # too small, unreadable, text-only, or save failed
 
-            new_w, new_h, size_bytes = result
-            url_path = f"{rel_base}/{filename}"
+                new_w, new_h, size_bytes = result
+                url_path = f"{rel_base}/{filename}"
 
-            extracted.append(
-                {
-                    "filename": filename,
-                    "path": os.path.abspath(abs_path),
-                    "url_path": url_path,
-                    "page": one_indexed,
-                    "skill_area": skill_area,
-                    "width": new_w,
-                    "height": new_h,
-                    "size_bytes": size_bytes,
-                }
-            )
+                extracted.append(
+                    {
+                        "filename": filename,
+                        "path": os.path.abspath(abs_path),
+                        "url_path": url_path,
+                        "page": one_indexed,
+                        "skill_area": skill_area,
+                        "width": new_w,
+                        "height": new_h,
+                        "size_bytes": size_bytes,
+                    }
+                )
+                page_extracted_count += 1
 
             img_idx += 1
 
+        # ── SCAN PDF FALLBACK ─────────────────────────────────────────────
+        # If no images were extracted from this page via get_images(), AND the
+        # PDF appears to be a scan (no text layer), rasterize the page at 300 DPI
+        # and use OpenCV to detect photo regions.
+        if page_extracted_count == 0 and is_scan_pdf and HAS_CV2:
+            raster_bytes = rasterize_page_to_bytes(page, dpi=300)
+            if raster_bytes:
+                sub_bytes_list = extract_subimages_from_scan(
+                    raster_bytes, min_width, min_height, relaxed=True,
+                )
+                for sub_idx, sub_bytes in enumerate(sub_bytes_list):
+                    filename = f"{slug}_p{one_indexed:03d}_scan{sub_idx+1:02d}.webp"
+                    abs_path = os.path.join(output_dir, filename)
+
+                    # skip_photo_filter=True: OpenCV already verified these regions
+                    result = save_optimised_webp(
+                        sub_bytes, abs_path, min_width, min_height,
+                        skip_photo_filter=True,
+                    )
+                    if result is None:
+                        continue
+
+                    new_w, new_h, size_bytes = result
+                    url_path = f"{rel_base}/{filename}"
+
+                    extracted.append(
+                        {
+                            "filename": filename,
+                            "path": os.path.abspath(abs_path),
+                            "url_path": url_path,
+                            "page": one_indexed,
+                            "skill_area": skill_area,
+                            "width": new_w,
+                            "height": new_h,
+                            "size_bytes": size_bytes,
+                        }
+                    )
+
     doc.close()
+
+    # ── Separate Part 1 photos from other images (Part 3/4 graphics) ────────
+    # Part 1 always has 6 photograph-description questions.
+    # The first photo is often an "Example" photo from the instructions page.
+    # Strategy: keep ALL images but tag them with an estimated_part hint so the
+    # backend can map them correctly (Part 1 photos vs Part 3/4 charts/maps).
+    #
+    # Heuristic for Part 1 photos:
+    #   - They appear on the earliest pages of the listening section.
+    #   - They are real photographs (high variance, moderate aspect ratio).
+    #   - There should be exactly 6 of them.
+    # Everything else (tables, charts, maps, schedules) belongs to Part 3/4.
+
+    if skill_area == "listening" and len(extracted) > 0:
+        # Sort by page then filename to get stable ordering
+        extracted.sort(key=lambda x: (x.get("page", 0), x.get("filename", "")))
+
+        # Tag each image with an estimated part hint
+        # The first 6 large-ish photographs → Part 1; the rest → Part 3/4
+        part1_candidates = []
+        other_images = []
+
+        for img in extracted:
+            w = img.get("width", 0)
+            h = img.get("height", 0)
+            sz = img.get("size_bytes", 0)
+            aspect = w / max(1, h)
+            # Part 1 photos are typically larger photos with moderate aspect ratio
+            is_photo_like = sz > 10000 and 0.5 < aspect < 2.5
+            if is_photo_like and len(part1_candidates) < 7:
+                # Collect up to 7 candidates (6 real + possibly 1 example)
+                part1_candidates.append(img)
+            else:
+                other_images.append(img)
+
+        # If we have more than 6 Part-1 candidates, keep the last 6
+        # (the first one is often the example photo)
+        if len(part1_candidates) > 6:
+            # Move the extras into other_images
+            extras = part1_candidates[:-6]
+            part1_candidates = part1_candidates[-6:]
+            for ex in extras:
+                try:
+                    if os.path.exists(ex["path"]):
+                        os.remove(ex["path"])
+                except OSError:
+                    pass
+
+        for img in part1_candidates:
+            img["estimated_part"] = 1
+
+        for img in other_images:
+            img["estimated_part"] = 3  # Part 3 or 4 graphic
+
+        extracted = part1_candidates + other_images
+        # Re-sort by page order for stable output
+        extracted.sort(key=lambda x: (x.get("page", 0), x.get("filename", "")))
 
     return {
         "status": "ok",

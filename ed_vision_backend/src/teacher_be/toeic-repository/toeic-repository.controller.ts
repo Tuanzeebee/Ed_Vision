@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { tmpdir } from 'os';
 import type { Request as ExpressRequest } from 'express';
 import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 import { CertificateEnrollmentService } from '../../student_be/certificate/certificate-enrollment.service';
@@ -59,11 +60,7 @@ type AuthenticatedRequest = ExpressRequest & {
 
 const teacherToeicStorage = diskStorage({
   destination: (req, file, cb) => {
-    const destinationPath = './uploads/certificate';
-    if (!existsSync(destinationPath)) {
-      mkdirSync(destinationPath, { recursive: true });
-    }
-    cb(null, destinationPath);
+    cb(null, tmpdir());
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -74,11 +71,7 @@ const teacherToeicStorage = diskStorage({
 
 const teacherListeningAudioStorage = diskStorage({
   destination: (req, file, cb) => {
-    const destinationPath = './uploads/certificate/audio-staging';
-    if (!existsSync(destinationPath)) {
-      mkdirSync(destinationPath, { recursive: true });
-    }
-    cb(null, destinationPath);
+    cb(null, tmpdir());
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -89,9 +82,7 @@ const teacherListeningAudioStorage = diskStorage({
 
 const teacherAudioChunkStorage = diskStorage({
   destination: (req, file, cb) => {
-    const dest = './uploads/certificate/audio-staging';
-    if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
-    cb(null, dest);
+    cb(null, tmpdir());
   },
   filename: (req, file, cb) => {
     cb(null, `chunk-src-${Date.now()}${extname(file.originalname)}`);
@@ -107,7 +98,7 @@ export class TeacherToeicRepositoryController {
     private readonly practiceImportService: ToeicPracticeImportService,
     private readonly practiceSessionService: ToeicPracticeSessionService,
     private readonly diagnosticImportService: DiagnosticImportService,
-  ) {}
+  ) { }
 
   /**
    * GET /teacher/toeic-repository/list
@@ -156,6 +147,27 @@ export class TeacherToeicRepositoryController {
     }
     if (!file) {
       throw new BadRequestException('Vui lòng chọn file để upload.');
+    }
+
+    // For reading skill area, use the practice import parser (same logic as Diagnostic)
+    const skillArea = dto.skill_area || 'reading';
+    if (skillArea === 'reading') {
+      const practiceParsed = await this.practiceImportService.extractAndParseFromFile(file);
+      if (practiceParsed.length > 0) {
+        const externalParsed = practiceParsed.map((q) => ({
+          questionNumber: q.questionNumber,
+          part: q.detectedPart,
+          stem: q.stem,
+          context: q.readingPassage ?? null,
+          options: q.options.map((opt) => ({
+            optionKey: opt.optionKey,
+            optionText: opt.optionText,
+            isCorrect: opt.isCorrect,
+            rationale: null as string | null,
+          })),
+        }));
+        return this.service.importToeicExamFromOcrFile(accountId, dto, file, externalParsed);
+      }
     }
 
     return this.service.importToeicExamFromOcrFile(accountId, dto, file);
@@ -213,6 +225,33 @@ export class TeacherToeicRepositoryController {
     }
 
     return this.diagnosticImportService.chunkDiagnosticAudio(accountId, dto, file);
+  }
+
+  /**
+   * POST /teacher/toeic-repository/import-diagnostic-answer-key
+   * Upload file đáp án cho đề Khảo sát đầu vào.
+   */
+  @Post('import-diagnostic-answer-key')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: teacherToeicStorage,
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  async importDiagnosticAnswerKey(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const accountId = Number(req.user?.account_id ?? 0);
+    if (!accountId) {
+      throw new BadRequestException('Không tìm thấy account_id trong token.');
+    }
+    if (!file) {
+      throw new BadRequestException('Vui lòng chọn file đáp án để upload.');
+    }
+
+    return this.diagnosticImportService.importDiagnosticAnswerKeyFromFile(accountId, dto, file, this.service);
   }
 
   /**
@@ -293,6 +332,30 @@ export class TeacherToeicRepositoryController {
     if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
     if (!file) throw new BadRequestException('Vui lòng chọn file audio.');
     return this.listeningService.chunkListeningAudio(accountId, dto, file);
+  }
+
+  /**
+   * POST /teacher/toeic-repository/upload-full-audio
+   * Upload full TOEIC Listening audio (no chunking). The file is saved as-is
+   * and the URL is stored in repository metadata for continuous exam playback.
+   */
+  @Post('upload-full-audio')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: teacherAudioChunkStorage,
+      limits: { fileSize: 200 * 1024 * 1024 },
+    }),
+  )
+  async uploadFullAudio(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { repository_slug: string },
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<{ slug: string; full_audio_url: string }> {
+    const accountId = Number(req.user?.account_id ?? 0);
+    if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
+    if (!file) throw new BadRequestException('Vui lòng chọn file audio.');
+    if (!body.repository_slug?.trim()) throw new BadRequestException('repository_slug là bắt buộc.');
+    return this.listeningService.uploadFullAudio(body.repository_slug, file);
   }
 
   /**
@@ -395,6 +458,7 @@ export class TeacherToeicRepositoryController {
       accountId,
       dto,
       file,
+      this.service,
     );
   }
 
@@ -482,6 +546,42 @@ export class TeacherToeicRepositoryController {
       skill_area: skillArea,
       practice_set_id: practiceSetId,
     });
+  }
+
+  /**
+   * POST /teacher/toeic-repository/import-practice-images
+   * Upload a PDF containing listening images (Part 1 photos, Part 3/4 charts)
+   * for an existing practice question set. Images will be extracted and mapped.
+   */
+  @Post('import-practice-images')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: teacherToeicStorage,
+      limits: { fileSize: 50 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase();
+        if (ext === '.pdf') {
+          cb(null, true);
+          return;
+        }
+        cb(
+          new BadRequestException('Chỉ hỗ trợ file PDF cho trích xuất hình ảnh.') as any,
+          false,
+        );
+      },
+    }),
+  )
+  async importPracticeImages(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const accountId = Number(req.user?.account_id ?? 0);
+    if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
+    if (!file) throw new BadRequestException('Vui lòng chọn file PDF chứa hình ảnh.');
+    const practiceSetId = dto?.practice_set_id?.trim?.() ?? '';
+    if (!practiceSetId) throw new BadRequestException('Vui lòng cung cấp practice_set_id.');
+    return this.practiceImportService.importPracticeImagesFromPdf(practiceSetId, file);
   }
 
   /**

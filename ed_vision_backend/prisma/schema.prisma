@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Meeting type for slots & appointments. Values intentionally lowercase to match frontend strings.
-enum MeetingType {
-  online
-  offline
-  both
-}
-
-enum RecipientRole {
-  booker
-  instructor
-}
-
 model Account {
   account_id                 Int                             @id @default(autoincrement())
   email                      String                          @unique @db.VarChar(255)
@@ -31,28 +19,30 @@ model Account {
   updated_at                 DateTime                        @default(now()) @db.Timestamptz(6)
   roleRel                    Role?                           @relation(fields: [role_id], references: [id])
   appointmentsBooked         Appointment[]
+  verificationAttempts       AttendanceVerificationAttempt[]
+  approvedAttempts           AttendanceVerificationAttempt[] @relation("AttendanceApprover")
+  dailyStreak                DailyStreak?
+  deviceFingerprints         DeviceFingerprint[]
   instructor                 Instructor?
+  leaderboard                Leaderboard?
+  notifications              Notification[]
+  notificationMastersCreated NotificationMaster[]            @relation("NotificationMasterCreator")
+  notificationRecipients     NotificationRecipient[]
   otps                       Otp[]
   parent                     Parent?
   profile                    Profile?
-  student                    Student?
-  surveyResponses            SurveyResponse[]
-  createdSurveys             Survey[]                        @relation("AccountCreatedSurveys")
-  notifications              Notification[] // In-app notifications delivered to this account
-  reminderSchedules          ReminderSchedule[] // Scheduled reminders targeting this account
-  notificationMastersCreated NotificationMaster[]            @relation("NotificationMasterCreator") // Notifications created by this account (admin)
-  notificationRecipients     NotificationRecipient[] // Notifications received by this account
-  deviceFingerprints         DeviceFingerprint[] // Device fingerprints for attendance verification
-  approvedAttempts           AttendanceVerificationAttempt[] @relation("AttendanceApprover") // Attempts approved by this account
-  verificationAttempts       AttendanceVerificationAttempt[] // All verification attempts by this account
+  reminderSchedules          ReminderSchedule[]
   hostedRooms                Room[]                          @relation("RoomHost")
-  roomParticipants           RoomParticipant[]
   roomActions                RoomAction[]                    @relation("RoomActionTarget")
   roomBans                   RoomBan[]
+  roomParticipants           RoomParticipant[]
+  student                    Student?
   studySessions              StudySession[]
-  dailyStreak                DailyStreak?
   studyStat                  StudyStat?
-  leaderboard                Leaderboard?
+  createdSurveys             Survey[]                        @relation("AccountCreatedSurveys")
+  surveyResponses            SurveyResponse[]
+  prismaplacements           IeltsPlacementSession[]
+  toeicExamSessions          ToeicExamSession[]
 
   @@map("Account")
 }
@@ -95,14 +85,14 @@ model Student {
   class_id               Int?
   status                 String?                 @default("active") @db.VarChar(20)
   appointments           Appointment[]
+  attendanceSessions     AttendanceSession[]
+  certificateEnrollments CertificateEnrollment[]
   parentStudentLinks     ParentStudentLink[]
+  predictionResults      PredictionResult[]
   account                Account                 @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   classGroup             ClassGroup?             @relation(fields: [class_id], references: [class_id])
   courseRecords          StudentCourseRecord[]
-  predictionResults      PredictionResult[]
   surveyFactors          StudentSurveyFactors?
-  attendanceSessions     AttendanceSession[] // Offline attendance sessions for this student
-  certificateEnrollments CertificateEnrollment[] // Certificate band enrollments
 
   @@map("Student")
 }
@@ -118,11 +108,11 @@ model Instructor {
   status                      String?                      @default("active") @db.VarChar(20)
   adviserAssignments          AdviserAssignment[]
   appointments                Appointment[]
+  attendanceSessions          AttendanceSession[]
   account                     Account                      @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   department                  Department?                  @relation(fields: [department_id], references: [department_id])
   instructorAvailabilityWeeks InstructorAvailabilityWeek[]
   predictionResults           PredictionResult[]
-  attendanceSessions          AttendanceSession[] // Offline attendance sessions created by this instructor
 
   @@map("Instructor")
 }
@@ -197,8 +187,8 @@ model AcademicTerm {
   semester_number      Int                   @db.SmallInt
   is_summer            Boolean               @default(false)
   status               String?               @default("active") @db.VarChar(20)
-  studentCourseRecords StudentCourseRecord[]
   predictionResults    PredictionResult[]
+  studentCourseRecords StudentCourseRecord[]
 
   @@unique([academic_year, semester_number])
   @@map("AcademicTerm")
@@ -214,8 +204,8 @@ model Course {
   difficulty           String?               @db.VarChar(20)
   description          String?
   curriculumCourses    CurriculumCourse[]
-  studentCourseRecords StudentCourseRecord[]
   predictionResults    PredictionResult[]
+  studentCourseRecords StudentCourseRecord[]
 
   @@unique([course_code, study_format])
   @@map("Course")
@@ -259,9 +249,9 @@ model SurveyQuestion {
   question_type String?              @db.VarChar(20)
   category      String?              @db.VarChar(50)
   is_active     Boolean              @default(true)
-  code          String?              @unique @db.VarChar(100) // Identifier ổn định, e.g., 'study_time'
-  min_value     Float? // Min cho slider
-  max_value     Float? // Max cho slider
+  code          String?              @unique @db.VarChar(100)
+  min_value     Float?
+  max_value     Float?
   surveyAnswers SurveyAnswer[]
   surveyOptions SurveyOption[]
   questionLinks SurveyQuestionLink[]
@@ -309,16 +299,16 @@ model Survey {
   survey_id       Int                  @id @default(autoincrement())
   title           String
   description     String?
-  created_by      Int? // account_id của admin hoặc giảng viên
+  created_by      Int?
   created_at      DateTime             @default(now()) @db.Timestamptz(6)
   start_date      DateTime?            @db.Timestamptz(6)
   end_date        DateTime?            @db.Timestamptz(6)
   is_active       Boolean              @default(true)
-  type            String?              @db.VarChar(30) // 'input', 'periodic', etc.
-  target_role     String?              @db.VarChar(20) // 'student', 'teacher', 'parent'
+  type            String?              @db.VarChar(30)
+  target_role     String?              @db.VarChar(20)
+  createdBy       Account?             @relation("AccountCreatedSurveys", fields: [created_by], references: [account_id])
   surveyQuestions SurveyQuestionLink[]
   surveyResponses SurveyResponse[]
-  createdBy       Account?             @relation("AccountCreatedSurveys", fields: [created_by], references: [account_id], onDelete: SetNull)
 
   @@map("Survey")
 }
@@ -327,9 +317,9 @@ model SurveyQuestionLink {
   id          Int            @id @default(autoincrement())
   survey_id   Int
   question_id Int
-  order_index Int? // để sắp xếp câu hỏi
-  survey      Survey         @relation(fields: [survey_id], references: [survey_id], onDelete: Cascade)
+  order_index Int?
   question    SurveyQuestion @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
+  survey      Survey         @relation(fields: [survey_id], references: [survey_id], onDelete: Cascade)
 
   @@unique([survey_id, question_id])
   @@map("SurveyQuestionLink")
@@ -362,21 +352,20 @@ model InstructorAvailabilityDate {
 }
 
 model InstructorDailySlot {
-  slot_id          Int           @id @default(autoincrement())
-  date_id          Int // NEW: replace week_id + day_of_week
-  start_time_local DateTime?     @db.Time(6)
-  end_time_local   DateTime?     @db.Time(6)
-  period_label     String?       @db.VarChar(16)
-  capacity         Int           @default(10) @db.SmallInt
-  is_open          Boolean       @default(true)
+  slot_id          Int                        @id @default(autoincrement())
+  date_id          Int
+  start_time_local DateTime?                  @db.Time(6)
+  end_time_local   DateTime?                  @db.Time(6)
+  period_label     String?                    @db.VarChar(16)
+  capacity         Int                        @default(10) @db.SmallInt
+  is_open          Boolean                    @default(true)
   note             String?
-  auto_accept      Boolean       @default(false)
+  auto_accept      Boolean                    @default(false)
   meeting_link     String?
   meeting_location String?
-  meeting_type     MeetingType?  @default(offline)
+  meeting_type     MeetingType?               @default(offline)
   appointments     Appointment[]
-
-  date InstructorAvailabilityDate @relation(fields: [date_id], references: [date_id], onDelete: Cascade)
+  date             InstructorAvailabilityDate @relation(fields: [date_id], references: [date_id], onDelete: Cascade)
 
   @@unique([date_id, start_time_local])
   @@map("InstructorDailySlot")
@@ -404,8 +393,8 @@ model Appointment {
   slot                  InstructorDailySlot @relation(fields: [slot_id], references: [slot_id], onDelete: Cascade)
   student               Student?            @relation(fields: [student_id], references: [student_id])
   appointmentContact    AppointmentContact?
+  attendanceSessions    AttendanceSession[]
   reminderSchedules     ReminderSchedule[]
-  attendanceSessions    AttendanceSession[] // Offline attendance verification sessions (one-to-many)
 
   @@map("Appointment")
 }
@@ -421,86 +410,74 @@ model AppointmentContact {
   @@map("AppointmentContact")
 }
 
-// Notification templates store reusable message templates. Use `code` as a stable lookup key
-// (e.g. "appointment.created", "survey.reminder"). `content` may contain placeholders
-// like `{student_name}` or `{date}` that will be replaced when rendering a `Notification`.
 model NotificationTemplate {
-  template_id Int      @id @default(autoincrement())
-  code        String   @unique @db.VarChar(120) // Stable unique key (e.g. "appointment.created")
-  title       String?  @db.VarChar(255) // Optional human-friendly title
-  content     String // Template body; may include placeholders
-  channel     String?  @db.VarChar(20) // Default channel: 'email' | 'in_app' | 'both'
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @updatedAt @db.Timestamptz(6)
-
-  notifications       Notification[] // Back-relation: notifications generated from this template
-  reminderSchedules   ReminderSchedule[] // Back-relation: reminder schedules referencing this template by `code`
-  notificationMasters NotificationMaster[] // Back-relation: master notifications using this template
+  template_id         Int                  @id @default(autoincrement())
+  code                String               @unique @db.VarChar(120)
+  title               String?              @db.VarChar(255)
+  content             String
+  channel             String?              @db.VarChar(20)
+  is_active           Boolean              @default(true)
+  created_at          DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime             @updatedAt @db.Timestamptz(6)
+  notifications       Notification[]
+  notificationMasters NotificationMaster[]
+  reminderSchedules   ReminderSchedule[]
 
   @@map("NotificationTemplate")
 }
 
-// Master notification: 1 row per broadcast (admin gửi 1 thông báo = 1 row)
 model NotificationMaster {
-  id          Int      @id @default(autoincrement())
-  title       String   @db.VarChar(255)
+  id          Int                     @id @default(autoincrement())
+  title       String                  @db.VarChar(255)
   body        String
-  type        String?  @db.VarChar(100) // 'Lịch Thi', 'Cập Nhật Hệ Thống', 'Cuộc Hẹn', etc.
-  priority    String?  @db.VarChar(20) // 'Cao', 'Trung bình', 'Thấp'
-  target      String?  @db.VarChar(100) // 'Sinh viên', 'Giảng viên', 'Phụ huynh', 'Tất cả', etc.
-  channel     String?  @db.VarChar(20) // 'in_app' | 'email' | 'both'
-  attachments Json? // JSON array: [{name, size, type, url}]
-  created_by  Int // Account ID của admin tạo thông báo
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  template_id Int? // Optional template reference
-
-  creator    Account                 @relation("NotificationMasterCreator", fields: [created_by], references: [account_id], onDelete: Cascade)
-  template   NotificationTemplate?   @relation(fields: [template_id], references: [template_id], onDelete: SetNull)
-  recipients NotificationRecipient[]
+  type        String?                 @db.VarChar(100)
+  priority    String?                 @db.VarChar(20)
+  target      String?                 @db.VarChar(100)
+  channel     String?                 @db.VarChar(20)
+  attachments Json?
+  created_by  Int
+  created_at  DateTime                @default(now()) @db.Timestamptz(6)
+  template_id Int?
+  creator     Account                 @relation("NotificationMasterCreator", fields: [created_by], references: [account_id], onDelete: Cascade)
+  template    NotificationTemplate?   @relation(fields: [template_id], references: [template_id])
+  recipients  NotificationRecipient[]
 
   @@map("NotificationMaster")
 }
 
-// Recipient notification: 1 row per user nhận thông báo
 model NotificationRecipient {
-  id           Int       @id @default(autoincrement())
-  master_id    Int // Reference to NotificationMaster
-  account_id   Int // Người nhận
-  is_read      Boolean   @default(false)
-  read_at      DateTime? @db.Timestamptz(6)
-  delivered_at DateTime? @db.Timestamptz(6) // Thời điểm gửi thành công
+  id           Int                @id @default(autoincrement())
+  master_id    Int
+  account_id   Int
+  is_read      Boolean            @default(false)
+  read_at      DateTime?          @db.Timestamptz(6)
+  delivered_at DateTime?          @db.Timestamptz(6)
+  account      Account            @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  master       NotificationMaster @relation(fields: [master_id], references: [id], onDelete: Cascade)
 
-  master  NotificationMaster @relation(fields: [master_id], references: [id], onDelete: Cascade)
-  account Account            @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
-
-  @@unique([master_id, account_id]) // Mỗi user chỉ nhận 1 lần mỗi thông báo
+  @@unique([master_id, account_id])
   @@index([account_id])
   @@index([master_id])
   @@map("NotificationRecipient")
 }
 
-// Legacy: Rendered notifications delivered to accounts (in-app) - kept for backward compatibility
-// Consider migrating to NotificationMaster + NotificationRecipient
 model Notification {
-  notification_id Int      @id @default(autoincrement())
-  account_id      Int // Receiver account
-  title           String   @db.VarChar(255)
+  notification_id Int                   @id @default(autoincrement())
+  account_id      Int
+  title           String                @db.VarChar(255)
   body            String
-  type            String?  @db.VarChar(50)
-  priority        String?  @db.VarChar(20)
+  type            String?               @db.VarChar(50)
+  priority        String?               @db.VarChar(20)
   attachments     Json?
-  is_read         Boolean  @default(false)
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  is_read         Boolean               @default(false)
+  created_at      DateTime              @default(now()) @db.Timestamptz(6)
   template_id     Int?
-
-  account  Account               @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
-  template NotificationTemplate? @relation(fields: [template_id], references: [template_id], onDelete: SetNull)
+  account         Account               @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  template        NotificationTemplate? @relation(fields: [template_id], references: [template_id])
 
   @@map("Notification")
 }
 
-// Draft notifications created by admin before sending
 model NotificationDraft {
   draft_id    Int      @id @default(autoincrement())
   title       String   @db.VarChar(255)
@@ -509,17 +486,16 @@ model NotificationDraft {
   target      String   @db.VarChar(100)
   priority    String   @db.VarChar(20)
   attachments Json?
-  created_by  Int? // Admin who created the draft
+  created_by  Int?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @updatedAt @db.Timestamptz(6)
 
   @@map("NotificationDraft")
 }
 
-// Notification history for tracking sent/deleted notifications (admin stats)
 model NotificationHistory {
   history_id       Int      @id @default(autoincrement())
-  action           String   @db.VarChar(20) // 'sent' | 'deleted'
+  action           String   @db.VarChar(20)
   title            String   @db.VarChar(255)
   content          String
   type             String   @db.VarChar(100)
@@ -530,30 +506,26 @@ model NotificationHistory {
   read_count       Int      @default(0)
   action_date      DateTime @default(now()) @db.Timestamptz(6)
   created_date     DateTime @db.Timestamptz(6)
-  master_id        Int? // Optional link to NotificationMaster
+  master_id        Int?
 
   @@map("NotificationHistory")
 }
 
-// Generic reminder schedule. Can reference a `NotificationTemplate` by its `code`, or
-// be tied to an `appointment` via `appointment_id`. `metadata` stores placeholders
-// used to render the template (JSON), for example: { "student_name": "Alice", "date": "..." }.
 model ReminderSchedule {
-  reminder_id    Int           @id @default(autoincrement())
-  appointment_id Int? // Optional appointment link
-  account_id     Int // Who will receive the reminder
-  recipient_role RecipientRole @default(booker)
-  template_code  String        @db.VarChar(120) // Maps to NotificationTemplate.code
-  remind_at      DateTime      @db.Timestamptz(6) // When to send
-  sent_at        DateTime?     @db.Timestamptz(6) // When it was sent (null = not sent)
-  channel        String?       @db.VarChar(32) // Preferred channel for this schedule
-  metadata       Json? // JSON payload for rendering template placeholders
-  created_at     DateTime      @default(now()) @db.Timestamptz(6)
-  canceled       Boolean       @default(false)
-
-  appointment Appointment?          @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
-  account     Account               @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
-  template    NotificationTemplate? @relation(fields: [template_code], references: [code])
+  reminder_id    Int                  @id @default(autoincrement())
+  appointment_id Int?
+  account_id     Int
+  recipient_role RecipientRole        @default(booker)
+  template_code  String               @db.VarChar(120)
+  remind_at      DateTime             @db.Timestamptz(6)
+  sent_at        DateTime?            @db.Timestamptz(6)
+  channel        String?              @db.VarChar(32)
+  metadata       Json?
+  created_at     DateTime             @default(now()) @db.Timestamptz(6)
+  canceled       Boolean              @default(false)
+  account        Account              @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  appointment    Appointment?         @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
+  template       NotificationTemplate @relation(fields: [template_code], references: [code], onDelete: SetNull)
 
   @@unique([appointment_id, account_id, remind_at, template_code, recipient_role])
   @@index([remind_at, sent_at])
@@ -621,7 +593,7 @@ model EventLog {
   table_name            String
   operation             String
   record_id             Int?
-  payload               Json? // Prisma hỗ trợ kiểu JSON -> ánh xạ sang JSONB trong PostgreSQL
+  payload               Json?
   created_at            DateTime  @default(now())
   processed             Boolean   @default(false)
   processed_at          DateTime? @db.Timestamptz(6)
@@ -632,69 +604,60 @@ model EventLog {
   last_error            String?
   failed                Boolean   @default(false)
 
-  @@index([failed, processed, processing, created_at(sort: Desc)], name: "idx_eventlog_unprocessed")
-  @@index([table_name, created_at(sort: Desc)], name: "idx_eventlog_table_created_at")
+  @@index([failed, processed, processing, created_at(sort: Desc)], map: "idx_eventlog_unprocessed")
+  @@index([table_name, created_at(sort: Desc)], map: "idx_eventlog_table_created_at")
   @@map("EventLog")
 }
 
 model PredictionResult {
-  prediction_id          Int      @id @default(autoincrement())
-  student_id             Int // Sinh viên được dự đoán
-  course_id              Int // Môn học cụ thể
-  instructor_id          Int? // Giảng viên thực hiện dự đoán (nếu là mô hình giảng viên)
-  model_type             String   @db.VarChar(20) // 'teacher' hoặc 'student'
-  predicted_gpa          Decimal? @db.Decimal(5, 2) // GPA dự đoán (cho cả hai mô hình)
-  predicted_fail_warning Boolean? // True nếu dự đoán rớt (chỉ cho mô hình giảng viên)
-  prediction_confidence  Float? // Độ tin cậy của dự đoán
-  model_version          String   @db.VarChar(50) // Phiên bản mô hình (e.g., 'v1.0_teacher')
-  input_source           String?  @db.VarChar(50) // 'uploaded_file' hoặc 'existing_data'
-  enriched_for_student   Boolean  @default(false) // Đánh dấu nếu đã dùng để làm giàu mô hình sinh viên
-  prediction_status      String   @default("active") @db.VarChar(20) // 'active', 'outdated', 'historical'
-  term_id                Int? // Liên kết với AcademicTerm để biết học kỳ
-  created_at             DateTime @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime @updatedAt @db.Timestamptz(6)
+  prediction_id          Int           @id @default(autoincrement())
+  student_id             Int
+  course_id              Int
+  instructor_id          Int?
+  model_type             String        @db.VarChar(20)
+  predicted_gpa          Decimal?      @db.Decimal(5, 2)
+  predicted_fail_warning Boolean?
+  prediction_confidence  Float?
+  model_version          String        @db.VarChar(50)
+  input_source           String?       @db.VarChar(50)
+  enriched_for_student   Boolean       @default(false)
+  prediction_status      String        @default("active") @db.VarChar(20)
+  term_id                Int?
+  created_at             DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime      @updatedAt @db.Timestamptz(6)
+  course                 Course        @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  instructor             Instructor?   @relation(fields: [instructor_id], references: [instructor_id])
+  student                Student       @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  academicTerm           AcademicTerm? @relation(fields: [term_id], references: [term_id])
 
-  student      Student       @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-  course       Course        @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
-  instructor   Instructor?   @relation(fields: [instructor_id], references: [instructor_id])
-  academicTerm AcademicTerm? @relation(fields: [term_id], references: [term_id])
-
-  // Unique constraint: Một sinh viên chỉ có một dự đoán cho một môn từ một mô hình tại một thời điểm
   @@unique([student_id, course_id, model_type, model_version])
   @@map("PredictionResult")
 }
 
 model StudentSurveyFactors {
   factor_id               Int      @id @default(autoincrement())
-  student_id              Int // Sinh viên
-  study_time_hours        Float? // Thời gian học tập (giờ/tuần, hỏi trực tiếp)
-  work_time_hours         Float? // Thời gian đi làm (giờ/tuần, hỏi trực tiếp)
-  financial_support_score Float? // Hỗ trợ tài chính (score từ AI, 0-100)
-  mental_health_score     Float? // Tinh thần (score từ AI, 0-100)
+  student_id              Int      @unique
+  study_time_hours        Float?
+  work_time_hours         Float?
+  financial_support_score Float?
+  mental_health_score     Float?
   updated_at              DateTime @updatedAt @db.Timestamptz(6)
+  student                 Student  @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
 
-  student Student @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
-
-  // Unique: Một sinh viên chỉ có một bộ yếu tố (có thể update nếu survey lại)
-  @@unique([student_id])
   @@map("StudentSurveyFactors")
 }
 
-// ===== ATTENDANCE VERIFICATION MODELS =====
-
-// Session for offline attendance verification
 model AttendanceSession {
-  session_id          String    @id @default(cuid())
-  appointment_id      Int? // Link to existing appointment (optional for walk-in sessions)
-  instructor_id       Int
-  student_id          Int? // Optional for walk-in sessions
-  started_at          DateTime  @default(now()) @db.Timestamptz(6)
-  ended_at            DateTime? @db.Timestamptz(6)
-  status              String    @default("active") @db.VarChar(20) // 'active', 'completed', 'expired'
-  qr_refresh_interval Int       @default(3000) // milliseconds
-  qr_expiry_seconds   Int       @default(15)
-  created_at          DateTime  @default(now()) @db.Timestamptz(6)
-
+  session_id           String                          @id @default(cuid())
+  appointment_id       Int?
+  instructor_id        Int
+  student_id           Int?
+  started_at           DateTime                        @default(now()) @db.Timestamptz(6)
+  ended_at             DateTime?                       @db.Timestamptz(6)
+  status               String                          @default("active") @db.VarChar(20)
+  qr_refresh_interval  Int                             @default(3000)
+  qr_expiry_seconds    Int                             @default(15)
+  created_at           DateTime                        @default(now()) @db.Timestamptz(6)
   appointment          Appointment?                    @relation(fields: [appointment_id], references: [appointment_id], onDelete: Cascade)
   instructor           Instructor                      @relation(fields: [instructor_id], references: [instructor_id])
   student              Student?                        @relation(fields: [student_id], references: [student_id])
@@ -703,74 +666,57 @@ model AttendanceSession {
   @@map("AttendanceSession")
 }
 
-// Individual verification attempt
 model AttendanceVerificationAttempt {
-  attempt_id Int      @id @default(autoincrement())
-  session_id String
-  account_id Int // Student account
-  timestamp  DateTime @default(now()) @db.Timestamptz(6)
-
-  // QR Validation (40 points)
-  qr_token      String? @db.VarChar(255)
-  qr_valid      Boolean @default(false)
-  qr_fresh      Boolean @default(false) // Within expiry window
-  qr_not_reused Boolean @default(false)
-
-  // Device Binding (30 points)
-  device_fingerprint      String? @db.VarChar(500) // Hashed fingerprint
-  device_match            Boolean @default(false)
-  device_changed_recently Boolean @default(false)
-
-  // Network Context (20 points)
-  client_ip       String? @db.VarChar(45) // IPv4/IPv6
-  campus_ip       Boolean @default(false)
-  wifi_ssid       String? @db.VarChar(100)
-  campus_wifi     Boolean @default(false)
-  network_latency Int? // milliseconds to campus gateway
-
-  // GPS Geofencing (10 points - optional)
-  gps_latitude       Float?
-  gps_longitude      Float?
-  gps_accuracy       Float? // meters
-  gps_timestamp      DateTime?
-  campus_zone        Boolean   @default(false)
-  gps_spoof_detected Boolean   @default(false)
-
-  // Behavioral Biometrics (5 points)
-  scan_duration   Int? // milliseconds from QR display to scan
-  typing_pattern  String? @db.VarChar(500) // Keystroke dynamics hash
-  behavior_normal Boolean @default(false)
-
-  // Trust Score Calculation
-  trust_score   Int       @default(0) // 0-100
-  risk_level    String    @default("high") @db.VarChar(20) // 'high', 'medium', 'low'
-  approved      Boolean   @default(false)
-  approved_by   Int? // Instructor account_id
-  approved_at   DateTime?
-  review_reason String?   @db.VarChar(500)
-
-  // Anti-fraud flags
-  suspicious_timing   Boolean @default(false)
-  multiple_attempts   Boolean @default(false)
-  vpn_detected        Boolean @default(false)
-  brute_force_pattern Boolean @default(false)
-
-  session  AttendanceSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
-  account  Account           @relation(fields: [account_id], references: [account_id])
-  approver Account?          @relation("AttendanceApprover", fields: [approved_by], references: [account_id])
+  attempt_id              Int               @id @default(autoincrement())
+  session_id              String
+  account_id              Int
+  timestamp               DateTime          @default(now()) @db.Timestamptz(6)
+  qr_token                String?           @db.VarChar(255)
+  qr_valid                Boolean           @default(false)
+  qr_fresh                Boolean           @default(false)
+  qr_not_reused           Boolean           @default(false)
+  device_fingerprint      String?           @db.VarChar(500)
+  device_match            Boolean           @default(false)
+  device_changed_recently Boolean           @default(false)
+  client_ip               String?           @db.VarChar(45)
+  campus_ip               Boolean           @default(false)
+  wifi_ssid               String?           @db.VarChar(100)
+  campus_wifi             Boolean           @default(false)
+  network_latency         Int?
+  gps_latitude            Float?
+  gps_longitude           Float?
+  gps_accuracy            Float?
+  gps_timestamp           DateTime?
+  campus_zone             Boolean           @default(false)
+  gps_spoof_detected      Boolean           @default(false)
+  scan_duration           Int?
+  typing_pattern          String?           @db.VarChar(500)
+  behavior_normal         Boolean           @default(false)
+  trust_score             Int               @default(0)
+  risk_level              String            @default("high") @db.VarChar(20)
+  approved                Boolean           @default(false)
+  approved_by             Int?
+  approved_at             DateTime?
+  review_reason           String?           @db.VarChar(500)
+  suspicious_timing       Boolean           @default(false)
+  multiple_attempts       Boolean           @default(false)
+  vpn_detected            Boolean           @default(false)
+  brute_force_pattern     Boolean           @default(false)
+  account                 Account           @relation(fields: [account_id], references: [account_id])
+  approver                Account?          @relation("AttendanceApprover", fields: [approved_by], references: [account_id])
+  session                 AttendanceSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
 
   @@index([session_id, timestamp])
   @@index([account_id, timestamp])
   @@map("AttendanceVerificationAttempt")
 }
 
-// Device fingerprinting for binding
 model DeviceFingerprint {
   fingerprint_id       String    @id @default(cuid())
   account_id           Int
-  fingerprint_hash     String    @unique @db.VarChar(500) // SHA-256 hash of device data
+  fingerprint_hash     String    @unique @db.VarChar(500)
   user_agent           String?   @db.VarChar(500)
-  screen_resolution    String?   @db.VarChar(50) // "1920x1080"
+  screen_resolution    String?   @db.VarChar(50)
   timezone             String?   @db.VarChar(100)
   language             String?   @db.VarChar(10)
   platform             String?   @db.VarChar(50)
@@ -781,135 +727,623 @@ model DeviceFingerprint {
   is_primary           Boolean   @default(false)
   last_used_at         DateTime  @default(now()) @db.Timestamptz(6)
   created_at           DateTime  @default(now()) @db.Timestamptz(6)
-  verified_at          DateTime? // When 2FA was used to verify
-
-  account Account @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  verified_at          DateTime?
+  account              Account   @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
 
   @@unique([account_id, fingerprint_hash])
   @@index([account_id, is_primary])
   @@map("DeviceFingerprint")
 }
 
-// Campus network configuration
 model CampusNetworkConfig {
   config_id        Int      @id @default(autoincrement())
-  campus_name      String   @db.VarChar(100)
-  ip_ranges        String // JSON array of CIDR ranges: ["192.168.1.0/24", "10.0.0.0/8"]
-  wifi_ssids       String // JSON array: ["CampusWiFi", "EduNet"]
-  gateway_ips      String // JSON array for latency tests
-  gps_boundaries   String? // GeoJSON polygon for campus zone
+  campus_name      String   @unique @db.VarChar(100)
+  ip_ranges        String
+  wifi_ssids       String
+  gateway_ips      String
+  gps_boundaries   String?
   latitude_center  Float?
   longitude_center Float?
-  radius_meters    Int?     @default(200) // For simple circle geofence
+  radius_meters    Int?     @default(200)
   is_active        Boolean  @default(true)
   created_at       DateTime @default(now()) @db.Timestamptz(6)
   updated_at       DateTime @updatedAt @db.Timestamptz(6)
 
-  @@unique([campus_name])
   @@map("CampusNetworkConfig")
 }
-
-// ===== CERTIFICATE REVIEW MODELS =====
 
 /// Records which band/level a student has enrolled in for a given certificate.
 /// Constraint: only ONE active enrollment per (student, cert_type) at a time.
 /// To switch bands the student must complete the current band first.
 model CertificateEnrollment {
-  id               Int       @id @default(autoincrement())
-  student_id       Int
-  cert_type        String    @db.VarChar(30) // 'ielts' | 'toeic' | 'mos-word' | 'mos-excel' | 'mos-powerpoint'
-  status           String    @default("active") @db.VarChar(20) // enrollment lifecycle: 'active' | 'completed'
-  learning_status  String    @default("not_started") @db.VarChar(20) // study lifecycle: 'not_started' | 'in_progress' | 'completed'
-  progress_percent Int       @default(0) @db.SmallInt // 0..100
-  current_score    Int? // current TOEIC score used for roadmap realtime UI
-  target_score     Int? // target TOEIC score learner is pursuing
-  exam_score       Int? // latest TOEIC exam score from exam-simulation submissions
-  toeic_plan_state Json? // JSON state for TOEIC roadmap (current/target/sessions/foundation)
+  id                   Int                        @id @default(autoincrement())
+  student_id           Int
+  cert_type            String                     @db.VarChar(30)
+  status               String                     @default("active") @db.VarChar(20)
+  learning_status      String                     @default("not_started") @db.VarChar(20)
+  progress_percent     Int                        @default(0) @db.SmallInt
+  current_score        Int?
+  target_score         Int?
+  exam_score           Int?
+  toeic_plan_state     Json?
   /// Accumulated practice reserve points (0–100).
   /// Reaching 100 unlocks the exam-simulation for the current score band.
-  reserve_points   Float     @default(0) @db.DoublePrecision
-  started_at       DateTime? @db.Timestamptz(6)
-  last_activity_at DateTime? @db.Timestamptz(6)
-  completed_at     DateTime? @db.Timestamptz(6)
-  enrolled_at      DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime  @updatedAt @db.Timestamptz(6)
-
+  reserve_points       Float                      @default(0)
+  started_at           DateTime?                  @db.Timestamptz(6)
+  last_activity_at     DateTime?                  @db.Timestamptz(6)
+  completed_at         DateTime?                  @db.Timestamptz(6)
+  enrolled_at          DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime                   @updatedAt @db.Timestamptz(6)
   student              Student                    @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
   topicProgress        CertificateTopicProgress[]
+  ieltsRoadmap         IeltsAdaptiveRoadmap?
+  recommendations      IeltsRecommendation[]
+  weakPoints           IeltsWeakPoint[]
   practicePartSessions ToeicPracticePartSession[]
   userVocabProgress    UserVocabProgress[]
   vocabTestSessions    VocabTestSession[]
 
-  // A student may only have one active enrollment per cert at a time (enforced in service layer).
   @@index([student_id, cert_type, status])
   @@map("CertificateEnrollment")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TOEIC PRACTICE PART SESSION
-// Records one completed 10-question practice attempt for a single TOEIC part.
-//
-// Point budget (reserve_points):
-//   Listening:  Part 1 → 10 pts  |  Part 2 → 10 pts
-//               Part 3 → 15 pts  |  Part 4 → 15 pts   → max 50 pts
-//   Reading:    Part 5 → 15 pts  |  Part 6 → 15 pts
-//               Part 7 → 20 pts                         → max 50 pts
-//   Grand total across both skills = 100 pts
-//
-// Reaching reserve_points ≥ 100 unlocks the exam-simulation for the band.
-// ─────────────────────────────────────────────────────────────────────────────
+/// Detailed content repository for certificate learning materials (question-bank style).
+model LearningRepository {
+  id                Int                      @id @default(autoincrement())
+  cert_type         String                   @db.VarChar(30)
+  title             String                   @db.VarChar(255)
+  slug              String                   @unique @db.VarChar(120)
+  description       String?
+  content_type      String                   @default("practice_set") @db.VarChar(30)
+  skill_area        String?                  @db.VarChar(50)
+  topic_group       String?                  @db.VarChar(100)
+  difficulty_level  String?                  @db.VarChar(20)
+  target_score_min  Int?
+  target_score_max  Int?
+  estimated_minutes Int?
+  pass_score        Int?
+  tags              Json?
+  metadata          Json?
+  total_items       Int                      @default(0)
+  is_published      Boolean                  @default(false)
+  version           Int                      @default(1)
+  created_by        Int?
+  created_at        DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime                 @updatedAt @db.Timestamptz(6)
+  lessons_flashcard IeltsLesson[]            @relation("FlashcardRepo")
+  lessons_minitest  IeltsLesson[]            @relation("MiniTestRepo")
+  lessons_practice  IeltsLesson[]            @relation("PracticeRepo")
+  items             LearningRepositoryItem[]
 
-/// One completed 10-question practice attempt for a specific TOEIC part.
-model ToeicPracticePartSession {
-  id            Int @id @default(autoincrement())
+  @@index([cert_type, content_type, is_published])
+  @@index([skill_area, topic_group])
+  @@map("LearningRepository")
+}
+
+/// Individual learning item/question in a repository.
+model LearningRepositoryItem {
+  id                Int                        @id @default(autoincrement())
+  repository_id     Int
+  item_order        Int                        @default(1)
+  item_type         String                     @default("single_choice") @db.VarChar(30)
+  title             String?                    @db.VarChar(255)
+  stem              String
+  reading_passage   String?
+  hint              String?
+  explanation       String?
+  ai_explanation    String?
+  difficulty_level  String?                    @db.VarChar(20)
+  score_weight      Int                        @default(1)
+  estimated_seconds Int?
+  media_audio_url   String?
+  media_image_url   String?
+  metadata          Json?
+  created_at        DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime                   @updatedAt @db.Timestamptz(6)
+  repository        LearningRepository         @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  options           LearningRepositoryOption[]
+
+  @@unique([repository_id, item_order])
+  @@index([repository_id])
+  @@map("LearningRepositoryItem")
+}
+
+/// Options/answers for objective learning items.
+model LearningRepositoryOption {
+  id          Int                    @id @default(autoincrement())
+  item_id     Int
+  option_key  String                 @db.VarChar(10)
+  option_text String
+  is_correct  Boolean                @default(false)
+  rationale   String?
+  sort_order  Int                    @default(1)
+  created_at  DateTime               @default(now()) @db.Timestamptz(6)
+  item        LearningRepositoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_id, option_key])
+  @@index([item_id, sort_order])
+  @@map("LearningRepositoryOption")
+}
+
+/// DB cache for AI-generated explanations of hardcoded TOEIC practice questions.
+/// Keyed by topic_key (e.g. "toeic.listening.node_0.q_1.full") — survives server restarts.
+model ToeicNodeQuestionCache {
+  id         Int      @id @default(autoincrement())
+  topic_key  String   @unique @db.VarChar(220)
+  cert_type  String   @db.VarChar(30)
+  ai_answer  String
+  model      String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([cert_type])
+  @@map("ToeicNodeQuestionCache")
+}
+
+/// Tracks which individual topics a student has completed within an enrollment.
+/// topic_key uses a stable dot-notation key, e.g. 'grammar.basic_tenses'.
+model CertificateTopicProgress {
+  id            Int                   @id @default(autoincrement())
   enrollment_id Int
+  topic_key     String                @db.VarChar(100)
+  completed_at  DateTime              @default(now()) @db.Timestamptz(6)
+  enrollment    CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
 
-  skill_area String @db.VarChar(20) // 'listening' | 'reading'
-  toeic_part Int    @db.SmallInt // 1 | 2 | 3 | 4 | 5 | 6 | 7
+  @@unique([enrollment_id, topic_key])
+  @@index([enrollment_id])
+  @@map("CertificateTopicProgress")
+}
 
+model IeltsQuestion {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skill            String
+  subSkillCode     String?                @map("sub_skill_code")
+  questionType     String                 @map("question_type")
+  questionText     String                 @map("question_text")
+  options          Json?
+  correctAnswer    String                 @map("correct_answer")
+  explanation      String?
+  keywords         String[]               @default([])
+  bandMin          Decimal                @map("band_min") @db.Decimal(2, 1)
+  bandMax          Decimal                @map("band_max") @db.Decimal(2, 1)
+  difficultyWeight Decimal                @default(1.0) @map("difficulty_weight") @db.Decimal(3, 2)
+  expectedTimeSec  Int                    @default(60) @map("expected_time_sec")
+  errorTag         String?                @map("error_tag")
+  topicTags        String[]               @default([]) @map("topic_tags")
+  isAiGenerated    Boolean                @default(false) @map("is_ai_generated")
+  aiModel          String?                @map("ai_model")
+  seedQuestionIds  String[]               @default([]) @map("seed_question_ids") @db.Uuid
+  status           String                 @default("draft")
+  qualityScore     Int?                   @map("quality_score") @db.SmallInt
+  usedCount        Int                    @default(0) @map("used_count")
+  correctRate      Decimal?               @map("correct_rate") @db.Decimal(4, 3)
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  placementAnswers IeltsPlacementAnswer[] @relation("PlacementAnswers")
+  irtA             Decimal?               @default(1.0) @map("irt_a") @db.Decimal(4, 3)
+  irtB             Decimal?               @map("irt_b") @db.Decimal(4, 3)
+  irtC             Decimal?               @map("irt_c") @db.Decimal(4, 3)
+  contextType String? @map("context_type")
+  isPlacement Boolean? @map("is_placement")
+   passage_id       String?   @map("passage_id") @db.Uuid
+  passage          IeltsPassage? @relation(fields: [passage_id], references: [id])
+
+  @@index([skill, status], map: "idx_ielts_q_skill_status")
+  @@index([bandMin, bandMax], map: "idx_ielts_q_band")
+  @@index([errorTag], map: "idx_ielts_q_error_tag")
+  @@map("ielts_questions")
+}
+model IeltsPassage {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skill            String
+  title            String
+  content          String
+ band_min         Decimal   @db.Decimal(5, 2)  // thay @db.Numeric
+  band_max         Decimal   @db.Decimal(5, 2)  // thay @db.Numeric
+  topic_tags       String[]  @default([])
+  section_type     Int?      @db.SmallInt
+  is_ai_generated  Boolean   @default(false)
+  is_paraphrased   Boolean   @default(false)
+  status           String    @default("draft")
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+  audio_url        String?
+  audio_duration_s  Int?   @map("audio_duration_sec")
+  accent_type      String?
+  tts_generated    Boolean?
+
+  // Thêm back-relation
+  questions        IeltsQuestion[]
+
+  @@map("ielts_passages")
+}
+
+model IeltsPlacementSession {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId            Int                    @map("account_id")
+  skillsTested         String[]               @map("skills_tested")
+  status               PlacementStatus        @default(in_progress)
+  currentEstimatedBand Decimal                @default(5.0) @map("current_estimated_band") @db.Decimal(2, 1)
+  usedQuestionIds      String[]               @default([]) @map("used_question_ids") @db.Uuid
+  totalQuestionsAsked  Int                    @default(0) @map("total_questions_asked")
+  consecutiveCorrect   Int                    @default(0) @map("consecutive_correct")
+  consecutiveWrong     Int                    @default(0) @map("consecutive_wrong")
+  startedAt            DateTime               @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt          DateTime?              @map("completed_at") @db.Timestamptz(6)
+  finalBand            Decimal?               @map("final_band") @db.Decimal(2, 1)
+  skillBands           Json?                  @map("skill_bands")
+  confidenceLevel      ConfidenceLevel?       @map("confidence_level")
+  answers              IeltsPlacementAnswer[]
+  user                 Account                @relation(fields: [accountId], references: [account_id], onDelete: Cascade)
+  skillsAnswered       Json                   @default("{}") @map("skills_answered")
+  skillThetas          Json                   @default("{}") @map("skill_thetas")
+
+  @@index([accountId, status], map: "idx_placement_account")
+  @@map("ielts_placement_sessions")
+}
+
+model IeltsPlacementAnswer {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId        String                @map("session_id") @db.Uuid
+  questionId       String                @map("question_id") @db.Uuid
+  questionOrder    Int                   @map("question_order") @db.SmallInt
+  bandAtTime       Decimal               @map("band_at_time") @db.Decimal(2, 1)
+  bandMid          Decimal               @map("band_mid") @db.Decimal(2, 1)
+  difficultyWeight Decimal               @map("difficulty_weight") @db.Decimal(3, 2)
+  userAnswer       String?               @map("user_answer")
+  isCorrect        Boolean?              @map("is_correct")
+  timeTakenSec     Int?                  @map("time_taken_sec")
+  answeredAt       DateTime              @default(now()) @map("answered_at") @db.Timestamptz(6)
+  irtASnapshot     Decimal?              @map("irt_a_snapshot") @db.Decimal(5, 3)
+  irtBSnapshot     Decimal?              @map("irt_b_snapshot") @db.Decimal(5, 3)
+  irtCSnapshot     Decimal?              @map("irt_c_snapshot") @db.Decimal(5, 3)
+  skill            String?
+  question         IeltsQuestion         @relation("PlacementAnswers", fields: [questionId], references: [id])
+  session          IeltsPlacementSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionOrder])
+  @@index([sessionId, questionOrder], map: "idx_placement_answers_session")
+  @@map("ielts_placement_answers")
+}
+
+model ToeicPracticePartSession {
+  id              Int                   @id @default(autoincrement())
+  enrollment_id   Int
+  skill_area      String                @db.VarChar(20)
+  toeic_part      Int                   @db.SmallInt
   /// Score band of questions served in this session (matches student's level).
-  score_band_min Int @default(0)
-  score_band_max Int @default(990)
-
+  score_band_min  Int                   @default(0)
+  score_band_max  Int                   @default(990)
   /// IDs of the ToeicPracticeQuestion rows that were served (ordered).
-  question_ids Json // Int[]
-
+  question_ids    Json
   /// Student's submitted answers: { "<question_id>": "A" | "B" | "C" | "D" }
-  answers Json // Record<string, string>
-
-  total_questions Int @default(10) @db.SmallInt
-  correct_count   Int @default(0) @db.SmallInt
-
+  answers         Json
+  total_questions Int                   @default(10) @db.SmallInt
+  correct_count   Int                   @default(0) @db.SmallInt
   /// Reserve points earned in this session (correct_count × points_per_correct for this part).
-  earned_points Float @default(0) @db.DoublePrecision
-
-  completed_at DateTime @default(now()) @db.Timestamptz(6)
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-
-  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  earned_points   Float                 @default(0)
+  completed_at    DateTime              @default(now()) @db.Timestamptz(6)
+  created_at      DateTime              @default(now()) @db.Timestamptz(6)
+  enrollment      CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
 
   @@index([enrollment_id, skill_area, toeic_part])
   @@index([enrollment_id, completed_at])
   @@map("ToeicPracticePartSession")
 }
 
-/// Detailed content repository for certificate learning materials (question-bank style).
-model LearningRepository {
+model Room {
+  room_id          Int               @id @default(autoincrement())
+  host_id          Int?
+  title            String            @db.VarChar(255)
+  room_mode        String            @db.VarChar(20)
+  password_hash    String?           @db.VarChar(255)
+  cover_type       String?           @db.VarChar(20)
+  cover_url        String?           @db.VarChar(500)
+  is_public        Boolean           @default(true)
+  max_participants Int               @default(6)
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  host             Account?          @relation("RoomHost", fields: [host_id], references: [account_id])
+  actions          RoomAction[]
+  bans             RoomBan[]
+  participants     RoomParticipant[]
+  studySessions    StudySession[]
+
+  @@index([room_mode])
+  @@index([is_public])
+  @@map("Room")
+}
+
+model RoomParticipant {
+  id         Int       @id @default(autoincrement())
+  room_id    Int
+  account_id Int
+  is_host    Boolean   @default(false)
+  camera_on  Boolean   @default(false)
+  mic_on     Boolean   @default(false)
+  joined_at  DateTime  @default(now()) @db.Timestamptz(6)
+  left_at    DateTime? @db.Timestamptz(6)
+  account    Account   @relation(fields: [account_id], references: [account_id])
+  room       Room      @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+
+  @@index([room_id])
+  @@index([account_id])
+  @@index([room_id, left_at])
+  @@map("RoomParticipant")
+}
+
+model RoomAction {
   id                Int      @id @default(autoincrement())
-  cert_type         String   @db.VarChar(30) // ielts | toeic | mos-word | mos-excel | mos-powerpoint
+  room_id           Int
+  target_account_id Int
+  action_type       String   @db.VarChar(20)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  room              Room     @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+  targetAccount     Account  @relation("RoomActionTarget", fields: [target_account_id], references: [account_id])
+
+  @@map("RoomAction")
+}
+
+model RoomBan {
+  id           Int       @id @default(autoincrement())
+  room_id      Int
+  account_id   Int
+  banned_until DateTime? @db.Timestamptz(6)
+  account      Account   @relation(fields: [account_id], references: [account_id])
+  room         Room      @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
+
+  @@map("RoomBan")
+}
+
+model StudySession {
+  id               Int       @id @default(autoincrement())
+  account_id       Int
+  room_id          Int?
+  started_at       DateTime  @db.Timestamptz(6)
+  ended_at         DateTime? @db.Timestamptz(6)
+  duration_minutes Int?
+  account          Account   @relation(fields: [account_id], references: [account_id])
+  room             Room?     @relation(fields: [room_id], references: [room_id])
+
+  @@index([account_id])
+  @@index([started_at])
+  @@map("StudySession")
+}
+
+model DailyStreak {
+  account_id      Int       @id
+  current_streak  Int       @default(0)
+  longest_streak  Int       @default(0)
+  last_study_date DateTime? @db.Date
+  account         Account   @relation(fields: [account_id], references: [account_id])
+
+  @@map("DailyStreak")
+}
+
+model StudyStat {
+  account_id     Int      @id
+  total_minutes  Int      @default(0)
+  total_sessions Int      @default(0)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  account        Account  @relation(fields: [account_id], references: [account_id])
+
+  @@map("StudyStat")
+}
+
+model Leaderboard {
+  account_id Int      @id
+  score      Int?
+  rank       Int?
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  account    Account  @relation(fields: [account_id], references: [account_id])
+
+  @@map("Leaderboard")
+}
+
+model IeltsAdaptiveRoadmap {
+  id                     Int                   @id @default(autoincrement())
+  enrollment_id          Int                   @unique
+  current_band           Float
+  target_band            Float
+  target_completion_date DateTime?             @db.Timestamptz(6)
+  roadmap_version        Int                   @default(1)
+  difficulty_level       String
+  lesson_sequence        Int[]
+  current_lesson_index   Int                   @default(0)
+  status                 String                @default("active")
+  created_at             DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime              @updatedAt @db.Timestamptz(6)
+  enrollment             CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  band_tests             IeltsBandTest[]
+  lessons                IeltsLesson[]
+
+  @@map("IeltsAdaptiveRoadmap")
+}
+
+model IeltsLesson {
+  id                Int                    @id @default(autoincrement())
+  roadmap_id        Int
+  skill_area        String
+  lesson_title      String
+  lesson_order      Int
+  band_level        Float
+  flashcard_repo_id Int?
+  practice_repo_id  Int?
+  mini_test_repo_id Int?
+  estimated_minutes Int
+  status            String                 @default("locked")
+  scheduled_date    DateTime?              @db.Date
+  created_at        DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime               @updatedAt @db.Timestamptz(6)
+  flashcardRepo     LearningRepository?    @relation("FlashcardRepo", fields: [flashcard_repo_id], references: [id])
+  miniTestRepo      LearningRepository?    @relation("MiniTestRepo", fields: [mini_test_repo_id], references: [id])
+  practiceRepo      LearningRepository?    @relation("PracticeRepo", fields: [practice_repo_id], references: [id])
+  roadmap           IeltsAdaptiveRoadmap   @relation(fields: [roadmap_id], references: [id], onDelete: Cascade)
+  practice_sessions IeltsPracticeSession[]
+
+  @@map("IeltsLesson")
+}
+
+model IeltsPracticeSession {
+  id               String      @id @default(uuid())
+  lesson_id        Int
+  session_type     String
+  repository_id    Int
+  answers          Json        @default("{}")
+  total_questions  Int
+  correct_count    Int
+  accuracy_percent Float
+  total_time_sec   Int?
+  avg_time_per_q   Float?
+  error_analysis   Json?
+  created_at       DateTime    @default(now()) @db.Timestamptz(6)
+  lesson           IeltsLesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@map("IeltsPracticeSession")
+}
+
+model IeltsBandTest {
+  id                      String               @id @default(uuid())
+  roadmap_id              Int
+  test_name               String
+  band_level              Float
+  skills_tested           String[]
+  question_ids            String[]
+  answers                 Json                 @default("{}")
+  total_questions         Int
+  correct_count           Int
+  accuracy_percent        Float
+  total_time_sec          Int                  @default(0)
+  expected_time_sec       Int
+  response_time_factor    Float                @default(0)
+  consistency_score       Float?
+  severe_error_count      Int                  @default(0)
+  suspicious_fast_answers Int                  @default(0)
+  previous_band           Float
+  estimated_band          Float
+  band_change             String
+  confidence_level        String
+  skill_breakdown         Json                 @default("{}")
+  recommendation          String
+  weak_skills             String[]
+  status                  String               @default("pending")
+  completed_at            DateTime?            @db.Timestamptz(6)
+  created_at              DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime             @updatedAt @db.Timestamptz(6)
+  roadmap                 IeltsAdaptiveRoadmap @relation(fields: [roadmap_id], references: [id], onDelete: Cascade)
+
+  @@map("IeltsBandTest")
+}
+
+model IeltsSkillProgress {
+  id                Int       @id @default(autoincrement())
+  enrollment_id     Int
+  skill_area        String
+  current_band      Float
+  lessons_completed Int       @default(0)
+  total_practice    Int       @default(0)
+  accuracy_rate     Float     @default(0)
+  recent_sessions   Json      @default("[]")
+  weak_topics       String[]
+  last_practiced_at DateTime? @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@unique([enrollment_id, skill_area])
+  @@map("IeltsSkillProgress")
+}
+
+model IeltsErrorTag {
+  id                     Int                   @id @default(autoincrement())
+  name                   String                @db.VarChar(120)
+  skill                  String                @db.VarChar(30)
+  severity               Int                   @default(3)
+  improvement_suggestion String?
+  explanation            String?
+  recommended_action     String?
+  created_at             DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime              @updatedAt @db.Timestamptz(6)
+  recommendations        IeltsRecommendation[]
+  weak_points            IeltsWeakPoint[]
+
+  @@map("IeltsErrorTag")
+}
+
+model IeltsWeakPoint {
+  id            Int                   @id @default(autoincrement())
+  enrollment_id Int
+  error_tag_id  Int
+  occurrences   Int                   @default(1)
+  last_seen_at  DateTime              @default(now()) @db.Timestamptz(6)
+  is_active     Boolean               @default(true)
+  resolved_at   DateTime?             @db.Timestamptz(6)
+  created_at    DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime              @updatedAt @db.Timestamptz(6)
+  enrollment    CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  error_tag     IeltsErrorTag         @relation(fields: [error_tag_id], references: [id])
+
+  @@unique([enrollment_id, error_tag_id])
+  @@map("IeltsWeakPoint")
+}
+
+model IeltsRecommendation {
+  id            Int                   @id @default(autoincrement())
+  enrollment_id Int
+  type          String                @db.VarChar(30)
+  title         String                @db.VarChar(200)
+  reason        String?
+  lesson_id     Int?
+  skill         String?               @db.VarChar(30)
+  error_tag_id  Int?
+  priority      Int                   @default(3)
+  is_active     Boolean               @default(true)
+  created_at    DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime              @updatedAt @db.Timestamptz(6)
+  enrollment    CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  error_tag     IeltsErrorTag?        @relation(fields: [error_tag_id], references: [id])
+
+  @@map("IeltsRecommendation")
+}
+
+enum MeetingType {
+  online
+  offline
+  both
+}
+
+enum RecipientRole {
+  booker
+  instructor
+}
+
+enum PlacementStatus {
+  in_progress
+  completed
+  abandoned
+}
+
+enum ConfidenceLevel {
+  low
+  medium
+  high
+}
+
+/// Detailed content repository for certificate learning materials (exam/mock-test style).
+model ExamRepository {
+  id                Int      @id @default(autoincrement())
+  cert_type         String   @db.VarChar(30)
   title             String   @db.VarChar(255)
   slug              String   @unique @db.VarChar(120)
   description       String?
-  content_type      String   @default("practice_set") @db.VarChar(30) // lesson | practice_set | mini_test | mock_test
-  skill_area        String?  @db.VarChar(50) // listening | reading | grammar | vocabulary | writing | speaking
+  content_type      String   @default("practice_set") @db.VarChar(30)
+  skill_area        String?  @db.VarChar(50)
   topic_group       String?  @db.VarChar(100)
-  difficulty_level  String?  @db.VarChar(20) // beginner | intermediate | advanced
+  difficulty_level  String?  @db.VarChar(20)
   target_score_min  Int?
   target_score_max  Int?
   estimated_minutes Int?
-  pass_score        Int? // normalized pass threshold for this repository
-  tags              Json? // string[] for flexible filtering
-  metadata          Json? // flexible payload: source, authoring notes, etc.
+  pass_score        Int?
+  tags              Json?
+  metadata          Json?
   total_items       Int      @default(0)
   is_published      Boolean  @default(false)
   version           Int      @default(1)
@@ -917,17 +1351,65 @@ model LearningRepository {
   created_at        DateTime @default(now()) @db.Timestamptz(6)
   updated_at        DateTime @updatedAt @db.Timestamptz(6)
 
-  items LearningRepositoryItem[]
+  items    ExamRepositoryItem[]
+  sessions ToeicExamSession[]
 
   @@index([cert_type, content_type, is_published])
   @@index([skill_area, topic_group])
-  @@map("LearningRepository")
+  @@map("ExamRepository")
 }
 
-/// Repository for diagnostic tests (khảo sát đầu vào), similar to exams but simplified (no AI explanation).
+/// Individual exam item/question in a repository.
+model ExamRepositoryItem {
+  id                Int      @id @default(autoincrement())
+  repository_id     Int
+  item_order        Int      @default(1)
+  item_type         String   @default("single_choice") @db.VarChar(30)
+  title             String?  @db.VarChar(255)
+  stem              String
+  reading_passage   String?
+  hint              String?
+  difficulty_level  String?  @db.VarChar(20)
+  score_weight      Int      @default(1)
+  estimated_seconds Int?
+  media_audio_url   String?
+  media_image_url   String?
+  metadata          Json?
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt @db.Timestamptz(6)
+
+  repository  ExamRepository         @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  options     ExamRepositoryOption[]
+  examAnswers ToeicExamAnswer[]
+
+  @@unique([repository_id, item_order])
+  @@index([repository_id])
+  @@map("ExamRepositoryItem")
+}
+
+/// Options/answers for objective exam items.
+model ExamRepositoryOption {
+  id               Int      @id @default(autoincrement())
+  item_id          Int
+  option_key       String   @db.VarChar(10)
+  option_text      String
+  option_audio_url String?
+  is_correct       Boolean  @default(false)
+  rationale        String?
+  sort_order       Int      @default(1)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  item ExamRepositoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([item_id, option_key])
+  @@index([item_id, sort_order])
+  @@map("ExamRepositoryOption")
+}
+
+/// Repository for diagnostic tests (placement/khảo sát đầu vào).
 model DiagnosticRepository {
   id               Int      @id @default(autoincrement())
-  cert_type        String   @db.VarChar(30) // ielts | toeic
+  cert_type        String   @db.VarChar(30)
   title            String   @db.VarChar(255)
   slug             String   @unique @db.VarChar(120)
   description      String?
@@ -950,13 +1432,13 @@ model DiagnosticRepositoryItem {
   repository_id    Int
   item_order       Int      @default(1)
   item_type        String   @default("single_choice") @db.VarChar(30)
-  skill_area       String?  @db.VarChar(50) // listening | reading
-  part             Int?     @db.SmallInt // 1 to 7 for TOEIC
-  stem             String // question/content body
-  reading_passage  String? // optional shared/inline passage
+  skill_area       String?  @db.VarChar(50)
+  part             Int?     @db.SmallInt
+  stem             String
+  reading_passage  String?
   media_audio_url  String?
   media_image_url  String?
-  difficulty_level String?  @db.VarChar(20) // easy | medium | hard | expert
+  difficulty_level String?  @db.VarChar(20)
   score_band_min   Int      @default(0)
   score_band_max   Int      @default(990)
   metadata         Json?
@@ -974,7 +1456,7 @@ model DiagnosticRepositoryItem {
 model DiagnosticRepositoryOption {
   id               Int      @id @default(autoincrement())
   item_id          Int
-  option_key       String   @db.VarChar(10) // A / B / C / D …
+  option_key       String   @db.VarChar(10)
   option_text      String
   option_audio_url String?
   is_correct       Boolean  @default(false)
@@ -988,124 +1470,94 @@ model DiagnosticRepositoryOption {
   @@map("DiagnosticRepositoryOption")
 }
 
-/// Individual learning item/question in a repository.
-model LearningRepositoryItem {
-  id                Int      @id @default(autoincrement())
-  repository_id     Int
-  item_order        Int      @default(1)
-  item_type         String   @default("single_choice") @db.VarChar(30) // single_choice | multi_choice | fill_blank | short_answer
-  title             String?  @db.VarChar(255)
-  stem              String // question/content body
-  reading_passage   String? // optional shared/inline passage
-  hint              String?
-  explanation       String? // Giải thích nền tảng (thủ công / nhập liệu)
-  ai_explanation    String? // Giải thích AI (Ollama) — sinh tự động, tái sử dụng
-  difficulty_level  String?  @db.VarChar(20)
-  score_weight      Int      @default(1)
-  estimated_seconds Int?
-  media_audio_url   String?
-  media_image_url   String?
-  metadata          Json?
-  created_at        DateTime @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime @updatedAt @db.Timestamptz(6)
+/// Phiên thi thử TOEIC (mock exam) của một học viên cho một đề trong `ExamRepository`.
+/// Dùng để phục hồi tiến độ khi user F5 trình duyệt và tính countdown dựa trên
+/// `started_at` ở server (chống gian lận thời gian).
+///
+/// Quy ước:
+/// - Một học viên chỉ có tối đa 1 session đang mở (submitted_at = NULL) cho mỗi
+///   đề (repository_id). Khi bấm "Bắt đầu thi", backend sẽ tìm session active
+///   có sẵn để resume, nếu không tạo mới.
+/// - `duration_sec` được snapshot lúc start để đổi config đề sau không làm lệch
+///   countdown của session đang mở.
+/// - `current_index` lưu vị trí câu đang xem để F5 scroll đúng chỗ.
+model ToeicExamSession {
+  id             Int       @id @default(autoincrement())
+  account_id     Int
+  repository_id  Int
+  repository_slug String   @db.VarChar(120)
 
-  repository LearningRepository         @relation(fields: [repository_id], references: [id], onDelete: Cascade)
-  options    LearningRepositoryOption[]
+  started_at     DateTime  @default(now()) @db.Timestamptz(6)
+  duration_sec   Int
+  submitted_at   DateTime? @db.Timestamptz(6)
+  auto_submitted Boolean   @default(false)
 
-  @@unique([repository_id, item_order])
-  @@index([repository_id])
-  @@map("LearningRepositoryItem")
+  current_index  Int       @default(0)
+
+  /// Tổng số câu đúng (điền khi submit để không phải tính lại).
+  correct_count  Int?
+  total_count    Int?
+  /// Điểm quy đổi cuối cùng (nullable khi chưa submit).
+  total_score    Int?
+  /// Metadata bổ sung: agent, ip, reasons auto-submit, ...
+  metadata       Json?
+
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @updatedAt @db.Timestamptz(6)
+
+  account    Account            @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  repository ExamRepository     @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  answers    ToeicExamAnswer[]
+
+  @@index([account_id, repository_id])
+  @@index([account_id, submitted_at])
+  @@index([repository_slug])
+  @@map("ToeicExamSession")
 }
 
-/// Options/answers for objective learning items.
-/// option_text  : human-readable label shown in the UI (e.g. "Buy a DVD player", or "(A)" for audio-only options)
-/// option_audio_url : relative URL to an audio clip for this specific option
-///                    Used in TOEIC Listening Part 2 where each choice (A/B/C) is a spoken response.
-///                    NULL for all non-audio options (reading, grammar, Part 1 photos, etc.)
-model LearningRepositoryOption {
-  id               Int      @id @default(autoincrement())
-  item_id          Int
-  option_key       String   @db.VarChar(10) // A / B / C / D …
-  option_text      String // display label; placeholder "(A)" if option is audio-only
-  option_audio_url String? // /uploads/…/audio/<slug>_part2_<NNN>_<key>.mp3 — null when not applicable
-  is_correct       Boolean  @default(false)
-  rationale        String?
-  sort_order       Int      @default(1)
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
+/// Đáp án của từng câu trong một `ToeicExamSession`. Upsert mỗi lần user chọn
+/// đáp án hoặc flag câu để review. Một câu = một row (unique session+question).
+model ToeicExamAnswer {
+  id           Int      @id @default(autoincrement())
+  session_id   Int
+  question_id  Int
+  selected_key String?  @db.VarChar(4)
+  is_flagged   Boolean  @default(false)
+  answered_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @updatedAt @db.Timestamptz(6)
 
-  item LearningRepositoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  session  ToeicExamSession   @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  question ExamRepositoryItem @relation(fields: [question_id], references: [id], onDelete: Cascade)
 
-  @@unique([item_id, option_key])
-  @@index([item_id, sort_order])
-  @@map("LearningRepositoryOption")
+  @@unique([session_id, question_id])
+  @@index([session_id])
+  @@map("ToeicExamAnswer")
 }
-
-/// DB cache for AI tutor chat answers (legacy — kept for backward compat).
-/// New practice question explanations go into ToeicPracticeQuestion.ai_explanation.
-model ToeicNodeQuestionCache {
-  id         Int      @id @default(autoincrement())
-  topic_key  String   @unique @db.VarChar(220)
-  cert_type  String   @db.VarChar(30)
-  ai_answer  String
-  model      String   @db.VarChar(100)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @updatedAt @db.Timestamptz(6)
-
-  @@index([cert_type])
-  @@map("ToeicNodeQuestionCache")
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PRACTICE QUESTION BANKS
-// Separate from exam tables (LearningRepository/Item) so explanations and
-// difficulty metadata don't bloat the exam pipeline.
-//
-// Difficulty / score-band system
-// ──────────────────────────────
-// Each question carries score_band_min / score_band_max that map to the
-// student's current TOEIC score.  A student scoring 550 only sees questions
-// in bands like 450-650.  difficulty_score (0.0–1.0) is a heuristic computed
-// at import time from:
-//   1. Vocabulary rarity  (high-frequency words → easier)
-//   2. Option proximity   (very similar distractors → harder)
-//   3. Part / section     (Part 7 RC harder than Part 5 for most learners)
-//   4. Statistical update (fraction of students who answer correctly, later)
-// ─────────────────────────────────────────────────────────────────────────────
 
 /// TOEIC practice questions — study bank with AI explanations and difficulty.
-/// AI runs in background: sets ai_explanation + ai_explained_at per question.
-/// When a student reviews their answer the UI shows ai_explanation directly
-/// from DB (no file I/O, no regeneration if already explained).
 model ToeicPracticeQuestion {
   id Int @id @default(autoincrement())
 
-  // Classification
-  skill_area String @db.VarChar(30) // listening | reading | grammar | vocabulary
-  part       Int? // TOEIC part number 1-7 (null for vocab/grammar)
+  skill_area String @db.VarChar(30)
+  part       Int?
 
-  // Content
-  stem            String // question text
-  reading_passage String? // optional inline passage (Part 6-7 style)
-  context_image   String? // image URL for Part 1 questions
-  context_audio   String? // audio URL for Listening questions
+  stem            String
+  reading_passage String?
+  context_image   String?
+  context_audio   String?
 
-  // Difficulty & score band
-  // score_band maps to the student's current TOEIC score (5-990).
-  // Questions are served when student_score ∈ [score_band_min-50, score_band_max+50].
-  score_band_min   Int    @default(300) // e.g. 450 → for students ~400-550
-  score_band_max   Int    @default(990) // e.g. 650 → question ceiling
-  difficulty_label String @default("medium") @db.VarChar(20) // easy | medium | hard | expert
-  difficulty_score Float? @db.DoublePrecision // 0.0 (trivial) → 1.0 (very hard)
+  score_band_min   Int    @default(300)
+  score_band_max   Int    @default(990)
+  difficulty_label String @default("medium") @db.VarChar(20)
+  difficulty_score Float? @db.DoublePrecision
 
-  // Explanations
-  explanation     String? // human-authored baseline explanation
-  ai_explanation  String? // Ollama-generated; populated by background job
-  ai_explained_at DateTime? @db.Timestamptz(6) // null = not yet explained; non-null = skip
-  ai_model        String?   @db.VarChar(100) // model that generated the explanation
+  explanation     String?
+  ai_explanation  String?
+  ai_explained_at DateTime? @db.Timestamptz(6)
+  ai_model        String?   @db.VarChar(100)
 
-  // Source tracking (for provenance and dedup)
-  source_slug    String? @db.VarChar(120) // LearningRepository.slug this was copied from
-  source_item_id Int? // LearningRepositoryItem.id (nullable FK)
+  source_slug    String? @db.VarChar(120)
+  source_item_id Int?
 
   is_published Boolean  @default(true)
   created_at   DateTime @default(now()) @db.Timestamptz(6)
@@ -1113,9 +1565,7 @@ model ToeicPracticeQuestion {
 
   options ToeicPracticeOption[]
 
-  // Index for difficulty-filtered queries: "give me medium reading questions for score ~600"
   @@index([skill_area, score_band_min, score_band_max, is_published])
-  // Background AI job scans for rows where ai_explained_at IS NULL
   @@index([ai_explained_at])
   @@map("ToeicPracticeQuestion")
 }
@@ -1123,10 +1573,10 @@ model ToeicPracticeQuestion {
 model ToeicPracticeOption {
   id          Int     @id @default(autoincrement())
   question_id Int
-  option_key  String  @db.VarChar(10) // A | B | C | D
+  option_key  String  @db.VarChar(10)
   option_text String
   is_correct  Boolean @default(false)
-  rationale   String? // why this option is right/wrong (optional)
+  rationale   String?
   sort_order  Int     @default(0)
 
   question ToeicPracticeQuestion @relation(fields: [question_id], references: [id], onDelete: Cascade)
@@ -1140,18 +1590,17 @@ model ToeicPracticeOption {
 model IeltsPracticeQuestion {
   id Int @id @default(autoincrement())
 
-  skill_area    String  @db.VarChar(30) // listening | reading | writing | speaking
-  question_type String? @db.VarChar(50) // mcq | fill-blank | matching | true-false | short-answer
+  skill_area    String  @db.VarChar(30)
+  question_type String? @db.VarChar(50)
 
   stem            String
   reading_passage String?
   context_audio   String?
 
-  // Difficulty — IELTS band scale 1.0–9.0
-  band_min         Float  @default(4.0) @db.DoublePrecision // e.g. 5.0
-  band_max         Float  @default(9.0) @db.DoublePrecision // e.g. 6.5
+  band_min         Float  @default(4.0) @db.DoublePrecision
+  band_max         Float  @default(9.0) @db.DoublePrecision
   difficulty_label String @default("medium") @db.VarChar(20)
-  difficulty_score Float? @db.DoublePrecision // 0.0–1.0
+  difficulty_score Float? @db.DoublePrecision
 
   explanation     String?
   ai_explanation  String?
@@ -1192,16 +1641,15 @@ model IeltsPracticeOption {
 model MosPracticeQuestion {
   id Int @id @default(autoincrement())
 
-  app        String  @db.VarChar(30) // word | excel | powerpoint
-  skill_area String? @db.VarChar(80) // e.g. "formatting" | "formulas" | "charts" | "mail-merge"
+  app        String  @db.VarChar(30)
+  skill_area String? @db.VarChar(80)
 
   stem            String
-  reading_passage String? // scenario / task description shown to student
+  reading_passage String?
 
-  // MOS score range 1–1000
   score_band_min   Int    @default(1)
   score_band_max   Int    @default(1000)
-  difficulty_label String @default("medium") @db.VarChar(20) // easy | medium | hard | expert
+  difficulty_label String @default("medium") @db.VarChar(20)
   difficulty_score Float? @db.DoublePrecision
 
   explanation     String?
@@ -1239,182 +1687,18 @@ model MosPracticeOption {
   @@map("MosPracticeOption")
 }
 
-/// Tracks which individual topics a student has completed within an enrollment.
-/// topic_key uses a stable dot-notation key, e.g. 'grammar.basic_tenses'.
-model CertificateTopicProgress {
-  id            Int      @id @default(autoincrement())
-  enrollment_id Int
-  topic_key     String   @db.VarChar(100) // e.g. 'grammar.basic_tenses', 'listening.part1_form_fill'
-  completed_at  DateTime @default(now()) @db.Timestamptz(6)
-
-  enrollment CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
-
-  @@unique([enrollment_id, topic_key])
-  @@index([enrollment_id])
-  @@map("CertificateTopicProgress")
-}
-
-model Room {
-  room_id Int    @id @default(autoincrement())
-  host_id Int?
-  title   String @db.VarChar(255)
-
-  room_mode     String  @db.VarChar(20) // audio | video | focus
-  password_hash String? @db.VarChar(255)
-
-  cover_type String? @db.VarChar(20) // image | youtube
-  cover_url  String? @db.VarChar(500)
-
-  is_public        Boolean @default(true)
-  max_participants Int     @default(6)
-
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-
-  // relations
-  host          Account?          @relation("RoomHost", fields: [host_id], references: [account_id])
-  participants  RoomParticipant[]
-  actions       RoomAction[]
-  bans          RoomBan[]
-  studySessions StudySession[]
-
-  @@index([room_mode])
-  @@index([is_public])
-  @@map("Room")
-}
-
-model RoomParticipant {
-  id Int @id @default(autoincrement())
-
-  room_id    Int
-  account_id Int
-
-  is_host Boolean @default(false)
-
-  camera_on Boolean @default(false)
-  mic_on    Boolean @default(false)
-
-  joined_at DateTime  @default(now()) @db.Timestamptz(6)
-  left_at   DateTime? @db.Timestamptz(6)
-
-  // relations
-  room    Room    @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
-  account Account @relation(fields: [account_id], references: [account_id])
-
-  @@index([room_id])
-  @@index([account_id])
-  @@index([room_id, left_at])
-  @@map("RoomParticipant")
-}
-
-model RoomAction {
-  id Int @id @default(autoincrement())
-
-  room_id           Int
-  target_account_id Int
-
-  action_type String @db.VarChar(20) // kick | mute
-
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-
-  // relations
-  room          Room    @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
-  targetAccount Account @relation("RoomActionTarget", fields: [target_account_id], references: [account_id])
-
-  @@map("RoomAction")
-}
-
-model RoomBan {
-  id Int @id @default(autoincrement())
-
-  room_id    Int
-  account_id Int
-
-  banned_until DateTime? @db.Timestamptz(6)
-
-  // relations
-  room    Room    @relation(fields: [room_id], references: [room_id], onDelete: Cascade)
-  account Account @relation(fields: [account_id], references: [account_id])
-
-  @@map("RoomBan")
-}
-
-model StudySession {
-  id Int @id @default(autoincrement())
-
-  account_id Int
-  room_id    Int?
-
-  started_at DateTime  @db.Timestamptz(6)
-  ended_at   DateTime? @db.Timestamptz(6)
-
-  duration_minutes Int?
-
-  // relations
-  account Account @relation(fields: [account_id], references: [account_id])
-  room    Room?   @relation(fields: [room_id], references: [room_id], onDelete: SetNull)
-
-  @@index([account_id])
-  @@index([started_at])
-  @@index([account_id, ended_at]) // For migration and historical queries
-  @@map("StudySession")
-}
-
-model DailyStreak {
-  account_id Int @id
-
-  current_streak Int @default(0)
-  longest_streak Int @default(0)
-
-  last_study_date DateTime? @db.Date
-
-  // relation
-  account Account @relation(fields: [account_id], references: [account_id])
-
-  @@index([last_study_date]) // For streak queries
-  @@map("DailyStreak")
-}
-
-model StudyStat {
-  account_id Int @id
-
-  total_minutes  Int @default(0)
-  total_sessions Int @default(0)
-
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-
-  // relation
-  account Account @relation(fields: [account_id], references: [account_id])
-
-  @@index([total_minutes(sort: Desc)]) // For total ranking queries
-  @@map("StudyStat")
-}
-
-model Leaderboard {
-  account_id Int @id
-
-  score Int?
-  rank  Int?
-
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-
-  // relation
-  account Account @relation(fields: [account_id], references: [account_id])
-
-  @@map("Leaderboard")
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // VOCABULARY SYSTEM MODELS (TOEIC & IELTS)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Chủ đề từ vựng TOEIC (Business, Office, Finance...)
+/// Chủ đề từ vựng (Business, Office, Finance...)
 model VocabTopic {
   id         Int      @id @default(autoincrement())
-  slug       String   @unique @db.VarChar(100) // "email-van-phong"
-  title_vi   String   @db.VarChar(200) // "Email & Văn phòng"
-  title_en   String   @db.VarChar(200) // "Email & Office Communication"
-  emoji      String   @db.VarChar(10) // "📧"
-  cert_type  String   @default("toeic") @db.VarChar(20) // toeic | ielts
+  slug       String   @unique @db.VarChar(100)
+  title_vi   String   @db.VarChar(200)
+  title_en   String   @db.VarChar(200)
+  emoji      String   @db.VarChar(10)
+  cert_type  String   @default("toeic") @db.VarChar(20)
   is_active  Boolean  @default(true)
   sort_order Int      @default(0)
   created_at DateTime @default(now()) @db.Timestamptz(6)
@@ -1430,10 +1714,10 @@ model VocabWord {
   id         Int      @id @default(autoincrement())
   topic_id   Int
   word       String   @db.VarChar(200)
-  level      String   @db.VarChar(20) // "Cơ bản" | "Trung bình" | "Nâng cao"
-  freq       Int      @db.SmallInt // 1=thấp | 2=trung bình | 3=cao
-  audio_url  String?  @db.VarChar(500) // TTS pre-generated URL (optional)
-  source     String?  @db.VarChar(50) // "ocr-upload" | "manual" | "ai-generated"
+  level      String   @db.VarChar(20)
+  freq       Int      @db.SmallInt
+  audio_url  String?  @db.VarChar(500)
+  source     String?  @db.VarChar(50)
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @updatedAt @db.Timestamptz(6)
 
@@ -1450,10 +1734,10 @@ model VocabWord {
 model VocabDefinition {
   id         Int    @id @default(autoincrement())
   word_id    Int
-  pos        String @db.VarChar(20) // "n." | "v." | "adj." | "adv." | "prep."
-  meaning    String @db.VarChar(500) // nghĩa tiếng Việt
-  example_en String @db.Text // ví dụ tiếng Anh (có thể có <strong>)
-  example_vi String @db.Text // dịch ví dụ
+  pos        String @db.VarChar(20)
+  meaning    String @db.VarChar(500)
+  example_en String @db.Text
+  example_vi String @db.Text
   sort_order Int    @default(0)
 
   word VocabWord @relation(fields: [word_id], references: [id], onDelete: Cascade)
@@ -1465,11 +1749,11 @@ model VocabDefinition {
 /// Tiến độ học từ vựng của từng sinh viên
 model UserVocabProgress {
   id             Int       @id @default(autoincrement())
-  enrollment_id  Int // → CertificateEnrollment.id
+  enrollment_id  Int
   word_id        Int
   is_known       Boolean   @default(false)
   reviewed_at    DateTime? @db.Timestamptz(6)
-  correct_streak Int       @default(0) // đúng liên tiếp trong bộ kiểm tra
+  correct_streak Int       @default(0)
   total_attempts Int       @default(0)
   total_correct  Int       @default(0)
   updated_at     DateTime  @updatedAt @db.Timestamptz(6)
@@ -1486,9 +1770,9 @@ model UserVocabProgress {
 model VocabTestSession {
   id            Int       @id @default(autoincrement())
   enrollment_id Int
-  mode          String    @db.VarChar(20) // "flashcard" | "write"
-  word_ids      Json // int[] - danh sách từ được kiểm tra
-  score         Int? // % đúng cuối phiên
+  mode          String    @db.VarChar(20)
+  word_ids      Json
+  score         Int?
   started_at    DateTime  @default(now()) @db.Timestamptz(6)
   ended_at      DateTime? @db.Timestamptz(6)
 
@@ -1504,9 +1788,9 @@ model VocabTestAnswer {
   id          Int     @id @default(autoincrement())
   session_id  Int
   word_id     Int
-  user_input  String? @db.Text // null nếu mode = flashcard
+  user_input  String? @db.Text
   is_correct  Boolean
-  ai_score    Float? // 0.0 - 1.0 (Qwen2.5 fuzzy match)
+  ai_score    Float?
   ai_feedback String? @db.Text
 
   session VocabTestSession @relation(fields: [session_id], references: [id], onDelete: Cascade)

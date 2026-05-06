@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   ClipboardList,
   PenLine,
@@ -16,6 +16,13 @@ import {
   saveToeicIntakeProfile,
 } from "./toeicIntake";
 import { generateDiagnosticTest, submitDiagnosticTest } from "../../services/api/certificateService";
+import { buildAssetUrl } from "../../services/api/config";
+
+function resolveMediaUrl(src?: string | null): string {
+  if (!src) return "";
+  if (/^https?:\/\//i.test(src)) return src;
+  return buildAssetUrl(src);
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +38,7 @@ type ExamQuestion = {
   choices: string[];
   optionKeys?: string[];
   audioUrl?: string;
+  imageUrl?: string;
   correct?: number;
 };
 
@@ -360,6 +368,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
   const [examError, setExamError] = useState<string | null>(null);
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function getQuestionCount(band: number) {
@@ -372,18 +381,30 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
 
   async function startExam(band: number) {
     setIsGenerating(true);
+    setLoadingMessage("Đang tạo bộ đề khảo sát...");
     setExamError(null);
     try {
+      // Step 1: Fetch questions from API
       const questions = await generateDiagnosticTest(band);
+      console.log('Diagnostic API returned:', questions);
       
+      setLoadingMessage("Đang sắp xếp câu hỏi...");
+
+      // Sort questions by part then by item_order for correct sequence
+      const sorted = [...questions].sort((a, b) => {
+        if (a.part !== b.part) return (a.part ?? 99) - (b.part ?? 99);
+        return (a.item_order ?? 0) - (b.item_order ?? 0);
+      });
+
       const newParts: ExamPart[] = [];
-      const grouped: Record<number, typeof questions> = {};
-      for (const q of questions) {
-        if (!grouped[q.part]) grouped[q.part] = [];
-        grouped[q.part].push(q);
+      const grouped: Record<number, typeof sorted> = {};
+      for (const q of sorted) {
+        const p = q.part ?? 0;
+        if (!grouped[p]) grouped[p] = [];
+        grouped[p].push(q);
       }
       
-      for (const partNumStr of Object.keys(grouped).sort()) {
+      for (const partNumStr of Object.keys(grouped).sort((a, b) => Number(a) - Number(b))) {
         const partNum = Number(partNumStr);
         const qArr = grouped[partNum];
         newParts.push({
@@ -398,9 +419,79 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
             choices: q.options.map(o => o.option_text),
             optionKeys: q.options.map(o => o.option_key),
             audioUrl: q.media_audio_url || undefined,
+            imageUrl: q.media_image_url || undefined,
           }))
         });
       }
+
+      // Step 2: Preload all images and audio, WAIT until done
+      setLoadingMessage("Đang tải hình ảnh và audio...");
+
+      const preloadPromises: Promise<void>[] = [];
+      let loadedCount = 0;
+      let totalMedia = 0;
+
+      // Count total media
+      for (const part of newParts) {
+        for (const q of part.questions) {
+          if (q.imageUrl) totalMedia++;
+          if (q.audioUrl) totalMedia++;
+        }
+      }
+
+      const updateProgress = () => {
+        loadedCount++;
+        if (totalMedia > 0) {
+          setLoadingMessage(`Đang tải media... (${loadedCount}/${totalMedia})`);
+        }
+      };
+
+      for (const part of newParts) {
+        for (const q of part.questions) {
+          if (q.imageUrl) {
+            const src = resolveMediaUrl(q.imageUrl);
+            preloadPromises.push(
+              new Promise<void>((resolve) => {
+                const img = new Image();
+                const done = () => { updateProgress(); resolve(); };
+                img.onload = done;
+                img.onerror = done;
+                img.src = src;
+                // Fallback in case events never fire
+                setTimeout(done, 15000);
+              })
+            );
+          }
+          if (q.audioUrl) {
+            const src = resolveMediaUrl(q.audioUrl);
+            // Use fetch to ensure file is downloaded & put into HTTP cache reliably.
+            // `canplaythrough` on a detached <audio> is unreliable in Chrome.
+            preloadPromises.push(
+              (async () => {
+                try {
+                  const res = await fetch(src, { credentials: 'omit' });
+                  // Consume body so it's fully cached
+                  await res.blob();
+                } catch {
+                  /* ignore network errors; UI has its own fallback */
+                } finally {
+                  updateProgress();
+                }
+              })()
+            );
+          }
+        }
+      }
+
+      if (preloadPromises.length > 0) {
+        // Wait for all media or timeout after 30s max
+        await Promise.race([
+          Promise.all(preloadPromises),
+          new Promise<void>((resolve) => setTimeout(resolve, 30000)),
+        ]);
+      }
+
+      setLoadingMessage("Sẵn sàng!");
 
       setCurrentExamParts(newParts);
       setExamPart(0);
@@ -412,6 +503,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
       setExamError("Không thể tạo bài kiểm tra, có thể kho dữ liệu chưa đủ câu hỏi cho mốc điểm này.");
     } finally {
       setIsGenerating(false);
+      setLoadingMessage("");
     }
   }
 
@@ -430,10 +522,17 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
     setAnswers((prev) => ({ ...prev, [questionId]: choiceIndex }));
   }
 
+  const examTopRef = useRef<HTMLDivElement>(null);
+
+  function scrollToExamTop() {
+    examTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handleNextPart() {
     if (examPart < currentExamParts.length - 1) {
       setExamPart((p) => p + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(scrollToExamTop, 50);
     } else {
       submitExam();
     }
@@ -442,7 +541,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
   function handlePrevPart() {
     if (examPart > 0) {
       setExamPart((p) => p - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(scrollToExamTop, 50);
     }
   }
 
@@ -989,6 +1088,26 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
             </div>
           )}
 
+          {isGenerating && (
+            <div className="p-6 rounded-2xl mb-6 flex flex-col items-center gap-4" style={{ background: "linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)", border: "1.5px solid #c7d2fe" }}>
+              <div className="relative">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "#ffffff", boxShadow: "0 2px 12px rgba(99,102,241,0.15)" }}>
+                  <svg className="w-7 h-7 animate-spin" style={{ color: "#6366f1" }} viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" opacity="0.2"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-sm" style={{ color: "#312e81" }}>Đang chuẩn bị bài khảo sát</p>
+                <p className="text-xs mt-1.5 font-medium" style={{ color: "#6366f1" }}>{loadingMessage}</p>
+              </div>
+              <div className="w-full max-w-xs rounded-full overflow-hidden" style={{ height: "4px", background: "#c7d2fe" }}>
+                <div className="h-full rounded-full animate-pulse" style={{ width: "100%", background: "linear-gradient(90deg, #6366f1, #818cf8, #6366f1)", backgroundSize: "200% 100%", animation: "shimmer 1.5s ease-in-out infinite" }} />
+              </div>
+            </div>
+          )}
+
           {showExamWarning && selectedExamBand && (
             <div className="p-5 rounded-2xl mb-6 flex gap-4 items-start" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#fef3c7" }}>
@@ -1031,7 +1150,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
     const progress = Math.round(((examPart + 1) / currentExamParts.length) * 100);
 
     return (
-      <div style={{ background: "#f8fafc", paddingBottom: "64px" }}>
+      <div ref={examTopRef} style={{ background: "#f8fafc", paddingBottom: "64px" }}>
         {/* Top bar */}
         <div
           className="sticky top-0 z-10"
@@ -1168,14 +1287,73 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
                 >
                   {q.text}
                 </p>
+
+                {q.imageUrl ? (
+                  <div className="mb-5 flex justify-center relative">
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-200 animate-pulse img-placeholder">
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <svg className="w-8 h-8 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                        <span className="text-xs">Đang tải hình...</span>
+                      </div>
+                    </div>
+                    <img
+                      src={resolveMediaUrl(q.imageUrl)}
+                      alt="Question illustration"
+                      loading="eager"
+                      decoding="async"
+                      className="rounded-lg shadow-sm max-w-full h-auto object-contain border border-slate-200 relative z-[1] bg-white"
+                      style={{ maxHeight: '300px' }}
+                      onLoad={(e) => {
+                        const placeholder = (e.target as HTMLElement).parentElement?.querySelector('.img-placeholder');
+                        if (placeholder) (placeholder as HTMLElement).style.display = 'none';
+                      }}
+                      onError={(e) => {
+                        const placeholder = (e.target as HTMLElement).parentElement?.querySelector('.img-placeholder');
+                        if (placeholder) (placeholder as HTMLElement).style.display = 'none';
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : part.partNumber === 1 && (
+                  <div className="mb-5 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 py-8 text-sm text-slate-500">
+                    <div className="flex flex-col items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-slate-400" />
+                      <span>Không tìm thấy hình ảnh cho câu hỏi này</span>
+                    </div>
+                  </div>
+                )}
                 
-                {q.audioUrl && (
-                  <div className="mb-4">
+                {q.audioUrl ? (
+                  <div className="mb-4 relative">
+                    <div className="audio-loading absolute inset-0 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-400">
+                      <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                      <span>Đang tải audio...</span>
+                    </div>
                     <audio 
                       controls 
-                      className="w-full h-10"
-                      src={q.audioUrl.startsWith('http') ? q.audioUrl : `http://localhost:3000${q.audioUrl}`} 
+                      preload="auto"
+                      className="w-full h-10 relative z-[1]"
+                      src={resolveMediaUrl(q.audioUrl)}
+                      onCanPlay={(e) => {
+                        const loading = (e.target as HTMLElement).parentElement?.querySelector('.audio-loading');
+                        if (loading) (loading as HTMLElement).style.display = 'none';
+                      }}
+                      onLoadedData={(e) => {
+                        const loading = (e.target as HTMLElement).parentElement?.querySelector('.audio-loading');
+                        if (loading) (loading as HTMLElement).style.display = 'none';
+                      }}
+                      onError={(e) => {
+                        const loading = (e.target as HTMLElement).parentElement?.querySelector('.audio-loading');
+                        if (loading) (loading as HTMLElement).innerHTML = '<div class="flex items-center gap-2 text-amber-600"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Không thể tải file nghe</span></div>';
+                      }}
                     />
+                  </div>
+                ) : part.skill === "listening" && (
+                  <div className="mb-4 flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 py-3 text-sm text-slate-500">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-slate-400" />
+                      <span>Chưa có file nghe cho câu hỏi này</span>
+                    </div>
                   </div>
                 )}
 

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { IsObject, IsArray, IsNumber } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { encryptString, tryDecryptString } from '../../common/crypto.util';
 
@@ -7,7 +8,11 @@ export class GenerateDiagnosticDto {
 }
 
 export class SubmitDiagnosticDto {
+  @IsObject()
   answers!: Record<string, string>; // questionId -> optionKey
+
+  @IsArray()
+  @IsNumber({}, { each: true })
   question_ids!: number[];
 }
 
@@ -97,18 +102,46 @@ export class ToeicDiagnosticService {
       throw new BadRequestException(`Hệ thống chưa đủ dữ liệu khảo sát cho mốc điểm này. Yêu cầu ít nhất ${dist.l} câu Listening và ${dist.r} câu Reading, nhưng hiện tại chỉ có ${selectedListening.length} câu Listening và ${selectedReading.length} câu Reading.`);
     }
 
-    const combined = [...selectedListening, ...selectedReading];
+    const combined = [...selectedListening, ...selectedReading]
+      .sort((a, b) => {
+        // Sort by part number first, then by item_order within each part
+        const partA = a.part ?? 99;
+        const partB = b.part ?? 99;
+        if (partA !== partB) return partA - partB;
+        return (a.item_order ?? 0) - (b.item_order ?? 0);
+      });
+
+    // For Part 3/4, each group of 3 questions shares 1 audio file.
+    // Audio is only stored on the first question of each group.
+    // Propagate audio/image from group leader to the other 2 questions.
+    for (let i = 0; i < combined.length; i++) {
+      const q = combined[i];
+      if ((q.part === 3 || q.part === 4) && !q.media_audio_url) {
+        // Look backwards for the nearest question in the same part that has audio
+        for (let j = i - 1; j >= 0; j--) {
+          const prev = combined[j];
+          if (prev.part !== q.part) break;
+          if (prev.media_audio_url) {
+            q.media_audio_url = prev.media_audio_url;
+            // Also propagate image if this question doesn't have one
+            if (!q.media_image_url && prev.media_image_url) {
+              q.media_image_url = prev.media_image_url;
+            }
+            break;
+          }
+        }
+      }
+    }
 
     return combined.map(q => ({
       id: q.id,
+      item_order: q.item_order,
       part: q.part,
       skill_area: q.skill_area,
-      // Cẩn thận: dữ liệu trong DB đã được mã hóa, gửi y nguyên cho frontend (Frontend sẽ tự gọi decrypt)
-      // Nhưng nếu frontend ToeicIntakePanel chưa có cơ chế decrypt, ta có thể phải trả về plain text cho Intake.
-      // Tuy nhiên user muốn "toàn bộ data khi nạp vào hệ thống phải được mã hóa toàn bộ", và frontend có hook dùng tryDecryptString.
       stem: q.stem, 
       reading_passage: q.reading_passage,
       media_audio_url: q.media_audio_url,
+      media_image_url: q.media_image_url,
       options: q.options.map(o => ({
         id: o.id,
         option_key: o.option_key,

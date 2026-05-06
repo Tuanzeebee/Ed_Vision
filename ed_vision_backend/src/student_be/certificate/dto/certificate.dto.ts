@@ -19,6 +19,21 @@ const CERT_TYPES = [
   'mos-excel',
   'mos-powerpoint',
 ] as const;
+const ALL_BANDS = [
+  '4.0',
+  '5.0',
+  '6.0',
+  '6.5',
+  '7.0',
+  '7.5+', // IELTS
+  '350-495',
+  '500-599',
+  '600-699',
+  '700-799',
+  '800+', // TOEIC
+  'associate',
+  'expert', // MOS
+] as const;
 
 export class CreateEnrollmentDto {
   @IsString()
@@ -175,6 +190,7 @@ export class ToeicRepositoryDetailResponseDto {
   title!: string;
   description?: string | null;
   skill_area?: string | null;
+  full_audio_url?: string | null;
   milestone_score!: number;
   estimated_minutes!: number;
   pass_score!: number;
@@ -182,6 +198,7 @@ export class ToeicRepositoryDetailResponseDto {
   answer_key_configured_items!: number;
   answer_key_missing_items!: number;
   answer_key_ready!: boolean;
+  active_session_id?: number | null;
   items!: ToeicRepositoryItemDto[];
 }
 
@@ -652,4 +669,30 @@ export class ToeicRepositoryDeleteResponseDto {
   slug!: string;
   deleted!: boolean;
   items_deleted!: number;
+}
+
+export class ToeicChatGroqMessageDto {
+  @IsString()
+  @IsIn(['user', 'assistant'])
+  role!: 'user' | 'assistant';
+
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+}
+
+export class ToeicChatGroqDto {
+  @IsInt()
+  @Min(1)
+  question_id!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  user_message!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ToeicChatGroqMessageDto)
+  chat_history?: ToeicChatGroqMessageDto[];
 }

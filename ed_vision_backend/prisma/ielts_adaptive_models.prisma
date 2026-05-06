@@ -1,0 +1,196 @@
+// ================================================
+
+// IELTS Adaptive Learning Roadmap Models
+// ================================================
+// Add these models to your main schema.prisma file
+
+/// Adaptive learning roadmap for each IELTS enrollment
+model IeltsAdaptiveRoadmap {
+  id                Int       @id @default(autoincrement())
+  enrollment_id     Int       @unique
+  current_band      Decimal   @db.Decimal(2, 1) // 4.0, 4.5, 5.0, etc.
+  target_band       Decimal   @db.Decimal(2, 1)
+  roadmap_version   Int       @default(1) // Increments when band changes
+  difficulty_level  String    @db.VarChar(20) // beginner | intermediate | advanced
+  
+  /// Generated lesson sequence based on current band
+  lesson_sequence   Json      // Array of lesson IDs in order: [1, 2, 3, ...]
+  
+  /// Current position in roadmap (0-indexed)
+  current_lesson_index Int    @default(0)
+  
+  status            String    @default("active") @db.VarChar(20) // active | completed | archived
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @updatedAt @db.Timestamptz(6)
+  
+  enrollment        CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  lessons           IeltsLesson[]
+  bandTests         IeltsBandTest[]
+  
+  @@index([enrollment_id, status])
+  @@map("IeltsAdaptiveRoadmap")
+}
+
+/// Individual lesson in the roadmap (one per skill)
+model IeltsLesson {
+  id                Int       @id @default(autoincrement())
+  roadmap_id        Int
+  skill_area        String    @db.VarChar(30) // reading | listening | grammar | vocabulary | writing | speaking
+  lesson_title      String    @db.VarChar(255)
+  lesson_order      Int       // Position in roadmap
+  band_level        Decimal   @db.Decimal(2, 1) // Band this lesson targets
+  
+  /// Repository ID for flashcards/content
+  flashcard_repo_id Int?
+  
+  /// Repository ID for practice questions (2-3 warmup questions)
+  practice_repo_id  Int?
+  
+  /// Repository ID for mini test
+  mini_test_repo_id Int?
+  
+  estimated_minutes Int       @default(30)
+  status            String    @default("locked") @db.VarChar(20) // locked | unlocked | in_progress | completed
+  
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @updatedAt @db.Timestamptz(6)
+  
+  roadmap           IeltsAdaptiveRoadmap @relation(fields: [roadmap_id], references: [id], onDelete: Cascade)
+  flashcardRepo     LearningRepository? @relation("LessonFlashcards", fields: [flashcard_repo_id], references: [id])
+  practiceRepo      LearningRepository? @relation("LessonPractice", fields: [practice_repo_id], references: [id])
+  miniTestRepo      LearningRepository? @relation("LessonMiniTest", fields: [mini_test_repo_id], references: [id])
+  
+  practiceSessions  IeltsPracticeSession[]
+  
+  @@unique([roadmap_id, lesson_order])
+  @@index([roadmap_id, status])
+  @@map("IeltsLesson")
+}
+
+/// Practice session for warmup questions or mini tests
+model IeltsPracticeSession {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lesson_id         Int
+  session_type      String    @db.VarChar(20) // warmup | mini_test
+  repository_id     Int       // Which repo (practice or mini_test)
+  
+  /// Student's answers: { "item_id": "selected_option_key" }
+  answers           Json      // Record<number, string>
+  
+  total_questions   Int       @default(0)
+  correct_count     Int       @default(0)
+  accuracy_percent  Decimal   @db.Decimal(5, 2)
+  
+  /// Time tracking
+  total_time_sec    Int?
+  avg_time_per_q    Decimal?  @db.Decimal(6, 2)
+  
+  /// Error analysis
+  error_analysis    Json?     // { errorType: count, ... }
+  
+  completed_at      DateTime  @default(now()) @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  
+  lesson            IeltsLesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  repository        LearningRepository @relation("PracticeSessions", fields: [repository_id], references: [id])
+  
+  @@index([lesson_id, session_type])
+  @@index([completed_at])
+  @@map("IeltsPracticeSession")
+}
+
+/// Comprehensive band test after completing multiple lessons
+model IeltsBandTest {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roadmap_id        Int
+  test_name         String    @db.VarChar(255)
+  band_level        Decimal   @db.Decimal(2, 1) // Band level being tested
+  
+  /// Skills covered in this test
+  skills_tested     String[]  // ['reading', 'listening', 'grammar', ...]
+  
+  /// Questions selected from IeltsQuestion table
+  question_ids      String[]  @db.Uuid
+  
+  /// Student's answers: { "question_id": "answer_text" }
+  answers           Json      // Record<string, string>
+  
+  // Performance metrics
+  total_questions   Int       @default(0)
+  correct_count     Int       @default(0)
+  accuracy_percent  Decimal   @db.Decimal(5, 2)
+  
+  /// Time metrics
+  total_time_sec    Int
+  expected_time_sec Int
+  response_time_factor Decimal @db.Decimal(5, 3) // actual/expected ratio
+  
+  /// Advanced metrics
+  consistency_score    Decimal? @db.Decimal(5, 2) // Based on last 5 sessions
+  severe_error_count   Int      @default(0) // Errors with severity >= 4
+  suspicious_fast_answers Int   @default(0) // Answers with time < 30% expected
+  
+  /// Band estimation result
+  previous_band        Decimal  @db.Decimal(2, 1)
+  estimated_band       Decimal  @db.Decimal(2, 1)
+  band_change          String   @db.VarChar(10) // UP | DOWN | STABLE
+  confidence_level     String   @db.VarChar(10) // low | medium | high
+  
+  /// Detailed breakdown per skill
+  skill_breakdown      Json     // { skill: { accuracy, band, weakPoints: [] } }
+  
+  /// Recommendation for next steps
+  recommendation       String   @db.VarChar(20) // advance | maintain | remedial
+  weak_skills          String[] // Skills that need improvement
+  
+  status               String   @default("in_progress") @db.VarChar(20) // in_progress | completed
+  started_at           DateTime @default(now()) @db.Timestamptz(6)
+  completed_at         DateTime? @db.Timestamptz(6)
+  
+  roadmap              IeltsAdaptiveRoadmap @relation(fields: [roadmap_id], references: [id], onDelete: Cascade)
+  
+  @@index([roadmap_id, completed_at])
+  @@index([band_level, band_change])
+  @@map("IeltsBandTest")
+}
+
+/// Skill-specific progress tracking
+model IeltsSkillProgress {
+  id                Int       @id @default(autoincrement())
+  enrollment_id     Int
+  skill_area        String    @db.VarChar(30) // reading | listening | grammar | vocabulary | writing | speaking
+  
+  current_band      Decimal   @db.Decimal(2, 1)
+  lessons_completed Int       @default(0)
+  total_practice    Int       @default(0) // Total practice questions attempted
+  accuracy_rate     Decimal   @db.Decimal(5, 2) // Overall accuracy for this skill
+  
+  /// Recent performance trend
+  recent_sessions   Json?     // Last 5 session results: [{ date, accuracy, time }, ...]
+  
+  /// Common error patterns
+  weak_topics       String[]  @default([]) // Topics student struggles with
+  
+  last_practiced_at DateTime? @db.Timestamptz(6)
+  updated_at        DateTime  @updatedAt @db.Timestamptz(6)
+  
+  enrollment        CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  
+  @@unique([enrollment_id, skill_area])
+  @@index([enrollment_id])
+  @@map("IeltsSkillProgress")
+}
+
+// ================================================
+// Modifications to existing models
+// ================================================
+
+// Add to LearningRepository model:
+// - IeltsLesson relation for flashcards: IeltsLesson[] @relation("LessonFlashcards")
+// - IeltsLesson relation for practice: IeltsLesson[] @relation("LessonPractice")
+// - IeltsLesson relation for mini tests: IeltsLesson[] @relation("LessonMiniTest")
+// - IeltsPracticeSession relation: IeltsPracticeSession[] @relation("PracticeSessions")
+
+// Add to CertificateEnrollment model:
+// - roadmap IeltsAdaptiveRoadmap?
+// - skillProgress IeltsSkillProgress[]

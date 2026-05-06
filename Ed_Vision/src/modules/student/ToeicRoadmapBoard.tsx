@@ -20,7 +20,11 @@ import {
   saveToeicIntakeProfile,
   skipFoundation,
 } from "./toeicIntake";
-import { getSkills, getRadarData } from "./certificateData";
+import { getSkills } from "./certificateData";
+import {
+  calculateToeicPracticeScore,
+  type ToeicScoreResult,
+} from "./toeicPracticeScore";
 import { askCertificateTutor, getPersonalScores, getToeicReservePoints } from "../../services/api/certificateService";
 import { getToeicLeaderboard } from "@/services/api/certificateService";
 import StudentLeaderboard from "./components/StudentLeaderboard";
@@ -86,46 +90,100 @@ export default function ToeicRoadmapBoard({
   const [hasListeningData, setHasListeningData] = useState(false);
   const [hasReadingData, setHasReadingData] = useState(false);
   const [isAccuracyLoaded, setIsAccuracyLoaded] = useState(false);
+  const [listeningCorrect, setListeningCorrect] = useState<number>(0);
+  const [listeningTotal, setListeningTotal] = useState<number>(0);
+  const [readingCorrect, setReadingCorrect] = useState<number>(0);
+  const [readingTotal, setReadingTotal] = useState<number>(0);
+  const [skillPracticeScore, setSkillPracticeScore] = useState<ToeicScoreResult | null>(null);
+
+  // Compute earned-based percentages for strongest/weakest comparison
+  const earnedPctBySkill = useMemo(() => {
+    if (!skillPracticeScore) return [0, 0];
+    return toeicSkills.map((skill) => {
+      const sd = skillPracticeScore.skills.find((s) => s.key === skill.id);
+      if (!sd || sd.totalCap === 0) return 0;
+      return Math.round((sd.totalEarned / sd.totalCap) * 100);
+    });
+  }, [skillPracticeScore, toeicSkills]);
 
   const radarData = useMemo(() => [listeningAccuracy, readingAccuracy], [listeningAccuracy, readingAccuracy]);
 
-  const maxVal = radarData.length > 0 ? Math.max(...radarData) : 0;
-  const minVal = radarData.length > 0 ? Math.min(...radarData) : 0;
+  const maxVal = earnedPctBySkill.length > 0 ? Math.max(...earnedPctBySkill) : 0;
+  const minVal = earnedPctBySkill.length > 0 ? Math.min(...earnedPctBySkill) : 0;
   
   // Custom logic to determine strongest/weakest when there's no data
-  const strongest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[radarData.indexOf(maxVal)]?.label ?? "Đọc";
-  const weakest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[radarData.indexOf(minVal)]?.label ?? "Nghe";
+  const strongest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[earnedPctBySkill.indexOf(maxVal)]?.label ?? "Đọc";
+  const weakest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[earnedPctBySkill.indexOf(minVal)]?.label ?? "Nghe";
 
   // Fetch accuracy from recent practice sessions
   useEffect(() => {
     getToeicReservePoints()
       .then((data) => {
-        let listeningCorrect = 0;
-        let listeningTotal = 0;
-        let readingCorrect = 0;
-        let readingTotal = 0;
+        // Prefer server aggregate (counts ALL sessions, not just the 20 recent).
+        let listeningTotal = Number(data.listening_total ?? NaN);
+        let readingTotal = Number(data.reading_total ?? NaN);
+        let listeningAcc = Number(data.listening_accuracy ?? NaN);
+        let readingAcc = Number(data.reading_accuracy ?? NaN);
 
-        for (const session of data.part_sessions) {
-          if (session.toeic_part >= 1 && session.toeic_part <= 4) {
-            listeningCorrect += session.correct_count || 0;
-            listeningTotal += session.total_questions || 10;
-          } else if (session.toeic_part >= 5 && session.toeic_part <= 7) {
-            readingCorrect += session.correct_count || 0;
-            readingTotal += session.total_questions || 10;
+        // Fallback: derive from part_sessions (last 20) for older backends.
+        if (!Number.isFinite(listeningTotal) || !Number.isFinite(readingTotal)) {
+          let lCorrect = 0, lTotal = 0, rCorrect = 0, rTotal = 0;
+          for (const s of data.part_sessions ?? []) {
+            if (s.toeic_part >= 1 && s.toeic_part <= 4) {
+              lCorrect += s.correct_count || 0;
+              lTotal += s.total_questions || 0;
+            } else if (s.toeic_part >= 5 && s.toeic_part <= 7) {
+              rCorrect += s.correct_count || 0;
+              rTotal += s.total_questions || 0;
+            }
           }
+          if (!Number.isFinite(listeningTotal)) listeningTotal = lTotal;
+          if (!Number.isFinite(readingTotal)) readingTotal = rTotal;
+          if (!Number.isFinite(listeningAcc))
+            listeningAcc = lTotal > 0 ? Math.round((lCorrect / lTotal) * 100) : 0;
+          if (!Number.isFinite(readingAcc))
+            readingAcc = rTotal > 0 ? Math.round((rCorrect / rTotal) * 100) : 0;
         }
 
-        const hasList = listeningTotal > 0;
-        const hasRead = readingTotal > 0;
+        setHasListeningData(listeningTotal > 0);
+        setHasReadingData(readingTotal > 0);
+        setListeningAccuracy(listeningAcc || 0);
+        setReadingAccuracy(readingAcc || 0);
 
-        setHasListeningData(hasList);
-        setHasReadingData(hasRead);
+        // Build per-part best correct from part_sessions for per-part cap scoring
+        const bestCorrectByPart: Record<string, number> = {};
+        const partKeyMap: Record<number, string> = { 1: "part1", 2: "part2", 3: "part3", 4: "part4", 5: "part5", 6: "part6", 7: "part7" };
+        let lCorrectAgg = 0, lTotalAgg = 0, rCorrectAgg = 0, rTotalAgg = 0;
+        for (const s of data.part_sessions ?? []) {
+          const pk = partKeyMap[s.toeic_part];
+          if (pk) {
+            bestCorrectByPart[pk] = Math.max(bestCorrectByPart[pk] ?? 0, s.correct_count || 0);
+          }
+          if (s.toeic_part >= 1 && s.toeic_part <= 4) {
+            lCorrectAgg += s.correct_count || 0;
+            lTotalAgg += s.total_questions || 0;
+          } else if (s.toeic_part >= 5 && s.toeic_part <= 7) {
+            rCorrectAgg += s.correct_count || 0;
+            rTotalAgg += s.total_questions || 0;
+          }
+        }
+        setListeningCorrect(Number.isFinite(Number(data.listening_correct)) ? Number(data.listening_correct) : lCorrectAgg);
+        setListeningTotal(Number.isFinite(Number(data.listening_total)) ? Number(data.listening_total) : lTotalAgg);
+        setReadingCorrect(Number.isFinite(Number(data.reading_correct)) ? Number(data.reading_correct) : rCorrectAgg);
+        setReadingTotal(Number.isFinite(Number(data.reading_total)) ? Number(data.reading_total) : rTotalAgg);
 
-        const lAcc = hasList ? Math.round((listeningCorrect / listeningTotal) * 100) : 0;
-        const rAcc = hasRead ? Math.round((readingCorrect / readingTotal) * 100) : 0;
+        // Calculate per-part cap score (same logic as ToeicLearningMapPage)
+        const hasAnyPart = Object.keys(bestCorrectByPart).length > 0;
+        if (hasAnyPart) {
+          const baseScore = profile.milestoneState.currentScore;
+          const result = calculateToeicPracticeScore({
+            bestCorrectByPart,
+            minScore: baseScore,
+            maxScore: baseScore + 200,
+          });
+          setSkillPracticeScore(result);
+        }
 
-        setListeningAccuracy(lAcc);
-        setReadingAccuracy(rAcc);
         setIsAccuracyLoaded(true);
       })
       .catch(() => {
@@ -465,7 +523,6 @@ export default function ToeicRoadmapBoard({
             </h3>
             <div className="space-y-4">
               {toeicSkills.map((skill, idx) => {
-                const value = radarData[idx] ?? 0;
                 const icon =
                   skill.id === "listening" ? (
                     <Ear className="w-4 h-4" />
@@ -479,37 +536,51 @@ export default function ToeicRoadmapBoard({
                 
                 const hasData = skill.id === "listening" ? hasListeningData : hasReadingData;
 
+                // Per-part cap data from calculateToeicPracticeScore
+                const skillDetail = skillPracticeScore?.skills.find((s) => s.key === skill.id);
+                const earned = skillDetail?.totalEarned ?? 0;
+                const cap = skillDetail?.totalCap ?? 0;
+                const correctCount = skill.id === "listening" ? listeningCorrect : readingCorrect;
+                const totalCount = skill.id === "listening" ? listeningTotal : readingTotal;
+                const pct = cap > 0 ? Math.round((earned / cap) * 100) : 0;
+                const displayPct = hasData ? pct : 0;
+
                 return (
                   <div
                     key={skill.id}
                     className="rounded-xl border border-slate-100 bg-slate-50 p-3"
                   >
-                    <div className="flex items-center justify-between text-sm mb-2">
+                    <div className="flex items-center justify-between text-sm mb-1">
                       <span className="flex items-center gap-2 font-semibold text-slate-700">
                         {icon}
                         {skill.label}
                       </span>
                       <span className="font-bold text-slate-700">
-                        {!hasData ? "- / 100" : `${value}/100`}
+                        {!hasData ? "-" : `${displayPct}`}%
                       </span>
                     </div>
                     <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
                       <div
                         className={`h-2.5 rounded-full ${hasData ? `bg-gradient-to-r ${barColor}` : "bg-transparent"}`}
                         style={{
-                          width: hasData ? `${Math.max(4, Math.min(100, value))}%` : "0%",
+                          width: hasData ? `${Math.max(4, Math.min(100, displayPct))}%` : "0%",
                         }}
                       />
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
                       {!hasData
                         ? "Chưa ôn tập lần nào. Bắt đầu luyện tập ngay!"
-                        : value >= 75
+                        : displayPct >= 75
                           ? "Đang ổn định, tập trung nâng cao tốc độ."
-                          : value >= 50
+                          : displayPct >= 50
                             ? "Mức trung bình, cần duy trì ôn luyện đều đặn."
                             : "Đang yếu, ưu tiên luyện tập để tránh mất điểm!"}
                     </p>
+                    {hasData && (
+                      <p className="mt-0.5 text-[10px] text-slate-400 italic">
+                        Mỗi part có trần điểm riêng — luyện lại 1 part không thể tăng thêm khi đã đạt trần
+                      </p>
+                    )}
                   </div>
                 );
               })}

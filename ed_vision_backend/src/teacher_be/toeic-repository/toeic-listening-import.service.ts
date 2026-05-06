@@ -55,11 +55,11 @@ function decodeFilename(raw: string): string {
  *     MOS/
  */
 function listeningImagesRelDir(slug: string): string {
-  return join('TOEIC', 'toeic-listening-exam', slug, 'images');
+  return join('certificate', 'TOEIC', 'toeic-listening-exam', slug, 'images');
 }
 
 function listeningAudioRelDir(slug: string): string {
-  return join('TOEIC', 'toeic-listening-exam', slug, 'audio');
+  return join('certificate', 'TOEIC', 'toeic-listening-exam', slug, 'audio');
 }
 
 function absoluteUploadsDir(...parts: string[]): string {
@@ -154,7 +154,7 @@ export class ToeicListeningImportService {
     // We insert placeholder DB rows so the student sees the correct exam
     // structure even before audio is uploaded.
 
-    const existingItems = await this.prisma.learningRepositoryItem.findMany({
+    const existingItems = await this.prisma.examRepositoryItem.findMany({
       where: { repository_id },
       select: { id: true, metadata: true },
     });
@@ -217,7 +217,7 @@ export class ToeicListeningImportService {
                 ? `[Part 3 - Câu ${qNum}: Nghe đoạn hội thoại và chọn đáp án đúng]`
                 : `[Part 4 - Câu ${qNum}: Nghe bài nói ngắn và chọn đáp án đúng]`;
 
-        const created = await this.prisma.learningRepositoryItem.create({
+        const created = await this.prisma.examRepositoryItem.create({
           data: {
             repository_id,
             // Temporary order; will be fixed by reorder step below
@@ -225,7 +225,6 @@ export class ToeicListeningImportService {
             item_type: 'multiple_choice',
             stem: stemText,
             reading_passage: null,
-            explanation: null,
             score_weight: 1,
             estimated_seconds: range.estimatedSeconds,
             media_image_url: null,
@@ -239,7 +238,7 @@ export class ToeicListeningImportService {
           select: { id: true },
         });
 
-        await this.prisma.learningRepositoryOption.createMany({
+        await this.prisma.examRepositoryOption.createMany({
           data: range.optionKeys.map((key, idx) => ({
             item_id: created.id,
             option_key: key,
@@ -263,7 +262,7 @@ export class ToeicListeningImportService {
     // ── Step 4: Assign image URLs to Part 1 items (existing + new placeholders) ──
     if (imageAssets.length > 0) {
       // Refresh the item list so newly created placeholders are included
-      const allItems = await this.prisma.learningRepositoryItem.findMany({
+      const allItems = await this.prisma.examRepositoryItem.findMany({
         where: { repository_id },
         select: { id: true, metadata: true },
       });
@@ -299,7 +298,7 @@ export class ToeicListeningImportService {
           const img = bestImages[idx];
           if (!img) return null;
           const imageUrl = `/uploads/${(img.url || '').replace(/\\/g, '/')}`;
-          return this.prisma.learningRepositoryItem.update({
+          return this.prisma.examRepositoryItem.update({
             where: { id: item.id },
             data: { media_image_url: imageUrl },
           });
@@ -317,6 +316,9 @@ export class ToeicListeningImportService {
     // ── Step 5: Reorder all items by question_number ──────────────────────────
     await this.reorderItemsByQuestionNumber(repository_id);
 
+    // Auto-sync any existing audio or images that might be in the folder
+    await this.autoSyncMediaFromDisk(slug);
+
     return {
       repository_id,
       slug,
@@ -328,6 +330,70 @@ export class ToeicListeningImportService {
       image_assets: imageAssets,
       image_extract_error: imageExtractError,
     };
+  }
+
+  private async autoSyncMediaFromDisk(slug: string): Promise<void> {
+    const repository = await this.prisma.examRepository.findUnique({
+      where: { slug },
+    });
+    if (!repository) return;
+
+    const items = await this.prisma.examRepositoryItem.findMany({
+      where: { repository_id: repository.id },
+    });
+
+    const qNumToItemId = new Map<number, number>();
+    for (const item of items) {
+      const metadata = item.metadata as any;
+      if (metadata && typeof metadata.question_number === 'number') {
+        qNumToItemId.set(metadata.question_number, item.id);
+      }
+    }
+
+    // Sync Audio
+    const audioDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-exam', slug, 'audio');
+    if (existsSync(audioDir)) {
+      const { readdirSync } = require('fs');
+      const audioFiles = readdirSync(audioDir);
+      for (const file of audioFiles) {
+        if (!file.endsWith('.mp3')) continue;
+        const match = file.match(/_part\d+_[qt](\d+)\.mp3/);
+        if (match) {
+          const qNum = parseInt(match[1], 10);
+          const itemId = qNumToItemId.get(qNum);
+          if (itemId) {
+            const url = `/uploads/certificate/TOEIC/toeic-listening-exam/${slug}/audio/${file}`;
+            await this.prisma.examRepositoryItem.update({
+              where: { id: itemId },
+              data: { media_audio_url: url },
+            });
+          }
+        }
+      }
+    }
+
+    // Sync Images
+    const imagesDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-exam', slug, 'images');
+    if (existsSync(imagesDir)) {
+      const { readdirSync } = require('fs');
+      const imageFiles = readdirSync(imagesDir).filter((f: string) => f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg')).sort();
+      
+      const part1ItemIds = items
+        .filter((i) => (i.metadata as any)?.part === 1)
+        .sort((a, b) => ((a.metadata as any)?.question_number || 0) - ((b.metadata as any)?.question_number || 0))
+        .map((i) => i.id);
+
+      for (let i = 0; i < Math.min(imageFiles.length, part1ItemIds.length); i++) {
+        const itemId = part1ItemIds[i];
+        if (itemId) {
+          const url = `certificate/TOEIC/toeic-listening-exam/${slug}/images/${imageFiles[i]}`;
+          await this.prisma.examRepositoryItem.update({
+            where: { id: itemId },
+            data: { media_image_url: `/uploads/${url}` },
+          });
+        }
+      }
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -356,7 +422,7 @@ export class ToeicListeningImportService {
     const where: any = { cert_type: 'toeic' };
     if (skillArea) where.skill_area = skillArea;
 
-    const repos = await this.prisma.learningRepository.findMany({
+    const repos = await this.prisma.examRepository.findMany({
       where,
       orderBy: { created_at: 'desc' },
       take: 50,
@@ -389,7 +455,7 @@ export class ToeicListeningImportService {
   async deleteRepository(
     slug: string,
   ): Promise<ToeicRepositoryDeleteResponseDto> {
-    const repo = await this.prisma.learningRepository.findFirst({
+    const repo = await this.prisma.examRepository.findFirst({
       where: { slug },
       select: { id: true },
     });
@@ -399,18 +465,18 @@ export class ToeicListeningImportService {
     }
 
     // Count items before deletion
-    const itemCount = await this.prisma.learningRepositoryItem.count({
+    const itemCount = await this.prisma.examRepositoryItem.count({
       where: { repository_id: repo.id },
     });
 
     // Delete options → items → repository (cascade may handle this, but be explicit)
-    await this.prisma.learningRepositoryOption.deleteMany({
+    await this.prisma.examRepositoryOption.deleteMany({
       where: { item: { repository_id: repo.id } },
     });
-    await this.prisma.learningRepositoryItem.deleteMany({
+    await this.prisma.examRepositoryItem.deleteMany({
       where: { repository_id: repo.id },
     });
-    await this.prisma.learningRepository.delete({
+    await this.prisma.examRepository.delete({
       where: { id: repo.id },
     });
 
@@ -431,7 +497,7 @@ export class ToeicListeningImportService {
   private async reorderItemsByQuestionNumber(
     repositoryId: number,
   ): Promise<void> {
-    const items = await this.prisma.learningRepositoryItem.findMany({
+    const items = await this.prisma.examRepositoryItem.findMany({
       where: { repository_id: repositoryId },
       select: { id: true, metadata: true },
     });
@@ -459,7 +525,7 @@ export class ToeicListeningImportService {
     await this.prisma.$transaction(async (tx) => {
       // Step A – temp orders (item.id offset guarantees uniqueness)
       for (const item of sorted) {
-        await tx.learningRepositoryItem.update({
+        await tx.examRepositoryItem.update({
           where: { id: item.id },
           data: { item_order: item.id + 2_000_000 },
         });
@@ -467,14 +533,14 @@ export class ToeicListeningImportService {
 
       // Step B – final sequential orders
       for (let i = 0; i < sorted.length; i++) {
-        await tx.learningRepositoryItem.update({
+        await tx.examRepositoryItem.update({
           where: { id: sorted[i].id },
           data: { item_order: i + 1 },
         });
       }
     });
 
-    await this.prisma.learningRepository.update({
+    await this.prisma.examRepository.update({
       where: { id: repositoryId },
       data: {
         total_items: sorted.length,
@@ -561,7 +627,7 @@ export class ToeicListeningImportService {
     return (parsed.images ?? []).map(
       (img: any): ToeicListeningImageAssetDto => {
         // Ensure the url_path uses forward slashes and our canonical structure
-        const canonicalUrl = `TOEIC/toeic-listening-exam/${slug}/images/${img.filename}`;
+        const canonicalUrl = `certificate/TOEIC/toeic-listening-exam/${slug}/images/${img.filename}`;
         return {
           filename: img.filename,
           url: canonicalUrl,
@@ -589,7 +655,7 @@ export class ToeicListeningImportService {
     void accountId;
 
     const slug = dto.repository_slug.trim();
-    const repository = await this.prisma.learningRepository.findFirst({
+    const repository = await this.prisma.examRepository.findFirst({
       where: { slug },
       select: { id: true, slug: true },
     });
@@ -599,6 +665,7 @@ export class ToeicListeningImportService {
 
     // Save uploaded file to staging area
     const audioAbsDir = absoluteUploadsDir(
+      'certificate',
       'TOEIC',
       'toeic-listening-exam',
       slug,
@@ -668,7 +735,7 @@ export class ToeicListeningImportService {
     // Auto-map if requested
     let autoMappedCount = 0;
     if (dto.auto_map !== false && chunks.length > 0) {
-      const items = await this.prisma.learningRepositoryItem.findMany({
+      const items = await this.prisma.examRepositoryItem.findMany({
         where: { repository_id: repository.id },
         select: { id: true, metadata: true },
       });
@@ -682,7 +749,7 @@ export class ToeicListeningImportService {
       for (const chunk of chunks) {
         const itemId = qNumToItemId.get(chunk.question_number);
         if (!itemId) continue;
-        await this.prisma.learningRepositoryItem.update({
+        await this.prisma.examRepositoryItem.update({
           where: { id: itemId },
           data: { media_audio_url: chunk.url },
         });
@@ -698,5 +765,54 @@ export class ToeicListeningImportService {
       chunks,
       auto_mapped_count: autoMappedCount,
     };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // PUBLIC: uploadFullAudio — save full audio file without chunking
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async uploadFullAudio(
+    repositorySlug: string,
+    file: Express.Multer.File,
+  ): Promise<{ slug: string; full_audio_url: string }> {
+    const slug = repositorySlug.trim();
+    const repository = await this.prisma.examRepository.findFirst({
+      where: { slug },
+      select: { id: true, slug: true, metadata: true },
+    });
+    if (!repository) {
+      throw new BadRequestException(`Không tìm thấy repository: ${slug}`);
+    }
+
+    const audioAbsDir = absoluteUploadsDir(
+      'certificate',
+      'TOEIC',
+      'toeic-listening-exam',
+      slug,
+      'audio',
+    );
+    if (!existsSync(audioAbsDir)) mkdirSync(audioAbsDir, { recursive: true });
+
+    const ext = extname(file.originalname || file.filename || '').toLowerCase() || '.mp3';
+    const destFilename = `full_audio${ext}`;
+    const destPath = join(audioAbsDir, destFilename);
+
+    const buf = await readFile(file.path);
+    await writeFile(destPath, buf);
+
+    const fullAudioUrl = `/uploads/certificate/TOEIC/toeic-listening-exam/${slug}/audio/${destFilename}`;
+
+    // Store full_audio_url in repository metadata
+    const existingMetadata = (repository.metadata as Record<string, any>) ?? {};
+    await this.prisma.examRepository.update({
+      where: { id: repository.id },
+      data: {
+        metadata: { ...existingMetadata, full_audio_url: fullAudioUrl },
+      },
+    });
+
+    this.logger.log(`[FullAudio] Saved ${destFilename} for ${slug} → ${fullAudioUrl}`);
+
+    return { slug: repository.slug, full_audio_url: fullAudioUrl };
   }
 }

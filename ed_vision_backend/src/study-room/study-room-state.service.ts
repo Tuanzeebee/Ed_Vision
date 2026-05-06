@@ -35,12 +35,16 @@ export class StudyRoomStateService {
 
   constructor(private readonly redisService: RedisService) {}
 
-  async addParticipantConnection(
-    input: AddConnectionInput,
-  ): Promise<{ state: StudyRoomParticipantLiveState; isFirstConnection: boolean }> {
+  async addParticipantConnection(input: AddConnectionInput): Promise<{
+    state: StudyRoomParticipantLiveState;
+    isFirstConnection: boolean;
+  }> {
     await this.pruneRoom(input.roomId);
 
-    const existing = await this.getParticipantState(input.roomId, input.accountId);
+    const existing = await this.getParticipantState(
+      input.roomId,
+      input.accountId,
+    );
     const now = new Date().toISOString();
 
     const state: StudyRoomParticipantLiveState = existing
@@ -119,7 +123,9 @@ export class StudyRoomStateService {
 
       return Array.from(room.values())
         .map((state) => this.cloneState(state))
-        .filter((state): state is StudyRoomParticipantLiveState => Boolean(state))
+        .filter((state): state is StudyRoomParticipantLiveState =>
+          Boolean(state),
+        )
         .sort((left, right) => left.joinedAt.localeCompare(right.joinedAt));
     }
 
@@ -154,7 +160,9 @@ export class StudyRoomStateService {
       await client.zRem(this.getRoomIndexKey(roomId), staleMembers);
     }
 
-    participants.sort((left, right) => left.joinedAt.localeCompare(right.joinedAt));
+    participants.sort((left, right) =>
+      left.joinedAt.localeCompare(right.joinedAt),
+    );
     return participants;
   }
 

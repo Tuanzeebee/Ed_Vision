@@ -40,7 +40,24 @@ export interface ToeicIntakeProfile {
   updatedAt: string
 }
 
-const STORAGE_KEY = 'edvision.toeic.intake.v2'
+const STORAGE_KEY_PREFIX = 'edvision.toeic.intake.v2'
+
+/** Lấy userId từ localStorage để scope key — không cần React hook */
+function getCurrentUserId(): string | number | undefined {
+  try {
+    const raw = window.localStorage.getItem('user')
+    if (!raw) return undefined
+    const u = JSON.parse(raw)
+    return u?.account_id || u?.id || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function getStorageKey(): string {
+  const uid = getCurrentUserId()
+  return uid ? `${STORAGE_KEY_PREFIX}.${uid}` : STORAGE_KEY_PREFIX
+}
 
 export const TOEIC_SCORE_PER_CORRECT = 2.5
 export const TOEIC_PRACTICE_SET_SIZE = 10
@@ -168,7 +185,7 @@ export function pickPracticeQuestionIds(bank: string[], usedQuestionIds: string[
 export function getToeicIntakeProfile(): ToeicIntakeProfile | null {
   if (typeof window === 'undefined') return null
 
-  const payload = window.localStorage.getItem(STORAGE_KEY)
+  const payload = window.localStorage.getItem(getStorageKey())
   if (!payload) return null
 
   try {
@@ -193,13 +210,13 @@ export function getToeicIntakeProfile(): ToeicIntakeProfile | null {
 
 export function saveToeicIntakeProfile(profile: ToeicIntakeProfile): void {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
+  window.localStorage.setItem(getStorageKey(), JSON.stringify(profile))
   void syncToeicProfileToServer(profile)
 }
 
 export function clearToeicIntakeProfile(): void {
   if (typeof window === 'undefined') return
-  window.localStorage.removeItem(STORAGE_KEY)
+  window.localStorage.removeItem(getStorageKey())
 }
 
 export async function syncToeicProfileToServer(profile: ToeicIntakeProfile): Promise<void> {

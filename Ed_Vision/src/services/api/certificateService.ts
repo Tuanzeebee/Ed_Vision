@@ -76,11 +76,13 @@ export interface ToeicRepositoryDetailResponse {
   title: string;
   description?: string | null;
   skill_area: "listening" | "reading" | "grammar" | string;
+  full_audio_url?: string | null;
   total_items: number;
   pass_score: number;
   answer_key_configured_items?: number;
   answer_key_missing_items?: number;
   answer_key_ready?: boolean;
+  active_session_id?: number | null;
   items: Array<{
     id: number;
     item_order: number;
@@ -272,6 +274,101 @@ export async function getToeicExamRepositoryDetail(
   return decryptRepositoryDetail(res.data);
 }
 
+// ── TOEIC Exam Simulation Session (server-driven countdown + resume) ─────────
+
+export interface ExamSessionAnswer {
+  question_id: number;
+  selected_key: "A" | "B" | "C" | "D" | null;
+  is_flagged: boolean;
+}
+
+export interface ExamSessionState {
+  session_id: number;
+  repository_id: number;
+  repository_slug: string;
+  repository_title: string;
+  started_at: string;
+  duration_sec: number;
+  remaining_sec: number;
+  submitted_at: string | null;
+  auto_submitted: boolean;
+  current_index: number;
+  total_questions: number;
+  answers: ExamSessionAnswer[];
+}
+
+export interface ExamSubmitResult {
+  session_id: number;
+  correct_count: number;
+  total_count: number;
+  total_score: number;
+  auto_submitted: boolean;
+  submitted_at: string;
+  question_results: Array<{
+    question_id: number;
+    selected_key: string | null;
+    correct_key: string | null;
+    is_correct: boolean;
+  }>;
+}
+
+export async function startExamSession(
+  repositorySlug: string,
+  durationSecHint?: number,
+): Promise<ExamSessionState> {
+  const res = await apiClient.post<ExamSessionState>(
+    `/student/certificate/toeic-exam/start`,
+    { repository_slug: repositorySlug, duration_sec_hint: durationSecHint },
+  );
+  return res.data;
+}
+
+export async function getExamSession(
+  sessionId: number,
+): Promise<ExamSessionState> {
+  const res = await apiClient.get<ExamSessionState>(
+    `/student/certificate/toeic-exam/${sessionId}`,
+  );
+  return res.data;
+}
+
+export async function upsertExamAnswer(
+  sessionId: number,
+  payload: {
+    question_id: number;
+    selected_key: "A" | "B" | "C" | "D" | null;
+    is_flagged?: boolean;
+  },
+): Promise<{ ok: true; remaining_sec: number }> {
+  const res = await apiClient.patch<{ ok: true; remaining_sec: number }>(
+    `/student/certificate/toeic-exam/${sessionId}/answer`,
+    payload,
+  );
+  return res.data;
+}
+
+export async function updateExamCursor(
+  sessionId: number,
+  currentIndex: number,
+): Promise<{ ok: true }> {
+  const res = await apiClient.patch<{ ok: true }>(
+    `/student/certificate/toeic-exam/${sessionId}/cursor`,
+    { current_index: currentIndex },
+  );
+  return res.data;
+}
+
+export async function submitExamSession(
+  sessionId: number,
+  reason: "manual" | "timeout" = "manual",
+): Promise<ExamSubmitResult> {
+  const res = await apiClient.post<ExamSubmitResult>(
+    `/student/certificate/toeic-exam/${sessionId}/submit`,
+    { reason },
+  );
+  return res.data;
+}
+
 export async function explainToeicAnswer(
   slug: string,
   payload: ToeicExplainAnswerPayload,
@@ -308,6 +405,31 @@ export async function askCertificateTutor(
   );
 
   const res = await Promise.race([requestPromise, timeoutPromise]);
+  return res.data;
+}
+
+export interface ToeicChatGroqMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ToeicChatGroqPayload {
+  question_id: number;
+  user_message: string;
+  chat_history?: ToeicChatGroqMessage[];
+}
+
+export interface ToeicChatGroqResponse {
+  answer: string;
+}
+
+export async function chatGroqTutor(
+  payload: ToeicChatGroqPayload,
+): Promise<ToeicChatGroqResponse> {
+  const res = await apiClient.post<ToeicChatGroqResponse>(
+    "/student/certificate/ai-tutor/groq-chat",
+    payload,
+  );
   return res.data;
 }
 
@@ -364,6 +486,27 @@ export async function importToeicAnswerKeyFromFile(
 
   const res = await apiClient.post<ToeicAnswerKeyImportResponse>(
     "/teacher/toeic-repository/import-answer-key-file",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return res.data;
+}
+
+export async function importDiagnosticAnswerKey(
+  payload: { repository_slug: string },
+  file: File,
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", payload.repository_slug);
+
+  const res = await apiClient.post<any>(
+    "/teacher/toeic-repository/import-diagnostic-answer-key",
     formData,
     {
       headers: {
@@ -506,6 +649,26 @@ export async function chunkListeningAudio(
   return res.data;
 }
 
+export interface FullAudioUploadResponse {
+  slug: string;
+  full_audio_url: string;
+}
+
+export async function uploadFullListeningAudio(
+  repositorySlug: string,
+  file: File,
+): Promise<FullAudioUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", repositorySlug);
+  const res = await apiClient.post<FullAudioUploadResponse>(
+    "/teacher/toeic-repository/upload-full-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
 // ── Repository Management ─────────────────────────────────────────────────────
 
 export interface ToeicRepositoryListItem {
@@ -580,6 +743,8 @@ export interface ToeicPracticeQuestion {
   id: number;
   stem: string;
   reading_passage?: string | null;
+  context_image?: string | null;
+  context_audio?: string | null;
   ai_explanation?: string | null;
   options: ToeicPracticeQuestionOption[];
 }
@@ -629,6 +794,16 @@ export interface ToeicReservePointsResponse {
   exam_unlocked: boolean;
   unlock_threshold: number;
   part_sessions: ToeicReservePointsPartSession[];
+  // Aggregate stats across ALL practice sessions (not just the 20 recent).
+  listening_sessions_count?: number;
+  reading_sessions_count?: number;
+  listening_correct?: number;
+  listening_total?: number;
+  reading_correct?: number;
+  reading_total?: number;
+  listening_accuracy?: number;
+  reading_accuracy?: number;
+  completed_parts?: number[];
 }
 
 export async function getToeicPracticeQuestions(
@@ -695,6 +870,7 @@ export interface ImportPracticeQuestionsResponse {
   score_band_max: number;
   practice_set_id: string;
   detected_parts: number[];
+  extracted_image_count?: number;
   skipped_duplicates: Array<{
     question_number: number;
     part: number;
@@ -712,6 +888,7 @@ export interface PracticeManualSupplementItem {
   toeic_part: number;
   question_number?: number;
   stem: string;
+  reading_passage?: string;
   options: Array<{
     option_key: "A" | "B" | "C" | "D";
     option_text: string;
@@ -751,6 +928,7 @@ export interface PracticeQuestionListItem {
   question_number?: number | null;
   has_answer_key?: boolean;
   stem: string;
+  reading_passage?: string | null;
   score_band_min: number;
   score_band_max: number;
   difficulty_label: string;
@@ -874,6 +1052,7 @@ export interface ImportPracticeAudioResponse {
   practice_set_id: string;
   total_chunks: number;
   auto_mapped_count: number;
+  image_mapped_count?: number;
 }
 
 export async function importPracticeAudio(
@@ -891,6 +1070,29 @@ export async function importPracticeAudio(
   return res.data;
 }
 
+
+// ── Practice Listening Image Import ──────────────────────────────────────────
+
+export interface ImportPracticeImagesResponse {
+  practice_set_id: string;
+  extracted_count: number;
+  part1_mapped: number;
+}
+
+export async function importPracticeImages(
+  practiceSetId: string,
+  file: File,
+): Promise<ImportPracticeImagesResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("practice_set_id", practiceSetId);
+  const res = await apiClient.post<ImportPracticeImagesResponse>(
+    "/teacher/toeic-repository/import-practice-images",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
 
 export async function resetToeicPracticeProgress(
   resetReservePoints = true,
@@ -1041,11 +1243,13 @@ export interface DiagnosticQuestionOption {
 
 export interface DiagnosticQuestion {
   id: number;
+  item_order: number;
   part: number;
   skill_area: string;
   stem: string;
   reading_passage: string | null;
   media_audio_url?: string | null;
+  media_image_url?: string | null;
   options: DiagnosticQuestionOption[];
 }
 

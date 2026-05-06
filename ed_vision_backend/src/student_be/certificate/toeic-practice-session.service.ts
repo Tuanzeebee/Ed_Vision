@@ -114,6 +114,16 @@ export interface ReservePointsStatusDto {
     earned_points: number;
     completed_at: Date | null;
   }>;
+  // Aggregate stats across ALL practice sessions (not just the 20 recent).
+  listening_sessions_count: number;
+  reading_sessions_count: number;
+  listening_correct: number;
+  listening_total: number;
+  reading_correct: number;
+  reading_total: number;
+  listening_accuracy: number; // 0-100
+  reading_accuracy: number; // 0-100
+  completed_parts: number[]; // distinct parts with >= 1 session
 }
 
 export interface ResetPracticeProgressResponseDto {
@@ -324,7 +334,12 @@ export class ToeicPracticeSessionService {
     const enrollment = await this.findActiveEnrollment(accountId);
     const learnerScore = this.resolveLearnerBandScore(enrollment);
     const skillArea = this.deriveSkillArea(part);
-    const fixedCount = 10;
+
+    // Target: 10 questions per part.
+    // - If DB has ≥10 valid: random-pick 10, prioritising questions with audio.
+    // - If DB has <10: return all available (no throw).
+    const targetCount = 10;
+
     const usedQuestionIds = await this.getUsedQuestionIdSet(enrollment.id, part);
     const usedQuestionIdList = [...usedQuestionIds];
 
@@ -356,7 +371,7 @@ export class ToeicPracticeSessionService {
     let questions = await fetchQuestions({ strictBand: true, excludeUsed: true });
 
     // Fallback 1: still unseen, but open all score bands for this part.
-    if (questions.length < fixedCount) {
+    if (questions.length < targetCount) {
       const unseenAllBands = await fetchQuestions({
         strictBand: false,
         excludeUsed: true,
@@ -365,7 +380,7 @@ export class ToeicPracticeSessionService {
     }
 
     // Fallback 2: if unseen pool is exhausted, allow previously-seen questions.
-    if (questions.length < fixedCount) {
+    if (questions.length < targetCount) {
       const allQuestionsForPart = await fetchQuestions({
         strictBand: false,
         excludeUsed: false,
@@ -379,15 +394,34 @@ export class ToeicPracticeSessionService {
       );
     }
 
-    if (questions.length < fixedCount) {
-      throw new NotFoundException(
-        `TOEIC Part ${part} hiện chỉ có ${questions.length}/${fixedCount} câu hỏi hợp lệ. Vui lòng bổ sung thêm trong kho câu hỏi.`,
-      );
+    // ── Selection ────────────────────────────────────────────────────────
+    // Split pool by whether the question has an audio link. Prioritise
+    // audio-bearing questions first (important for listening parts 1-4,
+    // harmless for reading parts where context_audio is usually null).
+    const withAudio = questions.filter((q) => !!q.context_audio);
+    const withoutAudio = questions.filter((q) => !q.context_audio);
+
+    const pickRandom = <T>(arr: T[], n: number): T[] =>
+      this.shuffle(arr).slice(0, n);
+
+    let selected: typeof questions;
+    if (questions.length <= targetCount) {
+      // Not enough questions in DB — return everything we have.
+      selected = this.shuffle(questions);
+    } else if (withAudio.length >= targetCount) {
+      // Enough audio questions alone to fill the target.
+      selected = pickRandom(withAudio, targetCount);
+    } else {
+      // Take all audio questions first, fill remainder with non-audio ones.
+      const remainder = targetCount - withAudio.length;
+      selected = [
+        ...this.shuffle(withAudio),
+        ...pickRandom(withoutAudio, remainder),
+      ];
     }
 
-    const prioritized = this.sortQuestionsByBandDistance(questions, learnerScore);
-    const candidateWindow = prioritized.slice(0, Math.max(fixedCount, 24));
-    const shuffled = this.shuffle(candidateWindow).slice(0, fixedCount);
+    // Keep the variable name used downstream.
+    const shuffled = selected;
 
     const scoreBandMin =
       shuffled.length > 0
@@ -455,7 +489,9 @@ export class ToeicPracticeSessionService {
       throw new BadRequestException('question_ids không được để trống.');
     }
 
-    const fixedCount = 10;
+    // Accept any reasonable number of questions (1..maxCount) — some TOEIC
+    // parts have fewer than 10 items available (e.g. Part 1 Photographs = 6).
+    const maxCount = 10;
     const uniqueQuestionIds = Array.from(
       new Set(
         dto.question_ids
@@ -465,9 +501,9 @@ export class ToeicPracticeSessionService {
       ),
     );
 
-    if (uniqueQuestionIds.length !== fixedCount) {
+    if (uniqueQuestionIds.length < 1 || uniqueQuestionIds.length > maxCount) {
       throw new BadRequestException(
-        `Mỗi phiên luyện tập phải nộp đúng ${fixedCount} câu hỏi hợp lệ.`,
+        `Mỗi phiên luyện tập phải nộp từ 1 đến ${maxCount} câu hỏi hợp lệ.`,
       );
     }
 
@@ -481,9 +517,9 @@ export class ToeicPracticeSessionService {
       },
     });
 
-    if (questions.length !== fixedCount) {
+    if (questions.length !== uniqueQuestionIds.length) {
       throw new BadRequestException(
-        'Không tìm thấy đầy đủ 10 câu hỏi hợp lệ cho TOEIC part đã chọn.',
+        `Một số câu hỏi không hợp lệ hoặc không thuộc Part ${dto.toeic_part}.`,
       );
     }
 
@@ -528,7 +564,10 @@ export class ToeicPracticeSessionService {
 
     const totalQuestions = uniqueQuestionIds.length;
     const budget = PART_POINT_BUDGET[dto.toeic_part] ?? 10;
-    const pointsPerCorrect = budget / 10;
+    // Scale per-correct value by the actual number of questions served so
+    // that parts with fewer than 10 items (e.g. Part 1 Photographs = 6)
+    // can still earn the full part budget when fully correct.
+    const pointsPerCorrect = budget / Math.max(1, totalQuestions);
     const earnedPoints = correctCount * pointsPerCorrect;
 
     const previousBestAggregate = await this.prisma.toeicPracticePartSession.aggregate({
@@ -712,6 +751,46 @@ export class ToeicPracticeSessionService {
     const reservePoints = enrollment.reserve_points ?? 0;
     const unlockThreshold = enrollment.target_score ?? DEFAULT_UNLOCK_THRESHOLD;
 
+    // ── Aggregate across ALL practice sessions (not just the 20 recent) ──
+    const allSessions = await this.prisma.toeicPracticePartSession.findMany({
+      where: { enrollment_id: enrollment.id },
+      select: {
+        toeic_part: true,
+        correct_count: true,
+        total_questions: true,
+      },
+    });
+
+    let listeningSessionsCount = 0;
+    let readingSessionsCount = 0;
+    let listeningCorrect = 0;
+    let listeningTotal = 0;
+    let readingCorrect = 0;
+    let readingTotal = 0;
+    const completedPartsSet = new Set<number>();
+
+    for (const s of allSessions) {
+      completedPartsSet.add(s.toeic_part);
+      if (s.toeic_part >= 1 && s.toeic_part <= 4) {
+        listeningSessionsCount += 1;
+        listeningCorrect += s.correct_count || 0;
+        listeningTotal += s.total_questions || 0;
+      } else if (s.toeic_part >= 5 && s.toeic_part <= 7) {
+        readingSessionsCount += 1;
+        readingCorrect += s.correct_count || 0;
+        readingTotal += s.total_questions || 0;
+      }
+    }
+
+    const listeningAccuracy =
+      listeningTotal > 0
+        ? Math.round((listeningCorrect / listeningTotal) * 100)
+        : 0;
+    const readingAccuracy =
+      readingTotal > 0
+        ? Math.round((readingCorrect / readingTotal) * 100)
+        : 0;
+
     return {
       reserve_points: reservePoints,
       exam_unlocked: reservePoints >= unlockThreshold,
@@ -723,6 +802,15 @@ export class ToeicPracticeSessionService {
         earned_points: s.earned_points,
         completed_at: s.completed_at,
       })),
+      listening_sessions_count: listeningSessionsCount,
+      reading_sessions_count: readingSessionsCount,
+      listening_correct: listeningCorrect,
+      listening_total: listeningTotal,
+      reading_correct: readingCorrect,
+      reading_total: readingTotal,
+      listening_accuracy: listeningAccuracy,
+      reading_accuracy: readingAccuracy,
+      completed_parts: Array.from(completedPartsSet).sort((a, b) => a - b),
     };
   }
 }

@@ -72,7 +72,7 @@ export class PredictionController {
   async getUploadedGrades(
     @Param('uploadId') uploadId: string,
     @Query('teacher_id') teacherId?: string,
-  ) {
+  ): Promise<any> {
     return await this.predictionService.getUploadedGrades(uploadId, teacherId);
   }
 
@@ -84,14 +84,13 @@ export class PredictionController {
   async getTeacherUploads(
     @Request() req: any,
     @Query('course_code') courseCode?: string,
-  ) {
-    // Get account_id from JWT
+  ): Promise<any> {
     const accountId = req.user?.account_id || req.user?.sub;
+
     if (!accountId) {
       throw new BadRequestException('User not authenticated');
     }
 
-    // Get instructor_id from Instructor table
     const instructor = await this.prisma.instructor.findUnique({
       where: { account_id: accountId },
       select: { instructor_id: true },
@@ -101,7 +100,6 @@ export class PredictionController {
       throw new BadRequestException('Instructor not found for this account');
     }
 
-    // Use instructor_id as teacher_id for MongoDB queries
     return await this.predictionService.getTeacherUploads(
       instructor.instructor_id.toString(),
       courseCode,
