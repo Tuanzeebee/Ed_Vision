@@ -301,5 +301,138 @@
     "student3Major": "Sinh viên Y khoa",
     "student3Quote": "Với áp lực học tập cao ở ngành Y, GradeForecast giúp tôi quản lý thời gian và tối ưu hóa việc học một cách khoa học và hiệu quả.",
     "studentsLabel": "sinh viên"
+  },
+  "landingV2": {
+    "nav": {
+      "home": "Trang chủ",
+      "startChat": "Bắt đầu chat",
+      "forecast": "Dự báo",
+      "certificates": "Chứng chỉ",
+      "planning": "Lập kế hoạch",
+      "community": "Cộng đồng"
+    },
+    "hero": {
+      "titlePrefix": "Dự đoán",
+      "titleEmphasis": "tương lai",
+      "titleSuffix": "của bạn.",
+      "description": "Dự đoán điểm số và chứng chỉ chính xác. Trao quyền cho sinh viên với insight từ AI để làm chủ GPA và chinh phục các kỳ thi quốc tế như IELTS, TOEIC, MOS.",
+      "cta": "Bắt đầu ngay"
+    },
+    "about": {
+      "label": "Về chúng tôi",
+      "titleEmphasis1": "Chính xác",
+      "titleRest1": "rồi đến những công cụ dành cho",
+      "titleEmphasis2": "sinh viên để họ tạo dựng, phát triển và dẫn dắt."
+    },
+    "services": {
+      "title": "Chúng tôi làm gì",
+      "subtitle": "Dịch vụ của chúng tôi",
+      "items": [
+        {
+          "tag": "Tính năng cốt lõi",
+          "title": "Grade Forecast AI",
+          "description": "Phân tích thông minh dự đoán điểm cuối kỳ dựa trên hiệu suất hiện tại, bài tập và lịch sử học tập với độ chính xác 98%."
+        },
+        {
+          "tag": "Trung tâm học tập",
+          "title": "Certificate Mastery",
+          "description": "Lộ trình toàn diện cho IELTS, TOEIC và MOS. Bao gồm phân tích kỹ năng thời gian thực, mô phỏng và tài nguyên học tập từ cộng đồng."
+        }
+      ]
+    },
+    "featured": {
+      "label": "Cách tiếp cận",
+      "description": "Chúng tôi tin vào sức mạnh của sự khám phá được dẫn dắt bởi tò mò. Mỗi dự án bắt đầu bằng một câu hỏi, và mỗi câu trả lời mở ra một cánh cửa đổi mới.",
+      "cta": "Khám phá thêm"
+    },
+    "philosophy": {
+      "titlePrefix": "Đổi mới x trong",
+      "titleEmphasis": "Tầm nhìn",
+      "section1Title": "Lộ trình chiến lược",
+      "section1Body": "Chúng tôi thu hẹp khoảng cách giữa nỗ lực và kết quả. Bằng cách kết hợp dữ liệu hiệu suất chi tiết với lộ trình cá nhân hóa, chúng tôi giúp sinh viên tự tin định hướng mục tiêu học tập.",
+      "section2Title": "Kỹ năng sẵn sàng cho tương lai",
+      "section2Body": "Vượt ra ngoài điểm số, chúng tôi tập trung vào chứng chỉ. Nền tảng chuẩn bị cho bạn các tiêu chuẩn toàn cầu về tiếng Anh và kỹ năng văn phòng, giúp bạn bước vào thị trường lao động với chứng nhận xác thực."
+    },
+    "howItWorks": {
+      "titlePrefix": "Cách thức",
+      "titleEmphasis": "hoạt động",
+      "subtitle": "Hành trình 4 bước để rõ ràng học thuật",
+      "steps": [
+        {
+          "title": "Thiết lập hồ sơ",
+          "description": "Nhập các môn học, bài tập và điểm hiện tại để xây nền tảng."
+        },
+        {
+          "title": "Phân tích dữ liệu",
+          "description": "AI xử lý mô hình học tập và dữ liệu hiệu suất lịch sử."
+        },
+        {
+          "title": "Dự đoán",
+          "description": "Nhận dự báo điểm số độ chính xác cao cho mục tiêu học kỳ sắp tới."
+        },
+        {
+          "title": "Kế hoạch thành công",
+          "description": "Nhận các bước hành động và trọng tâm học tập để đạt GPA mục tiêu."
+        }
+      ]
+    },
+    "partner": {
+      "title": "Đồng hành cùng chúng tôi",
+      "cta": "Bắt đầu chat với Viktor"
+    },
+    "testimonials": {
+      "titlePrefix": "Mọi người",
+      "titleEmphasis": "nói gì",
+      "rating": "Clutch 5/5",
+      "items": [
+        {
+          "name": "An Nguyen",
+          "role": "Chuyên ngành Khoa học máy tính",
+          "text": "Độ chính xác khiến tôi bất ngờ. Nó giúp tôi tập trung thời gian học đúng chỗ cần nhất để đảm bảo GPA."
+        },
+        {
+          "name": "Linh Hoang",
+          "role": "Quản trị kinh doanh",
+          "text": "Cuối cùng cũng có cách biết mình đang ở đâu trước khi quá muộn. Giao diện mượt mà khiến việc theo dõi bài tập như mơ."
+        },
+        {
+          "name": "Duy Khoa",
+          "role": "Sinh viên Khoa học dữ liệu",
+          "text": "Những insight ở đây tốt hơn bất kỳ bảng tính nào tôi tự làm. Nó giống như quả cầu pha lê học thuật vậy."
+        },
+        {
+          "name": "Rachel Foster",
+          "role": "Thành tích xuất sắc",
+          "text": "Những ý tưởng tiên phong cần triển khai táo bạo. Công cụ này đáp ứng điều đó và luôn nâng chuẩn thành công của sinh viên."
+        },
+        {
+          "name": "David Zhang",
+          "role": "Cố vấn học tập",
+          "text": "Mức độ chi tiết thật sự ấn tượng. Đây là công cụ đầu tiên tôi giới thiệu cho sinh viên muốn làm chủ tương lai của mình."
+        }
+      ]
+    },
+    "footer": {
+      "titlePrefix": "Hãy đảm bảo thành công",
+      "titleEmphasis": "học thuật",
+      "titleSuffix": "của bạn ngay hôm nay.",
+      "cta": "Bắt đầu",
+      "sections": {
+        "academic": {
+          "title": "Học thuật",
+          "links": ["Dự báo AI", "Chứng chỉ", "Lộ trình IELTS", "Luyện TOEIC"]
+        },
+        "predict": {
+          "title": "Dự đoán",
+          "links": ["Dự báo điểm", "Lập kế hoạch", "Công cụ SIM", "MOS Word"]
+        },
+        "company": {
+          "title": "Công ty",
+          "links": ["Giới thiệu", "Tuyển dụng", "Liên hệ", "Chính sách"]
+        }
+      },
+      "brand": "Asme",
+      "copyright": "© 2026 Asme Studio. Tất cả quyền được bảo lưu."
+    }
   }
 }

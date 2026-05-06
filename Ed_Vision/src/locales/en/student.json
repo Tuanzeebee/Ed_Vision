@@ -301,5 +301,138 @@
     "student3Major": "Medical Student",
     "student3Quote": "With the high academic pressure in Medicine, GradeForecast helps me manage time and optimize learning scientifically and efficiently.",
     "studentsLabel": "students"
+  },
+  "landingV2": {
+    "nav": {
+      "home": "Home",
+      "startChat": "Start Chat",
+      "forecast": "Forecast",
+      "certificates": "Certificates",
+      "planning": "Planning",
+      "community": "Community"
+    },
+    "hero": {
+      "titlePrefix": "Predict your",
+      "titleEmphasis": "future.",
+      "titleSuffix": "",
+      "description": "Precision Grade Prediction & Certificate Mastery. Empowering students with AI-driven insights to master their GPA and conquer international exams like IELTS, TOEIC, and MOS.",
+      "cta": "Start Now"
+    },
+    "about": {
+      "label": "About Us",
+      "titleEmphasis1": "Precision",
+      "titleRest1": "then tools for",
+      "titleEmphasis2": "students that then create, build, and lead."
+    },
+    "services": {
+      "title": "What we do",
+      "subtitle": "Our services",
+      "items": [
+        {
+          "tag": "MVP Feature",
+          "title": "Grade Forecast AI",
+          "description": "Smart analytics that predict your final grades based on current performance, assignments, and historical learning patterns with 98% accuracy."
+        },
+        {
+          "tag": "Learning Hub",
+          "title": "Certificate Mastery",
+          "description": "Comprehensive roadmaps for IELTS, TOEIC, and MOS. Includes real-time skill analysis, simulators, and community-driven learning resources."
+        }
+      ]
+    },
+    "featured": {
+      "label": "Our Approach",
+      "description": "We believe in the power of curiosity-driven exploration. Every project starts with a question, and every answer opens a new door to innovation.",
+      "cta": "Explore more"
+    },
+    "philosophy": {
+      "titlePrefix": "Innovation then x in",
+      "titleEmphasis": "Vision",
+      "section1Title": "Strategic Roadmap",
+      "section1Body": "We bridge the gap between effort and results. By combining detailed performance data with personalized roadmaps, we help students navigate their academic goals with absolute confidence.",
+      "section2Title": "Future-Ready Skills",
+      "section2Body": "Beyond grades, we focus on certification. Our platform prepares you for global standards in English and Office productivity, ensuring you enter the workforce with verified credentials."
+    },
+    "howItWorks": {
+      "titlePrefix": "How it",
+      "titleEmphasis": "works",
+      "subtitle": "A four-step journey to academic clarity",
+      "steps": [
+        {
+          "title": "Profile Setup",
+          "description": "Enter your current courses, assignments, and grades to build your foundation."
+        },
+        {
+          "title": "Data Analysis",
+          "description": "Our AI processes your learning patterns and historical performance data."
+        },
+        {
+          "title": "Prediction",
+          "description": "Receive a high-accuracy grade forecast for your upcoming semester goals."
+        },
+        {
+          "title": "Success Plan",
+          "description": "Get actionable steps and study focus areas to reach your target GPA."
+        }
+      ]
+    },
+    "partner": {
+      "title": "Partner with us",
+      "cta": "Start chat with Viktor"
+    },
+    "testimonials": {
+      "titlePrefix": "What",
+      "titleEmphasis": "builders",
+      "rating": "Clutch 5/5",
+      "items": [
+        {
+          "name": "An Nguyen",
+          "role": "Computer Science Major",
+          "text": "The accuracy is frighteningly good. It helped me focus my study time exactly where I needed it most to secure my GPA."
+        },
+        {
+          "name": "Linh Hoang",
+          "role": "Business Administration",
+          "text": "Finally, a way to see where I stand before it's too late. The liquid interface makes tracking assignments feel like a dream."
+        },
+        {
+          "name": "Duy Khoa",
+          "role": "Data Science Student",
+          "text": "As a student, the insights provided here are better than any spreadsheet I could build. It's essentially an academic crystal ball."
+        },
+        {
+          "name": "Rachel Foster",
+          "role": "Top Tier Honors",
+          "text": "Pioneering ideas require bold execution. This tool delivers exactly that, consistently pushing the boundaries of student success."
+        },
+        {
+          "name": "David Zhang",
+          "role": "Academic Advisor",
+          "text": "The attention to detail is obsessive. It's the first tool I recommend to students who want to take full control of their future."
+        }
+      ]
+    },
+    "footer": {
+      "titlePrefix": "Let's secure your",
+      "titleEmphasis": "academic",
+      "titleSuffix": "success then now.",
+      "cta": "Get started",
+      "sections": {
+        "academic": {
+          "title": "Academic",
+          "links": ["Forecast AI", "Certificates", "IELTS Track", "TOEIC Prep"]
+        },
+        "predict": {
+          "title": "Predict",
+          "links": ["Grade Forecast", "Planning", "SIM Tool", "MOS Word"]
+        },
+        "company": {
+          "title": "Company",
+          "links": ["About", "Careers", "Contact", "Privacy"]
+        }
+      },
+      "brand": "Asme",
+      "copyright": "© 2026 Asme Studio. All rights reserved."
+    }
   }
 }

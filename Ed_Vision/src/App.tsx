@@ -33,6 +33,7 @@ import NotificationManagement from "./modules/admin/NotificationManagement";
 import NotificationPage from "./pages/NotificationPage";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
+import StudentLandingV2 from "@/modules/student/landingPage/src/App";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
 
 // New auth components (some components navigate to /auth/* so provide routes)
@@ -128,6 +129,9 @@ function App() {
             {/* Default route redirect to student landing */}
             <Route path="/" element={<AuthRedirectWrapper><Navigate to="/student/landing" replace /></AuthRedirectWrapper>} />
 
+          {/* Student routes */}
+          <Route path="/student/landing" element={<StudentLandingV2 />} />
+          <Route path="/student/landing-v2" element={<StudentLandingV2 />} />
             {/* Student routes */}
             <Route path="/student/landing" element={<GradeForecastLanding />} />
             <Route path="/student/ielts-assessment" element={<IELTSAssessment />} />
