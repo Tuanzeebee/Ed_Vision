@@ -17,6 +17,7 @@ import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import NoSeekAudioPlayer from "./components/NoSeekAudioPlayer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
+import { useAuth } from "@/hooks/useAuth";
 import {
   getToeicExamRepositoryDetail,
   startExamSession,
@@ -74,8 +75,16 @@ interface PartInfo {
   startIndex: number;
 }
 
-const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v2";
-const RESULTS_STORAGE_KEY = "edvision.toeic.exam.results.v1";
+const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
+const RESULTS_STORAGE_KEY_PREFIX = "edvision.toeic.exam.results.v1";
+
+/** Storage key scoped theo user — tránh acc mới đọc data acc cũ */
+function getMapStorageKey(userId: string | number | undefined): string {
+  return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
+}
+function getResultsStorageKey(userId: string | number | undefined): string {
+  return userId ? `${RESULTS_STORAGE_KEY_PREFIX}.${userId}` : RESULTS_STORAGE_KEY_PREFIX;
+}
 
 function getPartName(part: number): string {
   const labels: Record<number, string> = {
@@ -188,6 +197,8 @@ export default function ToeicExamSimulationPage() {
   const { examType } = useParams<{ examType: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const userId = user?.account_id || user?.id;
 
   useToeicScrollReset();
 
@@ -351,7 +362,7 @@ export default function ToeicExamSimulationPage() {
   }, [resolvedExamType, sessionParam, applySessionState, setSearchParams]);
 
   const { isUnlocked, completedCount, requiredCount } = useMemo(() => {
-    const raw = localStorage.getItem(MAP_STORAGE_KEY);
+    const raw = localStorage.getItem(getMapStorageKey(userId));
     // Listening có 5 node (Part 1-4 + Mock Exam), Reading có 4 node (Part 5-7 + Mock Exam).
     // Node cuối cùng là chính bài thi thử → chỉ yêu cầu hoàn thành các node luyện tập (tổng - 1).
     const required = isListening ? 4 : 3;
@@ -370,7 +381,7 @@ export default function ToeicExamSimulationPage() {
     } catch {
       return { isUnlocked: false, completedCount: 0, requiredCount: required };
     }
-  }, [isListening]);
+  }, [isListening, userId]);
 
   // Tick mỗi giây để render countdown. Giá trị `timeLeft` luôn được tính lại
   // từ `serverStartedAt + serverDurationSec - now` để bền với F5.
@@ -506,13 +517,14 @@ export default function ToeicExamSimulationPage() {
     };
 
     try {
+      const resultsKey = getResultsStorageKey(userId);
       const existing: ExamResult[] = JSON.parse(
-        localStorage.getItem(RESULTS_STORAGE_KEY) ?? "[]",
+        localStorage.getItem(resultsKey) ?? "[]",
       );
       existing.push(result);
-      localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(existing));
+      localStorage.setItem(resultsKey, JSON.stringify(existing));
     } catch {
-      localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify([result]));
+      localStorage.setItem(getResultsStorageKey(userId), JSON.stringify([result]));
     }
 
     setPhase("summary");

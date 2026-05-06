@@ -132,7 +132,11 @@ export default function CertificateReview() {
     // - Fallback: completed_topics / total_topics
     let progress = 0
     if (c.id === 'toeic' && latest.current_score && latest.target_score && latest.target_score > 0) {
-      progress = Math.max(0, Math.min(100, Math.round((latest.current_score / latest.target_score) * 100)))
+      // Tiến độ = số part đã hoàn thành / tổng part (7 part TOEIC)
+      // Nếu API cung cấp completed_topics thì dùng, nếu không fallback reserve_points
+      const toeicTotalParts = 7
+      const toeicCompleted = latest.completed_topics?.length ?? 0
+      progress = Math.max(0, Math.min(100, Math.round((toeicCompleted / toeicTotalParts) * 100)))
     } else if (latest.progress_percent != null) {
       progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
     } else if (latest.total_topics > 0) {
@@ -157,8 +161,8 @@ export default function CertificateReview() {
       ? Math.round((completedCerts.length / certsWithProgress.length) * 100)
       : 0
 
-  // Chưa có API cho streak — giữ tạm thời
-  const streak = 5
+  // Chưa có API cho streak — hiện 0 cho acc chưa có dữ liệu
+  const streak = 0
 
   const displayName = user?.fullName || user?.full_name || user?.name || 'Sinh viên'
 
@@ -251,7 +255,10 @@ export default function CertificateReview() {
               <StatCard
                 icon={<Diamond className="w-5 h-5 text-cyan-500 fill-cyan-400" />}
                 label="Tổng điểm tích lũy"
-                value="1,250 điểm"
+                value={(() => {
+                  const total = enrollments.reduce((sum, e) => sum + (e.current_score ?? 0), 0)
+                  return total > 0 ? `${total.toLocaleString()} điểm` : '0 điểm'
+                })()}
                 sub="Tích lũy từ tất cả chứng chỉ đang học"
                 accent="bg-indigo-100"
                 cardClassName="bg-indigo-50/90 border-indigo-100"
