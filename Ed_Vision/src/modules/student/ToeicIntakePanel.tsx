@@ -16,6 +16,13 @@ import {
   saveToeicIntakeProfile,
 } from "./toeicIntake";
 import { generateDiagnosticTest, submitDiagnosticTest } from "../../services/api/certificateService";
+import { buildAssetUrl } from "../../services/api/config";
+
+function resolveMediaUrl(src?: string | null): string {
+  if (!src) return "";
+  if (/^https?:\/\//i.test(src)) return src;
+  return buildAssetUrl(src);
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -442,44 +449,49 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
       for (const part of newParts) {
         for (const q of part.questions) {
           if (q.imageUrl) {
-            const src = q.imageUrl.startsWith('http') ? q.imageUrl : `http://localhost:3000${q.imageUrl}`;
+            const src = resolveMediaUrl(q.imageUrl);
             preloadPromises.push(
               new Promise<void>((resolve) => {
                 const img = new Image();
-                img.onload = () => { updateProgress(); resolve(); };
-                img.onerror = () => { updateProgress(); resolve(); };
+                const done = () => { updateProgress(); resolve(); };
+                img.onload = done;
+                img.onerror = done;
                 img.src = src;
+                // Fallback in case events never fire
+                setTimeout(done, 15000);
               })
             );
           }
           if (q.audioUrl) {
-            const src = q.audioUrl.startsWith('http') ? q.audioUrl : `http://localhost:3000${q.audioUrl}`;
+            const src = resolveMediaUrl(q.audioUrl);
+            // Use fetch to ensure file is downloaded & put into HTTP cache reliably.
+            // `canplaythrough` on a detached <audio> is unreliable in Chrome.
             preloadPromises.push(
-              new Promise<void>((resolve) => {
-                const audio = new Audio();
-                audio.preload = 'auto';
-                audio.oncanplaythrough = () => { updateProgress(); resolve(); };
-                audio.onerror = () => { updateProgress(); resolve(); };
-                audio.src = src;
-                // Timeout fallback — don't block forever if audio is slow
-                setTimeout(() => { updateProgress(); resolve(); }, 15000);
-              })
+              (async () => {
+                try {
+                  const res = await fetch(src, { credentials: 'omit' });
+                  // Consume body so it's fully cached
+                  await res.blob();
+                } catch {
+                  /* ignore network errors; UI has its own fallback */
+                } finally {
+                  updateProgress();
+                }
+              })()
             );
           }
         }
       }
 
       if (preloadPromises.length > 0) {
-        // Wait for all media or timeout after 20s max
+        // Wait for all media or timeout after 30s max
         await Promise.race([
           Promise.all(preloadPromises),
-          new Promise<void>((resolve) => setTimeout(resolve, 20000)),
+          new Promise<void>((resolve) => setTimeout(resolve, 30000)),
         ]);
       }
 
       setLoadingMessage("Sẵn sàng!");
-      // Extra buffer to let browser finish rendering cached media
-      await new Promise<void>((resolve) => setTimeout(resolve, 1500));
 
       setCurrentExamParts(newParts);
       setExamPart(0);
@@ -1285,7 +1297,7 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
                       </div>
                     </div>
                     <img
-                      src={q.imageUrl.startsWith('http') ? q.imageUrl : `http://localhost:3000${q.imageUrl}`}
+                      src={resolveMediaUrl(q.imageUrl)}
                       alt="Question illustration"
                       loading="eager"
                       decoding="async"
@@ -1313,18 +1325,20 @@ export default function ToeicIntakePanel({ onConfirmBand }: Props) {
                 
                 {q.audioUrl ? (
                   <div className="mb-4 relative">
-                    <div className="audio-loading flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-400">
+                    <div className="audio-loading absolute inset-0 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-400">
                       <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                       <span>Đang tải audio...</span>
                     </div>
                     <audio 
                       controls 
                       preload="auto"
-                      className="w-full h-10"
-                      style={{ display: 'none' }}
-                      src={q.audioUrl.startsWith('http') ? q.audioUrl : `http://localhost:3000${q.audioUrl}`}
+                      className="w-full h-10 relative z-[1]"
+                      src={resolveMediaUrl(q.audioUrl)}
                       onCanPlay={(e) => {
-                        (e.target as HTMLAudioElement).style.display = '';
+                        const loading = (e.target as HTMLElement).parentElement?.querySelector('.audio-loading');
+                        if (loading) (loading as HTMLElement).style.display = 'none';
+                      }}
+                      onLoadedData={(e) => {
                         const loading = (e.target as HTMLElement).parentElement?.querySelector('.audio-loading');
                         if (loading) (loading as HTMLElement).style.display = 'none';
                       }}

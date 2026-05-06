@@ -6,8 +6,8 @@ import Footer from '../../components/layout/Footer'
 import { TrendingUp, Flame, Award, Lock, Diamond, Trophy } from 'lucide-react'
 import { CERTIFICATES, StatCard, CertCard } from './certificateData'
 import type { CertId, Certificate } from './certificateData'
-import { getAllEnrollments } from '@/services/api/certificateService'
-import type { EnrollmentResponse } from '@/services/api/certificateService'
+import { getAllEnrollments, getToeicReservePoints } from '@/services/api/certificateService'
+import type { EnrollmentResponse, ToeicReservePointsResponse } from '@/services/api/certificateService'
 
 const BACKGROUND_VIDEO_URL =
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4'
@@ -23,10 +23,15 @@ export default function CertificateReview() {
 
   // ── Load dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
+  const [toeicReserve, setToeicReserve] = useState<ToeicReservePointsResponse | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   useEffect(() => {
-    getAllEnrollments().then((data) => {
-      setEnrollments(data)
+    Promise.all([
+      getAllEnrollments(),
+      getToeicReservePoints().catch(() => null),
+    ]).then(([enrollData, reserveData]) => {
+      setEnrollments(enrollData)
+      setToeicReserve(reserveData)
       setIsLoaded(true)
     }).catch(() => {
       setIsLoaded(true)
@@ -126,13 +131,29 @@ export default function CertificateReview() {
     const latest = active ?? enrollments.find((e) => e.cert_type === c.id)
     if (!latest) return c
 
-    // Tính tiến độ: đồng nhất với CertificateDetail
-    // - TOEIC: current_score / target_score (điểm gốc so với mục tiêu)
-    // - Còn lại: progress_percent từ API
-    // - Fallback: completed_topics / total_topics
+    // Tính tiến độ:
+    // - TOEIC: dùng completed_parts từ reserve-points (parts thực sự đã luyện)
+    //   + kết hợp listening/reading sessions để tính chính xác hơn
+    // - Còn lại: progress_percent từ API hoặc completed_topics / total_topics
     let progress = 0
-    if (c.id === 'toeic' && latest.current_score && latest.target_score && latest.target_score > 0) {
-      progress = Math.max(0, Math.min(100, Math.round((latest.current_score / latest.target_score) * 100)))
+    if (c.id === 'toeic') {
+      const toeicTotalParts = 7
+      if (toeicReserve) {
+        // Dùng completed_parts từ reserve-points API (parts student đã luyện thực tế)
+        const partsCompleted = toeicReserve.completed_parts?.length ?? 0
+        const totalSessions = (toeicReserve.listening_sessions_count ?? 0) + (toeicReserve.reading_sessions_count ?? 0)
+        if (partsCompleted > 0) {
+          // Tiến độ chính = số part đã luyện / 7 parts
+          progress = Math.max(0, Math.min(100, Math.round((partsCompleted / toeicTotalParts) * 100)))
+        } else if (totalSessions > 0) {
+          // Có sessions nhưng chưa có completed_parts → ít nhất 1 part
+          progress = Math.max(1, Math.round((1 / toeicTotalParts) * 100))
+        }
+      }
+      // Fallback: dùng progress_percent từ enrollment nếu lớn hơn
+      if (latest.progress_percent != null && latest.progress_percent > progress) {
+        progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
+      }
     } else if (latest.progress_percent != null) {
       progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
     } else if (latest.total_topics > 0) {
@@ -146,7 +167,12 @@ export default function CertificateReview() {
   })
 
   // ── Tổng hợp thống kê từ dữ liệu thật ────────────────────────────────────────
-  const startedCerts = certsWithProgress.filter((c) => c.progress > 0)
+  const startedCerts = certsWithProgress.filter((c) => {
+    if (c.progress > 0) return true
+    // Nếu enrollment đã ở trạng thái in_progress (backend ghi nhận có hoạt động)
+    const enroll = enrollments.find((e) => e.cert_type === c.id)
+    return enroll?.learning_status === 'in_progress'
+  })
   const completedCerts = certsWithProgress.filter((c) => c.progress >= 100)
   const avgProgress =
     startedCerts.length > 0
@@ -157,8 +183,8 @@ export default function CertificateReview() {
       ? Math.round((completedCerts.length / certsWithProgress.length) * 100)
       : 0
 
-  // Chưa có API cho streak — giữ tạm thời
-  const streak = 5
+  // Chưa có API cho streak — hiện 0 cho acc chưa có dữ liệu
+  const streak = 0
 
   const displayName = user?.fullName || user?.full_name || user?.name || 'Sinh viên'
 
@@ -251,7 +277,10 @@ export default function CertificateReview() {
               <StatCard
                 icon={<Diamond className="w-5 h-5 text-cyan-500 fill-cyan-400" />}
                 label="Tổng điểm tích lũy"
-                value="1,250 điểm"
+                value={(() => {
+                  const total = enrollments.reduce((sum, e) => sum + (e.current_score ?? 0), 0)
+                  return total > 0 ? `${total.toLocaleString()} điểm` : '0 điểm'
+                })()}
                 sub="Tích lũy từ tất cả chứng chỉ đang học"
                 accent="bg-indigo-100"
                 cardClassName="bg-indigo-50/90 border-indigo-100"

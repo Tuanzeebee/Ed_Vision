@@ -25,6 +25,7 @@ import {
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
+import { useAuth } from "@/hooks/useAuth";
 import {
   askCertificateTutor,
   getToeicPracticeQuestions,
@@ -38,6 +39,11 @@ import {
   saveToeicIntakeProfile,
   appendToeicPracticeResult,
 } from "./toeicIntake";
+import {
+  DEFAULT_SCORING_CONFIG,
+  getAllTotalQuestions,
+  getPartCap,
+} from "./toeicPracticeScore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface QuestionOption {
@@ -111,10 +117,15 @@ interface PracticeMistakeHistoryItem {
 type PracticeMistakeHistoryStore = Record<string, PracticeMistakeHistoryItem[]>;
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v2";
+const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
 const PRACTICE_DRAFT_STORAGE_KEY_PREFIX = "edvision.toeic.practice.draft.v1";
 const PRACTICE_MISTAKE_HISTORY_STORAGE_KEY =
   "edvision.toeic.practice.mistakes.v1";
+
+/** Storage key scoped theo user — tránh acc mới đọc data acc cũ */
+function getMapStorageKey(userId: string | number | undefined): string {
+  return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
+}
 const PRACTICE_MISTAKE_HISTORY_LIMIT = 120;
 const AI_PREFETCH_BATCH_SIZE = 1;
 const AI_PREFETCH_PRIORITY_AHEAD = 2;
@@ -1149,9 +1160,10 @@ const LISTENING_QUESTIONS: Record<number, PracticeQuestion[]> = {
 };
 
 // ── localStorage helpers ───────────────────────────────────────────────────
-function loadMapState(): LearningMapState {
+function loadMapState(userId?: string | number): LearningMapState {
   try {
-    const raw = localStorage.getItem(MAP_STORAGE_KEY);
+    const key = getMapStorageKey(userId);
+    const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw) as LearningMapState;
   } catch {
     /* ignore */
@@ -1162,8 +1174,8 @@ function loadMapState(): LearningMapState {
   };
 }
 
-function saveMapState(state: LearningMapState): void {
-  localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(state));
+function saveMapState(state: LearningMapState, userId?: string | number): void {
+  localStorage.setItem(getMapStorageKey(userId), JSON.stringify(state));
 }
 
 function buildPracticeDraftStorageKey(
@@ -1287,6 +1299,8 @@ export default function ToeicNodePracticePage() {
     nodeIndex: string;
   }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = user?.account_id || user?.id;
 
   useToeicScrollReset();
 
@@ -1399,6 +1413,9 @@ export default function ToeicNodePracticePage() {
     number | null
   >(null);
   const [examUnlocked, setExamUnlocked] = useState(false);
+  // Track whether the backend session has been successfully recorded so we
+  // can retry on handleComplete if the initial submit fails/skipped.
+  const [submitSucceeded, setSubmitSucceeded] = useState(false);
 
   // --- Groq Chat Tutor State ---
   const [chatMessage, setChatMessage] = useState("");
@@ -1505,7 +1522,7 @@ export default function ToeicNodePracticePage() {
           setDbQuestions(null);
           setSessionQuestionIds([]);
           setDbError(
-            `Part ${toeicPart} hiện chưa đủ 10 câu hỏi mới trong band điểm của bạn. Vui lòng liên hệ giáo viên để bổ sung bộ câu hỏi.`,
+            `Part ${toeicPart} hiện chưa có câu hỏi nào trong kho. Vui lòng liên hệ giáo viên để bổ sung bộ câu hỏi.`,
           );
           return;
         }
@@ -1587,10 +1604,21 @@ export default function ToeicNodePracticePage() {
     [questions, firstAnswers],
   );
 
-  const scoreGained = useMemo(
-    () => correctCount * (nodeInfo?.scorePerCorrect ?? 2.5),
-    [correctCount, nodeInfo],
-  );
+  // Điểm earned từ per-part cap (khớp với LearningMapPage)
+  const scoreGained = useMemo(() => {
+    if (toeicPart === null || !nodeInfo) return 0;
+    const partKey = `part${toeicPart}`;
+    const partConfig = DEFAULT_SCORING_CONFIG.skills
+      .flatMap((s) => s.parts)
+      .find((p) => p.key === partKey);
+    if (!partConfig) return correctCount * (nodeInfo.scorePerCorrect ?? 2.5);
+    const totalQ = getAllTotalQuestions();
+    const range = 200; // dải điểm cố định
+    const cap = getPartCap(partConfig, range, totalQ);
+    const accuracy = partConfig.questions > 0 ? correctCount / partConfig.questions : 0;
+    const earned = Math.min(cap, Math.pow(accuracy, DEFAULT_SCORING_CONFIG.curveExponent) * cap);
+    return parseFloat(earned.toFixed(1));
+  }, [correctCount, nodeInfo, toeicPart]);
 
   const currentAttemptKey =
     currentAttempt !== null && currentQuestion
@@ -2531,7 +2559,7 @@ export default function ToeicNodePracticePage() {
               .join("\n");
 
         const summaryQuestion = [
-          `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau 10 câu vừa làm.`,
+          `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau ${questions.length} câu vừa làm.`,
           "BẮT BUỘC trả lời 100% bằng tiếng Việt (giữ nguyên thuật ngữ TOEIC nếu cần).",
           "BẮT BUỘC đúng format 5 dòng:",
           `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
@@ -2546,7 +2574,7 @@ export default function ToeicNodePracticePage() {
           `Skill: ${activeSkill}`,
           `Part: ${toeicPart}`,
           `Đúng lần đầu: ${correctCount}/${questions.length}`,
-          "Dữ liệu RAG - 10 câu vừa làm:",
+          `Dữ liệu RAG - ${questions.length} câu vừa làm:`,
           sessionRows.join("\n\n"),
           "Dữ liệu RAG - lịch sử sai của user:",
           historyText,
@@ -2628,7 +2656,7 @@ export default function ToeicNodePracticePage() {
               Đang chuẩn bị bộ câu hỏi luyện tập...
             </p>
             <p className="text-sm text-slate-500">
-              Hệ thống đang ghép bộ 10 câu phù hợp với node hiện tại.
+              Hệ thống đang ghép bộ câu hỏi phù hợp với node hiện tại.
             </p>
           </div>
         </main>
@@ -2930,8 +2958,26 @@ export default function ToeicNodePracticePage() {
             if (practiceDraftStorageKey) {
               clearPracticeRunDraft(practiceDraftStorageKey);
             }
+            setSubmitSucceeded(true);
           })
-          .catch(() => { });
+          .catch((err) => {
+            console.error(
+              "[ToeicNodePractice] submitToeicPracticeSession failed:",
+              err?.response?.status,
+              err?.response?.data,
+              "payload:",
+              {
+                toeic_part: toeicPart,
+                question_ids: sessionQuestionIds,
+                answers: answersPayload,
+              },
+            );
+          });
+      } else {
+        console.warn(
+          "[ToeicNodePractice] Skip submit — toeicPart or sessionQuestionIds missing",
+          { toeicPart, sessionQuestionIdsLength: sessionQuestionIds.length },
+        );
       }
       setShowSummary(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2946,8 +2992,33 @@ export default function ToeicNodePracticePage() {
   };
 
   const handleComplete = () => {
-    // 1. Update map state in localStorage
-    const mapState = loadMapState();
+    // 0. Safety net — if the per-question submit was skipped or failed,
+    // retry sending the practice session to the backend so DB stays in sync
+    // with localStorage (fixes: listening page shows "Đã hoàn thành" but
+    // detail page counts 0).
+    if (!submitSucceeded && toeicPart !== null && sessionQuestionIds.length > 0) {
+      const answersPayload: Record<string, string> = {};
+      sessionQuestionIds.forEach((qId, idx) => {
+        if (firstAnswers[idx]) answersPayload[String(qId)] = firstAnswers[idx];
+      });
+      submitToeicPracticeSession({
+        toeic_part: toeicPart,
+        question_ids: sessionQuestionIds,
+        answers: answersPayload,
+      })
+        .then(() => {
+          setSubmitSucceeded(true);
+        })
+        .catch((err) => {
+          console.error(
+            "[ToeicNodePractice] retry submitToeicPracticeSession failed:",
+            err,
+          );
+        });
+    }
+
+    // 1. Update map state in localStorage (scoped theo user)
+    const mapState = loadMapState(userId);
     const skillState = mapState[activeSkill];
 
     const updatedCompleted = skillState.completedNodes.includes(parsedNodeIndex)
@@ -2973,32 +3044,20 @@ export default function ToeicNodePracticePage() {
       },
     };
 
-    saveMapState(newMapState);
+    saveMapState(newMapState, userId);
 
-    // 2. Sync TOEIC intake milestone score
+    // 2. Sync TOEIC intake milestone (session counters + usedQuestionIds)
+    // ★ KHÔNG sửa milestoneState.currentScore — per-part cap ở LearningMapPage quản lý điểm.
     const profile = getToeicIntakeProfile();
     if (profile) {
-      const nextCurrentScore = Math.min(
-        profile.milestoneState.targetScore,
-        profile.milestoneState.currentScore + Math.round(scoreGained),
-      );
-
-      const boostedProfile = appendToeicPracticeResult(
+      const updatedProfile = appendToeicPracticeResult(
         profile,
         activeSkill,
         correctCount,
         questions.map((question) => question.id),
       );
 
-      const nextProfile = {
-        ...boostedProfile,
-        milestoneState: {
-          ...boostedProfile.milestoneState,
-          currentScore: nextCurrentScore,
-        },
-      };
-
-      saveToeicIntakeProfile(nextProfile);
+      saveToeicIntakeProfile(updatedProfile);
     }
 
     // 3. Navigate back to map
@@ -3040,7 +3099,7 @@ export default function ToeicNodePracticePage() {
                   </div>
                   <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4 text-center">
                     <div className="text-5xl font-black mb-1">
-                      +{scoreGained.toFixed(0)}
+                      +{scoreGained.toFixed(1)}
                     </div>
                     <div className="text-sm text-white/80">TOEIC points</div>
                   </div>
@@ -3296,7 +3355,7 @@ export default function ToeicNodePracticePage() {
 
                 {partSummaryLoading && !partSummaryText ? (
                   <p className="text-sm text-slate-500">
-                    AI đang tổng hợp tóm tắt từ 10 câu vừa làm và lịch sử sai...
+                    AI đang tổng hợp tóm tắt từ các câu vừa làm và lịch sử sai...
                   </p>
                 ) : (
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">

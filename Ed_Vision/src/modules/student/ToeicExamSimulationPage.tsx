@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   BookOpen,
@@ -7,15 +7,25 @@ import {
   Clock,
   Headphones,
   Lock,
-  Map,
+  Map as MapIcon,
+  PlayCircle,
   RotateCcw,
   Trophy,
+  Volume2,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
+import NoSeekAudioPlayer from "./components/NoSeekAudioPlayer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
+import { useAuth } from "@/hooks/useAuth";
 import {
   getToeicExamRepositoryDetail,
+  startExamSession,
+  getExamSession,
+  upsertExamAnswer,
+  updateExamCursor,
+  submitExamSession,
+  type ExamSessionState,
   type ToeicRepositoryDetailResponse,
 } from "@/services/api/certificateService";
 
@@ -65,8 +75,16 @@ interface PartInfo {
   startIndex: number;
 }
 
-const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v2";
-const RESULTS_STORAGE_KEY = "edvision.toeic.exam.results.v1";
+const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
+const RESULTS_STORAGE_KEY_PREFIX = "edvision.toeic.exam.results.v1";
+
+/** Storage key scoped theo user — tránh acc mới đọc data acc cũ */
+function getMapStorageKey(userId: string | number | undefined): string {
+  return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
+}
+function getResultsStorageKey(userId: string | number | undefined): string {
+  return userId ? `${RESULTS_STORAGE_KEY_PREFIX}.${userId}` : RESULTS_STORAGE_KEY_PREFIX;
+}
 
 function getPartName(part: number): string {
   const labels: Record<number, string> = {
@@ -178,6 +196,9 @@ function calcScore(correct: number, total: number): number {
 export default function ToeicExamSimulationPage() {
   const { examType } = useParams<{ examType: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const userId = user?.account_id || user?.id;
 
   useToeicScrollReset();
 
@@ -189,28 +210,88 @@ export default function ToeicExamSimulationPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [repositorySlug, setRepositorySlug] = useState("");
   const [repositoryTitle, setRepositoryTitle] = useState("");
+  const [fullAudioUrl, setFullAudioUrl] = useState<string | null>(null);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [audioConfirmed, setAudioConfirmed] = useState(false);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+
+  // ── Server-driven session state ──
+  // sessionId = null → chưa start. Khi có giá trị, countdown được tính từ
+  // `serverStartedAt + serverDurationSec - now` (không trừ dần ở client) để F5
+  // không reset thời gian + chống user chỉnh đồng hồ máy.
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [serverStartedAt, setServerStartedAt] = useState<number | null>(null);
+  const [serverDurationSec, setServerDurationSec] = useState<number>(0);
+  const [tickNow, setTickNow] = useState<number>(() => Date.now());
+  const [phase, setPhase] = useState<ExamPhase>("intro");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, AnswerKey>>({});
 
   const totalQuestions = questions.length;
   const examDurationSeconds = useMemo(() => {
+    if (serverDurationSec > 0) return serverDurationSec;
     if (totalQuestions <= 0) {
       return isListening ? 45 * 60 : 30 * 60;
     }
     const perQuestionSeconds = isListening ? 75 : 65;
     const floor = isListening ? 20 * 60 : 15 * 60;
     return Math.max(floor, totalQuestions * perQuestionSeconds);
-  }, [isListening, totalQuestions]);
+  }, [isListening, totalQuestions, serverDurationSec]);
+
+  // Hydrate session state khi phát hiện ?session=xxx trên URL (vd: F5).
+  // Lưu ý: phải chạy SAU khi questions load xong để map answers theo index.
+  const sessionParam = searchParams.get("session");
+  const hydratedRef = useRef<number | null>(null);
+
+  const applySessionState = useCallback(
+    (state: ExamSessionState, qs: ExamQuestion[]) => {
+      setSessionId(state.session_id);
+      setServerStartedAt(new Date(state.started_at).getTime());
+      setServerDurationSec(state.duration_sec);
+      setCurrentIndex(Math.min(state.current_index, Math.max(0, qs.length - 1)));
+
+      // Map server answers (theo question_id) về client state (theo index).
+      const idToIndex = new Map<number, number>();
+      qs.forEach((q, idx) => {
+        const numId = Number(q.id);
+        if (Number.isFinite(numId)) idToIndex.set(numId, idx);
+      });
+      const mapped: Record<number, AnswerKey> = {};
+      for (const ans of state.answers) {
+        const idx = idToIndex.get(ans.question_id);
+        if (idx === undefined) continue;
+        if (
+          ans.selected_key === "A" ||
+          ans.selected_key === "B" ||
+          ans.selected_key === "C" ||
+          ans.selected_key === "D"
+        ) {
+          mapped[idx] = ans.selected_key;
+        }
+      }
+      setAnswers(mapped);
+
+      if (state.submitted_at) {
+        setPhase("summary");
+      } else {
+        setPhase("exam");
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    // Reset all exam state immediately so stale reading data never bleeds into
-    // a listening session (and vice-versa) during SPA navigation.
+    // Reset state khi đổi examType (listening ↔ reading) để dữ liệu cũ không
+    // bleed sang.
     setQuestions([]);
     setPhase("intro");
     setCurrentIndex(0);
     setAnswers({});
-    setTimeLeft(0);
-    setExamStarted(false);
+    setSessionId(null);
+    setServerStartedAt(null);
+    setServerDurationSec(0);
     setLoadError(null);
+    hydratedRef.current = null;
 
     if (!resolvedExamType) {
       setLoading(false);
@@ -220,19 +301,39 @@ export default function ToeicExamSimulationPage() {
 
     let active = true;
     setLoading(true);
-    setLoadError(null);
 
     getToeicExamRepositoryDetail(resolvedExamType)
-      .then((detail) => {
+      .then(async (detail) => {
         if (!active) return;
         const mapped = toExamQuestions(detail, resolvedExamType);
         setRepositorySlug(detail.slug);
         setRepositoryTitle(detail.title);
+        setFullAudioUrl(detail.full_audio_url ?? null);
+        setHasActiveSession(!!detail.active_session_id);
         setQuestions(mapped);
         if (mapped.length === 0) {
-          setLoadError(
-            "Hiện tại chưa có bộ đề thi thử mới đúng.",
-          );
+          setLoadError("Hiện tại chưa có bộ đề thi thử mới đúng.");
+          return;
+        }
+
+        // Resume session nếu URL có ?session=xxx
+        const sid = Number(sessionParam);
+        if (Number.isFinite(sid) && sid > 0 && hydratedRef.current !== sid) {
+          try {
+            const state = await getExamSession(sid);
+            if (!active) return;
+            // Chỉ apply nếu session khớp đúng repository đang load.
+            if (state.repository_slug === detail.slug) {
+              hydratedRef.current = sid;
+              applySessionState(state, mapped);
+            } else {
+              // Slug không khớp → xoá query param để tránh confusion.
+              setSearchParams({}, { replace: true });
+            }
+          } catch {
+            // Session không tồn tại / không thuộc user → bỏ qua, ở lại intro.
+            setSearchParams({}, { replace: true });
+          }
         }
       })
       .catch((err: unknown) => {
@@ -256,11 +357,15 @@ export default function ToeicExamSimulationPage() {
     return () => {
       active = false;
     };
-  }, [resolvedExamType]);
+    // sessionParam intentionally tracked: nếu user paste link có ?session=xxx
+    // thì phải hydrate ngay.
+  }, [resolvedExamType, sessionParam, applySessionState, setSearchParams]);
 
   const { isUnlocked, completedCount, requiredCount } = useMemo(() => {
-    const raw = localStorage.getItem(MAP_STORAGE_KEY);
-    const required = isListening ? 5 : 4;
+    const raw = localStorage.getItem(getMapStorageKey(userId));
+    // Listening có 5 node (Part 1-4 + Mock Exam), Reading có 4 node (Part 5-7 + Mock Exam).
+    // Node cuối cùng là chính bài thi thử → chỉ yêu cầu hoàn thành các node luyện tập (tổng - 1).
+    const required = isListening ? 4 : 3;
     if (!raw) {
       return { isUnlocked: false, completedCount: 0, requiredCount: required };
     }
@@ -276,17 +381,21 @@ export default function ToeicExamSimulationPage() {
     } catch {
       return { isUnlocked: false, completedCount: 0, requiredCount: required };
     }
-  }, [isListening]);
+  }, [isListening, userId]);
 
-  const [phase, setPhase] = useState<ExamPhase>("intro");
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, AnswerKey>>({});
-  const [timeLeft, setTimeLeft] = useState(examDurationSeconds);
-  const [examStarted, setExamStarted] = useState(false);
-
+  // Tick mỗi giây để render countdown. Giá trị `timeLeft` luôn được tính lại
+  // từ `serverStartedAt + serverDurationSec - now` để bền với F5.
   useEffect(() => {
-    setTimeLeft(examDurationSeconds);
-  }, [examDurationSeconds]);
+    if (phase !== "exam" || !serverStartedAt) return;
+    const id = setInterval(() => setTickNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [phase, serverStartedAt]);
+
+  const timeLeft = useMemo(() => {
+    if (!serverStartedAt || serverDurationSec <= 0) return examDurationSeconds;
+    const elapsed = Math.floor((tickNow - serverStartedAt) / 1000);
+    return Math.max(0, serverDurationSec - elapsed);
+  }, [serverStartedAt, serverDurationSec, tickNow, examDurationSeconds]);
 
   const partsInfo = useMemo(() => getPartsInfo(questions), [questions]);
   const answerKeyMissingCount = useMemo(
@@ -298,20 +407,6 @@ export default function ToeicExamSimulationPage() {
     [questions],
   );
 
-  useEffect(() => {
-    if (!examStarted || phase !== "exam") return;
-    if (timeLeft <= 0) {
-      setPhase("summary");
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setTimeLeft((value) => Math.max(0, value - 1));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [examStarted, phase, timeLeft]);
-
   const currentQuestion = questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
 
@@ -322,53 +417,145 @@ export default function ToeicExamSimulationPage() {
     }).length;
   }, [questions, answers]);
 
-  const handleStartExam = useCallback(() => {
-    setPhase("exam");
-    setExamStarted(true);
-    setCurrentIndex(0);
-    setAnswers({});
-    setTimeLeft(examDurationSeconds);
-  }, [examDurationSeconds]);
+  const handleStartExam = useCallback(async () => {
+    if (!repositorySlug) return;
+    try {
+      const state = await startExamSession(repositorySlug, examDurationSeconds);
+      setSessionId(state.session_id);
+      setServerStartedAt(new Date(state.started_at).getTime());
+      setServerDurationSec(state.duration_sec);
+      setCurrentIndex(state.current_index ?? 0);
+
+      // Hydrate answer đã có (nếu resume từ phiên cũ).
+      const idToIndex = new Map<number, number>();
+      questions.forEach((q, idx) => {
+        const numId = Number(q.id);
+        if (Number.isFinite(numId)) idToIndex.set(numId, idx);
+      });
+      const mapped: Record<number, AnswerKey> = {};
+      for (const ans of state.answers) {
+        const idx = idToIndex.get(ans.question_id);
+        if (idx === undefined) continue;
+        if (
+          ans.selected_key === "A" ||
+          ans.selected_key === "B" ||
+          ans.selected_key === "C" ||
+          ans.selected_key === "D"
+        ) {
+          mapped[idx] = ans.selected_key;
+        }
+      }
+      setAnswers(mapped);
+
+      // Đẩy session_id vào URL để F5 vẫn resume được.
+      setSearchParams(
+        { session: String(state.session_id) },
+        { replace: true },
+      );
+      setPhase(state.submitted_at ? "summary" : "exam");
+    } catch (err) {
+      const typedErr = err as {
+        response?: { data?: { message?: string | string[] } };
+        message?: string;
+      };
+      const message =
+        typedErr?.response?.data?.message ||
+        typedErr?.message ||
+        "Không thể bắt đầu phiên thi.";
+      setLoadError(Array.isArray(message) ? message.join(" ") : String(message));
+    }
+  }, [repositorySlug, examDurationSeconds, questions, setSearchParams]);
 
   const handleSelectAnswer = useCallback(
     (key: AnswerKey) => {
-      if (answers[currentIndex] !== undefined) return;
       setAnswers((prev) => ({ ...prev, [currentIndex]: key }));
+
+      // Persist lên server. Fire-and-forget; nếu lỗi mạng UI vẫn giữ lựa chọn,
+      // user có thể nộp bài và server sẽ chấm theo bản DB hiện tại.
+      const q = questions[currentIndex];
+      const numId = q ? Number(q.id) : NaN;
+      if (sessionId && Number.isFinite(numId)) {
+        upsertExamAnswer(sessionId, {
+          question_id: numId,
+          selected_key: key,
+        }).catch(() => {
+          /* swallow — UX không nên chặn vì lỗi network thoáng qua */
+        });
+      }
     },
-    [answers, currentIndex],
+    [answers, currentIndex, questions, sessionId],
   );
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!resolvedExamType) return;
+    let serverScore: number | null = null;
+    let serverCorrect: number | null = null;
+    let serverTotal: number | null = null;
+
+    if (sessionId) {
+      try {
+        const result = await submitExamSession(sessionId, "manual");
+        serverScore = result.total_score;
+        serverCorrect = result.correct_count;
+        serverTotal = result.total_count;
+      } catch {
+        /* nếu API lỗi vẫn fallback sang chấm phía client */
+      }
+    }
+
+    const finalCorrect = serverCorrect ?? correctCount;
+    const finalTotal = serverTotal ?? gradableTotal;
+    const finalScore = serverScore ?? calcScore(correctCount, gradableTotal);
+
     const result: ExamResult = {
       examType: resolvedExamType,
-      score: calcScore(correctCount, gradableTotal),
-      correctCount,
-      totalCount: gradableTotal,
+      score: finalScore,
+      correctCount: finalCorrect,
+      totalCount: finalTotal,
       completedAt: new Date().toISOString(),
       repositorySlug: repositorySlug || "unknown",
     };
 
     try {
+      const resultsKey = getResultsStorageKey(userId);
       const existing: ExamResult[] = JSON.parse(
-        localStorage.getItem(RESULTS_STORAGE_KEY) ?? "[]",
+        localStorage.getItem(resultsKey) ?? "[]",
       );
       existing.push(result);
-      localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(existing));
+      localStorage.setItem(resultsKey, JSON.stringify(existing));
     } catch {
-      localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify([result]));
+      localStorage.setItem(getResultsStorageKey(userId), JSON.stringify([result]));
     }
 
     setPhase("summary");
-  }, [correctCount, gradableTotal, repositorySlug, resolvedExamType]);
+  }, [
+    correctCount,
+    gradableTotal,
+    repositorySlug,
+    resolvedExamType,
+    sessionId,
+  ]);
+
+  // Auto-submit khi server-driven timer hết.
+  useEffect(() => {
+    if (phase !== "exam") return;
+    if (!serverStartedAt) return;
+    if (timeLeft > 0) return;
+    void handleSubmit();
+  }, [phase, serverStartedAt, timeLeft, handleSubmit]);
 
   const handleRetry = useCallback(() => {
+    // "Thi lại" = reset về intro, xoá session khỏi URL. User bấm Bắt đầu thi
+    // sẽ tạo session mới ở backend.
     setPhase("intro");
     setCurrentIndex(0);
     setAnswers({});
-    setExamStarted(false);
-    setTimeLeft(examDurationSeconds);
-  }, [examDurationSeconds]);
+    setSessionId(null);
+    setServerStartedAt(null);
+    setServerDurationSec(0);
+    setAudioConfirmed(false);
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
 
   const handleGoToMap = useCallback(() => {
     if (!resolvedExamType) return;
@@ -439,7 +626,7 @@ export default function ToeicExamSimulationPage() {
               className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl transition-colors"
             >
               <span className="inline-flex items-center gap-2 justify-center">
-                <Map className="w-4 h-4" />
+                <MapIcon className="w-4 h-4" />
                 Đến trang luyện tập
               </span>
             </button>
@@ -527,7 +714,7 @@ export default function ToeicExamSimulationPage() {
               disabled={totalQuestions === 0}
               className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold disabled:opacity-50 hover:bg-teal-500 transition-colors shadow-sm"
             >
-              Bắt đầu thi
+              {hasActiveSession ? "Tiếp tục bài thi" : "Bắt đầu thi"}
             </button>
           </div>
         </main>
@@ -662,7 +849,7 @@ export default function ToeicExamSimulationPage() {
               onClick={handleGoToMap}
               className="py-3 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-700 font-semibold inline-flex items-center justify-center gap-2 transition-colors"
             >
-              <Map className="w-4 h-4" />
+              <MapIcon className="w-4 h-4" />
               Về map luyện tập
             </button>
             <button
@@ -832,7 +1019,51 @@ export default function ToeicExamSimulationPage() {
             {formatTime(timeLeft)}
           </div>
         </div>
+
+        {/* Continuous audio player for Listening exam */}
+        {isListening && fullAudioUrl && (
+          <div className="max-w-5xl mx-auto px-4 py-2 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <Headphones className="w-4 h-4 text-teal-600 shrink-0" />
+              <span className="text-xs font-semibold text-teal-700 shrink-0">LISTENING</span>
+              <div className="flex-1">
+                <NoSeekAudioPlayer
+                  src={`http://localhost:3000${fullAudioUrl}`}
+                  autoPlay={audioConfirmed}
+                  noPause={audioConfirmed}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Audio confirmation overlay for Listening */}
+      {isListening && fullAudioUrl && !audioConfirmed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 text-center">
+            <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Volume2 className="w-8 h-8 text-teal-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Sẵn sàng bắt đầu phần Listening?
+            </h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Audio sẽ phát <span className="font-semibold text-gray-800">liên tục và không thể dừng lại</span>, giống như bài thi TOEIC thật.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Hãy đảm bảo bạn đã đeo tai nghe và sẵn sàng trước khi bấm nút bên dưới.
+            </p>
+            <button
+              onClick={() => setAudioConfirmed(true)}
+              className="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold transition-colors shadow-sm inline-flex items-center justify-center gap-2"
+            >
+              <PlayCircle className="w-5 h-5" />
+              Bắt đầu phát audio
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         {currentQuestion && (
@@ -858,19 +1089,16 @@ export default function ToeicExamSimulationPage() {
                 />
               </div>
             )}
-            {/* Audio player for Listening parts 1-4 */}
-            {currentQuestion.part !== undefined &&
+            {/* Per-question audio player (only when NO full audio is available) */}
+            {!fullAudioUrl &&
+              currentQuestion.part !== undefined &&
               currentQuestion.part <= 4 &&
               currentQuestion.audioUrl && (
                 <div className="mb-4">
-                  <audio
+                  <NoSeekAudioPlayer
                     key={currentQuestion.id + "-audio"}
-                    controls
-                    className="w-full"
                     src={`http://localhost:3000${currentQuestion.audioUrl}`}
-                  >
-                    Trình duyệt của bạn không hỗ trợ audio.
-                  </audio>
+                  />
                 </div>
               )}
             <p className="text-gray-900 text-lg font-semibold mb-4">
@@ -880,18 +1108,14 @@ export default function ToeicExamSimulationPage() {
               {currentQuestion.options.map((opt) => {
                 const selected = answers[currentIndex];
                 const isSelected = selected === opt.key;
-                const isDisabled = selected !== undefined;
                 return (
                   <button
                     key={opt.key}
-                    disabled={isDisabled}
                     onClick={() => handleSelectAnswer(opt.key)}
                     className={`text-left px-4 py-3 rounded-xl border transition-colors ${
                       isSelected
                         ? "bg-teal-600 border-teal-600 text-white shadow-sm"
-                        : isDisabled
-                          ? "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-white border-gray-300 text-gray-800 hover:border-teal-500 hover:bg-teal-50"
+                        : "bg-white border-gray-300 text-gray-800 hover:border-teal-500 hover:bg-teal-50"
                     }`}
                   >
                     <span className="font-bold mr-2">{opt.key}.</span>
@@ -903,8 +1127,8 @@ export default function ToeicExamSimulationPage() {
             {hasAnswered && (
               <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400" />
-                Bạn đã chọn đáp án {answers[currentIndex]}. Không thể thay đổi
-                đáp án.
+                Bạn đã chọn đáp án {answers[currentIndex]}. Bạn có thể đổi đáp án
+                trước khi nộp bài.
               </p>
             )}
           </div>
@@ -912,7 +1136,13 @@ export default function ToeicExamSimulationPage() {
 
         <div className="flex items-center justify-between gap-3">
           <button
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            onClick={() => {
+              const next = Math.max(0, currentIndex - 1);
+              setCurrentIndex(next);
+              if (sessionId) {
+                updateExamCursor(sessionId, next).catch(() => undefined);
+              }
+            }}
             disabled={currentIndex === 0}
             className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium shadow-sm hover:bg-gray-50 disabled:opacity-40 transition-colors"
           >
@@ -934,9 +1164,13 @@ export default function ToeicExamSimulationPage() {
             </button>
           ) : (
             <button
-              onClick={() =>
-                setCurrentIndex((i) => Math.min(totalQuestions - 1, i + 1))
-              }
+              onClick={() => {
+                const next = Math.min(totalQuestions - 1, currentIndex + 1);
+                setCurrentIndex(next);
+                if (sessionId) {
+                  updateExamCursor(sessionId, next).catch(() => undefined);
+                }
+              }}
               disabled={!hasAnswered}
               className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold disabled:opacity-40 inline-flex items-center gap-2 shadow-sm transition-colors"
             >

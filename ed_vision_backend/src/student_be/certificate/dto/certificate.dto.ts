@@ -190,6 +190,7 @@ export class ToeicRepositoryDetailResponseDto {
   title!: string;
   description?: string | null;
   skill_area?: string | null;
+  full_audio_url?: string | null;
   milestone_score!: number;
   estimated_minutes!: number;
   pass_score!: number;
@@ -197,6 +198,7 @@ export class ToeicRepositoryDetailResponseDto {
   answer_key_configured_items!: number;
   answer_key_missing_items!: number;
   answer_key_ready!: boolean;
+  active_session_id?: number | null;
   items!: ToeicRepositoryItemDto[];
 }
 

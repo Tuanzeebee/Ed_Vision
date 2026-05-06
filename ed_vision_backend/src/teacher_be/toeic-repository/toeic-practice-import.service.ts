@@ -896,6 +896,25 @@ export class ToeicPracticeImportService {
     * - optional inline answer or separate answer-key block
     * - optional part headers (PART 5 / Phan 6 / ...)
    */
+  /**
+   * Public alias để các service khác (vd: DiagnosticImportService) tái sử dụng
+   * cùng pipeline parser câu hỏi (ổn định cho Part 5/6/7 reading 100 câu).
+   */
+  public parsePracticeQuestionsFromText(rawText: string): ParsedPracticeQuestion[] {
+    return this.parseQuestionsFromText(rawText);
+  }
+
+  /**
+   * Public helper: extract text from file + parse questions.
+   * Reuses the exact same extractText + parseQuestionsFromText pipeline
+   * so that callers (e.g. controller for TOEIC Reading import) get identical results.
+   */
+  public async extractAndParseFromFile(file: Express.Multer.File): Promise<ParsedPracticeQuestion[]> {
+    const rawText = await this.extractText(file);
+    if (!rawText || rawText.trim().length < 20) return [];
+    return this.parseQuestionsFromText(rawText);
+  }
+
   private parseQuestionsFromText(rawText: string): ParsedPracticeQuestion[] {
     const normalized = rawText
       .replace(/\r\n/g, '\n')
