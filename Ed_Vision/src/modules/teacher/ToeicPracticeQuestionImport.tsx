@@ -1238,6 +1238,18 @@ export function ToeicPracticeQuestionImportBody({
                     : ""}
                 </p>
               )}
+              {!!answerKeyResult.missing_option_question_numbers?.length && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Câu thiếu đáp án {"("}đã tạo placeholder, vui lòng cập nhật
+                  nội dung{")"}:{" "}
+                  {answerKeyResult.missing_option_question_numbers
+                    .slice(0, 20)
+                    .join(", ")}
+                  {answerKeyResult.missing_option_question_numbers.length > 20
+                    ? " ..."
+                    : ""}
+                </p>
+              )}
             </div>
           )}
 

@@ -246,6 +246,7 @@ export class ToeicPracticeAnswerKeyImportResponseDto {
   updated_questions!: number;
   unanswered_questions!: number;
   unmatched_question_numbers!: number[];
+  missing_option_question_numbers!: number[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2254,6 +2255,7 @@ export class ToeicPracticeImportService {
     let matchedQuestions = 0;
     let updatedQuestions = 0;
     const unmatchedQuestionNumbers: number[] = [];
+    const missingOptionQuestionNumbers: number[] = [];
 
     for (const [questionNumber, answerKey] of answerMap.entries()) {
       const question = questionByNumber.get(questionNumber);
@@ -2267,7 +2269,47 @@ export class ToeicPracticeImportService {
         (option) => this.normalizeOptionKey(option.option_key) === answerKey,
       );
 
-      if (!matchedOption) continue;
+      if (!matchedOption) {
+        // Question exists but the option letter from the answer-key is missing
+        // on this question (e.g. PDF text-layer chỉ bóc được 3/4 options).
+        // Thay vì bỏ qua khiến teacher không biết câu nào miss, ta tạo
+        // placeholder option theo đúng letter và đánh dấu is_correct = true.
+        // Teacher có thể cập nhật text sau.
+        const nextSort =
+          question.options.reduce(
+            (max, opt) => Math.max(max, opt.sort_order ?? 0),
+            -1,
+          ) + 1;
+        missingOptionQuestionNumbers.push(questionNumber);
+        this.logger.warn(
+          `[AnswerKey] Q#${questionNumber} (id=${question.id}) thiếu option "${answerKey}". ` +
+            `Tạo placeholder option "${answerKey}" và đánh dấu is_correct=true.`,
+        );
+        operations.push(
+          this.prisma.toeicPracticeOption.updateMany({
+            where: { question_id: question.id },
+            data: { is_correct: false },
+          }),
+          this.prisma.toeicPracticeOption.upsert({
+            where: {
+              question_id_option_key: {
+                question_id: question.id,
+                option_key: answerKey,
+              },
+            },
+            create: {
+              question_id: question.id,
+              option_key: answerKey,
+              option_text: `(${answerKey}) — Vui lòng nhập nội dung đáp án`,
+              is_correct: true,
+              sort_order: nextSort,
+            },
+            update: { is_correct: true },
+          }),
+        );
+        updatedQuestions += 1;
+        continue;
+      }
 
       operations.push(
         this.prisma.toeicPracticeOption.updateMany({
@@ -2303,6 +2345,7 @@ export class ToeicPracticeImportService {
       updated_questions: updatedQuestions,
       unanswered_questions: unansweredQuestions,
       unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
     };
   }
 

@@ -1016,6 +1016,7 @@ export interface ImportPracticeAnswerKeyResponse {
   updated_questions: number;
   unanswered_questions: number;
   unmatched_question_numbers: number[];
+  missing_option_question_numbers?: number[];
 }
 
 export async function importToeicPracticeAnswerKey(
