@@ -394,30 +394,171 @@ export class ToeicPracticeSessionService {
       );
     }
 
-    // ── Selection ────────────────────────────────────────────────────────
-    // Split pool by whether the question has an audio link. Prioritise
-    // audio-bearing questions first (important for listening parts 1-4,
-    // harmless for reading parts where context_audio is usually null).
-    const withAudio = questions.filter((q) => !!q.context_audio);
-    const withoutAudio = questions.filter((q) => !q.context_audio);
+    // ── Audio-grouped parts (Listening Part 1-4) ──────────────────────────
+    // - Part 3/4: 1 audio dùng chung cho 3 câu liên tiếp (vd Q32-34). Khi
+    //   import, audio chunker chỉ gán `context_audio` lên câu đầu nhóm
+    //   (anchor); 2 câu sau (sibling) có context_audio = null → bị bỏ qua.
+    // - Part 1/2: thường 1 audio / 1 câu, nhưng nếu data thực tế cũng có
+    //   pattern "anchor + sibling không audio" thì xử lý y hệt Part 3/4.
+    //   Sibling chỉ được gom vào nhóm khi `context_audio` của nó là null
+    //   (nếu sibling có audio riêng → vẫn coi là độc lập, không gom).
+    // → Lấy nguyên nhóm và lan truyền audio cho mọi sibling không có audio.
+    const isGroupedPart = part >= 1 && part <= 4;
 
-    const pickRandom = <T>(arr: T[], n: number): T[] =>
-      this.shuffle(arr).slice(0, n);
+    type QuestionRow = (typeof questions)[number];
 
-    let selected: typeof questions;
-    if (questions.length <= targetCount) {
-      // Not enough questions in DB — return everything we have.
-      selected = this.shuffle(questions);
-    } else if (withAudio.length >= targetCount) {
-      // Enough audio questions alone to fill the target.
-      selected = pickRandom(withAudio, targetCount);
+    let selected: QuestionRow[];
+
+    if (isGroupedPart) {
+      // 1. Bổ sung sibling còn thiếu (cùng source_slug, item_id +1/+2 của
+      //    mỗi anchor có context_audio) — kể cả khi sibling đã used hay
+      //    không khớp band.
+      const anchorsInPool = questions.filter(
+        (q) =>
+          !!q.context_audio &&
+          !!q.source_slug &&
+          q.source_item_id != null,
+      );
+
+      const siblingFilters: { source_slug: string; source_item_id: number }[] =
+        [];
+      for (const anchor of anchorsInPool) {
+        const slug = anchor.source_slug as string;
+        const startId = anchor.source_item_id as number;
+        siblingFilters.push({ source_slug: slug, source_item_id: startId + 1 });
+        siblingFilters.push({ source_slug: slug, source_item_id: startId + 2 });
+      }
+
+      if (siblingFilters.length > 0) {
+        const siblings = await this.prisma.toeicPracticeQuestion.findMany({
+          where: {
+            part,
+            is_published: true,
+            options: { some: { is_correct: true } },
+            OR: siblingFilters,
+          },
+          include: {
+            options: { orderBy: { sort_order: 'asc' } },
+          },
+        });
+        questions = this.mergeUniqueQuestionsById(questions, siblings);
+      }
+
+      // 2. Build groups: anchor + sibling+1 + sibling+2 (cùng source_slug)
+      const byKey = new Map<string, QuestionRow>();
+      for (const q of questions) {
+        if (q.source_slug && q.source_item_id != null) {
+          byKey.set(`${q.source_slug}:${q.source_item_id}`, q);
+        }
+      }
+
+      const allAnchors = questions.filter(
+        (q) =>
+          !!q.context_audio &&
+          !!q.source_slug &&
+          q.source_item_id != null,
+      );
+
+      // Sibling được merge vào group khi:
+      //   - context_audio của nó là NULL (legacy: chỉ anchor gắn audio), HOẶC
+      //   - context_audio TRÙNG URL với anchor (data mới: chunker gán cùng URL
+      //     cho cả 3 câu trong Part 3/4 — xem toeic-practice-import.service
+      //     `chunkPracticeAudio`, targets = [n, n+1, n+2]).
+      // Nếu sibling có audio URL KHÁC → coi là anchor của nhóm khác, dừng gom.
+      // Đồng thời dedupe theo id (tránh Q33 vừa là sibling của Q32 vừa là
+      // anchor của nhóm [Q33]) — sắp xếp anchors theo source_item_id tăng
+      // dần để nhóm đầu (vd 32) "claim" các sibling trước.
+      const sortedAnchors = [...allAnchors].sort((a, b) => {
+        const slugCmp = (a.source_slug ?? '').localeCompare(b.source_slug ?? '');
+        if (slugCmp !== 0) return slugCmp;
+        return (a.source_item_id ?? 0) - (b.source_item_id ?? 0);
+      });
+      const assigned = new Set<number>();
+      const groups: QuestionRow[][] = [];
+      for (const anchor of sortedAnchors) {
+        if (assigned.has(anchor.id)) continue;
+        const slug = anchor.source_slug as string;
+        const startId = anchor.source_item_id as number;
+        const anchorAudio = anchor.context_audio as string;
+        const group: QuestionRow[] = [anchor];
+        assigned.add(anchor.id);
+        for (let offset = 1; offset <= 2; offset++) {
+          const sibling = byKey.get(`${slug}:${startId + offset}`);
+          if (!sibling) continue;
+          if (assigned.has(sibling.id)) continue;
+          const sibAudio = sibling.context_audio;
+          // Khác URL → sibling thuộc nhóm audio khác, dừng gom.
+          if (sibAudio && sibAudio !== anchorAudio) break;
+          group.push(sibling);
+          assigned.add(sibling.id);
+        }
+        groups.push(group);
+      }
+
+      // 3. Pick random groups cho tới khi đạt đủ targetCount câu.
+      //    Ưu tiên giữ nguyên nhóm 3; nếu nhóm cuối dư thì cắt để tổng = 10
+      //    (cho phép câu lẻ ở cuối — theo yêu cầu nghiệp vụ).
+      const shuffledGroups = this.shuffle(groups);
+      selected = [];
+      for (const group of shuffledGroups) {
+        if (selected.length >= targetCount) break;
+        const remaining = targetCount - selected.length;
+        if (group.length <= remaining) {
+          selected.push(...group);
+        } else {
+          // Nhóm cuối vượt target → chỉ lấy đủ số câu còn thiếu (giữ thứ tự
+          // anchor → sibling+1 → sibling+2 để sinh viên vẫn nghe đúng audio).
+          selected.push(...group.slice(0, remaining));
+          break;
+        }
+      }
+
+      // 4. Fallback nếu không có anchor nào (vd dữ liệu chưa chunk audio):
+      //    quay về logic cũ (random toàn bộ).
+      if (selected.length === 0) {
+        selected = this.shuffle(questions).slice(0, targetCount);
+      }
+
+      // 5. Lan truyền context_audio từ anchor xuống sibling để frontend
+      //    hiển thị audio cho cả nhóm. Dừng khi gặp sibling có audio riêng
+      //    (đó là anchor của nhóm khác).
+      const audioByQid = new Map<number, string>();
+      for (const anchor of allAnchors) {
+        const slug = anchor.source_slug as string;
+        const startId = anchor.source_item_id as number;
+        const audio = anchor.context_audio as string;
+        audioByQid.set(anchor.id, audio);
+        for (let offset = 1; offset <= 2; offset++) {
+          const sibling = byKey.get(`${slug}:${startId + offset}`);
+          if (!sibling) continue;
+          if (sibling.context_audio) break;
+          audioByQid.set(sibling.id, audio);
+        }
+      }
+      selected = selected.map((q) => {
+        const shared = audioByQid.get(q.id);
+        return shared && !q.context_audio ? { ...q, context_audio: shared } : q;
+      });
     } else {
-      // Take all audio questions first, fill remainder with non-audio ones.
-      const remainder = targetCount - withAudio.length;
-      selected = [
-        ...this.shuffle(withAudio),
-        ...pickRandom(withoutAudio, remainder),
-      ];
+      // ── Selection cũ cho Reading Part 5, 6, 7 ───────────────────────────
+      // Reading parts không có audio → chỉ random thuần.
+      const withAudio = questions.filter((q) => !!q.context_audio);
+      const withoutAudio = questions.filter((q) => !q.context_audio);
+
+      const pickRandom = <T>(arr: T[], n: number): T[] =>
+        this.shuffle(arr).slice(0, n);
+
+      if (questions.length <= targetCount) {
+        selected = this.shuffle(questions);
+      } else if (withAudio.length >= targetCount) {
+        selected = pickRandom(withAudio, targetCount);
+      } else {
+        const remainder = targetCount - withAudio.length;
+        selected = [
+          ...this.shuffle(withAudio),
+          ...pickRandom(withoutAudio, remainder),
+        ];
+      }
     }
 
     // Keep the variable name used downstream.

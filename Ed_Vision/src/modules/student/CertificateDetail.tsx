@@ -206,14 +206,23 @@ export default function CertificateDetail() {
   }, [cert.id]);
 
   // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
-  // Tiến độ = current_score / target_score (điểm gốc so với mục tiêu)
+  // TOEIC: dùng completed_parts / 7 parts (số part học viên đã thực sự luyện),
+  //        khớp logic ở CertificateReview để hiển thị nhất quán.
+  // Khác: dùng progress_percent từ enrollment.
   const realProgress = (() => {
-    if (enrollment && isToeic) {
-      const currentScore = enrollment.current_score ?? toeicProfile?.milestoneState.currentScore ?? 0;
-      const targetScore = enrollment.target_score ?? toeicProfile?.milestoneState.targetScore ?? 0;
-      if (targetScore > 0) {
-        return Math.max(0, Math.min(100, Math.round((currentScore / targetScore) * 100)));
+    if (isToeic) {
+      const toeicTotalParts = 7;
+      const partsCompleted = completedToeicParts.length;
+      let progress = 0;
+      if (partsCompleted > 0) {
+        progress = Math.max(0, Math.min(100, Math.round((partsCompleted / toeicTotalParts) * 100)));
       }
+      // Fallback: nếu enrollment.progress_percent lớn hơn (đã được backend tính sẵn) thì dùng nó.
+      const enrollmentProgress = enrollment?.progress_percent != null
+        ? Math.max(0, Math.min(100, Math.round(Number(enrollment.progress_percent))))
+        : 0;
+      if (enrollmentProgress > progress) progress = enrollmentProgress;
+      return progress;
     }
     return enrollment
       ? Math.max(0, Math.min(100, Number(enrollment.progress_percent ?? 0)))

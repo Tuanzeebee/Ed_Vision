@@ -5,6 +5,9 @@ import { API_BASE_URL } from '@/services/api/config';
 // Create axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  // Timeout 30s — tránh request bị hang vô hạn khi backend chậm/treo. Các call
+  // dài (AI tutor, Groq) có thể override timeout riêng nếu cần.
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,6 +22,22 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // File upload (multipart/form-data) — vd upload audio, OCR PDF, chunk
+    // listening audio, … — backend chạy Whisper/OCR có thể >30s. Bỏ timeout
+    // riêng cho các call này để không bị "timeout of 30000ms exceeded".
+    const contentType =
+      (config.headers?.['Content-Type'] as string | undefined) ??
+      (config.headers?.['content-type'] as string | undefined);
+    const isMultipart =
+      typeof contentType === 'string' &&
+      contentType.toLowerCase().includes('multipart/form-data');
+    const isFormData =
+      typeof FormData !== 'undefined' && config.data instanceof FormData;
+    if (isMultipart || isFormData) {
+      config.timeout = 0; // không giới hạn
+    }
+
     return config;
   },
   (error) => {

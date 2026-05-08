@@ -154,9 +154,10 @@ export class VocabImportService {
     return { imported };
   }
 
-  // ── processImage: Tesseract OCR column-aware → Regex ─────────────────────
-  // Không dùng AI model — nhanh, ổn định, không timeout.
-  // Kết quả có thể có OCR noise tiếng Việt nhưng teacher kiểm tra trước khi confirm.
+  // ── processImage: preprocess Sharp → Tesseract column-aware → (Ollama clean) → Regex
+  // - Preprocess: grayscale + normalize + sharpen + upscale 2x → tăng accuracy Tesseract VI.
+  // - Optional: nếu Ollama qwen3 chạy local, fix OCR noise (","→".", ";"→":") trước regex.
+  // - Fallback: nếu Ollama không available hoặc timeout, regex trực tiếp trên OCR raw.
   private async processImage(file: Express.Multer.File): Promise<ExtractedWord[]> {
     let ocrText = '';
     try {
@@ -169,8 +170,27 @@ export class VocabImportService {
       throw new BadRequestException('Không đọc được ảnh. Kiểm tra file rõ nét và thử lại.');
     }
 
-    const result = this.regexExtractor.extract(ocrText);
-    if (result.length > 0) return result;
+    // Thử Ollama clean trước — nếu có nhiều entry hơn, dùng bản clean.
+    let bestResult = this.regexExtractor.extract(ocrText);
+    if (this.ollama) {
+      try {
+        const available = await this.ollama.isAvailable();
+        if (available) {
+          const cleaned = await this.ollama.cleanText(ocrText);
+          const cleanedResult = this.regexExtractor.extract(cleaned);
+          if (cleanedResult.length > bestResult.length) {
+            console.log(
+              `[VocabImport] Ollama clean improved entries: ${bestResult.length} → ${cleanedResult.length}`,
+            );
+            bestResult = cleanedResult;
+          }
+        }
+      } catch (e: any) {
+        console.warn(`[VocabImport] Ollama cleanText failed (sử dụng OCR raw): ${e?.message}`);
+      }
+    }
+
+    if (bestResult.length > 0) return bestResult;
 
     throw new BadRequestException('Không phân tích được từ vựng từ ảnh. Thử file PDF hoặc TXT để kết quả tốt hơn.');
   }
@@ -193,7 +213,7 @@ export class VocabImportService {
     return result;
   }
 
-  // ── ocrColumns: crop từng cột → Tesseract OCR song song ──────────────────
+  // ── ocrColumns: crop từng cột → preprocess Sharp → Tesseract OCR song song ─────
   private async ocrColumns(imagePath: string): Promise<string> {
     const os = await import('os');
     const tmpDir = os.tmpdir();
@@ -201,8 +221,13 @@ export class VocabImportService {
     const detectionResult = await this.columnDetector.detectColumns(imagePath);
     const croppedPaths = await this.columnDetector.cropToColumns(imagePath, detectionResult.columns, tmpDir);
 
+    // Preprocess từng cột (grayscale + normalize + sharpen + upscale) trước khi OCR.
+    const preprocessedPaths = await Promise.all(
+      croppedPaths.map((p) => this.preprocessForOcr(p)),
+    );
+
     const columnResults = await Promise.all(
-      croppedPaths.map(async (colPath, i) => {
+      preprocessedPaths.map(async (colPath, i) => {
         try {
           const text = await this.ocrImage(colPath);
           return text;
@@ -213,16 +238,65 @@ export class VocabImportService {
       }),
     );
 
-    for (const p of croppedPaths) { try { fs.unlinkSync(p); } catch { /**/ } }
+    // Cleanup phải xóa cả cropped lẫn preprocessed.
+    for (const p of [...croppedPaths, ...preprocessedPaths]) {
+      if (!p) continue;
+      try { fs.unlinkSync(p); } catch { /**/ }
+    }
 
     return columnResults.filter(Boolean).join('\n\n');
   }
 
-  // ── Tesseract OCR ─────────────────────────────────────────────────────────
+  // ── preprocessForOcr: tăng accuracy Tesseract VI bằng pipeline Sharp ──────────
+  // grayscale → normalize (kéo giãn contrast) → sharpen → upscale 2x cho chữ nhỏ.
+  // Kết quả lưu vào file PNG riu để OCR tiếng Việt đọc dấu tốt hơn.
+  private async preprocessForOcr(inputPath: string): Promise<string> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const sharp = require('sharp') as any;
+      const meta = await sharp(inputPath).metadata();
+      const targetWidth = Math.min((meta.width ?? 1000) * 2, 4000);
+      const outPath = inputPath.replace(/(\.[^.]+)?$/, '_pre.png');
+      await sharp(inputPath)
+        .resize({ width: targetWidth, withoutEnlargement: false })
+        .grayscale()
+        .normalize()
+        .sharpen()
+        .png({ compressionLevel: 0 })
+        .toFile(outPath);
+      return outPath;
+    } catch (e: any) {
+      console.warn('[VocabImport] preprocessForOcr failed, dùng ảnh gốc:', e?.message);
+      return inputPath;
+    }
+  }
+
+  // ── Tesseract OCR ──────────────────────────────────────────────
+  // PSM 6 = assume single uniform block of text (hợp với từng cột đã crop).
+  // preserve_interword_spaces=1 → giữ nguyên khoảng trắng giữa từ, giảm dani entry.
   private async ocrImage(filePath: string): Promise<string> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createWorker } = require('tesseract.js') as { createWorker: (l: string[]) => Promise<{ recognize: (p: string) => Promise<{ data: { text: string } }>; terminate: () => Promise<void> }> };
+    const { createWorker, PSM } = require('tesseract.js') as {
+      createWorker: (
+        l: string[],
+        oem?: number,
+        opts?: any,
+      ) => Promise<{
+        setParameters: (p: Record<string, string>) => Promise<void>;
+        recognize: (p: string) => Promise<{ data: { text: string } }>;
+        terminate: () => Promise<void>;
+      }>;
+      PSM?: { SINGLE_BLOCK: string };
+    };
     const worker = await createWorker(['eng', 'vie']);
+    try {
+      await worker.setParameters({
+        tessedit_pageseg_mode: (PSM && PSM.SINGLE_BLOCK) || '6',
+        preserve_interword_spaces: '1',
+      });
+    } catch {
+      // Older tesseract.js versions không hỗ trợ setParameters — bỏ qua, dùng default.
+    }
     const { data: { text } } = await worker.recognize(filePath);
     await worker.terminate();
     return text;

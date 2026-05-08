@@ -819,6 +819,11 @@ export default function ToeicLearningMapPage() {
     // Đọc localStorage (scoped theo user) để merge với dữ liệu API
     const localState = loadMapState(userId);
 
+    // Hiển thị ngay với localStorage để map không bao giờ bị treo loading.
+    // API call vẫn chạy ngầm và cập nhật state khi hoàn tất.
+    setMapState(localState);
+    setIsLoaded(true);
+
     const safeArray = (arr: unknown): number[] =>
       Array.isArray(arr) ? arr.filter((x) => typeof x === "number") : [];
 
