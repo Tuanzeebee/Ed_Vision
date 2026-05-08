@@ -4,8 +4,12 @@ import { useNavigate } from "react-router-dom";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useAuth } from "@/hooks/useAuth";
-import { getWeeklyLeaderboard, getTotalLeaderboard, getPersonalStats, type LeaderboardEntry } from "@/services/api/leaderboardService";
+import { getWeeklyLeaderboard, getTotalLeaderboard, getPersonalStats, type LeaderboardEntry, type LeaderboardResponse, type PersonalStatsResponse } from "@/services/api/leaderboardService";
 import { getAvatarUrl } from "@/lib/avatarUtils";
+import cacheService from "@/services/cacheService";
+
+const LEADERBOARD_TTL = 30 * 1000; // 30s
+const PERSONAL_STATS_TTL = 30 * 1000;
 
 type DisplayUser = {
   id: string;
@@ -31,17 +35,42 @@ export default function ToeicFullLeaderboardPage() {
   const [totalEntries, setTotalEntries] = useState(0);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
 
-  // Fetch leaderboard data
+  // Fetch personal stats once — response chứa cả weeklyRank lẫn totalRank,
+  // không cần gọi lại khi đổi tab.
+  const [personalStats, setPersonalStats] = useState<PersonalStatsResponse | null>(null);
   useEffect(() => {
+    let cancelled = false;
+    const fetchStats = async () => {
+      try {
+        const stats = await cacheService.getOrFetch<PersonalStatsResponse>(
+          `leaderboard:personal-stats:${user?.id ?? "anon"}`,
+          () => getPersonalStats(),
+          PERSONAL_STATS_TTL,
+        );
+        if (!cancelled) setPersonalStats(stats);
+      } catch {
+        // ignore — sẽ fallback bằng entry trong bảng
+      }
+    };
+    fetchStats();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Fetch leaderboard data theo tab — có cache + cancel flag để tránh race condition
+  useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch all data for search/filter functionality
         const fetchFn = tab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
-        const response = await fetchFn(100, 0); // Fetch up to 100 entries
-        
-        // Convert backend entries to display format
+        const response = await cacheService.getOrFetch<LeaderboardResponse>(
+          `leaderboard:${tab}:100:0`,
+          () => fetchFn(100, 0),
+          LEADERBOARD_TTL,
+        );
+        if (cancelled) return;
+
         const displayUsers: DisplayUser[] = response.entries.map((entry) => ({
           id: `user-${entry.accountId}`,
           name: entry.username,
@@ -55,28 +84,25 @@ export default function ToeicFullLeaderboardPage() {
         setData(displayUsers);
         setTotalEntries(response.pagination.total);
 
-        // Fetch user personal stats for exact rank
-        try {
-          const stats = await getPersonalStats();
-          if (tab === "week") {
-            setCurrentUserRank(stats.rankings.weeklyRank);
-          } else {
-            setCurrentUserRank(stats.rankings.totalRank);
-          }
-        } catch {
-          // Fallback to searching in current page
+        // Lấy rank chính xác từ personal stats (đã fetch song song ở effect khác).
+        if (personalStats) {
+          setCurrentUserRank(
+            tab === "week" ? personalStats.rankings.weeklyRank : personalStats.rankings.totalRank,
+          );
+        } else {
           const userEntry = response.entries.find(e => e.accountId === user?.id);
           setCurrentUserRank(userEntry?.rank || null);
         }
       } catch {
-        setError("Không thể tải bảng xếp hạng. Vui lòng thử lại sau.");
+        if (!cancelled) setError("Không thể tải bảng xếp hạng. Vui lòng thử lại sau.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
-  }, [tab, user?.id]);
+    return () => { cancelled = true; };
+  }, [tab, user?.id, personalStats]);
 
   const filteredData = useMemo(() => {
     return data.filter(u => u.name.toLowerCase().includes(search.toLowerCase()));

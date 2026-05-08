@@ -21,6 +21,7 @@ import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OpenRouterService } from '../../common/services/openrouter.service';
 import { QuestionPointsCalculatorService } from '../../study-room/services/question-points-calculator.service';
+import { StreakTrackerService } from '../../study-room/services/streak-tracker.service';
 import { getWeekStart } from '../../study-room/leaderboard.constants';
 import {
   CreateEnrollmentDto,
@@ -159,7 +160,7 @@ type ToeicEnrollmentLeaderboardRow = Prisma.CertificateEnrollmentGetPayload<{
     student: {
       include: {
         account: {
-          include: { profile: true };
+          include: { profile: true; dailyStreak: true };
         };
       };
     };
@@ -1504,7 +1505,7 @@ export class CertificateEnrollmentService {
         student: {
           include: {
             account: {
-              include: { profile: true },
+              include: { profile: true, dailyStreak: true },
             },
           },
         },
@@ -1512,6 +1513,8 @@ export class CertificateEnrollmentService {
       orderBy: { updated_at: 'desc' },
       take: safeLimit,
     });
+
+    const now = new Date();
 
     return rows
       .map((row: ToeicEnrollmentLeaderboardRow) => {
@@ -1533,11 +1536,18 @@ export class CertificateEnrollmentService {
           row.student?.student_code ||
           `Student ${row.student_id}`;
 
+        const dailyStreak = row.student?.account?.dailyStreak ?? null;
+        const streak = StreakTrackerService.computeEffectiveCurrentStreak(
+          dailyStreak?.last_study_date ?? null,
+          dailyStreak?.current_streak ?? 0,
+          now,
+        );
+
         return {
           account_id: Number(row.student?.account_id ?? 0),
           name: String(name),
           score,
-          streak: Number(plan.listening_sessions + plan.reading_sessions),
+          streak,
           isCurrentUser: Number(row.student_id) === Number(studentId),
         } satisfies ToeicLeaderboardEntryDto;
       })

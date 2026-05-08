@@ -459,37 +459,58 @@ export class ToeicPracticeSessionService {
           q.source_item_id != null,
       );
 
-      // Sibling chỉ được merge vào group nếu nó KHÔNG có context_audio
-      // riêng (tránh nuốt mất câu hỏi Part 1/2 vốn 1 audio/1 câu, hoặc bất kỳ
-      // câu nào có audio độc lập). Khi gặp sibling có audio riêng → coi đó
-      // là anchor của nhóm khác, không gom.
-      const groups: QuestionRow[][] = allAnchors.map((anchor) => {
+      // Sibling được merge vào group khi:
+      //   - context_audio của nó là NULL (legacy: chỉ anchor gắn audio), HOẶC
+      //   - context_audio TRÙNG URL với anchor (data mới: chunker gán cùng URL
+      //     cho cả 3 câu trong Part 3/4 — xem toeic-practice-import.service
+      //     `chunkPracticeAudio`, targets = [n, n+1, n+2]).
+      // Nếu sibling có audio URL KHÁC → coi là anchor của nhóm khác, dừng gom.
+      // Đồng thời dedupe theo id (tránh Q33 vừa là sibling của Q32 vừa là
+      // anchor của nhóm [Q33]) — sắp xếp anchors theo source_item_id tăng
+      // dần để nhóm đầu (vd 32) "claim" các sibling trước.
+      const sortedAnchors = [...allAnchors].sort((a, b) => {
+        const slugCmp = (a.source_slug ?? '').localeCompare(b.source_slug ?? '');
+        if (slugCmp !== 0) return slugCmp;
+        return (a.source_item_id ?? 0) - (b.source_item_id ?? 0);
+      });
+      const assigned = new Set<number>();
+      const groups: QuestionRow[][] = [];
+      for (const anchor of sortedAnchors) {
+        if (assigned.has(anchor.id)) continue;
         const slug = anchor.source_slug as string;
         const startId = anchor.source_item_id as number;
+        const anchorAudio = anchor.context_audio as string;
         const group: QuestionRow[] = [anchor];
+        assigned.add(anchor.id);
         for (let offset = 1; offset <= 2; offset++) {
           const sibling = byKey.get(`${slug}:${startId + offset}`);
           if (!sibling) continue;
-          if (sibling.context_audio) break; // sibling có audio riêng → dừng nhóm
+          if (assigned.has(sibling.id)) continue;
+          const sibAudio = sibling.context_audio;
+          // Khác URL → sibling thuộc nhóm audio khác, dừng gom.
+          if (sibAudio && sibAudio !== anchorAudio) break;
           group.push(sibling);
+          assigned.add(sibling.id);
         }
-        return group;
-      });
+        groups.push(group);
+      }
 
-      // 3. Pick random groups cho tới khi đạt ~ targetCount câu.
-      //    Tránh cắt ngang nhóm (đảm bảo nhóm nào lấy thì lấy đủ 3 câu).
+      // 3. Pick random groups cho tới khi đạt đủ targetCount câu.
+      //    Ưu tiên giữ nguyên nhóm 3; nếu nhóm cuối dư thì cắt để tổng = 10
+      //    (cho phép câu lẻ ở cuối — theo yêu cầu nghiệp vụ).
       const shuffledGroups = this.shuffle(groups);
       selected = [];
       for (const group of shuffledGroups) {
         if (selected.length >= targetCount) break;
-        // Cho phép vượt target tối đa 2 câu để giữ nguyên nhóm cuối.
-        if (
-          selected.length + group.length > targetCount &&
-          selected.length >= targetCount - 1
-        ) {
+        const remaining = targetCount - selected.length;
+        if (group.length <= remaining) {
+          selected.push(...group);
+        } else {
+          // Nhóm cuối vượt target → chỉ lấy đủ số câu còn thiếu (giữ thứ tự
+          // anchor → sibling+1 → sibling+2 để sinh viên vẫn nghe đúng audio).
+          selected.push(...group.slice(0, remaining));
           break;
         }
-        selected.push(...group);
       }
 
       // 4. Fallback nếu không có anchor nào (vd dữ liệu chưa chunk audio):
