@@ -2480,13 +2480,27 @@ export class ToeicPracticeImportService {
       }
 
       for (const chunk of chunks) {
-        const itemId = qNumToId.get(chunk.question_number);
-        if (!itemId) continue;
-        await this.prisma.toeicPracticeQuestion.update({
-          where: { id: itemId },
-          data: { context_audio: chunk.url },
-        });
-        autoMappedCount++;
+        const isGroupedPart = chunk.part === 3 || chunk.part === 4;
+        // Trong TOEIC Part 3/4, mỗi audio chunk dùng chung cho 1 nhóm 3 câu
+        // (vd Q32-34, Q35-37, ...). Audio chunker chỉ trả `question_number`
+        // là câu đầu nhóm → tự lan ra +1, +2 để cả 3 câu cùng có audio.
+        const targets = isGroupedPart
+          ? [
+              chunk.question_number,
+              chunk.question_number + 1,
+              chunk.question_number + 2,
+            ]
+          : [chunk.question_number];
+
+        for (const qNum of targets) {
+          const itemId = qNumToId.get(qNum);
+          if (!itemId) continue;
+          await this.prisma.toeicPracticeQuestion.update({
+            where: { id: itemId },
+            data: { context_audio: chunk.url },
+          });
+          autoMappedCount++;
+        }
       }
     }
 

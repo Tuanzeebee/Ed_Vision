@@ -776,13 +776,26 @@ export class DiagnosticImportService {
       }
 
       for (const chunk of chunks) {
-        const itemId = qNumToItemId.get(chunk.question_number);
-        if (!itemId) continue;
-        await this.prisma.diagnosticRepositoryItem.update({
-          where: { id: itemId },
-          data: { media_audio_url: chunk.url },
-        });
-        autoMappedCount++;
+        const isGroupedPart = chunk.part === 3 || chunk.part === 4;
+        // Part 3/4: 1 audio dùng chung cho nhóm 3 câu liên tiếp.
+        // Lan media_audio_url ra +1, +2 để cả 3 câu đều có audio.
+        const targets = isGroupedPart
+          ? [
+              chunk.question_number,
+              chunk.question_number + 1,
+              chunk.question_number + 2,
+            ]
+          : [chunk.question_number];
+
+        for (const qNum of targets) {
+          const itemId = qNumToItemId.get(qNum);
+          if (!itemId) continue;
+          await this.prisma.diagnosticRepositoryItem.update({
+            where: { id: itemId },
+            data: { media_audio_url: chunk.url },
+          });
+          autoMappedCount++;
+        }
       }
     }
 
