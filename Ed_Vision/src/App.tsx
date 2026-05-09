@@ -10,7 +10,6 @@ import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
 import {
   SeasonalEffectProvider,
-  SeasonalToggleButton,
 } from "@/components/seasonal-effects";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/booking/AllAppointments";
@@ -122,8 +121,6 @@ function App() {
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <SeasonalEffectProvider forceEvent="CHRISTMAS">
         <Router>
-          {/* Seasonal Effects Toggle Button */}
-          <SeasonalToggleButton />
           {/* Session timeout warning removed - feature deleted */}
           <Routes>
             {/* Default route redirect to student landing */}

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import type { SeasonalEvent, SeasonalConfig, SeasonalEffectContextType } from "./types";
 import { SEASONAL_EVENTS } from "./types";
-import { Snowfall, ChristmasDecorations, ChristmasMusic } from "./christmas";
+
 import { useAuth } from "@/hooks/useAuth";
 
 const SeasonalEffectContext = createContext<SeasonalEffectContextType | null>(null);
@@ -107,12 +107,7 @@ return saved === null ? true : saved === "true";
 
     switch (config.event) {
       case "CHRISTMAS":
-        return (
-          <>
-            <Snowfall intensity="medium"/>
-            <ChristmasDecorations />
-            <ChristmasMusic volume={0.2} />
-          </>);
+        return null;
       // Thêm các event khác sau
       case "LUNAR_NEW_YEAR":
         // TODO: Thêm hiệu ứng Tết
