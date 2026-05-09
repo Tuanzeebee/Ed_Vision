@@ -1013,6 +1013,16 @@ export class DiagnosticImportService {
     let updatedCount = 0;
     const optionUpdates: Promise<any>[] = [];
 
+    // Build set of question_numbers present in DB items để xác định câu nào
+    // có trong file answer key nhưng không có item tương ứng (unmatched).
+    const dbQuestionNumbers = new Set<number>();
+    for (const item of items) {
+      const qNum = (item.metadata as any)?.question_number;
+      if (typeof qNum === 'number') dbQuestionNumbers.add(qNum);
+    }
+
+    const missingOptionQuestionNumbers: number[] = [];
+
     for (const item of items) {
       const qNum = (item.metadata as any)?.question_number;
       if (typeof qNum !== 'number') continue;
@@ -1045,7 +1055,18 @@ export class DiagnosticImportService {
           );
         }
         updatedCount++;
+      } else {
+        // Item tồn tại, có đáp án trong answer key, nhưng option_key không khớp
+        // bất kỳ option nào → đáp án parse ra (vd "D") nhưng câu hỏi chỉ có A/B/C
+        // (option bị thiếu khi import đề), hoặc OCR đáp án sai ký tự.
+        missingOptionQuestionNumbers.push(qNum);
       }
+    }
+
+    // Câu có trong answer key nhưng không có item trong DB
+    const unmatchedQuestionNumbers: number[] = [];
+    for (const qNum of answerKeyMap.keys()) {
+      if (!dbQuestionNumbers.has(qNum)) unmatchedQuestionNumbers.push(qNum);
     }
 
     if (optionUpdates.length > 0) {
@@ -1060,6 +1081,10 @@ export class DiagnosticImportService {
       repository_id: repository.id,
       slug: repository.slug,
       updated_count: updatedCount,
+      total_answer_keys: answerKeyMap.size,
+      total_db_items: items.length,
+      unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
     };
   }
 }
