@@ -9,7 +9,15 @@ import { getTrustedProxySetting } from './common/config/network.config';
 import { RedisIoAdapter } from './websocket/redis-io.adapter';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Disable global console.log, console.debug and console.warn if necessary
+  // Keep original to print the startup message
+  const originalConsoleLog = console.log;
+  console.log = () => {};
+  console.debug = () => {};
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn'],
+  });
 
   // Enable CORS
   app.enableCors({
@@ -69,6 +77,6 @@ async function bootstrap() {
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   const host = process.env.HOST || '0.0.0.0';
   await app.listen(port, host);
-  console.log(`Application is running on: http://${host}:${port}`);
+  originalConsoleLog(`Application is running on: http://${host}:${port}`);
 }
 bootstrap();
