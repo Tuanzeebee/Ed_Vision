@@ -110,8 +110,9 @@ export class RankingEngineService {
         });
       }
 
-      // Sort by score descending
-      entries.sort((a, b) => b.score - a.score);
+      // Sort by score DESC; tie-breaker: account_id ASC (user đăng ký lâu hơn
+      // = account_id nhỏ hơn → xếp trên) theo đúng mô tả UI trên frontend.
+      entries.sort((a, b) => b.score - a.score || a.accountId - b.accountId);
 
       // Assign ranks (handle tied scores)
       const rankedEntries = this.assignRanks(entries);
@@ -183,8 +184,8 @@ export class RankingEngineService {
         });
       }
 
-      // Sort by score descending
-      entries.sort((a, b) => b.score - a.score);
+      // Sort by score DESC; tie-breaker: account_id ASC (lâu năm xếp trên).
+      entries.sort((a, b) => b.score - a.score || a.accountId - b.accountId);
 
       // Assign ranks (handle tied scores)
       const rankedEntries = this.assignRanks(entries);
@@ -329,7 +330,10 @@ export class RankingEngineService {
         },
       });
 
-      // Filter by eligibility
+      // Batch eligibility — 1 round-trip của 3 query song song, thay vì N call.
+      const candidateIds = accounts.map((a) => a.account_id);
+      const eligibleSet = await this.eligibilityChecker.getEligibleAccountIdsBatch(candidateIds);
+
       const eligibleUsers: Array<{
         accountId: number;
         fullName: string;
@@ -338,15 +342,13 @@ export class RankingEngineService {
       }> = [];
 
       for (const account of accounts) {
-        const eligible = await this.eligibilityChecker.isEligible(account.account_id);
-        if (eligible && account.profile) {
-          eligibleUsers.push({
-            accountId: account.account_id,
-            fullName: account.profile.full_name,
-            avatarUrl: account.profile.avatar_url,
-            gender: account.profile.gender,
-          });
-        }
+        if (!eligibleSet.has(account.account_id) || !account.profile) continue;
+        eligibleUsers.push({
+          accountId: account.account_id,
+          fullName: account.profile.full_name,
+          avatarUrl: account.profile.avatar_url,
+          gender: account.profile.gender,
+        });
       }
 
       return eligibleUsers;
@@ -400,7 +402,10 @@ export class RankingEngineService {
         },
       });
 
-      // Filter by eligibility
+      // Batch eligibility — 1 round-trip của 3 query song song, thay vì N call.
+      const candidateIds = accounts.map((a) => a.account_id);
+      const eligibleSet = await this.eligibilityChecker.getEligibleAccountIdsBatch(candidateIds);
+
       const eligibleUsers: Array<{
         accountId: number;
         fullName: string;
@@ -410,16 +415,14 @@ export class RankingEngineService {
       }> = [];
 
       for (const account of accounts) {
-        const eligible = await this.eligibilityChecker.isEligible(account.account_id);
-        if (eligible && account.profile && account.studyStat) {
-          eligibleUsers.push({
-            accountId: account.account_id,
-            fullName: account.profile.full_name,
-            avatarUrl: account.profile.avatar_url,
-            gender: account.profile.gender,
-            totalMinutes: account.studyStat.total_minutes,
-          });
-        }
+        if (!eligibleSet.has(account.account_id) || !account.profile || !account.studyStat) continue;
+        eligibleUsers.push({
+          accountId: account.account_id,
+          fullName: account.profile.full_name,
+          avatarUrl: account.profile.avatar_url,
+          gender: account.profile.gender,
+          totalMinutes: account.studyStat.total_minutes,
+        });
       }
 
       return eligibleUsers;

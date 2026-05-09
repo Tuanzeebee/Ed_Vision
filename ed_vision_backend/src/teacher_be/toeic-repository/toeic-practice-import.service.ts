@@ -634,6 +634,27 @@ export class ToeicPracticeImportService {
     );
   }
 
+  /**
+   * Fix các artifact OCR thường gặp ở option marker đầu dòng cho TOEIC RC PDF:
+   *   - "(8)"  → "(B)"   (chữ B nhận nhầm thành digit 8)
+   *   - "(©)"  → "(C)"   (chữ C nhận nhầm thành ký tự copyright ©)
+   *   - "(¢)"  → "(C)"   (cent sign)
+   *   - "(®)"  → "(B)"   (registered sign, hiếm gặp nhưng tương tự)
+   *
+   * Chỉ áp dụng khi marker nằm ở ĐẦU DÒNG kèm theo `)` ngay sau, để tránh đụng
+   * vào nội dung passage hợp lệ (vd: footnote "(8)" giữa câu).
+   *
+   * Đây là root-cause của các trường hợp `missing_option_question_numbers`
+   * trên TOEIC Reading PDF: option B/C bị bỏ qua do regex `[A-D]` không match
+   * "8"/"©", khiến câu chỉ lưu được 2-3 options, đáp án thực không khớp.
+   */
+  private fixOcrOptionMarkers(line: string): string {
+    return line
+      .replace(/^\(\s*8\s*\)/u, '(B)')
+      .replace(/^\(\s*[©¢]\s*\)/u, '(C)')
+      .replace(/^\(\s*®\s*\)/u, '(B)');
+  }
+
   private extractInlineOptionsFromLine(line: string): {
     stem: string;
     options: ParsedOption[];
@@ -647,7 +668,13 @@ export class ToeicPracticeImportService {
       return { stem: line.trim(), options: [] };
     }
 
-    const stem = line.slice(0, markers[0].index ?? 0).trim();
+    // Lookbehind cho phép '(' trước A-D (để bắt option dạng "(A)"), nhưng không
+    // consume ký tự đó → phải tự cắt bỏ '(' / '[' / '{' dangling ở cuối stem,
+    // tránh trường hợp stem = "(" khi dòng chỉ chứa options dạng "(A) ... (B) ...".
+    const stem = line
+      .slice(0, markers[0].index ?? 0)
+      .replace(/[\s([{]+$/u, '')
+      .trim();
     const options: ParsedOption[] = [];
 
     for (let i = 0; i < markers.length; i += 1) {
@@ -1275,6 +1302,7 @@ export class ToeicPracticeImportService {
     const lines = normalized
       .split('\n')
       .map((l) => l.replace(/\s+/g, ' ').trim())
+      .map((l) => this.fixOcrOptionMarkers(l))
       .filter((l) => l.length > 0);
 
     const answerKeyMap = this.extractAnswerKeyMap(normalized);
@@ -1317,20 +1345,26 @@ export class ToeicPracticeImportService {
         .filter((o) => o.optionText.length > 0);
 
       // Targeted recovery cho TOEIC Part 7 dạng "In which of the positions marked
-      // [1], [2], [3], and [4]…" — option markers thường bị OCR phá ("(A M", "© @"…),
-      // dẫn đến parser bỏ qua câu. Vì đây là dạng câu chuẩn với đáp án cố định
-      // [1]/[2]/[3]/[4], ta inject lại canonical options nếu không trích được.
+      // [1], [2], [3], and [4]…" — option markers/text thường bị OCR phá:
+      //   (A) H]   → đúng là (A) [1]
+      //   (8) [2]  → (B) [2]   (đã được fix trước parser, nhưng option text vẫn
+      //                        có thể là "[2]" hoặc rác như "B]")
+      //   (©) [3]  → (C) [3]
+      //   (D) [4]
+      // Đây là dạng câu CHUẨN với đáp án CỐ ĐỊNH [1]/[2]/[3]/[4], không có biến
+      // thể nội dung. Ta luôn override về canonical khi nhận diện được stem,
+      // bất kể options.length, để đảm bảo đáp án đúng (B/C) không trỏ vào text rác.
       let needsReview = false;
-      if (options.length < 2) {
-        const stemPreview = wq!.stemLines.join(' ');
-        if (/in which of the positions marked\s*\[\s*1\s*\]/i.test(stemPreview)) {
-          options = [
-            { optionKey: 'A', optionText: '[1]', isCorrect: false },
-            { optionKey: 'B', optionText: '[2]', isCorrect: false },
-            { optionKey: 'C', optionText: '[3]', isCorrect: false },
-            { optionKey: 'D', optionText: '[4]', isCorrect: false },
-          ];
-        }
+      const stemPreview = wq!.stemLines.join(' ');
+      const isInWhichPositions =
+        /in which of the positions marked\s*\[\s*1\s*\]/i.test(stemPreview);
+      if (isInWhichPositions) {
+        options = [
+          { optionKey: 'A', optionText: '[1]', isCorrect: false },
+          { optionKey: 'B', optionText: '[2]', isCorrect: false },
+          { optionKey: 'C', optionText: '[3]', isCorrect: false },
+          { optionKey: 'D', optionText: '[4]', isCorrect: false },
+        ];
       }
 
       // Fallback chung cho Reading (Part 5/6/7): nếu câu có nhãn + stem hợp lệ

@@ -10,6 +10,8 @@ import cacheService from "@/services/cacheService";
 
 const LEADERBOARD_TTL = 30 * 1000; // 30s
 const PERSONAL_STATS_TTL = 30 * 1000;
+// Dùng chung cache key với StudentLeaderboard card để chuyển trang gần như tức thì.
+const LEADERBOARD_CACHE_KEY = (tab: "week" | "total") => `leaderboard:${tab}:100:0`;
 
 type DisplayUser = {
   id: string;
@@ -25,6 +27,11 @@ export default function ToeicFullLeaderboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [tab, setTab] = useState<"week" | "total">("week");
+
+  // Luôn scroll lên đầu khi vào trang (từ card nhỏ / URL trực tiếp / back).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
@@ -56,45 +63,61 @@ export default function ToeicFullLeaderboardPage() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // Fetch leaderboard data theo tab — có cache + cancel flag để tránh race condition
+  // Fetch leaderboard data theo tab — stale-while-revalidate để không bị spinner
+  // nhấp nháy khi đã có dữ liệu cũ.
+  // LƯU Ý: Không include `personalStats` vào deps (trước đây gây re-run + spinner lần 2).
   useEffect(() => {
     let cancelled = false;
-    const fetchData = async () => {
+
+    const mapEntries = (entries: LeaderboardEntry[]): DisplayUser[] =>
+      entries.map((entry) => ({
+        id: `user-${entry.accountId}`,
+        name: entry.username,
+        avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
+        score: entry.score,
+        streak: entry.currentStreak || 0,
+        isCurrentUser: entry.accountId === user?.id,
+        isOnline: entry.isOnline,
+      }));
+
+    const applyResponse = (response: LeaderboardResponse) => {
+      setData(mapEntries(response.entries));
+      setTotalEntries(response.pagination.total);
+      const userEntry = response.entries.find((e) => e.accountId === user?.id);
+      setCurrentUserRank((prev) => prev ?? userEntry?.rank ?? null);
+    };
+
+    // 1. Hiển thị cache stale ngay nếu có — không spinner flash.
+    const cached = cacheService.peek<LeaderboardResponse>(LEADERBOARD_CACHE_KEY(tab));
+    if (cached) {
+      applyResponse(cached);
+      setLoading(false);
+      setError(null);
+    } else {
       setLoading(true);
       setError(null);
+    }
+
+    // 2. Cache còn tươi — thôi không fetch nữa.
+    if (cacheService.isFresh(LEADERBOARD_CACHE_KEY(tab))) {
+      return () => { cancelled = true; };
+    }
+
+    // 3. Fetch nền.
+    const fetchData = async () => {
       try {
         const fetchFn = tab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
         const response = await cacheService.getOrFetch<LeaderboardResponse>(
-          `leaderboard:${tab}:100:0`,
+          LEADERBOARD_CACHE_KEY(tab),
           () => fetchFn(100, 0),
           LEADERBOARD_TTL,
         );
         if (cancelled) return;
-
-        const displayUsers: DisplayUser[] = response.entries.map((entry) => ({
-          id: `user-${entry.accountId}`,
-          name: entry.username,
-          avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
-          score: entry.score,
-          streak: entry.currentStreak || 0,
-          isCurrentUser: entry.accountId === user?.id,
-          isOnline: entry.isOnline,
-        }));
-
-        setData(displayUsers);
-        setTotalEntries(response.pagination.total);
-
-        // Lấy rank chính xác từ personal stats (đã fetch song song ở effect khác).
-        if (personalStats) {
-          setCurrentUserRank(
-            tab === "week" ? personalStats.rankings.weeklyRank : personalStats.rankings.totalRank,
-          );
-        } else {
-          const userEntry = response.entries.find(e => e.accountId === user?.id);
-          setCurrentUserRank(userEntry?.rank || null);
-        }
+        applyResponse(response);
       } catch {
-        if (!cancelled) setError("Không thể tải bảng xếp hạng. Vui lòng thử lại sau.");
+        if (!cancelled && !cached) {
+          setError("Không thể tải bảng xếp hạng. Vui lòng thử lại sau.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -102,7 +125,32 @@ export default function ToeicFullLeaderboardPage() {
 
     fetchData();
     return () => { cancelled = true; };
-  }, [tab, user?.id, personalStats]);
+  }, [tab, user?.id]);
+
+  // Cập nhật rank chính xác từ personal stats (tách khỏi leaderboard fetch để
+  // không trigger reload bảng khi stats resolve muộn).
+  useEffect(() => {
+    if (!personalStats) return;
+    setCurrentUserRank(
+      tab === "week" ? personalStats.rankings.weeklyRank : personalStats.rankings.totalRank,
+    );
+  }, [tab, personalStats]);
+
+  // Prefetch tab còn lại để đổi tab là hiện ngay.
+  useEffect(() => {
+    const otherTab = tab === "week" ? "total" : "week";
+    if (cacheService.isFresh(LEADERBOARD_CACHE_KEY(otherTab))) return;
+    const fetchFn = otherTab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
+    cacheService
+      .getOrFetch<LeaderboardResponse>(
+        LEADERBOARD_CACHE_KEY(otherTab),
+        () => fetchFn(100, 0),
+        LEADERBOARD_TTL,
+      )
+      .catch(() => {
+        // silent — prefetch không ảnh hưởng UI
+      });
+  }, [tab]);
 
   const filteredData = useMemo(() => {
     return data.filter(u => u.name.toLowerCase().includes(search.toLowerCase()));

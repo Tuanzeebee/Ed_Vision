@@ -243,18 +243,50 @@ export class QuestionPointsCalculatorService {
   }
 
   /**
-   * Get weekly EXP for multiple users (batch via Redis pipeline).
+   * Get weekly EXP for multiple users.
+   *
+   * Source of truth is Redis — `awardSessionPoints()` tích lũy EXP vào key
+   * `REDIS_KEY_WEEKLY_EXP(accountId, weekStart)`. Trước đây hàm này tổng hợp
+   * `ToeicPracticePartSession.earned_points` từ DB — cột đó thực chất là
+   * *reserve points* (thang điểm mở khóa practice), KHÔNG phải EXP → tất cả
+   * user hiển thị sai / 0 ở tab "Xếp hạng tuần".
    */
   async getWeeklyPointsBatch(
     accountIds: number[],
     weekStart: string,
   ): Promise<Map<number, number>> {
     const result = new Map<number, number>();
-    
+    for (const id of accountIds) result.set(id, 0);
+    if (accountIds.length === 0) return result;
+
+    // ── Primary path: Redis MGET ──────────────────────────────────────────
+    if (this.redis.isReady()) {
+      const client = this.redis.getClient();
+      if (client) {
+        try {
+          const keys = accountIds.map((id) =>
+            this.redis.getKey(REDIS_KEY_WEEKLY_EXP(id, weekStart)),
+          );
+          const values = await client.mGet(keys);
+          values.forEach((raw, idx) => {
+            const parsed = raw ? parseInt(raw, 10) : 0;
+            result.set(accountIds[idx], Number.isFinite(parsed) ? parsed : 0);
+          });
+          return result;
+        } catch (error) {
+          this.logger.warn(
+            `Redis MGET weekly EXP failed, will attempt DB fallback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
+      }
+    }
+
+    // ── Fallback: derive from practice sessions in DB ────────────────────
+    // LƯU Ý: `ToeicPracticePartSession.earned_points` là reserve-points chứ
+    // không phải EXP, nên kết quả là proxy gần đúng. Chỉ dùng khi Redis chết
+    // để tránh trả về toàn 0 (giữ hành vi cũ làm an toàn).
     try {
-      // Fallback to DB query for robust calculation
       const startDate = new Date(weekStart);
-      
       const sessions = await this.prisma.toeicPracticePartSession.findMany({
         where: {
           enrollment: { student: { account_id: { in: accountIds } } },
@@ -266,30 +298,16 @@ export class QuestionPointsCalculatorService {
         },
       });
 
-      // Aggregate by account_id
-      for (const id of accountIds) {
-        result.set(id, 0);
-      }
-
       for (const session of sessions) {
         const accId = session.enrollment.student.account_id;
-        const current = result.get(accId) || 0;
-        result.set(accId, current + session.earned_points);
+        result.set(accId, (result.get(accId) ?? 0) + session.earned_points);
       }
-
-      // Round all values
-      for (const [key, val] of result.entries()) {
-        result.set(key, Math.round(val));
-      }
-
+      for (const [key, val] of result.entries()) result.set(key, Math.round(val));
       return result;
     } catch (error) {
       this.logger.error(
-        `Failed to get weekly EXP batch from DB: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed DB fallback for weekly EXP batch: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      for (const id of accountIds) {
-        result.set(id, 0);
-      }
       return result;
     }
   }

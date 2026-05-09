@@ -8,6 +8,9 @@ import cacheService from "@/services/cacheService";
 
 const LEADERBOARD_TTL = 30 * 1000; // 30s
 const PERSONAL_STATS_TTL = 30 * 1000;
+// Cache chung cho cả trang full leaderboard (limit=100). Card nhỏ slice 10 dòng đầu.
+const LEADERBOARD_CACHE_KEY = (tab: "week" | "total") => `leaderboard:${tab}:100:0`;
+const DISPLAY_LIMIT = 10;
 
 type DisplayEntry = {
   id: string;
@@ -77,34 +80,49 @@ export default function StudentLeaderboard() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // Fetch leaderboard data based on tab (có cache + cancel flag để tránh race condition)
+  // Fetch leaderboard data based on tab — dùng stale-while-revalidate +
+  // cache chung (limit=100) với trang full để chuyển trang gần như tức thì.
   useEffect(() => {
     let cancelled = false;
-    const fetchLeaderboard = async () => {
+
+    const mapEntries = (entries: LeaderboardEntry[]): DisplayEntry[] =>
+      entries.slice(0, DISPLAY_LIMIT).map((entry) => ({
+        id: `user-${entry.accountId}`,
+        name: entry.username,
+        avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
+        score: entry.score,
+        streak: entry.currentStreak || 0,
+        isCurrentUser: entry.accountId === user?.id,
+        isOnline: entry.isOnline,
+      }));
+
+    // 1. Hiển thị dữ liệu stale (nếu có) ngay lập tức để tránh spinner nhấp nháy.
+    const cached = cacheService.peek<LeaderboardResponse>(LEADERBOARD_CACHE_KEY(tab));
+    if (cached) {
+      setData(mapEntries(cached.entries));
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
+
+    // 2. Nếu cache còn tươi thì thôi, không fetch lại.
+    if (cacheService.isFresh(LEADERBOARD_CACHE_KEY(tab))) {
+      return () => { cancelled = true; };
+    }
+
+    // 3. Fetch nền.
+    const fetchLeaderboard = async () => {
       try {
         const fetchFn = tab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
         const response = await cacheService.getOrFetch<LeaderboardResponse>(
-          `leaderboard:${tab}:10:0`,
-          () => fetchFn(10, 0),
+          LEADERBOARD_CACHE_KEY(tab),
+          () => fetchFn(100, 0),
           LEADERBOARD_TTL,
         );
         if (cancelled) return;
-
-        const displayData: DisplayEntry[] = response.entries.map((entry) => ({
-          id: `user-${entry.accountId}`,
-          name: entry.username,
-          avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
-          score: entry.score,
-          streak: entry.currentStreak || 0,
-          isCurrentUser: entry.accountId === user?.id,
-          isOnline: entry.isOnline,
-        }));
-
-        setData(displayData);
+        setData(mapEntries(response.entries));
       } catch {
-        // Silently fail — show empty state
-        if (!cancelled) setData([]);
+        if (!cancelled && !cached) setData([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -113,6 +131,22 @@ export default function StudentLeaderboard() {
     fetchLeaderboard();
     return () => { cancelled = true; };
   }, [tab, user?.id]);
+
+  // Prefetch tab còn lại để khi user đổi tab là có ngay.
+  useEffect(() => {
+    const otherTab = tab === "week" ? "total" : "week";
+    if (cacheService.isFresh(LEADERBOARD_CACHE_KEY(otherTab))) return;
+    const fetchFn = otherTab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
+    cacheService
+      .getOrFetch<LeaderboardResponse>(
+        LEADERBOARD_CACHE_KEY(otherTab),
+        () => fetchFn(100, 0),
+        LEADERBOARD_TTL,
+      )
+      .catch(() => {
+        // silent — prefetch không ảnh hưởng UI
+      });
+  }, [tab]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -253,7 +287,10 @@ export default function StudentLeaderboard() {
 
         <div className="p-3 border-t border-slate-50 text-center">
           <button
-            onClick={() => navigate("/student/leaderboard")}
+            onClick={() => {
+              navigate("/student/leaderboard");
+              window.scrollTo({ top: 0, behavior: "auto" });
+            }}
             className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline cursor-pointer transition-all"
           >
             Xem tất cả bảng xếp hạng &rarr;
