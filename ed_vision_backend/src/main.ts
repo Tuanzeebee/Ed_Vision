@@ -5,7 +5,10 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import * as express from 'express';
 import * as fs from 'fs';
-import { getTrustedProxySetting } from './common/config/network.config';
+import {
+  buildCorsOptions,
+  getTrustedProxySetting,
+} from './common/config/network.config';
 import { RedisIoAdapter } from './websocket/redis-io.adapter';
 
 async function bootstrap() {
@@ -19,13 +22,9 @@ async function bootstrap() {
     logger: ['error', 'warn'],
   });
 
-  // Enable CORS
-  app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'], // Vite dev and other local
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  });
+  // Enable CORS — origins được điều khiển qua CORS_ORIGINS env
+  // (xem src/common/config/network.config.ts)
+  app.enableCors(buildCorsOptions());
 
   // Create directories if they don't exist
   const uploadsDir = join(process.cwd(), 'uploads');

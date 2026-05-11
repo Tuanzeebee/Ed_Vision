@@ -1,0 +1,25 @@
+# Cloudflared ingress config (alternative to dashboard "Public Hostname" UI).
+# Dùng khi chạy cloudflared local bằng CLI thay vì cấu hình qua dashboard.
+#
+# Tunnel ID lấy từ dashboard Zero Trust > Networks > Tunnels.
+tunnel: 9494cb2a-f173-44dd-8a0d-503481163e74
+credentials-file: C:\Users\<USER>\.cloudflared\9494cb2a-f173-44dd-8a0d-503481163e74.json
+
+# Vite (port 5173) đóng vai trò gateway:
+#   /            -> Vite dev server (React)
+#   /api/*       -> proxy nội bộ -> NestJS :3000 (strip /api)
+#   /uploads/*   -> proxy nội bộ -> NestJS :3000
+#   /audio/*     -> proxy nội bộ -> NestJS :3000
+#   /socket.io/* -> proxy nội bộ -> NestJS :3000 (websocket)
+ingress:
+  - hostname: www.teamnghiencuu.id.vn
+    service: http://localhost:5173
+    originRequest:
+      # Tăng timeout cho streaming / SSE / long-poll
+      connectTimeout: 30s
+      noTLSVerify: true
+      # WebSocket cho HMR + socket.io
+      disableChunkedEncoding: false
+      httpHostHeader: www.teamnghiencuu.id.vn
+  # catch-all bắt buộc
+  - service: http_status:404

@@ -313,7 +313,7 @@ async function main() {
         INSERT INTO ielts_questions (
           skill, sub_skill_code, question_type, question_text,
           options, correct_answer, explanation,
-          passage_id, question_order, context_type,
+          passage_id, context_type,
           band_min, band_max, difficulty_weight, expected_time_sec,
           error_tag, topic_tags,
           irt_a, irt_b, irt_c,
@@ -321,16 +321,16 @@ async function main() {
         ) VALUES (
           'reading', $1, $2, $3,
           $4::jsonb, $5, $6,
-          $7::uuid, $8, 'passage',
-          $9, $10, 1.0, $11,
-          $12, $13::text[],
-          $14, $15, $16,
+          $7::uuid, 'passage',
+          $8, $9, 1.0, $10,
+          $11, $12::text[],
+          $13, $14, $15,
           true, 'approved', false
         )
       `,
         q.sub_skill_code, q.question_type, q.question_text,
         q.options, q.correct_answer, q.explanation,
-        passageId, q.question_order,
+        passageId,
         q.band_min, q.band_max, q.expected_time_sec,
         q.error_tag,
         `{${q.topic_tags.map(t => `"${t}"`).join(',')}}`,

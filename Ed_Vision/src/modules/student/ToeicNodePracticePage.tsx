@@ -23,6 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
+import { buildAssetUrl } from "@/services/api/config";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
 import { useAuth } from "@/hooks/useAuth";
@@ -1406,7 +1407,7 @@ export default function ToeicNodePracticePage() {
 
   const resolveAudioUrl = useCallback((url: string | null | undefined) => {
     if (!url) return null;
-    return url.startsWith("http") ? url : `http://localhost:3000${url}`;
+    return url.startsWith("http") ? url : buildAssetUrl(url);
   }, []);
 
   /**
@@ -3627,7 +3628,7 @@ export default function ToeicNodePracticePage() {
                     src={
                       currentQuestion.imageUrl.startsWith("http")
                         ? currentQuestion.imageUrl
-                        : `http://localhost:3000${currentQuestion.imageUrl}`
+                        : buildAssetUrl(currentQuestion.imageUrl)
                     }
                     alt="Listening context"
                     className="max-h-64 rounded-lg border border-slate-200 object-contain"
