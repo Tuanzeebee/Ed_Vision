@@ -847,7 +847,8 @@ export class ToeicPracticeImportService {
    * khiến parser chỉ nhận được câu cột-trái (vd: 40/100 câu Reading).
    */
   private async extractPdfTextColumnAware(buf: Buffer): Promise<string> {
-    const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    // @ts-ignore
+    const pdfjs: any = require('pdfjs-dist/legacy/build/pdf.js');
     const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
     try {
       const allLines: string[] = [];

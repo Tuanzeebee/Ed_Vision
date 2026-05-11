@@ -27,7 +27,28 @@ const SPEAKING_QUOTA = 1; // Speaking chỉ hỏi đúng 1 câu/test
 const SPEAKING_SKILL = 'speaking';
 const IRT_SKILLS = ['reading', 'listening', 'writing', 'vocabulary'];
 const INITIAL_BAND = 5.0;
-const ALLOWED_TYPES = ['mcq', 'gap_fill', 'true_false_ng', 'speaking'];
+const ALLOWED_TYPES = [
+  'mcq',
+  'multiple_choice',
+  'gap_fill',
+  'true_false_ng',
+  'true_false_not_given',
+  'yes_no_not_given',
+  'matching_headings',
+  'matching_information',
+  'matching_features',
+  'sentence_completion',
+  'summary_completion',
+  'note_completion',
+  'table_completion',
+  'flow_chart',
+  'diagram_labelling',
+  'short_answer',
+  'speaking',
+  'part1',
+  'part2',
+  'part3',
+];
 const STRENGTH_THRESHOLD = 0.75;
 const WEAKNESS_THRESHOLD = -0.75;
 
@@ -293,6 +314,22 @@ export class AdaptiveService {
       } as Prisma.IeltsPlacementAnswerUncheckedCreateInput,
     });
 
+    // ✅ Update question metrics (usedCount, correctRate)
+    const newUsedCount = (question.usedCount ?? 0) + 1;
+    const currentCorrectCount = Math.round(
+      Number(question.correctRate ?? 0) * (question.usedCount ?? 0),
+    );
+    const newCorrectCount = currentCorrectCount + (isCorrect ? 1 : 0);
+    const newCorrectRate = newCorrectCount / newUsedCount;
+
+    await this.prisma.ieltsQuestion.update({
+      where: { id: input.questionId },
+      data: {
+        usedCount: newUsedCount,
+        correctRate: newCorrectRate,
+      },
+    });
+
     const currentAnswer = {
       isCorrect,
       irtASnapshot: question.irtA,
@@ -498,7 +535,7 @@ export class AdaptiveService {
         FROM ielts_questions
         WHERE skill = ANY(${nonSpeakingSkills}::text[])
           AND status = 'approved' AND is_placement = true
-          AND question_type = ANY(${['mcq', 'gap_fill', 'true_false_ng']}::text[])
+          AND question_type = ANY(${ALLOWED_TYPES}::text[])
           AND irt_a IS NOT NULL AND irt_b IS NOT NULL
           AND id != ALL(${usedQuestionIds}::uuid[])
       `;

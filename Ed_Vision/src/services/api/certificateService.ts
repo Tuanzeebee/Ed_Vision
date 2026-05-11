@@ -141,6 +141,7 @@ export interface IeltsOcrImportPayload {
   replace_existing?: boolean;
   band_range?: string;
   exam_year?: string;
+  audio_url?: string;
 }
 
 export interface IeltsOcrImportResponse {
@@ -151,6 +152,7 @@ export interface IeltsOcrImportResponse {
   skipped_count: number;
   total_detected: number;
   source_filename: string;
+  passages?: number;
 }
 
 export interface ToeicAnswerKeyImportPayload {
@@ -541,6 +543,9 @@ export async function importIeltsExamFromOcrFile(
   }
   if (payload.exam_year) {
     formData.append("exam_year", payload.exam_year);
+  }
+  if (payload.audio_url) {
+    formData.append("audio_url", payload.audio_url);
   }
 
   const res = await apiClient.post<IeltsOcrImportResponse>(
@@ -1292,3 +1297,105 @@ export async function submitDiagnosticTest(
   );
   return res.data;
 }
+
+// ── IELTS Answer Key Import ───────────────────────────────────────────────────
+export interface IeltsAnswerKeyImportPayload {
+  repository_slug: string;
+  clear_existing?: boolean;
+}
+
+export interface IeltsAnswerKeyImportResponse {
+  repository_id: number;
+  slug: string;
+  skill_area: string;
+  source_filename: string;
+  total_answers_detected: number;
+  applied_items: number;
+  unanswered_items: number;
+  unknown_question_numbers: number[];
+}
+
+export async function importIeltsAnswerKeyFromFile(
+  payload: IeltsAnswerKeyImportPayload,
+  file: File,
+): Promise<IeltsAnswerKeyImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", payload.repository_slug);
+  if (typeof payload.clear_existing === "boolean") {
+    formData.append("clear_existing", String(payload.clear_existing));
+  }
+  const res = await apiClient.post<IeltsAnswerKeyImportResponse>(
+    "/teacher/ielts-repository/import-answer-key",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+// ── IELTS Practice Questions Import ──────────────────────────────────────────
+export interface IeltsPracticeImportPayload {
+  skill_area: "reading" | "listening" | "speaking" | "writing";
+  band_min: number;
+  band_max: number;
+  replace_existing?: boolean;
+}
+
+export interface IeltsPracticeImportResponse {
+  slug?: string;
+  imported_count: number;
+  skipped_count: number;
+  total_detected: number;
+  skill_area: string;
+  band_min: number;
+  band_max: number;
+  source_filename: string;
+}
+
+export async function importIeltsPracticeQuestions(
+  payload: IeltsPracticeImportPayload,
+  file: File,
+): Promise<IeltsPracticeImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("skill_area", payload.skill_area);
+  formData.append("band_min", String(payload.band_min));
+  formData.append("band_max", String(payload.band_max));
+  if (typeof payload.replace_existing === "boolean") {
+    formData.append("replace_existing", String(payload.replace_existing));
+  }
+  const res = await apiClient.post<IeltsPracticeImportResponse>(
+    "/teacher/ielts-repository/import-practice",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+// ── IELTS IRT Re-calibration ──────────────────────────────────────────────────
+export interface IeltsRecalibratePayload {
+  min_responses?: number;
+  skill?: string;
+}
+
+export interface IeltsRecalibrateResponse {
+  recalibrated_count: number;
+  skipped_count: number;
+  details: Array<{
+    question_id: string;
+    old_irt_b: number;
+    new_irt_b: number;
+    response_count: number;
+  }>;
+}
+
+export async function recalibrateIeltsIrt(
+  payload?: IeltsRecalibratePayload,
+): Promise<IeltsRecalibrateResponse> {
+  const res = await apiClient.post<IeltsRecalibrateResponse>(
+    "/teacher/ielts-repository/recalibrate",
+    payload ?? {},
+  );
+  return res.data;
+}
+
