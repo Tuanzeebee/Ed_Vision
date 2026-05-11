@@ -127,3 +127,39 @@ export class IeltsRepositoryDeleteResponseDto {
   deleted: boolean;
   items_deleted: number;
 }
+
+// ─── Practice import ─────────────────────────────────────────────────────────
+
+export class IeltsPracticeImportDto {
+  @IsString()
+  skill_area: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  band_min: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  band_max: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return false;
+  })
+  replace_existing?: boolean;
+}
+
+export class IeltsPracticeImportResponseDto {
+  slug: string;
+  imported_count: number;
+  skipped_count: number;
+  total_detected: number;
+  skill_area: string;
+  band_min: number;
+  band_max: number;
+  source_filename: string;
+}
+

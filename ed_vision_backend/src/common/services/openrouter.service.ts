@@ -399,6 +399,68 @@ If you cannot determine which group this image belongs to, respond with:
     return null;
   }
 
+  /**
+   * Generic text generation via OpenRouter.
+   */
+  async generate(
+    prompt: string,
+    options: { temperature?: number; max_tokens?: number } = {},
+  ): Promise<string> {
+    if (!this.apiKey) {
+      throw new Error('OPENROUTER_API_KEY is not set');
+    }
+
+    try {
+      const response = await axios.post(
+        this.apiUrl,
+        {
+          model: this.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: options.temperature ?? 0.1,
+          max_tokens: options.max_tokens ?? 1024,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://ed-vision.app',
+            'X-Title': 'Ed Vision AI Service',
+          },
+          timeout: 60_000,
+        },
+      );
+
+      return response.data?.choices?.[0]?.message?.content ?? '';
+    } catch (err: any) {
+      this.logger.error(`OpenRouter text generation failed: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate and parse JSON response.
+   */
+  async generateJson<T>(
+    prompt: string,
+    options: { temperature?: number; max_tokens?: number } = {},
+  ): Promise<T> {
+    const raw = await this.generate(prompt, options);
+    
+    // Strip markdown code fences
+    const cleaned = raw
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+
+    // Find JSON block
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error('OpenRouter response did not contain valid JSON');
+    }
+
+    return JSON.parse(match[0]) as T;
+  }
+
   private imageToBase64(absPath: string): string | null {
     try {
       const buffer = readFileSync(absPath);
