@@ -13,6 +13,7 @@ import {
   Volume2,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
+import { buildAssetUrl } from "@/services/api/config";
 import {
   importIeltsExamFromOcrFile,
   importToeicExamFromOcrFile,
@@ -25,8 +26,8 @@ import {
   type ToeicOcrImportResponse,
   type ToeicAnswerKeyImportResponse,
   type ToeicListeningImportResponse,
-  chunkListeningAudio,
-  type ToeicAudioChunkResponse,
+  uploadFullListeningAudio,
+  type FullAudioUploadResponse,
   listToeicRepositories,
   deleteToeicRepository,
   type ToeicRepositoryListItem,
@@ -123,12 +124,12 @@ export function ToeicRepositoryImportBody({
   const [listeningResult, setListeningResult] =
     useState<ToeicListeningImportResponse | null>(null);
 
-  // Inline audio state (matches DiagnosticImport pattern)
+  // Inline audio state
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [isAudioChunking, setIsAudioChunking] = useState(false);
-  const [audioChunkResult, setAudioChunkResult] =
-    useState<ToeicAudioChunkResponse | null>(null);
-  const [audioChunkError, setAudioChunkError] = useState<string | null>(null);
+  const [isAudioUploading, setIsAudioUploading] = useState(false);
+  const [fullAudioResult, setFullAudioResult] =
+    useState<FullAudioUploadResponse | null>(null);
+  const [audioUploadError, setAudioUploadError] = useState<string | null>(null);
 
   // Answer key state
   const [answerKeyFile, setAnswerKeyFile] = useState<File | null>(null);
@@ -212,9 +213,17 @@ export function ToeicRepositoryImportBody({
     }
     const loweredFileName = file.name.toLowerCase();
     if (examType === "toeic") {
-      if (!loweredFileName.endsWith(".pdf")) {
-        setError("TOEIC chỉ hỗ trợ file PDF. Vui lòng chọn file .pdf.");
-        return;
+      if (skillArea === "listening") {
+        if (!loweredFileName.endsWith(".pdf")) {
+          setError("TOEIC Listening chỉ hỗ trợ file PDF. Vui lòng chọn file .pdf.");
+          return;
+        }
+      } else {
+        const allowedExts = [".pdf", ".txt"];
+        if (!allowedExts.some(ext => loweredFileName.endsWith(ext))) {
+          setError("TOEIC Reading hỗ trợ file PDF hoặc TXT. Vui lòng chọn đúng định dạng.");
+          return;
+        }
       }
     } else {
       const allowedIeltsFile = [".pdf", ".txt", ".xlsx", ".xls"].some((ext) =>
@@ -233,8 +242,8 @@ export function ToeicRepositoryImportBody({
     setResult(null);
     setIeltsResult(null);
     setListeningResult(null);
-    setAudioChunkResult(null);
-    setAudioChunkError(null);
+    setFullAudioResult(null);
+    setAudioUploadError(null);
 
     try {
       if (examType === "ielts") {
@@ -279,23 +288,23 @@ export function ToeicRepositoryImportBody({
         setAnswerKeyRepositorySlug(response.slug);
         if (showRepoList) void loadRepoList();
 
-        // Auto-chunk audio if provided
+        // Upload full audio (no chunking) if provided
         if (audioFile) {
-          setIsAudioChunking(true);
+          setIsAudioUploading(true);
           try {
-            const chunkRes = await chunkListeningAudio(
-              { repository_slug: response.slug, method: "both", auto_map: true },
+            const audioRes = await uploadFullListeningAudio(
+              response.slug,
               audioFile,
             );
-            setAudioChunkResult(chunkRes);
+            setFullAudioResult(audioRes);
           } catch (audioErr: any) {
-            setAudioChunkError(
+            setAudioUploadError(
               audioErr?.response?.data?.message ??
               audioErr?.message ??
-              "Tách audio thất bại. Bạn có thể thử lại sau.",
+              "Upload audio thất bại. Bạn có thể thử lại sau.",
             );
           } finally {
-            setIsAudioChunking(false);
+            setIsAudioUploading(false);
           }
         }
       } else {
@@ -673,11 +682,11 @@ export function ToeicRepositoryImportBody({
             {/* PDF file */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
-                File đề thi {examType === "toeic" ? "(PDF)" : "(PDF/TXT/XLSX)"}
+                File đề thi {examType === "toeic" ? (skillArea === "listening" ? "(PDF)" : "(PDF/TXT)") : "(PDF/TXT/XLSX)"}
               </label>
               <input
                 type="file"
-                accept={examType === "toeic" ? ".pdf" : ".pdf,.txt,.xlsx,.xls"}
+                accept={examType === "toeic" ? (skillArea === "listening" ? ".pdf" : ".pdf,.txt") : ".pdf,.txt,.xlsx,.xls"}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className={`${fieldClass} cursor-pointer file:mr-3 file:border-0 file:rounded-lg file:px-3 file:py-1 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200`}
               />
@@ -685,7 +694,7 @@ export function ToeicRepositoryImportBody({
                 {examType === "toeic"
                   ? skillArea === "listening"
                     ? "Hệ thống sẽ tự động tách câu hỏi và trích xuất ảnh (Part 1)."
-                    : "Hệ thống sẽ tự động nhận dạng và phân tích câu hỏi."
+                    : "Hỗ trợ PDF/TXT. Parser sẽ tự động phân tích câu hỏi theo chuẩn TOEIC Reading."
                   : "Hỗ trợ: PDF, TXT, XLSX, XLS cho luồng import IELTS."}
               </p>
             </div>
@@ -703,7 +712,7 @@ export function ToeicRepositoryImportBody({
                   className={`${fieldClass} cursor-pointer file:mr-3 file:border-0 file:rounded-lg file:px-3 file:py-1 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200`}
                 />
                 <p className="mt-1 text-[10px] text-gray-500">
-                  Nếu tải lên file mp3 đơn lẻ chứa toàn bộ bài, hệ thống sẽ tự động dùng AI cắt và ghép vào từng câu hỏi.
+                  Upload file audio xuyên suốt bài thi (không tách). Audio sẽ chạy liên tục khi thí sinh làm bài như thi thật.
                 </p>
               </div>
             )}
@@ -807,24 +816,24 @@ export function ToeicRepositoryImportBody({
             </div>
           )}
 
-          {/* Audio chunk inline result */}
-          {isAudioChunking && (
+          {/* Full audio upload result */}
+          {isAudioUploading && (
             <div className="flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
               <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
-              <span>Đang tách audio, vui lòng chờ...</span>
+              <span>Đang upload audio...</span>
             </div>
           )}
-          {audioChunkError && (
+          {audioUploadError && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>Audio: {audioChunkError}</span>
+              <span>Audio: {audioUploadError}</span>
             </div>
           )}
-          {audioChunkResult && (
+          {fullAudioResult && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              <p className="font-semibold">Tách audio thành công ✓</p>
+              <p className="font-semibold">Upload audio thành công</p>
               <p className="mt-1 text-xs">
-                {audioChunkResult.total_chunks} đoạn | Đã gắn tự động: {audioChunkResult.auto_mapped_count} câu
+                Audio xuyên suốt đã được lưu cho bộ đề <span className="font-medium">{fullAudioResult.slug}</span>
               </p>
             </div>
           )}
@@ -924,7 +933,7 @@ export function ToeicRepositoryImportBody({
                             className="group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-shadow hover:shadow-md"
                           >
                             <img
-                              src={`http://localhost:3000${img.url}`}
+                              src={buildAssetUrl(img.url)}
                               alt={img.filename}
                               className="h-28 w-full object-cover transition-transform group-hover:scale-105"
                               loading="lazy"

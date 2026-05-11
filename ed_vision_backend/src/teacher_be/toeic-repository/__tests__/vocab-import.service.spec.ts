@@ -87,6 +87,115 @@ describe('RegexExtractor', () => {
     expect(result.map((r) => r.word)).toContain('abandon');
     expect(result.map((r) => r.word)).toContain('achieve');
   });
+
+  it('Pattern F: OCR bỏ mất colon — "18. Accept (v) chấp thuận" → parse được', () => {
+    const result = extractor.extract('18. Accept (v) chấp thuận');
+    expect(result).toHaveLength(1);
+    expect(result[0].word).toBe('accept');
+    expect(result[0].meaning).toBe('chấp thuận');
+  });
+
+  it('Pattern G: OCR mất POS lẫn colon — "14. Abstract bản tóm tắt" → parse được', () => {
+    const result = extractor.extract('14. Abstract bản tóm tắt');
+    expect(result).toHaveLength(1);
+    expect(result[0].word).toBe('abstract');
+    expect(result[0].meaning).toBe('bản tóm tắt');
+  });
+
+  it('splitMultiEntry: OCR merge 2 entry liền nhau — tách đúng', () => {
+    const input = '22. Accessible (a) : có thể tiếp cận được, tới được.23. Accommodate (v) : thích ứng';
+    const result = extractor.extract(input);
+    expect(result.length).toBe(2);
+    expect(result.map((r) => r.word)).toContain('accessible');
+    expect(result.map((r) => r.word)).toContain('accommodate');
+  });
+
+  it('OCR Tesseract VI nhầm dấu chấm thành dấu phẩy sau số — vẫn parse đủ', () => {
+    // Tesseract VN thường nhầm "23." → "23," (đặc biệt ở chữ in nhỏ)
+    // Trước fix: entry 23 dính vào meaning của entry 22 → mất 1 entry
+    const input = '22. Accessible (a) : có thể tiếp cận được, tới được.23, Accommodate (v) : thích ứng';
+    const result = extractor.extract(input);
+    expect(result.length).toBe(2);
+    expect(result.map((r) => r.word)).toContain('accessible');
+    expect(result.map((r) => r.word)).toContain('accommodate');
+  });
+
+  it('OCR mất hẳn dấu chấm sau số ("23 Accommodate") — vẫn split & parse được', () => {
+    const input = '22. Accessible (a) : có thể tiếp cận được, tới được. 23 Accommodate (v) : thích ứng';
+    const result = extractor.extract(input);
+    expect(result.length).toBeGreaterThanOrEqual(2);
+    expect(result.map((r) => r.word)).toContain('accessible');
+    expect(result.map((r) => r.word)).toContain('accommodate');
+  });
+
+  it('mergeLines: continuation tiếng Việt bắt đầu bằng chữ hoa → vẫn merge', () => {
+    const input = '19. Acceptable (adj) : có thể chấp\nNhận được';
+    const result = extractor.extract(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].word).toBe('acceptable');
+    expect(result[0].meaning).toContain('chấp');
+  });
+
+  it('Full TOEIC page simulation — 52 entries → parse ≥ 50 từ', () => {
+    const input = [
+      'TỪ VỰNG DÀNH CHO PHẦN ĐỌC HIỂU (TOEIC)',
+      '1. Abandon (v) : từ bỏ, bỏ',
+      '2. Abandonment (n) : sự bỏ rơi, tình trạng ruồng bỏ',
+      '3. Abeyance (n) : sự đình chỉ, hoãn lại',
+      '4. Abide (v) : tôn trọng, tuân theo',
+      '5. Able (adj) : có năng lực, có tư cách',
+      '6. Ability (n) : khả năng',
+      '7. Aboard (adv) : ở nước ngoài',
+      '8. Abrogate (v) : hủy bỏ, bãi bỏ',
+      '9. Abrogation (n) : sự bãi bỏ, bãi trừ',
+      '10. Absence (n) : sự vắng mặt, sự thiếu',
+      '11. Absent (adj) : vắng, thiếu',
+      '12. Absorb (v) : nuốt, gộp, tập trung vào',
+      '13. Absorption (n) : việc sát nhập, sự nhập chung công ty',
+      '14. Abstract (n) : bản tóm tắt',
+      '15. Abuse (v & n) : lạm dụng, sự lạm dụng',
+      '16. Accede (v) : đồng ý, tán thành',
+      '17. Accelerate (v) : thúc mau, giục gấp',
+      '18. Accept (v) : chấp thuận',
+      '19. Acceptable (adj) : có thể chấp nhận',
+      '20. Acceptance (n) : sự tán thành',
+      '21. Access (n) : tiếp cận',
+      '22. Accessible (a) : có thể tiếp cận được, tới được',
+      '23. Accommodate (v) : thích ứng, điều tiết, thích nghi',
+      '24. Accommodation (n) : sự hòa giải, dàn xếp, thích nghi',
+      '25. Accordingly (adv) : theo đó',
+      '26. Accordance (n) : sự phù hợp, sự theo đúng',
+      '27. Account (n) : bản quyết toán, kê khai',
+      '28. Accumulate (v) : chống chất, tích lũy',
+      '29. Accurate (adj) : đúng đắn, chính xác',
+      '30. Achive (v) : đạt được',
+      '31. Acquire (v) : thu được, giành được',
+      '32. Active (adj) : linh lợi, chủ động',
+      '33. Adapt (v) : thích hợp, thích nghi',
+      '34. Additional (adj) : thêm vào, phụ vào, tăng thêm',
+      '35. Adequate (adj) : thỏa đáng, tương xứng',
+      '36. Adhere (v) : bám chặt vào, tôn trọng',
+      '37. Adjourn (v) : dời lại, hoàn lại',
+      '38. Adjust (v) : điều chỉnh, dàn xếp',
+      '39. Adjustment (n) : việc điều chỉnh',
+      '40. Admit (v) : thừa nhận, thú nhận',
+      '41. Adopt (v) : chấp nhận, thông qua',
+      '42. Advance (v) : cải tiến',
+      '43. Advantage (n) : lợi thế',
+      '44. Advertise (v) : quảng cáo',
+      '45. Advertisement (n) : mẫu quảng cáo',
+      '46. Advice (n) : hướng dẫn, giấy báo',
+      '47. Advisable (adj) : thích hợp',
+      '48. Advise (v) : khuyên',
+      '49. Advocate (v) : biện hộ, tán thành',
+      '50. Affiliate (v) : gia nhập, liên kết',
+      '51. Affiliation (n) : chi nhánh',
+      '52. Affirmative (adj) : khẳng định, quả quyết',
+    ].join('\n');
+
+    const result = extractor.extract(input);
+    expect(result.length).toBe(52);
+  });
 });
 
 // ─── PreviewBuilder tests ──────────────────────────────────────────────────────

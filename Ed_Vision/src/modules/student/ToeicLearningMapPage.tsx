@@ -15,7 +15,13 @@ import {
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
+import { useAuth } from "@/hooks/useAuth";
 import { getToeicIntakeProfile } from "./toeicIntake";
+import { getToeicReservePoints, getToeicPlanSync } from "@/services/api/certificateService";
+import {
+  calculateToeicPracticeScore,
+  type ToeicScoreResult,
+} from "./toeicPracticeScore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface NodeInfo {
@@ -44,7 +50,12 @@ interface LearningMapState {
   reading: SkillMapState;
 }
 
-const MAP_STORAGE_KEY = "edvision.toeic.learningmap.v2";
+const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
+
+/** Storage key scoped theo user — tránh acc mới đọc data acc cũ */
+function getMapStorageKey(userId: string | number | undefined): string {
+  return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
+}
 
 // ── Listening: 5 separate nodes (Part 1, 2, 3, 4, Advanced) ───────────────
 const LISTENING_NODES: NodeInfo[] = [
@@ -188,9 +199,10 @@ const READING_NODES: NodeInfo[] = [
   },
 ];
 
-function loadMapState(): LearningMapState {
+function loadMapState(userId?: string | number): LearningMapState {
   try {
-    const raw = localStorage.getItem(MAP_STORAGE_KEY);
+    const key = getMapStorageKey(userId);
+    const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw) as LearningMapState;
   } catch {
     /* ignore */
@@ -780,6 +792,8 @@ function VideoBackground() {
 export default function ToeicLearningMapPage() {
   const { skillId } = useParams<{ skillId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = user?.account_id || user?.id;
 
   useToeicScrollReset();
 
@@ -789,24 +803,160 @@ export default function ToeicLearningMapPage() {
   const nodes = activeSkill === "listening" ? LISTENING_NODES : READING_NODES;
   const isListening = activeSkill === "listening";
 
-  const [mapState, setMapState] = useState<LearningMapState>(loadMapState);
+  const [mapState, setMapState] = useState<LearningMapState>({
+    listening: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+    reading: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+  });
   const [selectedNode, setSelectedNode] = useState<number>(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [baseScore, setBaseScore] = useState(300);   // Điểm gốc từ intake (KHÔNG bao gồm boost)
+  const [targetScore, setTargetScore] = useState(650);
 
-  const toeicProfile = getToeicIntakeProfile();
-  const currentScore = toeicProfile
-    ? Math.round(
-        toeicProfile.milestoneState.currentScore +
-          toeicProfile.milestoneState.totalBoost,
-      )
-    : 300;
-  const targetScore = toeicProfile?.milestoneState.targetScore ?? 650;
+  // ── Load dữ liệu từ API + merge với localStorage (giống CertificateReview) ─
+  useEffect(() => {
+    let cancelled = false;
+
+    // Đọc localStorage (scoped theo user) để merge với dữ liệu API
+    const localState = loadMapState(userId);
+
+    // Hiển thị ngay với localStorage để map không bao giờ bị treo loading.
+    // API call vẫn chạy ngầm và cập nhật state khi hoàn tất.
+    setMapState(localState);
+    setIsLoaded(true);
+
+    const safeArray = (arr: unknown): number[] =>
+      Array.isArray(arr) ? arr.filter((x) => typeof x === "number") : [];
+
+    const mergeSkillStates = (
+      apiState: SkillMapState,
+      local: SkillMapState,
+    ): SkillMapState => {
+      const apiCompleted = safeArray(apiState?.completedNodes);
+      const localCompleted = safeArray(local?.completedNodes);
+      const apiScores = safeArray(apiState?.nodeScores);
+      const localScores = safeArray(local?.nodeScores);
+
+      // Merge: lấy maximum completions từ cả 2 nguồn
+      const mergedCompleted = Array.from(
+        new Set([...apiCompleted, ...localCompleted]),
+      ).sort((a, b) => a - b);
+
+      const mergedScores: number[] = [];
+      const maxLen = Math.max(apiScores.length, localScores.length);
+      for (let i = 0; i < maxLen; i++) {
+        mergedScores[i] = Math.max(apiScores[i] ?? 0, localScores[i] ?? 0);
+      }
+
+      // Sequential unlock tính lại từ mergedCompleted
+      let unlockedUpTo = 0;
+      for (let i = 0; i < mergedCompleted.length; i++) {
+        if (mergedCompleted[i] === i) {
+          unlockedUpTo = i + 1;
+        } else {
+          break;
+        }
+      }
+      unlockedUpTo = Math.max(
+        unlockedUpTo,
+        apiState?.unlockedUpTo ?? 0,
+        local?.unlockedUpTo ?? 0,
+      );
+
+      return { unlockedUpTo, completedNodes: mergedCompleted, nodeScores: mergedScores };
+    };
+
+    Promise.all([
+      getToeicReservePoints().catch(() => null),
+      getToeicPlanSync().catch(() => null),
+    ])
+      .then(([reserveData, planData]) => {
+        if (cancelled) return;
+
+        if (reserveData) {
+          const completedParts = new Set(
+            Array.isArray(reserveData.completed_parts)
+              ? reserveData.completed_parts
+              : [],
+          );
+
+          const buildSkillState = (
+            partNumbers: number[],
+            totalNodes: number,
+          ): SkillMapState => {
+            const completedNodes: number[] = [];
+            const nodeScores: number[] = [];
+
+            partNumbers.forEach((part, nodeIdx) => {
+              if (completedParts.has(part)) {
+                completedNodes.push(nodeIdx);
+                const session = (reserveData.part_sessions ?? []).find(
+                  (s) => s.toeic_part === part,
+                );
+                nodeScores[nodeIdx] = session?.earned_points ?? 0;
+              }
+            });
+
+            // Sequential unlock
+            let unlockedUpTo = 0;
+            for (let i = 0; i < partNumbers.length; i++) {
+              if (completedNodes.includes(i)) {
+                unlockedUpTo = i + 1;
+              } else {
+                break;
+              }
+            }
+            unlockedUpTo = Math.min(unlockedUpTo, totalNodes - 1);
+
+            return { unlockedUpTo, completedNodes, nodeScores };
+          };
+
+          const apiListening = buildSkillState([1, 2, 3, 4], LISTENING_NODES.length);
+          const apiReading = buildSkillState([5, 6, 7], READING_NODES.length);
+
+          const merged: LearningMapState = {
+            listening: mergeSkillStates(apiListening, localState.listening),
+            reading: mergeSkillStates(apiReading, localState.reading),
+          };
+
+          setMapState(merged);
+
+          // Ghi lại merged state vào localStorage (scoped theo user)
+          try {
+            localStorage.setItem(getMapStorageKey(userId), JSON.stringify(merged));
+          } catch { /* ignore quota errors */ }
+        } else {
+          // API không khả dụng — dùng localStorage
+          setMapState(localState);
+        }
+
+        // Lấy điểm gốc (base) từ intake — KHÔNG bị ảnh hưởng bởi practice sessions
+        const profile = getToeicIntakeProfile();
+        if (profile) {
+          // profile.currentScore là điểm gốc từ lúc intake, không bị mutate
+          setBaseScore(Math.round(profile.currentScore));
+          setTargetScore(
+            planData?.target_score ?? profile.milestoneState.targetScore,
+          );
+        } else if (planData) {
+          // Fallback: API không có profile local → dùng planData
+          // current_score trên server có thể đã bị cộng boost cũ → trừ lại
+          const recoveredBase = Math.round(
+            planData.current_score - (planData.total_boost ?? 0),
+          );
+          setBaseScore(Math.max(10, recoveredBase));
+          setTargetScore(planData.target_score);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const skillState = mapState[activeSkill];
-
-  // Re-read state when skill changes
-  useEffect(() => {
-    setMapState(loadMapState());
-  }, [activeSkill]);
 
   const currentNodeIndex = useMemo(() => {
     const { unlockedUpTo, completedNodes } = skillState;
@@ -832,11 +982,91 @@ export default function ToeicLearningMapPage() {
   const totalNodes = nodes.length;
   const completedCount = skillState.completedNodes.length;
   const completionPercent = Math.round((completedCount / totalNodes) * 100);
-  const totalScoreGained = (skillState.nodeScores || []).reduce(
-    (a, b) => a + b,
-    0,
-  );
   const mascotNode = nodes[currentNodeIndex] ?? nodes[0];
+
+  // ── Tính điểm TOEIC ôn luyện (per-part cap, chống spam) ──
+  const practiceScore: ToeicScoreResult | null = useMemo(() => {
+    const listeningState = mapState.listening;
+    const readingState = mapState.reading;
+
+    // Chỉ tính khi có ít nhất 1 node hoàn thành
+    if (
+      listeningState.completedNodes.length === 0 &&
+      readingState.completedNodes.length === 0
+    ) {
+      return null;
+    }
+
+    // Map node index → part key (bỏ Mock Exam = node cuối)
+    // Listening nodes 0–3 → part1..part4
+    // Reading  nodes 0–2 → part5..part7
+    const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
+    const READING_PART_KEYS  = ["part5", "part6", "part7"];
+
+    const bestCorrectByPart: Record<string, number> = {};
+
+    // Ước lượng best correct từ nodeScores / scorePerCorrect
+    const fillBest = (
+      nodes: NodeInfo[],
+      state: SkillMapState,
+      partKeys: string[],
+    ) => {
+      const practiceNodes = nodes.slice(0, -1); // Bỏ Mock Exam
+      practiceNodes.forEach((node, i) => {
+        const partKey = partKeys[i];
+        if (!partKey) return;
+        if (state.completedNodes.includes(i)) {
+          const earned = (state.nodeScores || [])[i] ?? 0;
+          const correct =
+            node.scorePerCorrect > 0
+              ? Math.round(earned / node.scorePerCorrect)
+              : 0;
+          // Lấy MAX (best) — phòng trường hợp merge nhiều lần
+          bestCorrectByPart[partKey] = Math.max(
+            bestCorrectByPart[partKey] ?? 0,
+            correct,
+          );
+        }
+      });
+    };
+
+    fillBest(LISTENING_NODES, listeningState, LISTENING_PART_KEYS);
+    fillBest(READING_NODES, readingState, READING_PART_KEYS);
+
+    // Dải điểm = [baseScore, baseScore + 200]
+    const minBand = baseScore;
+    const maxBand = baseScore + 200;
+
+    return calculateToeicPracticeScore({
+      bestCorrectByPart,
+      minScore: minBand,
+      maxScore: maxBand,
+    });
+  }, [mapState, baseScore]);
+
+  // ── currentScore giờ do per-part cap quyết định, không phải totalBoost ──
+  const currentScore = practiceScore?.finalScore ?? baseScore;
+
+  // ── Map node index → per-part cap earned (thay thế nodeScores cũ để UI khớp) ──
+  const PART_KEYS_BY_SKILL: Record<string, string[]> = {
+    listening: ["part1", "part2", "part3", "part4"],
+    reading: ["part5", "part6", "part7"],
+  };
+
+  /** Lấy điểm earned từ per-part cap cho 1 node (bỏ Mock Exam node cuối) */
+  const getNodeEarned = (nodeIdx: number): number | null => {
+    if (!practiceScore) return null;
+    const partKeys = PART_KEYS_BY_SKILL[activeSkill] ?? [];
+    const partKey = partKeys[nodeIdx];
+    if (!partKey) return null; // Mock Exam node
+    const part = practiceScore.partDetails.find((p) => p.partKey === partKey);
+    return part ? part.earned : null;
+  };
+
+  // Tổng điểm earned của skill hiện tại từ per-part cap
+  const totalScoreGained = practiceScore
+    ? (practiceScore.skills.find((s) => s.key === activeSkill)?.totalEarned ?? 0)
+    : 0;
 
   const accentColor = isListening ? "teal" : "emerald";
   const accentCls = isListening
@@ -852,6 +1082,21 @@ export default function ToeicLearningMapPage() {
         score: "text-emerald-600",
         bar: "from-emerald-400 to-teal-400",
       };
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <div className="w-10 h-10 border-4 border-teal-400 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-slate-500 text-sm">Đang tải dữ liệu...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -937,7 +1182,7 @@ export default function ToeicLearningMapPage() {
                   <p className="text-slate-600 text-xs mt-0.5 drop-shadow">
                     {completedCount}/{totalNodes} node · {completionPercent}%
                     hoàn thành
-                    {totalScoreGained > 0 && ` · +${totalScoreGained}đ`}
+                    {totalScoreGained > 0 && ` · +${totalScoreGained.toFixed(1)}đ`}
                   </p>
                 </div>
                 <div className="text-right">
@@ -1017,6 +1262,8 @@ export default function ToeicLearningMapPage() {
                 Còn {Math.max(0, targetScore - currentScore)} điểm để đạt mục
                 tiêu
               </p>
+
+              {/* Scoring logic (practiceScore) vẫn hoạt động — chỉ ẩn panel chi tiết */}
             </div>
 
             {/* Selected node detail */}
@@ -1060,21 +1307,28 @@ export default function ToeicLearningMapPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 text-teal-400" />+
-                  {selectedNodeData.questionsCount *
-                    selectedNodeData.scorePerCorrect}{" "}
+                  {(() => {
+                    const partKeys = (PART_KEYS_BY_SKILL[activeSkill] ?? []);
+                    const pk = partKeys[selectedNode];
+                    if (!pk || !practiceScore) {
+                      return (selectedNodeData.questionsCount * selectedNodeData.scorePerCorrect).toFixed(1);
+                    }
+                    const pd = practiceScore.partDetails.find((p) => p.partKey === pk);
+                    return pd ? pd.cap.toFixed(1) : (selectedNodeData.questionsCount * selectedNodeData.scorePerCorrect).toFixed(1);
+                  })()}{" "}
                   điểm max
                 </span>
               </div>
 
-              {isNodeCompleted(selectedNode) &&
-                (skillState.nodeScores || [])[selectedNode] !== undefined && (
+              {isNodeCompleted(selectedNode) && (() => {
+                const earned = getNodeEarned(selectedNode);
+                return earned !== null ? (
                   <div className="mb-3 bg-emerald-50 rounded-xl p-3 text-sm text-emerald-700 font-semibold flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />
-                    Đã hoàn thành · +
-                    {(skillState.nodeScores || [])[selectedNode]} điểm đã tích
-                    lũy
+                    Đã hoàn thành · +{earned.toFixed(1)} điểm đã tích lũy
                   </div>
-                )}
+                ) : null;
+              })()}
 
               {!isNodeUnlocked(selectedNode) && (
                 <div className="mb-3 bg-slate-50 rounded-xl p-3 text-sm text-slate-500 flex items-center gap-2">
@@ -1179,12 +1433,14 @@ export default function ToeicLearningMapPage() {
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      {isNodeCompleted(i) &&
-                        (skillState.nodeScores || [])[i] !== undefined && (
+                      {isNodeCompleted(i) && (() => {
+                        const earned = getNodeEarned(i);
+                        return earned !== null ? (
                           <span className="text-xs text-emerald-600 font-bold block">
-                            +{(skillState.nodeScores || [])[i]}đ
+                            +{earned.toFixed(1)}đ
                           </span>
-                        )}
+                        ) : null;
+                      })()}
                       {isSummitNode(i) && (
                         <Flag className="w-4 h-4 text-amber-500" />
                       )}

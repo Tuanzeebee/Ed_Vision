@@ -16,9 +16,19 @@ interface NotificationDropdownProps {
   isAdminMode?: boolean;
   isTeacherMode?: boolean;
   isParentMode?: boolean;
+  variant?: 'default' | 'minimal';
+  buttonClassName?: string;
+  iconClassName?: string;
 }
 
-export default function NotificationDropdown({ isAdminMode, isTeacherMode, isParentMode }: NotificationDropdownProps) {
+export default function NotificationDropdown({
+  isAdminMode,
+  isTeacherMode,
+  isParentMode,
+  variant = 'default',
+  buttonClassName = '',
+  iconClassName = ''
+}: NotificationDropdownProps) {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
@@ -145,14 +155,25 @@ export default function NotificationDropdown({ isAdminMode, isTeacherMode, isPar
     }
   };
 
+  const isMinimal = variant === 'minimal';
+
+  const buttonClassNameComputed = isMinimal
+    ? `relative p-2 rounded-full transition-colors focus:outline-none cursor-pointer ${buttonClassName}`
+    : `relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none cursor-pointer ${buttonClassName}`;
+
+  const iconClassNameComputed = isMinimal
+    ? `w-5 h-5 ${iconClassName}`
+    : `w-5 h-5 text-gray-600 ${iconClassName}`;
+
   return (
     <div className="relative"ref={dropdownRef}>
       {/* Bell Icon Button */}
       <button
         onClick={() =>setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none cursor-pointer"aria-label={t('notifications.title')}
+        className={buttonClassNameComputed}
+        aria-label={t('notifications.title')}
       >
-        <svg className="w-5 h-5 text-gray-600"viewBox="0 0 24 24"fill="none"stroke="currentColor">
+        <svg className={iconClassNameComputed}viewBox="0 0 24 24"fill="none"stroke="currentColor">
           <path strokeWidth="2"strokeLinecap="round"strokeLinejoin="round"d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
         </svg>
         

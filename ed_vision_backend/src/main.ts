@@ -5,19 +5,26 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import * as express from 'express';
 import * as fs from 'fs';
-import { getTrustedProxySetting } from './common/config/network.config';
+import {
+  buildCorsOptions,
+  getTrustedProxySetting,
+} from './common/config/network.config';
 import { RedisIoAdapter } from './websocket/redis-io.adapter';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Disable global console.log, console.debug and console.warn if necessary
+  // Keep original to print the startup message
+  const originalConsoleLog = console.log;
+  console.log = () => {};
+  console.debug = () => {};
 
-  // Enable CORS
-  app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'], // Vite dev and other local
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn'],
   });
+
+  // Enable CORS — origins được điều khiển qua CORS_ORIGINS env
+  // (xem src/common/config/network.config.ts)
+  app.enableCors(buildCorsOptions());
 
   // Create directories if they don't exist
   const uploadsDir = join(process.cwd(), 'uploads');
@@ -32,9 +39,19 @@ async function bootstrap() {
     },
   );
 
-  // Serve static audio files
+  // Serve static audio files (legacy prefix)
   app.useStaticAssets(join(uploadsDir, 'audio'), {
     prefix: '/audio',
+  });
+
+  // Serve the entire uploads directory (images, audio, certificates, etc.)
+  app.useStaticAssets(uploadsDir, {
+    prefix: '/uploads',
+    setHeaders: (res) => {
+      // Cache static media aggressively; file names are content-hashed/unique.
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    },
   });
 
   app.set('trust proxy', getTrustedProxySetting());
@@ -59,6 +76,6 @@ async function bootstrap() {
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   const host = process.env.HOST || '0.0.0.0';
   await app.listen(port, host);
-  console.log(`Application is running on: http://${host}:${port}`);
+  originalConsoleLog(`Application is running on: http://${host}:${port}`);
 }
 bootstrap();

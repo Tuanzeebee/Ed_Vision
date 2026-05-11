@@ -10,7 +10,6 @@ import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
 import {
   SeasonalEffectProvider,
-  SeasonalToggleButton,
 } from "@/components/seasonal-effects";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/booking/AllAppointments";
@@ -33,6 +32,7 @@ import NotificationManagement from "./modules/admin/NotificationManagement";
 import NotificationPage from "./pages/NotificationPage";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
+import StudentLandingV2 from "@/modules/student/landingPage/src/App";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
 
 // New auth components (some components navigate to /auth/* so provide routes)
@@ -121,13 +121,14 @@ function App() {
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <SeasonalEffectProvider forceEvent="CHRISTMAS">
         <Router>
-          {/* Seasonal Effects Toggle Button */}
-          <SeasonalToggleButton />
           {/* Session timeout warning removed - feature deleted */}
           <Routes>
             {/* Default route redirect to student landing */}
             <Route path="/" element={<AuthRedirectWrapper><Navigate to="/student/landing" replace /></AuthRedirectWrapper>} />
 
+          {/* Student routes */}
+          <Route path="/student/landing" element={<StudentLandingV2 />} />
+          <Route path="/student/landing-v2" element={<StudentLandingV2 />} />
             {/* Student routes */}
             <Route path="/student/landing" element={<GradeForecastLanding />} />
             <Route path="/student/ielts-assessment" element={<IELTSAssessment />} />
@@ -174,6 +175,7 @@ function App() {
               <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/foundation/:tab" element={<ProtectedRoute permission="student_course_overview"><ToeicFoundationStudyPage /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/exam/:examType" element={<ProtectedRoute permission="student_course_overview"><ToeicExamSimulationPage /></ProtectedRoute>} />
+              <Route path="leaderboard" element={<ProtectedRoute permission="student_course_overview"><ToeicFullLeaderboardPage /></ProtectedRoute>} />
             </Route>
 
                                         {/* Route cho parent */}

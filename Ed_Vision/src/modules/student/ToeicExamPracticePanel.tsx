@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Clock3, Ear, FileText, Trophy, CheckCircle2 } from 'lucide-react'
 import { explainToeicAnswer, type ToeicRepositoryDetailResponse } from '@/services/api/certificateService'
+import NoSeekAudioPlayer from './components/NoSeekAudioPlayer'
 
 const LISTENING_FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80',
@@ -463,7 +464,11 @@ export default function ToeicExamPracticePanel({ repository, currentScore, onLiv
             {repository.skill_area === 'reading' ? `${currentPartLabel} · Câu hỏi` : 'Listening · Câu hỏi'}
           </div>
           {repository.skill_area === 'listening' && currentItem?.media_audio_url && (
-            <audio className="mb-4 w-full" controls src={currentItem.media_audio_url} />
+            <NoSeekAudioPlayer
+              key={(currentItem.id ?? 'audio') + '-audio'}
+              className="mb-4"
+              src={currentItem.media_audio_url}
+            />
           )}
           {repository.skill_area === 'listening' && listeningImageUrl && (
             <img

@@ -207,17 +207,20 @@ export class LeaderboardController {
     const startTime = Date.now();
 
     try {
-      // Fetch all data in parallel for performance
+      const weekStart = getWeekStart();
+
+      // Phase 1 — fetch cheap data + practice-session aggregates in parallel.
+      // totalExp is derived from ToeicPracticePartSession.earned_points so it
+      // stays consistent with the weekly EXP source (QuestionPointsCalculatorService)
+      // and the underlying practice scoring engine.
       const [
         studyStat,
         streakInfo,
         weeklyExp,
-        weeklyRank,
-        totalRank,
         eligibilityStatus,
         recentSessions,
+        student,
       ] = await Promise.all([
-        // Get total stats
         this.prisma.studyStat.findUnique({
           where: { account_id: accountId },
           select: {
@@ -225,17 +228,9 @@ export class LeaderboardController {
             total_sessions: true,
           },
         }),
-        // Get streak info
         this.streakTracker.getStreakInfo(accountId),
-        // Get weekly EXP
-        this.expCalculator.getWeeklyExp(accountId, getWeekStart()),
-        // Get weekly rank
-        this.rankingEngine.getUserRank(accountId, 'weekly'),
-        // Get total rank
-        this.rankingEngine.getUserRank(accountId, 'total'),
-        // Get eligibility status
+        this.expCalculator.getWeeklyExp(accountId, weekStart),
         this.eligibilityChecker.checkEligibility(accountId),
-        // Get recent sessions (last 10)
         this.prisma.studySession.findMany({
           where: {
             account_id: accountId,
@@ -250,10 +245,43 @@ export class LeaderboardController {
             duration_minutes: true,
           },
         }),
+        this.prisma.student.findUnique({
+          where: { account_id: accountId },
+          select: { student_id: true },
+        }),
       ]);
 
-      // Calculate total EXP (same as total minutes for now)
-      const totalExp = studyStat?.total_minutes ?? 0;
+      // Source-of-truth total EXP: TOEIC practice score gain.
+      // Mirrors the frontend formula in toeicPracticeScore.ts so the value
+      // shown by ToeicLearningMapPage's "+X.X điểm đã tích lũy" sums up to the
+      // exact same number displayed on CertificateReview / StudentLeaderboard.
+      // Formula: per part earned = (accuracy^0.85) × cap,
+      //          cap = (part_questions / total_all_questions) × 200
+      // Aggregated from MAX(correct_count) GROUP BY toeic_part across all of
+      // the user's TOEIC practice sessions.
+      let totalExp = 0;
+      if (student) {
+        const bestPerPart = await this.prisma.toeicPracticePartSession.groupBy({
+          by: ['toeic_part'],
+          where: { enrollment: { student_id: student.student_id } },
+          _max: { correct_count: true },
+        });
+        totalExp = this.computeToeicPracticeScoreGain(bestPerPart);
+      } else {
+        totalExp = studyStat?.total_minutes ?? 0;
+      }
+
+      // Phase 2 — only compute ranks when the user actually has activity.
+      // This avoids the expensive full-ranking pass for inactive users, which was
+      // the dominant cost of this endpoint on cold Redis cache.
+      const [weeklyRank, totalRank] = await Promise.all([
+        weeklyExp > 0
+          ? this.rankingEngine.getUserRank(accountId, 'weekly')
+          : Promise.resolve<number | null>(null),
+        totalExp > 0
+          ? this.rankingEngine.getUserRank(accountId, 'total')
+          : Promise.resolve<number | null>(null),
+      ]);
 
       // Map recent sessions to response format
       const recentSessionsResponse = recentSessions.map((session) => ({
@@ -300,6 +328,53 @@ export class LeaderboardController {
       );
       throw error;
     }
+  }
+
+  /**
+   * Compute the TOEIC practice score gain for a user.
+   *
+   * Mirrors the frontend formula in `Ed_Vision/src/modules/student/toeicPracticeScore.ts`
+   * so that the "Tổng điểm tích lũy" card on CertificateReview / StudentLeaderboard
+   * matches the per-node "+X.X điểm đã tích lũy" message on ToeicLearningMapPage.
+   *
+   *   cap_part   = (part_questions / total_all_questions) × 200
+   *   earned     = (accuracy ^ 0.85) × cap_part
+   *   totalGain  = Σ earned over all parts (capped per part by definition)
+   *
+   * Default config: parts 1..7 with question counts {1:6, 2-7:10}, total 66, range 200.
+   */
+  private computeToeicPracticeScoreGain(
+    bestPerPart: Array<{ toeic_part: number; _max: { correct_count: number | null } }>,
+  ): number {
+    const PART_QUESTIONS: Record<number, number> = {
+      1: 6,
+      2: 10,
+      3: 10,
+      4: 10,
+      5: 10,
+      6: 10,
+      7: 10,
+    };
+    const TOTAL_ALL_QUESTIONS = Object.values(PART_QUESTIONS).reduce((s, n) => s + n, 0); // 66
+    const RANGE = 200;
+    const CURVE_EXPONENT = 0.85;
+
+    let total = 0;
+    for (const row of bestPerPart) {
+      const questions = PART_QUESTIONS[row.toeic_part];
+      if (!questions) continue;
+      const bestCorrect = Math.max(0, Math.min(row._max.correct_count ?? 0, questions));
+      const accuracy = bestCorrect / questions;
+      const cap = (questions / TOTAL_ALL_QUESTIONS) * RANGE;
+      const rawEarned = Math.min(cap, Math.pow(accuracy, CURVE_EXPONENT) * cap);
+      // Round per-part to 2 decimals BEFORE summing — mirrors the frontend
+      // formula (toeicPracticeScore.ts: `parseFloat(earned.toFixed(2))`) so
+      // the aggregated total matches the "+X.X" practice node display exactly.
+      total += Math.round(rawEarned * 100) / 100;
+    }
+
+    // Final display rounds to 1 decimal (matches `.toFixed(1)` on the practice node).
+    return Math.round(total * 10) / 10;
   }
 
   /**

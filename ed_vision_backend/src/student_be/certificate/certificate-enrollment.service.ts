@@ -19,7 +19,9 @@ import * as XLSX from 'xlsx';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OpenRouterService } from '../../common/services/openrouter.service';
 import { QuestionPointsCalculatorService } from '../../study-room/services/question-points-calculator.service';
+import { StreakTrackerService } from '../../study-room/services/streak-tracker.service';
 import { getWeekStart } from '../../study-room/leaderboard.constants';
 import {
   CreateEnrollmentDto,
@@ -158,7 +160,7 @@ type ToeicEnrollmentLeaderboardRow = Prisma.CertificateEnrollmentGetPayload<{
     student: {
       include: {
         account: {
-          include: { profile: true };
+          include: { profile: true; dailyStreak: true };
         };
       };
     };
@@ -280,6 +282,7 @@ export class CertificateEnrollmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly questionPointsCalculator: QuestionPointsCalculatorService,
+    private readonly openRouter: OpenRouterService,
   ) { }
 
   private readonly inFlightExplanationGenerations = new Map<
@@ -1502,7 +1505,7 @@ export class CertificateEnrollmentService {
         student: {
           include: {
             account: {
-              include: { profile: true },
+              include: { profile: true, dailyStreak: true },
             },
           },
         },
@@ -1510,6 +1513,8 @@ export class CertificateEnrollmentService {
       orderBy: { updated_at: 'desc' },
       take: safeLimit,
     });
+
+    const now = new Date();
 
     return rows
       .map((row: ToeicEnrollmentLeaderboardRow) => {
@@ -1531,11 +1536,18 @@ export class CertificateEnrollmentService {
           row.student?.student_code ||
           `Student ${row.student_id}`;
 
+        const dailyStreak = row.student?.account?.dailyStreak ?? null;
+        const streak = StreakTrackerService.computeEffectiveCurrentStreak(
+          dailyStreak?.last_study_date ?? null,
+          dailyStreak?.current_streak ?? 0,
+          now,
+        );
+
         return {
           account_id: Number(row.student?.account_id ?? 0),
           name: String(name),
           score,
-          streak: Number(plan.listening_sessions + plan.reading_sessions),
+          streak,
           isCurrentUser: Number(row.student_id) === Number(studentId),
         } satisfies ToeicLeaderboardEntryDto;
       })
@@ -1921,7 +1933,7 @@ export class CertificateEnrollmentService {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-        
+
         const fileData = await readFile(file.path);
         let mimeType = file.mimetype || 'image/jpeg';
         if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
@@ -2880,6 +2892,13 @@ export class CertificateEnrollmentService {
     accountId: number,
     dto: ToeicOcrImportDto,
     file: Express.Multer.File,
+    externalParsed?: Array<{
+      questionNumber: number | null;
+      part: number | null;
+      stem: string;
+      context?: string | null;
+      options: Array<{ optionKey: string; optionText: string; isCorrect: boolean; rationale?: string | null }>;
+    }>,
   ): Promise<ToeicOcrImportResponseDto> {
     if (!file) {
       throw new BadRequestException('Vui lòng gửi file để OCR import.');
@@ -2889,28 +2908,47 @@ export class CertificateEnrollmentService {
       dto.skill_area,
       file.originalname || '',
     );
-    const rawText = await this.extractRawTextFromOcrImportFile(file);
 
-    const allowEmpty = (dto as any).allow_empty_parsing === true;
+    let parsedQuestions: ParsedOcrQuestion[];
 
-    if (!rawText || rawText.length < 40) {
-      if (!allowEmpty) {
-        throw new BadRequestException(
-          'OCR không trích xuất đủ text để tạo bộ câu hỏi.',
-        );
+    if (externalParsed && externalParsed.length > 0) {
+      // Use externally-parsed questions (e.g. from ToeicPracticeImportService)
+      parsedQuestions = externalParsed.map((q) => ({
+        questionNumber: q.questionNumber,
+        part: q.part,
+        stem: q.stem,
+        context: q.context ?? null,
+        options: q.options.map((opt) => ({
+          optionKey: opt.optionKey,
+          optionText: opt.optionText,
+          isCorrect: opt.isCorrect,
+          rationale: opt.rationale ?? null,
+        })),
+      }));
+    } else {
+      const rawText = await this.extractRawTextFromOcrImportFile(file);
+
+      const allowEmpty = (dto as any).allow_empty_parsing === true;
+
+      if (!rawText || rawText.length < 40) {
+        if (!allowEmpty) {
+          throw new BadRequestException(
+            'OCR không trích xuất đủ text để tạo bộ câu hỏi.',
+          );
+        }
       }
-    }
 
-    const parsedQuestions = this.parseToeicQuestionsFromOcrText(
-      rawText,
-      skillArea,
-    );
+      parsedQuestions = this.parseToeicQuestionsFromOcrText(
+        rawText,
+        skillArea,
+      );
 
-    if (parsedQuestions.length === 0) {
-      if (!allowEmpty) {
-        throw new BadRequestException(
-          'Không parse được câu hỏi hợp lệ từ nội dung OCR.',
-        );
+      if (parsedQuestions.length === 0) {
+        if (!allowEmpty) {
+          throw new BadRequestException(
+            'Không parse được câu hỏi hợp lệ từ nội dung OCR.',
+          );
+        }
       }
     }
 
@@ -4120,10 +4158,37 @@ export class CertificateEnrollmentService {
     return false;
   }
 
+  /**
+   * Primary: OpenRouter (fast, no local dependency)
+   * Fallback: Ollama (local, khi OpenRouter unavailable)
+   * Toggle: AI_TUTOR_PROVIDER=openrouter|ollama (default: openrouter)
+   */
   private async callOllamaTutorAnswer(
     prompt: string,
     model: string,
   ): Promise<string> {
+    const provider = (process.env.AI_TUTOR_PROVIDER ?? 'openrouter').trim().toLowerCase();
+
+    // ── Try OpenRouter first (unless explicitly set to ollama-only) ──
+    if (provider !== 'ollama' && this.openRouter.isAvailable()) {
+      try {
+        const result = await this.openRouter.chatCompletion(prompt, {
+          temperature: 0.2,
+          max_tokens: 600,
+        });
+        const answer = this.extractTutorAnswerFromRaw(result.answer);
+        const finalAnswer = answer.length > 0 ? answer : result.answer.trim();
+        if (finalAnswer.length >= 5) {
+          return finalAnswer;
+        }
+      } catch (err) {
+        // OpenRouter failed — fall through to Ollama
+        const logger = new Logger('CertificateEnrollmentService');
+        logger.warn(`OpenRouter tutor failed, falling back to Ollama: ${String(err)}`);
+      }
+    }
+
+    // ── Fallback: Ollama local ──
     const baseUrl =
       process.env.OLLAMA_BASE_URL?.trim() ||
       'http://127.0.0.1:11434/api/generate';
@@ -4980,6 +5045,17 @@ OUTPUT:
       throw new NotFoundException('Không tìm thấy bộ đề TOEIC.');
     }
 
+    // Check for an active (unsubmitted) exam session for this user + repo.
+    const activeSession = await this.prisma.toeicExamSession.findFirst({
+      where: {
+        account_id: accountId,
+        repository_id: repo.id,
+        submitted_at: null,
+      },
+      orderBy: { started_at: 'desc' },
+      select: { id: true },
+    });
+
     const metadata = (repo.metadata ?? {}) as Prisma.JsonObject;
 
     const totalItems = Number(repo.total_items ?? repo.items?.length ?? 0);
@@ -5030,6 +5106,7 @@ OUTPUT:
       title: String(repo.title),
       description: repo.description ?? null,
       skill_area: repo.skill_area ?? null,
+      full_audio_url: (metadata.full_audio_url as string) ?? null,
       milestone_score: Number(
         metadata.milestone_score ?? repo.target_score_min ?? 0,
       ),
@@ -5043,6 +5120,7 @@ OUTPUT:
       answer_key_configured_items: answerKeyConfiguredItems,
       answer_key_missing_items: answerKeyMissingItems,
       answer_key_ready: items.length > 0 && answerKeyMissingItems === 0,
+      active_session_id: activeSession?.id ?? null,
       items,
     };
   }

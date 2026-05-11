@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Target, Headphones, Languages, BookOpenCheck, Calendar } from "lucide-react";
-import { getToeicPlanSync } from "@/services/api/certificateService";
+import {
+  getToeicPlanSync,
+  getToeicReservePoints,
+} from "@/services/api/certificateService";
 import { useVocabStats } from "@/hooks/useVocab";
 
 type StatCardProps = {
@@ -45,20 +48,48 @@ export default function StudentPersonalStatistics({ enrollmentId }: StudentPerso
 
   const [listeningSessions, setListeningSessions] = useState(0);
   const [readingSessions, setReadingSessions] = useState(0);
+  const [examAttempts, setExamAttempts] = useState(0);
   const vocabStats = useVocabStats(enrollmentId ?? null);
   const knownWords = vocabStats?.knownWords ?? 0;
   const knownWordsDisplay = knownWords.toLocaleString('en-US');
 
   useEffect(() => {
+    // Full mock-exam attempts (counted in plan_sync whenever a full exam is submitted)
     getToeicPlanSync()
       .then((data) => {
         if (data) {
-          setListeningSessions(data.listening_sessions || 0);
-          setReadingSessions(data.reading_sessions || 0);
+          setExamAttempts(
+            (data.listening_sessions || 0) + (data.reading_sessions || 0),
+          );
         }
       })
       .catch(() => {
         // Silent catch
+      });
+
+    // Practice part sessions (Listening: parts 1-4, Reading: parts 5-7).
+    getToeicReservePoints()
+      .then((data) => {
+        console.log("[StudentPersonalStatistics] reserve-points response:", data);
+        // Prefer aggregate fields from backend (total across all sessions).
+        // Fallback: derive from part_sessions (last 20) for older backends.
+        let listening = Number(data.listening_sessions_count ?? NaN);
+        let reading = Number(data.reading_sessions_count ?? NaN);
+        if (!Number.isFinite(listening) || !Number.isFinite(reading)) {
+          let l = 0;
+          let r = 0;
+          for (const s of data.part_sessions ?? []) {
+            if (s.toeic_part >= 1 && s.toeic_part <= 4) l += 1;
+            else if (s.toeic_part >= 5 && s.toeic_part <= 7) r += 1;
+          }
+          if (!Number.isFinite(listening)) listening = l;
+          if (!Number.isFinite(reading)) reading = r;
+        }
+        setListeningSessions(listening);
+        setReadingSessions(reading);
+      })
+      .catch((err) => {
+        console.error("[StudentPersonalStatistics] reserve-points error:", err);
       });
   }, []);
 
@@ -92,7 +123,7 @@ export default function StudentPersonalStatistics({ enrollmentId }: StudentPerso
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Tổng lượt làm bài thi" 
-          value={listeningSessions + readingSessions} 
+          value={examAttempts} 
           todayAdd={0} 
           yesterdayAdd={0}
           icon={<Target className="w-4 h-4" />}

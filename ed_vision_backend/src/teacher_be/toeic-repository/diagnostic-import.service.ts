@@ -28,6 +28,7 @@ function surveyImagesRelDir(slug: string): string {
 
 import { IsOptional, IsString } from 'class-validator';
 import { CertificateEnrollmentService } from 'src/student_be/certificate/certificate-enrollment.service';
+import { ToeicPracticeImportService } from './toeic-practice-import.service';
 
 export interface ParsedOption {
   optionKey: string;
@@ -40,6 +41,7 @@ export interface ParsedDiagnosticQuestion {
   stem: string;
   options: ParsedOption[];
   detectedPart: number | null;
+  readingPassage?: string | null;
 }
 
 export class DiagnosticImportDto {
@@ -58,6 +60,7 @@ export class DiagnosticImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly openRouterService: OpenRouterService,
+    private readonly practiceImportService: ToeicPracticeImportService,
   ) { }
 
   // ── Extract Text ─────────────────────────────────────────────────────────────
@@ -327,7 +330,7 @@ export class DiagnosticImportService {
     score_band_min: number;
     score_band_max: number;
     difficulty_level: string;
-  } | null {
+  } {
     let score = 0; // 0 to 10
 
     // 1. Part factor (0-4 pts)
@@ -353,21 +356,20 @@ export class DiagnosticImportService {
     const matches = question.stem.match(advancedSuffixes);
     if (matches && matches.length > 1) score += 1;
 
-    // Đề khảo sát chỉ giới hạn max 500 điểm.
-    // Nếu câu hỏi quá khó (score > 8), lược bỏ (return null) vì nó không phù hợp để khảo sát.
-    if (score > 8) {
-      return null;
-    }
-
-    // Phân bổ dải điểm khảo sát (0 - 500)
+    // Phân bổ dải điểm khảo sát (0 - 990).
+    // Trước đây nếu score > 8 sẽ bị lược bỏ (return null) khiến nhiều câu Part 7
+    // có stem dài / vocab khó bị mất. Nay giữ lại toàn bộ, các câu rất khó được
+    // gom vào band expert (700-990) để đảm bảo đủ số câu nạp vào kho khảo sát.
     if (score <= 3) {
       return { score_band_min: 0, score_band_max: 150, difficulty_level: 'easy' };
     } else if (score <= 5) {
       return { score_band_min: 150, score_band_max: 300, difficulty_level: 'medium' };
     } else if (score <= 7) {
       return { score_band_min: 300, score_band_max: 450, difficulty_level: 'hard' };
-    } else {
+    } else if (score <= 8) {
       return { score_band_min: 450, score_band_max: 500, difficulty_level: 'expert' };
+    } else {
+      return { score_band_min: 700, score_band_max: 990, difficulty_level: 'expert_plus' };
     }
   }
 
@@ -378,12 +380,38 @@ export class DiagnosticImportService {
     body: any,
     file: Express.Multer.File,
   ): Promise<DiagnosticImportResponseDto> {
-    const rawText = await this.extractText(file);
-    if (!rawText.trim()) {
-      throw new BadRequestException('Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.');
-    }
+    // Dùng chung pipeline (extractText + parser) với module Nạp Câu Hỏi Ôn Luyện
+    // để đảm bảo Reading 100 câu (Part 5/6/7) được nhận diện đầy đủ — bao gồm cả
+    // bước trích text 2-cột bằng pdfjs-dist (chống lỗi pdf-parse trộn cột trái/phải).
+    const practiceParsed = await this.practiceImportService.extractAndParseFromFile(file);
 
-    let allParsedQuestions = this.parseQuestionsFromText(rawText);
+    // rawText dùng cho fallback Listening (image-based PDF) bên dưới.
+    const rawText = practiceParsed.length === 0 ? await this.extractText(file) : '';
+    if (practiceParsed.length === 0 && !rawText.trim()) {
+      const ext = extname(file.originalname || file.path).toLowerCase();
+      const selectedSkillArea = body.skill_area || 'reading';
+      const isListeningPdf = ext === '.pdf' && selectedSkillArea === 'listening';
+      if (!isListeningPdf) {
+        throw new BadRequestException('Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.');
+      }
+    }
+    let allParsedQuestions: ParsedDiagnosticQuestion[] = practiceParsed.map((q) => ({
+      questionNumber: q.questionNumber,
+      stem: q.stem,
+      options: q.options.map((opt) => ({
+        optionKey: opt.optionKey,
+        optionText: opt.optionText,
+        isCorrect: opt.isCorrect,
+      })),
+      detectedPart: q.detectedPart,
+      readingPassage: q.readingPassage ?? null,
+    }));
+
+    // Fallback parser cũ phòng khi pipeline practice trả 0 (vd: file Listening
+    // toàn ảnh, không có text) — giữ logic placeholder bên dưới hoạt động.
+    if (allParsedQuestions.length === 0) {
+      allParsedQuestions = this.parseQuestionsFromText(rawText);
+    }
     const certType = body.cert_type || 'toeic';
     const selectedSkillArea = body.skill_area || 'reading';
     const isPdf = extname(file.originalname || file.path).toLowerCase() === '.pdf';
@@ -486,11 +514,6 @@ export class DiagnosticImportService {
       const q = parsedQuestions[i];
       const difficulty = this.calculateHeuristicDifficulty(q);
 
-      // Bỏ qua câu hỏi quá khó (difficulty = null)
-      if (!difficulty) {
-        continue;
-      }
-
       const createdItem = await this.prisma.diagnosticRepositoryItem.create({
         data: {
           repository_id: newRepo.id,
@@ -499,6 +522,9 @@ export class DiagnosticImportService {
           skill_area: selectedSkillArea,
           part: q.detectedPart,
           stem: tryEncryptString(q.stem) ?? q.stem,
+          reading_passage: q.readingPassage
+            ? tryEncryptString(q.readingPassage) ?? q.readingPassage
+            : null,
           difficulty_level: difficulty.difficulty_level,
           score_band_min: difficulty.score_band_min,
           score_band_max: difficulty.score_band_max,
@@ -750,13 +776,26 @@ export class DiagnosticImportService {
       }
 
       for (const chunk of chunks) {
-        const itemId = qNumToItemId.get(chunk.question_number);
-        if (!itemId) continue;
-        await this.prisma.diagnosticRepositoryItem.update({
-          where: { id: itemId },
-          data: { media_audio_url: chunk.url },
-        });
-        autoMappedCount++;
+        const isGroupedPart = chunk.part === 3 || chunk.part === 4;
+        // Part 3/4: 1 audio dùng chung cho nhóm 3 câu liên tiếp.
+        // Lan media_audio_url ra +1, +2 để cả 3 câu đều có audio.
+        const targets = isGroupedPart
+          ? [
+              chunk.question_number,
+              chunk.question_number + 1,
+              chunk.question_number + 2,
+            ]
+          : [chunk.question_number];
+
+        for (const qNum of targets) {
+          const itemId = qNumToItemId.get(qNum);
+          if (!itemId) continue;
+          await this.prisma.diagnosticRepositoryItem.update({
+            where: { id: itemId },
+            data: { media_audio_url: chunk.url },
+          });
+          autoMappedCount++;
+        }
       }
     }
 
@@ -974,6 +1013,16 @@ export class DiagnosticImportService {
     let updatedCount = 0;
     const optionUpdates: Promise<any>[] = [];
 
+    // Build set of question_numbers present in DB items để xác định câu nào
+    // có trong file answer key nhưng không có item tương ứng (unmatched).
+    const dbQuestionNumbers = new Set<number>();
+    for (const item of items) {
+      const qNum = (item.metadata as any)?.question_number;
+      if (typeof qNum === 'number') dbQuestionNumbers.add(qNum);
+    }
+
+    const missingOptionQuestionNumbers: number[] = [];
+
     for (const item of items) {
       const qNum = (item.metadata as any)?.question_number;
       if (typeof qNum !== 'number') continue;
@@ -1006,7 +1055,18 @@ export class DiagnosticImportService {
           );
         }
         updatedCount++;
+      } else {
+        // Item tồn tại, có đáp án trong answer key, nhưng option_key không khớp
+        // bất kỳ option nào → đáp án parse ra (vd "D") nhưng câu hỏi chỉ có A/B/C
+        // (option bị thiếu khi import đề), hoặc OCR đáp án sai ký tự.
+        missingOptionQuestionNumbers.push(qNum);
       }
+    }
+
+    // Câu có trong answer key nhưng không có item trong DB
+    const unmatchedQuestionNumbers: number[] = [];
+    for (const qNum of answerKeyMap.keys()) {
+      if (!dbQuestionNumbers.has(qNum)) unmatchedQuestionNumbers.push(qNum);
     }
 
     if (optionUpdates.length > 0) {
@@ -1021,6 +1081,10 @@ export class DiagnosticImportService {
       repository_id: repository.id,
       slug: repository.slug,
       updated_count: updatedCount,
+      total_answer_keys: answerKeyMap.size,
+      total_db_items: items.length,
+      unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
     };
   }
 }

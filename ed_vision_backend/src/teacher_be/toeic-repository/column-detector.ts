@@ -99,6 +99,15 @@ export class ColumnDetector {
       // Sắp xếp theo x tăng dần (đảm bảo thứ tự trái-phải)
       columns.sort((a, b) => a.x - b.x);
 
+      // Thêm padding cho mỗi cột để không cắt mất chữ ở mép
+      const COL_PADDING = 10;
+      for (const col of columns) {
+        const newX = Math.max(0, col.x - COL_PADDING);
+        const newEnd = Math.min(width, col.x + col.width + COL_PADDING);
+        col.x = newX;
+        col.width = newEnd - newX;
+      }
+
       return {
         columns,
         originalWidth: width,

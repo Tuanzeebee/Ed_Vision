@@ -2,8 +2,15 @@ import { useState, useEffect } from "react";
 import { HelpCircle, Trophy, Crown, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { getWeeklyLeaderboard, getTotalLeaderboard, getPersonalStats, type LeaderboardEntry } from "@/services/api/leaderboardService";
+import { getWeeklyLeaderboard, getTotalLeaderboard, getPersonalStats, type LeaderboardEntry, type LeaderboardResponse, type PersonalStatsResponse } from "@/services/api/leaderboardService";
 import { getAvatarUrl } from "@/lib/avatarUtils";
+import cacheService from "@/services/cacheService";
+
+const LEADERBOARD_TTL = 30 * 1000; // 30s
+const PERSONAL_STATS_TTL = 30 * 1000;
+// Cache chung cho cả trang full leaderboard (limit=100). Card nhỏ slice 10 dòng đầu.
+const LEADERBOARD_CACHE_KEY = (tab: "week" | "total") => `leaderboard:${tab}:100:0`;
+const DISPLAY_LIMIT = 10;
 
 type DisplayEntry = {
   id: string;
@@ -15,10 +22,10 @@ type DisplayEntry = {
   isOnline: boolean;
 };
 
-/** Danh hiệu theo tổng điểm TOEIC */
+/** Danh hiệu theo điểm TOEIC tích lũy từ practice (dải 0–200, tỷ lệ 70%/30%) */
 function getRankBadge(score: number): { label: string; emoji: string; color: string; border: string; bg: string } {
-  if (score >= 700) return { label: "Cao cấp", emoji: "👑", color: "text-amber-700", border: "border-amber-400/40", bg: "bg-amber-500/15" };
-  if (score >= 300) return { label: "Trung cấp", emoji: "🔥", color: "text-orange-700", border: "border-orange-400/30", bg: "bg-orange-500/15" };
+  if (score >= 140) return { label: "Cao cấp", emoji: "👑", color: "text-amber-700", border: "border-amber-400/40", bg: "bg-amber-500/15" };
+  if (score >= 60) return { label: "Trung cấp", emoji: "🔥", color: "text-orange-700", border: "border-orange-400/30", bg: "bg-orange-500/15" };
   return { label: "Sơ cấp", emoji: "🌱", color: "text-emerald-700", border: "border-emerald-400/30", bg: "bg-emerald-500/15" };
 }
 
@@ -47,11 +54,17 @@ export default function StudentLeaderboard() {
 
   const rankBadge = getRankBadge(personalStats.totalScore);
 
-  // Fetch personal stats from leaderboard endpoint
+  // Fetch personal stats from leaderboard endpoint (có cache + cancel flag)
   useEffect(() => {
+    let cancelled = false;
     const fetchPersonalStats = async () => {
       try {
-        const stats = await getPersonalStats();
+        const stats = await cacheService.getOrFetch<PersonalStatsResponse>(
+          `leaderboard:personal-stats:${user?.id ?? "anon"}`,
+          () => getPersonalStats(),
+          PERSONAL_STATS_TTL,
+        );
+        if (cancelled) return;
         setPersonalStats({
           weeklyExp: stats.rankings.weeklyExp ?? 0,
           weeklyRank: stats.rankings.weeklyRank,
@@ -64,37 +77,76 @@ export default function StudentLeaderboard() {
     };
 
     fetchPersonalStats();
-  }, []);
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
-  // Fetch leaderboard data based on tab
+  // Fetch leaderboard data based on tab — dùng stale-while-revalidate +
+  // cache chung (limit=100) với trang full để chuyển trang gần như tức thì.
   useEffect(() => {
-    const fetchLeaderboard = async () => {
+    let cancelled = false;
+
+    const mapEntries = (entries: LeaderboardEntry[]): DisplayEntry[] =>
+      entries.slice(0, DISPLAY_LIMIT).map((entry) => ({
+        id: `user-${entry.accountId}`,
+        name: entry.username,
+        avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
+        score: entry.score,
+        streak: entry.currentStreak || 0,
+        isCurrentUser: entry.accountId === user?.id,
+        isOnline: entry.isOnline,
+      }));
+
+    // 1. Hiển thị dữ liệu stale (nếu có) ngay lập tức để tránh spinner nhấp nháy.
+    const cached = cacheService.peek<LeaderboardResponse>(LEADERBOARD_CACHE_KEY(tab));
+    if (cached) {
+      setData(mapEntries(cached.entries));
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
+
+    // 2. Nếu cache còn tươi thì thôi, không fetch lại.
+    if (cacheService.isFresh(LEADERBOARD_CACHE_KEY(tab))) {
+      return () => { cancelled = true; };
+    }
+
+    // 3. Fetch nền.
+    const fetchLeaderboard = async () => {
       try {
         const fetchFn = tab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
-        const response = await fetchFn(10, 0); // Top 10 entries
-
-        const displayData: DisplayEntry[] = response.entries.map((entry) => ({
-          id: `user-${entry.accountId}`,
-          name: entry.username,
-          avatar: getAvatarUrl(entry.avatarUrl, entry.gender),
-          score: entry.score,
-          streak: entry.currentStreak || 0,
-          isCurrentUser: entry.accountId === user?.id,
-          isOnline: entry.isOnline,
-        }));
-
-        setData(displayData);
+        const response = await cacheService.getOrFetch<LeaderboardResponse>(
+          LEADERBOARD_CACHE_KEY(tab),
+          () => fetchFn(100, 0),
+          LEADERBOARD_TTL,
+        );
+        if (cancelled) return;
+        setData(mapEntries(response.entries));
       } catch {
-        // Silently fail — show empty state
-        setData([]);
+        if (!cancelled && !cached) setData([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchLeaderboard();
+    return () => { cancelled = true; };
   }, [tab, user?.id]);
+
+  // Prefetch tab còn lại để khi user đổi tab là có ngay.
+  useEffect(() => {
+    const otherTab = tab === "week" ? "total" : "week";
+    if (cacheService.isFresh(LEADERBOARD_CACHE_KEY(otherTab))) return;
+    const fetchFn = otherTab === "week" ? getWeeklyLeaderboard : getTotalLeaderboard;
+    cacheService
+      .getOrFetch<LeaderboardResponse>(
+        LEADERBOARD_CACHE_KEY(otherTab),
+        () => fetchFn(100, 0),
+        LEADERBOARD_TTL,
+      )
+      .catch(() => {
+        // silent — prefetch không ảnh hưởng UI
+      });
+  }, [tab]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -146,7 +198,7 @@ export default function StudentLeaderboard() {
           </div>
           <div className="bg-slate-100/80 rounded-xl p-3 text-center">
             <p className="text-xs text-slate-500">Tổng điểm tích lũy</p>
-            <p className="text-2xl font-black text-green-500">{personalStats.totalScore}</p>
+            <p className="text-2xl font-black text-green-500">{personalStats.totalScore.toFixed(1)}</p>
           </div>
           <div className="bg-slate-100/80 rounded-xl p-3 text-center">
             <p className="text-xs text-slate-500">Hạng tổng</p>
@@ -235,7 +287,10 @@ export default function StudentLeaderboard() {
 
         <div className="p-3 border-t border-slate-50 text-center">
           <button
-            onClick={() => navigate("/student/leaderboard")}
+            onClick={() => {
+              navigate("/student/leaderboard");
+              window.scrollTo({ top: 0, behavior: "auto" });
+            }}
             className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline cursor-pointer transition-all"
           >
             Xem tất cả bảng xếp hạng &rarr;

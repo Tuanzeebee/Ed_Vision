@@ -131,6 +131,90 @@ export class EligibilityCheckerService {
   }
 
   /**
+   * Batch resolve eligibility for many accounts using 3 set-based SQL queries
+   * instead of N sequential `isEligible()` calls. This is the fast path used
+   * by the leaderboard ranking engine.
+   *
+   * Eligibility = (surveyCompleted OR toeicDiagnosticDone) AND goalInputSet
+   *
+   * @param candidateIds - Account IDs to check
+   * @returns Promise<Set<number>> - Set of eligible account IDs
+   */
+  async getEligibleAccountIdsBatch(candidateIds: number[]): Promise<Set<number>> {
+    const eligible = new Set<number>();
+    if (candidateIds.length === 0) return eligible;
+
+    try {
+      // Run 3 bulk queries in parallel — 1 round-trip each.
+      const [surveyDone, enrollments, students] = await Promise.all([
+        // A) Accounts that have at least one input-survey response.
+        this.prisma.surveyResponse.findMany({
+          where: {
+            account_id: { in: candidateIds },
+            survey: { type: 'input', is_active: true },
+          },
+          distinct: ['account_id'],
+          select: { account_id: true },
+        }),
+        // B+C) All enrollments of these candidate students in one shot.
+        this.prisma.certificateEnrollment.findMany({
+          where: {
+            student: { account_id: { in: candidateIds } },
+            OR: [
+              { target_score: { not: null } },
+              { AND: [{ cert_type: 'toeic' }, { current_score: { gt: 0 } }] },
+            ],
+          },
+          select: {
+            cert_type: true,
+            target_score: true,
+            current_score: true,
+            student: { select: { account_id: true } },
+          },
+        }),
+        // Map student → account for candidates (some might not be students).
+        this.prisma.student.findMany({
+          where: { account_id: { in: candidateIds } },
+          select: { account_id: true },
+        }),
+      ]);
+
+      const studentAccountSet = new Set(students.map((s) => s.account_id));
+      const surveySet = new Set(
+        surveyDone.map((r) => r.account_id).filter((id): id is number => id !== null),
+      );
+
+      // Build per-account flags from the enrollments batch.
+      const goalSet = new Set<number>();
+      const toeicDiagSet = new Set<number>();
+      for (const e of enrollments) {
+        const accId = e.student.account_id;
+        if (e.target_score !== null && e.target_score !== undefined) {
+          goalSet.add(accId);
+        }
+        if (e.cert_type === 'toeic' && (e.current_score ?? 0) > 0) {
+          toeicDiagSet.add(accId);
+        }
+      }
+
+      for (const id of candidateIds) {
+        // Must be a student to be eligible at all.
+        if (!studentAccountSet.has(id)) continue;
+        const surveyCompleted = surveySet.has(id) || toeicDiagSet.has(id);
+        const goalInputCompleted = goalSet.has(id);
+        if (surveyCompleted && goalInputCompleted) eligible.add(id);
+      }
+
+      return eligible;
+    } catch (error) {
+      this.logger.error(
+        `Failed batch eligibility check: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return eligible;
+    }
+  }
+
+  /**
    * Invalidate eligibility cache for a user
    * 
    * @param accountId - User account ID

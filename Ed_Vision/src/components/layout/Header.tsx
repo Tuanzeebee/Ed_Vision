@@ -189,6 +189,8 @@ export default function Header({
     }
   }
 
+  const logoSrc = "/src/assets/student/Logo_Predica.png"
+
   // mark unused prop as referenced to satisfy strict linting
   void isLandingPage
 
@@ -211,9 +213,9 @@ export default function Header({
             {isAdminMode ? (
               <h1 className="text-2xl font-bold text-gray-900">PREDICA</h1>
             ) : isTeacherMode ? (
-              <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
+              <img src={logoSrc} alt="Predica Logo" className="h-13 w-auto object-contain" />
             ) : (
-              <img src="/src/assets/shared/logo_predica.jpg" alt="Predica Logo" className="h-13 w-auto object-contain" />
+              <img src={logoSrc} alt="Predica Logo" className="h-13 w-auto object-contain" />
             )}
           </div>          {/* Navigation - chỉ hiển thị cho sinh viên, parent và trang chủ khi chưa login */}
           {showNavigation && (isLandingPage || (!isAuthenticated) || (isAuthenticated && (userRole === 'student' || userRole === 'parent'))) && !isAdminMode && !isTeacherMode && (

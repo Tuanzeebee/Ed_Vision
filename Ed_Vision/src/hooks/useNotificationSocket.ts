@@ -4,10 +4,6 @@ import { TokenManager } from '@/lib/tokenManager';
 import { fetchNotifications } from '@/stores/notificationStore';
 import { buildSocketUrl } from '@/services/api/config';
 
-const SOCKET_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  'http://localhost:3000';
-
 interface NotificationPayload {
   title: string;
   body: string;

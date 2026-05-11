@@ -256,8 +256,8 @@ export class OpenRouterService {
     const ext = extname(image.filename).toLowerCase().replace('.', '');
     const mimeType = ext === 'webp' ? 'image/webp'
       : ext === 'png' ? 'image/png'
-      : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
-      : 'image/webp';
+        : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+          : 'image/webp';
 
     const prompt = `You are analyzing a TOEIC Listening test image. This image was extracted from a PDF containing a TOEIC Listening test (Part 3 and Part 4).
 
@@ -400,6 +400,20 @@ If you cannot determine which group this image belongs to, respond with:
   }
 
   /**
+   * Generic text generation via OpenRouter (Alias for chat completion).
+   */
+  async chatCompletion(
+    prompt: string,
+    options: { temperature?: number; max_tokens?: number } = {},
+  ): Promise<{ answer: string; model: string }> {
+    const answer = await this.generate(prompt, options);
+    return {
+      answer,
+      model: this.model,
+    };
+  }
+
+  /**
    * Generic text generation via OpenRouter.
    */
   async generate(
@@ -445,7 +459,7 @@ If you cannot determine which group this image belongs to, respond with:
     options: { temperature?: number; max_tokens?: number } = {},
   ): Promise<T> {
     const raw = await this.generate(prompt, options);
-    
+
     // Strip markdown code fences
     const cleaned = raw
       .replace(/```json\s*/gi, '')

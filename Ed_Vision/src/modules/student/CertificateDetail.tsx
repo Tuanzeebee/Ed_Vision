@@ -49,6 +49,7 @@ import type { ToeicIntakeProfile } from "./toeicIntake";
 import {
   getToeicPlanSync,
   saveToeicPlanSync,
+  getToeicReservePoints,
 } from "@/services/api/certificateService";
 // Community discussions per cert type
 const DISCUSSIONS: Record<
@@ -142,10 +143,32 @@ export default function CertificateDetail() {
 
   // ── Dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
+  const [completedToeicParts, setCompletedToeicParts] = useState<number[]>([]);
   useEffect(() => {
     getEnrollment(cert.id)
       .then(setEnrollment)
       .catch(() => { });
+  }, [cert.id]);
+
+  useEffect(() => {
+    if (cert.id !== "toeic") {
+      setCompletedToeicParts([]);
+      return;
+    }
+    getToeicReservePoints()
+      .then((data) => {
+        if (Array.isArray(data.completed_parts) && data.completed_parts.length > 0) {
+          setCompletedToeicParts(data.completed_parts);
+          return;
+        }
+        // Fallback: derive from part_sessions for older backends.
+        const parts = new Set<number>();
+        for (const s of data.part_sessions ?? []) {
+          if (s.toeic_part >= 1 && s.toeic_part <= 7) parts.add(s.toeic_part);
+        }
+        setCompletedToeicParts(Array.from(parts).sort((a, b) => a - b));
+      })
+      .catch(() => setCompletedToeicParts([]));
   }, [cert.id]);
 
   // ── MOS Word Simulator ────────────────────────────────────────────────
@@ -183,14 +206,23 @@ export default function CertificateDetail() {
   }, [cert.id]);
 
   // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
-  // Tiến độ = current_score / target_score (điểm gốc so với mục tiêu)
+  // TOEIC: dùng completed_parts / 7 parts (số part học viên đã thực sự luyện),
+  //        khớp logic ở CertificateReview để hiển thị nhất quán.
+  // Khác: dùng progress_percent từ enrollment.
   const realProgress = (() => {
-    if (enrollment && isToeic) {
-      const currentScore = enrollment.current_score ?? toeicProfile?.milestoneState.currentScore ?? 0;
-      const targetScore = enrollment.target_score ?? toeicProfile?.milestoneState.targetScore ?? 0;
-      if (targetScore > 0) {
-        return Math.max(0, Math.min(100, Math.round((currentScore / targetScore) * 100)));
+    if (isToeic) {
+      const toeicTotalParts = 7;
+      const partsCompleted = completedToeicParts.length;
+      let progress = 0;
+      if (partsCompleted > 0) {
+        progress = Math.max(0, Math.min(100, Math.round((partsCompleted / toeicTotalParts) * 100)));
       }
+      // Fallback: nếu enrollment.progress_percent lớn hơn (đã được backend tính sẵn) thì dùng nó.
+      const enrollmentProgress = enrollment?.progress_percent != null
+        ? Math.max(0, Math.min(100, Math.round(Number(enrollment.progress_percent))))
+        : 0;
+      if (enrollmentProgress > progress) progress = enrollmentProgress;
+      return progress;
     }
     return enrollment
       ? Math.max(0, Math.min(100, Number(enrollment.progress_percent ?? 0)))
@@ -288,6 +320,16 @@ export default function CertificateDetail() {
   );
 
   // ── Derived data (depends on selectedBand + completed_topics thật) ──────────────
+  const completedPartSet = new Set(completedToeicParts);
+  // Extract part number from a TOEIC topic key like "listening.part3_short" → 3.
+  const extractToeicPartFromTopicKey = (topicKey?: string): number | null => {
+    if (!topicKey) return null;
+    const match = topicKey.match(/^(?:listening|reading)\.part(\d)/i);
+    if (!match) return null;
+    const part = Number(match[1]);
+    return Number.isFinite(part) && part >= 1 && part <= 7 ? part : null;
+  };
+
   const skills = getSkills(cert.id, selectedBand ?? undefined)
     .filter((section) => {
       if (!isToeic) return true;
@@ -295,12 +337,22 @@ export default function CertificateDetail() {
     })
     .map((section) => ({
       ...section,
-      topics: section.topics.map((t) => ({
-        ...t,
-        done: t.topicKey
+      topics: section.topics.map((t) => {
+        const fromEnrollment = t.topicKey
           ? (enrollment?.completed_topics ?? []).includes(t.topicKey)
-          : t.done,
-      })),
+          : false;
+        // For TOEIC, also mark a topic done if the student has completed
+        // any practice session for the matching part (part number parsed from topicKey).
+        let fromPractice = false;
+        if (isToeic) {
+          const part = extractToeicPartFromTopicKey(t.topicKey);
+          if (part && completedPartSet.has(part)) fromPractice = true;
+        }
+        return {
+          ...t,
+          done: fromEnrollment || fromPractice || (!t.topicKey && t.done),
+        };
+      }),
     }));
   const radarData = isToeic
     ? [radarDataRaw[2] ?? 68, radarDataRaw[3] ?? 64]

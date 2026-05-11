@@ -25,7 +25,76 @@ export interface StreakInfo {
 export class StreakTrackerService {
   private readonly logger = new Logger(StreakTrackerService.name);
 
+  /**
+   * Offset (phút) so với UTC dùng để xác định "ngày" của user. Mặc định 420
+   * (UTC+7 — Asia/Ho_Chi_Minh) để streak khớp với lịch VN, không phụ thuộc
+   * timezone của server (Docker thường chạy UTC). Có thể override bằng env
+   * `STREAK_TIMEZONE_OFFSET_MINUTES`.
+   */
+  private static readonly TZ_OFFSET_MINUTES = (() => {
+    const raw = Number.parseInt(
+      process.env.STREAK_TIMEZONE_OFFSET_MINUTES?.trim() ?? '420',
+      10,
+    );
+    return Number.isFinite(raw) ? raw : 420;
+  })();
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Compute the *effective* current streak based on the last study date.
+   *
+   * The streak persisted in DB is only updated when the user studies again.
+   * If the user has skipped one or more full days since `lastStudyDate`, the
+   * stored counter is stale and the effective streak must be reported as 0
+   * (broken) until they study again (which resets it to 1 in the write path).
+   *
+   * Rules (calendar days, local-time normalized):
+   * - lastStudyDate is null or storedCurrent <= 0 → 0
+   * - diff in days <= 1 (today or yesterday) → storedCurrent (still active)
+   * - diff in days >= 2 (missed at least one full day) → 0
+   */
+  static computeEffectiveCurrentStreak(
+    lastStudyDate: Date | null,
+    storedCurrent: number,
+    now: Date = new Date(),
+  ): number {
+    if (!lastStudyDate || storedCurrent <= 0) {
+      return 0;
+    }
+
+    const today = StreakTrackerService.toLocalDateOnly(now);
+    const last = StreakTrackerService.toLocalDateOnly(lastStudyDate);
+
+    const diffDays = Math.floor(
+      (today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // Future last_study_date (clock skew) — treat as still active.
+    if (diffDays <= 1) {
+      return storedCurrent;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Trả về Date đại diện cho 00:00 (UTC) của *ngày theo timezone user* tương
+   * ứng với timestamp `date`. Nhờ vậy, mọi so sánh ngày (diff, equals) độc
+   * lập với timezone của server. Khớp với cột `@db.Date` của Prisma vì giá
+   * trị trả về luôn nằm tại UTC midnight của ngày local đó.
+   */
+  static toLocalDateOnly(date: Date): Date {
+    const offsetMs = StreakTrackerService.TZ_OFFSET_MINUTES * 60 * 1000;
+    const shifted = new Date(date.getTime() + offsetMs);
+    return new Date(
+      Date.UTC(
+        shifted.getUTCFullYear(),
+        shifted.getUTCMonth(),
+        shifted.getUTCDate(),
+      ),
+    );
+  }
 
   /**
    * Update streak for a user after completing a study session
@@ -160,10 +229,13 @@ export class StreakTrackerService {
     try {
       const streak = await this.prisma.dailyStreak.findUnique({
         where: { account_id: accountId },
-        select: { current_streak: true },
+        select: { current_streak: true, last_study_date: true },
       });
 
-      return streak?.current_streak ?? 0;
+      return StreakTrackerService.computeEffectiveCurrentStreak(
+        streak?.last_study_date ?? null,
+        streak?.current_streak ?? 0,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to get current streak for account ${accountId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -215,7 +287,10 @@ export class StreakTrackerService {
       }
 
       return {
-        currentStreak: streak.current_streak,
+        currentStreak: StreakTrackerService.computeEffectiveCurrentStreak(
+          streak.last_study_date,
+          streak.current_streak,
+        ),
         longestStreak: streak.longest_streak,
         lastStudyDate: streak.last_study_date,
       };
@@ -248,9 +323,14 @@ export class StreakTrackerService {
       });
 
       // Create map from results
+      const now = new Date();
       for (const streak of streaks) {
         result.set(streak.account_id, {
-          currentStreak: streak.current_streak,
+          currentStreak: StreakTrackerService.computeEffectiveCurrentStreak(
+            streak.last_study_date,
+            streak.current_streak,
+            now,
+          ),
           longestStreak: streak.longest_streak,
           lastStudyDate: streak.last_study_date,
         });
@@ -277,15 +357,11 @@ export class StreakTrackerService {
   }
 
   /**
-   * Normalize date to midnight (remove time component)
-   * 
-   * @param date - Date to normalize
-   * @returns Date at midnight
+   * Normalize date to start-of-day theo timezone của user (mặc định UTC+7).
+   * Dùng `toLocalDateOnly` để không phụ thuộc timezone của server.
    */
   private normalizeDate(date: Date): Date {
-    const normalized = new Date(date);
-    normalized.setHours(0, 0, 0, 0);
-    return normalized;
+    return StreakTrackerService.toLocalDateOnly(date);
   }
 
   /**

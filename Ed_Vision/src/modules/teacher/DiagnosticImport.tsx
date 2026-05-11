@@ -239,11 +239,33 @@ export function DiagnosticImportBody({ certType }: { certType: "toeic" | "ielts"
           )}
 
           {answerKeyResult && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 space-y-1">
               <p className="font-semibold">Nạp đáp án thành công</p>
-              <p className="mt-1 text-xs">
-                Mã đề: <strong>{answerKeyResult.slug}</strong> | Cập nhật: <strong>{answerKeyResult.updated_count}</strong> câu.
+              <p className="text-xs">
+                Mã đề: <strong>{answerKeyResult.slug}</strong> | Cập nhật:{" "}
+                <strong>{answerKeyResult.updated_count}</strong> câu
+                {typeof answerKeyResult.total_answer_keys === "number" && (
+                  <>
+                    {" "}/ Tổng đáp án trong file: <strong>{answerKeyResult.total_answer_keys}</strong>
+                    {" "}/ Tổng câu trong đề: <strong>{answerKeyResult.total_db_items}</strong>
+                  </>
+                )}
+                .
               </p>
+              {Array.isArray(answerKeyResult.unmatched_question_numbers) &&
+                answerKeyResult.unmatched_question_numbers.length > 0 && (
+                  <p className="text-xs text-amber-700">
+                    Đáp án trong file nhưng không có câu hỏi tương ứng trong đề:{" "}
+                    <strong>{answerKeyResult.unmatched_question_numbers.join(", ")}</strong>
+                  </p>
+                )}
+              {Array.isArray(answerKeyResult.missing_option_question_numbers) &&
+                answerKeyResult.missing_option_question_numbers.length > 0 && (
+                  <p className="text-xs text-amber-700">
+                    Câu có đáp án nhưng option không khớp (option bị thiếu hoặc OCR sai ký tự):{" "}
+                    <strong>{answerKeyResult.missing_option_question_numbers.join(", ")}</strong>
+                  </p>
+                )}
             </div>
           )}
 

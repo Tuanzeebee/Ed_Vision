@@ -766,4 +766,53 @@ export class ToeicListeningImportService {
       auto_mapped_count: autoMappedCount,
     };
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // PUBLIC: uploadFullAudio — save full audio file without chunking
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async uploadFullAudio(
+    repositorySlug: string,
+    file: Express.Multer.File,
+  ): Promise<{ slug: string; full_audio_url: string }> {
+    const slug = repositorySlug.trim();
+    const repository = await this.prisma.examRepository.findFirst({
+      where: { slug },
+      select: { id: true, slug: true, metadata: true },
+    });
+    if (!repository) {
+      throw new BadRequestException(`Không tìm thấy repository: ${slug}`);
+    }
+
+    const audioAbsDir = absoluteUploadsDir(
+      'certificate',
+      'TOEIC',
+      'toeic-listening-exam',
+      slug,
+      'audio',
+    );
+    if (!existsSync(audioAbsDir)) mkdirSync(audioAbsDir, { recursive: true });
+
+    const ext = extname(file.originalname || file.filename || '').toLowerCase() || '.mp3';
+    const destFilename = `full_audio${ext}`;
+    const destPath = join(audioAbsDir, destFilename);
+
+    const buf = await readFile(file.path);
+    await writeFile(destPath, buf);
+
+    const fullAudioUrl = `/uploads/certificate/TOEIC/toeic-listening-exam/${slug}/audio/${destFilename}`;
+
+    // Store full_audio_url in repository metadata
+    const existingMetadata = (repository.metadata as Record<string, any>) ?? {};
+    await this.prisma.examRepository.update({
+      where: { id: repository.id },
+      data: {
+        metadata: { ...existingMetadata, full_audio_url: fullAudioUrl },
+      },
+    });
+
+    this.logger.log(`[FullAudio] Saved ${destFilename} for ${slug} → ${fullAudioUrl}`);
+
+    return { slug: repository.slug, full_audio_url: fullAudioUrl };
+  }
 }

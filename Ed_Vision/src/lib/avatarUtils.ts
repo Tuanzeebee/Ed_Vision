@@ -1,10 +1,29 @@
 /**
  * Utility functions for handling user avatars with gender-based defaults
  */
+import { buildAssetUrl } from '@/services/api/config';
 
 // Default avatar URLs from public folder
 const DEFAULT_MALE_AVATAR = '/avtnam.png';
 const DEFAULT_FEMALE_AVATAR = '/avtnu.png';
+
+// Host nội bộ của backend đã từng bị hard-code trong các bản dữ liệu cũ.
+// Khi gặp các URL này ta strip phần origin để resolve lại theo origin hiện tại
+// (tunnel www.teamnghiencuu.id.vn hoặc localhost dev).
+const LEGACY_BACKEND_ORIGINS = [
+  /^https?:\/\/localhost(:\d+)?/i,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?/i,
+  /^https?:\/\/0\.0\.0\.0(:\d+)?/i,
+];
+
+function normalizeBackendPath(value: string): string {
+  for (const re of LEGACY_BACKEND_ORIGINS) {
+    if (re.test(value)) {
+      return value.replace(re, '');
+    }
+  }
+  return value;
+}
 
 // Simple SVG fallback avatars as data URIs (used if PNG files don't exist)
 const FALLBACK_MALE_SVG = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Ccircle cx="100" cy="100" r="100" fill="%234A90E2"/%3E%3Ccircle cx="100" cy="80" r="35" fill="white"/%3E%3Cpath d="M 50 150 Q 50 120 100 120 Q 150 120 150 150 L 150 200 L 50 200 Z" fill="white"/%3E%3C/svg%3E';
@@ -22,13 +41,14 @@ export function getAvatarUrl(
 ): string {
   // If user has uploaded avatar, use it
   if (avatarUrl) {
-    // If it's already a full URL, return as is
-    if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
-      return avatarUrl;
+    // Strip các origin nội bộ cũ (localhost / 127.0.0.1 / 0.0.0.0) đã lưu
+    // trong DB, rồi resolve lại theo origin hiện tại (tunnel hoặc localhost).
+    const normalized = normalizeBackendPath(avatarUrl);
+    // Nếu sau khi strip vẫn là URL tuyệt đối khác (CDN, S3, …) thì giữ nguyên.
+    if (/^https?:\/\//i.test(normalized)) {
+      return normalized;
     }
-    // If it's a relative URL, convert to full URL
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${API_URL}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`;
+    return buildAssetUrl(normalized);
   }
 
   // No uploaded avatar - use gender-based default

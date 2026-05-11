@@ -307,7 +307,7 @@ export const useAuth = () => {
         return '/parent/dashboard'
       case 'student':
       default:
-        return '/student/instructions'
+        return '/student/landing'
     }
   }, [getUserRole])
 
