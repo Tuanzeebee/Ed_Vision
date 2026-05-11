@@ -11,6 +11,7 @@ import {
   FileUp,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
+import { buildAssetUrl } from "@/services/api/config";
 import {
   importIeltsExamFromOcrFile,
   importToeicExamFromOcrFile,
@@ -909,7 +910,7 @@ export function ToeicRepositoryImportBody({
                             className="group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-shadow hover:shadow-md"
                           >
                             <img
-                              src={`http://localhost:3000${img.url}`}
+                              src={buildAssetUrl(img.url)}
                               alt={img.filename}
                               className="h-28 w-full object-cover transition-transform group-hover:scale-105"
                               loading="lazy"

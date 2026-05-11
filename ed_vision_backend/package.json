@@ -21,6 +21,7 @@
     "purge:toeic-data:apply:with-cache": "node scripts/purge_toeic_data.js --apply --clear-ai-cache",
     "webhook:listen": "node src/etl/listener.js",
     "webhook:poll": "node src/etl/poller.js",
+    "seed:ielts": "node prisma/seed-ielts-full.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

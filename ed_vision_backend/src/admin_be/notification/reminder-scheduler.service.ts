@@ -407,14 +407,35 @@ export class ReminderSchedulerService implements OnModuleInit {
     // Tạo 3 reminder: trước 10 phút, 5 phút, 1 phút
     const reminderOffsets = [10, 5, 1]; // phút
 
+    const isInstructor = options?.intendedRecipient === 'instructor';
+    const templateCode = isInstructor
+      ? 'appointment.instructor.reminder'
+      : 'appointment.reminder';
+
+    // Defensive guard: ensure the NotificationTemplate row exists so the
+    // ReminderSchedule_template_code_fkey FK is never violated even if seeds
+    // were not run. Idempotent.
+    await this.prisma.notificationTemplate.upsert({
+      where: { code: templateCode },
+      update: {},
+      create: {
+        code: templateCode,
+        title: isInstructor ? 'Nhắc nhở lịch hẹn' : 'Nhắc nhở lịch hẹn',
+        content: isInstructor
+          ? 'Bạn có lịch hẹn với {student_name} lúc {time} {date}.'
+          : '{recipient_name}, bạn có lịch hẹn "{meeting_purpose}" với {other_party} lúc {time} {date}.',
+        channel: 'in_app',
+        is_active: true,
+      },
+    });
+
     const reminders = reminderOffsets.map((offset) => {
       const remindAt = new Date(appointmentTime.getTime() - offset * 60 * 1000);
       return {
         appointment_id: appointmentId,
         account_id: accountId,
-        recipient_role:
-          options?.intendedRecipient === 'instructor' ? 'instructor' : 'booker',
-        template_code: 'appointment.reminder',
+        recipient_role: isInstructor ? 'instructor' : 'booker',
+        template_code: templateCode,
         remind_at: remindAt,
         channel: 'in_app',
         metadata: { offset_minutes: offset },

@@ -14,6 +14,7 @@ import {
   Volume2,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
+import { buildAssetUrl } from "@/services/api/config";
 import Footer from "../../components/layout/Footer";
 import NoSeekAudioPlayer from "./components/NoSeekAudioPlayer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
@@ -1028,7 +1029,7 @@ export default function ToeicExamSimulationPage() {
               <span className="text-xs font-semibold text-teal-700 shrink-0">LISTENING</span>
               <div className="flex-1">
                 <NoSeekAudioPlayer
-                  src={`http://localhost:3000${fullAudioUrl}`}
+                  src={buildAssetUrl(fullAudioUrl)}
                   autoPlay={audioConfirmed}
                   noPause={audioConfirmed}
                 />
@@ -1080,7 +1081,7 @@ export default function ToeicExamSimulationPage() {
             {currentQuestion.part === 1 && currentQuestion.imageUrl && (
               <div className="mb-4 flex justify-center">
                 <img
-                  src={`http://localhost:3000${currentQuestion.imageUrl}`}
+                  src={buildAssetUrl(currentQuestion.imageUrl)}
                   alt="Part 1 photograph"
                   className="max-h-64 rounded-lg border border-gray-200 object-contain"
                   onError={(e) => {
@@ -1097,7 +1098,7 @@ export default function ToeicExamSimulationPage() {
                 <div className="mb-4">
                   <NoSeekAudioPlayer
                     key={currentQuestion.id + "-audio"}
-                    src={`http://localhost:3000${currentQuestion.audioUrl}`}
+                    src={buildAssetUrl(currentQuestion.audioUrl)}
                   />
                 </div>
               )}

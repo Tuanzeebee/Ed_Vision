@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { buildUrl } from '@/services/api/config'
 
-const BACKEND_URL = 'http://localhost:3000'
 const MAX_SECONDS = 60
 
 interface SpeakingResult {
@@ -123,7 +123,7 @@ export function SpeakingRecorder({
         formData.append('speakingPrompt', speakingPrompt);
         formData.append('timeTakenSec', String(timeTaken));
 
-        const res = await fetch(`${BACKEND_URL}/placement/speaking-submit`, {
+        const res = await fetch(buildUrl('/placement/speaking-submit'), {
           method: 'POST',
           body: formData,
         });
