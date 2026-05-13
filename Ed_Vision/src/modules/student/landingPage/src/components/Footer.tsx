@@ -1,10 +1,16 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Globe, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 export default function Footer() {
   const { t } = useTranslation('student');
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate('/student/instructions');
+  };
 
   const footerSections = useMemo(() => ([
     {
@@ -50,7 +56,11 @@ export default function Footer() {
                 {t('landingV2.footer.titleSuffix')}
               </h2>
               
-              <button className="liquid-glass-dark rounded-full px-10 py-4 text-white font-medium flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl">
+              <button
+                type="button"
+                onClick={handleGetStarted}
+                className="liquid-glass-dark rounded-full px-10 py-4 text-white font-medium flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl"
+              >
                 {t('landingV2.footer.cta')}
                 <ArrowRight className="w-5 h-5" />
               </button>
@@ -72,8 +82,11 @@ export default function Footer() {
 
           <div className="relative z-10 mt-20 pt-8 border-t border-black/5 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-[#0D212C]" />
-              <span className="text-[#0D212C] font-bold text-xl">{t('landingV2.footer.brand')}</span>
+              <img
+                src="/src/assets/student/Logo_Predica.png"
+                alt="Predica Logo"
+                className="h-13 w-auto object-contain"
+              />
             </div>
             
             <p className="text-xs text-[#0D212C]/40 font-bold uppercase tracking-widest">

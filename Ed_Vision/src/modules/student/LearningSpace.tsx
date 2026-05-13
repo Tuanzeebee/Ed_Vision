@@ -528,7 +528,7 @@ export default function LearningSpace({ className = '' }: Props) {
 
   // Memoize dock items to prevent unnecessary re-renders
   const dockItems = useMemo(() => [
-    { id: 'home', icon: 'fas fa-home', label: 'Home', onClick: () => navigate('/student/instructions') },
+    { id: 'home', icon: 'fas fa-home', label: 'Home', onClick: () => navigate('/student/landing') },
     { id: 'theme', icon: 'fas fa-image', label: 'Theme', onClick: () => openPanel('theme') },
     { id: 'ambience', icon: 'fas fa-cloud-rain', label: 'Ambience', onClick: () => openPanel('ambience') },
     { id: 'room', icon: 'fas fa-video', label: 'Room', onClick: () => openPanel('room') },

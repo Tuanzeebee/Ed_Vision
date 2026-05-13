@@ -312,10 +312,36 @@
       "community": "Community"
     },
     "hero": {
-      "titlePrefix": "Predict your",
-      "titleEmphasis": "future.",
+      "titlePrefix": "Reach a better version of yourself.",
+      "titleEmphasis": "",
       "titleSuffix": "",
-      "description": "Precision Grade Prediction & Certificate Mastery. Empowering students with AI-driven insights to master their GPA and conquer international exams like IELTS, TOEIC, and MOS.",
+      "titleOptions": [
+        "Reach a better version of yourself.",
+        "Helping you get closer to your goals.",
+        "Learn in a way that fits you.",
+        "Improve every day, at your own pace.",
+        "By your side on your self-improvement journey.",
+        "One step closer to success every day.",
+        "Start a better learning journey.",
+        "Reach your goals in your own way.",
+        "Grow yourself through small daily steps.",
+        "A learning journey designed just for you.",
+        "Reach a more capable version of yourself."
+      ],
+      "description": "Manage and support IELTS, TOEIC, MOS achievement with a personalized learning journey.",
+      "descriptionOptions": [
+        "Manage and support IELTS, TOEIC, MOS success with a personalized learning roadmap.",
+        "By your side for a more effective IELTS, TOEIC, and MOS learning journey.",
+        "Track progress, build a roadmap, and get smart study support.",
+        "Personalize the learning experience to help you improve every day.",
+        "Support learning management and practice based on your own goals.",
+        "A learning platform that helps you stay motivated and grow sustainably.",
+        "Optimize your learning journey with a personalized, intuitive experience.",
+        "Help you build effective study habits for IELTS, TOEIC, and MOS.",
+        "Easily manage learning goals with a smart companion system.",
+        "A modern learning space for building skills and certifications.",
+        "Manage and support IELTS, TOEIC, MOS achievement with a personalized learning journey."
+      ],
       "cta": "Start Now"
     },
     "about": {
@@ -337,6 +363,11 @@
           "tag": "Learning Hub",
           "title": "Certificate Mastery",
           "description": "Comprehensive roadmaps for IELTS, TOEIC, and MOS. Includes real-time skill analysis, simulators, and community-driven learning resources."
+        },
+        {
+          "tag": "Learning Space",
+          "title": "Learning Space",
+          "description": "A personalized study space that helps you stay focused, track progress, and build skills sustainably."
         }
       ]
     },
@@ -378,7 +409,7 @@
     },
     "partner": {
       "title": "Partner with us",
-      "cta": "Start chat with Viktor"
+      "cta": "Start chat"
     },
     "testimonials": {
       "titlePrefix": "What",
