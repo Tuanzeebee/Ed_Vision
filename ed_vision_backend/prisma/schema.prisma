@@ -1316,27 +1316,27 @@ model IeltsRecommendation {
 
 /// Detailed content repository for certificate learning materials (exam/mock-test style).
 model ExamRepository {
-  id                Int                  @id @default(autoincrement())
-  cert_type         String               @db.VarChar(30)
-  title             String               @db.VarChar(255)
-  slug              String               @unique @db.VarChar(120)
+  id                Int      @id @default(autoincrement())
+  cert_type         String   @db.VarChar(30)
+  title             String   @db.VarChar(255)
+  slug              String   @unique @db.VarChar(120)
   description       String?
-  content_type      String               @default("practice_set") @db.VarChar(30)
-  skill_area        String?              @db.VarChar(50)
-  topic_group       String?              @db.VarChar(100)
-  difficulty_level  String?              @db.VarChar(20)
+  content_type      String   @default("practice_set") @db.VarChar(30)
+  skill_area        String?  @db.VarChar(50)
+  topic_group       String?  @db.VarChar(100)
+  difficulty_level  String?  @db.VarChar(20)
   target_score_min  Int?
   target_score_max  Int?
   estimated_minutes Int?
   pass_score        Int?
   tags              Json?
   metadata          Json?
-  total_items       Int                  @default(0)
-  is_published      Boolean              @default(false)
-  version           Int                  @default(1)
+  total_items       Int      @default(0)
+  is_published      Boolean  @default(false)
+  version           Int      @default(1)
   created_by        Int?
-  created_at        DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime             @updatedAt @db.Timestamptz(6)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt @db.Timestamptz(6)
 
   items    ExamRepositoryItem[]
   sessions ToeicExamSession[]
@@ -1708,10 +1708,10 @@ enum ConfidenceLevel {
 
 /// Phiên thi thử TOEIC (mock exam) của một học viên cho một đề trong `ExamRepository`.
 model ToeicExamSession {
-  id              Int       @id @default(autoincrement())
+  id              Int    @id @default(autoincrement())
   account_id      Int
   repository_id   Int
-  repository_slug String    @db.VarChar(120)
+  repository_slug String @db.VarChar(120)
 
   started_at     DateTime  @default(now()) @db.Timestamptz(6)
   duration_sec   Int
@@ -1762,64 +1762,59 @@ model ToeicExamAnswer {
 
 /// User activity tracking cho Dashboard khung giờ cao điểm, heatmap, feature usage
 model UserActivityLog {
-  id           Int      @id @default(autoincrement())
-  account_id   Int
-  session_id   String?  @db.Uuid  // Group các actions cùng phiên (UUID từ frontend)
+  id         Int     @id @default(autoincrement())
+  account_id Int
+  session_id String? @db.Uuid
 
-  // Phân loại action chi tiết
-  action_type  String   @db.VarChar(50)  // login | logout | page_view | lesson_start | lesson_complete | exam_start | exam_submit | practice_start | practice_complete | etc.
-  feature      String   @db.VarChar(50)   // auth | dashboard | lesson | exam | practice | profile | admin | certificate | diagnostic
+  action_type String @db.VarChar(50)
+  feature     String @db.VarChar(50)
 
-  // Context chi tiết
-  page_path    String?  @db.VarChar(255)  // /student/dashboard, /admin/students, etc.
-  entity_type  String?  @db.VarChar(50)   // course | exam | lesson | student | certificate | topic
-  entity_id    Int?                      // ID cụ thể
+  page_path   String? @db.VarChar(255)
+  entity_type String? @db.VarChar(50)
+  entity_id   Int?
 
-  // Thông tin thiết bị cho phân tích
-  device_type  String?  @db.VarChar(20)   // desktop | mobile | tablet
-  ip_address   String?  @db.VarChar(45)   // IPv4/IPv6
-  user_agent   String?  @db.VarChar(500) // Browser info
+  device_type String? @db.VarChar(20)
+  ip_address  String? @db.VarChar(45)
+  user_agent  String? @db.VarChar(500)
 
-  // Thời gian
+  duration_sec Int?
+
   created_at   DateTime @default(now()) @db.Timestamptz(6)
-  session_date DateTime @db.Date         // Ngày (để query nhanh theo ngày)
-  hour_of_day  Int?     @db.SmallInt      // 0-23 (cho heatmap giờ)
-  day_of_week  Int?     @db.SmallInt      // 0-6 (cho heatmap thứ)
+  session_date DateTime @db.Date
+  hour_of_day  Int?     @db.SmallInt
+  day_of_week  Int?     @db.SmallInt
 
-  account      Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  account Account @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
 
   @@index([account_id, created_at])
   @@index([created_at, action_type])
   @@index([feature, created_at])
-  @@index([session_date, hour_of_day])  // Cho heatmap queries
+  @@index([session_date, hour_of_day])
   @@index([entity_type, entity_id, created_at])
   @@map("UserActivityLog")
 }
 
 /// Session aggregation - tổng hợp cho dashboard không cần query từng record
 model UserDailyActivitySummary {
-  id                 Int      @id @default(autoincrement())
-  account_id         Int
-  activity_date      DateTime @db.Date
+  id            Int      @id @default(autoincrement())
+  account_id    Int
+  activity_date DateTime @db.Date
 
-  // Summary metrics
-  total_sessions     Int      @default(0)
-  total_page_views   Int      @default(0)
-  total_duration_min Int      @default(0)  // Tổng thời gian active (phút)
+  total_sessions     Int @default(0)
+  total_page_views   Int @default(0)
+  total_duration_min Int @default(0)
 
-  // Peak activity
-  first_activity_at  DateTime? @db.Timestamptz(6)
-  last_activity_at   DateTime? @db.Timestamptz(6)
-  peak_hour          Int?      @db.SmallInt  // Giờ có activity nhiều nhất
+  first_activity_at DateTime? @db.Timestamptz(6)
+  last_activity_at  DateTime? @db.Timestamptz(6)
+  peak_hour         Int?      @db.SmallInt
 
-  // Feature breakdown (JSON để linh hoạt)
-  feature_breakdown  Json?     // { "lesson": 10, "exam": 2, "practice": 5 }
-  device_breakdown   Json?     // { "desktop": 15, "mobile": 2 }
+  feature_breakdown Json?
+  device_breakdown  Json?
 
-  created_at         DateTime @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime @updatedAt @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
 
-  account            Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  account Account @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
 
   @@unique([account_id, activity_date])
   @@index([activity_date])

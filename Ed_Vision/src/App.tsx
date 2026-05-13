@@ -31,11 +31,10 @@ import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import NotificationManagement from "./modules/admin/NotificationManagement";
 import NotificationPage from "./pages/NotificationPage";
 import OverviewDashBoardCertificate from "./modules/admin/OverviewDashBoardCertificate";
-import UsageBehaviorDashboard from "./modules/admin/UsageBehaviorDashboard";
 import StudentDirectoryOverview from "./modules/admin/StudentDirectoryOverview";
 import StudentProfileDetail from "./modules/admin/StudentProfileDetail";
 import ProgramEffectivenessDashboard from "./modules/admin/ProgramEffectivenessDashboard";
-
+import UsageBehaviorDashboard from "./modules/admin/UsageBehaviorDashboard";
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentLandingV2 from "@/modules/student/landingPage/src/App";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
@@ -222,6 +221,7 @@ function App() {
 
           {/* Admin routes - Reports & Analytics (protected by permission) */}
           <Route path="/admin/reports/learning" element={<ProtectedRoute permission="admin_reports"><GeneralStatistics /></ProtectedRoute>} />
+          <Route path="/admin/reports/usage-behavior" element={<ProtectedRoute permission="admin_reports"><UsageBehaviorDashboard /></ProtectedRoute>} />
 
           {/* Admin routes - System Management (protected by permission) */}
           <Route path="/admin/notifications" element={<ProtectedRoute permission="admin_notifications"><NotificationManagement /></ProtectedRoute>} />
