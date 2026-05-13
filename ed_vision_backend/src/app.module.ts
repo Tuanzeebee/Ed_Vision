@@ -13,6 +13,7 @@ import { SurveyManagementModule } from './admin_be/survey-management/survey-mana
 import { QuestionManagementModule } from './admin_be/question-management/question-management.module';
 import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
 import { UsageBehaviorModule } from './admin_be/usage-behavior/usage-behavior.module';
+import { CertificateOverviewModule } from './admin_be/certificate-overview/certificate-overview.module';
 import { NotificationModule } from './admin_be/notification/notification.module';
 import { BookingModule } from './booking/booking.module';
 import { ClassManagementModule } from './teacher_be/class-management/class-management.module';
@@ -78,6 +79,7 @@ function resolveI18nPath(): string {
     QuestionManagementModule,
     StatisticsOverviewModule,
     UsageBehaviorModule,
+    CertificateOverviewModule,
     NotificationModule,
     ClassManagementModule,
     SurveysModule,

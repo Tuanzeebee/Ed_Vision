@@ -113,6 +113,68 @@ export interface LearningDashboardSummaryResponse {
   learningContext: { currentLabel: string; previousLabel?: string };
 }
 
+// ===== Certificate Overview Dashboard =====
+export type CertificateOverviewTimeRange =
+  | 'this-month'
+  | 'last-month'
+  | 'this-quarter'
+  | 'this-year';
+
+export interface CertificateOverviewQuery {
+  timeRange?: CertificateOverviewTimeRange;
+}
+
+export type CertificateOverviewTrend = 'up' | 'down' | 'stable';
+
+export interface CertificateOverviewKpiValue {
+  value: number;
+  change: number;
+  trend: CertificateOverviewTrend;
+}
+
+export interface CertificateOverviewKpis {
+  totalStudents: CertificateOverviewKpiValue;
+  activeStudents: CertificateOverviewKpiValue;
+  returnRate: CertificateOverviewKpiValue;
+  completionRate: CertificateOverviewKpiValue;
+}
+
+export interface CertificateOverviewTraffic {
+  labels: string[];
+  values: number[];
+}
+
+export interface CertificateOverviewDistribution {
+  labels: string[];
+  values: number[];
+}
+
+export interface CertificateOverviewRetention {
+  labels: string[];
+  newStudents: number[];
+  returningStudents: number[];
+}
+
+export interface CertificateOverviewActivity {
+  id: string;
+  text: string;
+  time: string;
+  color: string;
+}
+
+export interface CertificateOverviewResponse {
+  timeRange: CertificateOverviewTimeRange;
+  rangeStart: string;
+  rangeEnd: string;
+  previousRangeStart: string;
+  previousRangeEnd: string;
+  kpis: CertificateOverviewKpis;
+  traffic: CertificateOverviewTraffic;
+  distribution: CertificateOverviewDistribution;
+  retention: CertificateOverviewRetention;
+  recentActivities: CertificateOverviewActivity[];
+}
+
 // ===== Usage Behavior Dashboard =====
 export type UsageBehaviorTimeRange = '7d' | '30d' | '90d';
 
@@ -225,6 +287,17 @@ class DashboardStatsService {
     const response = await apiClient.get<UsageBehaviorResponse>('/admin/dashboard/usage-behavior', {
       params: query,
     });
+    return response.data;
+  }
+
+  // ===== Certificate Overview dashboard (KPI + traffic + distribution + retention) =====
+  async getCertificateOverview(
+    query?: CertificateOverviewQuery,
+  ): Promise<CertificateOverviewResponse> {
+    const response = await apiClient.get<CertificateOverviewResponse>(
+      '/admin/dashboard/certificate-overview',
+      { params: query },
+    );
     return response.data;
   }
 }
