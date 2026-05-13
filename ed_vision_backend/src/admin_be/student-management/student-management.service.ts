@@ -429,9 +429,14 @@ export class StudentManagementService {
       },
     });
 
-    const totalChangePercent = totalStudentsLastMonth > 0
-      ? Math.round(((totalStudents - totalStudentsLastMonth) / totalStudentsLastMonth) * 100)
-      : 0;
+    const totalChangePercent =
+      totalStudentsLastMonth > 0
+        ? Math.round(
+            ((totalStudents - totalStudentsLastMonth) /
+              totalStudentsLastMonth) *
+              100,
+          )
+        : 0;
 
     // Count by certificate enrollment
     const certEnrollments = await this.prisma.certificateEnrollment.groupBy({
@@ -440,8 +445,12 @@ export class StudentManagementService {
       _count: { cert_type: true },
     });
 
-    const ieltsCount = certEnrollments.find(e => e.cert_type === 'ielts')?._count?.cert_type || 0;
-    const toeicCount = certEnrollments.find(e => e.cert_type === 'toeic')?._count?.cert_type || 0;
+    const ieltsCount =
+      certEnrollments.find((e) => e.cert_type === 'ielts')?._count?.cert_type ||
+      0;
+    const toeicCount =
+      certEnrollments.find((e) => e.cert_type === 'toeic')?._count?.cert_type ||
+      0;
 
     // Active students (have activity in last 30 days)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -456,7 +465,10 @@ export class StudentManagementService {
     });
 
     const activeStudents = activeStudentIds.length;
-    const activePercent = totalStudents > 0 ? Math.round((activeStudents / totalStudents) * 100) : 0;
+    const activePercent =
+      totalStudents > 0
+        ? Math.round((activeStudents / totalStudents) * 100)
+        : 0;
 
     // At-risk students
     const atRiskProgress = await this.prisma.studentLearningProgress.count({
@@ -464,11 +476,12 @@ export class StudentManagementService {
     });
 
     // At-risk high count - query separately and filter in memory
-    const allAtRiskProgress = await this.prisma.studentLearningProgress.findMany({
-      where: { at_risk: true },
-      select: { risk_factors: true },
-    });
-    const atRiskHigh = allAtRiskProgress.filter(p => {
+    const allAtRiskProgress =
+      await this.prisma.studentLearningProgress.findMany({
+        where: { at_risk: true },
+        select: { risk_factors: true },
+      });
+    const atRiskHigh = allAtRiskProgress.filter((p) => {
       const factors = p.risk_factors as string[] | null;
       return factors && Array.isArray(factors) && factors.includes('high');
     }).length;
@@ -578,8 +591,8 @@ export class StudentManagementService {
           where: { status: 'active' },
           orderBy: { enrolled_at: 'desc' },
           take: 1,
+          include: { learningProgress: true },
         },
-        learningProgress: true,
       },
       skip: (page - 1) * limit,
       take: limit,
@@ -591,7 +604,7 @@ export class StudentManagementService {
       .map((s) => s.certificateEnrollments[0]?.id)
       .filter((id): id is number => id != null);
 
-    const [testCountRows, practiceCountRows, vocabCountRows] =
+    const [testCountRows, practiceCountRows, vocabCountRows, allTestResults] =
       enrollmentIds.length > 0
         ? await Promise.all([
             this.prisma.studentTestResult.groupBy({
@@ -612,8 +625,24 @@ export class StudentManagementService {
               },
               _count: { id: true },
             }),
+            this.prisma.studentTestResult.findMany({
+              where: { enrollment_id: { in: enrollmentIds } },
+              orderBy: { completed_at: 'asc' },
+            }),
           ])
-        : [[], [], []];
+        : [[], [], [], []];
+
+    // Group test results by enrollment for baseline / progress computation
+    const testResultsByEnrollment = new Map<
+      number,
+      Array<(typeof allTestResults)[number]>
+    >();
+    for (const t of allTestResults) {
+      if (t.enrollment_id == null) continue;
+      const arr = testResultsByEnrollment.get(t.enrollment_id) ?? [];
+      arr.push(t);
+      testResultsByEnrollment.set(t.enrollment_id, arr);
+    }
 
     const testCountMap = new Map(
       testCountRows.map((r) => [r.enrollment_id, r._count.id]),
@@ -628,8 +657,9 @@ export class StudentManagementService {
     // Map to response type
     const data: StudentDirectoryItem[] = students.map((student) => {
       const enrollment = student.certificateEnrollments[0];
-      const progress = student.learningProgress?.[0];
+      const progress = enrollment?.learningProgress ?? null;
       const enrollmentId = enrollment?.id;
+      const certType = enrollment?.cert_type ?? null;
 
       // Determine certificate name
       let certificateName: string | undefined;
@@ -642,45 +672,63 @@ export class StudentManagementService {
       }
 
       // Determine learning status
-      let learningStatus: 'active' | 'inactive' | 'completed' | 'on_hold' = 'inactive';
+      let learningStatus: 'active' | 'inactive' | 'completed' | 'on_hold' =
+        'inactive';
       if (enrollment) {
-        if (enrollment.learning_status === 'completed') learningStatus = 'completed';
-        else if (enrollment.learning_status === 'on_hold') learningStatus = 'on_hold';
-        else if (enrollment.learning_status === 'active') learningStatus = 'active';
+        if (enrollment.learning_status === 'completed')
+          learningStatus = 'completed';
+        else if (enrollment.learning_status === 'on_hold')
+          learningStatus = 'on_hold';
+        else if (enrollment.learning_status === 'active')
+          learningStatus = 'active';
       }
 
       // Determine risk level
       const riskFactors = progress?.risk_factors as string[] | null;
       const riskLevel = progress?.at_risk
-        ? (riskFactors && Array.isArray(riskFactors) && riskFactors.includes('high') ? 'high' : 'medium')
+        ? riskFactors &&
+          Array.isArray(riskFactors) &&
+          riskFactors.includes('high')
+          ? 'high'
+          : 'medium'
         : 'low';
 
-      // Use CertificateEnrollment.current_score for current score (same as student page)
-      // Use target_score as the initial/target score
-      let initialScore: string | undefined;
-      let currentScore: string | undefined;
+      // Compute baseline / current / target scores from real data.
+      // currentScore = CertificateEnrollment.current_score (kept in sync by certificate
+      // service when student takes tests / practice).
+      // initialScore  = baseline score from StudentLearningProgress.baseline_* or the
+      // earliest StudentTestResult for this enrollment — NOT the target.
+      const testResultsForEnrollment = enrollmentId
+        ? (testResultsByEnrollment.get(enrollmentId) ?? [])
+        : [];
+      const baselineNumeric = this.resolveBaselineNumeric(
+        certType,
+        progress,
+        testResultsForEnrollment,
+      );
+      const currentNumeric = enrollment?.current_score ?? null;
+      const targetNumeric = enrollment?.target_score ?? null;
+
+      const initialScore = this.formatScore(baselineNumeric, certType);
+      const currentScore = this.formatScore(currentNumeric, certType);
+
       let improvementPercent: number | undefined;
-
-      if (enrollment) {
-        if (enrollment.cert_type === 'ielts') {
-          // IELTS: scores are stored as integers (e.g., 65 for 6.5)
-          currentScore = enrollment.current_score ? (enrollment.current_score / 10).toFixed(1) : undefined;
-          initialScore = enrollment.target_score ? (enrollment.target_score / 10).toFixed(1) : undefined;
-        } else if (enrollment.cert_type === 'toeic') {
-          // TOEIC: scores are stored as integers (e.g., 750)
-          currentScore = enrollment.current_score?.toString();
-          initialScore = enrollment.target_score?.toString();
-        }
-
-        // Calculate improvement if both scores exist
-        if (currentScore && initialScore) {
-          const current = parseFloat(currentScore);
-          const initial = parseFloat(initialScore);
-          if (current > 0 && initial > 0) {
-            improvementPercent = Math.round(((current - initial) / initial) * 100);
-          }
-        }
+      if (
+        currentNumeric != null &&
+        baselineNumeric != null &&
+        baselineNumeric > 0
+      ) {
+        improvementPercent = Math.round(
+          ((currentNumeric - baselineNumeric) / baselineNumeric) * 100,
+        );
       }
+
+      const computedProgressPercent = this.computeProgressPercent(
+        currentNumeric,
+        baselineNumeric,
+        targetNumeric,
+        enrollment?.progress_percent ?? 0,
+      );
 
       return {
         studentId: student.student_id,
@@ -689,11 +737,13 @@ export class StudentManagementService {
         fullName: student.account.profile?.full_name || '',
         email: student.account.email,
         avatarUrl: student.account.profile?.avatar_url || undefined,
-        certType: enrollment?.cert_type as 'ielts' | 'toeic' | null,
+        certType: certType as 'ielts' | 'toeic' | null,
         certificateName,
-        progressPercent: enrollment?.progress_percent || 0,
+        progressPercent: computedProgressPercent,
         examCount: enrollmentId ? (testCountMap.get(enrollmentId) ?? 0) : 0,
-        practiceCount: enrollmentId ? (practiceCountMap.get(enrollmentId) ?? 0) : 0,
+        practiceCount: enrollmentId
+          ? (practiceCountMap.get(enrollmentId) ?? 0)
+          : 0,
         vocabCount: enrollmentId ? (vocabCountMap.get(enrollmentId) ?? 0) : 0,
         initialScore,
         currentScore,
@@ -702,19 +752,20 @@ export class StudentManagementService {
         riskLevel,
         department: student.classGroup?.program?.department?.name,
         cohortYear: student.cohort_year || undefined,
-        lastActivityAt: student.account.activityLogs[0]?.created_at.toISOString(),
+        lastActivityAt:
+          student.account.activityLogs[0]?.created_at.toISOString(),
       };
     });
 
     // Filter by learning status if specified
     let filteredData = data;
     if (learningStatus) {
-      filteredData = data.filter(s => s.learningStatus === learningStatus);
+      filteredData = data.filter((s) => s.learningStatus === learningStatus);
     }
 
     // Filter by risk level if specified
     if (riskLevel) {
-      filteredData = filteredData.filter(s => s.riskLevel === riskLevel);
+      filteredData = filteredData.filter((s) => s.riskLevel === riskLevel);
     }
 
     const totalPages = Math.ceil(total / limit);
@@ -757,11 +808,12 @@ export class StudentManagementService {
           where: { status: 'active' },
           orderBy: { enrolled_at: 'desc' },
           take: 1,
+          include: { learningProgress: true },
         },
-        learningProgress: true,
+        // All test results for the student so we can find baseline + compute
+        // per-skill progress accurately (the chart still only renders recent ones).
         testResults: {
-          orderBy: { completed_at: 'desc' },
-          take: 10,
+          orderBy: { completed_at: 'asc' },
         },
       },
     });
@@ -771,25 +823,47 @@ export class StudentManagementService {
     }
 
     const enrollment = student.certificateEnrollments[0];
-    const progress = student.learningProgress?.[0];
+    const progress = enrollment?.learningProgress ?? null;
+    const certType = enrollment?.cert_type ?? null;
+
+    // Restrict test results to the active enrollment when one exists; otherwise
+    // fall back to all of the student's test results so non-enrolled history
+    // (placement, diagnostics) still shows up.
+    const enrollmentTestResults = enrollment
+      ? student.testResults.filter((t) => t.enrollment_id === enrollment.id)
+      : student.testResults;
+    const testResultsForChart = enrollmentTestResults.length
+      ? enrollmentTestResults
+      : student.testResults;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [recentActivities, dailySummaries] = await Promise.all([
-      this.prisma.userActivityLog.findMany({
-        where: { account_id: student.account_id },
-        orderBy: { created_at: 'desc' },
-        take: 20,
-      }),
-      this.prisma.userDailyActivitySummary.findMany({
-        where: {
-          account_id: student.account_id,
-          activity_date: { gte: thirtyDaysAgo },
-        },
-        orderBy: { activity_date: 'desc' },
-      }),
-    ]);
+    const [recentActivities, dailySummaries, practiceCount, vocabCount] =
+      await Promise.all([
+        this.prisma.userActivityLog.findMany({
+          where: { account_id: student.account_id },
+          orderBy: { created_at: 'desc' },
+          take: 20,
+        }),
+        this.prisma.userDailyActivitySummary.findMany({
+          where: {
+            account_id: student.account_id,
+            activity_date: { gte: thirtyDaysAgo },
+          },
+          orderBy: { activity_date: 'desc' },
+        }),
+        enrollment
+          ? this.prisma.toeicPracticePartSession.count({
+              where: { enrollment_id: enrollment.id },
+            })
+          : Promise.resolve(0),
+        enrollment
+          ? this.prisma.userVocabProgress.count({
+              where: { enrollment_id: enrollment.id, is_known: true },
+            })
+          : Promise.resolve(0),
+      ]);
 
     // Determine certificate name
     let certificateName: string | undefined;
@@ -802,45 +876,61 @@ export class StudentManagementService {
     }
 
     // Learning status
-    let learningStatus: 'active' | 'inactive' | 'completed' | 'on_hold' = 'inactive';
+    let learningStatus: 'active' | 'inactive' | 'completed' | 'on_hold' =
+      'inactive';
     if (enrollment) {
-      if (enrollment.learning_status === 'completed') learningStatus = 'completed';
-      else if (enrollment.learning_status === 'on_hold') learningStatus = 'on_hold';
-      else if (enrollment.learning_status === 'active') learningStatus = 'active';
+      if (enrollment.learning_status === 'completed')
+        learningStatus = 'completed';
+      else if (enrollment.learning_status === 'on_hold')
+        learningStatus = 'on_hold';
+      else if (enrollment.learning_status === 'active')
+        learningStatus = 'active';
     }
 
     // Risk level
     const riskFactorsDetail = progress?.risk_factors as string[] | null;
     const riskLevel = progress?.at_risk
-      ? (riskFactorsDetail && Array.isArray(riskFactorsDetail) && riskFactorsDetail.includes('high') ? 'high' : 'medium')
+      ? riskFactorsDetail &&
+        Array.isArray(riskFactorsDetail) &&
+        riskFactorsDetail.includes('high')
+        ? 'high'
+        : 'medium'
       : 'low';
 
-    // Use CertificateEnrollment.current_score for current score (same as student page)
-    // Use target_score as the initial/target score
-    let initialScore: string | undefined;
-    let currentScore: string | undefined;
+    // Compute baseline / current / target scores from real data.
+    const baselineNumeric = this.resolveBaselineNumeric(
+      certType,
+      progress,
+      enrollmentTestResults,
+    );
+    const currentNumeric = enrollment?.current_score ?? null;
+    const targetNumeric = enrollment?.target_score ?? null;
+
+    const initialScore = this.formatScore(baselineNumeric, certType);
+    const currentScore = this.formatScore(currentNumeric, certType);
+
     let improvementPercent: number | undefined;
-
-    if (enrollment) {
-      if (enrollment.cert_type === 'ielts') {
-        // IELTS: scores are stored as integers (e.g., 65 for 6.5)
-        currentScore = enrollment.current_score ? (enrollment.current_score / 10).toFixed(1) : undefined;
-        initialScore = enrollment.target_score ? (enrollment.target_score / 10).toFixed(1) : undefined;
-      } else if (enrollment.cert_type === 'toeic') {
-        // TOEIC: scores are stored as integers (e.g., 750)
-        currentScore = enrollment.current_score?.toString();
-        initialScore = enrollment.target_score?.toString();
-      }
-
-      // Calculate improvement if both scores exist
-      if (currentScore && initialScore) {
-        const current = parseFloat(currentScore);
-        const initial = parseFloat(initialScore);
-        if (current > 0 && initial > 0) {
-          improvementPercent = Math.round(((current - initial) / initial) * 100);
-        }
-      }
+    if (
+      currentNumeric != null &&
+      baselineNumeric != null &&
+      baselineNumeric > 0
+    ) {
+      improvementPercent = Math.round(
+        ((currentNumeric - baselineNumeric) / baselineNumeric) * 100,
+      );
     }
+
+    const computedProgressPercent = this.computeProgressPercent(
+      currentNumeric,
+      baselineNumeric,
+      targetNumeric,
+      enrollment?.progress_percent ?? 0,
+    );
+
+    const skillProgress = this.computeSkillProgress(
+      enrollmentTestResults,
+      certType,
+    );
 
     const totalStudyMinutes = dailySummaries.reduce(
       (sum, item) => sum + item.total_duration_min,
@@ -858,9 +948,9 @@ export class StudentManagementService {
       ? Math.round(totalStudyMinutes / dailySummaries.length)
       : 0;
 
-    const scoreHistory = student.testResults
-      .slice()
-      .reverse()
+    // Score history is ordered chronologically (oldest -> newest) for the
+    // progress chart. testResults are already sorted ascending by completed_at.
+    const scoreHistory = testResultsForChart
       .map((test, index) => {
         const score =
           test.band_score ??
@@ -902,40 +992,40 @@ export class StudentManagementService {
       programName: student.classGroup?.program?.program_name,
       department: student.classGroup?.program?.department?.name,
       cohortYear: student.cohort_year || undefined,
-      certType: enrollment?.cert_type as 'ielts' | 'toeic' | null,
+      certType: certType as 'ielts' | 'toeic' | null,
       certificateName,
-      progressPercent: enrollment?.progress_percent || 0,
-      examCount: student.testResults?.length || 0,
-      practiceCount: 0,
-      vocabCount: 0,
+      progressPercent: computedProgressPercent,
+      examCount: enrollmentTestResults.length,
+      practiceCount,
+      vocabCount,
       initialScore,
       currentScore,
       improvementPercent,
       learningStatus,
       riskLevel,
       lastActivityAt: recentActivities[0]?.created_at.toISOString(),
-      skillProgress: {
-        listening: progress?.listening_improvement || 0,
-        reading: progress?.reading_improvement || 0,
-        writing: progress?.writing_improvement || 0,
-        speaking: progress?.speaking_improvement || 0,
-      },
-      testResults: student.testResults.map(t => ({
-        id: t.id,
-        testType: t.test_type as any,
-        testPhase: t.test_phase as any,
-        certType: t.cert_type as any,
-        totalScore: t.total_score || undefined,
-        bandScore: t.band_score || undefined,
-        listeningScore: t.listening_score || undefined,
-        readingScore: t.reading_score || undefined,
-        writingScore: t.writing_score || undefined,
-        speakingScore: t.speaking_score || undefined,
-        completedAt: t.completed_at?.toISOString() || t.created_at.toISOString(),
-        durationMinutes: t.duration_minutes || undefined,
-      })),
+      skillProgress,
+      testResults: enrollmentTestResults
+        .slice()
+        .reverse()
+        .map((t) => ({
+          id: t.id,
+          testType: t.test_type as any,
+          testPhase: t.test_phase as any,
+          certType: t.cert_type as any,
+          totalScore: t.total_score || undefined,
+          bandScore: t.band_score || undefined,
+          listeningScore: t.listening_score || undefined,
+          readingScore: t.reading_score || undefined,
+          writingScore: t.writing_score || undefined,
+          speakingScore: t.speaking_score || undefined,
+          completedAt:
+            t.completed_at?.toISOString() || t.created_at.toISOString(),
+          durationMinutes: t.duration_minutes || undefined,
+        }))
+        .slice(0, 10),
       scoreHistory,
-      recentActivities: recentActivities.map(a => ({
+      recentActivities: recentActivities.map((a) => ({
         id: a.id,
         actionType: a.action_type,
         feature: a.feature,
@@ -949,8 +1039,179 @@ export class StudentManagementService {
         activeDays: dailySummaries.length,
         lastActivityAt: recentActivities[0]?.created_at.toISOString(),
       },
-      riskFactors: progress?.risk_factors ? JSON.parse(JSON.stringify(progress.risk_factors)) : undefined,
-      projectedCompletionDate: progress?.projected_completion_date?.toISOString(),
+      riskFactors: progress?.risk_factors
+        ? JSON.parse(JSON.stringify(progress.risk_factors))
+        : undefined,
+      projectedCompletionDate:
+        progress?.projected_completion_date?.toISOString(),
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SHARED SCORE / PROGRESS HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Resolve the student's baseline ("entry") score for a certificate enrollment.
+   *
+   * Priority:
+   *   1. `StudentLearningProgress.baseline_band_score` (IELTS, in band 0-9) or
+   *      `baseline_total_score` (TOEIC, in points).
+   *   2. Earliest `StudentTestResult` flagged `is_baseline = true` for the enrollment.
+   *   3. Earliest test result of any kind for the enrollment.
+   *
+   * Returned as a numeric value in the same units as `CertificateEnrollment.current_score`:
+   *   - IELTS: band × 10 (e.g. 65 for band 6.5)
+   *   - TOEIC: total score (e.g. 450)
+   */
+  private resolveBaselineNumeric(
+    certType: string | null,
+    progress:
+      | {
+          baseline_band_score: number | null;
+          baseline_total_score: number | null;
+        }
+      | null
+      | undefined,
+    testResults: Array<{
+      band_score: number | null;
+      total_score: number | null;
+      is_baseline: boolean;
+      completed_at: Date | null;
+      created_at: Date;
+    }>,
+  ): number | null {
+    if (certType === 'ielts' && progress?.baseline_band_score != null) {
+      return Math.round(progress.baseline_band_score * 10);
+    }
+    if (certType === 'toeic' && progress?.baseline_total_score != null) {
+      return progress.baseline_total_score;
+    }
+
+    const sorted = [...testResults].sort((a, b) => {
+      const aTime = (a.completed_at ?? a.created_at).getTime();
+      const bTime = (b.completed_at ?? b.created_at).getTime();
+      return aTime - bTime;
+    });
+    const baseline = sorted.find((t) => t.is_baseline) ?? sorted[0];
+    if (!baseline) return null;
+
+    if (certType === 'ielts') {
+      if (baseline.band_score != null) {
+        return Math.round(baseline.band_score * 10);
+      }
+      return baseline.total_score ?? null;
+    }
+    return baseline.total_score ?? null;
+  }
+
+  /**
+   * Format a numeric score for display in the directory / detail UI.
+   *   - IELTS: band with one decimal place (e.g. "6.5").
+   *   - TOEIC: integer string (e.g. "750").
+   */
+  private formatScore(
+    numeric: number | null,
+    certType: string | null,
+  ): string | undefined {
+    if (numeric == null) return undefined;
+    if (certType === 'ielts') return (numeric / 10).toFixed(1);
+    return numeric.toString();
+  }
+
+  /**
+   * Compute progress percentage toward target using the same convention as
+   * `certificate-enrollment.service.ts`:
+   *   `(current - baseline) / (target - baseline) × 100`, clamped to 0-100.
+   *
+   * Returns `fallback` (defaults to 0) when target is missing or invalid so
+   * callers can substitute the stored `enrollment.progress_percent` if desired.
+   */
+  private computeProgressPercent(
+    current: number | null,
+    baseline: number | null,
+    target: number | null,
+    fallback = 0,
+  ): number {
+    if (current == null || target == null || target <= 0) {
+      return Math.max(0, Math.min(100, Math.round(fallback)));
+    }
+    const baselineSafe = baseline ?? 0;
+    if (target <= baselineSafe) {
+      return current >= target
+        ? 100
+        : Math.max(0, Math.min(100, Math.round(fallback)));
+    }
+    const gained = Math.max(0, current - baselineSafe);
+    const total = Math.max(1, target - baselineSafe);
+    return Math.max(0, Math.min(100, Math.round((gained / total) * 100)));
+  }
+
+  /**
+   * Compute per-skill progress percentage (0-100) from a student's test history.
+   *
+   * For each skill we take the most recent positive score across the supplied
+   * test results and normalize it to the maximum possible value for the cert
+   * type:
+   *   - IELTS: max 90 (band 9 × 10)
+   *   - TOEIC Listening/Reading: max 495
+   *   - TOEIC Writing/Speaking:  max 200
+   */
+  private computeSkillProgress(
+    testResults: Array<{
+      listening_score: number | null;
+      reading_score: number | null;
+      writing_score: number | null;
+      speaking_score: number | null;
+      completed_at: Date | null;
+      created_at: Date;
+    }>,
+    certType: string | null,
+  ): { listening: number; reading: number; writing: number; speaking: number } {
+    const sortedDesc = [...testResults].sort((a, b) => {
+      const aTime = (a.completed_at ?? a.created_at).getTime();
+      const bTime = (b.completed_at ?? b.created_at).getTime();
+      return bTime - aTime;
+    });
+
+    type SkillKey =
+      | 'listening_score'
+      | 'reading_score'
+      | 'writing_score'
+      | 'speaking_score';
+
+    const pickLatest = (key: SkillKey): number | null => {
+      for (const t of sortedDesc) {
+        const v = t[key];
+        if (v != null && v > 0) return v;
+      }
+      return null;
+    };
+
+    const maxFor = (
+      skill: 'listening' | 'reading' | 'writing' | 'speaking',
+    ): number => {
+      if (certType === 'ielts') return 90;
+      if (skill === 'listening' || skill === 'reading') return 495;
+      return 200;
+    };
+
+    const norm = (
+      score: number | null,
+      skill: 'listening' | 'reading' | 'writing' | 'speaking',
+    ): number => {
+      if (score == null) return 0;
+      return Math.max(
+        0,
+        Math.min(100, Math.round((score / maxFor(skill)) * 100)),
+      );
+    };
+
+    return {
+      listening: norm(pickLatest('listening_score'), 'listening'),
+      reading: norm(pickLatest('reading_score'), 'reading'),
+      writing: norm(pickLatest('writing_score'), 'writing'),
+      speaking: norm(pickLatest('speaking_score'), 'speaking'),
     };
   }
 }
