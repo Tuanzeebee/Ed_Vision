@@ -343,9 +343,10 @@ export class CertificateOverviewService {
           FROM "StudySession"
          WHERE started_at <= ${end}
         UNION ALL
-        SELECT account_id, enrolled_at AS occurred_at
-          FROM "CertificateEnrollment"
-         WHERE enrolled_at <= ${end}
+        SELECT s.account_id, ce.enrolled_at AS occurred_at
+          FROM "CertificateEnrollment" ce
+          JOIN "Student" s ON s.student_id = ce.student_id
+         WHERE ce.enrolled_at <= ${end}
       )
       SELECT account_id,
              MIN(occurred_at) AS first_activity,
@@ -372,8 +373,10 @@ export class CertificateOverviewService {
           SELECT account_id FROM "StudySession"
            WHERE started_at >= ${bucket.start} AND started_at <= ${bucket.end}
           UNION
-          SELECT account_id FROM "CertificateEnrollment"
-           WHERE enrolled_at >= ${bucket.start} AND enrolled_at <= ${bucket.end}
+          SELECT s.account_id
+            FROM "CertificateEnrollment" ce
+            JOIN "Student" s ON s.student_id = ce.student_id
+           WHERE ce.enrolled_at >= ${bucket.start} AND ce.enrolled_at <= ${bucket.end}
         ) AS events
       `;
       activeAccountsPerBucket.push(
