@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import './index.css';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
-import FeaturedVideoSection from './components/FeaturedVideoSection';
 import PhilosophySection from './components/PhilosophySection';
 import HowItWorks from './components/HowItWorks';
 import ServicesSection from './components/ServicesSection';
@@ -38,6 +37,16 @@ export default function App() {
     });
   }, []);
 
+  useEffect(() => {
+    document.documentElement.classList.add('landing-v2-active');
+    document.body.classList.add('landing-v2-active');
+
+    return () => {
+      document.documentElement.classList.remove('landing-v2-active');
+      document.body.classList.remove('landing-v2-active');
+    };
+  }, []);
+
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -56,7 +65,6 @@ export default function App() {
       <div id="features">
         <ServicesSection />
       </div>
-      <FeaturedVideoSection />
       <HowItWorks />
       <PhilosophySection />
       <TestimonialCarousel />
