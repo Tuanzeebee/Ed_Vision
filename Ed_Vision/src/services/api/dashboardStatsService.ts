@@ -113,6 +113,44 @@ export interface LearningDashboardSummaryResponse {
   learningContext: { currentLabel: string; previousLabel?: string };
 }
 
+// ===== Usage Behavior Dashboard =====
+export type UsageBehaviorTimeRange = '7d' | '30d' | '90d';
+
+export interface UsageBehaviorQuery {
+  timeRange?: UsageBehaviorTimeRange;
+}
+
+export interface UsageBehaviorHeatmap {
+  hours: string[];
+  days: string[];
+  matrix: number[][];
+  intensity: number[][];
+}
+
+export interface UsageBehaviorDuration {
+  labels: string[];
+  values: number[];
+}
+
+export interface UsageBehaviorFeatureItem {
+  id: string;
+  name: string;
+  count: number;
+  percent: number;
+}
+
+export interface UsageBehaviorResponse {
+  timeRange: UsageBehaviorTimeRange;
+  rangeStart: string;
+  rangeEnd: string;
+  heatmap: UsageBehaviorHeatmap;
+  duration: UsageBehaviorDuration;
+  featureUsage: {
+    items: UsageBehaviorFeatureItem[];
+    total: number;
+  };
+}
+
 class DashboardStatsService {
   /**
    * Get filter options for dashboard
@@ -177,6 +215,14 @@ class DashboardStatsService {
   // Consolidated learning summary endpoint (server-side aggregates)
   async getLearningDashboardSummary(query?: DashboardStatsQuery): Promise<LearningDashboardSummaryResponse> {
     const response = await apiClient.get<LearningDashboardSummaryResponse>('/admin/dashboard/learning-summary', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // ===== Usage Behavior dashboard (heatmap + duration + feature usage) =====
+  async getUsageBehavior(query?: UsageBehaviorQuery): Promise<UsageBehaviorResponse> {
+    const response = await apiClient.get<UsageBehaviorResponse>('/admin/dashboard/usage-behavior', {
       params: query,
     });
     return response.data;

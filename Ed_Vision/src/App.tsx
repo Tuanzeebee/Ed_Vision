@@ -26,6 +26,7 @@ import TeacherSupportHistory from "./modules/admin/TeacherSupportHistory";
 import QuestionManagement from "./modules/admin/QuestionManagement";
 import AddQuestion from "./modules/admin/AddQuestion";
 import GeneralStatistics from "./modules/admin/GeneralStatistics";
+import UsageBehaviorDashboard from "./modules/admin/UsageBehaviorDashboard";
 import PermissionManagement from "./modules/admin/PermissionManagement";
 import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import NotificationManagement from "./modules/admin/NotificationManagement";
@@ -212,6 +213,7 @@ function App() {
 
           {/* Admin routes - Reports & Analytics (protected by permission) */}
           <Route path="/admin/reports/learning" element={<ProtectedRoute permission="admin_reports"><GeneralStatistics /></ProtectedRoute>} />
+          <Route path="/admin/reports/usage-behavior" element={<ProtectedRoute permission="admin_reports"><UsageBehaviorDashboard /></ProtectedRoute>} />
 
           {/* Admin routes - System Management (protected by permission) */}
           <Route path="/admin/notifications" element={<ProtectedRoute permission="admin_notifications"><NotificationManagement /></ProtectedRoute>} />

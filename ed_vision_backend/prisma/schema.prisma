@@ -43,6 +43,8 @@ model Account {
   surveyResponses            SurveyResponse[]
   prismaplacements           IeltsPlacementSession[]
   toeicExamSessions          ToeicExamSession[]
+  activityLogs               UserActivityLog[]
+  dailyActivitySummaries     UserDailyActivitySummary[]
 
   @@map("Account")
 }
@@ -1306,27 +1308,27 @@ model IeltsRecommendation {
 
 /// Detailed content repository for certificate learning materials (exam/mock-test style).
 model ExamRepository {
-  id                Int                  @id @default(autoincrement())
-  cert_type         String               @db.VarChar(30)
-  title             String               @db.VarChar(255)
-  slug              String               @unique @db.VarChar(120)
+  id                Int      @id @default(autoincrement())
+  cert_type         String   @db.VarChar(30)
+  title             String   @db.VarChar(255)
+  slug              String   @unique @db.VarChar(120)
   description       String?
-  content_type      String               @default("practice_set") @db.VarChar(30)
-  skill_area        String?              @db.VarChar(50)
-  topic_group       String?              @db.VarChar(100)
-  difficulty_level  String?              @db.VarChar(20)
+  content_type      String   @default("practice_set") @db.VarChar(30)
+  skill_area        String?  @db.VarChar(50)
+  topic_group       String?  @db.VarChar(100)
+  difficulty_level  String?  @db.VarChar(20)
   target_score_min  Int?
   target_score_max  Int?
   estimated_minutes Int?
   pass_score        Int?
   tags              Json?
   metadata          Json?
-  total_items       Int                  @default(0)
-  is_published      Boolean              @default(false)
-  version           Int                  @default(1)
+  total_items       Int      @default(0)
+  is_published      Boolean  @default(false)
+  version           Int      @default(1)
   created_by        Int?
-  created_at        DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime             @updatedAt @db.Timestamptz(6)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt @db.Timestamptz(6)
 
   items    ExamRepositoryItem[]
   sessions ToeicExamSession[]
@@ -1698,10 +1700,10 @@ enum ConfidenceLevel {
 
 /// Phiên thi thử TOEIC (mock exam) của một học viên cho một đề trong `ExamRepository`.
 model ToeicExamSession {
-  id              Int       @id @default(autoincrement())
+  id              Int    @id @default(autoincrement())
   account_id      Int
   repository_id   Int
-  repository_slug String    @db.VarChar(120)
+  repository_slug String @db.VarChar(120)
 
   started_at     DateTime  @default(now()) @db.Timestamptz(6)
   duration_sec   Int
@@ -1744,4 +1746,69 @@ model ToeicExamAnswer {
   @@unique([session_id, question_id])
   @@index([session_id])
   @@map("ToeicExamAnswer")
+}
+
+/// ═══════════════════════════════════════════════════════════════════════════
+/// ANALYTICS TABLES - Dashboard Support
+/// ═══════════════════════════════════════════════════════════════════════════
+
+/// User activity tracking cho Dashboard khung giờ cao điểm, heatmap, feature usage
+model UserActivityLog {
+  id         Int     @id @default(autoincrement())
+  account_id Int
+  session_id String? @db.Uuid
+
+  action_type String @db.VarChar(50)
+  feature     String @db.VarChar(50)
+
+  page_path   String? @db.VarChar(255)
+  entity_type String? @db.VarChar(50)
+  entity_id   Int?
+
+  device_type String? @db.VarChar(20)
+  ip_address  String? @db.VarChar(45)
+  user_agent  String? @db.VarChar(500)
+
+  duration_sec Int?
+
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  session_date DateTime @db.Date
+  hour_of_day  Int?     @db.SmallInt
+  day_of_week  Int?     @db.SmallInt
+
+  account Account @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@index([account_id, created_at])
+  @@index([created_at, action_type])
+  @@index([feature, created_at])
+  @@index([session_date, hour_of_day])
+  @@index([entity_type, entity_id, created_at])
+  @@map("UserActivityLog")
+}
+
+/// Session aggregation - tổng hợp cho dashboard không cần query từng record
+model UserDailyActivitySummary {
+  id            Int      @id @default(autoincrement())
+  account_id    Int
+  activity_date DateTime @db.Date
+
+  total_sessions     Int @default(0)
+  total_page_views   Int @default(0)
+  total_duration_min Int @default(0)
+
+  first_activity_at DateTime? @db.Timestamptz(6)
+  last_activity_at  DateTime? @db.Timestamptz(6)
+  peak_hour         Int?      @db.SmallInt
+
+  feature_breakdown Json?
+  device_breakdown  Json?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  account Account @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@unique([account_id, activity_date])
+  @@index([activity_date])
+  @@map("UserDailyActivitySummary")
 }
