@@ -10,7 +10,6 @@ import { Suspense, useEffect } from "react";
 import { initializePermissions } from "@/services/permissionService";
 import {
   SeasonalEffectProvider,
-  SeasonalToggleButton,
 } from "@/components/seasonal-effects";
 import BookAppointmentStepWrapper from "@/modules/parent/BookAppointmentStepWrapper";
 import AllAppointments from "@/modules/booking/AllAppointments";
@@ -31,7 +30,11 @@ import PermissionManagement from "./modules/admin/PermissionManagement";
 import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import NotificationManagement from "./modules/admin/NotificationManagement";
 import NotificationPage from "./pages/NotificationPage";
-
+import OverviewDashBoardCertificate from "./modules/admin/OverviewDashBoardCertificate";
+import StudentDirectoryOverview from "./modules/admin/StudentDirectoryOverview";
+import StudentProfileDetail from "./modules/admin/StudentProfileDetail";
+import ProgramEffectivenessDashboard from "./modules/admin/ProgramEffectivenessDashboard";
+import UsageBehaviorDashboard from "./modules/admin/UsageBehaviorDashboard";
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentLandingV2 from "@/modules/student/landingPage/src/App";
 import StudentCourseOverview from "@/modules/student/StudentCourseOverview";
@@ -122,8 +125,6 @@ function App() {
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <SeasonalEffectProvider forceEvent="CHRISTMAS">
         <Router>
-          {/* Seasonal Effects Toggle Button */}
-          <SeasonalToggleButton />
           {/* Session timeout warning removed - feature deleted */}
           <Routes>
             {/* Default route redirect to student landing */}
@@ -178,6 +179,7 @@ function App() {
               <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/foundation/:tab" element={<ProtectedRoute permission="student_course_overview"><ToeicFoundationStudyPage /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/exam/:examType" element={<ProtectedRoute permission="student_course_overview"><ToeicExamSimulationPage /></ProtectedRoute>} />
+              <Route path="leaderboard" element={<ProtectedRoute permission="student_course_overview"><ToeicFullLeaderboardPage /></ProtectedRoute>} />
             </Route>
 
                                         {/* Route cho parent */}
@@ -195,6 +197,11 @@ function App() {
                                         {/* Admin routes - Dashboard (protected by permission) */}
                                         <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
+                                        <Route path="/admin/dashboard/certificate" element={<ProtectedRoute permission="admin_overview"><OverviewDashBoardCertificate /></ProtectedRoute>} />
+                                        <Route path="/admin/dashboard/usage-behavior" element={<ProtectedRoute permission="admin_overview"><UsageBehaviorDashboard /></ProtectedRoute>} />
+                                        <Route path="/admin/students" element={<ProtectedRoute permission="admin_overview"><StudentDirectoryOverview /></ProtectedRoute>} />
+                                        <Route path="/admin/students/:id" element={<ProtectedRoute permission="admin_overview"><StudentProfileDetail /></ProtectedRoute>} />
+                                        <Route path="/admin/program-effectiveness" element={<ProtectedRoute permission="admin_overview"><ProgramEffectivenessDashboard /></ProtectedRoute>} />
 
           {/* Admin routes - Management (protected by permission) */}
           <Route path="/admin/users" element={<ProtectedRoute permission="admin_users"><AccountManagement /></ProtectedRoute>} />
@@ -214,6 +221,7 @@ function App() {
 
           {/* Admin routes - Reports & Analytics (protected by permission) */}
           <Route path="/admin/reports/learning" element={<ProtectedRoute permission="admin_reports"><GeneralStatistics /></ProtectedRoute>} />
+          <Route path="/admin/reports/usage-behavior" element={<ProtectedRoute permission="admin_reports"><UsageBehaviorDashboard /></ProtectedRoute>} />
 
           {/* Admin routes - System Management (protected by permission) */}
           <Route path="/admin/notifications" element={<ProtectedRoute permission="admin_notifications"><NotificationManagement /></ProtectedRoute>} />

@@ -23,6 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
+import { buildAssetUrl } from "@/services/api/config";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
 import { useAuth } from "@/hooks/useAuth";
@@ -127,8 +128,8 @@ function getMapStorageKey(userId: string | number | undefined): string {
   return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
 }
 const PRACTICE_MISTAKE_HISTORY_LIMIT = 120;
-const AI_PREFETCH_BATCH_SIZE = 1;
-const AI_PREFETCH_PRIORITY_AHEAD = 2;
+const AI_PREFETCH_PRIORITY_AHEAD = 1;
+const EMPTY_QUESTIONS_BANK: Record<number, PracticeQuestion[]> = {};
 
 // ── TTS Audio Hook ────────────────────────────────────────────────────────
 function useTTS() {
@@ -1312,7 +1313,7 @@ export default function ToeicNodePracticePage() {
 
   const isListening = activeSkill === "listening";
   const nodeInfoList = isListening ? LISTENING_NODE_INFO : READING_NODE_INFO;
-  const questionsBank = isListening ? LISTENING_QUESTIONS : {};
+  const questionsBank = isListening ? LISTENING_QUESTIONS : EMPTY_QUESTIONS_BANK;
 
   const nodeInfo = nodeInfoList[parsedNodeIndex] ?? null;
   const toeicPart = nodeIndexToToeicPart(activeSkill, parsedNodeIndex);
@@ -1400,6 +1401,80 @@ export default function ToeicNodePracticePage() {
   const aiExplanationRef = useRef<Record<string, AiTutorExplanation>>({});
   const aiLoadingRef = useRef<Record<string, boolean>>({});
 
+  // Audio prefetch cache — giữ HTMLAudioElement còn sống để browser cache
+  // không bị GC. Key = URL đầy đủ đã resolve (relative path → absolute).
+  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+  const resolveAudioUrl = useCallback((url: string | null | undefined) => {
+    if (!url) return null;
+    return url.startsWith("http") ? url : buildAssetUrl(url);
+  }, []);
+
+  /**
+   * Tải trước 1 audio URL. Có 2 mode:
+   * - mode='metadata' (default): resolve khi `loadedmetadata` — chỉ cần đủ
+   *   để biết duration & bắt đầu phát. RẤT NHANH cho audio dài (chỉ tải
+   *   vài KB header). Dùng cho blocking phase trước khi vào practice.
+   * - mode='full': resolve khi `canplaythrough` — đợi đủ buffer để phát
+   *   không gián đoạn. Dùng cho background prefetch.
+   * Luôn `audio.preload = 'auto'` để browser tiếp tục tải full bytes về
+   * cache ngay cả sau khi promise đã resolve (background).
+   */
+  const prefetchAudio = useCallback(
+    (
+      rawUrl: string | null | undefined,
+      mode: "metadata" | "full" = "metadata",
+      timeoutMs = 12000,
+    ): Promise<void> => {
+      const fullUrl = resolveAudioUrl(rawUrl);
+      if (!fullUrl) return Promise.resolve();
+      const cache = audioCacheRef.current;
+      const cached = cache.get(fullUrl);
+      if (cached) {
+        if (mode === "metadata" && cached.readyState >= 1) return Promise.resolve();
+        if (mode === "full" && cached.readyState >= 4) return Promise.resolve();
+      }
+
+      return new Promise<void>((resolve) => {
+        const audio = cached ?? new Audio();
+        audio.preload = "auto";
+        if (audio.src !== fullUrl) audio.src = fullUrl;
+        cache.set(fullUrl, audio);
+
+        let done = false;
+        const cleanup = () => {
+          audio.removeEventListener("loadedmetadata", onMetaReady);
+          audio.removeEventListener("canplaythrough", onFullReady);
+          audio.removeEventListener("error", onError);
+          clearTimeout(timer);
+        };
+        const finish = () => {
+          if (done) return;
+          done = true;
+          cleanup();
+          resolve();
+        };
+        const onMetaReady = () => {
+          if (mode === "metadata") finish();
+        };
+        const onFullReady = () => finish();
+        const onError = () => finish();
+
+        audio.addEventListener("loadedmetadata", onMetaReady);
+        audio.addEventListener("canplaythrough", onFullReady, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+        const timer = setTimeout(finish, timeoutMs);
+
+        try {
+          audio.load();
+        } catch {
+          finish();
+        }
+      });
+    },
+    [resolveAudioUrl],
+  );
+
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [sessionQuestionIds, setSessionQuestionIds] = useState<number[]>([]);
@@ -1416,6 +1491,7 @@ export default function ToeicNodePracticePage() {
   // Track whether the backend session has been successfully recorded so we
   // can retry on handleComplete if the initial submit fails/skipped.
   const [submitSucceeded, setSubmitSucceeded] = useState(false);
+  const [isSubmittingSession, setIsSubmittingSession] = useState(false);
 
   // --- Groq Chat Tutor State ---
   const [chatMessage, setChatMessage] = useState("");
@@ -1516,8 +1592,12 @@ export default function ToeicNodePracticePage() {
     setDbError(null);
 
     resetPracticeRunState();
+    // Reset audio cache mỗi lần load bộ câu hỏi mới để giải phóng bộ nhớ
+    // (audio cũ giữ trong RAM có thể tốn vài chục MB).
+    audioCacheRef.current.clear();
+
     getToeicPracticeQuestions(toeicPart)
-      .then((data) => {
+      .then(async (data) => {
         if (!Array.isArray(data.questions) || data.questions.length === 0) {
           setDbQuestions(null);
           setSessionQuestionIds([]);
@@ -1543,11 +1623,54 @@ export default function ToeicNodePracticePage() {
           audioUrl: q.context_audio || null,
           imageUrl: q.context_image || null,
         }));
+
+        // ── Prefetch audio: tải trước 5 audio URL đầu (unique) BEFORE
+        //    setDbLoading(false) để khi user vào câu 1 thì audio sẵn sàng
+        //    play ngay, không bị "00:00 đứng hình".
+        //    Sau đó prefetch phần còn lại trong background (không await).
+        const uniqueAudioUrls: string[] = [];
+        const seen = new Set<string>();
+        for (const q of mapped) {
+          if (!q.audioUrl) continue;
+          if (seen.has(q.audioUrl)) continue;
+          seen.add(q.audioUrl);
+          uniqueAudioUrls.push(q.audioUrl);
+        }
+
+        const PREFETCH_BLOCKING = 5;
+        const blockingUrls = uniqueAudioUrls.slice(0, PREFETCH_BLOCKING);
+
+        if (blockingUrls.length > 0) {
+          // Blocking phase: chỉ chờ metadata (duration ready), audio dài
+          // 1+ phút cũng resolve trong < 1s vì chỉ tải vài KB header.
+          await Promise.all(
+            blockingUrls.map((u) => prefetchAudio(u, "metadata")),
+          );
+        }
+
+        // Set state SAU khi 5 audio đầu đã có metadata
         setDbQuestions(mapped.length > 0 ? mapped : null);
         setSessionQuestionIds(data.questions.map((q) => q.id));
         setReservePoints(data.current_reserve_points);
         setUnlockThreshold(data.unlock_threshold ?? 300);
         setExamUnlocked(data.current_reserve_points >= data.unlock_threshold);
+
+        // Background: tải full bytes cho TẤT CẢ audio (kể cả 5 cái blocking
+        // ở trên — vì chúng mới chỉ tải metadata). Pool 3 song song để cân
+        // bằng giữa tốc độ và băng thông.
+        if (uniqueAudioUrls.length > 0) {
+          void (async () => {
+            const POOL = 3;
+            const queue = [...uniqueAudioUrls];
+            const workers = Array.from({ length: POOL }, async () => {
+              while (queue.length > 0) {
+                const url = queue.shift();
+                if (url) await prefetchAudio(url, "full", 60000);
+              }
+            });
+            await Promise.all(workers);
+          })();
+        }
       })
       .catch((error: unknown) => {
         const msg =
@@ -2429,38 +2552,9 @@ export default function ToeicNodePracticePage() {
     ],
   );
 
-  useEffect(() => {
-    if (questions.length === 0) return;
-
-    let cancelled = false;
-
-    const prefetchAllQuestions = async () => {
-      // Warm up the first visible question first to reduce first-screen latency.
-      await fetchAiExplanation(0, questions[0].correctAnswer, false);
-
-      const targets = questions.slice(1).map((questionData, offset) => ({
-        questionIndex: offset + 1,
-        optionKey: questionData.correctAnswer,
-      }));
-
-      for (let i = 0; i < targets.length; i += AI_PREFETCH_BATCH_SIZE) {
-        if (cancelled) return;
-
-        const batch = targets.slice(i, i + AI_PREFETCH_BATCH_SIZE);
-        await Promise.all(
-          batch.map(({ questionIndex, optionKey }) =>
-            fetchAiExplanation(questionIndex, optionKey, false),
-          ),
-        );
-      }
-    };
-
-    void prefetchAllQuestions();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAiExplanation, questions]);
+  // NOTE: Đã bỏ effect prefetch toàn bộ câu hỏi (gây nghẽn AI tutor backend
+  // và làm "Câu tiếp theo" / "Đang tải dữ liệu..." treo lâu).
+  // Chỉ giữ prefetch theo câu hiện tại + 1 câu kế để tối ưu UX mà không spam.
 
   useEffect(() => {
     if (questions.length === 0) return;
@@ -2482,6 +2576,19 @@ export default function ToeicNodePracticePage() {
       );
     }
   }, [currentQuestionIndex, fetchAiExplanation, questions]);
+
+  // Audio prefetch ahead: đảm bảo audio của câu hiện tại + 2 câu kế tiếp đã
+  // được tải đủ buffer trước khi user bấm "Tiếp theo". Mode 'full' vì user
+  // sắp phát thực sự. Idempotent — call lại với URL đã cache sẽ resolve ngay.
+  useEffect(() => {
+    if (questions.length === 0) return;
+    const AHEAD = 2;
+    const endIndex = Math.min(questions.length - 1, currentQuestionIndex + AHEAD);
+    for (let i = currentQuestionIndex; i <= endIndex; i++) {
+      const url = questions[i]?.audioUrl;
+      if (url) void prefetchAudio(url, "full", 60000);
+    }
+  }, [currentQuestionIndex, questions, prefetchAudio]);
 
   useEffect(() => {
     if (!showSummary || questions.length === 0) return;
@@ -2656,7 +2763,8 @@ export default function ToeicNodePracticePage() {
               Đang chuẩn bị bộ câu hỏi luyện tập...
             </p>
             <p className="text-sm text-slate-500">
-              Hệ thống đang ghép bộ câu hỏi phù hợp với node hiện tại.
+              Hệ thống đang ghép bộ câu hỏi và tải sẵn audio để bạn luyện tập
+              mượt mà.
             </p>
           </div>
         </main>
@@ -2929,13 +3037,16 @@ export default function ToeicNodePracticePage() {
     if (!isCurrentSolved && !isCurrentCorrect) return;
 
     if (isLastQuestion) {
-      // Submit to API if using DB questions
+      // Submit to API in BACKGROUND (fire-and-forget) — không block UI để
+      // user vào Summary ngay lập tức. Nếu submit fail/chậm, handleComplete
+      // sẽ retry trước khi navigate về Learning Map.
       if (toeicPart !== null && sessionQuestionIds.length > 0) {
         const answersPayload: Record<string, string> = {};
         sessionQuestionIds.forEach((qId, idx) => {
           if (firstAnswers[idx])
             answersPayload[String(qId)] = firstAnswers[idx];
         });
+        setIsSubmittingSession(true);
         submitToeicPracticeSession({
           toeic_part: toeicPart,
           question_ids: sessionQuestionIds,
@@ -2960,24 +3071,16 @@ export default function ToeicNodePracticePage() {
             }
             setSubmitSucceeded(true);
           })
-          .catch((err) => {
+          .catch((err: any) => {
             console.error(
               "[ToeicNodePractice] submitToeicPracticeSession failed:",
               err?.response?.status,
               err?.response?.data,
-              "payload:",
-              {
-                toeic_part: toeicPart,
-                question_ids: sessionQuestionIds,
-                answers: answersPayload,
-              },
             );
+          })
+          .finally(() => {
+            setIsSubmittingSession(false);
           });
-      } else {
-        console.warn(
-          "[ToeicNodePractice] Skip submit — toeicPart or sessionQuestionIds missing",
-          { toeicPart, sessionQuestionIdsLength: sessionQuestionIds.length },
-        );
       }
       setShowSummary(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3525,7 +3628,7 @@ export default function ToeicNodePracticePage() {
                     src={
                       currentQuestion.imageUrl.startsWith("http")
                         ? currentQuestion.imageUrl
-                        : `http://localhost:3000${currentQuestion.imageUrl}`
+                        : buildAssetUrl(currentQuestion.imageUrl)
                     }
                     alt="Listening context"
                     className="max-h-64 rounded-lg border border-slate-200 object-contain"
@@ -3535,17 +3638,18 @@ export default function ToeicNodePracticePage() {
                   />
                 </div>
               )}
-              {/* Real audio player for listening when audio URL exists */}
+              {/* Real audio player for listening when audio URL exists.
+                  IMPORTANT: key dựa trên URL (không phải questionId) để Part
+                  3/4 dùng chung 1 audio cho 3 câu thì element KHÔNG remount
+                  → giữ nguyên duration + thời điểm đang phát khi user
+                  chuyển câu trong cùng nhóm. */}
               {isListening && currentQuestion.audioUrl ? (
                 <audio
-                  key={currentQuestion.id + "-audio"}
+                  key={resolveAudioUrl(currentQuestion.audioUrl) ?? currentQuestion.id}
                   controls
+                  preload="auto"
                   className="w-full"
-                  src={
-                    currentQuestion.audioUrl.startsWith("http")
-                      ? currentQuestion.audioUrl
-                      : `http://localhost:3000${currentQuestion.audioUrl}`
-                  }
+                  src={resolveAudioUrl(currentQuestion.audioUrl) ?? undefined}
                 >
                   Trình duyệt của bạn không hỗ trợ audio.
                 </audio>

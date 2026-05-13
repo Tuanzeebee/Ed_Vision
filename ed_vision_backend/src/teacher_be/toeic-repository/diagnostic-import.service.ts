@@ -380,15 +380,21 @@ export class DiagnosticImportService {
     body: any,
     file: Express.Multer.File,
   ): Promise<DiagnosticImportResponseDto> {
-    const rawText = await this.extractText(file);
-    if (!rawText.trim()) {
-      throw new BadRequestException('Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.');
-    }
+    // Dùng chung pipeline (extractText + parser) với module Nạp Câu Hỏi Ôn Luyện
+    // để đảm bảo Reading 100 câu (Part 5/6/7) được nhận diện đầy đủ — bao gồm cả
+    // bước trích text 2-cột bằng pdfjs-dist (chống lỗi pdf-parse trộn cột trái/phải).
+    const practiceParsed = await this.practiceImportService.extractAndParseFromFile(file);
 
-    // Dùng chung parser với module Nạp Câu Hỏi Ôn Luyện để đảm bảo Reading 100 câu
-    // (Part 5/6/7) được nhận diện đầy đủ; trước đây parser cũ của diagnostic
-    // bỏ sót ~12 câu so với pipeline practice.
-    const practiceParsed = this.practiceImportService.parsePracticeQuestionsFromText(rawText);
+    // rawText dùng cho fallback Listening (image-based PDF) bên dưới.
+    const rawText = practiceParsed.length === 0 ? await this.extractText(file) : '';
+    if (practiceParsed.length === 0 && !rawText.trim()) {
+      const ext = extname(file.originalname || file.path).toLowerCase();
+      const selectedSkillArea = body.skill_area || 'reading';
+      const isListeningPdf = ext === '.pdf' && selectedSkillArea === 'listening';
+      if (!isListeningPdf) {
+        throw new BadRequestException('Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.');
+      }
+    }
     let allParsedQuestions: ParsedDiagnosticQuestion[] = practiceParsed.map((q) => ({
       questionNumber: q.questionNumber,
       stem: q.stem,
@@ -770,13 +776,26 @@ export class DiagnosticImportService {
       }
 
       for (const chunk of chunks) {
-        const itemId = qNumToItemId.get(chunk.question_number);
-        if (!itemId) continue;
-        await this.prisma.diagnosticRepositoryItem.update({
-          where: { id: itemId },
-          data: { media_audio_url: chunk.url },
-        });
-        autoMappedCount++;
+        const isGroupedPart = chunk.part === 3 || chunk.part === 4;
+        // Part 3/4: 1 audio dùng chung cho nhóm 3 câu liên tiếp.
+        // Lan media_audio_url ra +1, +2 để cả 3 câu đều có audio.
+        const targets = isGroupedPart
+          ? [
+              chunk.question_number,
+              chunk.question_number + 1,
+              chunk.question_number + 2,
+            ]
+          : [chunk.question_number];
+
+        for (const qNum of targets) {
+          const itemId = qNumToItemId.get(qNum);
+          if (!itemId) continue;
+          await this.prisma.diagnosticRepositoryItem.update({
+            where: { id: itemId },
+            data: { media_audio_url: chunk.url },
+          });
+          autoMappedCount++;
+        }
       }
     }
 
@@ -994,6 +1013,16 @@ export class DiagnosticImportService {
     let updatedCount = 0;
     const optionUpdates: Promise<any>[] = [];
 
+    // Build set of question_numbers present in DB items để xác định câu nào
+    // có trong file answer key nhưng không có item tương ứng (unmatched).
+    const dbQuestionNumbers = new Set<number>();
+    for (const item of items) {
+      const qNum = (item.metadata as any)?.question_number;
+      if (typeof qNum === 'number') dbQuestionNumbers.add(qNum);
+    }
+
+    const missingOptionQuestionNumbers: number[] = [];
+
     for (const item of items) {
       const qNum = (item.metadata as any)?.question_number;
       if (typeof qNum !== 'number') continue;
@@ -1026,7 +1055,18 @@ export class DiagnosticImportService {
           );
         }
         updatedCount++;
+      } else {
+        // Item tồn tại, có đáp án trong answer key, nhưng option_key không khớp
+        // bất kỳ option nào → đáp án parse ra (vd "D") nhưng câu hỏi chỉ có A/B/C
+        // (option bị thiếu khi import đề), hoặc OCR đáp án sai ký tự.
+        missingOptionQuestionNumbers.push(qNum);
       }
+    }
+
+    // Câu có trong answer key nhưng không có item trong DB
+    const unmatchedQuestionNumbers: number[] = [];
+    for (const qNum of answerKeyMap.keys()) {
+      if (!dbQuestionNumbers.has(qNum)) unmatchedQuestionNumbers.push(qNum);
     }
 
     if (optionUpdates.length > 0) {
@@ -1041,6 +1081,10 @@ export class DiagnosticImportService {
       repository_id: repository.id,
       slug: repository.slug,
       updated_count: updatedCount,
+      total_answer_keys: answerKeyMap.size,
+      total_db_items: items.length,
+      unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
     };
   }
 }

@@ -9,8 +9,11 @@ import {
   Trash2,
   RefreshCw,
   FileUp,
+  Music,
+  Volume2,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
+import { buildAssetUrl } from "@/services/api/config";
 import {
   importIeltsExamFromOcrFile,
   importToeicExamFromOcrFile,
@@ -29,6 +32,7 @@ import {
   deleteToeicRepository,
   type ToeicRepositoryListItem,
 } from "@/services/api/certificateService";
+import IeltsRepositoryImport from "@/pages/IeltsRepositoryImport";
 
 type RepositoryListItem = ToeicRepositoryListItem | IeltsRepositoryListItem;
 
@@ -93,6 +97,12 @@ export function ToeicRepositoryImportBody({
   const [examType, setExamType] = useState<"toeic" | "ielts">(
     externalCertType ?? "toeic",
   );
+
+  useEffect(() => {
+    if (externalCertType) {
+      setExamType(externalCertType);
+    }
+  }, [externalCertType]);
   const [file, setFile] = useState<File | null>(null);
   const [skillArea, setSkillArea] = useState<"reading" | "listening" | "speaking" | "writing">(
     externalCertType === "ielts" ? "speaking" : "reading",
@@ -129,6 +139,27 @@ export function ToeicRepositoryImportBody({
   const [answerKeyError, setAnswerKeyError] = useState<string | null>(null);
   const [answerKeyResult, setAnswerKeyResult] =
     useState<ToeicAnswerKeyImportResponse | null>(null);
+  
+  // Audio upload state
+  const [audioPart, setAudioPart] = useState<number>(1);
+  const [audioTrackNumber, setAudioTrackNumber] = useState<number | "">(1);
+  const [isAudioSubmitting, setIsAudioSubmitting] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioResults, setAudioResults] = useState<any[]>([]);
+
+  const handleSubmitAudio = async () => {
+    if (!audioFile || !listeningResult) return;
+    setIsAudioSubmitting(true);
+    setAudioError(null);
+    try {
+      // Stub implementation
+      console.log("Uploading audio for part", audioPart, "track", audioTrackNumber);
+    } catch (err: any) {
+      setAudioError(err.message || "Lỗi khi upload audio");
+    } finally {
+      setIsAudioSubmitting(false);
+    }
+  };
 
   // Repository management state
   const [showRepoList, setShowRepoList] = useState(false);
@@ -352,44 +383,37 @@ export function ToeicRepositoryImportBody({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-10">
-      {/* ── Quick guide ── */}
-      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5">
-        <h2 className="mb-3 text-sm font-bold text-blue-800">
-          Hướng dẫn nhập nhanh
-        </h2>
-        <ul className="space-y-1.5">
-          {(examType === "toeic"
-            ? [
-              "Kỹ năng: chọn Reading cho Part 5-7, Listening cho Part 1-4.",
-              "Mã kho đề: mã duy nhất, ví dụ toeic-reading-mock-01. Để trống sẽ tự tạo.",
-              "Tiêu đề kho đề: tên hiển thị cho học viên. Để trống sẽ tự đặt tên mặc định.",
-              "Năm đề thi: nhập năm để hệ thống tự động sắp xếp đề theo thứ tự từ cũ đến mới cho học viên.",
-              "File: TOEIC chỉ hỗ trợ PDF. Listening có thể trích xuất ảnh và câu hỏi tự động.",
-              "Nếu file đề chưa có đáp án chuẩn, có thể bổ sung đáp án ở phần bên dưới.",
-            ]
-            : [
-              "Loại đề: chọn IELTS để nạp đúng vào kho đề IELTS.",
-              "Kỹ năng: chọn Reading hoặc Listening theo bộ đề.",
-              "Mã & tiêu đề kho đề: nếu để trống hệ thống sẽ tự sinh mặc định.",
-              "Năm đề thi: có thể nhập để quản trị và sắp xếp dễ hơn.",
-              "File: IELTS hỗ trợ PDF, TXT, XLSX, XLS.",
-              "Sau khi nạp xong, dữ liệu sẽ được lưu vào kho đề IELTS của hệ thống.",
-            ]
-          ).map((tip, i) => (
-            <li
-              key={i}
-              className="flex items-start gap-2 text-xs text-blue-700 leading-relaxed"
-            >
-              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-200 text-blue-700 font-bold text-[10px]">
-                {i + 1}
-              </span>
-              {tip}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* ── Type Switch ── */}
+      {!externalCertType && (
+        <div className="flex items-center gap-1 rounded-xl bg-gray-100 p-1 w-fit">
+          <button
+            onClick={() => setExamType("toeic")}
+            className={`px-4 py-1.5 text-sm font-bold rounded-lg transition ${
+              examType === "toeic"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            TOEIC
+          </button>
+          <button
+            onClick={() => setExamType("ielts")}
+            className={`px-4 py-1.5 text-sm font-bold rounded-lg transition ${
+              examType === "ielts"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            IELTS
+          </button>
+        </div>
+      )}
 
-      {/* ── Repository list panel ── */}
+      {examType === "ielts" ? (
+        <IeltsRepositoryImport mode="exam" />
+      ) : (
+        <>
+          {/* ── Repository list panel ── */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-md overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <button
@@ -909,7 +933,7 @@ export function ToeicRepositoryImportBody({
                             className="group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition-shadow hover:shadow-md"
                           >
                             <img
-                              src={`http://localhost:3000${img.url}`}
+                              src={buildAssetUrl(img.url)}
                               alt={img.filename}
                               className="h-28 w-full object-cover transition-transform group-hover:scale-105"
                               loading="lazy"
@@ -971,7 +995,7 @@ export function ToeicRepositoryImportBody({
               </h3>
               <ul className="space-y-1">
                 {[
-                  `File audio nên đặt tên theo format: ${listeningResult.slug}_part{N}_{track}.mp3`,
+                  `File audio nên đặt tên theo format: ${listeningResult?.slug}_part{N}_{track}.mp3`,
                   "Part 1: 6 files (1 câu/file) — track 1–6",
                   "Part 2: 25 files (1 câu/file) — track 1–25",
                   "Part 3: 13 tracks × 3 câu — track 1–13",
@@ -986,7 +1010,7 @@ export function ToeicRepositoryImportBody({
                       <span>
                         File audio nên đặt tên theo format:{" "}
                         <code className="rounded bg-green-100 px-1 font-mono text-green-800">
-                          {listeningResult.slug}_part{"{N}"}_{"{track}"}.mp3
+                          {listeningResult?.slug}_part{"{N}"}_{"{track}"}.mp3
                         </code>
                       </span>
                     ) : (
@@ -1016,7 +1040,7 @@ export function ToeicRepositoryImportBody({
                 </select>
                 <p className="mt-1 text-xs text-gray-400">
                   <span
-                    className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${PART_COLORS[audioPart].badge}`}
+                    className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${PART_COLORS[audioPart]?.badge || ""}`}
                   >
                     Part {audioPart}
                   </span>
@@ -1053,7 +1077,7 @@ export function ToeicRepositoryImportBody({
                 </label>
                 <input
                   className={`${fieldClass} bg-gray-50 cursor-default`}
-                  value={listeningResult.slug}
+                  value={listeningResult?.slug || ""}
                   readOnly
                 />
                 <p className="mt-1 text-xs text-gray-400">
@@ -1064,7 +1088,7 @@ export function ToeicRepositoryImportBody({
 
             {/* Audio file picker */}
             <div
-              className={`group rounded-xl border-2 border-dashed ${PART_COLORS[audioPart].border} ${PART_COLORS[audioPart].bg} p-5 transition-colors ${PART_COLORS[audioPart].hover}`}
+              className={`group rounded-xl border-2 border-dashed ${PART_COLORS[audioPart]?.border || ""} ${PART_COLORS[audioPart]?.bg || ""} p-5 transition-colors ${PART_COLORS[audioPart]?.hover || ""}`}
             >
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Chọn file audio
@@ -1074,17 +1098,17 @@ export function ToeicRepositoryImportBody({
                 type="file"
                 accept=".mp3,.wav,.m4a,.ogg,.aac"
                 onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
-                className={`w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold cursor-pointer ${PART_COLORS[audioPart].file}`}
+                className={`w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold cursor-pointer ${PART_COLORS[audioPart]?.file || ""}`}
               />
               <p className="mt-2 text-xs text-gray-400">
                 Hỗ trợ: MP3, WAV, M4A, OGG, AAC.
               </p>
               {audioFile && (
                 <div
-                  className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${PART_COLORS[audioPart].badge}`}
+                  className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${PART_COLORS[audioPart]?.badge || ""}`}
                 >
                   <Music className="h-4 w-4 shrink-0" />
-                  {audioFile.name}
+                  {audioFile?.name}
                 </div>
               )}
             </div>
@@ -1116,7 +1140,7 @@ export function ToeicRepositoryImportBody({
                   Đã upload ({audioResults.length} track)
                 </h4>
                 <ul className="space-y-2">
-                  {audioResults.map((r, idx) => (
+                  {audioResults.map((r: any, idx: number) => (
                     <li
                       key={idx}
                       className="flex items-center gap-2.5 rounded-lg border border-green-200 bg-white px-3 py-2.5 text-sm shadow-sm"
@@ -1142,7 +1166,7 @@ export function ToeicRepositoryImportBody({
                           <span className="text-xs text-gray-500">
                             → mapped to{" "}
                             <span className="font-semibold text-green-700">
-                              {r.mapped_item_ids.length} câu
+                               {r.mapped_item_ids?.length || 0} câu
                             </span>
                           </span>
                         </div>
@@ -1325,6 +1349,8 @@ export function ToeicRepositoryImportBody({
             {activeSlug}
           </code>
         </p>
+      )}
+        </>
       )}
     </div>
   );

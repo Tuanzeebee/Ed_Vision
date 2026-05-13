@@ -8,6 +8,8 @@ import { CERTIFICATES, StatCard, CertCard } from './certificateData'
 import type { CertId, Certificate } from './certificateData'
 import { getAllEnrollments, getToeicReservePoints } from '@/services/api/certificateService'
 import type { EnrollmentResponse, ToeicReservePointsResponse } from '@/services/api/certificateService'
+import { studyRoomService } from '@/services/student/studyRoomService'
+import { getPersonalStats } from '@/services/api/leaderboardService'
 
 const BACKGROUND_VIDEO_URL =
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4'
@@ -25,13 +27,23 @@ export default function CertificateReview() {
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
   const [toeicReserve, setToeicReserve] = useState<ToeicReservePointsResponse | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [streak, setStreak] = useState(0)
+  const [totalExp, setTotalExp] = useState(0)
   useEffect(() => {
     Promise.all([
       getAllEnrollments(),
       getToeicReservePoints().catch(() => null),
-    ]).then(([enrollData, reserveData]) => {
+      studyRoomService.getMyStudyStats().catch(() => null),
+      getPersonalStats().catch(() => null),
+    ]).then(([enrollData, reserveData, statsData, personalStats]) => {
       setEnrollments(enrollData)
       setToeicReserve(reserveData)
+      if (statsData) {
+        setStreak(statsData.streak.current ?? 0)
+      }
+      if (personalStats) {
+        setTotalExp(personalStats.totals.totalExp ?? 0)
+      }
       setIsLoaded(true)
     }).catch(() => {
       setIsLoaded(true)
@@ -183,9 +195,6 @@ export default function CertificateReview() {
       ? Math.round((completedCerts.length / certsWithProgress.length) * 100)
       : 0
 
-  // Chưa có API cho streak — hiện 0 cho acc chưa có dữ liệu
-  const streak = 0
-
   const displayName = user?.fullName || user?.full_name || user?.name || 'Sinh viên'
 
   const hasCompletedIeltsSurvey = useMemo(() => {
@@ -277,10 +286,7 @@ export default function CertificateReview() {
               <StatCard
                 icon={<Diamond className="w-5 h-5 text-cyan-500 fill-cyan-400" />}
                 label="Tổng điểm tích lũy"
-                value={(() => {
-                  const total = enrollments.reduce((sum, e) => sum + (e.current_score ?? 0), 0)
-                  return total > 0 ? `${total.toLocaleString()} điểm` : '0 điểm'
-                })()}
+                value={totalExp > 0 ? `${totalExp.toFixed(1)} điểm` : '0 điểm'}
                 sub="Tích lũy từ tất cả chứng chỉ đang học"
                 accent="bg-indigo-100"
                 cardClassName="bg-indigo-50/90 border-indigo-100"

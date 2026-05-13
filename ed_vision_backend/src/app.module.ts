@@ -12,6 +12,8 @@ import { InstructorManagementModule } from './admin_be/instructor-management/ins
 import { SurveyManagementModule } from './admin_be/survey-management/survey-management.module';
 import { QuestionManagementModule } from './admin_be/question-management/question-management.module';
 import { StatisticsOverviewModule } from './admin_be/statistics-overview/statistics-overview.module';
+import { UsageBehaviorModule } from './admin_be/usage-behavior/usage-behavior.module';
+import { CertificateOverviewModule } from './admin_be/certificate-overview/certificate-overview.module';
 import { NotificationModule } from './admin_be/notification/notification.module';
 import { BookingModule } from './booking/booking.module';
 import { ClassManagementModule } from './teacher_be/class-management/class-management.module';
@@ -37,6 +39,7 @@ import { StudyRoomModule } from './study-room/study-room.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { IeltsAdaptiveModule } from './ielts-adaptive/ielts-adaptive.module';
 import { PlacementModule } from './placement/placement.module';
+import { IeltsRepositoryModule } from './ielts-repository/ielts-repository.module';
 
 function resolveI18nPath(): string {
   const candidatePaths = [
@@ -75,6 +78,8 @@ function resolveI18nPath(): string {
     SurveyManagementModule,
     QuestionManagementModule,
     StatisticsOverviewModule,
+    UsageBehaviorModule,
+    CertificateOverviewModule,
     NotificationModule,
     ClassManagementModule,
     SurveysModule,
@@ -90,6 +95,7 @@ function resolveI18nPath(): string {
     IeltsAdaptiveModule,
     PlacementModule,
     YouTubeMusicModule,
+    IeltsRepositoryModule,
     TtsModule,
     SttModule,
   ],

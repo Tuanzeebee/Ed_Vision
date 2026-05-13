@@ -29,6 +29,8 @@ import {
   IeltsListeningAudioUploadResponseDto,
   IeltsRepositoryListItemDto,
   IeltsRepositoryDeleteResponseDto,
+  IeltsPracticeImportDto,
+  IeltsPracticeImportResponseDto,
 } from './dto/ielts-import.dto';
 
 type AuthenticatedRequest = ExpressRequest & {
@@ -98,13 +100,13 @@ export class IeltsRepositoryController {
       storage: ieltsUploadStorage,
       limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
       fileFilter: (_req, file, cb) => {
-        const allowed = ['.pdf', '.txt', '.xlsx', '.xls'];
+        const allowed = ['.pdf', '.txt', '.xlsx', '.xls', '.docx', '.png', '.jpg', '.jpeg'];
         if (allowed.includes(extname(file.originalname).toLowerCase())) {
           cb(null, true);
         } else {
           cb(
             new BadRequestException(
-              'Chỉ hỗ trợ định dạng: PDF, TXT, XLSX, XLS.',
+              'Chỉ hỗ trợ định dạng: PDF, TXT, DOCX, XLSX, XLS, Ảnh (PNG/JPG).',
             ),
             false,
           );
@@ -140,12 +142,14 @@ export class IeltsRepositoryController {
       storage: ieltsUploadStorage,
       limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
       fileFilter: (_req, file, cb) => {
-        const allowed = ['.txt', '.csv'];
+        const allowed = ['.pdf', '.txt', '.csv', '.docx', '.png', '.jpg', '.jpeg'];
         if (allowed.includes(extname(file.originalname).toLowerCase())) {
           cb(null, true);
         } else {
           cb(
-            new BadRequestException('File đáp án phải là .txt hoặc .csv.'),
+            new BadRequestException(
+              'File đáp án hỗ trợ: PDF, TXT, CSV, DOCX, Ảnh (PNG/JPG).',
+            ),
             false,
           );
         }
@@ -161,6 +165,43 @@ export class IeltsRepositoryController {
     }
     return this.service.importAnswerKey(dto, file);
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /teacher/ielts-repository/import-practice
+  // Import practice questions (Reading/Listening/Speaking/Writing).
+  // ─────────────────────────────────────────────────────────────────────────
+  @Post('import-practice')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: ieltsUploadStorage,
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['.pdf', '.txt', '.xlsx', '.xls', '.docx', '.png', '.jpg', '.jpeg'];
+        if (allowed.includes(extname(file.originalname).toLowerCase())) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'Hỗ trợ định dạng: PDF, TXT, DOCX, XLSX, XLS, Ảnh (PNG/JPG).',
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async importPractice(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: IeltsPracticeImportDto,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<IeltsPracticeImportResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng đính kèm file.');
+    }
+    const accountId = req.user?.account_id ?? 0;
+    return this.service.importPractice(accountId, dto, file);
+  }
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // POST /teacher/ielts-repository/upload-audio

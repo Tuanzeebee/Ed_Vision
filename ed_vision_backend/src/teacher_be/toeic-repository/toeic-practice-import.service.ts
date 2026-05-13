@@ -98,6 +98,11 @@ export class ToeicPracticeImportResponseDto {
     missing_count: number;
     question_numbers: number[];
   }>;
+  /**
+   * Số thứ tự các câu được import nhưng options là placeholder do PDF gốc
+   * thiếu options trong text-layer. Teacher cần edit lại 4 đáp án thật.
+   */
+  questions_needing_review!: number[];
 }
 
 export class ToeicPracticeManualOptionDto {
@@ -241,6 +246,7 @@ export class ToeicPracticeAnswerKeyImportResponseDto {
   updated_questions!: number;
   unanswered_questions!: number;
   unmatched_question_numbers!: number[];
+  missing_option_question_numbers!: number[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -259,6 +265,12 @@ interface ParsedPracticeQuestion {
   options: ParsedOption[];
   detectedPart: number | null;
   readingPassage: string | null;
+  /**
+   * Đánh dấu câu được parser "cứu" bằng placeholder options vì PDF gốc bị mất
+   * options trong text-layer (OCR hỏng cục bộ). Caller (controller / frontend)
+   * nên hiển thị cảnh báo cho teacher review thủ công.
+   */
+  needsReview?: boolean;
 }
 
 type ToeicPracticeImportScope = 'single_part' | 'full_reading' | 'full_listening';
@@ -622,6 +634,27 @@ export class ToeicPracticeImportService {
     );
   }
 
+  /**
+   * Fix các artifact OCR thường gặp ở option marker đầu dòng cho TOEIC RC PDF:
+   *   - "(8)"  → "(B)"   (chữ B nhận nhầm thành digit 8)
+   *   - "(©)"  → "(C)"   (chữ C nhận nhầm thành ký tự copyright ©)
+   *   - "(¢)"  → "(C)"   (cent sign)
+   *   - "(®)"  → "(B)"   (registered sign, hiếm gặp nhưng tương tự)
+   *
+   * Chỉ áp dụng khi marker nằm ở ĐẦU DÒNG kèm theo `)` ngay sau, để tránh đụng
+   * vào nội dung passage hợp lệ (vd: footnote "(8)" giữa câu).
+   *
+   * Đây là root-cause của các trường hợp `missing_option_question_numbers`
+   * trên TOEIC Reading PDF: option B/C bị bỏ qua do regex `[A-D]` không match
+   * "8"/"©", khiến câu chỉ lưu được 2-3 options, đáp án thực không khớp.
+   */
+  private fixOcrOptionMarkers(line: string): string {
+    return line
+      .replace(/^\(\s*8\s*\)/u, '(B)')
+      .replace(/^\(\s*[©¢]\s*\)/u, '(C)')
+      .replace(/^\(\s*®\s*\)/u, '(B)');
+  }
+
   private extractInlineOptionsFromLine(line: string): {
     stem: string;
     options: ParsedOption[];
@@ -635,7 +668,13 @@ export class ToeicPracticeImportService {
       return { stem: line.trim(), options: [] };
     }
 
-    const stem = line.slice(0, markers[0].index ?? 0).trim();
+    // Lookbehind cho phép '(' trước A-D (để bắt option dạng "(A)"), nhưng không
+    // consume ký tự đó → phải tự cắt bỏ '(' / '[' / '{' dangling ở cuối stem,
+    // tránh trường hợp stem = "(" khi dòng chỉ chứa options dạng "(A) ... (B) ...".
+    const stem = line
+      .slice(0, markers[0].index ?? 0)
+      .replace(/[\s([{]+$/u, '')
+      .trim();
     const options: ParsedOption[] = [];
 
     for (let i = 0; i < markers.length; i += 1) {
@@ -801,17 +840,353 @@ export class ToeicPracticeImportService {
 
   // ── File text extraction ─────────────────────────────────────────────────────
 
+  /**
+   * Trích text PDF có nhận diện layout nhiều cột (TOEIC RC thường dùng 2 cột).
+   * Dùng `pdfjs-dist` để lấy items kèm toạ độ x/y, gom theo cột rồi mới ghép dòng.
+   * Tránh được lỗi `pdf-parse` nối ngang cột-trái với cột-phải vào cùng 1 dòng,
+   * khiến parser chỉ nhận được câu cột-trái (vd: 40/100 câu Reading).
+   */
+  private async extractPdfTextColumnAware(buf: Buffer): Promise<string> {
+    // @ts-ignore
+    const pdfjs: any = require('pdfjs-dist/legacy/build/pdf.js');
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+    try {
+      const allLines: string[] = [];
+      for (let pn = 1; pn <= doc.numPages; pn++) {
+        const page = await doc.getPage(pn);
+        try {
+          const tc = await page.getTextContent();
+          const pageW: number = page.view?.[2] ?? 612;
+          const items = (tc.items as any[])
+            .filter((it) => 'str' in it && it.str && String(it.str).trim().length > 0)
+            .map((it) => ({
+              x: Number(it.transform?.[4] ?? 0),
+              y: Number(it.transform?.[5] ?? 0),
+              s: String(it.str),
+            }));
+
+          if (items.length === 0) continue;
+
+          type Item = { x: number; y: number; s: string };
+          // midX = pageW * 0.45 để xử lý layout Part 6 dạng "135. (A) ... 138. (A) ..."
+          // mà nhãn câu thứ 2 nằm gần giữa trang (x≈269 trên trang 573pt).
+          // leftBandMax / rightBandMin chỉ dùng cho heuristic phát hiện 2 cột,
+          // không ảnh hưởng đến split actual.
+          const midX = pageW * 0.45;
+          const leftBandMax = pageW * 0.42;
+          const rightBandMin = pageW * 0.5;
+
+          // Helper: gom items thành rows theo y (tolerance 3pt).
+          const groupIntoRows = (xs: Item[]): Array<{ y: number; items: Item[] }> => {
+            const sorted = [...xs].sort((a, b) => b.y - a.y);
+            const rows: Array<{ y: number; items: Item[] }> = [];
+            let cur: { y: number; items: Item[] } | null = null;
+            for (const it of sorted) {
+              if (!cur || Math.abs(it.y - cur.y) > 3) {
+                cur = { y: it.y, items: [it] };
+                rows.push(cur);
+              } else {
+                cur.items.push(it);
+              }
+            }
+            return rows;
+          };
+
+          // Phát hiện 2 cột:
+          //  (a) Đếm số ROW có item ở CẢ nửa trái lẫn nửa phải (≥4 → 2-col).
+          //  (b) Hoặc cả 2 nửa đều có ≥10 items thực (handles trang TOEIC mà
+          //      cột trái và cột phải lệch y, ít row dual nhưng vẫn 2-col).
+          const allRows = groupIntoRows(items);
+          let dualRowCount = 0;
+          for (const row of allRows) {
+            const hasL = row.items.some(
+              (it) => it.x < leftBandMax && it.s.trim().length > 0,
+            );
+            const hasR = row.items.some(
+              (it) => it.x >= rightBandMin && it.s.trim().length > 0,
+            );
+            if (hasL && hasR) dualRowCount++;
+          }
+          const leftItemCount = items.filter(
+            (it) => it.x < leftBandMax && it.s.trim().length > 0,
+          ).length;
+          const rightItemCount = items.filter(
+            (it) => it.x >= rightBandMin && it.s.trim().length > 0,
+          ).length;
+          const isTwoColumn =
+            dualRowCount >= 4 ||
+            (leftItemCount >= 10 && rightItemCount >= 10);
+
+          const groups: Item[][] = isTwoColumn
+            ? [
+              items.filter((i) => i.x < midX),
+              items.filter((i) => i.x >= midX),
+            ]
+            : [items];
+
+          for (const group of groups) {
+            // Gom items thành rows theo y, sort theo x trong row.
+            const groupRows = groupIntoRows(group);
+            for (const row of groupRows) {
+              row.items.sort((a, b) => a.x - b.x);
+              let line = '';
+              for (const it of row.items) {
+                const needSep =
+                  line.length > 0 && !line.endsWith(' ') && !it.s.startsWith(' ');
+                line += (needSep ? ' ' : '') + it.s;
+              }
+              const cleaned = line.replace(/\s+/g, ' ').trim();
+              if (cleaned) allLines.push(cleaned);
+            }
+          }
+        } finally {
+          if (typeof page.cleanup === 'function') page.cleanup();
+        }
+      }
+      return this.normalizeQuestionLabels(allLines).join('\n');
+    } finally {
+      if (typeof doc.destroy === 'function') {
+        await doc.destroy().catch(() => undefined);
+      }
+    }
+  }
+
+  /**
+   * Chuẩn hoá nhãn câu hỏi sau khi extract PDF column-aware.
+   * Xử lý các pattern thường gặp khi PDF có text layer "lệch":
+   *  - Nhãn bị cắt ngắn ("11," "12.") khi prev là "110." → fix về "111." "112."
+   *  - Nhãn dính nhiều trên 1 dòng ("135. (A) garden 138. (A) ...") → tách 2 dòng.
+   *  - Nhãn không có dấu `.` ("122 Mr. Singh ...") → thêm dấu chấm.
+   *  - Nhãn bị MẤT hoàn toàn (vd: 121, 126) → suy luận từ chuỗi (D)→(A) liền nhau
+   *    của các block options và inject nhãn synthetic vào trước stem-line gần nhất.
+   */
+  private normalizeQuestionLabels(lines: string[]): string[] {
+    const out: string[] = [];
+    let lastNum: number | null = null;
+    let pendingNewQ = false;
+    // Track passage context: passage text Part 7 thường chứa list "1. ...", "2. ..."
+    // dễ bị nhầm thành Q191/Q192 do truncation correction. Khi inPassage=true,
+    // chỉ cho phép truncation cho 2-digit drop (vd "11"→"111") chứ không cho
+    // single-digit (tránh "1" trong list bị nhầm thành Q-cuối-cùng-+1).
+    let inPassage = false;
+
+    const isOptA = (s: string) => /^\(?A\)?\s*[.):\-]/i.test(s);
+    const isOptD = (s: string) => /^\(?D\)?\s*[.):\-]/i.test(s);
+
+    const pushLabel = (n: number, rest: string) => {
+      const trimmed = rest.trim();
+      out.push(trimmed ? `${n}. ${trimmed}` : `${n}.`);
+      // Chỉ cập nhật lastNum khi nhãn đi tuần tự (lastNum+1) hoặc có nội dung
+      // đáng kể đi kèm (>5 ký tự). Tránh trường hợp marker chỉ-vị-trí "[137]"
+      // trong passage Part 6 (xuất hiện dạng bare "137.") làm lệch chuỗi nhãn.
+      if (lastNum === null || n === lastNum + 1) {
+        lastNum = n;
+      } else if (n > lastNum + 1 && n - lastNum <= 5 && trimmed.length > 5) {
+        lastNum = n;
+      }
+      pendingNewQ = false;
+    };
+
+    for (let line of lines) {
+      // 0) Tránh false-positive: line bắt đầu bằng time format "6:00 P.M."
+      //    parser có regex `(\d{1,3})\s*[).:\-]` coi `:` là separator → nhầm
+      //    thành Q6 với stem "00 P.M.". Prepend space để parser bỏ qua.
+      if (/^\d{1,2}:\d{2}\b/.test(line)) {
+        line = ' ' + line;
+      }
+
+      // Track passage context: bắt đầu khi thấy "Questions X-Y refer to..."
+      // Reset khi thấy PART header.
+      if (/Questions?\s+\d+\s*[-\u2013\u2014]\s*\d+\s*refer/i.test(line)) {
+        inPassage = true;
+      } else if (/^\s*PART\s+(?:[1-7]|[IVX]+)\b/i.test(line)) {
+        inPassage = false;
+      }
+
+      // 1a) Tách nhãn-kép Part 6 (option marker phía sau): "135. (A) garden 138. (A) When buying..."
+      const dualOpt = line.match(
+        /^(\d{1,3})[.,]\s*(.+?)\s+(\d{1,3})[.,]\s*(\(?[A-D]\)?[.):\-]?\s.+)$/,
+      );
+      if (dualOpt) {
+        pushLabel(+dualOpt[1], dualOpt[2]);
+        pushLabel(+dualOpt[3], dualOpt[4]);
+        continue;
+      }
+
+      // 1b) Tách nhãn-kép Part 7 (cả 2 đều stem): "172. ... ? 175. In which of the positions..."
+      // Yêu cầu: cả 2 số đều thuộc range Reading (101-200), số sau > số trước,
+      // chênh lệch ≤ 10 (cùng 1 passage block).
+      const dualStem = line.match(
+        /^(\d{1,3})[.,]\s+(.+?)\s+(\d{1,3})[.,]\s+(.+)$/,
+      );
+      if (dualStem) {
+        const n1 = +dualStem[1], n2 = +dualStem[3];
+        if (
+          n1 >= 100 && n1 <= 200 &&
+          n2 >= 100 && n2 <= 200 &&
+          n2 > n1 && n2 - n1 <= 10
+        ) {
+          pushLabel(n1, dualStem[2]);
+          pushLabel(n2, dualStem[4]);
+          continue;
+        }
+      }
+
+      // 2) Nhãn không có separator: "122 Mr. Singh wants..."
+      // Chỉ áp dụng NGOÀI passage để tránh nhầm với địa chỉ kiểu "161 Sussex Street".
+      const noSep = line.match(/^(\d{2,3})\s+([A-Z].+)$/);
+      if (
+        noSep &&
+        +noSep[1] >= 101 &&
+        +noSep[1] <= 200 &&
+        !inPassage
+      ) {
+        pushLabel(+noSep[1], noSep[2]);
+        continue;
+      }
+
+      // 3) Nhãn chuẩn "NNN." / "NNN," + sửa các artifact OCR thường gặp:
+      //    - Truncation: "11,"→"111.", "12."→"112." khi prev là "110."
+      //    - Leading garbage digit: "4135."→"135.", "497."→"197." (OCR thêm "4"
+      //      vào đầu nhãn, có khi thay thế chữ số đầu).
+      const labelM = line.match(/^([0-9]+)[.,]\s*(.*)$/);
+      if (labelM) {
+        let n = +labelM[1];
+        const rest = labelM[2];
+
+        // Bóc bớt 1-2 chữ số đầu nếu n > 200 (vượt range TOEIC) và phần còn lại
+        // khớp với nhãn kỳ vọng (lastNum + 1) — trực tiếp hoặc sau truncation fix.
+        if (n > 200 && lastNum !== null) {
+          const s = labelM[1];
+          const expected = lastNum + 1;
+          for (let strip = 1; strip <= 2 && strip < s.length; strip++) {
+            const cand = +s.slice(strip);
+            if (cand < 1 || cand > 200) continue;
+            if (cand === expected) { n = cand; break; }
+            // Truncation case: "97" sau "196" → kỳ vọng 197 (= 97 + 100).
+            if (lastNum >= 100 && cand < 100 && expected - cand === 100) {
+              n = expected;
+              break;
+            }
+          }
+        }
+
+        // Sửa truncation: nhãn bị OCR cắt mất 1-2 chữ số đầu so với expected.
+        // Ví dụ: "11,"→"111.", "12."→"112.", "1."→"111.", "3."→"113.", "7."→"117.".
+        // Quy tắc tổng quát: nếu n < 100 và lastNum ≥ 100, kỳ vọng expected = lastNum+1.
+        // Nếu chuỗi chữ số của expected kết thúc bằng đúng chuỗi chữ số của n, sửa.
+        // GUARD: trong passage Part 7, KHÔNG cho phép single-digit truncation
+        // (tránh "1.", "2." trong list passage bị nhầm thành Q-tiếp-theo).
+        // Vẫn cho 2-digit truncation vì "11", "12" rất hiếm xuất hiện trong passage.
+        if (lastNum !== null && lastNum >= 100 && n < 100) {
+          const expected = lastNum + 1;
+          const isSingleDigit = labelM[1].length === 1;
+          if (
+            String(expected).endsWith(String(n)) &&
+            !(inPassage && isSingleDigit)
+          ) {
+            n = expected;
+          }
+        }
+
+        // Nếu vẫn ngoài range TOEIC (1-200), bỏ qua việc coi đây là nhãn câu.
+        // Trong passage, đặc biệt skip cả số 1-9 + period (list-marker).
+        if (n < 1 || n > 200 || (inPassage && n < 100 && labelM[1].length === 1)) {
+          // Trong passage, single-digit "1." là list marker — bỏ qua nhãn,
+          // không push vào out để parser không tạo Q-rác.
+          if (inPassage && labelM[1].length === 1 && n < 10) {
+            // Push as plain text (with space prefix) để parser không match qStartMatch
+            out.push(' ' + line);
+          } else {
+            out.push(line);
+          }
+          continue;
+        }
+
+        // Bare label (không có nội dung kèm theo) NHƯNG nhảy số ngoài tuần tự
+        // (vd: "137." standalone giữa passage Part 6 trong khi lastNum=134) →
+        // đây là marker chỉ-vị-trí-blank, KHÔNG phải nhãn câu thật. Drop để
+        // parser không tạo câu hỏi giả.
+        if (
+          rest.trim().length === 0 &&
+          lastNum !== null &&
+          n !== lastNum + 1 &&
+          (n > lastNum + 1 || n <= lastNum)
+        ) {
+          // Skip — passage position marker
+          continue;
+        }
+
+        pushLabel(n, rest);
+        continue;
+      }
+
+      // 4) Inject nhãn bị mất: option (A) xuất hiện ngay sau (D) của câu trước,
+      //    không có nhãn nào ở giữa → tạo nhãn synthetic gắn vào stem-line đầu tiên.
+      if (isOptA(line) && pendingNewQ && lastNum !== null) {
+        let lastDIdx = -1;
+        for (let j = out.length - 1; j >= 0; j--) {
+          if (isOptD(out[j])) { lastDIdx = j; break; }
+        }
+        const expected = lastNum + 1;
+
+        const isStemLike = (s: string) =>
+          s.length > 8 &&
+          !/^TEST\d/i.test(s) &&
+          !/^GO ON\b/i.test(s) &&
+          !/^\d{1,4}$/.test(s) &&
+          !/^Questions?\s+\d+/i.test(s) &&
+          !isOptA(s) &&
+          !isOptD(s) &&
+          !/^\(?[BC]\)?\s*[.):\-]/i.test(s);
+
+        let stemIdx = -1;
+        for (let j = lastDIdx + 1; j < out.length; j++) {
+          if (isStemLike(out[j])) { stemIdx = j; break; }
+        }
+        if (stemIdx >= 0) {
+          out[stemIdx] = `${expected}. ${out[stemIdx]}`;
+        } else {
+          // Không có stem (vd: Part 6 fill-in-the-blank) — push nhãn rỗng,
+          // parser đã có nhánh xử lý nhãn rỗng trong passage context.
+          out.splice(lastDIdx + 1, 0, `${expected}.`);
+        }
+        lastNum = expected;
+        pendingNewQ = false;
+      }
+
+      out.push(line);
+      if (isOptD(line)) pendingNewQ = true;
+    }
+
+    return out;
+  }
+
   private async extractText(file: Express.Multer.File): Promise<string> {
     const ext = extname(file.originalname || file.filename || '').toLowerCase();
 
     if (ext === '.pdf') {
+      const buf = await readFile(file.path).catch(() => null);
+
+      // Ưu tiên trích cột-aware bằng pdfjs-dist để xử lý layout TOEIC 2 cột.
+      if (buf) {
+        try {
+          const text = await this.extractPdfTextColumnAware(buf);
+          if (text && text.trim().length > 0) return text;
+        } catch (err) {
+          this.logger.warn(
+            `Column-aware PDF extract failed, fallback to pdf-parse: ${String(err)}`,
+          );
+        }
+      }
+
       try {
         const pdfParseModule = await import('pdf-parse');
-        const buf = await readFile(file.path);
+        const pdfBuf = buf ?? (await readFile(file.path));
         const parserCtor = (pdfParseModule as { PDFParse?: any }).PDFParse;
 
         if (typeof parserCtor === 'function') {
-          const parser = new parserCtor({ data: buf });
+          const parser = new parserCtor({ data: pdfBuf });
           try {
             const parsed = await parser.getText();
             return String(parsed?.text ?? '');
@@ -824,7 +1199,7 @@ export class ToeicPracticeImportService {
 
         const legacyDefault = (pdfParseModule as { default?: any }).default;
         if (typeof legacyDefault === 'function') {
-          const parsed = await legacyDefault(buf);
+          const parsed = await legacyDefault(pdfBuf);
           return String(parsed?.text ?? '');
         }
       } catch (err) {
@@ -928,6 +1303,7 @@ export class ToeicPracticeImportService {
     const lines = normalized
       .split('\n')
       .map((l) => l.replace(/\s+/g, ' ').trim())
+      .map((l) => this.fixOcrOptionMarkers(l))
       .filter((l) => l.length > 0);
 
     const answerKeyMap = this.extractAnswerKeyMap(normalized);
@@ -960,7 +1336,7 @@ export class ToeicPracticeImportService {
       if (!wq) return;
 
       const optionKeys = ['A', 'B', 'C', 'D'];
-      const options: ParsedOption[] = optionKeys
+      let options: ParsedOption[] = optionKeys
         .filter((k) => wq!.optionsMap.has(k))
         .map((k) => ({
           optionKey: k,
@@ -968,6 +1344,64 @@ export class ToeicPracticeImportService {
           isCorrect: false,
         }))
         .filter((o) => o.optionText.length > 0);
+
+      // Targeted recovery cho TOEIC Part 7 dạng "In which of the positions marked
+      // [1], [2], [3], and [4]…" — option markers/text thường bị OCR phá:
+      //   (A) H]   → đúng là (A) [1]
+      //   (8) [2]  → (B) [2]   (đã được fix trước parser, nhưng option text vẫn
+      //                        có thể là "[2]" hoặc rác như "B]")
+      //   (©) [3]  → (C) [3]
+      //   (D) [4]
+      // Đây là dạng câu CHUẨN với đáp án CỐ ĐỊNH [1]/[2]/[3]/[4], không có biến
+      // thể nội dung. Ta luôn override về canonical khi nhận diện được stem,
+      // bất kể options.length, để đảm bảo đáp án đúng (B/C) không trỏ vào text rác.
+      let needsReview = false;
+      const stemPreview = wq!.stemLines.join(' ');
+      const isInWhichPositions =
+        /in which of the positions marked\s*\[\s*1\s*\]/i.test(stemPreview);
+      if (isInWhichPositions) {
+        options = [
+          { optionKey: 'A', optionText: '[1]', isCorrect: false },
+          { optionKey: 'B', optionText: '[2]', isCorrect: false },
+          { optionKey: 'C', optionText: '[3]', isCorrect: false },
+          { optionKey: 'D', optionText: '[4]', isCorrect: false },
+        ];
+      }
+
+      // Fallback chung cho Reading (Part 5/6/7): nếu câu có nhãn + stem hợp lệ
+      // nhưng PDF mất options trong text-layer (OCR hỏng cục bộ), inject 4
+      // placeholder để giữ nguyên số câu. Đánh dấu needsReview = true để caller
+      // báo cho teacher edit lại.
+      // Chỉ áp dụng cho Reading vì Listening (Part 1-4) đã có fallback riêng
+      // ở `importPracticeQuestions` xử lý case không có options text.
+      const partForRecovery = wq!.detectedPart ?? currentPart;
+      const qNum = wq!.questionNumber;
+      // Yêu cầu chặt: chỉ inject placeholder cho câu Reading có số 101-200 thật
+      // (tránh false-positive khi mid-passage text bị regex hiểu nhầm thành Q#1).
+      const isReadingQuestion =
+        qNum !== null &&
+        qNum >= 101 &&
+        qNum <= 200 &&
+        (partForRecovery === null ||
+          (partForRecovery >= 5 && partForRecovery <= 7));
+      if (
+        options.length < 2 &&
+        qNum !== null &&
+        isReadingQuestion &&
+        wq!.stemLines.join(' ').trim().length >= 20
+      ) {
+        const stemHasPlaceholder = wq!.stemLines.join(' ');
+        options = (['A', 'B', 'C', 'D'] as const).map((k) => ({
+          optionKey: k,
+          optionText: `(${k}) — Vui lòng nhập đáp án (PDF gốc thiếu options của câu này)`,
+          isCorrect: false,
+        }));
+        needsReview = true;
+        this.logger.warn(
+          `[Parser] Q#${qNum}: PDF text-layer thiếu options, ` +
+          `inject placeholder (stem preview: "${stemHasPlaceholder.slice(0, 60)}...")`,
+        );
+      }
 
       if (options.length < 2) {
         wq = null;
@@ -1012,6 +1446,7 @@ export class ToeicPracticeImportService {
         options,
         detectedPart: wq.detectedPart ?? currentPart,
         readingPassage: assignedPassage,
+        needsReview: needsReview || undefined,
       });
 
       wq = null;
@@ -1077,11 +1512,20 @@ export class ToeicPracticeImportService {
       // Allow empty rest when in a passage context (Part 6 fill-in-the-blank)
       // OR when currentPart === 6 (even if passage header not detected yet)
       const inPassageContext = currentPassageQuestionRange !== null || currentPart === 6;
+      // Note: separator hợp lệ:
+      //   - `.` (chuẩn)
+      //   - `)` (vd: "101) text")
+      //   - `:` chỉ khi KHÔNG theo sau là chữ số (tránh nhầm time "6:00 P.M.")
+      //   - `-` chỉ khi theo sau là KHOẢNG TRẮNG (tránh nhầm compound như "40-year")
       const qStartMatch =
-        line.match(/^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*[).:\-]\s*(.+)$/i) ??
+        line.match(
+          /^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*(?:[).]|:(?!\d)|-(?=\s))\s*(.+)$/i,
+        ) ??
         line.match(/^(\d{1,3})\s{2,}(.+)$/) ??
         (inPassageContext
-          ? line.match(/^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*[).:\-]\s*()$/i)
+          ? line.match(
+              /^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*(?:[).]|:(?!\d)|-(?=\s))\s*$/i,
+            )
           : null);
 
       if (qStartMatch) {
@@ -1300,6 +1744,7 @@ export class ToeicPracticeImportService {
     let skippedCount = 0;
     let part1Count = 0;
     const detectedParts = new Set<number>();
+    const questionsNeedingReview = new Set<number>();
     const skippedDuplicates: Array<{
       question_number: number;
       part: number;
@@ -1473,6 +1918,9 @@ export class ToeicPracticeImportService {
         detectedParts.add(part);
         importedCount++;
         seenInCurrentBatch.add(fingerprint);
+        if (pq.needsReview) {
+          questionsNeedingReview.add(questionNumber);
+        }
       } catch (err) {
         this.logger.warn(
           `Failed to persist Q#${String(pq.questionNumber ?? index + 1)}: ${String(err)}`,
@@ -1511,6 +1959,7 @@ export class ToeicPracticeImportService {
       extracted_image_count: imageAssets.length,
       skipped_duplicates: skippedDuplicates,
       manual_fill_suggestions: manualFillSuggestions,
+      questions_needing_review: [...questionsNeedingReview].sort((a, b) => a - b),
     };
   }
 
@@ -1841,6 +2290,7 @@ export class ToeicPracticeImportService {
     let matchedQuestions = 0;
     let updatedQuestions = 0;
     const unmatchedQuestionNumbers: number[] = [];
+    const missingOptionQuestionNumbers: number[] = [];
 
     for (const [questionNumber, answerKey] of answerMap.entries()) {
       const question = questionByNumber.get(questionNumber);
@@ -1854,7 +2304,47 @@ export class ToeicPracticeImportService {
         (option) => this.normalizeOptionKey(option.option_key) === answerKey,
       );
 
-      if (!matchedOption) continue;
+      if (!matchedOption) {
+        // Question exists but the option letter from the answer-key is missing
+        // on this question (e.g. PDF text-layer chỉ bóc được 3/4 options).
+        // Thay vì bỏ qua khiến teacher không biết câu nào miss, ta tạo
+        // placeholder option theo đúng letter và đánh dấu is_correct = true.
+        // Teacher có thể cập nhật text sau.
+        const nextSort =
+          question.options.reduce(
+            (max, opt) => Math.max(max, opt.sort_order ?? 0),
+            -1,
+          ) + 1;
+        missingOptionQuestionNumbers.push(questionNumber);
+        this.logger.warn(
+          `[AnswerKey] Q#${questionNumber} (id=${question.id}) thiếu option "${answerKey}". ` +
+            `Tạo placeholder option "${answerKey}" và đánh dấu is_correct=true.`,
+        );
+        operations.push(
+          this.prisma.toeicPracticeOption.updateMany({
+            where: { question_id: question.id },
+            data: { is_correct: false },
+          }),
+          this.prisma.toeicPracticeOption.upsert({
+            where: {
+              question_id_option_key: {
+                question_id: question.id,
+                option_key: answerKey,
+              },
+            },
+            create: {
+              question_id: question.id,
+              option_key: answerKey,
+              option_text: `(${answerKey}) — Vui lòng nhập nội dung đáp án`,
+              is_correct: true,
+              sort_order: nextSort,
+            },
+            update: { is_correct: true },
+          }),
+        );
+        updatedQuestions += 1;
+        continue;
+      }
 
       operations.push(
         this.prisma.toeicPracticeOption.updateMany({
@@ -1890,6 +2380,7 @@ export class ToeicPracticeImportService {
       updated_questions: updatedQuestions,
       unanswered_questions: unansweredQuestions,
       unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
     };
   }
 
@@ -2067,13 +2558,27 @@ export class ToeicPracticeImportService {
       }
 
       for (const chunk of chunks) {
-        const itemId = qNumToId.get(chunk.question_number);
-        if (!itemId) continue;
-        await this.prisma.toeicPracticeQuestion.update({
-          where: { id: itemId },
-          data: { context_audio: chunk.url },
-        });
-        autoMappedCount++;
+        const isGroupedPart = chunk.part === 3 || chunk.part === 4;
+        // Trong TOEIC Part 3/4, mỗi audio chunk dùng chung cho 1 nhóm 3 câu
+        // (vd Q32-34, Q35-37, ...). Audio chunker chỉ trả `question_number`
+        // là câu đầu nhóm → tự lan ra +1, +2 để cả 3 câu cùng có audio.
+        const targets = isGroupedPart
+          ? [
+              chunk.question_number,
+              chunk.question_number + 1,
+              chunk.question_number + 2,
+            ]
+          : [chunk.question_number];
+
+        for (const qNum of targets) {
+          const itemId = qNumToId.get(qNum);
+          if (!itemId) continue;
+          await this.prisma.toeicPracticeQuestion.update({
+            where: { id: itemId },
+            data: { context_audio: chunk.url },
+          });
+          autoMappedCount++;
+        }
       }
     }
 

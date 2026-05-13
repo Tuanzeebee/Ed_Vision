@@ -110,6 +110,24 @@ describe('RegexExtractor', () => {
     expect(result.map((r) => r.word)).toContain('accommodate');
   });
 
+  it('OCR Tesseract VI nhầm dấu chấm thành dấu phẩy sau số — vẫn parse đủ', () => {
+    // Tesseract VN thường nhầm "23." → "23," (đặc biệt ở chữ in nhỏ)
+    // Trước fix: entry 23 dính vào meaning của entry 22 → mất 1 entry
+    const input = '22. Accessible (a) : có thể tiếp cận được, tới được.23, Accommodate (v) : thích ứng';
+    const result = extractor.extract(input);
+    expect(result.length).toBe(2);
+    expect(result.map((r) => r.word)).toContain('accessible');
+    expect(result.map((r) => r.word)).toContain('accommodate');
+  });
+
+  it('OCR mất hẳn dấu chấm sau số ("23 Accommodate") — vẫn split & parse được', () => {
+    const input = '22. Accessible (a) : có thể tiếp cận được, tới được. 23 Accommodate (v) : thích ứng';
+    const result = extractor.extract(input);
+    expect(result.length).toBeGreaterThanOrEqual(2);
+    expect(result.map((r) => r.word)).toContain('accessible');
+    expect(result.map((r) => r.word)).toContain('accommodate');
+  });
+
   it('mergeLines: continuation tiếng Việt bắt đầu bằng chữ hoa → vẫn merge', () => {
     const input = '19. Acceptable (adj) : có thể chấp\nNhận được';
     const result = extractor.extract(input);

@@ -77,6 +77,25 @@ class CacheService {
   }
 
   /**
+   * Peek — trả về data kể cả khi đã expired (không xóa entry).
+   * Dùng cho stale-while-revalidate: hiển thị dữ liệu cũ ngay lập tức
+   * trong khi fetch dữ liệu mới ở background.
+   */
+  peek<T>(key: string): T | null {
+    const item = this.cache.get(key);
+    return item ? (item.data as T) : null;
+  }
+
+  /**
+   * Check nếu cache entry còn "tươi" (chưa hết TTL)
+   */
+  isFresh(key: string): boolean {
+    const item = this.cache.get(key);
+    if (!item) return false;
+    return Date.now() - item.timestamp <= item.ttl;
+  }
+
+  /**
    * Get hoặc fetch nếu không có cache
    */
   async getOrFetch<T>(

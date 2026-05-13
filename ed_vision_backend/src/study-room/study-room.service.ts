@@ -1215,7 +1215,10 @@ export class StudyRoomService {
         updatedAt: stats?.updated_at ?? null,
       },
       streak: {
-        current: streak?.current_streak ?? 0,
+        current: StreakTrackerService.computeEffectiveCurrentStreak(
+          streak?.last_study_date ?? null,
+          streak?.current_streak ?? 0,
+        ),
         longest: streak?.longest_streak ?? 0,
         lastStudyDate: streak?.last_study_date ?? null,
       },
@@ -1259,7 +1262,10 @@ export class StudyRoomService {
         score: entry.total_minutes,
         totalMinutes: entry.total_minutes,
         totalSessions: entry.total_sessions,
-        currentStreak: entry.account.dailyStreak?.current_streak ?? 0,
+        currentStreak: StreakTrackerService.computeEffectiveCurrentStreak(
+          entry.account.dailyStreak?.last_study_date ?? null,
+          entry.account.dailyStreak?.current_streak ?? 0,
+        ),
         updatedAt: entry.updated_at,
       })),
     };

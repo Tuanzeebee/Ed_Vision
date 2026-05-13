@@ -130,16 +130,14 @@ export class ProfileController {
   )
   async uploadAvatar(
     @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
   ) {
     if (!file) {
       throw new BadRequestException('Không có file được upload');
     }
 
-    // Return full URL to the uploaded file
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const url = `${protocol}://${host}/uploads/avatars/${file.filename}`;
+    // Trả về relative URL để frontend tự resolve theo origin hiện tại
+    // (tunnel hoặc localhost). Tránh hard-code host của backend.
+    const url = `/uploads/avatars/${file.filename}`;
     return { url };
   }
 
