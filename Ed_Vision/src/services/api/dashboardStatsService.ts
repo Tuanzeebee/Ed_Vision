@@ -175,6 +175,76 @@ export interface CertificateOverviewResponse {
   recentActivities: CertificateOverviewActivity[];
 }
 
+// ===== Program Effectiveness Dashboard =====
+export type ProgramEffectivenessCertType = 'ielts' | 'toeic' | 'all';
+
+export interface ProgramEffectivenessQuery {
+  certType?: ProgramEffectivenessCertType;
+}
+
+export interface ProgramEffectivenessScoreComparison {
+  labels: string[];
+  entry: number[];
+  exit: number[];
+  scaleMax: number;
+  entrySampleSize: number;
+  exitSampleSize: number;
+}
+
+export interface ProgramEffectivenessAchievement {
+  successRate: number;
+  totalEvaluated: number;
+  ieltsAchievementRate: number;
+  ieltsEvaluated: number;
+  toeicAchievementRate: number;
+  toeicEvaluated: number;
+}
+
+export type ProgramEffectivenessBadgeTone = 'success' | 'info' | 'warning';
+export type ProgramEffectivenessIconKey = 'improvement' | 'attention';
+
+export interface ProgramEffectivenessModuleImpact {
+  id: string;
+  programComponent: string;
+  name: string;
+  description: string;
+  badge: string;
+  badgeTone: ProgramEffectivenessBadgeTone;
+  iconKey: ProgramEffectivenessIconKey;
+  improvement: number | null;
+  dropoutRate: number | null;
+  completionRate: number | null;
+  totalStudents: number;
+  effectivenessRank: number | null;
+  needsAttention: boolean;
+}
+
+export type ProgramEffectivenessRatingTone =
+  | 'success'
+  | 'info'
+  | 'warning'
+  | 'danger';
+
+export interface ProgramEffectivenessGroup {
+  id: string;
+  cohortType: string;
+  cohortId: string;
+  cohortName: string;
+  totalStudents: number;
+  avgImprovement: number;
+  successRate: number;
+  rating: string;
+  ratingTone: ProgramEffectivenessRatingTone;
+}
+
+export interface ProgramEffectivenessResponse {
+  certType: ProgramEffectivenessCertType;
+  scoreComparison: ProgramEffectivenessScoreComparison;
+  achievement: ProgramEffectivenessAchievement;
+  moduleImpact: ProgramEffectivenessModuleImpact[];
+  groupEffectiveness: ProgramEffectivenessGroup[];
+}
+
 // ===== Usage Behavior Dashboard =====
 export type UsageBehaviorTimeRange = '7d' | '30d' | '90d';
 
@@ -296,6 +366,17 @@ class DashboardStatsService {
   ): Promise<CertificateOverviewResponse> {
     const response = await apiClient.get<CertificateOverviewResponse>(
       '/admin/dashboard/certificate-overview',
+      { params: query },
+    );
+    return response.data;
+  }
+
+  // ===== Program Effectiveness dashboard (score comparison + achievement + module + cohort) =====
+  async getProgramEffectiveness(
+    query?: ProgramEffectivenessQuery,
+  ): Promise<ProgramEffectivenessResponse> {
+    const response = await apiClient.get<ProgramEffectivenessResponse>(
+      '/admin/dashboard/program-effectiveness',
       { params: query },
     );
     return response.data;
