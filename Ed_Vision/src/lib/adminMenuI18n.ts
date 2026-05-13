@@ -13,11 +13,18 @@ export const MENU_LABEL_KEYS: Record<string, string>= {
   // Quản lý submenu
   "Tài khoản & Vai trò": "admin:sidebar.accountsRoles",
   "Quản lý Khảo sát": "admin:sidebar.surveyManagement",
+
+  // Sinh viên menu
+  "Sinh viên": "admin:sidebar.students",
+  "Danh sách Sinh viên": "admin:sidebar.studentDirectory",
   
   // Dữ liệu & Báo cáo submenu
   "Thống kê Tổng quát": "admin:sidebar.generalStats",
   "Báo cáo Lãnh đạo": "admin:sidebar.leadershipReports",
   "Kết quả Học máy": "admin:sidebar.mlResults",
+  "Dashboard Chứng chỉ": "admin:sidebar.certificateDashboard",
+  "Hành vi Sử dụng": "admin:sidebar.usageBehavior",
+  "Hiệu quả Chương trình": "admin:sidebar.programEffectiveness",
   
   // Quản lý Hệ thống submenu
   "Quản lý Thông báo": "admin:sidebar.notificationManagement",

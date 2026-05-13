@@ -30,6 +30,11 @@ import PermissionManagement from "./modules/admin/PermissionManagement";
 import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import NotificationManagement from "./modules/admin/NotificationManagement";
 import NotificationPage from "./pages/NotificationPage";
+import OverviewDashBoardCertificate from "./modules/admin/OverviewDashBoardCertificate";
+import UsageBehaviorDashboard from "./modules/admin/UsageBehaviorDashboard";
+import StudentDirectoryOverview from "./modules/admin/StudentDirectoryOverview";
+import StudentProfileDetail from "./modules/admin/StudentProfileDetail";
+import ProgramEffectivenessDashboard from "./modules/admin/ProgramEffectivenessDashboard";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentLandingV2 from "@/modules/student/landingPage/src/App";
@@ -193,6 +198,11 @@ function App() {
                                         {/* Admin routes - Dashboard (protected by permission) */}
                                         <Route path="/admin/dashboard" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
                                         <Route path="/admin/overview" element={<ProtectedRoute permission="admin_overview"><AdminOverviewDashboard /></ProtectedRoute>} />
+                                        <Route path="/admin/dashboard/certificate" element={<ProtectedRoute permission="admin_overview"><OverviewDashBoardCertificate /></ProtectedRoute>} />
+                                        <Route path="/admin/dashboard/usage-behavior" element={<ProtectedRoute permission="admin_overview"><UsageBehaviorDashboard /></ProtectedRoute>} />
+                                        <Route path="/admin/students" element={<ProtectedRoute permission="admin_overview"><StudentDirectoryOverview /></ProtectedRoute>} />
+                                        <Route path="/admin/students/:id" element={<ProtectedRoute permission="admin_overview"><StudentProfileDetail /></ProtectedRoute>} />
+                                        <Route path="/admin/program-effectiveness" element={<ProtectedRoute permission="admin_overview"><ProgramEffectivenessDashboard /></ProtectedRoute>} />
 
           {/* Admin routes - Management (protected by permission) */}
           <Route path="/admin/users" element={<ProtectedRoute permission="admin_users"><AccountManagement /></ProtectedRoute>} />

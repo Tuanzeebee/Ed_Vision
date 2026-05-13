@@ -43,6 +43,8 @@ model Account {
   surveyResponses            SurveyResponse[]
   prismaplacements           IeltsPlacementSession[]
   toeicExamSessions          ToeicExamSession[]
+  activityLogs               UserActivityLog[]
+  dailyActivitySummaries     UserDailyActivitySummary[]
 
   @@map("Account")
 }
@@ -93,6 +95,10 @@ model Student {
   classGroup             ClassGroup?             @relation(fields: [class_id], references: [class_id])
   courseRecords          StudentCourseRecord[]
   surveyFactors          StudentSurveyFactors?
+
+  // Analytics relations
+  testResults            StudentTestResult[]
+  learningProgress       StudentLearningProgress[]
 
   @@map("Student")
 }
@@ -782,6 +788,10 @@ model CertificateEnrollment {
   practicePartSessions ToeicPracticePartSession[]
   userVocabProgress    UserVocabProgress[]
   vocabTestSessions    VocabTestSession[]
+
+  // Analytics relations
+  testResults          StudentTestResult[]
+  learningProgress     StudentLearningProgress?
 
   @@index([student_id, cert_type, status])
   @@map("CertificateEnrollment")
@@ -1744,4 +1754,260 @@ model ToeicExamAnswer {
   @@unique([session_id, question_id])
   @@index([session_id])
   @@map("ToeicExamAnswer")
+}
+
+/// ═══════════════════════════════════════════════════════════════════════════
+/// ANALYTICS TABLES - Dashboard Support
+/// ═══════════════════════════════════════════════════════════════════════════
+
+/// User activity tracking cho Dashboard khung giờ cao điểm, heatmap, feature usage
+model UserActivityLog {
+  id           Int      @id @default(autoincrement())
+  account_id   Int
+  session_id   String?  @db.Uuid  // Group các actions cùng phiên (UUID từ frontend)
+
+  // Phân loại action chi tiết
+  action_type  String   @db.VarChar(50)  // login | logout | page_view | lesson_start | lesson_complete | exam_start | exam_submit | practice_start | practice_complete | etc.
+  feature      String   @db.VarChar(50)   // auth | dashboard | lesson | exam | practice | profile | admin | certificate | diagnostic
+
+  // Context chi tiết
+  page_path    String?  @db.VarChar(255)  // /student/dashboard, /admin/students, etc.
+  entity_type  String?  @db.VarChar(50)   // course | exam | lesson | student | certificate | topic
+  entity_id    Int?                      // ID cụ thể
+
+  // Thông tin thiết bị cho phân tích
+  device_type  String?  @db.VarChar(20)   // desktop | mobile | tablet
+  ip_address   String?  @db.VarChar(45)   // IPv4/IPv6
+  user_agent   String?  @db.VarChar(500) // Browser info
+
+  // Thời gian
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  session_date DateTime @db.Date         // Ngày (để query nhanh theo ngày)
+  hour_of_day  Int?     @db.SmallInt      // 0-23 (cho heatmap giờ)
+  day_of_week  Int?     @db.SmallInt      // 0-6 (cho heatmap thứ)
+
+  account      Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@index([account_id, created_at])
+  @@index([created_at, action_type])
+  @@index([feature, created_at])
+  @@index([session_date, hour_of_day])  // Cho heatmap queries
+  @@index([entity_type, entity_id, created_at])
+  @@map("UserActivityLog")
+}
+
+/// Session aggregation - tổng hợp cho dashboard không cần query từng record
+model UserDailyActivitySummary {
+  id                 Int      @id @default(autoincrement())
+  account_id         Int
+  activity_date      DateTime @db.Date
+
+  // Summary metrics
+  total_sessions     Int      @default(0)
+  total_page_views   Int      @default(0)
+  total_duration_min Int      @default(0)  // Tổng thời gian active (phút)
+
+  // Peak activity
+  first_activity_at  DateTime? @db.Timestamptz(6)
+  last_activity_at   DateTime? @db.Timestamptz(6)
+  peak_hour          Int?      @db.SmallInt  // Giờ có activity nhiều nhất
+
+  // Feature breakdown (JSON để linh hoạt)
+  feature_breakdown  Json?     // { "lesson": 10, "exam": 2, "practice": 5 }
+  device_breakdown   Json?     // { "desktop": 15, "mobile": 2 }
+
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @updatedAt @db.Timestamptz(6)
+
+  account            Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@unique([account_id, activity_date])
+  @@index([activity_date])
+  @@map("UserDailyActivitySummary")
+}
+
+/// ═══════════════════════════════════════════════════════════════════════════
+/// LEARNING EFFECTIVENESS - Before/After Score Tracking
+/// ═══════════════════════════════════════════════════════════════════════════
+
+/// Kết quả test đầu vào và các lần test sau (Diagnostic, Mock, Official)
+model StudentTestResult {
+  id                Int      @id @default(autoincrement())
+  student_id        Int
+  enrollment_id     Int?     // Link đến CertificateEnrollment nếu có
+
+  // Test classification
+  cert_type         String   @db.VarChar(30)  // ielts | toeic
+  test_type         String   @db.VarChar(30)  // diagnostic | placement | mock | official | practice
+  test_phase        String   @db.VarChar(30)  // entry | midterm | final | exit  // Phân loại giai đoạn
+
+  // Source info
+  repository_id     Int?     // Nếu test từ ExamRepository
+  session_id        Int?     // Link đến ToeicExamSession hoặc IeltsPlacementSession
+
+  // SCORES - Tổng quát
+  total_score       Int?     // TOEIC: 0-990, IELTS: band × 10 (65 = 6.5)
+  band_score        Float?   // IELTS band (1.0-9.0)
+  percentile_rank   Int?     // Phần trăm so với cohort
+
+  // SCORES - Chi tiết theo skill (cho phân tích cải thiện từng kỹ năng)
+  listening_score   Int?     // TOEIC points hoặc IELTS band × 10
+  reading_score     Int?     // TOEIC points hoặc IELTS band × 10
+  writing_score     Int?     // TOEIC: 0-200, IELTS: band × 10
+  speaking_score    Int?     // TOEIC: 0-200, IELTS: band × 10
+
+  // Writing/Speaking chi tiết (IELTS)
+  writing_task1_score Int?     // IELTS Task 1
+  writing_task2_score Int?   // IELTS Task 2
+
+  // Progress tracking
+  attempt_number    Int      @default(1)  // Lần làm thứ mấy
+  is_baseline       Boolean  @default(false)  // true = điểm chuẩn đầu vào
+  improvement_from_baseline Float?  // % cải thiện so với baseline
+
+  // Test metadata
+  duration_minutes  Int?     // Thời gian làm bài
+  total_questions   Int?     // Số câu hỏi
+  correct_count     Int?     // Số câu đúng
+  accuracy_percent  Float?   // Tỷ lệ đúng %
+
+  // Timestamps
+  started_at        DateTime? @db.Timestamptz(6)
+  completed_at      DateTime? @db.Timestamptz(6)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  student           Student                @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  enrollment        CertificateEnrollment? @relation(fields: [enrollment_id], references: [id])
+
+  @@index([student_id, cert_type, test_type])
+  @@index([student_id, test_phase, completed_at])
+  @@index([enrollment_id, test_phase])
+  @@index([student_id, is_baseline])
+  @@index([cert_type, completed_at])  // Cho cohort analysis
+  @@map("StudentTestResult")
+}
+
+/// Tổng hợp hiệu quả học tập của sinh viên theo enrollment
+model StudentLearningProgress {
+  id                    Int      @id @default(autoincrement())
+  student_id            Int
+  enrollment_id         Int      @unique  // Một enrollment có một progress summary
+  cert_type             String   @db.VarChar(30)
+
+  // Baseline scores (điểm đầu vào)
+  baseline_test_id      Int?     // Link đến StudentTestResult
+  baseline_band_score   Float?
+  baseline_total_score  Int?
+
+  // Current/Last scores
+  last_test_id          Int?
+  last_band_score       Float?
+  last_total_score      Int?
+  last_test_date        DateTime? @db.Timestamptz(6)
+
+  // Progress metrics
+  improvement_band      Float?   // Cải thiện band (1.5, 0.8, etc.)
+  improvement_percent   Float?   // % cải thiện
+  tests_completed       Int      @default(0)  // Số test đã làm
+
+  // Skill breakdown progress
+  listening_improvement Float?
+  reading_improvement   Float?
+  writing_improvement   Float?
+  speaking_improvement  Float?
+
+  // Risk assessment
+  at_risk               Boolean  @default(false)  // Có đang có nguy cơ không đạt target
+  risk_factors          Json?    // ["low_practice", "declining_writing", "absent_7days"]
+
+  // Target tracking
+  target_band           Float?
+  target_score          Int?
+  projected_completion_date DateTime? @db.Date  // Dự đoán ngày đạt target
+
+  updated_at            DateTime @updatedAt @db.Timestamptz(6)
+
+  student               Student               @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  enrollment            CertificateEnrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+
+  @@index([student_id, cert_type])
+  @@index([at_risk, cert_type])  // Query at-risk students nhanh
+  @@map("StudentLearningProgress")
+}
+
+/// Cohort performance - tổng hợp theo nhóm (khoa, khóa, lớp)
+model CohortPerformance {
+  id                 Int      @id @default(autoincrement())
+
+  // Cohort classification
+  cohort_type        String   @db.VarChar(30)  // department | class | year | program | certificate
+  cohort_id          String   @db.VarChar(50)   // ID của cohort (CNTT2021, IELTS65, etc.)
+  cohort_name        String   @db.VarChar(100) // Tên hiển thị
+
+  cert_type          String?  @db.VarChar(30)  // ielts | toeic | null (tất cả)
+
+  // Period
+  period_type        String   @db.VarChar(20)  // monthly | quarterly | yearly | all_time
+  period_start       DateTime @db.Date
+  period_end         DateTime @db.Date
+
+  // Cohort stats
+  total_students     Int
+  active_students    Int      // Có activity trong period
+  tested_students    Int      // Có làm test trong period
+
+  // Score stats
+  avg_baseline_band  Float?
+  avg_current_band   Float?
+  avg_improvement    Float?
+
+  // Success rate
+  target_band        Float?   // Target band để đánh giá success
+  students_reached_target Int?
+  success_rate_percent    Float?
+
+  // Breakdown
+  test_type_breakdown Json?   // { "diagnostic": 50, "mock": 120, "official": 30 }
+  skill_breakdown     Json?   // { "listening": { "avg": 6.5 }, "reading": ... }
+
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([cohort_type, cohort_id, cert_type, period_type, period_start])
+  @@index([cohort_type, cert_type])
+  @@index([period_start, period_end])
+  @@map("CohortPerformance")
+}
+
+/// Program effectiveness metrics - cho Dashboard Hiệu quả chương trình
+model ProgramEffectivenessMetric {
+  id                 Int      @id @default(autoincrement())
+
+  cert_type          String   @db.VarChar(30)  // ielts | toeic
+  program_component  String   @db.VarChar(50)  // module_grammar | module_mock_test | module_writing | etc.
+
+  // Metrics
+  total_students     Int
+  avg_improvement    Float?   // Cải thiện trung bình (band hoặc điểm)
+  completion_rate    Float?   // % hoàn thành module
+  dropout_rate       Float?   // % bỏ dở
+
+  // Time metrics
+  avg_duration_days  Int?     // Thời gian trung bình hoàn thành
+
+  // Ranking
+  effectiveness_rank Int?     // 1, 2, 3... theo improvement
+  needs_attention    Boolean  @default(false)
+  attention_reason   String?  @db.VarChar(255) // "high_dropout", "low_improvement"
+
+  period_start       DateTime @db.Date
+  period_end         DateTime @db.Date
+
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([cert_type, program_component, period_start])
+  @@index([cert_type, effectiveness_rank])
+  @@map("ProgramEffectivenessMetric")
 }
