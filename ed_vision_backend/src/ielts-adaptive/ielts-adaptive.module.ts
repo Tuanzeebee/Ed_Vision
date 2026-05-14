@@ -4,6 +4,7 @@ import { IeltsAdaptiveService } from './services/ielts-adaptive.service';
 import { BandEstimationService } from './services/band-estimation.service';
 import { EvaluationService } from './services/evaluation.service';
 import { IeltsAiGradingService } from './services/ielts-ai-grading.service';
+import { IeltsGroqTutorService } from './services/ielts-groq-tutor.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiModule } from '../common/gemini/gemini.module';
@@ -11,7 +12,14 @@ import { GeminiModule } from '../common/gemini/gemini.module';
 @Module({
   imports: [PrismaModule, GeminiModule],
   controllers: [IeltsAdaptiveController],
-  providers: [IeltsAdaptiveService, BandEstimationService, EvaluationService, PrismaService, IeltsAiGradingService],
-  exports: [IeltsAdaptiveService],
+  providers: [
+    IeltsAdaptiveService,
+    BandEstimationService,
+    EvaluationService,
+    PrismaService,
+    IeltsAiGradingService,
+    IeltsGroqTutorService,
+  ],
+  exports: [IeltsAdaptiveService, IeltsGroqTutorService],
 })
 export class IeltsAdaptiveModule {}

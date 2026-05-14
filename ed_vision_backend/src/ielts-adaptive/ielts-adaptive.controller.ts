@@ -37,7 +37,9 @@ import {
   GradeSpeakingDto,
   GradeWritingDto,
   IeltsGradingResultDto,
+  IeltsChatGroqDto,
 } from './dto/ielts-adaptive.dto';
+import { IeltsGroqTutorService } from './services/ielts-groq-tutor.service';
 
 @Controller('ielts-adaptive')
 export class IeltsAdaptiveController {
@@ -47,6 +49,7 @@ export class IeltsAdaptiveController {
     private readonly service: IeltsAdaptiveService,
     private readonly gradingService: IeltsAiGradingService,
     private readonly geminiService: GeminiService,
+    private readonly groqTutorService: IeltsGroqTutorService,
   ) {}
 
   @Get('health')
@@ -334,27 +337,26 @@ export class IeltsAdaptiveController {
   async gradeWriting(
     @Body() dto: GradeWritingDto,
   ): Promise<IeltsGradingResultDto> {
-    // MOCK: return random scores
-    const rand = (min: number, max: number) =>
-      Math.round((Math.random() * (max - min) + min) * 2) / 2;
-    const band = rand(4, 8);
-    return {
-      bandScore: band,
-      skill: 'writing',
-      criteria: [
-        { name: 'Task Achievement', score: rand(4, 8), feedback: 'Mock feedback' },
-        { name: 'Coherence & Cohesion', score: rand(4, 8), feedback: 'Mock feedback' },
-        { name: 'Lexical Resource', score: rand(4, 8), feedback: 'Mock feedback' },
-        { name: 'Grammatical Range', score: rand(4, 8), feedback: 'Mock feedback' },
-      ],
-      overallFeedback: 'This is a mock grading response.',
-      strengths: ['Clear structure'],
-      weaknesses: ['Vocabulary range'],
-      suggestions: ['Use more varied vocabulary'],
-      correctedExamples: [],
-      confidence: 'high',
-      estimatedCefrLevel: band >= 7 ? 'C1' : band >= 5.5 ? 'B2' : 'B1',
-    } as any;
+    if (!dto.essay?.trim()) {
+      throw new BadRequestException('essay is required');
+    }
+    if (!dto.task_prompt?.trim()) {
+      throw new BadRequestException('task_prompt is required');
+    }
+
+    return this.gradingService.gradeWriting({
+      essay: dto.essay,
+      taskPrompt: dto.task_prompt,
+      taskType: dto.task_type ?? 'task2',
+      targetBand: dto.target_band ?? 6.5,
+      wordCount: dto.essay.trim().split(/\s+/).length,
+      lessonLevel: dto.lesson_level,
+    }) as any;
+  }
+
+  @Post('groq-tutor/chat')
+  async chatIeltsGroqTutor(@Body() dto: IeltsChatGroqDto) {
+    return this.groqTutorService.chatIeltsGroqTutor(dto);
   }
 
   @UseGuards(DevAuthGuard)

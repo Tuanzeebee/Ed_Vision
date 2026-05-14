@@ -38,7 +38,7 @@ interface BandEstimationResult {
 export class BandEstimationService {
   private readonly logger = new Logger(BandEstimationService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Thuật toán chính ước tính band IELTS sau khi học sinh nộp bài Band Test.
@@ -97,7 +97,7 @@ export class BandEstimationService {
       const suspiciousWrong = suspiciousFastAnswers - suspiciousCorrect;
       warnings.push(
         `⚠️ ${suspiciousFastAnswers} câu trả lời quá nhanh (< 30% thời gian kỳ vọng): ` +
-          `${suspiciousCorrect} đúng, ${suspiciousWrong} sai – có thể đoán mò.`,
+        `${suspiciousCorrect} đúng, ${suspiciousWrong} sai – có thể đoán mò.`,
       );
     }
     const suspiciousRatio = totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
@@ -287,7 +287,7 @@ export class BandEstimationService {
     const accMean = accuracies.reduce((s, v) => s + v, 0) / accuracies.length;
     const accStdDev = Math.sqrt(
       accuracies.reduce((s, v) => s + Math.pow(v - accMean, 2), 0) /
-        accuracies.length,
+      accuracies.length,
     );
     // stdDev 0 → 100%, stdDev 20 → 50%, stdDev 40+ → 0%
     const accConsistency = Math.max(0, Math.min(100, 100 - accStdDev * 2.5));
@@ -302,7 +302,7 @@ export class BandEstimationService {
       const rtfMean = rtfValues.reduce((s, v) => s + v, 0) / rtfValues.length;
       const rtfStdDev = Math.sqrt(
         rtfValues.reduce((s, v) => s + Math.pow(v - rtfMean, 2), 0) /
-          rtfValues.length,
+        rtfValues.length,
       );
       // stdDev 0 → 100%, stdDev 0.2 → 50%, stdDev 0.4+ → 0%
       rtfConsistency = Math.max(0, Math.min(100, 100 - rtfStdDev * 250));

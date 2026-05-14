@@ -38,6 +38,69 @@ export interface IeltsGradingResult {
   }>;
   estimatedCefrLevel: string;
   confidence: 'low' | 'medium' | 'high';
+
+  // ── MỚI ──────────────────────────────────────────
+  taskAnalysis?: {
+    responseLevel: string;
+    responseLabel: string;
+    responseSummary: string;
+    responseTips: string[];
+    ideaDevelopmentLevel: string;
+    ideaDevelopmentLabel: string;
+    ideaDevelopmentSummary: string;
+    ideaDevelopmentTips: string[];
+  };
+  sentenceFeedback?: Array<{
+    original: string;
+    issues: string[];
+    suggestion: string;
+    explanation: string;
+    severity: 'minor' | 'major';
+    criterionTag: 'lexical' | 'grammar' | 'task' | 'coherence';
+  }>;
+  grammarAnalysis?: {
+    diversityLevel: string;
+    diversityLabel: string;
+    diversitySummary: string;
+    diversityTips: string[];
+    accuracyLevel: string;
+    accuracyLabel: string;
+    accuracySummary: string;
+    accuracyTips: string[];
+    commonErrors: Array<{
+      pattern: string;
+      example: string;
+      fix: string;
+      rule: string;
+    }>;
+  };
+  coherenceAnalysis?: {
+    flowLevel: string;
+    flowLabel: string;
+    flowSummary: string;
+    flowTips: string[];
+    paragraphLevel: string;
+    paragraphLabel: string;
+    paragraphSummary: string;
+    paragraphTips: string[];
+    referencingLevel: string;
+    referencingLabel: string;
+    referencingSummary: string;
+    referencingTips: string[];
+    missingLinks: string[];
+  };
+  lexicalAnalysis?: {
+    diversityLevel: string;
+    diversityLabel: string;
+    diversitySummary: string;
+    diversityTips: string[];
+    overusedWords: string[];
+    suggestedUpgrades: Array<{
+      original: string;
+      upgrade: string;
+      example: string;
+    }>;
+  };
 }
 
 /**
@@ -112,31 +175,16 @@ Note: If the transcript is very short (under 30 words), or is mostly silence/fil
 
 export function buildWritingGradingPrompt(input: WritingGradingInput): string {
   const { essay, taskPrompt, taskType, targetBand, wordCount, lessonLevel } = input;
+  const truncated = essay.length > 4000 ? essay.slice(0, 4000) + '…' : essay;
+  const firstCriterion = taskType === 'task1' ? 'Task Achievement' : 'Task Response';
 
-  const truncated =
-    essay.length > 4000 ? essay.slice(0, 4000) + '…[truncated]' : essay;
+  return `You are a strict IELTS examiner. Return ONLY valid JSON, no markdown.
+IMPORTANT: You MUST write ALL feedback, explanations, summaries, tips, strengths, weaknesses, and labels in VIETNAMESE. Only exact quotes from the essay or specific English vocabulary should remain in English.
 
-  const task1Criteria = `
-1. **Task Achievement (TA)**: Does the response fulfil the task requirements? (Task 1: describe/summarise the visual data accurately)
-2. **Coherence and Cohesion (CC)**: Organisation, paragraphing, cohesive devices
-3. **Lexical Resource (LR)**: Vocabulary range, accuracy, collocations
-4. **Grammatical Range and Accuracy (GRA)**: Grammar structures, complexity, error frequency`;
-
-  const task2Criteria = `
-1. **Task Response (TR)**: Does the response address all parts of the task with fully-developed ideas?
-2. **Coherence and Cohesion (CC)**: Organisation, paragraphing, cohesive devices
-3. **Lexical Resource (LR)**: Vocabulary range, accuracy, collocations
-4. **Grammatical Range and Accuracy (GRA)**: Grammar structures, complexity, error frequency`;
-
-  const criteria = taskType === 'task1' ? task1Criteria : task2Criteria;
-  const firstCriterionName = taskType === 'task1' ? 'Task Achievement' : 'Task Response';
-
-  return `You are an expert IELTS examiner. Grade the following IELTS Writing ${taskType === 'task1' ? 'Task 1' : 'Task 2'} response strictly according to official IELTS band descriptors.
-
-## Task Information
-- Writing task: ${taskType === 'task1' ? 'Task 1 (Academic)' : 'Task 2 (Essay)'}
+## Task Info
+- Type: ${taskType === 'task1' ? 'Task 1 (Academic)' : 'Task 2 (Essay)'}
 - Target band: ${targetBand}
-- Word count: ${wordCount}${lessonLevel ? `\n- Lesson level: ${lessonLevel}` : ''}
+- Word count: ${wordCount}${lessonLevel ? `\n- Level: ${lessonLevel}` : ''}
 
 ## Writing Prompt
 ${taskPrompt}
@@ -144,33 +192,90 @@ ${taskPrompt}
 ## Student Essay
 ${truncated}
 
-## Grading Instructions
-Evaluate the response on the four official IELTS Writing criteria:
-${criteria}
-
-Score each criterion from 0 to 9 in 0.5 steps. Be strict but fair.
-
-Note: Task 2 has minimum 250 words; Task 1 has minimum 150 words. Penalise significantly if under-length.
-
-## Required JSON Output (ONLY output valid JSON, no markdown, no extra text)
 {
   "skill": "writing",
   "taskType": "${taskType}",
-  "bandScore": <overall band 0-9 in 0.5 steps>,
-  "criteria": [
-    { "name": "${firstCriterionName}", "score": <0-9>, "feedback": "<1-2 sentences>" },
-    { "name": "Coherence and Cohesion", "score": <0-9>, "feedback": "<1-2 sentences>" },
-    { "name": "Lexical Resource", "score": <0-9>, "feedback": "<1-2 sentences>" },
-    { "name": "Grammatical Range and Accuracy", "score": <0-9>, "feedback": "<1-2 sentences>" }
-  ],
-  "overallFeedback": "<2-3 sentences summarising performance>",
-  "strengths": ["<strength 1>", "<strength 2>"],
-  "weaknesses": ["<weakness 1>", "<weakness 2>"],
-  "suggestions": ["<actionable tip 1>", "<actionable tip 2>", "<actionable tip 3>"],
-  "correctedExamples": [
-    { "original": "<sentence from essay with error>", "suggestion": "<corrected version>", "explanation": "<brief grammar/lexical note>" }
-  ],
+  "bandScore": <0-9 step 0.5>,
   "estimatedCefrLevel": "<A1|A2|B1|B2|C1|C2>",
-  "confidence": "<low|medium|high>"
+  "confidence": "<low|medium|high>",
+  "overallFeedback": "<3-4 sentences specific to this essay>",
+
+  "criteria": [
+    { "name": "${firstCriterion}", "score": <0-9>, "feedback": "<2-3 sentences with examples from essay>" },
+    { "name": "Coherence and Cohesion", "score": <0-9>, "feedback": "<2-3 sentences>" },
+    { "name": "Lexical Resource", "score": <0-9>, "feedback": "<2-3 sentences>" },
+    { "name": "Grammatical Range and Accuracy", "score": <0-9>, "feedback": "<2-3 sentences>" }
+  ],
+
+  "sentenceFeedback": [
+    {
+      "original": "<exact sentence from essay>",
+      "issues": ["grammar"|"word_choice"|"paraphrase"|"clarity"|"coherence"],
+      "suggestion": "<fully rewritten sentence>",
+      "explanation": "<specific reason>",
+      "severity": "minor"|"major",
+      "criterionTag": "lexical"|"grammar"|"task"|"coherence"
+    }
+  ],
+
+  "taskAnalysis": {
+    "responseLevel": "<Không đáp ứng|Đáp ứng một phần|Đáp ứng đầy đủ|Đáp ứng xuất sắc>",
+    "responseLabel": "<short uppercase label>",
+    "responseSummary": "<2-3 sentences: does essay address all parts of the prompt?>",
+    "responseTips": ["<tip 1>", "<tip 2>"],
+    "ideaDevelopmentLevel": "<Thiếu ý|Sơ sài|Phát triển tốt|Phát triển xuất sắc>",
+    "ideaDevelopmentLabel": "<short uppercase label>",
+    "ideaDevelopmentSummary": "<2-3 sentences about depth of arguments, examples>",
+    "ideaDevelopmentTips": ["<tip 1>", "<tip 2>"]
+  },
+
+  "grammarAnalysis": {
+    "diversityLevel": "<Hạn chế|Trung bình|Đa dạng|Rất đa dạng và chính xác>",
+    "diversityLabel": "<MỘT LOẠT CÁC CẤU TRÚC ĐƯỢC SỬ DỤNG LINH HOẠT VÀ CHÍNH XÁC>",
+    "diversitySummary": "<2-3 sentences: which complex structures used — relative clauses, conditionals, passive, etc.>",
+    "diversityTips": ["<tip 1>", "<tip 2>"],
+    "accuracyLevel": "<Nhiều lỗi hệ thống|Lỗi đáng kể|Ít lỗi|Không có lỗi hệ thống>",
+    "accuracyLabel": "<ÍT LỖI, LỖI KHÔNG HỆ THỐNG, KHÔNG CẢN TRỞ Ý NGHĨA>",
+    "accuracySummary": "<2-3 sentences about error frequency and type>",
+    "accuracyTips": ["<tip 1>", "<tip 2>"],
+    "commonErrors": [
+      { "pattern": "<error type>", "example": "<exact from essay>", "fix": "<corrected>", "rule": "<grammar rule>" }
+    ]
+  },
+
+  "coherenceAnalysis": {
+    "flowLevel": "<Confusing|Not logically connected|Considerable disruptions|Minor disruptions|Flawlessly connected>",
+    "flowLabel": "<CÁC Ý TƯỞNG ĐƯỢC LIÊN KẾT MỘT CÁCH HOÀN HẢO>",
+    "flowSummary": "<2-3 sentences about logical progression, argument structure>",
+    "flowTips": ["<tip 1>", "<tip 2>", "<tip 3>"],
+    "paragraphLevel": "<Không rõ ràng|Cần cải thiện|Chia đoạn hiệu quả|Xuất sắc>",
+    "paragraphLabel": "<CHIA ĐOẠN HIỆU QUẢ>",
+    "paragraphSummary": "<2-3 sentences: intro, body paras, conclusion structure>",
+    "paragraphTips": ["<tip 1>", "<tip 2>"],
+    "referencingLevel": "<Không sử dụng|Hạn chế|Sử dụng thành thạo|Sử dụng thành thạo, không có sai sót>",
+    "referencingLabel": "<SỬ DỤNG THÀNH THẠO, KHÔNG CÓ SAI SÓT>",
+    "referencingSummary": "<2-3 sentences about pronouns, substitution, referencing>",
+    "referencingTips": ["<tip 1>"],
+    "linkingWordsUsed": ["<word used in essay>"],
+    "missingLinks": ["<suggested linking phrases>"]
+  },
+
+  "lexicalAnalysis": {
+    "diversityLevel": "<Rất hạn chế|Hạn chế|Trung bình|Phong phú|Vốn từ phong phú, sử dụng linh hoạt và chính xác>",
+    "diversityLabel": "<VỐN TỪ PHONG PHÚ, SỬ DỤNG LINH HOẠT VÀ CHÍNH XÁC>",
+    "diversitySummary": "<2-3 sentences: academic words, collocations, topic-specific vocab used>",
+    "diversityTips": ["<tip>"],
+    "overusedWords": ["<word repeated too often>"],
+    "suggestedUpgrades": [
+      { "original": "<basic word/phrase from essay>", "upgrade": "<academic alternative>", "example": "<example sentence>" }
+    ]
+  },
+
+  "strengths": ["<specific + quote from essay>", "<specific strength 2>"],
+  "weaknesses": ["<specific + quote from essay>", "<specific weakness 2>"],
+  "suggestions": ["<tip 1>", "<tip 2>", "<tip 3>"],
+  "correctedExamples": [
+    { "original": "<sentence>", "suggestion": "<corrected>", "explanation": "<note>" }
+  ]
 }`;
 }

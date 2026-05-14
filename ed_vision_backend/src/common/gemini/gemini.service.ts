@@ -71,20 +71,43 @@ export class GeminiService {
   ): Promise<T> {
     const raw = await this.generate(prompt, options);
 
-    // Strip markdown code fences (```json ... ```)
-    const stripped = raw
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```\s*$/, '')
-      .trim();
+    try {
+      return JSON.parse(raw) as T;
+    } catch (e) {
+      // 1. Extract markdown code blocks
+      const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (match) {
+        try {
+          return JSON.parse(match[1].trim()) as T;
+        } catch {}
+      }
 
-    // Extract JSON object via regex in case of any surrounding text
-    const match = stripped.match(/\{[\s\S]*\}/);
-    if (!match) {
-      this.logger.warn('Could not extract JSON from Gemini response');
+      // 2. Extract first valid {...} block
+      const objMatch = raw.match(/\{[\s\S]*\}/);
+      if (objMatch) {
+        let str = objMatch[0];
+        try {
+          return JSON.parse(str) as T;
+        } catch {
+          // 3. Sanitize control characters (unescaped newlines inside strings)
+          try {
+            const sanitized = str.replace(/[\n\r\t]+/g, " ");
+            return JSON.parse(sanitized) as T;
+          } catch {}
+
+          // 4. Try to fix truncation by closing common missing brackets
+          const endings = ['"}', '"]}', '}', ']}', '"]}]}'];
+          for (const ending of endings) {
+            try {
+              return JSON.parse(str + ending) as T;
+            } catch {}
+          }
+        }
+      }
+
+      this.logger.warn('Could not extract JSON from Gemini response. Raw prefix: ' + raw.slice(0, 100));
       throw new Error('Gemini response did not contain valid JSON');
     }
-
-    return JSON.parse(match[0]) as T;
   }
 
   async transcribeAudio(

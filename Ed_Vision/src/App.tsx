@@ -78,7 +78,7 @@ import SettingGradeTable from "./modules/teacher/SettingGradeTable";
 import IELTSAssessment from "@/modules/student/IELTSAssessment";
 import CertificateReview from "./modules/student/CertificateReview";
 import CertificateDetail from "./modules/student/CertificateDetail";
-import IeltsRoadmapPage from "./modules/student/IeltsRoadmapPage";
+import { IeltsRoadmapPage } from "./modules/student/IeltsRoadmapPage";
 import ToeicLearningMapPage from "./modules/student/ToeicLearningMapPage";
 import ToeicNodePracticePage from "./modules/student/ToeicNodePracticePage";
 import ToeicFoundationStudyPage from "./modules/student/ToeicFoundationStudyPage";
@@ -86,6 +86,7 @@ import ToeicExamSimulationPage from "./modules/student/ToeicExamSimulationPage";
 import RoadmapPage from "./modules/ielts-adaptive/RoadmapPage";
 import { LessonPage } from "./modules/ielts-adaptive/LessonPage";
 import { BandTestPage } from "./modules/ielts-adaptive/BandTestPage";
+import WritingPracticePage from "./modules/ielts-adaptive/WritingPracticePage";
 
 function RoadmapRouteWrapper() {
   const { enrollmentId } = useParams<{ enrollmentId: string }>();
@@ -138,12 +139,16 @@ function App() {
             <Route path="/demo/ielts-adaptive/roadmap/:enrollmentId" element={<RoadmapRouteWrapper />} />
             <Route path="/demo/ielts-adaptive/lesson/:lessonId" element={<LessonPage />} />
             <Route path="/demo/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
+            <Route path="/demo/ielts-adaptive/writing" element={<WritingPracticePage />} />
+            <Route path="/demo/ielts-adaptive/writing/:lessonId" element={<WritingPracticePage />} />
 
             {/* IELTS Adaptive direct routes for in-page navigation */}
             <Route path="/ielts-adaptive/roadmap" element={<RoadmapPage enrollmentId={1} />} />
             <Route path="/ielts-adaptive/roadmap/:enrollmentId" element={<RoadmapRouteWrapper />} />
             <Route path="/ielts-adaptive/lesson/:lessonId" element={<LessonPage />} />
             <Route path="/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
+            <Route path="/ielts-adaptive/writing" element={<WritingPracticePage />} />
+            <Route path="/ielts-adaptive/writing/:lessonId" element={<WritingPracticePage />} />
 
 
             {/* Auth routes (used by updated components) */}
@@ -170,6 +175,8 @@ function App() {
               <Route path="survey" element={<ProtectedRoute permission="student_survey"><StudentSurvey /></ProtectedRoute>} />
               <Route path="certificate-review" element={<ProtectedRoute permission="student_course_overview"><CertificateReview /></ProtectedRoute>} />
               <Route path="certificate-review/ielts" element={<ProtectedRoute permission="student_course_overview"><IeltsRoadmapPage /></ProtectedRoute>} />
+              <Route path="certificate-review/ielts/writing" element={<ProtectedRoute permission="student_course_overview"><WritingPracticePage /></ProtectedRoute>} />
+              <Route path="certificate-review/ielts/writing/:lessonId" element={<ProtectedRoute permission="student_course_overview"><WritingPracticePage /></ProtectedRoute>} />
               <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />

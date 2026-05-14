@@ -29,6 +29,7 @@ export default function CertificateReview() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [streak, setStreak] = useState(0)
   const [totalExp, setTotalExp] = useState(0)
+  const [currentStudyMap, setCurrentStudyMap] = useState<Record<string, string>>({})
   useEffect(() => {
     Promise.all([
       getAllEnrollments(),
@@ -48,6 +49,28 @@ export default function CertificateReview() {
     }).catch(() => {
       setIsLoaded(true)
     })
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const skillLabelMap: Record<string, string> = {
+      reading: 'Reading',
+      listening: 'Listening',
+      writing: 'Writing',
+      speaking: 'Speaking',
+      grammar: 'Grammar',
+      vocabulary: 'Vocabulary',
+    }
+    const ieltsLessonTitle = window.localStorage.getItem('ieltsCurrentLessonTitle') ?? ''
+    const ieltsLessonSkill = window.localStorage.getItem('ieltsCurrentLessonSkill') ?? ''
+    const skillLabel = skillLabelMap[ieltsLessonSkill] ?? ieltsLessonSkill
+    const ieltsProgressLabel = ieltsLessonTitle
+      ? `Đang học: ${skillLabel ? `${skillLabel} · ` : ''}${ieltsLessonTitle}`
+      : ''
+    setCurrentStudyMap((prev) => ({
+      ...prev,
+      ielts: ieltsProgressLabel,
+    }))
   }, [])
 
   useEffect(() => {
@@ -175,7 +198,7 @@ export default function CertificateReview() {
     const status: Certificate['status'] = latest.status === 'active' ? 'active' : 'in-progress'
     // "Đang học" chỉ hiện khi đã làm khảo sát và có điểm gốc (current_score)
     const hasBaseScore = !!(latest.current_score && latest.current_score > 0)
-    return { ...c, progress, status, hasBaseScore }
+    return { ...c, progress, status, hasBaseScore, progressLabel: currentStudyMap[c.id] }
   })
 
   // ── Tổng hợp thống kê từ dữ liệu thật ────────────────────────────────────────

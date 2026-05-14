@@ -33,7 +33,7 @@ export class IeltsAdaptiveService {
     private prisma: PrismaService,
     private bandEstimation: BandEstimationService,
     private evaluation: EvaluationService,
-  ) {}
+  ) { }
 
   /**
    * Chuyển đổi điểm số nguyên (vd: 450) thành band IELTS (vd: 4.5).
@@ -309,15 +309,15 @@ export class IeltsAdaptiveService {
 
     const generated = roadmap
       ? await this.regenerateRoadmap(
-          roadmap.id,
-          currentBand,
-          Recommendation.MAINTAIN,
-        )
+        roadmap.id,
+        currentBand,
+        Recommendation.MAINTAIN,
+      )
       : await this.generateRoadmapForEnrollment(
-          enrollment.id,
-          currentBand,
-          targetBand,
-        );
+        enrollment.id,
+        currentBand,
+        targetBand,
+      );
 
     const roadmapWithLessons =
       await this.prisma.ieltsAdaptiveRoadmap.findUnique({
@@ -1698,7 +1698,7 @@ export class IeltsAdaptiveService {
         if (!flashcardRepo && !practiceRepo && !miniTestRepo) {
           this.logger.warn(
             `No IELTS repositories found for skill=${skill} band=${bandStep}. ` +
-              'Run: node prisma/seedIeltsAdaptive.js',
+            'Run: node prisma/seedIeltsAdaptive.js',
           );
           continue;
         }

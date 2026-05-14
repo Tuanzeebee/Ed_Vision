@@ -435,6 +435,33 @@ export async function chatGroqTutor(
   return res.data;
 }
 
+export interface IeltsChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface IeltsChatGroqPayload {
+  skill: "listening" | "reading" | "writing" | "speaking" | "vocabulary" | "grammar";
+  context_text: string;
+  user_message: string;
+  chat_history?: IeltsChatMessage[];
+  band_target?: number;
+}
+
+export interface IeltsChatGroqResponse {
+  answer: string;
+}
+
+export async function chatIeltsGroqTutor(
+  payload: IeltsChatGroqPayload,
+): Promise<IeltsChatGroqResponse> {
+  const res = await apiClient.post<IeltsChatGroqResponse>(
+    "/ielts-adaptive/groq-tutor/chat",
+    payload,
+  );
+  return res.data;
+}
+
 export async function importToeicExamFromOcrFile(
   payload: ToeicOcrImportPayload,
   file: File,

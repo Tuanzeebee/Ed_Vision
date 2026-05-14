@@ -24,6 +24,11 @@ export interface AiGradingResult {
     estimatedCefrLevel?: string;
     confidence?: 'low' | 'medium' | 'high';
     skill?: 'speaking' | 'writing';
+    sentenceFeedback?: any[];
+    taskAnalysis?: any;
+    grammarAnalysis?: any;
+    coherenceAnalysis?: any;
+    lexicalAnalysis?: any;
 }
 
 interface Props {
@@ -31,24 +36,24 @@ interface Props {
 }
 
 function bandColor(score: number) {
-    if (score >= 7) return 'bg-emerald-500';
-    if (score >= 5.5) return 'bg-amber-500';
-    if (score >= 4) return 'bg-orange-500';
+    if (score >= 7) return 'bg-blue-600';
+    if (score >= 5.5) return 'bg-emerald-500';
+    if (score >= 4) return 'bg-amber-500';
     return 'bg-rose-500';
 }
 
 function bandTextColor(score: number) {
-    if (score >= 7) return 'text-emerald-700';
-    if (score >= 5.5) return 'text-amber-700';
-    if (score >= 4) return 'text-orange-700';
+    if (score >= 7) return 'text-blue-700';
+    if (score >= 5.5) return 'text-emerald-700';
+    if (score >= 4) return 'text-amber-700';
     return 'text-rose-700';
 }
 
 function bandBg(score: number) {
-    if (score >= 7) return 'bg-emerald-50 border-emerald-200';
-    if (score >= 5.5) return 'bg-amber-50 border-amber-200';
-    if (score >= 4) return 'bg-orange-50 border-orange-200';
-    return 'bg-rose-50 border-rose-200';
+    if (score >= 7) return 'bg-blue-50 border-blue-100';
+    if (score >= 5.5) return 'bg-emerald-50 border-emerald-100';
+    if (score >= 4) return 'bg-amber-50 border-amber-100';
+    return 'bg-rose-50 border-rose-100';
 }
 
 const AiScoreCard: React.FC<Props> = ({ result }) => {
@@ -66,50 +71,57 @@ const AiScoreCard: React.FC<Props> = ({ result }) => {
     } = result;
 
     return (
-        <div className={`rounded-2xl border p-4 flex flex-col gap-4 ${bandBg(bandScore)}`}>
+        <div className={`rounded-[32px] border-2 p-6 sm:p-8 flex flex-col gap-6 shadow-xl shadow-blue-900/5 ${bandBg(bandScore)}`}>
             {/* Header — band badge */}
-            <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0 ${bandColor(bandScore)}`}>
+            <div className="flex items-center gap-6">
+                <div className={`w-20 h-20 rounded-[24px] flex items-center justify-center text-white font-black text-2xl shrink-0 shadow-lg ${bandColor(bandScore)}`}>
                     {bandScore.toFixed(1)}
                 </div>
                 <div className="flex-1">
-                    <p className={`text-base font-bold ${bandTextColor(bandScore)}`}>Band {bandScore.toFixed(1)}</p>
+                    <p className={`text-[10px] font-black uppercase tracking-widest opacity-60 mb-1`}>AI Assessment Result</p>
+                    <p className={`text-2xl font-black ${bandTextColor(bandScore)} tracking-tight`}>Band {bandScore.toFixed(1)}</p>
                     {estimatedCefrLevel && (
-                        <p className="text-xs text-slate-500 mt-0.5">CEFR: {estimatedCefrLevel}</p>
-                    )}
-                    {overallFeedback && (
-                        <p className="text-sm text-slate-700 mt-1 leading-relaxed">{overallFeedback}</p>
+                        <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mt-1">CEFR: {estimatedCefrLevel}</p>
                     )}
                 </div>
             </div>
 
+            {overallFeedback && (
+                <div className="bg-white/50 rounded-[20px] p-5 border border-current/5">
+                    <p className="text-[15px] text-slate-700 font-medium leading-relaxed">{overallFeedback}</p>
+                </div>
+            )}
+
             {/* Criteria bars */}
             {criteria.length > 0 && (
-                <div className="flex flex-col gap-2">
-                    {criteria.map((c) => (
-                        <div key={c.name}>
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-semibold text-slate-600 truncate">{c.name}</span>
-                                <span className={`text-xs font-bold ml-2 shrink-0 ${bandTextColor(c.score)}`}>{c.score.toFixed(1)}</span>
+                <div className="flex flex-col gap-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-1">Detailed Breakdown</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                        {criteria.map((c) => (
+                            <div key={c.name}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest truncate">{c.name}</span>
+                                    <span className={`text-[11px] font-black ml-2 shrink-0 ${bandTextColor(c.score)}`}>{c.score.toFixed(1)}</span>
+                                </div>
+                                <div className="h-2 bg-white/50 rounded-full overflow-hidden border border-current/5 shadow-inner">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-1000 ${bandColor(c.score)}`}
+                                        style={{ width: `${(c.score / 9) * 100}%` }}
+                                    />
+                                </div>
                             </div>
-                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full ${bandColor(c.score)}`}
-                                    style={{ width: `${(c.score / 9) * 100}%` }}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
 
             {/* Expandable details */}
             <button
                 onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors self-start"
+                className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-all self-center py-2 px-6 rounded-full bg-white/30 border border-current/5 active:scale-95 shadow-sm"
             >
-                {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                {expanded ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {expanded ? 'Ẩn chi tiết phân tích' : 'Xem chi tiết phân tích'}
             </button>
 
             {expanded && (
@@ -158,11 +170,12 @@ const AiScoreCard: React.FC<Props> = ({ result }) => {
                     {/* Suggestions */}
                     {suggestions.length > 0 && (
                         <div>
-                            <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1.5">💡 Gợi ý cải thiện</p>
-                            <ul className="flex flex-col gap-1">
+                            <p className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] mb-3 px-1">💡 Gợi ý cải thiện</p>
+                            <ul className="flex flex-col gap-2">
                                 {suggestions.map((s, i) => (
-                                    <li key={i} className="text-xs text-slate-700 flex gap-2 leading-relaxed">
-                                        <span className="text-indigo-400 shrink-0">{i + 1}.</span>{s}
+                                    <li key={i} className="text-[13px] text-slate-700 bg-white/40 p-4 rounded-[16px] flex gap-3 border border-blue-100/30">
+                                        <span className="text-blue-500 font-black shrink-0">{i + 1}.</span>
+                                        <span className="font-medium leading-relaxed">{s}</span>
                                     </li>
                                 ))}
                             </ul>
