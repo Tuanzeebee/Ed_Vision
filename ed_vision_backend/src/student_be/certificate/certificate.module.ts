@@ -10,12 +10,13 @@ import { ToeicExamSessionService } from './toeic-exam-session.service';
 import { StudyRoomModule } from '../../study-room/study-room.module';
 import { OpenRouterModule } from '../../common/services/openrouter.module';
 import { RagModule } from '../../rag/rag.module';
+import { ProgramEffectivenessModule } from '../../admin_be/program-effectiveness/program-effectiveness.module';
 
 @Module({
   imports: [
     PrismaModule,
     StudyRoomModule,
-    OpenRouterModule,
+    OpenRouterModule, ProgramEffectivenessModule,
     forwardRef(() => RagModule),
   ],
   controllers: [CertificateEnrollmentController],
@@ -35,4 +36,4 @@ import { RagModule } from '../../rag/rag.module';
     ToeicExamSessionService,
   ],
 })
-export class CertificateModule {}
+export class CertificateModule { }

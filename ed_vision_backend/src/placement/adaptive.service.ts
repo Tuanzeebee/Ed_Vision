@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { TestResultRecorderService } from '../admin_be/program-effectiveness/test-result-recorder.service';
 import {
   estimateThetaEAP,
   getFullEstimateEAP,
@@ -27,7 +28,28 @@ const SPEAKING_QUOTA = 1; // Speaking chỉ hỏi đúng 1 câu/test
 const SPEAKING_SKILL = 'speaking';
 const IRT_SKILLS = ['reading', 'listening', 'writing', 'vocabulary'];
 const INITIAL_BAND = 5.0;
-const ALLOWED_TYPES = ['mcq', 'gap_fill', 'true_false_ng', 'speaking'];
+const ALLOWED_TYPES = [
+  'mcq',
+  'multiple_choice',
+  'gap_fill',
+  'true_false_ng',
+  'true_false_not_given',
+  'yes_no_not_given',
+  'matching_headings',
+  'matching_information',
+  'matching_features',
+  'sentence_completion',
+  'summary_completion',
+  'note_completion',
+  'table_completion',
+  'flow_chart',
+  'diagram_labelling',
+  'short_answer',
+  'speaking',
+  'part1',
+  'part2',
+  'part3',
+];
 const STRENGTH_THRESHOLD = 0.75;
 const WEAKNESS_THRESHOLD = -0.75;
 
@@ -102,7 +124,10 @@ interface SkillPattern {
 export class AdaptiveService {
   private readonly logger = new Logger(AdaptiveService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly testResultRecorder: TestResultRecorderService,
+  ) {}
 
   async startPlacementTest(input: StartTestInput): Promise<StartTestResult> {
     const existing = await this.prisma.ieltsPlacementSession.findFirst({
@@ -311,6 +336,22 @@ export class AdaptiveService {
         irtCSnapshot: question.irtC,
         skill: question.skill,
       } as Prisma.IeltsPlacementAnswerUncheckedCreateInput,
+    });
+
+    // ✅ Update question metrics (usedCount, correctRate)
+    const newUsedCount = (question.usedCount ?? 0) + 1;
+    const currentCorrectCount = Math.round(
+      Number(question.correctRate ?? 0) * (question.usedCount ?? 0),
+    );
+    const newCorrectCount = currentCorrectCount + (isCorrect ? 1 : 0);
+    const newCorrectRate = newCorrectCount / newUsedCount;
+
+    await this.prisma.ieltsQuestion.update({
+      where: { id: input.questionId },
+      data: {
+        usedCount: newUsedCount,
+        correctRate: newCorrectRate,
+      },
     });
 
     const currentAnswer = {
@@ -559,7 +600,7 @@ export class AdaptiveService {
         FROM ielts_questions
         WHERE skill = ANY(${nonSpeakingSkills}::text[])
           AND status = 'approved' AND is_placement = true
-          AND question_type = ANY(${['mcq', 'gap_fill', 'true_false_ng']}::text[])
+          AND question_type = ANY(${ALLOWED_TYPES}::text[])
           AND irt_a IS NOT NULL AND irt_b IS NOT NULL
           AND id != ALL(${usedQuestionIds}::uuid[])
       `;
@@ -866,6 +907,60 @@ export class AdaptiveService {
         } as any,
         confidenceLevel: estimate.confidence,
       } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
+    });
+
+    // Fire-and-forget: record placement result to StudentTestResult
+    this.recordPlacementResult(sessionId, finalBand, skillBands, allAnswers.length).catch(() => {});
+  }
+
+  private async recordPlacementResult(
+    sessionId: string,
+    finalBand: number,
+    skillBands: Record<string, number | null>,
+    totalQuestions: number,
+  ): Promise<void> {
+    const session = await this.prisma.ieltsPlacementSession.findUnique({
+      where: { id: sessionId },
+      select: { accountId: true, startedAt: true, completedAt: true },
+    });
+    if (!session) return;
+
+    // Find active IELTS enrollment
+    const student = await this.prisma.student.findUnique({
+      where: { account_id: session.accountId },
+      select: { student_id: true },
+    });
+    let enrollmentId: number | null = null;
+    if (student) {
+      const enrollment = await this.prisma.certificateEnrollment.findFirst({
+        where: { student_id: student.student_id, cert_type: 'ielts', status: 'active' },
+        select: { id: true },
+      });
+      enrollmentId = enrollment?.id ?? null;
+    }
+
+    const bandX10 = Math.round(finalBand * 10);
+    const durationMin = session.completedAt && session.startedAt
+      ? Math.ceil((session.completedAt.getTime() - session.startedAt.getTime()) / 60000)
+      : null;
+
+    await this.testResultRecorder.record({
+      accountId: session.accountId,
+      certType: 'ielts',
+      testType: 'placement',
+      testPhase: 'entry',
+      isBaseline: true,
+      enrollmentId,
+      totalScore: bandX10,
+      bandScore: finalBand,
+      listeningScore: skillBands.listening != null ? Math.round(skillBands.listening * 10) : null,
+      readingScore: skillBands.reading != null ? Math.round(skillBands.reading * 10) : null,
+      writingScore: skillBands.writing != null ? Math.round(skillBands.writing * 10) : null,
+      speakingScore: skillBands.speaking != null ? Math.round(skillBands.speaking * 10) : null,
+      totalQuestions,
+      durationMinutes: durationMin,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt ?? new Date(),
     });
   }
 

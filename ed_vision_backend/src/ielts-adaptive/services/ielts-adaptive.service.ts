@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { BandEstimationService } from './band-estimation.service';
 import { EvaluationService } from './evaluation.service';
+import { TestResultRecorderService } from '../../admin_be/program-effectiveness/test-result-recorder.service';
 import {
   CreateRoadmapDto,
   UpdateRoadmapTargetsDto,
@@ -33,6 +34,7 @@ export class IeltsAdaptiveService {
     private prisma: PrismaService,
     private bandEstimation: BandEstimationService,
     private evaluation: EvaluationService,
+    private testResultRecorder: TestResultRecorderService,
   ) {}
 
   /**
@@ -1525,6 +1527,9 @@ export class IeltsAdaptiveService {
       };
     });
 
+    // Fire-and-forget: record to StudentTestResult for analytics
+    this.recordBandTestResult(bandTest.roadmap.enrollment_id, updated, estimation, totalTime).catch(() => {});
+
     return {
       ...updated,
       band_level: Number(updated.band_level),
@@ -1541,6 +1546,49 @@ export class IeltsAdaptiveService {
       warnings: estimation.metrics.warnings,
       question_results: questionResultsDetail,
     };
+  }
+
+  private async recordBandTestResult(
+    enrollmentId: number,
+    updated: any,
+    estimation: any,
+    totalTimeSec: number,
+  ): Promise<void> {
+    const enrollment = await this.prisma.certificateEnrollment.findUnique({
+      where: { id: enrollmentId },
+      select: { student_id: true, student: { select: { account_id: true } } },
+    });
+    if (!enrollment) return;
+
+    const estimatedBand = Number(updated.estimated_band);
+    const skillBreakdown = updated.skill_breakdown as Record<string, any> | null;
+
+    await this.testResultRecorder.record({
+      accountId: enrollment.student.account_id,
+      certType: 'ielts',
+      testType: 'mock',
+      testPhase: 'midterm',
+      enrollmentId,
+      totalScore: Math.round(estimatedBand * 10),
+      bandScore: estimatedBand,
+      listeningScore: skillBreakdown?.listening
+        ? Math.round((skillBreakdown.listening.accuracy / 100) * 90)
+        : null,
+      readingScore: skillBreakdown?.reading
+        ? Math.round((skillBreakdown.reading.accuracy / 100) * 90)
+        : null,
+      writingScore: skillBreakdown?.writing
+        ? Math.round((skillBreakdown.writing.accuracy / 100) * 90)
+        : null,
+      speakingScore: skillBreakdown?.speaking
+        ? Math.round((skillBreakdown.speaking.accuracy / 100) * 90)
+        : null,
+      totalQuestions: updated.total_questions,
+      correctCount: updated.correct_count,
+      accuracyPercent: Number(updated.accuracy_percent),
+      durationMinutes: Math.ceil(totalTimeSec / 60),
+      completedAt: new Date(),
+    });
   }
 
   /**

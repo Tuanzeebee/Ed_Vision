@@ -297,7 +297,7 @@ export class ToeicPracticeImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly openRouterService: OpenRouterService,
-  ) {}
+  ) { }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -481,9 +481,9 @@ export class ToeicPracticeImportService {
 
     this.logger.debug(
       `[FileAnalysis] fullTest=${likelyFullTest} pureReading=${likelyPureReading} ` +
-        `qRange=[${minQuestionNumber}–${maxQuestionNumber}] ` +
-        `headers: P1=${hasPart1} P2=${hasPart2} P3=${hasPart3} P4=${hasPart4} ` +
-        `P5=${hasPart5} P6=${hasPart6} P7=${hasPart7}`,
+      `qRange=[${minQuestionNumber}–${maxQuestionNumber}] ` +
+      `headers: P1=${hasPart1} P2=${hasPart2} P3=${hasPart3} P4=${hasPart4} ` +
+      `P5=${hasPart5} P6=${hasPart6} P7=${hasPart7}`,
     );
 
     return {
@@ -904,8 +904,7 @@ export class ToeicPracticeImportService {
    * khiến parser chỉ nhận được câu cột-trái (vd: 40/100 câu Reading).
    */
   private async extractPdfTextColumnAware(buf: Buffer): Promise<string> {
-    // pdfjs-dist@3.x ships .js (not .mjs) in legacy/build
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // @ts-ignore
     const pdfjs: any = require('pdfjs-dist/legacy/build/pdf.js');
     const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
     try {
@@ -980,9 +979,9 @@ export class ToeicPracticeImportService {
 
           const groups: Item[][] = isTwoColumn
             ? [
-                items.filter((i) => i.x < midX),
-                items.filter((i) => i.x >= midX),
-              ]
+              items.filter((i) => i.x < midX),
+              items.filter((i) => i.x >= midX),
+            ]
             : [items];
 
           for (const group of groups) {
@@ -1482,7 +1481,7 @@ export class ToeicPracticeImportService {
         needsReview = true;
         this.logger.warn(
           `[Parser] Q#${qNum}: PDF text-layer thiếu options, ` +
-            `inject placeholder (stem preview: "${stemHasPlaceholder.slice(0, 60)}...")`,
+          `inject placeholder (stem preview: "${stemHasPlaceholder.slice(0, 60)}...")`,
         );
       }
 
@@ -1621,8 +1620,8 @@ export class ToeicPracticeImportService {
         line.match(/^(\d{1,3})\s{2,}(.+)$/) ??
         (inPassageContext
           ? line.match(
-              /^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*(?:[).]|:(?!\d)|-(?=\s))\s*$/i,
-            )
+            /^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*(?:[).]|:(?!\d)|-(?=\s))\s*$/i,
+          )
           : null);
 
       if (qStartMatch) {
@@ -1833,15 +1832,15 @@ export class ToeicPracticeImportService {
                 : `[Part 4 - Câu ${i}: Nghe bài nói ngắn và chọn đáp án đúng]`,
           options: isPart2
             ? ['A', 'B', 'C'].map((k) => ({
-                optionKey: k,
-                optionText: `(${k})`,
-                isCorrect: false,
-              }))
+              optionKey: k,
+              optionText: `(${k})`,
+              isCorrect: false,
+            }))
             : ['A', 'B', 'C', 'D'].map((k) => ({
-                optionKey: k,
-                optionText: `(${k})`,
-                isCorrect: false,
-              })),
+              optionKey: k,
+              optionText: `(${k})`,
+              isCorrect: false,
+            })),
           readingPassage: null,
         });
       }
@@ -1896,13 +1895,13 @@ export class ToeicPracticeImportService {
       part1Images.length > 0
         ? part1Images.slice(0, 6)
         : [...imageAssets]
-            .filter((img) => (img.size_bytes || 0) > 10000)
-            .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
-            .slice(0, 6)
-            .sort((a, b) => {
-              if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
-              return (a.filename || '').localeCompare(b.filename || '');
-            });
+          .filter((img) => (img.size_bytes || 0) > 10000)
+          .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
+          .slice(0, 6)
+          .sort((a, b) => {
+            if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+            return (a.filename || '').localeCompare(b.filename || '');
+          });
 
     // ── Phase 1: Analyze file characteristics ──────────────────────────────────
     const fileInfo = this.analyzeFileCharacteristics(rawText, parsed);
@@ -1911,7 +1910,7 @@ export class ToeicPracticeImportService {
     if (importScope === 'single_part' && fileInfo.likelyFullTest) {
       this.logger.warn(
         `[Import] File có vẻ là full test nhưng scope=single_part(Part ${dto.toeic_part}). ` +
-          `Sẽ lọc theo detectedPart để đảm bảo độ chính xác.`,
+        `Sẽ lọc theo detectedPart để đảm bảo độ chính xác.`,
       );
     }
 
@@ -2089,7 +2088,7 @@ export class ToeicPracticeImportService {
 
     this.logger.log(
       `[Import] Complete — set=${practiceSetId} imported=${importedCount} skipped=${skippedCount} ` +
-        `parts=${[...detectedParts].sort((a, b) => a - b).join(',')}`,
+      `parts=${[...detectedParts].sort((a, b) => a - b).join(',')}`,
     );
 
     const duplicateByPart = new Map<number, number[]>();
@@ -2546,7 +2545,7 @@ export class ToeicPracticeImportService {
         missingOptionQuestionNumbers.push(questionNumber);
         this.logger.warn(
           `[AnswerKey] Q#${questionNumber} (id=${question.id}) thiếu option "${answerKey}". ` +
-            `Tạo placeholder option "${answerKey}" và đánh dấu is_correct=true.`,
+          `Tạo placeholder option "${answerKey}" và đánh dấu is_correct=true.`,
         );
         operations.push(
           this.prisma.toeicPracticeOption.updateMany({
@@ -2797,10 +2796,10 @@ export class ToeicPracticeImportService {
         // là câu đầu nhóm → tự lan ra +1, +2 để cả 3 câu cùng có audio.
         const targets = isGroupedPart
           ? [
-              chunk.question_number,
-              chunk.question_number + 1,
-              chunk.question_number + 2,
-            ]
+            chunk.question_number,
+            chunk.question_number + 1,
+            chunk.question_number + 2,
+          ]
           : [chunk.question_number];
 
         for (const qNum of targets) {
@@ -2976,7 +2975,7 @@ export class ToeicPracticeImportService {
 
     this.logger.log(
       `[ImageMapping] Found ${unmappedImages.length} unmapped image(s) for slug "${slug}". ` +
-        `Calling OpenRouter to map to ${questionContexts.length} Part 3/4 questions...`,
+      `Calling OpenRouter to map to ${questionContexts.length} Part 3/4 questions...`,
     );
 
     // 4. Call OpenRouter LLM
@@ -3010,7 +3009,7 @@ export class ToeicPracticeImportService {
 
       this.logger.log(
         `  ${mapping.image_filename} → Q${mapping.question_numbers.join(',')} ` +
-          `(${mapping.description}, confidence=${mapping.confidence})`,
+        `(${mapping.description}, confidence=${mapping.confidence})`,
       );
     }
 

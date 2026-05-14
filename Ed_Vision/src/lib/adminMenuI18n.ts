@@ -15,9 +15,13 @@ export const MENU_LABEL_KEYS: Record<string, string> = {
   "Quản lý Khảo sát": "admin:sidebar.surveyManagement",
 
   // Dữ liệu & Báo cáo submenu
+  "Danh sách Sinh viên": "admin:sidebar.studentDirectory",
   "Thống kê Tổng quát": "admin:sidebar.generalStats",
   "Báo cáo Lãnh đạo": "admin:sidebar.leadershipReports",
   "Kết quả Học máy": "admin:sidebar.mlResults",
+  "Dashboard Chứng chỉ": "admin:sidebar.certificateDashboard",
+  "Hành vi Sử dụng": "admin:sidebar.usageBehavior",
+  "Hiệu quả Chương trình": "admin:sidebar.programEffectiveness",
 
   // Quản lý Hệ thống submenu
   "Quản lý Thông báo": "admin:sidebar.notificationManagement",

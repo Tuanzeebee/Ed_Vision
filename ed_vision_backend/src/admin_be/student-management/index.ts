@@ -4,5 +4,7 @@ export * from './student-management.service';
 export * from './dto/create-student.dto';
 export * from './dto/update-student.dto';
 export * from './dto/student-filter.dto';
+export * from './dto/student-directory-filter.dto';
 export * from './models/student-response.type';
 export * from './models/student-list.type';
+export * from './models/student-directory.types';

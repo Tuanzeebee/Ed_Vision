@@ -113,6 +113,180 @@ export interface LearningDashboardSummaryResponse {
   learningContext: { currentLabel: string; previousLabel?: string };
 }
 
+// ===== Certificate Overview Dashboard =====
+export type CertificateOverviewTimeRange =
+  | 'this-month'
+  | 'last-month'
+  | 'this-quarter'
+  | 'this-year';
+
+export interface CertificateOverviewQuery {
+  timeRange?: CertificateOverviewTimeRange;
+}
+
+export type CertificateOverviewTrend = 'up' | 'down' | 'stable';
+
+export interface CertificateOverviewKpiValue {
+  value: number;
+  change: number;
+  trend: CertificateOverviewTrend;
+}
+
+export interface CertificateOverviewKpis {
+  totalStudents: CertificateOverviewKpiValue;
+  activeStudents: CertificateOverviewKpiValue;
+  returnRate: CertificateOverviewKpiValue;
+  completionRate: CertificateOverviewKpiValue;
+}
+
+export interface CertificateOverviewTraffic {
+  labels: string[];
+  values: number[];
+}
+
+export interface CertificateOverviewDistribution {
+  labels: string[];
+  values: number[];
+}
+
+export interface CertificateOverviewRetention {
+  labels: string[];
+  newStudents: number[];
+  returningStudents: number[];
+}
+
+export interface CertificateOverviewActivity {
+  id: string;
+  text: string;
+  time: string;
+  color: string;
+  textKey?: string;
+  textParams?: Record<string, string | number>;
+  timeKey?: string;
+  timeParams?: Record<string, string | number>;
+}
+
+export interface CertificateOverviewResponse {
+  timeRange: CertificateOverviewTimeRange;
+  rangeStart: string;
+  rangeEnd: string;
+  previousRangeStart: string;
+  previousRangeEnd: string;
+  kpis: CertificateOverviewKpis;
+  traffic: CertificateOverviewTraffic;
+  distribution: CertificateOverviewDistribution;
+  retention: CertificateOverviewRetention;
+  recentActivities: CertificateOverviewActivity[];
+}
+
+// ===== Program Effectiveness Dashboard =====
+export type ProgramEffectivenessCertType = 'ielts' | 'toeic' | 'all';
+
+export interface ProgramEffectivenessQuery {
+  certType?: ProgramEffectivenessCertType;
+}
+
+export interface ProgramEffectivenessScoreComparison {
+  labels: string[];
+  entry: number[];
+  exit: number[];
+  scaleMax: number;
+  entrySampleSize: number;
+  exitSampleSize: number;
+}
+
+export interface ProgramEffectivenessAchievement {
+  successRate: number;
+  totalEvaluated: number;
+  ieltsAchievementRate: number;
+  ieltsEvaluated: number;
+  toeicAchievementRate: number;
+  toeicEvaluated: number;
+}
+
+export type ProgramEffectivenessBadgeTone = 'success' | 'info' | 'warning';
+export type ProgramEffectivenessIconKey = 'improvement' | 'attention';
+
+export interface ProgramEffectivenessModuleImpact {
+  id: string;
+  programComponent: string;
+  name: string;
+  description: string;
+  badge: string;
+  badgeTone: ProgramEffectivenessBadgeTone;
+  iconKey: ProgramEffectivenessIconKey;
+  improvement: number | null;
+  dropoutRate: number | null;
+  completionRate: number | null;
+  totalStudents: number;
+  effectivenessRank: number | null;
+  needsAttention: boolean;
+}
+
+export type ProgramEffectivenessRatingTone =
+  | 'success'
+  | 'info'
+  | 'warning'
+  | 'danger';
+
+export interface ProgramEffectivenessGroup {
+  id: string;
+  cohortType: string;
+  cohortId: string;
+  cohortName: string;
+  totalStudents: number;
+  avgImprovement: number;
+  successRate: number;
+  rating: string;
+  ratingTone: ProgramEffectivenessRatingTone;
+}
+
+export interface ProgramEffectivenessResponse {
+  certType: ProgramEffectivenessCertType;
+  scoreComparison: ProgramEffectivenessScoreComparison;
+  achievement: ProgramEffectivenessAchievement;
+  moduleImpact: ProgramEffectivenessModuleImpact[];
+  groupEffectiveness: ProgramEffectivenessGroup[];
+}
+
+// ===== Usage Behavior Dashboard =====
+export type UsageBehaviorTimeRange = '7d' | '30d' | '90d';
+
+export interface UsageBehaviorQuery {
+  timeRange?: UsageBehaviorTimeRange;
+}
+
+export interface UsageBehaviorHeatmap {
+  hours: string[];
+  days: string[];
+  matrix: number[][];
+  intensity: number[][];
+}
+
+export interface UsageBehaviorDuration {
+  labels: string[];
+  values: number[];
+}
+
+export interface UsageBehaviorFeatureItem {
+  id: string;
+  name: string;
+  count: number;
+  percent: number;
+}
+
+export interface UsageBehaviorResponse {
+  timeRange: UsageBehaviorTimeRange;
+  rangeStart: string;
+  rangeEnd: string;
+  heatmap: UsageBehaviorHeatmap;
+  duration: UsageBehaviorDuration;
+  featureUsage: {
+    items: UsageBehaviorFeatureItem[];
+    total: number;
+  };
+}
+
 class DashboardStatsService {
   /**
    * Get filter options for dashboard
@@ -179,6 +353,36 @@ class DashboardStatsService {
     const response = await apiClient.get<LearningDashboardSummaryResponse>('/admin/dashboard/learning-summary', {
       params: query,
     });
+    return response.data;
+  }
+
+  // ===== Usage Behavior dashboard (heatmap + duration + feature usage) =====
+  async getUsageBehavior(query?: UsageBehaviorQuery): Promise<UsageBehaviorResponse> {
+    const response = await apiClient.get<UsageBehaviorResponse>('/admin/dashboard/usage-behavior', {
+      params: query,
+    });
+    return response.data;
+  }
+
+  // ===== Certificate Overview dashboard (KPI + traffic + distribution + retention) =====
+  async getCertificateOverview(
+    query?: CertificateOverviewQuery,
+  ): Promise<CertificateOverviewResponse> {
+    const response = await apiClient.get<CertificateOverviewResponse>(
+      '/admin/dashboard/certificate-overview',
+      { params: query },
+    );
+    return response.data;
+  }
+
+  // ===== Program Effectiveness dashboard (score comparison + achievement + module + cohort) =====
+  async getProgramEffectiveness(
+    query?: ProgramEffectivenessQuery,
+  ): Promise<ProgramEffectivenessResponse> {
+    const response = await apiClient.get<ProgramEffectivenessResponse>(
+      '/admin/dashboard/program-effectiveness',
+      { params: query },
+    );
     return response.data;
   }
 }

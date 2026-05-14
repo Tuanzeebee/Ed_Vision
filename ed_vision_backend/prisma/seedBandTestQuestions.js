@@ -18,9 +18,9 @@ function stripComments(str) {
 
 async function main() {
     // Xoá dữ liệu band test cũ - XOÁ TOÀN BỘ
-    console.log('🗑️  Xoá TOÀN BỘ dữ liệu band test cũ...');
-    const deletedCount = await prisma.ieltsQuestion.deleteMany({});
-    console.log(`✅ Đã xoá ${deletedCount.count} câu hỏi cũ (tất cả)`);
+    // console.log('🗑️  Xoá TOÀN BỘ dữ liệu band test cũ...');
+    // const deletedCount = await prisma.ieltsQuestion.deleteMany({});
+    // console.log(`✅ Đã xoá ${deletedCount.count} câu hỏi cũ (tất cả)`);
 
     const jsonPath = path.join(__dirname, 'questions', 'band_test_questions.json');
     if (!fs.existsSync(jsonPath)) {

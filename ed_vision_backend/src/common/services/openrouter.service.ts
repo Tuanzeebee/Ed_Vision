@@ -456,53 +456,75 @@ If you cannot determine which group this image belongs to, respond with:
    */
   async chatCompletion(
     prompt: string,
-    options?: {
-      model?: string;
-      temperature?: number;
-      max_tokens?: number;
-      systemPrompt?: string;
-    },
+    options: { temperature?: number; max_tokens?: number } = {},
   ): Promise<{ answer: string; model: string }> {
+    const answer = await this.generate(prompt, options);
+    return {
+      answer,
+      model: this.model,
+    };
+  }
+
+  /**
+   * Generic text generation via OpenRouter.
+   */
+  async generate(
+    prompt: string,
+    options: { temperature?: number; max_tokens?: number } = {},
+  ): Promise<string> {
     if (!this.apiKey) {
-      throw new Error('OPENROUTER_API_KEY not configured');
+      throw new Error('OPENROUTER_API_KEY is not set');
     }
 
-    const chatModel =
-      options?.model ||
-      process.env.OPENROUTER_TUTOR_MODEL ||
-      'google/gemma-4-26b-a4b-it:free';
-
-    const messages: Array<{ role: string; content: string }> = [];
-    if (options?.systemPrompt) {
-      messages.push({ role: 'system', content: options.systemPrompt });
-    }
-    messages.push({ role: 'user', content: prompt });
-
-    const response = await axios.post(
-      this.apiUrl,
-      {
-        model: chatModel,
-        messages,
-        temperature: options?.temperature ?? 0.2,
-        max_tokens: options?.max_tokens ?? 600,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://ed-vision.app',
-          'X-Title': 'Ed Vision AI Tutor',
+    try {
+      const response = await axios.post(
+        this.apiUrl,
+        {
+          model: this.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: options.temperature ?? 0.1,
+          max_tokens: options.max_tokens ?? 1024,
         },
-        timeout: 30_000,
-      },
-    );
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://ed-vision.app',
+            'X-Title': 'Ed Vision AI Service',
+          },
+          timeout: 60_000,
+        },
+      );
 
-    const content = response.data?.choices?.[0]?.message?.content?.trim() ?? '';
-    if (!content) {
-      throw new Error('OpenRouter returned empty content');
+      return response.data?.choices?.[0]?.message?.content ?? '';
+    } catch (err: any) {
+      this.logger.error(`OpenRouter text generation failed: ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate and parse JSON response.
+   */
+  async generateJson<T>(
+    prompt: string,
+    options: { temperature?: number; max_tokens?: number } = {},
+  ): Promise<T> {
+    const raw = await this.generate(prompt, options);
+
+    // Strip markdown code fences
+    const cleaned = raw
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+
+    // Find JSON block
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error('OpenRouter response did not contain valid JSON');
     }
 
-    return { answer: content, model: chatModel };
+    return JSON.parse(match[0]) as T;
   }
 
   private imageToBase64(absPath: string): string | null {
