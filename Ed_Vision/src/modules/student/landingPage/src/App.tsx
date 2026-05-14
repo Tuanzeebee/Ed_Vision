@@ -20,8 +20,8 @@ export default function App() {
   useEffect(() => {
     // Basic smooth scroll implementation for anchors
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        const href = this.getAttribute('href');
+      anchor.addEventListener('click', (e) => {
+        const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href');
         if (href && href.startsWith('#')) {
           e.preventDefault();
           const targetId = href.substring(1);

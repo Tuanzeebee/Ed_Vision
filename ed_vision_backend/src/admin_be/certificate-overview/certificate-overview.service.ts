@@ -333,6 +333,8 @@ export class CertificateOverviewService {
       });
     }
 
+    // Compute the TRUE first-ever activity per account (no lower-bound filter)
+    // so that returning students are not misclassified as new.
     const rows = await this.prisma.$queryRaw<AccountFirstActivityRow[]>`
       WITH events AS (
         SELECT account_id, created_at AS occurred_at
@@ -352,7 +354,6 @@ export class CertificateOverviewService {
              MIN(occurred_at) AS first_activity,
              MAX(occurred_at) AS last_activity
       FROM events
-      WHERE occurred_at >= ${buckets[0].start}
       GROUP BY account_id
     `;
 
@@ -440,11 +441,16 @@ export class CertificateOverviewService {
       const count = this.toNumber(row.cnt);
       if (count <= 0) continue;
       const label = this.formatCertLabel(row.cert_type);
+      const relTime = this.formatRelativeTimeI18n(recentEnrollWindowStart, end);
       items.push({
         id: `enroll-${row.cert_type}`,
         text: `${count} SV mới đăng ký ${label}`,
         time: this.formatRelativeTime(recentEnrollWindowStart, end),
         color: 'bg-blue-500',
+        textKey: 'recentActivity.newEnrollment',
+        textParams: { count, cert: label },
+        timeKey: relTime.key,
+        timeParams: relTime.params,
       });
     }
 
@@ -472,6 +478,9 @@ export class CertificateOverviewService {
           text: `${pct}% tiến độ trung bình ${this.formatCertLabel(topProgress.cert_type)}`,
           time: 'Tuần này',
           color: 'bg-green-500',
+          textKey: 'recentActivity.avgProgress',
+          textParams: { percent: pct, cert: this.formatCertLabel(topProgress.cert_type) },
+          timeKey: 'recentActivity.thisWeek',
         });
       }
     }
@@ -496,6 +505,9 @@ export class CertificateOverviewService {
         text: `Cảnh báo: ${inactiveCount} SV vắng mặt 7 ngày`,
         time: 'Hôm nay',
         color: 'bg-orange-500',
+        textKey: 'recentActivity.inactiveWarning',
+        textParams: { count: inactiveCount },
+        timeKey: 'recentActivity.today',
       });
     }
 
@@ -510,6 +522,18 @@ export class CertificateOverviewService {
       return 'Giao tiếp';
     }
     return certType ? certType.toUpperCase() : 'Khác';
+  }
+
+  private formatRelativeTimeI18n(
+    start: Date,
+    end: Date,
+  ): { key: string; params?: Record<string, number> } {
+    const diffMs = Math.max(0, end.getTime() - start.getTime());
+    const hours = Math.floor(diffMs / (60 * 60 * 1000));
+    if (hours < 1) return { key: 'recentActivity.justNow' };
+    if (hours < 24) return { key: 'recentActivity.hoursAgo', params: { count: hours } };
+    const days = Math.floor(hours / 24);
+    return { key: 'recentActivity.daysAgo', params: { count: days } };
   }
 
   private formatRelativeTime(start: Date, end: Date): string {

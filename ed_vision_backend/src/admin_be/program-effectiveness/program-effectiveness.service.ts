@@ -13,7 +13,9 @@ import {
   ProgramEffectivenessScoreComparison,
 } from './dto/program-effectiveness.dto';
 
-const SKILL_LABELS = ['Listening', 'Reading', 'Writing', 'Speaking'];
+const IELTS_SKILL_LABELS = ['Listening', 'Reading', 'Writing', 'Speaking'];
+const TOEIC_SKILL_LABELS = ['Listening', 'Reading'];
+const ALL_SKILL_LABELS = ['Listening', 'Reading', 'Writing', 'Speaking'];
 
 const IELTS_BAND_DIVISOR = 10; // StudentTestResult stores IELTS band × 10
 const TOEIC_LR_BAND_DIVISOR = 55; // ≈ 495 / 9 — projects TOEIC L/R onto 0–9
@@ -235,15 +237,25 @@ export class ProgramEffectivenessService {
     const totalStudents = (rows: ScoreAggregateRow[]): number =>
       rows.reduce((sum, row) => sum + this.toNumber(row.student_count), 0);
 
-    const entryValues = [0, 1, 2, 3].map((i) =>
+    // TOEIC only has Listening + Reading (indices 0, 1)
+    // IELTS / all has all 4 skills (indices 0, 1, 2, 3)
+    const skillIndices = certType === 'toeic' ? [0, 1] : [0, 1, 2, 3];
+    const labels =
+      certType === 'toeic'
+        ? TOEIC_SKILL_LABELS
+        : certType === 'ielts'
+          ? IELTS_SKILL_LABELS
+          : ALL_SKILL_LABELS;
+
+    const entryValues = skillIndices.map((i) =>
       this.round1(projectSkill(entryRows, i)),
     );
-    const exitValues = [0, 1, 2, 3].map((i) =>
+    const exitValues = skillIndices.map((i) =>
       this.round1(projectSkill(exitRows, i)),
     );
 
     return {
-      labels: SKILL_LABELS,
+      labels,
       entry: entryValues,
       exit: exitValues,
       scaleMax: 9,
@@ -566,7 +578,7 @@ export class ProgramEffectivenessService {
       return {
         certType,
         scoreComparison: {
-          labels: SKILL_LABELS,
+          labels: ALL_SKILL_LABELS,
           entry: [0, 0, 0, 0],
           exit: [0, 0, 0, 0],
           scaleMax: 9,

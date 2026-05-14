@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import AdminLayout from '@/components/ui/admin/AdminLayout'
 import LoadingSpinner from '@/components/ui/admin/LoadingSpinner'
 import dashboardStatsService, {
@@ -50,14 +51,14 @@ const Icon = ({ name, className = '' }: { name: string; className?: string }) =>
   <i className={`fas ${name} ${className}`}></i>
 )
 
-const TIME_RANGE_OPTIONS: Array<{
+const TIME_RANGE_KEYS: Array<{
   value: CertificateOverviewTimeRange
-  label: string
+  labelKey: string
 }> = [
-  { value: 'this-month', label: 'Tháng này' },
-  { value: 'last-month', label: 'Tháng trước' },
-  { value: 'this-quarter', label: 'Quý này' },
-  { value: 'this-year', label: 'Năm nay' },
+  { value: 'this-month', labelKey: 'admin:certificateOverviewPage.thisMonth' },
+  { value: 'last-month', labelKey: 'admin:certificateOverviewPage.lastMonth' },
+  { value: 'this-quarter', labelKey: 'admin:certificateOverviewPage.thisQuarter' },
+  { value: 'this-year', labelKey: 'admin:certificateOverviewPage.thisYear' },
 ]
 
 const DISTRIBUTION_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6']
@@ -91,6 +92,7 @@ function formatChange(change: number, trend: 'up' | 'down' | 'stable'): string {
 }
 
 export default function OverviewDashBoardCertificate() {
+  const { t } = useTranslation(['admin'])
   const { showToast } = useToast()
   const [timeRange, setTimeRange] =
     useState<CertificateOverviewTimeRange>('this-month')
@@ -108,8 +110,8 @@ export default function OverviewDashBoardCertificate() {
       setData(result)
     } catch (err) {
       console.error('Failed to load certificate overview', err)
-      setError('Không thể tải dữ liệu tổng quan chứng chỉ. Vui lòng thử lại.')
-      showToast('Không thể tải dữ liệu tổng quan chứng chỉ', 'error')
+      setError(t('admin:certificateOverviewPage.errorLoad'))
+      showToast(t('admin:certificateOverviewPage.errorLoad'), 'error')
     } finally {
       setLoading(false)
     }
@@ -123,7 +125,7 @@ export default function OverviewDashBoardCertificate() {
     const kpis = data?.kpis
     return [
       {
-        title: 'Tổng sinh viên',
+        title: t('admin:certificateOverviewPage.totalStudents'),
         value: formatNumber(kpis?.totalStudents.value ?? 0),
         change: formatChange(
           kpis?.totalStudents.change ?? 0,
@@ -133,7 +135,7 @@ export default function OverviewDashBoardCertificate() {
         ...KPI_STYLES[0],
       },
       {
-        title: 'Đang hoạt động',
+        title: t('admin:certificateOverviewPage.activeStudents'),
         value: formatNumber(kpis?.activeStudents.value ?? 0),
         change: formatChange(
           kpis?.activeStudents.change ?? 0,
@@ -143,7 +145,7 @@ export default function OverviewDashBoardCertificate() {
         ...KPI_STYLES[1],
       },
       {
-        title: 'Tỷ lệ quay lại',
+        title: t('admin:certificateOverviewPage.returnRate'),
         value: formatPercent(kpis?.returnRate.value ?? 0),
         change: formatChange(
           kpis?.returnRate.change ?? 0,
@@ -153,7 +155,7 @@ export default function OverviewDashBoardCertificate() {
         ...KPI_STYLES[2],
       },
       {
-        title: 'Tỷ lệ hoàn thành',
+        title: t('admin:certificateOverviewPage.completionRate'),
         value: formatPercent(kpis?.completionRate.value ?? 0),
         change: formatChange(
           kpis?.completionRate.change ?? 0,
@@ -163,7 +165,7 @@ export default function OverviewDashBoardCertificate() {
         ...KPI_STYLES[3],
       },
     ]
-  }, [data])
+  }, [data, t])
 
   const trafficChartData = useMemo(() => {
     const labels = data?.traffic.labels ?? ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
@@ -172,7 +174,7 @@ export default function OverviewDashBoardCertificate() {
       labels,
       datasets: [
         {
-          label: 'Lượt truy cập',
+          label: t('admin:certificateOverviewPage.trafficLabel'),
           data: values,
           borderColor: '#2563eb',
           backgroundColor: 'rgba(37, 99, 235, 0.1)',
@@ -185,7 +187,7 @@ export default function OverviewDashBoardCertificate() {
         },
       ],
     }
-  }, [data])
+  }, [data, t])
 
   const trafficChartOptions = useMemo(
     () => ({
@@ -265,20 +267,20 @@ export default function OverviewDashBoardCertificate() {
       labels,
       datasets: [
         {
-          label: 'Mới',
+          label: t('admin:certificateOverviewPage.retentionNew'),
           data: newStudents,
           backgroundColor: '#2563eb',
           borderRadius: 4,
         },
         {
-          label: 'Quay lại',
+          label: t('admin:certificateOverviewPage.retentionReturning'),
           data: returningStudents,
           backgroundColor: '#94a3b8',
           borderRadius: 4,
         },
       ],
     }
-  }, [data])
+  }, [data, t])
 
   const retentionChartOptions = useMemo(
     () => ({
@@ -313,7 +315,7 @@ export default function OverviewDashBoardCertificate() {
       <div className="space-y-8">
         {/* Page Title */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Executive Overview</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('admin:certificateOverviewPage.title')}</h1>
           <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-md border border-gray-200">
             <Icon name="fa-calendar" className="text-gray-500 text-sm" />
             <select
@@ -324,9 +326,9 @@ export default function OverviewDashBoardCertificate() {
               }
               disabled={loading}
             >
-              {TIME_RANGE_OPTIONS.map((option) => (
+              {TIME_RANGE_KEYS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </option>
               ))}
             </select>
@@ -344,7 +346,7 @@ export default function OverviewDashBoardCertificate() {
                 onClick={() => fetchData()}
                 className="text-sm font-medium text-red-600 hover:text-red-800"
               >
-                Thử lại
+                {t('admin:certificateOverviewPage.retry')}
               </button>
             </div>
           </Card>
@@ -393,7 +395,7 @@ export default function OverviewDashBoardCertificate() {
               <Card className="lg:col-span-2 p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h4 className="font-bold text-gray-900">
-                    Lượt truy cập theo thời gian
+                    {t('admin:certificateOverviewPage.trafficTitle')}
                   </h4>
                 </div>
                 <div className="h-64">
@@ -404,7 +406,7 @@ export default function OverviewDashBoardCertificate() {
               {/* Distribution Chart */}
               <Card className="p-6">
                 <h4 className="font-bold text-gray-900 mb-6">
-                  Phân bổ theo chứng chỉ
+                  {t('admin:certificateOverviewPage.distributionTitle')}
                 </h4>
                 <div className="h-64">
                   <Doughnut
@@ -420,7 +422,7 @@ export default function OverviewDashBoardCertificate() {
               {/* Retention Chart */}
               <Card className="p-6">
                 <h4 className="font-bold text-gray-900 mb-6">
-                  Sinh viên mới vs Quay lại
+                  {t('admin:certificateOverviewPage.retentionTitle')}
                 </h4>
                 <div className="h-64">
                   <Bar data={retentionChartData} options={retentionChartOptions} />
@@ -429,10 +431,10 @@ export default function OverviewDashBoardCertificate() {
 
               {/* Recent Activities */}
               <Card className="p-6">
-                <h4 className="font-bold text-gray-900 mb-6">Hoạt động gần đây</h4>
+                <h4 className="font-bold text-gray-900 mb-6">{t('admin:certificateOverviewPage.recentActivityTitle')}</h4>
                 {recentActivities.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    Chưa có hoạt động nào trong khoảng thời gian này.
+                    {t('admin:certificateOverviewPage.noActivity')}
                   </p>
                 ) : (
                   <div className="space-y-4">
@@ -446,11 +448,15 @@ export default function OverviewDashBoardCertificate() {
                             className={`w-2 h-2 rounded-full ${activity.color}`}
                           ></div>
                           <span className="text-sm font-medium text-gray-700">
-                            {activity.text}
+                            {activity.textKey
+                              ? String(t(`admin:certificateOverviewPage.${activity.textKey}`, activity.textParams as any))
+                              : activity.text}
                           </span>
                         </div>
                         <span className="text-xs text-gray-500">
-                          {activity.time}
+                          {activity.timeKey
+                            ? String(t(`admin:certificateOverviewPage.${activity.timeKey}`, activity.timeParams as any))
+                            : activity.time}
                         </span>
                       </div>
                     ))}

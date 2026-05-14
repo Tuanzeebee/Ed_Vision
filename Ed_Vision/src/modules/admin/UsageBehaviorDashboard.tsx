@@ -12,18 +12,16 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js'
-import { Bar, Pie } from 'react-chartjs-2'
+import { Bar } from 'react-chartjs-2'
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend,
@@ -47,10 +45,10 @@ const Icon = ({ name, className = '' }: { name: string; className?: string }) =>
   <i className={`fas ${name} ${className}`}></i>
 )
 
-const TIME_RANGE_OPTIONS: Array<{ value: UsageBehaviorTimeRange; label: string }> = [
-  { value: '7d', label: '7 ngày qua' },
-  { value: '30d', label: '30 ngày qua' },
-  { value: '90d', label: '90 ngày qua' },
+const TIME_RANGE_KEYS: Array<{ value: UsageBehaviorTimeRange; labelKey: string }> = [
+  { value: '7d', labelKey: 'admin:usageBehaviorPage.7d' },
+  { value: '30d', labelKey: 'admin:usageBehaviorPage.30d' },
+  { value: '90d', labelKey: 'admin:usageBehaviorPage.90d' },
 ]
 
 /**
@@ -113,8 +111,8 @@ export default function UsageBehaviorDashboard() {
       setData(result)
     } catch (err) {
       console.error('Failed to load usage behavior dashboard', err)
-      setError('Không thể tải dữ liệu hành vi sử dụng. Vui lòng thử lại.')
-      showToast('Không thể tải dữ liệu hành vi sử dụng', 'error')
+      setError(t('admin:usageBehaviorPage.errorLoad'))
+      showToast(t('admin:usageBehaviorPage.errorLoad'), 'error')
     } finally {
       setLoading(false)
     }
@@ -131,14 +129,14 @@ export default function UsageBehaviorDashboard() {
       labels,
       datasets: [
         {
-          label: 'Phút',
+          label: t('admin:usageBehaviorPage.minuteLabel'),
           data: values,
           backgroundColor: '#2563eb',
           borderRadius: 6,
         },
       ],
     }
-  }, [data])
+  }, [data, t])
 
   const durationChartOptions = useMemo(
     () => ({
@@ -162,39 +160,6 @@ export default function UsageBehaviorDashboard() {
     [],
   )
 
-  // Device Chart data (Pie chart) - using mock data for now
-  const deviceChartData = useMemo(
-    () => ({
-      labels: ['Web Desktop', 'Mobile App', 'Tablet'],
-      datasets: [
-        {
-          data: [55, 35, 10],
-          backgroundColor: ['#2563eb', '#10b981', '#f59e0b'],
-          borderWidth: 0,
-          hoverOffset: 4,
-        },
-      ],
-    }),
-    [],
-  )
-
-  const deviceChartOptions = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right' as const,
-          labels: {
-            boxWidth: 12,
-            padding: 10,
-            font: { size: 11 },
-          },
-        },
-      },
-    }),
-    [],
-  )
 
   const heatmap = data?.heatmap
   const featureItems = data?.featureUsage.items ?? []
@@ -205,7 +170,7 @@ export default function UsageBehaviorDashboard() {
         {/* Page Title */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-bold text-gray-900">
-            Hành vi sử dụng & Khung giờ cao điểm
+            {t('admin:usageBehaviorPage.title')}
           </h1>
           <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-md border border-gray-200">
             <Icon name="fa-calendar" className="text-gray-500 text-sm" />
@@ -216,9 +181,9 @@ export default function UsageBehaviorDashboard() {
                 setTimeRange(e.target.value as UsageBehaviorTimeRange)
               }
             >
-              {TIME_RANGE_OPTIONS.map((option) => (
+              {TIME_RANGE_KEYS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </option>
               ))}
             </select>
@@ -241,17 +206,17 @@ export default function UsageBehaviorDashboard() {
             <Card className="p-6">
               <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
                 <h4 className="font-bold text-gray-900">
-                  Mật độ truy cập theo giờ &amp; ngày
+                  {t('admin:usageBehaviorPage.heatmapTitle')}
                 </h4>
                 <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>Ít</span>
+                  <span>{t('admin:usageBehaviorPage.less')}</span>
                   <div className="flex gap-1">
                     <div className="w-3 h-3 bg-blue-50 rounded-sm"></div>
                     <div className="w-3 h-3 bg-blue-200 rounded-sm"></div>
                     <div className="w-3 h-3 bg-blue-400 rounded-sm"></div>
                     <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
                   </div>
-                  <span>Nhiều</span>
+                  <span>{t('admin:usageBehaviorPage.more')}</span>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -277,35 +242,24 @@ export default function UsageBehaviorDashboard() {
               </div>
             </Card>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Duration Chart */}
-              <Card className="p-6">
-                <h4 className="font-bold text-gray-900 mb-6">
-                  Thời lượng học trung bình / phiên (phút)
-                </h4>
-                <div className="h-64">
-                  <Bar data={durationChartData} options={durationChartOptions} />
-                </div>
-              </Card>
-
-              {/* Device Chart */}
-              <Card className="p-6">
-                <h4 className="font-bold text-gray-900 mb-6">Thiết bị sử dụng</h4>
-                <div className="h-64">
-                  <Pie data={deviceChartData} options={deviceChartOptions} />
-                </div>
-              </Card>
-            </div>
+            {/* Duration Chart */}
+            <Card className="p-6">
+              <h4 className="font-bold text-gray-900 mb-6">
+                {t('admin:usageBehaviorPage.durationTitle')}
+              </h4>
+              <div className="h-64">
+                <Bar data={durationChartData} options={durationChartOptions} />
+              </div>
+            </Card>
 
             {/* Feature Usage */}
             <Card className="p-6">
               <h4 className="font-bold text-gray-900 mb-6">
-                Chức năng được sử dụng nhiều nhất
+                {t('admin:usageBehaviorPage.featureTitle')}
               </h4>
               {featureItems.length === 0 ? (
                 <p className="text-sm text-gray-500">
-                  Chưa có dữ liệu hoạt động trong khoảng thời gian này.
+                  {t('admin:usageBehaviorPage.noFeatureData')}
                 </p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -325,13 +279,13 @@ export default function UsageBehaviorDashboard() {
                           />
                         </div>
                         <span className="text-sm font-bold text-gray-700">
-                          {feature.name}
+                          {t(`admin:usageBehaviorPage.featureName_${feature.id}`, feature.name)}
                         </span>
                         <span className="text-2xl font-bold text-gray-900 mt-1">
                           {feature.percent}%
                         </span>
                         <span className="text-xs text-gray-500 mt-1">
-                          {feature.count.toLocaleString('vi-VN')} lượt
+                          {String(t('admin:usageBehaviorPage.hitCount', { count: feature.count.toLocaleString('vi-VN') } as any))}
                         </span>
                         <div className="w-full bg-gray-200 h-1.5 rounded-full mt-3">
                           <div

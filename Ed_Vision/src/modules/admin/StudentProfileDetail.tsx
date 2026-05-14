@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '@/components/ui/admin/AdminLayout'
 import {
@@ -50,7 +51,7 @@ const Card = ({
 )
 
 const formatDateTime = (value?: string) => {
-  if (!value) return 'Chưa có dữ liệu'
+  if (!value) return ''
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
     month: '2-digit',
@@ -81,12 +82,12 @@ const getTestLabel = (test: StudentTestResultItem) => {
   return `${cert} ${type} - ${test.testPhase}`
 }
 
-const getTestStatus = (test: StudentTestResultItem) => {
+const getTestStatus = (test: StudentTestResultItem, t: (key: string) => string) => {
   const score = test.bandScore ?? test.totalScore ?? 0
   const passed = test.certType === 'ielts' ? score >= 6.5 : score >= 750
   return passed
-    ? { label: 'Đạt chuẩn', bgColor: 'bg-green-100', textColor: 'text-green-700' }
-    : { label: 'Cần cải thiện', bgColor: 'bg-red-100', textColor: 'text-red-700' }
+    ? { label: t('admin:studentProfilePage.passed'), bgColor: 'bg-green-100', textColor: 'text-green-700' }
+    : { label: t('admin:studentProfilePage.needImprovement'), bgColor: 'bg-red-100', textColor: 'text-red-700' }
 }
 
 const clampPercent = (value?: number) => Math.max(0, Math.min(100, Math.round(value || 0)))
@@ -105,6 +106,7 @@ const getStatusLabel = (status?: StudentDetail['learningStatus']) => {
 }
 
 export default function StudentProfileDetail() {
+  const { t } = useTranslation(['admin'])
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const studentId = Number(id)
@@ -115,7 +117,7 @@ export default function StudentProfileDetail() {
   useEffect(() => {
     const fetchStudent = async () => {
       if (!Number.isInteger(studentId) || studentId <= 0) {
-        setError('Mã sinh viên không hợp lệ')
+        setError(t('admin:studentProfilePage.invalidId'))
         setLoading(false)
         return
       }
@@ -126,7 +128,7 @@ export default function StudentProfileDetail() {
         const data = await getStudentDetail(studentId)
         setStudent(data)
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Không thể tải chi tiết sinh viên')
+        setError(err instanceof Error ? err.message : t('admin:studentProfilePage.errorLoad'))
       } finally {
         setLoading(false)
       }
@@ -161,10 +163,10 @@ export default function StudentProfileDetail() {
     () => ({
       labels: student?.scoreHistory?.length
         ? student.scoreHistory.map((item) => item.label)
-        : ['Chưa có dữ liệu'],
+        : [t('admin:studentProfilePage.noChartData')],
       datasets: [
         {
-          label: `Điểm ${student?.certType?.toUpperCase() || 'Mock Test'}`,
+          label: String(t('admin:studentProfilePage.scoreLabel', { type: student?.certType?.toUpperCase() || 'Mock Test' } as any)),
           data: student?.scoreHistory?.length
             ? student.scoreHistory.map((item) => item.score)
             : [0],
@@ -179,7 +181,7 @@ export default function StudentProfileDetail() {
         },
       ],
     }),
-    [student?.certType, student?.scoreHistory]
+    [student?.certType, student?.scoreHistory, t]
   )
 
   const scoreHistoryOptions = useMemo(
@@ -208,8 +210,8 @@ export default function StudentProfileDetail() {
 
   const riskMessage = useMemo(() => {
     if (!student?.riskFactors?.length) return null
-    return `Cảnh báo: ${student.riskFactors.join(', ')}`
-  }, [student?.riskFactors])
+    return String(t('admin:studentProfilePage.riskWarning', { factors: student.riskFactors.join(', ') } as any))
+  }, [student?.riskFactors, t])
 
   const handleBack = () => {
     navigate('/admin/students')
@@ -220,7 +222,7 @@ export default function StudentProfileDetail() {
       <AdminLayout>
         <div className="p-10 text-center">
           <Icon name="fa-spinner" className="fa-spin text-3xl text-blue-600" />
-          <p className="text-sm text-gray-500 mt-3">Đang tải chi tiết sinh viên...</p>
+          <p className="text-sm text-gray-500 mt-3">{t('admin:studentProfilePage.loadingDetail')}</p>
         </div>
       </AdminLayout>
     )
@@ -233,13 +235,13 @@ export default function StudentProfileDetail() {
           <button
             onClick={handleBack}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
-            title="Quay lại"
+            title={t('admin:studentProfilePage.backTooltip')}
           >
             <Icon name="fa-arrow-left" className="text-lg" />
           </button>
           <Card className="p-10 text-center">
             <Icon name="fa-exclamation-triangle" className="text-3xl text-red-500" />
-            <p className="text-sm text-red-500 mt-3">{error || 'Không tìm thấy sinh viên'}</p>
+            <p className="text-sm text-red-500 mt-3">{error || t('admin:studentProfilePage.notFound')}</p>
           </Card>
         </div>
       </AdminLayout>
@@ -255,13 +257,13 @@ export default function StudentProfileDetail() {
             <button
               onClick={handleBack}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"
-              title="Quay lại"
+              title={t('admin:studentProfilePage.backTooltip')}
             >
               <Icon name="fa-arrow-left" className="text-lg" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Chi tiết hồ sơ sinh viên</h1>
-              <p className="text-sm text-gray-500 mt-0.5">MSSV: {student.studentCode}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('admin:studentProfilePage.title')}</h1>
+              <p className="text-sm text-gray-500 mt-0.5">{t('admin:studentProfilePage.studentCode')}: {student.studentCode}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -269,13 +271,13 @@ export default function StudentProfileDetail() {
               <Icon name="fa-search" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
               <input
                 type="text"
-                placeholder="Tìm kiếm MSSV..."
+                placeholder={t('admin:studentProfilePage.searchPlaceholder')}
                 className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
             <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
               <Icon name="fa-file-pdf" className="mr-2 text-xs" />
-              Export PDF
+              {t('admin:studentProfilePage.exportPdf')}
             </button>
           </div>
         </div>
@@ -296,11 +298,11 @@ export default function StudentProfileDetail() {
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
               {/* Student Info */}
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-gray-900">{student.fullName || 'Chưa cập nhật tên'}</h2>
-                <p className="text-sm text-gray-500">MSSV: {student.studentCode}</p>
+                <h2 className="text-xl font-bold text-gray-900">{student.fullName || t('admin:studentProfilePage.noNameYet')}</h2>
+                <p className="text-sm text-gray-500">{t('admin:studentProfilePage.studentCode')}: {student.studentCode}</p>
                 <div className="flex gap-2 mt-3">
                   <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-md uppercase">
-                    {student.certType || 'Chưa đăng ký'}
+                    {student.certType || t('admin:studentProfilePage.notRegistered')}
                   </span>
                   <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-md uppercase">
                     {getStatusLabel(student.learningStatus)}
@@ -311,14 +313,14 @@ export default function StudentProfileDetail() {
               {/* Department Info */}
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Khoa / Khóa</p>
+                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">{t('admin:studentProfilePage.departmentLabel')}</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">
-                    {student.department || student.programName || 'Chưa phân khoa'}
-                    {student.cohortYear ? ` - Khóa ${student.cohortYear}` : ''}
+                    {student.department || student.programName || t('admin:studentProfilePage.noDepartment')}
+                    {student.cohortYear ? ` - ${String(t('admin:studentProfilePage.cohort', { year: student.cohortYear } as any))}` : ''}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mt-4">Ngày học gần nhất</p>
+                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider mt-4">{t('admin:studentProfilePage.lastActivity')}</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">
                     {formatDateTime(student.studyStats?.lastActivityAt || student.lastActivityAt)}
                   </p>
@@ -328,9 +330,9 @@ export default function StudentProfileDetail() {
               {/* Stats & Warning */}
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Thời gian học TB</p>
+                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">{t('admin:studentProfilePage.avgStudyTime')}</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">
-                    {student.studyStats?.averageDailyMinutes || 0} phút / ngày
+                    {student.studyStats?.averageDailyMinutes || 0} {t('admin:studentProfilePage.minutesPerDay')}
                   </p>
                 </div>
                 {riskMessage && (
@@ -348,7 +350,7 @@ export default function StudentProfileDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Course Progress */}
           <Card className="p-6">
-            <h4 className="font-bold text-gray-900 mb-6">Tiến độ khóa học</h4>
+            <h4 className="font-bold text-gray-900 mb-6">{t('admin:studentProfilePage.courseProgress')}</h4>
             <div className="space-y-5">
               {skillProgressData.map((skill) => (
                 <div key={skill.name}>
@@ -371,7 +373,7 @@ export default function StudentProfileDetail() {
 
           {/* Score History Chart */}
           <Card className="lg:col-span-2 p-6">
-            <h4 className="font-bold text-gray-900 mb-6">Biểu đồ tiến bộ</h4>
+            <h4 className="font-bold text-gray-900 mb-6">{t('admin:studentProfilePage.progressChart')}</h4>
             <div className="h-64">
               <Line data={scoreHistoryData} options={scoreHistoryOptions} />
             </div>
@@ -381,29 +383,29 @@ export default function StudentProfileDetail() {
         {/* Recent Activity Table */}
         <Card className="overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h4 className="font-bold text-gray-900">Lịch sử làm bài gần đây</h4>
+            <h4 className="font-bold text-gray-900">{t('admin:studentProfilePage.testHistoryTitle')}</h4>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Ngày thực hiện</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Loại bài</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Điểm số</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Trạng thái</th>
-                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Hành động</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{t('admin:studentProfilePage.colDate')}</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{t('admin:studentProfilePage.colTestType')}</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{t('admin:studentProfilePage.colScore')}</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{t('admin:studentProfilePage.colStatus')}</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{t('admin:studentProfilePage.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {student.testResults.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
-                      Chưa có lịch sử làm bài
+                      {t('admin:studentProfilePage.noTestHistory')}
                     </td>
                   </tr>
                 ) : (
                   student.testResults.map((test) => {
-                    const status = getTestStatus(test)
+                    const status = getTestStatus(test, t)
                     return (
                       <tr key={test.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-700">{formatDate(test.completedAt)}</td>
@@ -416,7 +418,7 @@ export default function StudentProfileDetail() {
                         </td>
                         <td className="px-6 py-4">
                           <button className="text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium">
-                            Chi tiết
+                            {t('admin:studentProfilePage.detail')}
                           </button>
                         </td>
                       </tr>

@@ -160,6 +160,10 @@ export interface CertificateOverviewActivity {
   text: string;
   time: string;
   color: string;
+  textKey?: string;
+  textParams?: Record<string, string | number>;
+  timeKey?: string;
+  timeParams?: Record<string, string | number>;
 }
 
 export interface CertificateOverviewResponse {

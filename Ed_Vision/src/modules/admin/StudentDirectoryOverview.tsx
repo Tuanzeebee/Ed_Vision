@@ -63,25 +63,25 @@ const getCertificateColors = (certType: string | null) => {
 }
 
 // Helper to get status config
-const getStatusConfig = (status: string) => {
+const getStatusConfig = (status: string, t: (key: string) => string) => {
   switch (status) {
     case 'active':
       return {
-        label: 'Đang học',
+        label: t('admin:studentDirectoryPage.statusActive'),
         bgColor: 'bg-green-100',
         textColor: 'text-green-700',
         dotColor: 'bg-green-600',
       }
     case 'on_hold':
       return {
-        label: 'Tạm dừng',
+        label: t('admin:studentDirectoryPage.statusOnHold'),
         bgColor: 'bg-orange-100',
         textColor: 'text-orange-700',
         dotColor: 'bg-orange-600',
       }
     case 'completed':
       return {
-        label: 'Hoàn thành',
+        label: t('admin:studentDirectoryPage.statusCompleted'),
         bgColor: 'bg-blue-100',
         textColor: 'text-blue-700',
         dotColor: 'bg-blue-600',
@@ -89,7 +89,7 @@ const getStatusConfig = (status: string) => {
     case 'inactive':
     default:
       return {
-        label: 'Chưa bắt đầu',
+        label: t('admin:studentDirectoryPage.statusInactive'),
         bgColor: 'bg-gray-100',
         textColor: 'text-gray-700',
         dotColor: 'bg-gray-600',
@@ -98,24 +98,24 @@ const getStatusConfig = (status: string) => {
 }
 
 // Helper to get risk config
-const getRiskConfig = (riskLevel: string) => {
+const getRiskConfig = (riskLevel: string, t: (key: string) => string) => {
   switch (riskLevel) {
     case 'high':
       return {
-        level: 'Cao',
+        level: t('admin:studentDirectoryPage.riskHigh'),
         bgColor: 'bg-red-100',
         textColor: 'text-red-700',
       }
     case 'medium':
       return {
-        level: 'Trung bình',
+        level: t('admin:studentDirectoryPage.riskMedium'),
         bgColor: 'bg-yellow-100',
         textColor: 'text-yellow-700',
       }
     case 'low':
     default:
       return {
-        level: 'Thấp',
+        level: t('admin:studentDirectoryPage.riskLow'),
         bgColor: 'bg-gray-100',
         textColor: 'text-gray-600',
       }
@@ -186,7 +186,7 @@ export default function StudentDirectoryOverview() {
       setPagination(response.meta)
     } catch (err: any) {
       console.error('Failed to load students:', err)
-      setError(err.message || 'Không thể tải danh sách sinh viên')
+      setError(err.message || t('admin:studentDirectoryPage.errorLoad'))
     } finally {
       setStudentsLoading(false)
     }
@@ -222,16 +222,16 @@ export default function StudentDirectoryOverview() {
   const statsData = stats
     ? [
         {
-          title: 'Tổng sinh viên',
+          title: t('admin:studentDirectoryPage.totalStudents'),
           value: stats.totalStudents.toLocaleString(),
           change: stats.totalChangePercent > 0 ? `+${stats.totalChangePercent}%` : `${stats.totalChangePercent}%`,
-          changeLabel: 'tháng này',
+          changeLabel: t('admin:studentDirectoryPage.thisMonth'),
           icon: 'fa-users',
           iconBg: 'bg-blue-100',
           iconColor: 'text-blue-600',
         },
         {
-          title: 'IELTS / TOEIC',
+          title: t('admin:studentDirectoryPage.ieltsSlashToeic'),
           value: `${stats.ieltsCount} / ${stats.toeicCount}`,
           change: null,
           changeLabel: null,
@@ -240,18 +240,18 @@ export default function StudentDirectoryOverview() {
           iconColor: 'text-purple-600',
         },
         {
-          title: 'Đang hoạt động',
+          title: t('admin:studentDirectoryPage.activeStudents'),
           value: stats.activeStudents.toLocaleString(),
           change: `~${stats.activePercent}%`,
-          changeLabel: 'tổng số',
+          changeLabel: t('admin:studentDirectoryPage.totalLabel'),
           icon: 'fa-chart-line',
           iconBg: 'bg-green-100',
           iconColor: 'text-green-600',
         },
         {
-          title: 'Cần can thiệp',
+          title: t('admin:studentDirectoryPage.needIntervention'),
           value: stats.atRiskCount.toString(),
-          change: stats.atRiskHighCount > 0 ? `${stats.atRiskHighCount} rủi ro cao` : null,
+          change: stats.atRiskHighCount > 0 ? `${stats.atRiskHighCount} ${t('admin:studentDirectoryPage.highRisk')}` : null,
           changeLabel: null,
           icon: 'fa-exclamation-circle',
           iconBg: 'bg-red-100',
@@ -267,15 +267,15 @@ export default function StudentDirectoryOverview() {
         {/* Page Header with Search & Add Button */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quản lý Sinh viên</h1>
-            <p className="text-sm text-gray-500 mt-1">Danh sách và theo dõi tiến độ sinh viên</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('admin:studentDirectoryPage.title')}</h1>
+            <p className="text-sm text-gray-500 mt-1">{t('admin:studentDirectoryPage.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
               <Icon name="fa-search" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
               <input
                 type="text"
-                placeholder="Tìm kiếm sinh viên..."
+                placeholder={t('admin:studentDirectoryPage.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
@@ -283,7 +283,7 @@ export default function StudentDirectoryOverview() {
             </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors">
               <Icon name="fa-plus" className="text-xs" />
-              Thêm sinh viên
+              {t('admin:studentDirectoryPage.addStudent')}
             </button>
           </div>
         </div>
@@ -324,7 +324,7 @@ export default function StudentDirectoryOverview() {
                 onChange={(e) => setCertTypeFilter(e.target.value as 'ielts' | 'toeic' | '')}
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">Tất cả chứng chỉ</option>
+                <option value="">{t('admin:studentDirectoryPage.allCerts')}</option>
                 <option value="ielts">IELTS</option>
                 <option value="toeic">TOEIC</option>
               </select>
@@ -333,34 +333,34 @@ export default function StudentDirectoryOverview() {
                 onChange={(e) => setStatusFilter(e.target.value as 'active' | 'inactive' | 'completed' | 'on_hold' | '')}
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">Tất cả trạng thái</option>
-                <option value="active">Đang học</option>
-                <option value="on_hold">Tạm dừng</option>
-                <option value="completed">Hoàn thành</option>
-                <option value="inactive">Chưa bắt đầu</option>
+                <option value="">{t('admin:studentDirectoryPage.allStatuses')}</option>
+                <option value="active">{t('admin:studentDirectoryPage.statusActive')}</option>
+                <option value="on_hold">{t('admin:studentDirectoryPage.statusOnHold')}</option>
+                <option value="completed">{t('admin:studentDirectoryPage.statusCompleted')}</option>
+                <option value="inactive">{t('admin:studentDirectoryPage.statusInactive')}</option>
               </select>
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value as 'high' | 'medium' | 'low' | '')}
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">Mức độ rủi ro</option>
-                <option value="high">Cao</option>
-                <option value="medium">Trung bình</option>
-                <option value="low">Thấp</option>
+                <option value="">{t('admin:studentDirectoryPage.riskLevel')}</option>
+                <option value="high">{t('admin:studentDirectoryPage.riskHigh')}</option>
+                <option value="medium">{t('admin:studentDirectoryPage.riskMedium')}</option>
+                <option value="low">{t('admin:studentDirectoryPage.riskLow')}</option>
               </select>
             </div>
             <div className="flex items-center gap-2">
               <button
                 className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-500"
-                title="Xuất báo cáo"
+                title={t('admin:studentDirectoryPage.exportTooltip')}
               >
                 <Icon name="fa-download" className="text-sm" />
               </button>
               <button
                 onClick={() => fetchStudents()}
                 className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-500"
-                title="Làm mới"
+                title={t('admin:studentDirectoryPage.refreshTooltip')}
               >
                 <Icon name="fa-sync-alt" className={`text-sm ${studentsLoading ? 'fa-spin' : ''}`} />
               </button>
@@ -374,13 +374,13 @@ export default function StudentDirectoryOverview() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sinh viên</th>
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Chứng chỉ</th>
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tiến độ</th>
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Điểm (Vào/Hiện tại)</th>
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rủi ro</th>
-                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Thao tác</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin:studentDirectoryPage.colStudent')}</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin:studentDirectoryPage.colCertificate')}</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin:studentDirectoryPage.colProgress')}</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">{t('admin:studentDirectoryPage.colScore')}</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin:studentDirectoryPage.colStatus')}</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin:studentDirectoryPage.colRisk')}</th>
+                  <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">{t('admin:studentDirectoryPage.colAction')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -388,7 +388,7 @@ export default function StudentDirectoryOverview() {
                   <tr>
                     <td colSpan={7} className="p-8 text-center">
                       <Icon name="fa-spinner" className="fa-spin text-2xl text-blue-600" />
-                      <p className="text-sm text-gray-500 mt-2">Đang tải...</p>
+                      <p className="text-sm text-gray-500 mt-2">{t('admin:studentDirectoryPage.loading')}</p>
                     </td>
                   </tr>
                 ) : error ? (
@@ -402,14 +402,14 @@ export default function StudentDirectoryOverview() {
                   <tr>
                     <td colSpan={7} className="p-8 text-center">
                       <Icon name="fa-inbox" className="text-2xl text-gray-400" />
-                      <p className="text-sm text-gray-500 mt-2">Không tìm thấy sinh viên</p>
+                      <p className="text-sm text-gray-500 mt-2">{t('admin:studentDirectoryPage.noStudentFound')}</p>
                     </td>
                   </tr>
                 ) : (
                   students.map((student: StudentDirectoryItem) => {
                     const certColors = getCertificateColors(student.certType)
-                    const statusConfig = getStatusConfig(student.learningStatus)
-                    const riskConfig = getRiskConfig(student.riskLevel)
+                    const statusConfig = getStatusConfig(student.learningStatus, t)
+                    const riskConfig = getRiskConfig(student.riskLevel, t)
                     return (
                       <tr
                         key={student.studentId}
@@ -425,13 +425,13 @@ export default function StudentDirectoryOverview() {
                               <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
                                 {student.fullName}
                               </p>
-                              <p className="text-xs text-gray-500">MSSV: {student.studentCode}</p>
+                              <p className="text-xs text-gray-500">{t('admin:studentDirectoryPage.studentCode')}: {student.studentCode}</p>
                             </div>
                           </div>
                         </td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 ${certColors.bgColor} ${certColors.textColor} rounded-md text-xs font-medium`}>
-                            {student.certificateName || 'Chưa đăng ký'}
+                            {student.certificateName || t('admin:studentDirectoryPage.notRegistered')}
                           </span>
                         </td>
                         <td className="p-4 w-48">
@@ -470,7 +470,7 @@ export default function StudentDirectoryOverview() {
                               handleStudentClick(student.studentId)
                             }}
                             className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-gray-400 hover:text-blue-600"
-                            title="Xem chi tiết"
+                            title={t('admin:studentDirectoryPage.viewDetail')}
                           >
                             <Icon name="fa-chevron-right" className="text-sm" />
                           </button>
@@ -487,9 +487,9 @@ export default function StudentDirectoryOverview() {
           <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
             <p className="text-xs text-gray-500 font-medium">
               {studentsLoading ? (
-                'Đang tải...'
+                t('admin:studentDirectoryPage.loading')
               ) : (
-                `Hiển thị ${students.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0}-${Math.min(pagination.page * pagination.limit, pagination.total)} trong số ${pagination.total} sinh viên`
+                t('admin:studentDirectoryPage.showing', { from: students.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0, to: Math.min(pagination.page * pagination.limit, pagination.total), total: pagination.total })
               )}
             </p>
             <div className="flex items-center gap-1">

@@ -76,6 +76,14 @@ export interface CertificateOverviewActivity {
   time: string;
   /** Tailwind background color class used for the indicator dot. */
   color: string;
+  /** i18n key for the activity text (frontend resolves via t()). */
+  textKey?: string;
+  /** Interpolation params for textKey. */
+  textParams?: Record<string, string | number>;
+  /** i18n key for the time label. */
+  timeKey?: string;
+  /** Interpolation params for timeKey. */
+  timeParams?: Record<string, string | number>;
 }
 
 export interface CertificateOverviewResponse {

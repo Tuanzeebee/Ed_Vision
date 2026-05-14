@@ -768,6 +768,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Email & Office Communication",
     titleVI: "Email & Văn phòng",
     count: 25,
+    level: "Cơ bản",
     words: [
       {
         id: "v1-1",
@@ -1177,6 +1178,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Contracts & Agreements",
     titleVI: "Hợp đồng & Thỏa thuận",
     count: 30,
+    level: "Cơ bản",
     words: [
       {
         id: "v2-1",
@@ -1586,6 +1588,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Finance & Banking",
     titleVI: "Tài chính & Ngân hàng",
     count: 45,
+    level: "Trung bình",
     isPremiumPreview: true,
     words: [
       {
@@ -1756,6 +1759,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Manufacturing & Production",
     titleVI: "Sản xuất",
     count: 35,
+    level: "Trung bình",
     isPremiumPreview: true,
     words: [
       {
@@ -1926,6 +1930,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Human Resources",
     titleVI: "Nhân sự",
     count: 40,
+    level: "Trung bình",
     isPremiumPreview: true,
     words: [
       {
@@ -2096,6 +2101,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Travel & Transportation",
     titleVI: "Du lịch & Vận tải",
     count: 20,
+    level: "Nâng cao",
     isPremiumPreview: true,
     words: [
       {
@@ -2266,6 +2272,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Healthcare",
     titleVI: "Y tế & Sức khỏe",
     count: 25,
+    level: "Nâng cao",
     isPremiumPreview: true,
     words: [
       {
@@ -2436,6 +2443,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Technology & Equipment",
     titleVI: "Công nghệ & Thiết bị",
     count: 30,
+    level: "Nâng cao",
     isPremiumPreview: true,
     words: [
       {

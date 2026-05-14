@@ -2,38 +2,43 @@
 // ENUMS
 // ============================================
 
-export enum SkillArea {
-  READING = 'reading',
-  LISTENING = 'listening',
-  GRAMMAR = 'grammar',
-  VOCABULARY = 'vocabulary',
-  WRITING = 'writing',
-  SPEAKING = 'speaking',
-}
+export const SkillArea = {
+  READING: 'reading',
+  LISTENING: 'listening',
+  GRAMMAR: 'grammar',
+  VOCABULARY: 'vocabulary',
+  WRITING: 'writing',
+  SPEAKING: 'speaking',
+} as const;
+export type SkillArea = typeof SkillArea[keyof typeof SkillArea];
 
-export enum LessonStatus {
-  LOCKED = 'locked',
-  UNLOCKED = 'unlocked',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-}
+export const LessonStatus = {
+  LOCKED: 'locked',
+  UNLOCKED: 'unlocked',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+} as const;
+export type LessonStatus = typeof LessonStatus[keyof typeof LessonStatus];
 
-export enum SessionType {
-  WARMUP = 'warmup',
-  MINI_TEST = 'mini_test',
-}
+export const SessionType = {
+  WARMUP: 'warmup',
+  MINI_TEST: 'mini_test',
+} as const;
+export type SessionType = typeof SessionType[keyof typeof SessionType];
 
-export enum BandChange {
-  UP = 'UP',
-  DOWN = 'DOWN',
-  STABLE = 'STABLE',
-}
+export const BandChange = {
+  UP: 'UP',
+  DOWN: 'DOWN',
+  STABLE: 'STABLE',
+} as const;
+export type BandChange = typeof BandChange[keyof typeof BandChange];
 
-export enum Recommendation {
-  ADVANCE = 'advance',
-  MAINTAIN = 'maintain',
-  REMEDIAL = 'remedial',
-}
+export const Recommendation = {
+  ADVANCE: 'advance',
+  MAINTAIN: 'maintain',
+  REMEDIAL: 'remedial',
+} as const;
+export type Recommendation = typeof Recommendation[keyof typeof Recommendation];
 
 // ============================================
 // INTERFACES

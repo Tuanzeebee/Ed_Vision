@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import AdminLayout from '@/components/ui/admin/AdminLayout'
 import LoadingSpinner from '@/components/ui/admin/LoadingSpinner'
 import dashboardStatsService, {
@@ -50,13 +51,13 @@ const Card = ({
   </div>
 )
 
-const CERT_TYPE_OPTIONS: Array<{
+const CERT_TYPE_KEYS: Array<{
   value: ProgramEffectivenessCertType
-  label: string
+  labelKey: string
 }> = [
-  { value: 'all', label: 'Tất cả chứng chỉ' },
-  { value: 'ielts', label: 'IELTS' },
-  { value: 'toeic', label: 'TOEIC' },
+  { value: 'all', labelKey: 'admin:programEffectivenessPage.allCerts' },
+  { value: 'ielts', labelKey: 'IELTS' },
+  { value: 'toeic', labelKey: 'TOEIC' },
 ]
 
 const MODULE_ICON_STYLES: Record<
@@ -106,6 +107,7 @@ function formatImprovementBand(value: number): string {
 }
 
 export default function ProgramEffectivenessDashboard() {
+  const { t } = useTranslation(['admin'])
   const { showToast } = useToast()
   const [certType, setCertType] = useState<ProgramEffectivenessCertType>('all')
   const [data, setData] = useState<ProgramEffectivenessResponse | null>(null)
@@ -122,8 +124,8 @@ export default function ProgramEffectivenessDashboard() {
       setData(result)
     } catch (err) {
       console.error('Failed to load program effectiveness dashboard', err)
-      setError('Không thể tải dữ liệu hiệu quả chương trình. Vui lòng thử lại.')
-      showToast('Không thể tải dữ liệu hiệu quả chương trình', 'error')
+      setError(t('admin:programEffectivenessPage.errorLoad'))
+      showToast(t('admin:programEffectivenessPage.errorLoad'), 'error')
     } finally {
       setLoading(false)
     }
@@ -138,30 +140,31 @@ export default function ProgramEffectivenessDashboard() {
   const moduleImpact = data?.moduleImpact ?? []
   const groupEffectiveness = data?.groupEffectiveness ?? []
 
+  const defaultLabels =
+    certType === 'toeic'
+      ? ['Listening', 'Reading']
+      : ['Listening', 'Reading', 'Writing', 'Speaking']
+  const defaultZeros = defaultLabels.map(() => 0)
+
   const effectivenessChartData = useMemo(
     () => ({
-      labels: scoreComparison?.labels ?? [
-        'Listening',
-        'Reading',
-        'Writing',
-        'Speaking',
-      ],
+      labels: scoreComparison?.labels ?? defaultLabels,
       datasets: [
         {
-          label: 'Đầu vào',
-          data: scoreComparison?.entry ?? [0, 0, 0, 0],
+          label: t('admin:programEffectivenessPage.chartLabelEntry'),
+          data: scoreComparison?.entry ?? defaultZeros,
           backgroundColor: 'rgba(37, 99, 235, 0.4)',
           borderRadius: 4,
         },
         {
-          label: 'Cuối khóa',
-          data: scoreComparison?.exit ?? [0, 0, 0, 0],
+          label: t('admin:programEffectivenessPage.chartLabelExit'),
+          data: scoreComparison?.exit ?? defaultZeros,
           backgroundColor: '#2563eb',
           borderRadius: 4,
         },
       ],
     }),
-    [scoreComparison],
+    [scoreComparison, defaultLabels, defaultZeros, t],
   )
 
   const effectivenessChartOptions = useMemo(
@@ -248,10 +251,10 @@ export default function ProgramEffectivenessDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Hiệu quả chương trình học
+              {t('admin:programEffectivenessPage.title')}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Đánh giá hiệu quả đào tạo và tiến bộ sinh viên
+              {t('admin:programEffectivenessPage.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -267,16 +270,16 @@ export default function ProgramEffectivenessDashboard() {
                 }
                 disabled={loading}
               >
-                {CERT_TYPE_OPTIONS.map((option) => (
+                {CERT_TYPE_KEYS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {option.value === 'all' ? t(option.labelKey) : option.labelKey}
                   </option>
                 ))}
               </select>
             </div>
             <button className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
               <Icon name="fa-download" className="text-gray-500" />
-              Export Report
+              {t('admin:programEffectivenessPage.exportReport')}
             </button>
           </div>
         </div>
@@ -292,7 +295,7 @@ export default function ProgramEffectivenessDashboard() {
                 onClick={() => fetchData()}
                 className="text-sm font-medium text-red-600 hover:text-red-800"
               >
-                Thử lại
+                {t('admin:programEffectivenessPage.retry')}
               </button>
             </div>
           </Card>
@@ -312,7 +315,7 @@ export default function ProgramEffectivenessDashboard() {
                     className="text-amber-500 text-lg"
                   />
                   <span className="text-sm text-amber-800">
-                    Chưa có dữ liệu hiệu quả chương trình cho bộ lọc đang chọn.
+                    {t('admin:programEffectivenessPage.noData')}
                   </span>
                 </div>
               </Card>
@@ -323,23 +326,23 @@ export default function ProgramEffectivenessDashboard() {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h4 className="font-bold text-gray-900">
-                    So sánh Điểm Đầu vào vs Điểm Cuối khóa
+                    {t('admin:programEffectivenessPage.scoreComparisonTitle')}
                   </h4>
                   <p className="text-xs text-gray-500 mt-1">
-                    Mẫu: {formatNumberVN(scoreComparison?.entrySampleSize ?? 0)}{' '}
-                    SV đầu vào /{' '}
-                    {formatNumberVN(scoreComparison?.exitSampleSize ?? 0)} SV
-                    cuối khóa
+                    {t('admin:programEffectivenessPage.sample')}: {formatNumberVN(scoreComparison?.entrySampleSize ?? 0)}{' '}
+                    {t('admin:programEffectivenessPage.sampleEntry')} /{' '}
+                    {formatNumberVN(scoreComparison?.exitSampleSize ?? 0)}{' '}
+                    {t('admin:programEffectivenessPage.sampleExit')}
                   </p>
                 </div>
                 <div className="flex gap-4 text-xs font-medium">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-400/40 rounded-sm"></div>
-                    <span className="text-gray-600">Đầu vào</span>
+                    <span className="text-gray-600">{t('admin:programEffectivenessPage.entry')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
-                    <span className="text-gray-600">Cuối khóa</span>
+                    <span className="text-gray-600">{t('admin:programEffectivenessPage.exit')}</span>
                   </div>
                 </div>
               </div>
@@ -356,7 +359,7 @@ export default function ProgramEffectivenessDashboard() {
               {/* Standards Achievement */}
               <Card className="p-6">
                 <h4 className="font-bold text-gray-900 mb-6">
-                  % Sinh viên đạt chuẩn đầu ra
+                  {t('admin:programEffectivenessPage.achievementTitle')}
                 </h4>
                 <div className="flex items-center justify-center p-4">
                   <div className="relative w-44 h-44">
@@ -369,15 +372,13 @@ export default function ProgramEffectivenessDashboard() {
                         {formatPercentInt(achievementSuccessRate)}
                       </span>
                       <span className="text-xs text-gray-500 uppercase font-semibold mt-1">
-                        Thành công
+                        {t('admin:programEffectivenessPage.success')}
                       </span>
                     </div>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 text-center mt-2">
-                  Trên tổng{' '}
-                  {formatNumberVN(achievement?.totalEvaluated ?? 0)} SV được
-                  đánh giá
+                  {String(t('admin:programEffectivenessPage.totalEvaluated', { count: formatNumberVN(achievement?.totalEvaluated ?? 0) } as any))}
                 </p>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="p-4 bg-gray-50 rounded-lg text-center border border-gray-100">
@@ -404,12 +405,12 @@ export default function ProgramEffectivenessDashboard() {
               {/* Module Impact */}
               <Card className="p-6">
                 <h4 className="font-bold text-gray-900 mb-6">
-                  Mức độ cải thiện theo Module
+                  {t('admin:programEffectivenessPage.moduleImpactTitle')}
                 </h4>
                 <div className="space-y-4">
                   {moduleImpact.length === 0 && (
                     <p className="text-sm text-gray-500 text-center py-6">
-                      Chưa có dữ liệu module trong giai đoạn này.
+                      {t('admin:programEffectivenessPage.noModuleData')}
                     </p>
                   )}
                   {moduleImpact.map((module) => {
@@ -452,7 +453,7 @@ export default function ProgramEffectivenessDashboard() {
             <Card className="overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                 <h4 className="font-bold text-gray-900">
-                  Hiệu quả theo nhóm sinh viên
+                  {t('admin:programEffectivenessPage.groupEffectivenessTitle')}
                 </h4>
               </div>
               <div className="overflow-x-auto">
@@ -460,19 +461,19 @@ export default function ProgramEffectivenessDashboard() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">
-                        Nhóm (Năm học/Khoa)
+                        {t('admin:programEffectivenessPage.groupCol')}
                       </th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">
-                        Số lượng SV
+                        {t('admin:programEffectivenessPage.studentCountCol')}
                       </th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">
-                        Cải thiện TB
+                        {t('admin:programEffectivenessPage.avgImprovementCol')}
                       </th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">
-                        % Đạt chuẩn
+                        {t('admin:programEffectivenessPage.successRateCol')}
                       </th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">
-                        Đánh giá
+                        {t('admin:programEffectivenessPage.ratingCol')}
                       </th>
                     </tr>
                   </thead>
@@ -483,7 +484,7 @@ export default function ProgramEffectivenessDashboard() {
                           colSpan={5}
                           className="px-6 py-8 text-center text-sm text-gray-500"
                         >
-                          Chưa có dữ liệu nhóm sinh viên cho bộ lọc đang chọn.
+                          {t('admin:programEffectivenessPage.noGroupData')}
                         </td>
                       </tr>
                     )}

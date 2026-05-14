@@ -21,16 +21,10 @@ export const adminMenu: MenuItemConfig[] = [
     ]
   },
   {
-    label: "Sinh viên",
-    iconKey: "studentMenu",
-    children: [
-      { label: "Danh sách Sinh viên", to: "/admin/students", iconKey: "student" },
-    ]
-  },
-  {
     label: "Dữ liệu & Báo cáo",
     iconKey: "chart",
     children: [
+      { label: "Danh sách Sinh viên", to: "/admin/students", iconKey: "student" },
       { label: "Thống kê Tổng quát", to: "/admin/reports/learning", iconKey: "bar" },
       { label: "Dashboard Chứng chỉ", to: "/admin/dashboard/certificate", iconKey: "certificate" },
       { label: "Hành vi Sử dụng", to: "/admin/dashboard/usage-behavior", iconKey: "activity" },
