@@ -85,3 +85,16 @@ export type PlayerStore = {
   currentTime: number;
   volume: number;
 };
+
+export type MusicQueueState = {
+  currentTrack: MusicTrack | null;
+  queue: MusicTrack[];
+  currentIndex: number;
+  isPlaying: boolean;
+};
+
+export type SpotifySearchResult = {
+  tracks: MusicTrack[];
+  nextOffset: number | null;
+  total: number;
+};

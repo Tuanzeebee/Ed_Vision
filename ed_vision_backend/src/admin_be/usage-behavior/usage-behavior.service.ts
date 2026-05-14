@@ -91,13 +91,13 @@ export class UsageBehaviorService {
       )
       SELECT
         CASE
-          WHEN EXTRACT(HOUR FROM occurred_at) >= 6  AND EXTRACT(HOUR FROM occurred_at) < 12 THEN 0
-          WHEN EXTRACT(HOUR FROM occurred_at) >= 12 AND EXTRACT(HOUR FROM occurred_at) < 18 THEN 1
-          WHEN EXTRACT(HOUR FROM occurred_at) >= 18 AND EXTRACT(HOUR FROM occurred_at) < 24 THEN 2
+          WHEN EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') >= 6  AND EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') < 12 THEN 0
+          WHEN EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') >= 12 AND EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') < 18 THEN 1
+          WHEN EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') >= 18 AND EXTRACT(HOUR FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') < 24 THEN 2
           ELSE -1
         END AS hour_bucket,
         (
-          (CAST(EXTRACT(ISODOW FROM occurred_at) AS INTEGER) - 1)
+          (CAST(EXTRACT(ISODOW FROM occurred_at AT TIME ZONE 'Asia/Ho_Chi_Minh') AS INTEGER) - 1)
         ) AS day_index,
         COUNT(*)::int AS cnt
       FROM events
@@ -153,12 +153,29 @@ export class UsageBehaviorService {
   ): Promise<DurationResponse> {
     const rows = await this.prisma.$queryRaw<DurationRow[]>`
       SELECT
-        (CAST(EXTRACT(ISODOW FROM started_at) AS INTEGER) - 1) AS day_index,
-        AVG(NULLIF(duration_minutes, 0))::float AS avg_minutes
-      FROM "StudySession"
-      WHERE started_at >= ${start}
-        AND started_at <= ${end}
-        AND duration_minutes IS NOT NULL
+        day_index,
+        AVG(NULLIF(mins, 0))::float AS avg_minutes
+      FROM (
+        SELECT
+          (CAST(EXTRACT(ISODOW FROM started_at AT TIME ZONE 'Asia/Ho_Chi_Minh') AS INTEGER) - 1) AS day_index,
+          LEAST(
+            COALESCE(
+              NULLIF(duration_minutes, 0),
+              CASE
+                WHEN ended_at IS NOT NULL
+                  THEN CEIL(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0)
+                WHEN started_at >= NOW() - INTERVAL '24 hours'
+                  THEN CEIL(EXTRACT(EPOCH FROM (NOW() - started_at)) / 60.0)
+                ELSE NULL
+              END
+            ),
+            480
+          ) AS mins
+        FROM "StudySession"
+        WHERE started_at >= ${start}
+          AND started_at <= ${end}
+      ) sub
+      WHERE mins IS NOT NULL AND mins > 0
       GROUP BY day_index
     `;
 

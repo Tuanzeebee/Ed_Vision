@@ -453,18 +453,26 @@ export class StudentManagementService {
       0;
 
     // Active students (have activity in last 30 days)
+    // Include both UserActivityLog and StudySession to stay consistent with
+    // the CertificateOverview dashboard's countActiveAccounts logic.
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const activeStudentIds = await this.prisma.userActivityLog.findMany({
-      where: {
-        created_at: { gte: thirtyDaysAgo },
-        action_type: { not: 'logout' },
-      },
-      select: { account_id: true },
-      distinct: ['account_id'],
-    });
+    const activeAccountRows = await this.prisma.$queryRaw<
+      { account_id: number }[]
+    >`
+      SELECT DISTINCT account_id FROM (
+        SELECT DISTINCT account_id
+          FROM "UserActivityLog"
+         WHERE created_at >= ${thirtyDaysAgo}
+           AND action_type <> 'logout'
+        UNION
+        SELECT DISTINCT account_id
+          FROM "StudySession"
+         WHERE started_at >= ${thirtyDaysAgo}
+      ) AS active_accounts
+    `;
 
-    const activeStudents = activeStudentIds.length;
+    const activeStudents = activeAccountRows.length;
     const activePercent =
       totalStudents > 0
         ? Math.round((activeStudents / totalStudents) * 100)
@@ -665,7 +673,7 @@ export class StudentManagementService {
       let certificateName: string | undefined;
       if (enrollment) {
         if (enrollment.cert_type === 'ielts') {
-          certificateName = `IELTS ${enrollment.target_score ? (enrollment.target_score / 10).toFixed(1) : '6.5'}+`;
+          certificateName = `IELTS ${enrollment.target_score ? (enrollment.target_score / 100).toFixed(1) : '6.5'}+`;
         } else if (enrollment.cert_type === 'toeic') {
           certificateName = `TOEIC ${enrollment.target_score || '750'}`;
         }
@@ -869,7 +877,7 @@ export class StudentManagementService {
     let certificateName: string | undefined;
     if (enrollment) {
       if (enrollment.cert_type === 'ielts') {
-        certificateName = `IELTS ${enrollment.target_score ? (enrollment.target_score / 10).toFixed(1) : '6.5'}+`;
+        certificateName = `IELTS ${enrollment.target_score ? (enrollment.target_score / 100).toFixed(1) : '6.5'}+`;
       } else if (enrollment.cert_type === 'toeic') {
         certificateName = `TOEIC ${enrollment.target_score || '750'}`;
       }
@@ -1061,7 +1069,7 @@ export class StudentManagementService {
    *   3. Earliest test result of any kind for the enrollment.
    *
    * Returned as a numeric value in the same units as `CertificateEnrollment.current_score`:
-   *   - IELTS: band × 10 (e.g. 65 for band 6.5)
+   *   - IELTS: band × 100 (e.g. 650 for band 6.5)
    *   - TOEIC: total score (e.g. 450)
    */
   private resolveBaselineNumeric(
@@ -1082,7 +1090,7 @@ export class StudentManagementService {
     }>,
   ): number | null {
     if (certType === 'ielts' && progress?.baseline_band_score != null) {
-      return Math.round(progress.baseline_band_score * 10);
+      return Math.round(progress.baseline_band_score * 100);
     }
     if (certType === 'toeic' && progress?.baseline_total_score != null) {
       return progress.baseline_total_score;
@@ -1098,9 +1106,10 @@ export class StudentManagementService {
 
     if (certType === 'ielts') {
       if (baseline.band_score != null) {
-        return Math.round(baseline.band_score * 10);
+        return Math.round(baseline.band_score * 100);
       }
-      return baseline.total_score ?? null;
+      // total_score for IELTS is band × 10; convert to band × 100
+      return baseline.total_score != null ? baseline.total_score * 10 : null;
     }
     return baseline.total_score ?? null;
   }
@@ -1115,7 +1124,7 @@ export class StudentManagementService {
     certType: string | null,
   ): string | undefined {
     if (numeric == null) return undefined;
-    if (certType === 'ielts') return (numeric / 10).toFixed(1);
+    if (certType === 'ielts') return (numeric / 100).toFixed(1);
     return numeric.toString();
   }
 

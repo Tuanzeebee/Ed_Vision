@@ -123,7 +123,6 @@ function App() {
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-      <SeasonalEffectProvider forceEvent="CHRISTMAS">
         <Router>
           {/* Session timeout warning removed - feature deleted */}
           <Routes>
@@ -261,7 +260,6 @@ function App() {
 
                                 </Routes>
                         </Router>
-                        </SeasonalEffectProvider>
                 </Suspense>
         );
 }

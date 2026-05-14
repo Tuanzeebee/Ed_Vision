@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { TestResultRecorderService } from '../admin_be/program-effectiveness/test-result-recorder.service';
 import {
   estimateThetaEAP,
   getFullEstimateEAP,
@@ -123,7 +124,10 @@ interface SkillPattern {
 export class AdaptiveService {
   private readonly logger = new Logger(AdaptiveService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly testResultRecorder: TestResultRecorderService,
+  ) {}
 
   async startPlacementTest(input: StartTestInput): Promise<StartTestResult> {
     const existing = await this.prisma.ieltsPlacementSession.findFirst({
@@ -770,6 +774,60 @@ export class AdaptiveService {
         skillBands: { ...skillBands, _patterns: patterns, _sem: estimate.sem } as any,
         confidenceLevel: estimate.confidence,
       } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
+    });
+
+    // Fire-and-forget: record placement result to StudentTestResult
+    this.recordPlacementResult(sessionId, finalBand, skillBands, allAnswers.length).catch(() => {});
+  }
+
+  private async recordPlacementResult(
+    sessionId: string,
+    finalBand: number,
+    skillBands: Record<string, number | null>,
+    totalQuestions: number,
+  ): Promise<void> {
+    const session = await this.prisma.ieltsPlacementSession.findUnique({
+      where: { id: sessionId },
+      select: { accountId: true, startedAt: true, completedAt: true },
+    });
+    if (!session) return;
+
+    // Find active IELTS enrollment
+    const student = await this.prisma.student.findUnique({
+      where: { account_id: session.accountId },
+      select: { student_id: true },
+    });
+    let enrollmentId: number | null = null;
+    if (student) {
+      const enrollment = await this.prisma.certificateEnrollment.findFirst({
+        where: { student_id: student.student_id, cert_type: 'ielts', status: 'active' },
+        select: { id: true },
+      });
+      enrollmentId = enrollment?.id ?? null;
+    }
+
+    const bandX10 = Math.round(finalBand * 10);
+    const durationMin = session.completedAt && session.startedAt
+      ? Math.ceil((session.completedAt.getTime() - session.startedAt.getTime()) / 60000)
+      : null;
+
+    await this.testResultRecorder.record({
+      accountId: session.accountId,
+      certType: 'ielts',
+      testType: 'placement',
+      testPhase: 'entry',
+      isBaseline: true,
+      enrollmentId,
+      totalScore: bandX10,
+      bandScore: finalBand,
+      listeningScore: skillBands.listening != null ? Math.round(skillBands.listening * 10) : null,
+      readingScore: skillBands.reading != null ? Math.round(skillBands.reading * 10) : null,
+      writingScore: skillBands.writing != null ? Math.round(skillBands.writing * 10) : null,
+      speakingScore: skillBands.speaking != null ? Math.round(skillBands.speaking * 10) : null,
+      totalQuestions,
+      durationMinutes: durationMin,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt ?? new Date(),
     });
   }
 

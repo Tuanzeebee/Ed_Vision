@@ -10,12 +10,7 @@ type Props = {
   onError?: (error: string) => void;
 };
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
+// Window.YT types declared in YouTubeMusicPlayer.tsx
 
 export default function YouTubeBackgroundPlayer({ theme, enabled, volume = 30, muted = false, onReady, onError }: Props) {
   const playerRef = useRef<any>(null);
@@ -59,6 +54,8 @@ export default function YouTubeBackgroundPlayer({ theme, enabled, volume = 30, m
     // Create new player
     try {
       playerRef.current = new window.YT.Player('youtube-background-player', {
+        height: '100%',
+        width: '100%',
         videoId: theme.youtubeVideoId,
         playerVars: {
           autoplay: 1,
@@ -74,7 +71,7 @@ export default function YouTubeBackgroundPlayer({ theme, enabled, volume = 30, m
           playlist: theme.youtubeVideoId, // Required for loop
           mute: 1, // Mute by default for autoplay
           start: theme.start || 0,
-          end: theme.end || undefined,
+          ...(theme.end != null && { end: theme.end }),
         },
         events: {
           onReady: (event: any) => {

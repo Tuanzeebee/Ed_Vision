@@ -14,11 +14,8 @@ export const MENU_LABEL_KEYS: Record<string, string>= {
   "Tài khoản & Vai trò": "admin:sidebar.accountsRoles",
   "Quản lý Khảo sát": "admin:sidebar.surveyManagement",
 
-  // Sinh viên menu
-  "Sinh viên": "admin:sidebar.students",
-  "Danh sách Sinh viên": "admin:sidebar.studentDirectory",
-  
   // Dữ liệu & Báo cáo submenu
+  "Danh sách Sinh viên": "admin:sidebar.studentDirectory",
   "Thống kê Tổng quát": "admin:sidebar.generalStats",
   "Báo cáo Lãnh đạo": "admin:sidebar.leadershipReports",
   "Kết quả Học máy": "admin:sidebar.mlResults",
