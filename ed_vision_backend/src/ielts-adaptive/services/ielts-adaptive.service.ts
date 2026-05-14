@@ -693,7 +693,10 @@ export class IeltsAdaptiveService {
    * (bao gồm các items và options của từng item).
    * Ném NotFoundException nếu không tìm thấy bài.
    */
-  async getLesson(lessonId: number, accountId?: number): Promise<LessonResponseDto> {
+  async getLesson(
+    lessonId: number,
+    accountId?: number,
+  ): Promise<LessonResponseDto> {
     // If accountId is provided, scope the lookup to lessons that belong to the user's roadmap
     let roadmapId: number | undefined;
     if (accountId) {
@@ -703,7 +706,11 @@ export class IeltsAdaptiveService {
       });
       if (student) {
         const enrollment = await this.prisma.certificateEnrollment.findFirst({
-          where: { student_id: student.student_id, cert_type: 'ielts', status: 'active' },
+          where: {
+            student_id: student.student_id,
+            cert_type: 'ielts',
+            status: 'active',
+          },
           orderBy: { id: 'desc' },
           select: { id: true },
         });
@@ -917,15 +924,16 @@ export class IeltsAdaptiveService {
 
     // Normalise answers into Record<string, string> regardless of input format
     let answersMap: Record<string, string> = {};
-    let timeMap: Record<string, number> = dto.time_per_question ?? {};
+    const timeMap: Record<string, number> = dto.time_per_question ?? {};
 
     if (Array.isArray(dto.answers)) {
       for (const a of dto.answers) {
         answersMap[String(a.question_id)] = String(a.answer ?? '');
-        if (a.time_taken_sec != null) timeMap[String(a.question_id)] = a.time_taken_sec;
+        if (a.time_taken_sec != null)
+          timeMap[String(a.question_id)] = a.time_taken_sec;
       }
     } else {
-      answersMap = (dto.answers as Record<string, string>) ?? {};
+      answersMap = dto.answers ?? {};
     }
 
     // Load repository with items + options
@@ -957,26 +965,31 @@ export class IeltsAdaptiveService {
 
       // For gap_fill / short_answer: check correct_answer in metadata or option
       const meta: any = item.metadata ?? {};
-      const acceptedAnswers: string[] = (meta.acceptedAnswers ?? []).map((a: string) =>
-        a.trim().toLowerCase(),
+      const acceptedAnswers: string[] = (meta.acceptedAnswers ?? []).map(
+        (a: string) => a.trim().toLowerCase(),
       );
       const correctKey = correctOption?.option_key?.toLowerCase() ?? '';
-      const correctText = correctOption?.option_text?.trim().toLowerCase() ?? '';
-      const metaCorrect = String(meta.correctAnswer ?? '').trim().toLowerCase();
+      const correctText =
+        correctOption?.option_text?.trim().toLowerCase() ?? '';
+      const metaCorrect = String(meta.correctAnswer ?? '')
+        .trim()
+        .toLowerCase();
 
       const isCorrect =
         studentAnswer.length > 0 &&
         (studentAnswer === correctKey ||
           studentAnswer === correctText ||
           (metaCorrect && studentAnswer === metaCorrect) ||
-          (acceptedAnswers.length > 0 && acceptedAnswers.includes(studentAnswer)));
+          (acceptedAnswers.length > 0 &&
+            acceptedAnswers.includes(studentAnswer)));
 
       if (isCorrect) correctCount++;
 
       const timeTaken = timeMap[key] ?? 0;
       totalTime += timeTaken;
 
-      const displayCorrect = correctOption?.option_key ?? meta.correctAnswer ?? '';
+      const displayCorrect =
+        correctOption?.option_key ?? meta.correctAnswer ?? '';
 
       detailedResults.push({
         item_id: item.id,
@@ -1004,7 +1017,8 @@ export class IeltsAdaptiveService {
     }
 
     const totalQuestions = repo.items.length;
-    const accuracy = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+    const accuracy =
+      totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
     const avgTimePerQ = totalQuestions > 0 ? totalTime / totalQuestions : 0;
     const passScore = repo.pass_score ?? 60;
     const passed = accuracy >= passScore;
@@ -1068,16 +1082,18 @@ export class IeltsAdaptiveService {
     // Roadmap progress
     let roadmapProgressPercent: number | undefined;
     if (lesson) {
-      const roadmapWithLessons = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
-        where: { id: lesson.roadmap_id },
-        include: { lessons: { select: { status: true } } },
-      });
+      const roadmapWithLessons =
+        await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+          where: { id: lesson.roadmap_id },
+          include: { lessons: { select: { status: true } } },
+        });
       if (roadmapWithLessons) {
         const total = roadmapWithLessons.lessons.length;
         const done = roadmapWithLessons.lessons.filter(
           (l) => l.status === LessonStatus.COMPLETED,
         ).length;
-        roadmapProgressPercent = total > 0 ? Math.round((done / total) * 100) : 0;
+        roadmapProgressPercent =
+          total > 0 ? Math.round((done / total) * 100) : 0;
       }
     }
 
@@ -1250,7 +1266,10 @@ export class IeltsAdaptiveService {
         total_time_sec: 0,
         // expected_time_sec: tính từ expectedTimeSec của từng câu hỏi đã chọn
         expected_time_sec: await this.prisma.ieltsQuestion
-          .findMany({ where: { id: { in: questionIds } }, select: { expectedTimeSec: true } })
+          .findMany({
+            where: { id: { in: questionIds } },
+            select: { expectedTimeSec: true },
+          })
           .then((qs) => qs.reduce((s, q) => s + q.expectedTimeSec, 0)),
         response_time_factor: 0,
         previous_band: roadmap.current_band,
@@ -1312,7 +1331,9 @@ export class IeltsAdaptiveService {
     const mapOptions = (options: any): Record<string, string> => {
       if (!Array.isArray(options)) return {};
       return options.reduce((acc: Record<string, string>, opt: any) => {
-        const key = String(opt?.key ?? opt?.option_key ?? opt?.label ?? '').trim();
+        const key = String(
+          opt?.key ?? opt?.option_key ?? opt?.label ?? '',
+        ).trim();
         if (!key) return acc;
         acc[key] = String(opt?.text ?? opt?.option_text ?? '').trim();
         return acc;
@@ -1331,7 +1352,9 @@ export class IeltsAdaptiveService {
         band_level: Number(bandTest.band_level),
         accuracy_percent: Number(bandTest.accuracy_percent),
         response_time_factor: Number(bandTest.response_time_factor),
-        consistency_score: bandTest.consistency_score ? Number(bandTest.consistency_score) : undefined,
+        consistency_score: bandTest.consistency_score
+          ? Number(bandTest.consistency_score)
+          : undefined,
         previous_band: Number(bandTest.previous_band),
         estimated_band: Number(bandTest.estimated_band),
         band_change: bandTest.band_change as BandChange,
@@ -1393,7 +1416,7 @@ export class IeltsAdaptiveService {
 
     for (const question of questions) {
       const rawAnswer = dto.answers[question.id];
-      let studentAnswer = rawAnswer;
+      const studentAnswer = rawAnswer;
       let aiBandScore: number | null = null;
 
       if (typeof rawAnswer === 'string' && rawAnswer.trim().startsWith('{')) {
@@ -1410,10 +1433,12 @@ export class IeltsAdaptiveService {
         }
       }
 
-      const isAiSkill = question.skill === 'writing' || question.skill === 'speaking';
-      const isCorrect = isAiSkill && aiBandScore != null
-        ? aiBandScore >= Number(bandTest.previous_band)
-        : studentAnswer === question.correctAnswer;
+      const isAiSkill =
+        question.skill === 'writing' || question.skill === 'speaking';
+      const isCorrect =
+        isAiSkill && aiBandScore != null
+          ? aiBandScore >= Number(bandTest.previous_band)
+          : studentAnswer === question.correctAnswer;
       const timeTaken = dto.time_per_question[question.id] || 60;
 
       questionResults.push({
@@ -1691,9 +1716,24 @@ export class IeltsAdaptiveService {
       const scoreMax = Math.round((bandStep + 0.5) * 100);
 
       for (const skill of skills) {
-        const flashcardRepo = await findRepository(skill, 'flashcards', scoreMin, scoreMax);
-        const practiceRepo = await findRepository(skill, 'practice', scoreMin, scoreMax);
-        const miniTestRepo = await findRepository(skill, 'mini-test', scoreMin, scoreMax);
+        const flashcardRepo = await findRepository(
+          skill,
+          'flashcards',
+          scoreMin,
+          scoreMax,
+        );
+        const practiceRepo = await findRepository(
+          skill,
+          'practice',
+          scoreMin,
+          scoreMax,
+        );
+        const miniTestRepo = await findRepository(
+          skill,
+          'mini-test',
+          scoreMin,
+          scoreMax,
+        );
 
         if (!flashcardRepo && !practiceRepo && !miniTestRepo) {
           this.logger.warn(
@@ -1710,7 +1750,10 @@ export class IeltsAdaptiveService {
           flashcard_repo_id: flashcardRepo?.id ?? null,
           practice_repo_id: practiceRepo?.id ?? null,
           mini_test_repo_id: miniTestRepo?.id ?? null,
-          estimated_minutes: flashcardRepo?.estimated_minutes ?? practiceRepo?.estimated_minutes ?? 30,
+          estimated_minutes:
+            flashcardRepo?.estimated_minutes ??
+            practiceRepo?.estimated_minutes ??
+            30,
           band_level: bandStep,
         });
       }

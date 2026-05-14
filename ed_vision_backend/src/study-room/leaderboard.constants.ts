@@ -1,6 +1,6 @@
 /**
  * Leaderboard System Constants
- * 
+ *
  * Redis keys, TTLs, and configuration for the leaderboard system
  */
 

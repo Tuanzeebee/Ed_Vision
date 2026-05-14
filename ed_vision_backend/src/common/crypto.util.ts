@@ -10,7 +10,12 @@
  * system still works out-of-the-box in development.
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  createHash,
+} from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // GCM recommended
@@ -89,7 +94,9 @@ export function isEncryptedPayload(value: string): boolean {
 /**
  * Safely encrypt a string only if it is not already encrypted.
  */
-export function tryEncryptString(value: string | null | undefined): string | null | undefined {
+export function tryEncryptString(
+  value: string | null | undefined,
+): string | null | undefined {
   if (typeof value !== 'string' || !value) return value;
   if (isEncryptedPayload(value)) return value;
   return encryptString(value);
@@ -98,7 +105,9 @@ export function tryEncryptString(value: string | null | undefined): string | nul
 /**
  * Safely decrypt a string only if it is encrypted.
  */
-export function tryDecryptString(value: string | null | undefined): string | null | undefined {
+export function tryDecryptString(
+  value: string | null | undefined,
+): string | null | undefined {
   if (typeof value !== 'string' || !value) return value;
   if (!isEncryptedPayload(value)) return value;
   try {
@@ -107,7 +116,6 @@ export function tryDecryptString(value: string | null | undefined): string | nul
     return value;
   }
 }
-
 
 /**
  * Encrypt specified string fields on an object (in-place mutation).
@@ -135,9 +143,10 @@ export function encryptRecord(
 ): Record<string, string | null> {
   const result: Record<string, string | null> = {};
   for (const [key, value] of Object.entries(record)) {
-    result[key] = typeof value === 'string' && value.length > 0
-      ? encryptString(value)
-      : value;
+    result[key] =
+      typeof value === 'string' && value.length > 0
+        ? encryptString(value)
+        : value;
   }
   return result;
 }

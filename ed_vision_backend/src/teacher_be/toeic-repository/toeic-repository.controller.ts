@@ -50,7 +50,11 @@ import {
   ToeicPracticeManualSupplementDto,
   ToeicPracticeManualSupplementResponseDto,
 } from './toeic-practice-import.service';
-import { DiagnosticImportService, DiagnosticImportDto, DiagnosticImportResponseDto } from './diagnostic-import.service';
+import {
+  DiagnosticImportService,
+  DiagnosticImportDto,
+  DiagnosticImportResponseDto,
+} from './diagnostic-import.service';
 
 type AuthenticatedRequest = ExpressRequest & {
   user?: {
@@ -98,7 +102,7 @@ export class TeacherToeicRepositoryController {
     private readonly practiceImportService: ToeicPracticeImportService,
     private readonly practiceSessionService: ToeicPracticeSessionService,
     private readonly diagnosticImportService: DiagnosticImportService,
-  ) { }
+  ) {}
 
   /**
    * GET /teacher/toeic-repository/list
@@ -152,7 +156,8 @@ export class TeacherToeicRepositoryController {
     // For reading skill area, use the practice import parser (same logic as Diagnostic)
     const skillArea = dto.skill_area || 'reading';
     if (skillArea === 'reading') {
-      const practiceParsed = await this.practiceImportService.extractAndParseFromFile(file);
+      const practiceParsed =
+        await this.practiceImportService.extractAndParseFromFile(file);
       if (practiceParsed.length > 0) {
         const externalParsed = practiceParsed.map((q) => ({
           questionNumber: q.questionNumber,
@@ -166,7 +171,12 @@ export class TeacherToeicRepositoryController {
             rationale: null as string | null,
           })),
         }));
-        return this.service.importToeicExamFromOcrFile(accountId, dto, file, externalParsed);
+        return this.service.importToeicExamFromOcrFile(
+          accountId,
+          dto,
+          file,
+          externalParsed,
+        );
       }
     }
 
@@ -194,10 +204,16 @@ export class TeacherToeicRepositoryController {
       throw new BadRequestException('Không tìm thấy account_id trong token.');
     }
     if (!file) {
-      throw new BadRequestException('Vui lòng chọn file đề khảo sát để upload.');
+      throw new BadRequestException(
+        'Vui lòng chọn file đề khảo sát để upload.',
+      );
     }
 
-    return this.diagnosticImportService.importDiagnosticTest(accountId, body, file);
+    return this.diagnosticImportService.importDiagnosticTest(
+      accountId,
+      body,
+      file,
+    );
   }
 
   /**
@@ -224,7 +240,11 @@ export class TeacherToeicRepositoryController {
       throw new BadRequestException('Vui lòng chọn file ZIP Audio để upload.');
     }
 
-    return this.diagnosticImportService.chunkDiagnosticAudio(accountId, dto, file);
+    return this.diagnosticImportService.chunkDiagnosticAudio(
+      accountId,
+      dto,
+      file,
+    );
   }
 
   /**
@@ -251,7 +271,12 @@ export class TeacherToeicRepositoryController {
       throw new BadRequestException('Vui lòng chọn file đáp án để upload.');
     }
 
-    return this.diagnosticImportService.importDiagnosticAnswerKeyFromFile(accountId, dto, file, this.service);
+    return this.diagnosticImportService.importDiagnosticAnswerKeyFromFile(
+      accountId,
+      dto,
+      file,
+      this.service,
+    );
   }
 
   /**
@@ -354,7 +379,8 @@ export class TeacherToeicRepositoryController {
     const accountId = Number(req.user?.account_id ?? 0);
     if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
     if (!file) throw new BadRequestException('Vui lòng chọn file audio.');
-    if (!body.repository_slug?.trim()) throw new BadRequestException('repository_slug là bắt buộc.');
+    if (!body.repository_slug?.trim())
+      throw new BadRequestException('repository_slug là bắt buộc.');
     return this.listeningService.uploadFullAudio(body.repository_slug, file);
   }
 
@@ -565,7 +591,9 @@ export class TeacherToeicRepositoryController {
           return;
         }
         cb(
-          new BadRequestException('Chỉ hỗ trợ file PDF cho trích xuất hình ảnh.') as any,
+          new BadRequestException(
+            'Chỉ hỗ trợ file PDF cho trích xuất hình ảnh.',
+          ) as any,
           false,
         );
       },
@@ -578,10 +606,15 @@ export class TeacherToeicRepositoryController {
   ) {
     const accountId = Number(req.user?.account_id ?? 0);
     if (!accountId) throw new BadRequestException('Không tìm thấy account_id.');
-    if (!file) throw new BadRequestException('Vui lòng chọn file PDF chứa hình ảnh.');
+    if (!file)
+      throw new BadRequestException('Vui lòng chọn file PDF chứa hình ảnh.');
     const practiceSetId = dto?.practice_set_id?.trim?.() ?? '';
-    if (!practiceSetId) throw new BadRequestException('Vui lòng cung cấp practice_set_id.');
-    return this.practiceImportService.importPracticeImagesFromPdf(practiceSetId, file);
+    if (!practiceSetId)
+      throw new BadRequestException('Vui lòng cung cấp practice_set_id.');
+    return this.practiceImportService.importPracticeImagesFromPdf(
+      practiceSetId,
+      file,
+    );
   }
 
   /**

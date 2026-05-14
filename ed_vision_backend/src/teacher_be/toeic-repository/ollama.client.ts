@@ -7,8 +7,8 @@ import axios from 'axios';
 import { ExtractedWord, normPos } from './regex-extractor';
 
 export interface OllamaConfig {
-  baseUrl: string;   // default: http://localhost:11434
-  model: string;     // default: qwen3
+  baseUrl: string; // default: http://localhost:11434
+  model: string; // default: qwen3
   timeoutMs: number; // default: 60000
 }
 
@@ -34,7 +34,7 @@ export class OllamaClient {
   constructor(private readonly config: OllamaConfig) {}
 
   /**
-  * Gửi OCR text đến Qwen3 local để clean (fix OCR errors).
+   * Gửi OCR text đến Qwen3 local để clean (fix OCR errors).
    * Trả về cleaned text, không phải JSON — regex sẽ parse sau.
    */
   async cleanText(text: string): Promise<string> {
@@ -50,7 +50,7 @@ export class OllamaClient {
           stream: false,
           options: {
             temperature: 0,
-            num_predict: 4096,  // allow longer output for cleaned text
+            num_predict: 4096, // allow longer output for cleaned text
             top_p: 1,
           },
         },
@@ -104,9 +104,12 @@ ${joinedMeanings}`;
       );
 
       const raw: string = response.data?.response ?? '';
-      
-      const cleaned = raw.replace(/```[a-z]*\n?/gi, '').replace(/```\n?/g, '').trim();
-      const fixedMeanings = cleaned.split('|').map(s => s.trim());
+
+      const cleaned = raw
+        .replace(/```[a-z]*\n?/gi, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      const fixedMeanings = cleaned.split('|').map((s) => s.trim());
 
       // Kiểm tra xem số lượng phần tử trả về có khớp không
       if (fixedMeanings.length === words.length) {
@@ -115,11 +118,16 @@ ${joinedMeanings}`;
           meaning: fixedMeanings[i].length > 1 ? fixedMeanings[i] : w.meaning,
         }));
       } else {
-        console.warn(`[OllamaClient] Spell check mismatch: sent ${words.length}, got ${fixedMeanings.length}. Returning original.`);
+        console.warn(
+          `[OllamaClient] Spell check mismatch: sent ${words.length}, got ${fixedMeanings.length}. Returning original.`,
+        );
         return words;
       }
     } catch (e: any) {
-      console.warn('[OllamaClient] Spell check request failed, returning original words:', e?.message);
+      console.warn(
+        '[OllamaClient] Spell check request failed, returning original words:',
+        e?.message,
+      );
       return words;
     }
   }

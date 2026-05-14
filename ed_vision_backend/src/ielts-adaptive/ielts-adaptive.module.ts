@@ -11,7 +11,13 @@ import { GeminiModule } from '../common/gemini/gemini.module';
 @Module({
   imports: [PrismaModule, GeminiModule],
   controllers: [IeltsAdaptiveController],
-  providers: [IeltsAdaptiveService, BandEstimationService, EvaluationService, PrismaService, IeltsAiGradingService],
+  providers: [
+    IeltsAdaptiveService,
+    BandEstimationService,
+    EvaluationService,
+    PrismaService,
+    IeltsAiGradingService,
+  ],
   exports: [IeltsAdaptiveService],
 })
 export class IeltsAdaptiveModule {}

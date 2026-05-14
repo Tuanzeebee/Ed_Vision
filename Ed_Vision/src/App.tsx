@@ -30,6 +30,7 @@ import PermissionManagement from "./modules/admin/PermissionManagement";
 import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import NotificationManagement from "./modules/admin/NotificationManagement";
 import NotificationPage from "./pages/NotificationPage";
+import AdminRagKnowledgeBase from "./modules/admin/AdminRagKnowledgeBase";
 
 import GradeForecastLanding from "@/modules/student/GradeForecastLanding";
 import StudentLandingV2 from "@/modules/student/landingPage/src/App";
@@ -212,6 +213,10 @@ function App() {
 
           {/* Admin routes - Reports & Analytics (protected by permission) */}
           <Route path="/admin/reports/learning" element={<ProtectedRoute permission="admin_reports"><GeneralStatistics /></ProtectedRoute>} />
+
+          {/* Admin routes - Knowledge Base (protected by permission) */}
+          <Route path="/admin/knowledge-base" element={<ProtectedRoute permission="admin_dashboard"><AdminRagKnowledgeBase /></ProtectedRoute>} />
+          <Route path="/admin/rag" element={<ProtectedRoute permission="admin_dashboard"><AdminRagKnowledgeBase /></ProtectedRoute>} />
 
           {/* Admin routes - System Management (protected by permission) */}
           <Route path="/admin/notifications" element={<ProtectedRoute permission="admin_notifications"><NotificationManagement /></ProtectedRoute>} />

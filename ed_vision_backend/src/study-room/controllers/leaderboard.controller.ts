@@ -17,7 +17,7 @@ import { getWeekStart, getWeekEnd } from '../leaderboard.constants';
 
 /**
  * Leaderboard Controller
- * 
+ *
  * Handles leaderboard and personal stats endpoints
  */
 @Controller('study-rooms/leaderboard')
@@ -36,9 +36,9 @@ export class LeaderboardController {
 
   /**
    * GET /study-rooms/leaderboard/weekly
-   * 
+   *
    * Get weekly leaderboard (based on EXP earned this week)
-   * 
+   *
    * @param query - Query parameters (limit, offset)
    * @returns LeaderboardResponse - Weekly leaderboard with pagination
    */
@@ -62,7 +62,8 @@ export class LeaderboardController {
 
       // Get online status for all users in the result
       const accountIds = entries.map((e) => e.accountId);
-      const onlineUsers = await this.onlineStatusManager.getOnlineUsers(accountIds);
+      const onlineUsers =
+        await this.onlineStatusManager.getOnlineUsers(accountIds);
 
       // Map to LeaderboardEntry format with online status
       const leaderboardEntries: LeaderboardEntry[] = entries.map((entry) => ({
@@ -80,7 +81,8 @@ export class LeaderboardController {
 
       // Get total count of eligible users for pagination
       // Note: This is an approximation - we don't have exact count without full calculation
-      const total = entries.length < limit ? offset + entries.length : offset + limit + 1;
+      const total =
+        entries.length < limit ? offset + entries.length : offset + limit + 1;
 
       const response: LeaderboardResponse = {
         entries: leaderboardEntries,
@@ -114,9 +116,9 @@ export class LeaderboardController {
 
   /**
    * GET /study-rooms/leaderboard/total
-   * 
+   *
    * Get total leaderboard (based on total study minutes)
-   * 
+   *
    * @param query - Query parameters (limit, offset)
    * @returns LeaderboardResponse - Total leaderboard with pagination
    */
@@ -130,11 +132,15 @@ export class LeaderboardController {
       const { limit = 10, offset = 0 } = query;
 
       // Get ranking entries from RankingEngine
-      const entries = await this.rankingEngine.calculateTotalRanking(limit, offset);
+      const entries = await this.rankingEngine.calculateTotalRanking(
+        limit,
+        offset,
+      );
 
       // Get online status for all users in the result
       const accountIds = entries.map((e) => e.accountId);
-      const onlineUsers = await this.onlineStatusManager.getOnlineUsers(accountIds);
+      const onlineUsers =
+        await this.onlineStatusManager.getOnlineUsers(accountIds);
 
       // Get total sessions for each user
       const statsMap = await this.getStatsForUsers(accountIds);
@@ -162,7 +168,8 @@ export class LeaderboardController {
       });
 
       // Get total count of eligible users for pagination
-      const total = entries.length < limit ? offset + entries.length : offset + limit + 1;
+      const total =
+        entries.length < limit ? offset + entries.length : offset + limit + 1;
 
       const response: LeaderboardResponse = {
         entries: leaderboardEntries,
@@ -192,15 +199,15 @@ export class LeaderboardController {
     }
   }
 
-/**
- * GET /study-rooms/leaderboard/me/stats
- * 
- * Get personal study statistics for the authenticated user
- * 
- * @param accountId - Authenticated user's account ID
- * @returns PersonalStatsResponse - Comprehensive personal stats
- */
-@Get('me/stats')
+  /**
+   * GET /study-rooms/leaderboard/me/stats
+   *
+   * Get personal study statistics for the authenticated user
+   *
+   * @param accountId - Authenticated user's account ID
+   * @returns PersonalStatsResponse - Comprehensive personal stats
+   */
+  @Get('me/stats')
   async getPersonalStats(
     @GetUser('account_id') accountId: number,
   ): Promise<PersonalStatsResponse> {
@@ -301,7 +308,8 @@ export class LeaderboardController {
         streaks: {
           currentStreak: streakInfo?.currentStreak ?? 0,
           longestStreak: streakInfo?.longestStreak ?? 0,
-          lastStudyDate: streakInfo?.lastStudyDate?.toISOString().split('T')[0] ?? null,
+          lastStudyDate:
+            streakInfo?.lastStudyDate?.toISOString().split('T')[0] ?? null,
         },
         rankings: {
           weeklyRank,
@@ -344,7 +352,10 @@ export class LeaderboardController {
    * Default config: parts 1..7 with question counts {1:6, 2-7:10}, total 66, range 200.
    */
   private computeToeicPracticeScoreGain(
-    bestPerPart: Array<{ toeic_part: number; _max: { correct_count: number | null } }>,
+    bestPerPart: Array<{
+      toeic_part: number;
+      _max: { correct_count: number | null };
+    }>,
   ): number {
     const PART_QUESTIONS: Record<number, number> = {
       1: 6,
@@ -355,7 +366,10 @@ export class LeaderboardController {
       6: 10,
       7: 10,
     };
-    const TOTAL_ALL_QUESTIONS = Object.values(PART_QUESTIONS).reduce((s, n) => s + n, 0); // 66
+    const TOTAL_ALL_QUESTIONS = Object.values(PART_QUESTIONS).reduce(
+      (s, n) => s + n,
+      0,
+    ); // 66
     const RANGE = 200;
     const CURVE_EXPONENT = 0.85;
 
@@ -363,7 +377,10 @@ export class LeaderboardController {
     for (const row of bestPerPart) {
       const questions = PART_QUESTIONS[row.toeic_part];
       if (!questions) continue;
-      const bestCorrect = Math.max(0, Math.min(row._max.correct_count ?? 0, questions));
+      const bestCorrect = Math.max(
+        0,
+        Math.min(row._max.correct_count ?? 0, questions),
+      );
       const accuracy = bestCorrect / questions;
       const cap = (questions / TOTAL_ALL_QUESTIONS) * RANGE;
       const rawEarned = Math.min(cap, Math.pow(accuracy, CURVE_EXPONENT) * cap);
@@ -379,7 +396,7 @@ export class LeaderboardController {
 
   /**
    * Helper method to get stats for multiple users
-   * 
+   *
    * @param accountIds - Array of account IDs
    * @returns Map of accountId -> stats
    */

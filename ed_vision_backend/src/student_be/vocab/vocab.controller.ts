@@ -16,7 +16,14 @@ import type { Request as ExpressRequest } from 'express';
 import { DevAuthGuard } from '../../common/guards/dev-auth.guard';
 import { VocabService } from './vocab.service';
 import { VocabTestService } from './vocab-test.service';
-import { ToggleKnownDto, StartTestSessionDto, SubmitAnswerDto } from './dto/vocab.dto';
+import { VocabLookupService } from './vocab-lookup.service';
+import {
+  ToggleKnownDto,
+  StartTestSessionDto,
+  SubmitAnswerDto,
+  LookupWordDto,
+  SaveFromReadingDto,
+} from './dto/vocab.dto';
 
 type AuthenticatedRequest = ExpressRequest & {
   user: { account_id: number };
@@ -28,6 +35,7 @@ export class VocabController {
   constructor(
     private readonly vocabService: VocabService,
     private readonly testService: VocabTestService,
+    private readonly lookupService: VocabLookupService,
   ) {}
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -53,7 +61,12 @@ export class VocabController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    return this.vocabService.getWordsByTopic(enrollmentId, topicId, page, limit);
+    return this.vocabService.getWordsByTopic(
+      enrollmentId,
+      topicId,
+      page,
+      limit,
+    );
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -92,8 +105,9 @@ export class VocabController {
   @Get('stats')
   async getStats(
     @Query('enrollment_id', ParseIntPipe) enrollmentId: number,
+    @Query('cert_type') certType = 'toeic',
   ) {
-    return this.vocabService.getVocabStats(enrollmentId);
+    return this.vocabService.getVocabStats(enrollmentId, certType);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -144,5 +158,31 @@ export class VocabController {
     @Query('enrollment_id', ParseIntPipe) enrollmentId: number,
   ) {
     return this.testService.getSessionHistory(enrollmentId);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // POST /student/vocab/lookup
+  // Tra từ qua AI (hoặc từ database/cache)
+  // ────────────────────────────────────────────────────────────────────────────
+  @Post('lookup')
+  @HttpCode(HttpStatus.OK)
+  async lookupWord(
+    @Body() dto: LookupWordDto,
+    @Query('enrollment_id', ParseIntPipe) enrollmentId: number,
+  ) {
+    return this.lookupService.lookupWord(enrollmentId, dto);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // POST /student/vocab/save-from-reading
+  // Lưu từ mới vào kho từ vựng cá nhân từ bài đọc
+  // ────────────────────────────────────────────────────────────────────────────
+  @Post('save-from-reading')
+  @HttpCode(HttpStatus.OK)
+  async saveFromReading(
+    @Body() dto: SaveFromReadingDto,
+    @Query('enrollment_id', ParseIntPipe) enrollmentId: number,
+  ) {
+    return this.lookupService.saveFromReading(enrollmentId, dto);
   }
 }

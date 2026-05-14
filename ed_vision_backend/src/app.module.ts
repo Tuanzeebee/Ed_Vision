@@ -37,6 +37,7 @@ import { StudyRoomModule } from './study-room/study-room.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { IeltsAdaptiveModule } from './ielts-adaptive/ielts-adaptive.module';
 import { PlacementModule } from './placement/placement.module';
+import { RagModule } from './rag/rag.module';
 
 function resolveI18nPath(): string {
   const candidatePaths = [
@@ -89,6 +90,7 @@ function resolveI18nPath(): string {
     StudyRoomModule,
     IeltsAdaptiveModule,
     PlacementModule,
+    RagModule,
     YouTubeMusicModule,
     TtsModule,
     SttModule,

@@ -47,7 +47,8 @@ export class VocabTestService {
     if (progressRows.length === 0) {
       return {
         session_id: null,
-        message: 'Chưa có từ vựng nào được đánh dấu đã thuộc. Hãy học và đánh dấu trước!',
+        message:
+          'Chưa có từ vựng nào được đánh dấu đã thuộc. Hãy học và đánh dấu trước!',
         words: [],
       };
     }
@@ -105,7 +106,9 @@ export class VocabTestService {
       });
 
       if (word && word.definitions.length > 0) {
-        const correctMeaning = word.definitions.map((d) => d.meaning).join(', ');
+        const correctMeaning = word.definitions
+          .map((d) => d.meaning)
+          .join(', ');
         const prompt = `Bạn là giáo viên TOEIC. Từ tiếng Anh "${word.word}" có nghĩa là "${correctMeaning}". Học sinh trả lời: "${dto.user_input}". Hãy chấm điểm từ 0.0 đến 1.0 (1.0 = hoàn toàn đúng, 0.7+ = chấp nhận được, <0.7 = cần học lại) và đưa ra nhận xét ngắn bằng tiếng Việt (tối đa 1 câu). Trả lời theo định dạng JSON: {"score": 0.85, "feedback": "Nhận xét ngắn"}`;
 
         const raw = await callQwen(prompt);
@@ -113,7 +116,10 @@ export class VocabTestService {
           // Extract JSON from response
           const match = raw.match(/\{[\s\S]*\}/);
           if (match) {
-            const parsed = JSON.parse(match[0]) as { score?: number; feedback?: string };
+            const parsed = JSON.parse(match[0]) as {
+              score?: number;
+              feedback?: string;
+            };
             aiScore = parsed.score ?? null;
             aiFeedback = parsed.feedback ?? null;
             isCorrect = (aiScore ?? 0) >= 0.7;
@@ -122,9 +128,13 @@ export class VocabTestService {
           // Fallback: simple substring match
           const userLower = dto.user_input.toLowerCase().trim();
           const correctLower = correctMeaning.toLowerCase();
-          isCorrect = correctLower.includes(userLower) || userLower.includes(correctLower.split(',')[0].trim());
+          isCorrect =
+            correctLower.includes(userLower) ||
+            userLower.includes(correctLower.split(',')[0].trim());
           aiScore = isCorrect ? 0.8 : 0.3;
-          aiFeedback = isCorrect ? 'Đúng rồi!' : `Đáp án đúng là: ${correctMeaning}`;
+          aiFeedback = isCorrect
+            ? 'Đúng rồi!'
+            : `Đáp án đúng là: ${correctMeaning}`;
         }
       }
     }
@@ -221,7 +231,9 @@ export class VocabTestService {
       id: s.id,
       mode: s.mode,
       score: s.score,
-      wordCount: Array.isArray(s.word_ids) ? (s.word_ids as number[]).length : 0,
+      wordCount: Array.isArray(s.word_ids)
+        ? (s.word_ids as number[]).length
+        : 0,
       startedAt: s.started_at,
       endedAt: s.ended_at,
     }));

@@ -32,8 +32,6 @@ export interface VocabDefinition {
 export interface VocabWordApi {
   id: number;
   word: string;
-  level: string;
-  freq: number;
   audioUrl: string | null;
   isKnown: boolean;
   correctStreak: number;
@@ -69,7 +67,6 @@ export interface VocabStats {
   totalWords: number;
   knownWords: number;
   topics: number;
-  highFreqKnown: number;
 }
 
 const ENROLLMENT_CACHE_PREFIX = 'edvision.enrollment';
@@ -182,16 +179,16 @@ export function useVocabWords(
 }
 
 // ── Hook: vocab stats ─────────────────────────────────────────────────────────
-export function useVocabStats(enrollmentId: number | null) {
+export function useVocabStats(enrollmentId: number | null, certType = 'toeic') {
   const [stats, setStats] = useState<VocabStats | null>(null);
 
   useEffect(() => {
     if (!enrollmentId) return;
-    authFetch(buildUrl('student/vocab/stats', { enrollment_id: enrollmentId }))
+    authFetch(buildUrl('student/vocab/stats', { enrollment_id: enrollmentId, cert_type: certType }))
       .then((r) => r.json())
       .then((d: VocabStats) => setStats(d))
       .catch(console.error);
-  }, [enrollmentId]);
+  }, [enrollmentId, certType]);
 
   return stats;
 }

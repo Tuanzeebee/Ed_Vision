@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
-import { REDIS_KEY_ELIGIBILITY, TTL_ELIGIBILITY } from '../leaderboard.constants';
+import {
+  REDIS_KEY_ELIGIBILITY,
+  TTL_ELIGIBILITY,
+} from '../leaderboard.constants';
 
 /**
  * Eligibility Status
@@ -15,9 +18,9 @@ export interface EligibilityStatus {
 
 /**
  * Eligibility Checker Service
- * 
+ *
  * Responsible for checking if a user is eligible to appear on the leaderboard.
- * 
+ *
  * Eligibility Criteria:
  * 1. Survey Completion: User must have completed at least one input survey (type='input')
  * 2. Goal Input: User must have set target_score in CertificateEnrollment
@@ -33,7 +36,7 @@ export class EligibilityCheckerService {
 
   /**
    * Check if a user is eligible for the leaderboard
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<EligibilityStatus> - Detailed eligibility status
    */
@@ -90,7 +93,7 @@ export class EligibilityCheckerService {
 
   /**
    * Check if a user is eligible (simple boolean check)
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<boolean> - True if eligible, false otherwise
    */
@@ -101,7 +104,7 @@ export class EligibilityCheckerService {
 
   /**
    * Check if multiple users are eligible (batch operation)
-   * 
+   *
    * @param accountIds - Array of user account IDs
    * @returns Promise<Map<number, boolean>> - Map of accountId -> eligible
    */
@@ -140,7 +143,9 @@ export class EligibilityCheckerService {
    * @param candidateIds - Account IDs to check
    * @returns Promise<Set<number>> - Set of eligible account IDs
    */
-  async getEligibleAccountIdsBatch(candidateIds: number[]): Promise<Set<number>> {
+  async getEligibleAccountIdsBatch(
+    candidateIds: number[],
+  ): Promise<Set<number>> {
     const eligible = new Set<number>();
     if (candidateIds.length === 0) return eligible;
 
@@ -181,7 +186,9 @@ export class EligibilityCheckerService {
 
       const studentAccountSet = new Set(students.map((s) => s.account_id));
       const surveySet = new Set(
-        surveyDone.map((r) => r.account_id).filter((id): id is number => id !== null),
+        surveyDone
+          .map((r) => r.account_id)
+          .filter((id): id is number => id !== null),
       );
 
       // Build per-account flags from the enrollments batch.
@@ -216,7 +223,7 @@ export class EligibilityCheckerService {
 
   /**
    * Invalidate eligibility cache for a user
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<void>
    */
@@ -224,7 +231,9 @@ export class EligibilityCheckerService {
     try {
       const key = REDIS_KEY_ELIGIBILITY(accountId);
       await this.redis.delete(key);
-      this.logger.debug(`Invalidated eligibility cache for account ${accountId}`);
+      this.logger.debug(
+        `Invalidated eligibility cache for account ${accountId}`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to invalidate eligibility cache for account ${accountId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -234,7 +243,7 @@ export class EligibilityCheckerService {
 
   /**
    * Check if user has completed input survey
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<boolean> - True if completed, false otherwise
    */
@@ -263,13 +272,15 @@ export class EligibilityCheckerService {
 
       if (!student) return false;
 
-      const toeicEnrollment = await this.prisma.certificateEnrollment.findFirst({
-        where: {
-          student_id: student.student_id,
-          cert_type: 'toeic',
-          current_score: { gt: 0 },
+      const toeicEnrollment = await this.prisma.certificateEnrollment.findFirst(
+        {
+          where: {
+            student_id: student.student_id,
+            cert_type: 'toeic',
+            current_score: { gt: 0 },
+          },
         },
-      });
+      );
 
       return toeicEnrollment !== null;
     } catch (error) {
@@ -282,7 +293,7 @@ export class EligibilityCheckerService {
 
   /**
    * Check if user has completed goal input (set target score)
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<boolean> - True if completed, false otherwise
    */
@@ -320,11 +331,13 @@ export class EligibilityCheckerService {
 
   /**
    * Get cached eligibility status
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<EligibilityStatus | null> - Cached status or null if not found
    */
-  private async getCachedEligibility(accountId: number): Promise<EligibilityStatus | null> {
+  private async getCachedEligibility(
+    accountId: number,
+  ): Promise<EligibilityStatus | null> {
     if (!this.redis.isReady()) {
       return null;
     }
@@ -343,12 +356,15 @@ export class EligibilityCheckerService {
 
   /**
    * Cache eligibility status
-   * 
+   *
    * @param accountId - User account ID
    * @param status - Eligibility status to cache
    * @returns Promise<void>
    */
-  private async cacheEligibility(accountId: number, status: EligibilityStatus): Promise<void> {
+  private async cacheEligibility(
+    accountId: number,
+    status: EligibilityStatus,
+  ): Promise<void> {
     if (!this.redis.isReady()) {
       return;
     }
@@ -356,7 +372,9 @@ export class EligibilityCheckerService {
     try {
       const key = REDIS_KEY_ELIGIBILITY(accountId);
       await this.redis.setJson(key, status, TTL_ELIGIBILITY);
-      this.logger.debug(`Cached eligibility for account ${accountId}: ${status.eligible}`);
+      this.logger.debug(
+        `Cached eligibility for account ${accountId}: ${status.eligible}`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to cache eligibility for account ${accountId}: ${error instanceof Error ? error.message : 'Unknown error'}`,

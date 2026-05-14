@@ -25,12 +25,10 @@ import {
 import {
   CERTIFICATES,
   getSkills,
-  getRoadmap,
   getMosTasksBycert,
   getRadarData,
   getBandOption,
   BandSelector,
-  RoadmapView,
   SkillRadar,
   MosTaskPanel,
 } from "./certificateData";
@@ -51,6 +49,7 @@ import {
   saveToeicPlanSync,
   getToeicReservePoints,
 } from "@/services/api/certificateService";
+import { studyRoomService, type MyStudyStats } from "@/services/student/studyRoomService";
 // Community discussions per cert type
 const DISCUSSIONS: Record<
   string,
@@ -143,11 +142,17 @@ export default function CertificateDetail() {
 
   // ── Dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
+  const [studyStats, setStudyStats] = useState<MyStudyStats | null>(null);
   const [completedToeicParts, setCompletedToeicParts] = useState<number[]>([]);
   useEffect(() => {
     getEnrollment(cert.id)
       .then(setEnrollment)
       .catch(() => { });
+  }, [cert.id]);
+
+  useEffect(() => {
+    // Load study stats for all certificates
+    studyRoomService.getMyStudyStats().then(setStudyStats).catch(() => { });
   }, [cert.id]);
 
   useEffect(() => {
@@ -206,23 +211,26 @@ export default function CertificateDetail() {
   }, [cert.id]);
 
   // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
-  // TOEIC: dùng completed_parts / 7 parts (số part học viên đã thực sự luyện),
-  //        khớp logic ở CertificateReview để hiển thị nhất quán.
+  // TOEIC: dùng điểm gốc / điểm mục tiêu (clamp 0..100).
   // Khác: dùng progress_percent từ enrollment.
   const realProgress = (() => {
     if (isToeic) {
-      const toeicTotalParts = 7;
-      const partsCompleted = completedToeicParts.length;
-      let progress = 0;
-      if (partsCompleted > 0) {
-        progress = Math.max(0, Math.min(100, Math.round((partsCompleted / toeicTotalParts) * 100)));
+      const baseScore =
+        (enrollment?.current_score ?? null) ??
+        (toeicProfile?.milestoneState.currentScore ?? null);
+      const targetScore =
+        (enrollment?.target_score ?? null) ??
+        (toeicProfile?.milestoneState.targetScore ?? null);
+
+      if (baseScore && targetScore && targetScore > 0) {
+        const ratio = (Number(baseScore) / Number(targetScore)) * 100;
+        return Math.max(0, Math.min(100, Math.round(ratio)));
       }
-      // Fallback: nếu enrollment.progress_percent lớn hơn (đã được backend tính sẵn) thì dùng nó.
-      const enrollmentProgress = enrollment?.progress_percent != null
+
+      // Fallback: nếu enrollment.progress_percent có sẵn thì dùng nó.
+      return enrollment?.progress_percent != null
         ? Math.max(0, Math.min(100, Math.round(Number(enrollment.progress_percent))))
         : 0;
-      if (enrollmentProgress > progress) progress = enrollmentProgress;
-      return progress;
     }
     return enrollment
       ? Math.max(0, Math.min(100, Number(enrollment.progress_percent ?? 0)))
@@ -236,6 +244,33 @@ export default function CertificateDetail() {
           ? "in-progress"
           : "not-started"
       : cert.status;
+
+  const resolveDaysSince = (isoDate: string | null) => {
+    if (!isoDate) return null;
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) return null;
+    const today = new Date();
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+    const dateStart = new Date(
+      parsed.getFullYear(),
+      parsed.getMonth(),
+      parsed.getDate(),
+    );
+    const diffMs = todayStart.getTime() - dateStart.getTime();
+    return Math.max(0, Math.floor(diffMs / (24 * 60 * 60 * 1000)));
+  };
+
+  const inactiveDays = resolveDaysSince(studyStats?.streak.lastStudyDate ?? null);
+  const inactivityLabel =
+    inactiveDays === null
+      ? "Chưa ôn luyện"
+      : `Chưa ôn luyện ${inactiveDays} ngày`;
+  const showInactivity = inactiveDays === null || inactiveDays > 0;
+  const currentStreakDays = studyStats?.streak.current ?? 0;
 
   // ── Band selection — local preview mode (no DB persistence) ─────────────────
   const urlBand = (searchParams.get("band") ?? null) as CertBand | null;
@@ -358,7 +393,7 @@ export default function CertificateDetail() {
     ? [radarDataRaw[2] ?? 68, radarDataRaw[3] ?? 64]
     : radarDataRaw;
   const radarLabels = skills.map((s) => s.label);
-  const roadmapSteps = getRoadmap(cert.id, selectedBand ?? undefined);
+
   const activeSkillData = skills.find((s) => s.id === activeSkill);
 
   useEffect(() => {
@@ -533,6 +568,30 @@ export default function CertificateDetail() {
                       >
                         Tiến độ: {realProgress}%
                       </span>
+                      {studyStats && showInactivity && (
+                        <span
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold"
+                          style={{
+                            background: "rgba(248,113,113,0.18)",
+                            color: "#fecaca",
+                            border: "1px solid rgba(248,113,113,0.35)",
+                          }}
+                        >
+                          {inactivityLabel} ⚠️
+                        </span>
+                      )}
+                      {studyStats && (
+                        <span
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold"
+                          style={{
+                            background: "rgba(251,191,36,0.18)",
+                            color: "#fde68a",
+                            border: "1px solid rgba(251,191,36,0.35)",
+                          }}
+                        >
+                          Chuỗi học: {currentStreakDays} ngày 🔥
+                        </span>
+                      )}
                       {(realStatus === "active" ||
                         realStatus === "in-progress") &&
                         !!(
@@ -632,6 +691,11 @@ export default function CertificateDetail() {
                     {cert.sublabel}
                   </p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {studyStats && (
+                      <span className="bg-amber-500/20 px-2.5 py-1 rounded-lg text-xs font-bold border border-amber-400/30">
+                        Chuỗi học: {currentStreakDays} ngày 🔥
+                      </span>
+                    )}
                     <span className="bg-white/20 px-2.5 py-1 rounded-lg text-sm font-bold">
                       Tiến độ: {realProgress}%
                     </span>
@@ -678,7 +742,10 @@ export default function CertificateDetail() {
         ══════════════════════════════════════════════════════════════════════ */}
         {isEnglish && (
           <>
-            <StudentPersonalStatistics enrollmentId={enrollment?.id ?? null} />
+            <StudentPersonalStatistics
+              enrollmentId={enrollment?.id ?? null}
+              certType={cert.id}
+            />
 
             {cert.id === "toeic" && toeicProfile && (
               <ToeicRoadmapBoard
@@ -953,18 +1020,8 @@ export default function CertificateDetail() {
               </div>
             </section>
 
-            {/* ── Roadmap + Skill Analysis + Community ── */}
+            {/* ── Skill Analysis + Community ── */}
             <section>
-              {/* Roadmap — full width */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6 mb-6">
-                <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-purple-500" />
-                  Lộ trình học
-                </h3>
-                <RoadmapView steps={roadmapSteps} />
-              </div>
-
-              {/* Skill Analysis + Community Discussions — 2 columns */}
               {/* Skill Analysis + Community Discussions — 2 columns */}
               {!isToeic && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1115,15 +1172,6 @@ export default function CertificateDetail() {
                       </button>
                     )}
                   </div>
-                </div>
-
-                {/* Roadmap */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-5">
-                  <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2">
-                    <BarChart2 className="w-4 h-4 text-purple-500" />
-                    Lộ trình học
-                  </h3>
-                  <RoadmapView steps={roadmapSteps} />
                 </div>
 
                 {/* MosTaskPanel chỉ dùng cho Excel/PowerPoint; mos-word dùng MosWordSimulator */}

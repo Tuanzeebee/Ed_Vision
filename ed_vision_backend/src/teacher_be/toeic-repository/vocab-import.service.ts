@@ -2,7 +2,10 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
-import { CreateTopicDto, ConfirmImportDto } from '../../student_be/vocab/dto/vocab.dto';
+import {
+  CreateTopicDto,
+  ConfirmImportDto,
+} from '../../student_be/vocab/dto/vocab.dto';
 import { RegexExtractor } from './regex-extractor';
 import { PreviewBuilder } from './preview-builder';
 import { ColumnDetector } from './column-detector';
@@ -11,23 +14,73 @@ import { ExtractedWord } from './regex-extractor';
 
 // ─── Slugify ──────────────────────────────────────────────────────────────────
 function slugify(text: string): string {
-  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-');
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 }
 
 // ─── 10 TOEIC topics cố định ─────────────────────────────────────────────────
 const TOEIC_TOPICS = [
-  { slug: 'office-work', vi: 'Văn phòng & Công việc', en: 'Office & Work', emoji: '🏢' },
-  { slug: 'finance-banking', vi: 'Tài chính & Ngân hàng', en: 'Finance & Banking', emoji: '💰' },
-  { slug: 'human-resources', vi: 'Nhân sự', en: 'Human Resources', emoji: '👥' },
-  { slug: 'marketing-sales', vi: 'Marketing & Bán hàng', en: 'Marketing & Sales', emoji: '📢' },
-  { slug: 'travel-transport', vi: 'Du lịch & Giao thông', en: 'Travel & Transport', emoji: '✈️' },
+  {
+    slug: 'office-work',
+    vi: 'Văn phòng & Công việc',
+    en: 'Office & Work',
+    emoji: '🏢',
+  },
+  {
+    slug: 'finance-banking',
+    vi: 'Tài chính & Ngân hàng',
+    en: 'Finance & Banking',
+    emoji: '💰',
+  },
+  {
+    slug: 'human-resources',
+    vi: 'Nhân sự',
+    en: 'Human Resources',
+    emoji: '👥',
+  },
+  {
+    slug: 'marketing-sales',
+    vi: 'Marketing & Bán hàng',
+    en: 'Marketing & Sales',
+    emoji: '📢',
+  },
+  {
+    slug: 'travel-transport',
+    vi: 'Du lịch & Giao thông',
+    en: 'Travel & Transport',
+    emoji: '✈️',
+  },
   { slug: 'healthcare', vi: 'Y tế & Sức khỏe', en: 'Healthcare', emoji: '🏥' },
   { slug: 'technology', vi: 'Công nghệ', en: 'Technology', emoji: '💻' },
-  { slug: 'legal-contracts', vi: 'Pháp lý & Hợp đồng', en: 'Legal & Contracts', emoji: '⚖️' },
-  { slug: 'customer-service', vi: 'Dịch vụ khách hàng', en: 'Customer Service', emoji: '🤝' },
-  { slug: 'general-business', vi: 'Kinh doanh chung', en: 'General Business', emoji: '📊' },
+  {
+    slug: 'legal-contracts',
+    vi: 'Pháp lý & Hợp đồng',
+    en: 'Legal & Contracts',
+    emoji: '⚖️',
+  },
+  {
+    slug: 'customer-service',
+    vi: 'Dịch vụ khách hàng',
+    en: 'Customer Service',
+    emoji: '🤝',
+  },
+  {
+    slug: 'general-business',
+    vi: 'Kinh doanh chung',
+    en: 'General Business',
+    emoji: '📊',
+  },
 ];
-function getTopic(slug: string) { return TOEIC_TOPICS.find((t) => t.slug === slug) ?? TOEIC_TOPICS[9]; }
+function getTopic(slug: string) {
+  return TOEIC_TOPICS.find((t) => t.slug === slug) ?? TOEIC_TOPICS[9];
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface ParsedVocabWord {
@@ -37,9 +90,17 @@ export interface ParsedVocabWord {
   topic_en: string;
   level: string;
   freq: number;
-  definitions: { pos: string; meaning: string; example_en: string; example_vi: string }[];
+  definitions: {
+    pos: string;
+    meaning: string;
+    example_en: string;
+    example_vi: string;
+  }[];
 }
-export interface VocabImportPreviewDto { topic_id?: number; cert_type?: string; }
+export interface VocabImportPreviewDto {
+  topic_id?: number;
+  cert_type?: string;
+}
 
 @Injectable()
 export class VocabImportService {
@@ -61,7 +122,11 @@ export class VocabImportService {
   private initOllama(): void {
     const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
     const textModel = process.env.OLLAMA_MODEL ?? 'qwen3';
-    this.ollama = new OllamaClient({ baseUrl, model: textModel, timeoutMs: 60000 });
+    this.ollama = new OllamaClient({
+      baseUrl,
+      model: textModel,
+      timeoutMs: 60000,
+    });
   }
 
   // ── CRUD topics ──────────────────────────────────────────────────────────
@@ -69,17 +134,36 @@ export class VocabImportService {
     const slug = slugify(dto.title_vi);
     return this.prisma.vocabTopic.upsert({
       where: { slug },
-      create: { slug, title_vi: dto.title_vi, title_en: dto.title_en, emoji: dto.emoji, cert_type: dto.cert_type ?? 'toeic', sort_order: dto.sort_order ?? 0 },
-      update: { title_vi: dto.title_vi, title_en: dto.title_en, emoji: dto.emoji },
+      create: {
+        slug,
+        title_vi: dto.title_vi,
+        title_en: dto.title_en,
+        emoji: dto.emoji,
+        cert_type: dto.cert_type ?? 'toeic',
+        sort_order: dto.sort_order ?? 0,
+      },
+      update: {
+        title_vi: dto.title_vi,
+        title_en: dto.title_en,
+        emoji: dto.emoji,
+      },
     });
   }
 
   async listTopics(certType = 'toeic') {
     const topics = await this.prisma.vocabTopic.findMany({
-      where: { cert_type: certType }, orderBy: { sort_order: 'asc' },
+      where: { cert_type: certType },
+      orderBy: { sort_order: 'asc' },
       include: { _count: { select: { words: true } } },
     });
-    return topics.map((t) => ({ id: t.id, slug: t.slug, titleVI: t.title_vi, titleEN: t.title_en, emoji: t.emoji, wordCount: t._count.words }));
+    return topics.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      titleVI: t.title_vi,
+      titleEN: t.title_en,
+      emoji: t.emoji,
+      wordCount: t._count.words,
+    }));
   }
 
   async deleteWord(wordId: number) {
@@ -108,10 +192,16 @@ export class VocabImportService {
       extracted = await this.processText(rawText, 'TXT');
     }
 
-    try { fs.unlinkSync(file.path); } catch { /**/ }
+    try {
+      fs.unlinkSync(file.path);
+    } catch {
+      /**/
+    }
 
     if (!extracted.length) {
-      throw new BadRequestException('Không phân tích được từ vựng. Kiểm tra file rõ nét hoặc thử định dạng khác.');
+      throw new BadRequestException(
+        'Không phân tích được từ vựng. Kiểm tra file rõ nét hoặc thử định dạng khác.',
+      );
     }
 
     // Auto-correct spelling errors in Vietnamese meanings if Qwen3 is available
@@ -119,7 +209,10 @@ export class VocabImportService {
       extracted = await this.ollama.fixSpelling(extracted);
     }
 
-    return { preview: this.previewBuilder.build(extracted, dto.topic_id), rawText: '' };
+    return {
+      preview: this.previewBuilder.build(extracted, dto.topic_id),
+      rawText: '',
+    };
   }
 
   // ── confirmImport ────────────────────────────────────────────────────────
@@ -131,7 +224,16 @@ export class VocabImportService {
         const meta = getTopic(item.topic_slug);
         const db = await this.prisma.vocabTopic.upsert({
           where: { slug: item.topic_slug },
-          create: { slug: item.topic_slug, title_vi: meta.vi, title_en: meta.en, emoji: meta.emoji, cert_type: 'toeic', sort_order: TOEIC_TOPICS.findIndex((t) => t.slug === item.topic_slug) },
+          create: {
+            slug: item.topic_slug,
+            title_vi: meta.vi,
+            title_en: meta.en,
+            emoji: meta.emoji,
+            cert_type: 'toeic',
+            sort_order: TOEIC_TOPICS.findIndex(
+              (t) => t.slug === item.topic_slug,
+            ),
+          },
           update: {},
         });
         topicDbId = db.id;
@@ -139,14 +241,31 @@ export class VocabImportService {
       if (!topicDbId) continue;
 
       const word = await this.prisma.vocabWord.upsert({
-        where: { topic_id_word: { topic_id: topicDbId, word: item.word.toLowerCase() } },
-        create: { topic_id: topicDbId, word: item.word.toLowerCase(), level: item.level, freq: item.freq, source: 'vocab-import' },
+        where: {
+          topic_id_word: { topic_id: topicDbId, word: item.word.toLowerCase() },
+        },
+        create: {
+          topic_id: topicDbId,
+          word: item.word.toLowerCase(),
+          level: item.level,
+          freq: item.freq,
+          source: 'vocab-import',
+        },
         update: { level: item.level, freq: item.freq },
       });
-      await this.prisma.vocabDefinition.deleteMany({ where: { word_id: word.id } });
+      await this.prisma.vocabDefinition.deleteMany({
+        where: { word_id: word.id },
+      });
       if (item.definitions?.length) {
         await this.prisma.vocabDefinition.createMany({
-          data: item.definitions.map((d, i) => ({ word_id: word.id, pos: d.pos, meaning: d.meaning, example_en: d.example_en ?? '', example_vi: d.example_vi ?? '', sort_order: i })),
+          data: item.definitions.map((d, i) => ({
+            word_id: word.id,
+            pos: d.pos,
+            meaning: d.meaning,
+            example_en: d.example_en ?? '',
+            example_vi: d.example_vi ?? '',
+            sort_order: i,
+          })),
         });
       }
       imported++;
@@ -158,7 +277,9 @@ export class VocabImportService {
   // - Preprocess: grayscale + normalize + sharpen + upscale 2x → tăng accuracy Tesseract VI.
   // - Optional: nếu Ollama qwen3 chạy local, fix OCR noise (","→".", ";"→":") trước regex.
   // - Fallback: nếu Ollama không available hoặc timeout, regex trực tiếp trên OCR raw.
-  private async processImage(file: Express.Multer.File): Promise<ExtractedWord[]> {
+  private async processImage(
+    file: Express.Multer.File,
+  ): Promise<ExtractedWord[]> {
     let ocrText = '';
     try {
       ocrText = await this.ocrColumns(file.path);
@@ -167,7 +288,9 @@ export class VocabImportService {
     }
 
     if (!ocrText.trim()) {
-      throw new BadRequestException('Không đọc được ảnh. Kiểm tra file rõ nét và thử lại.');
+      throw new BadRequestException(
+        'Không đọc được ảnh. Kiểm tra file rõ nét và thử lại.',
+      );
     }
 
     // Thử Ollama clean trước — nếu có nhiều entry hơn, dùng bản clean.
@@ -186,17 +309,24 @@ export class VocabImportService {
           }
         }
       } catch (e: any) {
-        console.warn(`[VocabImport] Ollama cleanText failed (sử dụng OCR raw): ${e?.message}`);
+        console.warn(
+          `[VocabImport] Ollama cleanText failed (sử dụng OCR raw): ${e?.message}`,
+        );
       }
     }
 
     if (bestResult.length > 0) return bestResult;
 
-    throw new BadRequestException('Không phân tích được từ vựng từ ảnh. Thử file PDF hoặc TXT để kết quả tốt hơn.');
+    throw new BadRequestException(
+      'Không phân tích được từ vựng từ ảnh. Thử file PDF hoặc TXT để kết quả tốt hơn.',
+    );
   }
 
   // ── processText: qwen3 clean → Regex (cho PDF/TXT) ──────────────────
-  private async processText(rawText: string, source: string): Promise<ExtractedWord[]> {
+  private async processText(
+    rawText: string,
+    source: string,
+  ): Promise<ExtractedWord[]> {
     if (this.ollama) {
       try {
         const cleaned = await this.ollama.cleanText(rawText);
@@ -205,7 +335,9 @@ export class VocabImportService {
           return result;
         }
       } catch (e: any) {
-        console.warn(`[VocabImport] Qwen3 ${source} failed: ${e?.message} — trying raw`);
+        console.warn(
+          `[VocabImport] Qwen3 ${source} failed: ${e?.message} — trying raw`,
+        );
       }
     }
     // Fallback: regex trực tiếp trên raw text
@@ -219,7 +351,11 @@ export class VocabImportService {
     const tmpDir = os.tmpdir();
 
     const detectionResult = await this.columnDetector.detectColumns(imagePath);
-    const croppedPaths = await this.columnDetector.cropToColumns(imagePath, detectionResult.columns, tmpDir);
+    const croppedPaths = await this.columnDetector.cropToColumns(
+      imagePath,
+      detectionResult.columns,
+      tmpDir,
+    );
 
     // Preprocess từng cột (grayscale + normalize + sharpen + upscale) trước khi OCR.
     const preprocessedPaths = await Promise.all(
@@ -241,7 +377,11 @@ export class VocabImportService {
     // Cleanup phải xóa cả cropped lẫn preprocessed.
     for (const p of [...croppedPaths, ...preprocessedPaths]) {
       if (!p) continue;
-      try { fs.unlinkSync(p); } catch { /**/ }
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        /**/
+      }
     }
 
     return columnResults.filter(Boolean).join('\n\n');
@@ -252,8 +392,7 @@ export class VocabImportService {
   // Kết quả lưu vào file PNG riu để OCR tiếng Việt đọc dấu tốt hơn.
   private async preprocessForOcr(inputPath: string): Promise<string> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const sharp = require('sharp') as any;
+      const sharp = require('sharp');
       const meta = await sharp(inputPath).metadata();
       const targetWidth = Math.min((meta.width ?? 1000) * 2, 4000);
       const outPath = inputPath.replace(/(\.[^.]+)?$/, '_pre.png');
@@ -266,7 +405,10 @@ export class VocabImportService {
         .toFile(outPath);
       return outPath;
     } catch (e: any) {
-      console.warn('[VocabImport] preprocessForOcr failed, dùng ảnh gốc:', e?.message);
+      console.warn(
+        '[VocabImport] preprocessForOcr failed, dùng ảnh gốc:',
+        e?.message,
+      );
       return inputPath;
     }
   }
@@ -275,7 +417,6 @@ export class VocabImportService {
   // PSM 6 = assume single uniform block of text (hợp với từng cột đã crop).
   // preserve_interword_spaces=1 → giữ nguyên khoảng trắng giữa từ, giảm dani entry.
   private async ocrImage(filePath: string): Promise<string> {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { createWorker, PSM } = require('tesseract.js') as {
       createWorker: (
         l: string[],
@@ -297,15 +438,18 @@ export class VocabImportService {
     } catch {
       // Older tesseract.js versions không hỗ trợ setParameters — bỏ qua, dùng default.
     }
-    const { data: { text } } = await worker.recognize(filePath);
+    const {
+      data: { text },
+    } = await worker.recognize(filePath);
     await worker.terminate();
     return text;
   }
 
   // ── PDF extract ───────────────────────────────────────────────────────────
   private async extractPdf(filePath: string): Promise<string> {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pdfParse = require('pdf-parse') as (b: Buffer) => Promise<{ text: string }>;
+    const pdfParse = require('pdf-parse') as (
+      b: Buffer,
+    ) => Promise<{ text: string }>;
     return (await pdfParse(fs.readFileSync(filePath))).text;
   }
 

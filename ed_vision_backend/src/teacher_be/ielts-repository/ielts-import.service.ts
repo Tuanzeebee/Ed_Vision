@@ -44,7 +44,6 @@ async function extractTextViaPython(filePath: string): Promise<string> {
   if (!existsSync(script)) {
     // Fallback: try pdf-parse if available
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const pdfParse = require('pdf-parse') as (
         buf: Buffer,
       ) => Promise<{ text: string }>;
@@ -135,8 +134,7 @@ function parseIeltsQuestionsFromOcrText(
 
   // ── Question number detection ─────────────────────────────────────────────
 
-  const Q_NUMBER_RE =
-    /^(?:Q\.?\s*|Question\s*)?(\d{1,3})\s*[.)]\s+(.+)/i;
+  const Q_NUMBER_RE = /^(?:Q\.?\s*|Question\s*)?(\d{1,3})\s*[.)]\s+(.+)/i;
 
   // ── Option detection ──────────────────────────────────────────────────────
 
@@ -149,8 +147,7 @@ function parseIeltsQuestionsFromOcrText(
   // ── Fill-blank / short-answer range detection ─────────────────────────────
   // e.g. "Questions 1–3  Complete the notes below"
 
-  const RANGE_RE =
-    /^Questions?\s+(\d{1,3})\s*[-–]\s*(\d{1,3})/i;
+  const RANGE_RE = /^Questions?\s+(\d{1,3})\s*[-–]\s*(\d{1,3})/i;
 
   const questions: ParsedIeltsQuestion[] = [];
 
@@ -198,10 +195,7 @@ function parseIeltsQuestionsFromOcrText(
     }
 
     // For T/F/NG, synthesise options if needed
-    if (
-      w.questionType === 'true-false' &&
-      w.options.length === 0
-    ) {
+    if (w.questionType === 'true-false' && w.options.length === 0) {
       const tfKeys = ['TRUE', 'FALSE', 'NOT GIVEN'];
       for (const key of tfKeys) {
         w.options.push({
@@ -557,9 +551,7 @@ export class IeltsImportService {
     for (const item of items) {
       const meta = item.metadata as Record<string, unknown> | null;
       const qNum =
-        typeof meta?.question_number === 'number'
-          ? (meta.question_number as number)
-          : null;
+        typeof meta?.question_number === 'number' ? meta.question_number : null;
 
       if (qNum === null) {
         skippedCount++;
@@ -601,7 +593,8 @@ export class IeltsImportService {
       },
     });
 
-    const answerKeyComplete = totalConfigured >= items.length && items.length > 0;
+    const answerKeyComplete =
+      totalConfigured >= items.length && items.length > 0;
 
     return {
       repository_id: repository.id,
@@ -626,12 +619,11 @@ export class IeltsImportService {
     });
 
     if (!repository) {
-      throw new BadRequestException(
-        `Không tìm thấy IELTS repository: ${slug}`,
-      );
+      throw new BadRequestException(`Không tìm thấy IELTS repository: ${slug}`);
     }
 
-    const section = dto.section ?? this.inferSectionFromFilename(file.originalname);
+    const section =
+      dto.section ?? this.inferSectionFromFilename(file.originalname);
     const trackNumber = dto.track_number ?? 1;
 
     // ── Save file ─────────────────────────────────────────────────────────
@@ -726,7 +718,9 @@ export class IeltsImportService {
 
   // ─── Delete repository ────────────────────────────────────────────────────
 
-  async deleteRepository(slug: string): Promise<IeltsRepositoryDeleteResponseDto> {
+  async deleteRepository(
+    slug: string,
+  ): Promise<IeltsRepositoryDeleteResponseDto> {
     const repo = await this.prisma.examRepository.findFirst({
       where: { slug, cert_type: 'ielts' },
       select: { id: true },
@@ -797,7 +791,6 @@ export class IeltsImportService {
     if (ext === '.xlsx' || ext === '.xls') {
       // Best-effort: read first sheet as text
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const XLSX = require('xlsx');
         const wb = XLSX.readFile(file.path);
         const ws = wb.Sheets[wb.SheetNames[0]];

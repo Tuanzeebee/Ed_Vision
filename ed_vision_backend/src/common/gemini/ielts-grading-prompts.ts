@@ -60,11 +60,21 @@ export function computeIeltsBandFromCriteria(
 
 // ---------------------------------------------------------------------------
 
-export function buildSpeakingGradingPrompt(input: SpeakingGradingInput): string {
-  const { transcript, itemPrompt, targetBand, partType = 'part1', lessonLevel } = input;
+export function buildSpeakingGradingPrompt(
+  input: SpeakingGradingInput,
+): string {
+  const {
+    transcript,
+    itemPrompt,
+    targetBand,
+    partType = 'part1',
+    lessonLevel,
+  } = input;
 
   const truncated =
-    transcript.length > 3000 ? transcript.slice(0, 3000) + '…[truncated]' : transcript;
+    transcript.length > 3000
+      ? transcript.slice(0, 3000) + '…[truncated]'
+      : transcript;
 
   return `You are an expert IELTS examiner. Grade the following IELTS Speaking response strictly according to official IELTS band descriptors.
 
@@ -111,7 +121,8 @@ Note: If the transcript is very short (under 30 words), or is mostly silence/fil
 // ---------------------------------------------------------------------------
 
 export function buildWritingGradingPrompt(input: WritingGradingInput): string {
-  const { essay, taskPrompt, taskType, targetBand, wordCount, lessonLevel } = input;
+  const { essay, taskPrompt, taskType, targetBand, wordCount, lessonLevel } =
+    input;
 
   const truncated =
     essay.length > 4000 ? essay.slice(0, 4000) + '…[truncated]' : essay;
@@ -129,7 +140,8 @@ export function buildWritingGradingPrompt(input: WritingGradingInput): string {
 4. **Grammatical Range and Accuracy (GRA)**: Grammar structures, complexity, error frequency`;
 
   const criteria = taskType === 'task1' ? task1Criteria : task2Criteria;
-  const firstCriterionName = taskType === 'task1' ? 'Task Achievement' : 'Task Response';
+  const firstCriterionName =
+    taskType === 'task1' ? 'Task Achievement' : 'Task Response';
 
   return `You are an expert IELTS examiner. Grade the following IELTS Writing ${taskType === 'task1' ? 'Task 1' : 'Task 2'} response strictly according to official IELTS band descriptors.
 

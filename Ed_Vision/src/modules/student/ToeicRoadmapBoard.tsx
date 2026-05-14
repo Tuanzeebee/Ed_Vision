@@ -5,7 +5,6 @@ import {
   Ear,
   Flag,
   Lock,
-  Sparkles,
   BookOpenCheck,
   Brain,
   BookMarked,
@@ -25,8 +24,11 @@ import {
   calculateToeicPracticeScore,
   type ToeicScoreResult,
 } from "./toeicPracticeScore";
-import { askCertificateTutor, getPersonalScores, getToeicReservePoints } from "../../services/api/certificateService";
-import { getToeicLeaderboard } from "@/services/api/certificateService";
+import {
+  getPersonalScores,
+  getToeicLeaderboard,
+  getToeicReservePoints,
+} from "@/services/api/certificateService";
 import StudentLeaderboard from "./components/StudentLeaderboard";
 
 type Props = {
@@ -55,15 +57,15 @@ const FOUNDATION_TRACK_FALLBACK: FoundationTrackItem[] = [
     topic: "grammar",
     title: "Ngữ pháp nền tảng",
     key: "grammar.articles_pron",
-    hint: "Gồm các mảng: 12 thì, loại từ, cấu trúc câu, mệnh đề, danh từ/tính từ/động từ.",
+    hint: "Hệ thống ngữ pháp đa dạng với nhiều chuyên đề quan trọng như thì, từ loại, cấu trúc câu… giúp bạn xây chắc nền tảng tiếng Anh từ gốc.",
     badge: "Grammar Core",
   },
   {
     topic: "vocabulary",
     title: "Từ vựng theo chủ đề",
     key: "vocab.office_basics_1000",
-    hint: "Mỗi chủ đề tập trung khoảng 1000 từ, ưu tiên nhóm từ dùng trong TOEIC thực tế.",
-    badge: "Topic 1000 Words",
+    hint: "Kho từ vựng phong phú với nhiều chủ đề đa dạng, giúp bạn mở rộng vốn từ và ứng dụng tự tin trong học tập cũng như TOEIC.",
+    badge: "Various Topics",
   },
 ];
 
@@ -84,7 +86,6 @@ export default function ToeicRoadmapBoard({
     (s) => s.id === "listening" || s.id === "reading"
   ), [profile.recommendedBand]);
 
-  const [aiFeedback, setAiFeedback] = useState<string>("Đang lấy dữ liệu phân tích...");
   const [listeningAccuracy, setListeningAccuracy] = useState<number>(0);
   const [readingAccuracy, setReadingAccuracy] = useState<number>(0);
   const [hasListeningData, setHasListeningData] = useState(false);
@@ -195,30 +196,6 @@ export default function ToeicRoadmapBoard({
       });
   }, []);
 
-  useEffect(() => {
-    if (!isAccuracyLoaded) return;
-
-    if (!hasListeningData && !hasReadingData) {
-      setAiFeedback("Bạn chưa hoàn thành bất kỳ bài tập ôn luyện nào gần đây. Hãy bắt đầu ôn tập để hệ thống có thể phân tích năng lực và đưa ra nhận xét chính xác nhất!");
-      return;
-    }
-    
-    setAiFeedback("Trợ lý ảo đang phân tích...");
-    const listScore = listeningAccuracy;
-    const readScore = readingAccuracy;
-    
-    askCertificateTutor({
-      cert_type: "toeic",
-      question: `Dựa trên dữ liệu ôn tập thực tế của tôi: kỹ năng Nghe đạt tỉ lệ đúng ${listScore}%, kỹ năng Đọc đạt tỉ lệ đúng ${readScore}%. Hãy đóng vai một chuyên gia giáo dục, phân tích ngắn gọn điểm mạnh yếu của tôi dựa trên 2 tỉ lệ phần trăm này và đưa ra 1 lời khuyên thực tế nhất để cải thiện. Không chào hỏi, đi thẳng vào vấn đề.`,
-      topic_key: `toeic_skill_analysis_${listScore}_${readScore}`,
-      concise: true
-    }).then(res => {
-      setAiFeedback(res.answer);
-    }).catch(err => {
-      setAiFeedback("Hệ thống AI đang bận. Vui lòng thử lại sau.");
-    });
-  }, [isAccuracyLoaded, listeningAccuracy, readingAccuracy, hasListeningData, hasReadingData]);
-
   // Fetch real Điểm Gốc and Điểm Ôn Tập from backend
   useEffect(() => {
     getPersonalScores()
@@ -270,10 +247,7 @@ export default function ToeicRoadmapBoard({
         key:
           grammarSection?.topics[0]?.topicKey ??
           FOUNDATION_TRACK_FALLBACK[0].key,
-        hint:
-          grammarTopicCount > 0
-            ? `${grammarTopicCount} chuyên đề: thì, loại từ, cấu trúc câu và các điểm ngữ pháp TOEIC.`
-            : FOUNDATION_TRACK_FALLBACK[0].hint,
+        hint: "Hệ thống ngữ pháp đa dạng với nhiều chuyên đề quan trọng như thì, từ loại, cấu trúc câu… giúp bạn xây chắc nền tảng tiếng Anh từ gốc.",
         badge: "Grammar Core",
       },
       {
@@ -282,11 +256,8 @@ export default function ToeicRoadmapBoard({
         key:
           vocabularySection?.topics[0]?.topicKey ??
           FOUNDATION_TRACK_FALLBACK[1].key,
-        hint:
-          vocabularyTopicCount > 0
-            ? `${vocabularyTopicCount} chủ đề, mỗi chủ đề định hướng khoảng 1000 từ trọng tâm.`
-            : FOUNDATION_TRACK_FALLBACK[1].hint,
-        badge: "Topic 1000 Words",
+        hint: "Kho từ vựng phong phú với nhiều chủ đề đa dạng, giúp bạn mở rộng vốn từ và ứng dụng tự tin trong học tập cũng như TOEIC.",
+        badge: "Various Topics",
       },
     ];
   }, [profile.recommendedBand]);
@@ -462,8 +433,7 @@ export default function ToeicRoadmapBoard({
               <h3 className="font-bold">Nền tảng cho người mất gốc</h3>
             </div>
             <p className="text-sm text-slate-600">
-              Mặc định hệ thống khóa nhánh tăng tốc cho đến khi hoàn thành tối
-              thiểu 2 chủ đề nền tảng. Bạn có thể bỏ qua nếu đã vững.
+              Xây nền móng vững chắc với ngữ pháp cốt lõi và kho từ vựng thiết yếu - bước khởi đầu hoàn hảo cho hành trình chinh phục TOEIC.
             </p>
             <div className="mt-3 space-y-2">
               {foundationTrack.map((item) => {
@@ -490,11 +460,6 @@ export default function ToeicRoadmapBoard({
                         </p>
                         <p className="text-xs text-slate-500">{item.hint}</p>
                       </div>
-                      {done && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
-                          Done
-                        </span>
-                      )}
                     </div>
                     <button
                       onClick={() => openFoundationTheory(item.topic, item.key)}
@@ -599,16 +564,6 @@ export default function ToeicRoadmapBoard({
                 </div>
               </div>
 
-              {/* AI Feedback */}
-              <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-3.5">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm font-bold text-indigo-900">Nhận xét của Trợ lý ảo</span>
-                </div>
-                <p className="text-xs text-indigo-800/80 leading-relaxed text-justify">
-                  {aiFeedback}
-                </p>
-              </div>
             </div>
           </div>
         </div>
