@@ -9,11 +9,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 /** TOEIC score bands for practice question filtering */
 const SCORE_BANDS: Array<{ min: number; max: number; label: string }> = [
-  { min: 10,  max: 349, label: 'easy'   },  // 10-349
-  { min: 350, max: 549, label: 'easy'   },  // 350-549
-  { min: 550, max: 699, label: 'medium' },  // 550-699
-  { min: 700, max: 849, label: 'hard'   },  // 700-849
-  { min: 850, max: 990, label: 'expert' },  // 850-990
+  { min: 10, max: 349, label: 'easy' }, // 10-349
+  { min: 350, max: 549, label: 'easy' }, // 350-549
+  { min: 550, max: 699, label: 'medium' }, // 550-699
+  { min: 700, max: 849, label: 'hard' }, // 700-849
+  { min: 850, max: 990, label: 'expert' }, // 850-990
 ];
 
 /**
@@ -22,22 +22,160 @@ const SCORE_BANDS: Array<{ min: number; max: number; label: string }> = [
  * if its options contain rare / formal vocabulary.
  */
 const HIGH_FREQ_WORDS = new Set([
-  'the','a','an','is','are','was','were','be','been','being',
-  'have','has','had','do','does','did','will','would','can','could',
-  'should','may','might','shall','must','not','and','or','but','if',
-  'in','on','at','to','for','of','with','by','from','up','out','as',
-  'it','its','this','that','these','those','he','she','they','we','i',
-  'me','him','her','them','us','my','your','his','our','their',
-  'what','which','when','where','who','how','why',
-  'time','work','day','good','new','first','last','long','great','little',
-  'own','right','old','big','high','different','small','large','next',
-  'early','young','important','public','private','real','best','free',
-  'start','place','get','make','go','know','take','see','come','think',
-  'look','want','give','use','find','tell','ask','seem','feel','try',
-  'leave','call','keep','let','begin','show','hear','play','run','move',
-  'live','believe','hold','bring','happen','write','provide','sit','stand',
-  'lose','pay','meet','include','continue','set','learn','change','lead',
-  'follow','stop','create','speak','read','spend','grow','open','walk',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'can',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'must',
+  'not',
+  'and',
+  'or',
+  'but',
+  'if',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'with',
+  'by',
+  'from',
+  'up',
+  'out',
+  'as',
+  'it',
+  'its',
+  'this',
+  'that',
+  'these',
+  'those',
+  'he',
+  'she',
+  'they',
+  'we',
+  'i',
+  'me',
+  'him',
+  'her',
+  'them',
+  'us',
+  'my',
+  'your',
+  'his',
+  'our',
+  'their',
+  'what',
+  'which',
+  'when',
+  'where',
+  'who',
+  'how',
+  'why',
+  'time',
+  'work',
+  'day',
+  'good',
+  'new',
+  'first',
+  'last',
+  'long',
+  'great',
+  'little',
+  'own',
+  'right',
+  'old',
+  'big',
+  'high',
+  'different',
+  'small',
+  'large',
+  'next',
+  'early',
+  'young',
+  'important',
+  'public',
+  'private',
+  'real',
+  'best',
+  'free',
+  'start',
+  'place',
+  'get',
+  'make',
+  'go',
+  'know',
+  'take',
+  'see',
+  'come',
+  'think',
+  'look',
+  'want',
+  'give',
+  'use',
+  'find',
+  'tell',
+  'ask',
+  'seem',
+  'feel',
+  'try',
+  'leave',
+  'call',
+  'keep',
+  'let',
+  'begin',
+  'show',
+  'hear',
+  'play',
+  'run',
+  'move',
+  'live',
+  'believe',
+  'hold',
+  'bring',
+  'happen',
+  'write',
+  'provide',
+  'sit',
+  'stand',
+  'lose',
+  'pay',
+  'meet',
+  'include',
+  'continue',
+  'set',
+  'learn',
+  'change',
+  'lead',
+  'follow',
+  'stop',
+  'create',
+  'speak',
+  'read',
+  'spend',
+  'grow',
+  'open',
+  'walk',
 ]);
 
 /**
@@ -45,26 +183,124 @@ const HIGH_FREQ_WORDS = new Set([
  * Sourced from Academic Word List (AWL) and TOEIC advanced vocab patterns.
  */
 const ADVANCED_WORDS = new Set([
-  'accommodate','acquisition','analysis','approach','appropriate','aspect',
-  'assessment','assume','authority','benefit','category','clause','commission',
-  'commitment','communication','compensation','complex','comprehensive','concept',
-  'conclude','conduct','consequence','considerable','constitute','constraint',
-  'contribution','controversy','convention','corporate','corresponding',
-  'criteria','cumulative','demonstrate','despite','determine','deviate',
-  'dimension','discrimination','distribution','domestic','economic','efficiency',
-  'emerge','emphasis','entity','environment','establish','evaluation','evidence',
-  'evolve','exclude','explicit','facilitate','factor','framework','function',
-  'implement','implication','indicate','interpret','investment','justify',
-  'legislation','maintenance','mechanism','methodology','negligible','objective',
-  'obligation','obtain','paramount','perceive','perspective','phenomenon',
-  'policy','preliminary','principle','priority','procedure','provision',
-  'regulatory','reinforce','relevant','revenue','subsequent','substantial',
-  'sufficient','sustainability','systematically','terminate','therefore',
-  'transaction','transition','utilize','valid','variable','whereas',
-  'amendment','arbitration','compliance','confidential','contractual',
-  'disbursement','escalation','expenditure','fluctuate','incumbent',
-  'jurisdiction','liability','mandate','mediation','negotiate','protocol',
-  'reimbursement','remittance','stipulation','subcontract','tariff',
+  'accommodate',
+  'acquisition',
+  'analysis',
+  'approach',
+  'appropriate',
+  'aspect',
+  'assessment',
+  'assume',
+  'authority',
+  'benefit',
+  'category',
+  'clause',
+  'commission',
+  'commitment',
+  'communication',
+  'compensation',
+  'complex',
+  'comprehensive',
+  'concept',
+  'conclude',
+  'conduct',
+  'consequence',
+  'considerable',
+  'constitute',
+  'constraint',
+  'contribution',
+  'controversy',
+  'convention',
+  'corporate',
+  'corresponding',
+  'criteria',
+  'cumulative',
+  'demonstrate',
+  'despite',
+  'determine',
+  'deviate',
+  'dimension',
+  'discrimination',
+  'distribution',
+  'domestic',
+  'economic',
+  'efficiency',
+  'emerge',
+  'emphasis',
+  'entity',
+  'environment',
+  'establish',
+  'evaluation',
+  'evidence',
+  'evolve',
+  'exclude',
+  'explicit',
+  'facilitate',
+  'factor',
+  'framework',
+  'function',
+  'implement',
+  'implication',
+  'indicate',
+  'interpret',
+  'investment',
+  'justify',
+  'legislation',
+  'maintenance',
+  'mechanism',
+  'methodology',
+  'negligible',
+  'objective',
+  'obligation',
+  'obtain',
+  'paramount',
+  'perceive',
+  'perspective',
+  'phenomenon',
+  'policy',
+  'preliminary',
+  'principle',
+  'priority',
+  'procedure',
+  'provision',
+  'regulatory',
+  'reinforce',
+  'relevant',
+  'revenue',
+  'subsequent',
+  'substantial',
+  'sufficient',
+  'sustainability',
+  'systematically',
+  'terminate',
+  'therefore',
+  'transaction',
+  'transition',
+  'utilize',
+  'valid',
+  'variable',
+  'whereas',
+  'amendment',
+  'arbitration',
+  'compliance',
+  'confidential',
+  'contractual',
+  'disbursement',
+  'escalation',
+  'expenditure',
+  'fluctuate',
+  'incumbent',
+  'jurisdiction',
+  'liability',
+  'mandate',
+  'mediation',
+  'negotiate',
+  'protocol',
+  'reimbursement',
+  'remittance',
+  'stipulation',
+  'subcontract',
+  'tariff',
 ]);
 
 // ─── Ollama types ──────────────────────────────────────────────────────────────
@@ -73,6 +309,7 @@ interface OllamaGenerateRequest {
   model: string;
   prompt: string;
   stream: false;
+  think?: boolean; // Qwen3: false = disable thinking mode (no <think> overhead)
   options?: {
     num_predict?: number;
     temperature?: number;
@@ -108,8 +345,9 @@ export class PracticeExplanationService implements OnModuleInit {
   private readonly MODEL = process.env.OLLAMA_MODEL ?? 'qwen3';
 
   /** Ollama base URL */
-  private readonly OLLAMA_URL =
-    (process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434').replace(/\/$/, '');
+  private readonly OLLAMA_URL = (
+    process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'
+  ).replace(/\/$/, '');
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -124,7 +362,9 @@ export class PracticeExplanationService implements OnModuleInit {
 
     // Keep historical TOEIC practice explanations in one stable display format.
     void this.normalizeExistingPracticeExplanations().catch((err) =>
-      this.logger.warn(`Practice explanation normalization skipped: ${String(err)}`),
+      this.logger.warn(
+        `Practice explanation normalization skipped: ${String(err)}`,
+      ),
     );
 
     // Trigger one immediate pass on startup (after 30s delay) without waiting for cron
@@ -145,7 +385,9 @@ export class PracticeExplanationService implements OnModuleInit {
   @Cron(CronExpression.EVERY_5_MINUTES)
   async explainPendingToeicPracticeQuestions(): Promise<void> {
     if (this.isProcessing) {
-      this.logger.debug('Previous explanation job still running. Skipping this cycle.');
+      this.logger.debug(
+        'Previous explanation job still running. Skipping this cycle.',
+      );
       return;
     }
 
@@ -159,56 +401,56 @@ export class PracticeExplanationService implements OnModuleInit {
 
     this.isProcessing = true;
     try {
-
-    const pending = await this.prisma.toeicPracticeQuestion.findMany({
-      where: {
-        ai_explained_at: null,
-        is_published: true,
-        options: { some: { is_correct: true } }, // only explain if there IS a correct answer
-      },
-      take: this.BATCH_SIZE,
-      orderBy: { id: 'asc' },
-      select: {
-        id: true,
-        skill_area: true,
-        part: true,
-        stem: true,
-        reading_passage: true,
-        explanation: true,
-        options: {
-          select: { option_key: true, option_text: true, is_correct: true },
-          orderBy: { sort_order: 'asc' },
+      const pending = await this.prisma.toeicPracticeQuestion.findMany({
+        where: {
+          ai_explained_at: null,
+          is_published: true,
+          options: { some: { is_correct: true } }, // only explain if there IS a correct answer
         },
-      },
-    });
+        take: this.BATCH_SIZE,
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          skill_area: true,
+          part: true,
+          stem: true,
+          reading_passage: true,
+          explanation: true,
+          options: {
+            select: { option_key: true, option_text: true, is_correct: true },
+            orderBy: { sort_order: 'asc' },
+          },
+        },
+      });
 
-    if (pending.length === 0) return;
+      if (pending.length === 0) return;
 
-    this.logger.log(
-      `Background AI: explaining ${pending.length} TOEIC practice question(s)...`,
-    );
+      this.logger.log(
+        `Background AI: explaining ${pending.length} TOEIC practice question(s)...`,
+      );
 
-    const groups = this.groupByPassage(pending);
+      const groups = this.groupByPassage(pending);
 
-    for (const group of groups) {
-      try {
-        await this.explainGroup(group);
-      } catch (err) {
-        this.logger.warn(
-          `Failed to explain group: ${String(err)}`,
-        );
+      for (const group of groups) {
+        try {
+          await this.explainGroup(group);
+        } catch (err) {
+          this.logger.warn(`Failed to explain group: ${String(err)}`);
+        }
+
+        // Nghỉ 1s giữa mỗi group để Ollama giải phóng GPU/RAM
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      
-      // Nghỉ 1s giữa mỗi group để Ollama giải phóng GPU/RAM
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
     } finally {
       this.isProcessing = false;
     }
   }
 
   private groupByPassage(questions: any[]) {
-    const groups = new Map<string, { passage: string | null; questions: any[] }>();
+    const groups = new Map<
+      string,
+      { passage: string | null; questions: any[] }
+    >();
     for (const q of questions) {
       if (!q.reading_passage || (q.part !== 6 && q.part !== 7)) {
         groups.set(`solo_${q.id}`, { passage: null, questions: [q] });
@@ -233,12 +475,18 @@ export class PracticeExplanationService implements OnModuleInit {
     return results;
   }
 
-  private async explainGroup(group: { passage: string | null; questions: any[] }): Promise<void> {
+  private async explainGroup(group: {
+    passage: string | null;
+    questions: any[];
+  }): Promise<void> {
     if (!group.passage || group.questions.length === 1) {
       // Fallback cho Part 5 hoặc passage bị tách lẻ 1 câu
       for (const q of group.questions) {
         const explanation = await this.generateToeicExplanation(q);
-        const normalized = this.toNormalizedExplanationTemplate(explanation, q.options);
+        const normalized = this.toNormalizedExplanationTemplate(
+          explanation,
+          q.options,
+        );
         await this.prisma.toeicPracticeQuestion.update({
           where: { id: q.id },
           data: {
@@ -254,7 +502,10 @@ export class PracticeExplanationService implements OnModuleInit {
     const smartTruncate = (text: string, maxChars: number): string => {
       if (!text || text.length <= maxChars) return text;
       const truncated = text.slice(0, maxChars);
-      const lastPeriod = Math.max(truncated.lastIndexOf('. '), truncated.lastIndexOf('.\\n'));
+      const lastPeriod = Math.max(
+        truncated.lastIndexOf('. '),
+        truncated.lastIndexOf('.\\n'),
+      );
       return lastPeriod > maxChars * 0.6
         ? truncated.slice(0, lastPeriod + 1) + ' [...]'
         : truncated + ' [...]';
@@ -263,18 +514,26 @@ export class PracticeExplanationService implements OnModuleInit {
     const maxChars = 800;
     const passageSnippet = `\\n\\nReading Passage:\\n${smartTruncate(group.passage, maxChars)}`;
 
-    const questionBlock = group.questions.map((q, i) => {
-      const optionList = q.options
-        .map((o: any) => `  ${o.option_key}. ${o.option_text}${o.is_correct ? ' ✓' : ''}`)
-        .join('\\n');
-      const baseHint = q.explanation?.trim() ? `\\nHint: ${q.explanation}` : '';
-      return `Q${i + 1} (Part ${q.part ?? '?'} - #${q.id}):\\nStem: ${q.stem}\\nOptions:\\n${optionList}${baseHint}`;
-    }).join('\\n\\n');
+    const questionBlock = group.questions
+      .map((q, i) => {
+        const optionList = q.options
+          .map(
+            (o: any) =>
+              `  ${o.option_key}. ${o.option_text}${o.is_correct ? ' ✓' : ''}`,
+          )
+          .join('\\n');
+        const baseHint = q.explanation?.trim()
+          ? `\\nHint: ${q.explanation}`
+          : '';
+        return `Q${i + 1} (Part ${q.part ?? '?'} - #${q.id}):\\nStem: ${q.stem}\\nOptions:\\n${optionList}${baseHint}`;
+      })
+      .join('\\n\\n');
 
-    const formatStr = group.questions.map((_, i) => `Q${i + 1}: [explanation]`).join('\\n');
+    const formatStr = group.questions
+      .map((_, i) => `Q${i + 1}: [explanation]`)
+      .join('\\n');
 
     const prompt =
-      `/no_think\n` +
       `Bạn là gia sư TOEIC. Trả lời ngắn gọn. Giải thích bằng tiếng Việt.\n` +
       `Với mỗi câu hỏi dưới đây, giải thích ngắn gọn TẠI SAO đáp án đúng là đúng và TẠI SAO các đáp án khác sai.\n` +
       `${passageSnippet}\n\n` +
@@ -285,8 +544,9 @@ export class PracticeExplanationService implements OnModuleInit {
       model: this.MODEL,
       prompt,
       stream: false,
-      options: { 
-        num_predict: Math.max(200, group.questions.length * 200), 
+      think: false, // Disable Qwen3 thinking mode — answer fits in token budget
+      options: {
+        num_predict: Math.max(600, group.questions.length * 300),
         temperature: 0.1,
         num_ctx: 4096,
         top_k: 40,
@@ -303,9 +563,18 @@ export class PracticeExplanationService implements OnModuleInit {
 
     if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
 
-    const data = (await res.json()) as OllamaGenerateResponse;
-    const raw = (data.response ?? '').trim();
-    if (!raw) throw new Error('Empty Ollama response in grouped mode');
+    const data = (await res.json()) as OllamaGenerateResponse & {
+      error?: string;
+    };
+    if (data.error) throw new Error(`Ollama Error: ${data.error}`);
+    this.logger.debug(`Ollama raw data: ${JSON.stringify(data).substring(0, 500)}`);
+    let raw = (data.response ?? '').trim();
+    // Strip <think>...</think> tags if this is a reasoning model
+    raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    if (!raw) {
+       this.logger.error(`Ollama raw string was empty. Data: ${JSON.stringify(data)}`);
+       throw new Error('Empty Ollama response in grouped mode');
+    }
 
     const explanations = this.parseGroupResponse(raw, group.questions.length);
 
@@ -361,17 +630,22 @@ export class PracticeExplanationService implements OnModuleInit {
     stem: string;
     readingPassage?: string | null;
     options: Array<{ option_text: string }>;
-  }): { score: number; label: string; scoreBandMin: number; scoreBandMax: number } {
+  }): {
+    score: number;
+    label: string;
+    scoreBandMin: number;
+    scoreBandMax: number;
+  } {
     let score = 0.3; // baseline
 
     // 1. Part-based base difficulty
     const partBase: Record<number, number> = {
       1: 0.15, // Photo description — very accessible
-      2: 0.20, // Q&R — short exchanges
-      3: 0.40, // Conversations — moderate
+      2: 0.2, // Q&R — short exchanges
+      3: 0.4, // Conversations — moderate
       4: 0.45, // Talks — moderate-hard
       5: 0.35, // Incomplete sentences — grammar focus
-      6: 0.50, // Text completion — context + grammar
+      6: 0.5, // Text completion — context + grammar
       7: 0.65, // Reading comprehension — hardest
     };
     if (params.part && partBase[params.part] !== undefined) {
@@ -395,14 +669,17 @@ export class PracticeExplanationService implements OnModuleInit {
       const advancedRatio = advancedCount / words.length;
       const highFreqRatio = highFreqCount / words.length;
 
-      score += advancedRatio * 0.25;  // advanced vocab → harder
-      score -= highFreqRatio * 0.10;  // basic vocab → easier
+      score += advancedRatio * 0.25; // advanced vocab → harder
+      score -= highFreqRatio * 0.1; // basic vocab → easier
     }
 
     // 3. Option similarity (Levenshtein-like quick heuristic)
     if (params.options.length >= 2) {
       const texts = params.options.map((o) =>
-        o.option_text.toLowerCase().replace(/[^a-z\s]/g, '').trim(),
+        o.option_text
+          .toLowerCase()
+          .replace(/[^a-z\s]/g, '')
+          .trim(),
       );
       let totalSimilarity = 0;
       let pairs = 0;
@@ -422,7 +699,7 @@ export class PracticeExplanationService implements OnModuleInit {
     // 4. Passage length penalty (long passages → harder)
     if (params.readingPassage) {
       const wordCount = params.readingPassage.split(/\s+/).length;
-      if (wordCount > 200) score += 0.10;
+      if (wordCount > 200) score += 0.1;
       else if (wordCount > 100) score += 0.05;
     }
 
@@ -468,13 +745,19 @@ export class PracticeExplanationService implements OnModuleInit {
     stem: string;
     reading_passage?: string | null;
     explanation?: string | null;
-    options: Array<{ option_key: string; option_text: string; is_correct: boolean }>;
+    options: Array<{
+      option_key: string;
+      option_text: string;
+      is_correct: boolean;
+    }>;
   }): Promise<string> {
     const correctOpt = q.options.find((o) => o.is_correct);
     if (!correctOpt) throw new Error('No correct option — skip');
 
     const optionList = q.options
-      .map((o) => `  ${o.option_key}. ${o.option_text}${o.is_correct ? ' ✓' : ''}`)
+      .map(
+        (o) => `  ${o.option_key}. ${o.option_text}${o.is_correct ? ' ✓' : ''}`,
+      )
       .join('\n');
 
     const baseHint = q.explanation?.trim()
@@ -499,7 +782,6 @@ export class PracticeExplanationService implements OnModuleInit {
       : '';
 
     const prompt =
-      `/no_think\n` +
       `Bạn là gia sư TOEIC. Trả lời ngắn gọn, tối đa 150 từ. ` +
       `Giải thích TẠI SAO đáp án đúng là đúng, và TẠI SAO từng đáp án sai là sai. ` +
       `Giải thích cụ thể về quy tắc ngữ pháp, từ vựng hoặc logic. ` +
@@ -520,14 +802,16 @@ export class PracticeExplanationService implements OnModuleInit {
       6: 4096,
       7: 4096,
     };
-    const numCtx = q.part && NUM_CTX_BY_PART[q.part] ? NUM_CTX_BY_PART[q.part] : 2048;
+    const numCtx =
+      q.part && NUM_CTX_BY_PART[q.part] ? NUM_CTX_BY_PART[q.part] : 2048;
 
     const body: OllamaGenerateRequest = {
       model: this.MODEL,
       prompt,
       stream: false,
+      think: false, // Disable Qwen3 thinking mode — answer fits in token budget
       options: {
-        num_predict: 400,
+        num_predict: 600,
         temperature: 0.2,
         num_ctx: numCtx,
         top_k: 40,
@@ -544,9 +828,18 @@ export class PracticeExplanationService implements OnModuleInit {
 
     if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
 
-    const data = (await res.json()) as OllamaGenerateResponse;
-    const raw = (data.response ?? '').trim();
-    if (!raw) throw new Error('Empty Ollama response');
+    const data = (await res.json()) as OllamaGenerateResponse & {
+      error?: string;
+    };
+    if (data.error) throw new Error(`Ollama Error: ${data.error}`);
+    this.logger.debug(`Ollama raw data (single): ${JSON.stringify(data).substring(0, 500)}`);
+    let raw = (data.response ?? '').trim();
+    // Strip <think>...</think> tags
+    raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    if (!raw) {
+        this.logger.error(`Ollama raw string was empty (single). Data: ${JSON.stringify(data)}`);
+        throw new Error('Empty Ollama response');
+    }
     return this.normalizeExplanationWhitespace(raw);
   }
 
@@ -603,10 +896,10 @@ export class PracticeExplanationService implements OnModuleInit {
     min: number;
     max: number;
   } {
-    if (score < 0.25) return { label: 'easy',   min: 10,  max: 449 };
-    if (score < 0.45) return { label: 'easy',   min: 350, max: 599 };
-    if (score < 0.60) return { label: 'medium', min: 500, max: 749 };
-    if (score < 0.78) return { label: 'hard',   min: 650, max: 899 };
-    return               { label: 'expert', min: 800, max: 990 };
+    if (score < 0.25) return { label: 'easy', min: 10, max: 449 };
+    if (score < 0.45) return { label: 'easy', min: 350, max: 599 };
+    if (score < 0.6) return { label: 'medium', min: 500, max: 749 };
+    if (score < 0.78) return { label: 'hard', min: 650, max: 899 };
+    return { label: 'expert', min: 800, max: 990 };
   }
 }

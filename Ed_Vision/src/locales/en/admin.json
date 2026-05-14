@@ -87,7 +87,8 @@
     "mlResults": "ML Results",
     "notificationManagement": "Notification Management",
     "contentApproval": "Content Approval",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "ragSystem": "RAG System (AI)"
   },
   "programEffectivenessPage": {
     "title": "Program Effectiveness",

@@ -20,7 +20,13 @@ function absoluteUploadsDir(...parts: string[]): string {
 }
 
 function practiceImagesRelDir(slug: string): string {
-  return join('certificate', 'TOEIC', 'toeic-listening-practice', slug, 'images');
+  return join(
+    'certificate',
+    'TOEIC',
+    'toeic-listening-practice',
+    slug,
+    'images',
+  );
 }
 import {
   IsBoolean,
@@ -273,7 +279,10 @@ interface ParsedPracticeQuestion {
   needsReview?: boolean;
 }
 
-type ToeicPracticeImportScope = 'single_part' | 'full_reading' | 'full_listening';
+type ToeicPracticeImportScope =
+  | 'single_part'
+  | 'full_reading'
+  | 'full_listening';
 
 type ToeicOptionKey = 'A' | 'B' | 'C' | 'D';
 
@@ -367,7 +376,9 @@ export class ToeicPracticeImportService {
     return parsed >= 1 && parsed <= 200 ? parsed : null;
   }
 
-  private resolveImportScope(dto: ToeicPracticeImportDto): ToeicPracticeImportScope {
+  private resolveImportScope(
+    dto: ToeicPracticeImportDto,
+  ): ToeicPracticeImportScope {
     if (dto.import_scope) return dto.import_scope;
     if (dto.toeic_part) return 'single_part';
     return 'full_reading';
@@ -400,7 +411,10 @@ export class ToeicPracticeImportService {
     return 7;
   }
 
-  private partAllowedInScope(part: number, scope: ToeicPracticeImportScope): boolean {
+  private partAllowedInScope(
+    part: number,
+    scope: ToeicPracticeImportScope,
+  ): boolean {
     if (scope === 'single_part') return part >= 1 && part <= 7;
     if (scope === 'full_reading') return part >= 5 && part <= 7;
     return part >= 1 && part <= 4;
@@ -439,15 +453,18 @@ export class ToeicPracticeImportService {
     const hasPart6 = /\bpart\s*(6|vi)\b(?!\s*[ivxi\d])/i.test(normalized);
     const hasPart7 = /\bpart\s*(7|vii)\b(?!\s*[ivxi\d])/i.test(normalized);
 
-    const hasListeningPartHeaders = hasPart1 || hasPart2 || hasPart3 || hasPart4;
+    const hasListeningPartHeaders =
+      hasPart1 || hasPart2 || hasPart3 || hasPart4;
     const hasReadingPartHeaders = hasPart5 || hasPart6 || hasPart7;
 
     const questionNumbers = parsed
       .map((q) => q.questionNumber)
       .filter((n): n is number => typeof n === 'number' && n > 0);
 
-    const minQuestionNumber = questionNumbers.length > 0 ? Math.min(...questionNumbers) : 0;
-    const maxQuestionNumber = questionNumbers.length > 0 ? Math.max(...questionNumbers) : 0;
+    const minQuestionNumber =
+      questionNumbers.length > 0 ? Math.min(...questionNumbers) : 0;
+    const maxQuestionNumber =
+      questionNumbers.length > 0 ? Math.max(...questionNumbers) : 0;
     const questionNumbersStartAbove100 = minQuestionNumber >= 101;
 
     // Heuristic: is this a full test?
@@ -497,22 +514,26 @@ export class ToeicPracticeImportService {
   ): number | null {
     // ── single_part: trust detectedPart header mismatch but otherwise force dto.toeic_part
     if (scope === 'single_part') {
-      if (!dto.toeic_part || dto.toeic_part < 1 || dto.toeic_part > 7) return null;
+      if (!dto.toeic_part || dto.toeic_part < 1 || dto.toeic_part > 7)
+        return null;
       const targetPart = dto.toeic_part;
 
       if (fileInfo.likelyFullTest) {
         // Chỉ lấy câu mà parser đã gán đúng part từ PART header
         if (parsed.detectedPart === targetPart) return targetPart;
-        
+
         // Nếu không có PART header nhưng có số thứ tự câu hỏi (vd: 1-100 là Listening)
-        if (parsed.detectedPart === null && typeof parsed.questionNumber === 'number') {
+        if (
+          parsed.detectedPart === null &&
+          typeof parsed.questionNumber === 'number'
+        ) {
           const n = parsed.questionNumber;
           let inferred: number | null = null;
           if (n >= 1 && n <= 6) inferred = 1;
           else if (n >= 7 && n <= 31) inferred = 2;
           else if (n >= 32 && n <= 70) inferred = 3;
           else if (n >= 71 && n <= 100) inferred = 4;
-          
+
           if (inferred === targetPart) return targetPart;
         }
 
@@ -528,7 +549,11 @@ export class ToeicPracticeImportService {
 
     // ── full_listening ──────────────────────────────────────────────────────────
     if (scope === 'full_listening') {
-      if (parsed.detectedPart && parsed.detectedPart >= 1 && parsed.detectedPart <= 4) {
+      if (
+        parsed.detectedPart &&
+        parsed.detectedPart >= 1 &&
+        parsed.detectedPart <= 4
+      ) {
         return parsed.detectedPart;
       }
       if (typeof parsed.questionNumber === 'number') {
@@ -543,7 +568,11 @@ export class ToeicPracticeImportService {
     // Case 1: Full test file — filter out Listening questions
     if (fileInfo.likelyFullTest) {
       // Bỏ câu có PART header Listening (1-4)
-      if (parsed.detectedPart !== null && parsed.detectedPart >= 1 && parsed.detectedPart <= 4) {
+      if (
+        parsed.detectedPart !== null &&
+        parsed.detectedPart >= 1 &&
+        parsed.detectedPart <= 4
+      ) {
         return null;
       }
       // Bỏ câu số 1-100 khi file có cả Listening + Reading test header
@@ -557,11 +586,18 @@ export class ToeicPracticeImportService {
         return null;
       }
       // Câu có PART header Reading rõ ràng → dùng luôn
-      if (parsed.detectedPart !== null && parsed.detectedPart >= 5 && parsed.detectedPart <= 7) {
+      if (
+        parsed.detectedPart !== null &&
+        parsed.detectedPart >= 5 &&
+        parsed.detectedPart <= 7
+      ) {
         return parsed.detectedPart;
       }
       // Câu số 101-200 → infer by number
-      if (typeof parsed.questionNumber === 'number' && parsed.questionNumber >= 101) {
+      if (
+        typeof parsed.questionNumber === 'number' &&
+        parsed.questionNumber >= 101
+      ) {
         return this.inferPartByQuestionNumber(parsed.questionNumber);
       }
       return null;
@@ -569,7 +605,11 @@ export class ToeicPracticeImportService {
 
     // Case 2: File thuần Reading, câu bắt đầu từ 101+
     if (fileInfo.questionNumbersStartAbove100) {
-      if (parsed.detectedPart !== null && parsed.detectedPart >= 5 && parsed.detectedPart <= 7) {
+      if (
+        parsed.detectedPart !== null &&
+        parsed.detectedPart >= 5 &&
+        parsed.detectedPart <= 7
+      ) {
         return parsed.detectedPart;
       }
       if (typeof parsed.questionNumber === 'number') {
@@ -581,7 +621,8 @@ export class ToeicPracticeImportService {
 
     // Case 3: File thuần Reading, câu từ 1, có PART header rõ ràng
     if (fileInfo.likelyPureReading && parsed.detectedPart !== null) {
-      if (parsed.detectedPart >= 5 && parsed.detectedPart <= 7) return parsed.detectedPart;
+      if (parsed.detectedPart >= 5 && parsed.detectedPart <= 7)
+        return parsed.detectedPart;
       // detectedPart là 1-4 nhưng file là pure reading → ignore, fallthrough
     }
 
@@ -594,7 +635,7 @@ export class ToeicPracticeImportService {
       }
 
       const total = totalReadingQuestions > 0 ? totalReadingQuestions : 100;
-      const part5End = Math.round(total * 0.40); // 40 câu Part 5
+      const part5End = Math.round(total * 0.4); // 40 câu Part 5
       const part6End = Math.round(total * 0.52); // 12 câu Part 6 (40% + 12%)
 
       if (index < part5End) return 5;
@@ -613,16 +654,30 @@ export class ToeicPracticeImportService {
     dto: ToeicPracticeImportDto,
     scope: ToeicPracticeImportScope,
   ): number | null {
-    if (parsed.detectedPart && this.partAllowedInScope(parsed.detectedPart, scope)) {
+    if (
+      parsed.detectedPart &&
+      this.partAllowedInScope(parsed.detectedPart, scope)
+    ) {
       return parsed.detectedPart;
     }
     if (typeof parsed.questionNumber === 'number') {
-      const inferredByNumber = this.inferPartByQuestionNumber(parsed.questionNumber);
-      if (inferredByNumber && this.partAllowedInScope(inferredByNumber, scope)) {
+      const inferredByNumber = this.inferPartByQuestionNumber(
+        parsed.questionNumber,
+      );
+      if (
+        inferredByNumber &&
+        this.partAllowedInScope(inferredByNumber, scope)
+      ) {
         return inferredByNumber;
       }
     }
-    return this.inferPartByIndexInScope(index, scope as Extract<ToeicPracticeImportScope, 'full_reading' | 'full_listening'>);
+    return this.inferPartByIndexInScope(
+      index,
+      scope as Extract<
+        ToeicPracticeImportScope,
+        'full_reading' | 'full_listening'
+      >,
+    );
   }
 
   private isLikelyOptionContinuationLine(line: string): boolean {
@@ -797,7 +852,9 @@ export class ToeicPracticeImportService {
     return `${part}::${normalizedStem}::${optionSignature}`;
   }
 
-  private async loadExistingFingerprintMap(parts: number[]): Promise<Map<string, number>> {
+  private async loadExistingFingerprintMap(
+    parts: number[],
+  ): Promise<Map<string, number>> {
     if (parts.length === 0) {
       return new Map<string, number>();
     }
@@ -858,7 +915,9 @@ export class ToeicPracticeImportService {
           const tc = await page.getTextContent();
           const pageW: number = page.view?.[2] ?? 612;
           const items = (tc.items as any[])
-            .filter((it) => 'str' in it && it.str && String(it.str).trim().length > 0)
+            .filter(
+              (it) => 'str' in it && it.str && String(it.str).trim().length > 0,
+            )
             .map((it) => ({
               x: Number(it.transform?.[4] ?? 0),
               y: Number(it.transform?.[5] ?? 0),
@@ -877,7 +936,9 @@ export class ToeicPracticeImportService {
           const rightBandMin = pageW * 0.5;
 
           // Helper: gom items thành rows theo y (tolerance 3pt).
-          const groupIntoRows = (xs: Item[]): Array<{ y: number; items: Item[] }> => {
+          const groupIntoRows = (
+            xs: Item[],
+          ): Array<{ y: number; items: Item[] }> => {
             const sorted = [...xs].sort((a, b) => b.y - a.y);
             const rows: Array<{ y: number; items: Item[] }> = [];
             let cur: { y: number; items: Item[] } | null = null;
@@ -914,8 +975,7 @@ export class ToeicPracticeImportService {
             (it) => it.x >= rightBandMin && it.s.trim().length > 0,
           ).length;
           const isTwoColumn =
-            dualRowCount >= 4 ||
-            (leftItemCount >= 10 && rightItemCount >= 10);
+            dualRowCount >= 4 || (leftItemCount >= 10 && rightItemCount >= 10);
 
           const groups: Item[][] = isTwoColumn
             ? [
@@ -932,7 +992,9 @@ export class ToeicPracticeImportService {
               let line = '';
               for (const it of row.items) {
                 const needSep =
-                  line.length > 0 && !line.endsWith(' ') && !it.s.startsWith(' ');
+                  line.length > 0 &&
+                  !line.endsWith(' ') &&
+                  !it.s.startsWith(' ');
                 line += (needSep ? ' ' : '') + it.s;
               }
               const cleaned = line.replace(/\s+/g, ' ').trim();
@@ -1020,11 +1082,15 @@ export class ToeicPracticeImportService {
         /^(\d{1,3})[.,]\s+(.+?)\s+(\d{1,3})[.,]\s+(.+)$/,
       );
       if (dualStem) {
-        const n1 = +dualStem[1], n2 = +dualStem[3];
+        const n1 = +dualStem[1],
+          n2 = +dualStem[3];
         if (
-          n1 >= 100 && n1 <= 200 &&
-          n2 >= 100 && n2 <= 200 &&
-          n2 > n1 && n2 - n1 <= 10
+          n1 >= 100 &&
+          n1 <= 200 &&
+          n2 >= 100 &&
+          n2 <= 200 &&
+          n2 > n1 &&
+          n2 - n1 <= 10
         ) {
           pushLabel(n1, dualStem[2]);
           pushLabel(n2, dualStem[4]);
@@ -1035,12 +1101,7 @@ export class ToeicPracticeImportService {
       // 2) Nhãn không có separator: "122 Mr. Singh wants..."
       // Chỉ áp dụng NGOÀI passage để tránh nhầm với địa chỉ kiểu "161 Sussex Street".
       const noSep = line.match(/^(\d{2,3})\s+([A-Z].+)$/);
-      if (
-        noSep &&
-        +noSep[1] >= 101 &&
-        +noSep[1] <= 200 &&
-        !inPassage
-      ) {
+      if (noSep && +noSep[1] >= 101 && +noSep[1] <= 200 && !inPassage) {
         pushLabel(+noSep[1], noSep[2]);
         continue;
       }
@@ -1062,7 +1123,10 @@ export class ToeicPracticeImportService {
           for (let strip = 1; strip <= 2 && strip < s.length; strip++) {
             const cand = +s.slice(strip);
             if (cand < 1 || cand > 200) continue;
-            if (cand === expected) { n = cand; break; }
+            if (cand === expected) {
+              n = cand;
+              break;
+            }
             // Truncation case: "97" sau "196" → kỳ vọng 197 (= 97 + 100).
             if (lastNum >= 100 && cand < 100 && expected - cand === 100) {
               n = expected;
@@ -1091,7 +1155,11 @@ export class ToeicPracticeImportService {
 
         // Nếu vẫn ngoài range TOEIC (1-200), bỏ qua việc coi đây là nhãn câu.
         // Trong passage, đặc biệt skip cả số 1-9 + period (list-marker).
-        if (n < 1 || n > 200 || (inPassage && n < 100 && labelM[1].length === 1)) {
+        if (
+          n < 1 ||
+          n > 200 ||
+          (inPassage && n < 100 && labelM[1].length === 1)
+        ) {
           // Trong passage, single-digit "1." là list marker — bỏ qua nhãn,
           // không push vào out để parser không tạo Q-rác.
           if (inPassage && labelM[1].length === 1 && n < 10) {
@@ -1126,7 +1194,10 @@ export class ToeicPracticeImportService {
       if (isOptA(line) && pendingNewQ && lastNum !== null) {
         let lastDIdx = -1;
         for (let j = out.length - 1; j >= 0; j--) {
-          if (isOptD(out[j])) { lastDIdx = j; break; }
+          if (isOptD(out[j])) {
+            lastDIdx = j;
+            break;
+          }
         }
         const expected = lastNum + 1;
 
@@ -1142,7 +1213,10 @@ export class ToeicPracticeImportService {
 
         let stemIdx = -1;
         for (let j = lastDIdx + 1; j < out.length; j++) {
-          if (isStemLike(out[j])) { stemIdx = j; break; }
+          if (isStemLike(out[j])) {
+            stemIdx = j;
+            break;
+          }
         }
         if (stemIdx >= 0) {
           out[stemIdx] = `${expected}. ${out[stemIdx]}`;
@@ -1220,13 +1294,15 @@ export class ToeicPracticeImportService {
     if (ext === '.doc') {
       try {
         const mod = await import('word-extractor');
-        const WordExtractorCtor = (mod as any).default ?? (mod as any);
+        const WordExtractorCtor = mod.default ?? mod;
         const extractor = new WordExtractorCtor();
         const doc = await extractor.extract(file.path);
         const body = doc?.getBody?.() ?? '';
         return String(body);
       } catch (err) {
-        this.logger.warn(`Cannot parse DOC with word-extractor: ${String(err)}`);
+        this.logger.warn(
+          `Cannot parse DOC with word-extractor: ${String(err)}`,
+        );
       }
     }
 
@@ -1251,7 +1327,9 @@ export class ToeicPracticeImportService {
           await worker.terminate();
         }
       } catch (err) {
-        this.logger.warn(`Cannot parse image with tesseract OCR: ${String(err)}`);
+        this.logger.warn(
+          `Cannot parse image with tesseract OCR: ${String(err)}`,
+        );
       }
     }
 
@@ -1263,19 +1341,21 @@ export class ToeicPracticeImportService {
   // ── MCQ Parser ───────────────────────────────────────────────────────────────
 
   /**
-    * Parse TOEIC MCQ text from loose OCR/doc text.
+   * Parse TOEIC MCQ text from loose OCR/doc text.
    *
-    * Accepts non-rigid layouts:
-    * - question + options across multiple lines
-    * - inline options on one line
-    * - optional inline answer or separate answer-key block
-    * - optional part headers (PART 5 / Phan 6 / ...)
+   * Accepts non-rigid layouts:
+   * - question + options across multiple lines
+   * - inline options on one line
+   * - optional inline answer or separate answer-key block
+   * - optional part headers (PART 5 / Phan 6 / ...)
    */
   /**
    * Public alias để các service khác (vd: DiagnosticImportService) tái sử dụng
    * cùng pipeline parser câu hỏi (ổn định cho Part 5/6/7 reading 100 câu).
    */
-  public parsePracticeQuestionsFromText(rawText: string): ParsedPracticeQuestion[] {
+  public parsePracticeQuestionsFromText(
+    rawText: string,
+  ): ParsedPracticeQuestion[] {
     return this.parseQuestionsFromText(rawText);
   }
 
@@ -1284,7 +1364,9 @@ export class ToeicPracticeImportService {
    * Reuses the exact same extractText + parseQuestionsFromText pipeline
    * so that callers (e.g. controller for TOEIC Reading import) get identical results.
    */
-  public async extractAndParseFromFile(file: Express.Multer.File): Promise<ParsedPracticeQuestion[]> {
+  public async extractAndParseFromFile(
+    file: Express.Multer.File,
+  ): Promise<ParsedPracticeQuestion[]> {
     const rawText = await this.extractText(file);
     if (!rawText || rawText.trim().length < 20) return [];
     return this.parseQuestionsFromText(rawText);
@@ -1356,7 +1438,7 @@ export class ToeicPracticeImportService {
       // thể nội dung. Ta luôn override về canonical khi nhận diện được stem,
       // bất kể options.length, để đảm bảo đáp án đúng (B/C) không trỏ vào text rác.
       let needsReview = false;
-      const stemPreview = wq!.stemLines.join(' ');
+      const stemPreview = wq.stemLines.join(' ');
       const isInWhichPositions =
         /in which of the positions marked\s*\[\s*1\s*\]/i.test(stemPreview);
       if (isInWhichPositions) {
@@ -1374,8 +1456,8 @@ export class ToeicPracticeImportService {
       // báo cho teacher edit lại.
       // Chỉ áp dụng cho Reading vì Listening (Part 1-4) đã có fallback riêng
       // ở `importPracticeQuestions` xử lý case không có options text.
-      const partForRecovery = wq!.detectedPart ?? currentPart;
-      const qNum = wq!.questionNumber;
+      const partForRecovery = wq.detectedPart ?? currentPart;
+      const qNum = wq.questionNumber;
       // Yêu cầu chặt: chỉ inject placeholder cho câu Reading có số 101-200 thật
       // (tránh false-positive khi mid-passage text bị regex hiểu nhầm thành Q#1).
       const isReadingQuestion =
@@ -1388,9 +1470,9 @@ export class ToeicPracticeImportService {
         options.length < 2 &&
         qNum !== null &&
         isReadingQuestion &&
-        wq!.stemLines.join(' ').trim().length >= 20
+        wq.stemLines.join(' ').trim().length >= 20
       ) {
-        const stemHasPlaceholder = wq!.stemLines.join(' ');
+        const stemHasPlaceholder = wq.stemLines.join(' ');
         options = (['A', 'B', 'C', 'D'] as const).map((k) => ({
           optionKey: k,
           optionText: `(${k}) — Vui lòng nhập đáp án (PDF gốc thiếu options của câu này)`,
@@ -1429,7 +1511,11 @@ export class ToeicPracticeImportService {
       // Chỉ gán reading_passage cho Part 6 và 7 (Part 5 không có bài đọc)
       const effectivePart = wq.detectedPart ?? currentPart;
       let assignedPassage: string | null = null;
-      if (currentPassageLines.length > 0 && effectivePart !== null && effectivePart >= 6) {
+      if (
+        currentPassageLines.length > 0 &&
+        effectivePart !== null &&
+        effectivePart >= 6
+      ) {
         const inRange =
           currentPassageQuestionRange === null ||
           (typeof wq.questionNumber === 'number' &&
@@ -1480,16 +1566,25 @@ export class ToeicPracticeImportService {
 
       // ── Passage group header: "Questions 153-155 refer to the following..." ─
       // Supports range on same line as "refer" OR split across two lines.
-      const rangeOnlyMatch = line.match(/questions?\s+(\d{1,3})\s*[-\u2013\u2014]\s*(\d{1,3})/i);
+      const rangeOnlyMatch = line.match(
+        /questions?\s+(\d{1,3})\s*[-\u2013\u2014]\s*(\d{1,3})/i,
+      );
       if (rangeOnlyMatch) {
-        const range: [number, number] = [Number(rangeOnlyMatch[1]), Number(rangeOnlyMatch[2])];
+        const range: [number, number] = [
+          Number(rangeOnlyMatch[1]),
+          Number(rangeOnlyMatch[2]),
+        ];
         if (/refer|follow|based on|liên quan|sau đây/i.test(line)) {
           // Full header on one line
           flushQuestion();
           currentPassageLines = [];
           currentPassageQuestionRange = range;
           pendingPassageRange = null;
-        } else if (!/answer|mark|choose|select|indicate|instruction|direction/i.test(line)) {
+        } else if (
+          !/answer|mark|choose|select|indicate|instruction|direction/i.test(
+            line,
+          )
+        ) {
           // Range only — wait for next line to confirm
           pendingPassageRange = range;
         }
@@ -1511,7 +1606,8 @@ export class ToeicPracticeImportService {
       // ── Question start ────────────────────────────────────────────────────
       // Allow empty rest when in a passage context (Part 6 fill-in-the-blank)
       // OR when currentPart === 6 (even if passage header not detected yet)
-      const inPassageContext = currentPassageQuestionRange !== null || currentPart === 6;
+      const inPassageContext =
+        currentPassageQuestionRange !== null || currentPart === 6;
       // Note: separator hợp lệ:
       //   - `.` (chuẩn)
       //   - `)` (vd: "101) text")
@@ -1524,8 +1620,8 @@ export class ToeicPracticeImportService {
         line.match(/^(\d{1,3})\s{2,}(.+)$/) ??
         (inPassageContext
           ? line.match(
-              /^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*(?:[).]|:(?!\d)|-(?=\s))\s*$/i,
-            )
+            /^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*(?:[).]|:(?!\d)|-(?=\s))\s*$/i,
+          )
           : null);
 
       if (qStartMatch) {
@@ -1661,7 +1757,10 @@ export class ToeicPracticeImportService {
           wq.stemLines.push(line);
         }
         // Lines after options started are ignored (e.g. passage fragments)
-      } else if (currentPassageQuestionRange !== null && !this.isLikelyAnswerKeyLine(line)) {
+      } else if (
+        currentPassageQuestionRange !== null &&
+        !this.isLikelyAnswerKeyLine(line)
+      ) {
         // ── Accumulate passage text between header and first question ────────
         currentPassageLines.push(line);
       }
@@ -1686,28 +1785,36 @@ export class ToeicPracticeImportService {
     }
 
     const rawText = await this.extractText(file);
-    const isPdf = extname(file.originalname || file.path).toLowerCase() === '.pdf';
+    const isPdf =
+      extname(file.originalname || file.path).toLowerCase() === '.pdf';
     let parsed = this.parseQuestionsFromText(rawText);
 
     let imageAssets: any[] = [];
     const importScope = this.resolveImportScope(dto);
-    const skillArea = dto.skill_area || (importScope === 'full_listening' ? 'listening' : 'reading');
+    const skillArea =
+      dto.skill_area ||
+      (importScope === 'full_listening' ? 'listening' : 'reading');
 
     const practiceSetId = `tp-${Date.now()}-${randomUUID().slice(0, 8)}`;
 
     // Always extract images from PDF for listening (Part 1 photos, Part 3/4 charts)
-    const isListening = skillArea === 'listening' ||
+    const isListening =
+      skillArea === 'listening' ||
       importScope === 'full_listening' ||
       ['1', '2', '3', '4'].includes(String(dto.toeic_part));
 
     if (isListening && isPdf) {
       this.logger.log(`[Practice] Extracting images from listening PDF...`);
       imageAssets = await this.extractImagesFromPdf(file.path, practiceSetId);
-      this.logger.log(`[Practice] Extracted ${imageAssets.length} image(s) from PDF.`);
+      this.logger.log(
+        `[Practice] Extracted ${imageAssets.length} image(s) from PDF.`,
+      );
     }
 
     if (parsed.length === 0 && isListening && isPdf) {
-      this.logger.log(`Tạo placeholder cho đề Listening Practice (Image-based PDF)...`);
+      this.logger.log(
+        `Tạo placeholder cho đề Listening Practice (Image-based PDF)...`,
+      );
       for (let i = 1; i <= 100; i++) {
         const isPart1 = i <= 6;
         const isPart2 = i > 6 && i <= 31;
@@ -1716,15 +1823,31 @@ export class ToeicPracticeImportService {
         parsed.push({
           questionNumber: i,
           detectedPart: isPart1 ? 1 : isPart2 ? 2 : isPart3 ? 3 : 4,
-          stem: isPart1 ? `[Part 1 - Câu ${i}: Nhìn vào hình ảnh và chọn mô tả đúng nhất]` : isPart2 ? `[Part 2 - Câu ${i}: Nghe câu hỏi và chọn đáp án phù hợp nhất]` : isPart3 ? `[Part 3 - Câu ${i}: Nghe đoạn hội thoại và chọn đáp án đúng]` : `[Part 4 - Câu ${i}: Nghe bài nói ngắn và chọn đáp án đúng]`,
+          stem: isPart1
+            ? `[Part 1 - Câu ${i}: Nhìn vào hình ảnh và chọn mô tả đúng nhất]`
+            : isPart2
+              ? `[Part 2 - Câu ${i}: Nghe câu hỏi và chọn đáp án phù hợp nhất]`
+              : isPart3
+                ? `[Part 3 - Câu ${i}: Nghe đoạn hội thoại và chọn đáp án đúng]`
+                : `[Part 4 - Câu ${i}: Nghe bài nói ngắn và chọn đáp án đúng]`,
           options: isPart2
-            ? ['A', 'B', 'C'].map(k => ({ optionKey: k, optionText: `(${k})`, isCorrect: false }))
-            : ['A', 'B', 'C', 'D'].map(k => ({ optionKey: k, optionText: `(${k})`, isCorrect: false })),
+            ? ['A', 'B', 'C'].map((k) => ({
+              optionKey: k,
+              optionText: `(${k})`,
+              isCorrect: false,
+            }))
+            : ['A', 'B', 'C', 'D'].map((k) => ({
+              optionKey: k,
+              optionText: `(${k})`,
+              isCorrect: false,
+            })),
           readingPassage: null,
         });
       }
     } else if (parsed.length === 0) {
-      throw new BadRequestException('Không phân tích được câu hỏi nào từ file. Vui lòng đảm bảo cấu trúc: Mỗi câu phải bắt đầu bằng số thứ tự (vd: 101.) và có đủ đáp án A, B, C, D in hoa.');
+      throw new BadRequestException(
+        'Không phân tích được câu hỏi nào từ file. Vui lòng đảm bảo cấu trúc: Mỗi câu phải bắt đầu bằng số thứ tự (vd: 101.) và có đủ đáp án A, B, C, D in hoa.',
+      );
     }
 
     const difficultyLabel = this.deriveDifficultyLabel(dto.score_band_max);
@@ -1754,24 +1877,25 @@ export class ToeicPracticeImportService {
 
     // Separate Part 1 photos from Part 3/4 graphics using estimated_part from Python extractor
     const part1Images = imageAssets
-      .filter(img => img.estimated_part === 1)
+      .filter((img) => img.estimated_part === 1)
       .sort((a, b) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
 
     const part34Images = imageAssets
-      .filter(img => img.estimated_part !== 1)
+      .filter((img) => img.estimated_part !== 1)
       .sort((a, b) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
 
     // Backward-compat: if estimated_part is missing (old extractor), use size heuristic
-    const bestImages = part1Images.length > 0
-      ? part1Images.slice(0, 6)
-      : [...imageAssets]
-          .filter(img => (img.size_bytes || 0) > 10000)
+    const bestImages =
+      part1Images.length > 0
+        ? part1Images.slice(0, 6)
+        : [...imageAssets]
+          .filter((img) => (img.size_bytes || 0) > 10000)
           .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
           .slice(0, 6)
           .sort((a, b) => {
@@ -1786,7 +1910,7 @@ export class ToeicPracticeImportService {
     if (importScope === 'single_part' && fileInfo.likelyFullTest) {
       this.logger.warn(
         `[Import] File có vẻ là full test nhưng scope=single_part(Part ${dto.toeic_part}). ` +
-        `Sẽ lọc theo detectedPart để đảm bảo độ chính xác.`
+        `Sẽ lọc theo detectedPart để đảm bảo độ chính xác.`,
       );
     }
 
@@ -1802,17 +1926,39 @@ export class ToeicPracticeImportService {
       const isTargetReading = skillArea === 'reading';
       sourceList = parsed.filter((q) => {
         const num = typeof q.questionNumber === 'number' ? q.questionNumber : 0;
-        
+
         if (isTargetReading) {
           // Reject explicitly marked Listening parts or questions 1-100
-          if (q.detectedPart !== null && q.detectedPart >= 1 && q.detectedPart <= 4) return false;
-          if (fileInfo.hasListeningTest && fileInfo.hasReadingTest && num >= 1 && num <= 100) return false;
+          if (
+            q.detectedPart !== null &&
+            q.detectedPart >= 1 &&
+            q.detectedPart <= 4
+          )
+            return false;
+          if (
+            fileInfo.hasListeningTest &&
+            fileInfo.hasReadingTest &&
+            num >= 1 &&
+            num <= 100
+          )
+            return false;
         } else {
           // isTargetListening: Reject explicitly marked Reading parts or questions 101-200
-          if (q.detectedPart !== null && q.detectedPart >= 5 && q.detectedPart <= 7) return false;
-          if (fileInfo.hasListeningTest && fileInfo.hasReadingTest && num >= 101 && num <= 200) return false;
+          if (
+            q.detectedPart !== null &&
+            q.detectedPart >= 5 &&
+            q.detectedPart <= 7
+          )
+            return false;
+          if (
+            fileInfo.hasListeningTest &&
+            fileInfo.hasReadingTest &&
+            num >= 101 &&
+            num <= 200
+          )
+            return false;
         }
-        
+
         return true;
       });
     }
@@ -1826,7 +1972,14 @@ export class ToeicPracticeImportService {
 
     for (let index = 0; index < sourceList.length; index += 1) {
       const pq = sourceList[index];
-      const part = this.resolvePartForQuestionV2(pq, index, dto, importScope, fileInfo, totalReadingQuestions);
+      const part = this.resolvePartForQuestionV2(
+        pq,
+        index,
+        dto,
+        importScope,
+        fileInfo,
+        totalReadingQuestions,
+      );
       if (!part) {
         skippedCount += 1;
         continue;
@@ -1848,10 +2001,10 @@ export class ToeicPracticeImportService {
           // Auto-inject missing options for Listening tests (Parts 1 & 2 often have no text options printed)
           const isPart2 = part === 2;
           const optKeys = isPart2 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
-          pq.options = optKeys.map(k => ({
+          pq.options = optKeys.map((k) => ({
             optionKey: k,
             optionText: `(${k})`,
-            isCorrect: false
+            isCorrect: false,
           }));
           if (!pq.stem || pq.stem.length < 3) {
             pq.stem = `[Part ${part} - Câu ${questionNumber}]`;
@@ -1865,7 +2018,11 @@ export class ToeicPracticeImportService {
         }
       }
 
-      const fingerprint = this.buildQuestionFingerprint(part, pq.stem, pq.options);
+      const fingerprint = this.buildQuestionFingerprint(
+        part,
+        pq.stem,
+        pq.options,
+      );
       if (seenInCurrentBatch.has(fingerprint)) {
         skippedCount += 1;
         skippedDuplicates.push({
@@ -1959,29 +2116,50 @@ export class ToeicPracticeImportService {
       extracted_image_count: imageAssets.length,
       skipped_duplicates: skippedDuplicates,
       manual_fill_suggestions: manualFillSuggestions,
-      questions_needing_review: [...questionsNeedingReview].sort((a, b) => a - b),
+      questions_needing_review: [...questionsNeedingReview].sort(
+        (a, b) => a - b,
+      ),
     };
   }
 
   // ── Extract Images (Python) ──────────────────────────────────────────────────
-  private async extractImagesFromPdf(pdfPath: string, slug: string): Promise<any[]> {
+  private async extractImagesFromPdf(
+    pdfPath: string,
+    slug: string,
+  ): Promise<any[]> {
     const imagesRelDir = practiceImagesRelDir(slug);
     const outputDir = absoluteUploadsDir(...imagesRelDir.split(/[\\/]/));
     if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
     const pythonExe = process.platform === 'win32' ? 'python' : 'python3';
-    const scriptPath = resolve(join(process.cwd(), '..', 'ml_service', 'pdf_image_extractor.py'));
+    const scriptPath = resolve(
+      join(process.cwd(), '..', 'ml_service', 'pdf_image_extractor.py'),
+    );
 
     if (!existsSync(scriptPath)) return [];
 
     let stdout = '';
     try {
-      const result = await execFileAsync(pythonExe, [
-        scriptPath, pdfPath, outputDir, slug, '--min-width', String(IMG_MIN_WIDTH),
-        '--min-height', String(IMG_MIN_HEIGHT), '--skill-area', 'listening'
-      ], { timeout: 120_000 });
+      const result = await execFileAsync(
+        pythonExe,
+        [
+          scriptPath,
+          pdfPath,
+          outputDir,
+          slug,
+          '--min-width',
+          String(IMG_MIN_WIDTH),
+          '--min-height',
+          String(IMG_MIN_HEIGHT),
+          '--skill-area',
+          'listening',
+        ],
+        { timeout: 120_000 },
+      );
       stdout = result.stdout;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
 
     try {
       const parsed = JSON.parse(stdout.trim());
@@ -1997,7 +2175,9 @@ export class ToeicPracticeImportService {
         part_hint: img.part_hint,
         question_number: img.question_number,
       }));
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   }
 
   // ── Import Images from Separate PDF for Existing Practice Set ────────────────
@@ -2016,12 +2196,16 @@ export class ToeicPracticeImportService {
 
     const ext = extname(file.originalname || file.path).toLowerCase();
     if (ext !== '.pdf') {
-      throw new BadRequestException('Chỉ hỗ trợ file PDF cho trích xuất hình ảnh.');
+      throw new BadRequestException(
+        'Chỉ hỗ trợ file PDF cho trích xuất hình ảnh.',
+      );
     }
 
     // Extract images
     const imageAssets = await this.extractImagesFromPdf(file.path, slug);
-    this.logger.log(`[ImportImages] Extracted ${imageAssets.length} image(s) for slug "${slug}".`);
+    this.logger.log(
+      `[ImportImages] Extracted ${imageAssets.length} image(s) for slug "${slug}".`,
+    );
 
     if (imageAssets.length === 0) {
       return { practice_set_id: slug, extracted_count: 0, part1_mapped: 0 };
@@ -2030,23 +2214,32 @@ export class ToeicPracticeImportService {
     // Load existing questions
     const questions = await this.prisma.toeicPracticeQuestion.findMany({
       where: { source_slug: slug },
-      select: { id: true, source_item_id: true, part: true, context_image: true },
+      select: {
+        id: true,
+        source_item_id: true,
+        part: true,
+        context_image: true,
+      },
     });
 
     // Part 1 images: assign to Part 1 questions that don't have images yet
     const part1Images = imageAssets
-      .filter(img => img.estimated_part === 1)
+      .filter((img) => img.estimated_part === 1)
       .sort((a: any, b: any) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
 
     const part1Questions = questions
-      .filter(q => q.part === 1 && !q.context_image)
+      .filter((q) => q.part === 1 && !q.context_image)
       .sort((a, b) => (a.source_item_id ?? 0) - (b.source_item_id ?? 0));
 
     let part1Mapped = 0;
-    for (let i = 0; i < Math.min(part1Images.length, part1Questions.length); i++) {
+    for (
+      let i = 0;
+      i < Math.min(part1Images.length, part1Questions.length);
+      i++
+    ) {
       const img = part1Images[i];
       const q = part1Questions[i];
       const imageUrl = `/uploads/${(img.url_path || img.url || '').replace(/\\/g, '/')}`;
@@ -2057,7 +2250,9 @@ export class ToeicPracticeImportService {
       part1Mapped++;
     }
 
-    this.logger.log(`[ImportImages] Part 1 mapped: ${part1Mapped} image(s). Total extracted: ${imageAssets.length}.`);
+    this.logger.log(
+      `[ImportImages] Part 1 mapped: ${part1Mapped} image(s). Total extracted: ${imageAssets.length}.`,
+    );
 
     return {
       practice_set_id: slug,
@@ -2073,7 +2268,9 @@ export class ToeicPracticeImportService {
     void accountId;
 
     if (dto.score_band_min > dto.score_band_max) {
-      throw new BadRequestException('score_band_min phải nhỏ hơn hoặc bằng score_band_max.');
+      throw new BadRequestException(
+        'score_band_min phải nhỏ hơn hoặc bằng score_band_max.',
+      );
     }
 
     if (!dto.items || dto.items.length === 0) {
@@ -2107,18 +2304,24 @@ export class ToeicPracticeImportService {
 
       const normalizedOptions = item.options
         .map((option) => ({
-          optionKey: (this.normalizeOptionKey(option.option_key) ?? '').toUpperCase(),
+          optionKey: (
+            this.normalizeOptionKey(option.option_key) ?? ''
+          ).toUpperCase(),
           optionText: option.option_text.trim(),
         }))
         .filter((option) => option.optionKey && option.optionText.length > 0)
         .filter(
           (option, optionIndex, arr) =>
-            arr.findIndex((candidate) => candidate.optionKey === option.optionKey) ===
-            optionIndex,
+            arr.findIndex(
+              (candidate) => candidate.optionKey === option.optionKey,
+            ) === optionIndex,
         );
 
       const correctOption = this.normalizeOptionKey(item.correct_option_key);
-      if (!correctOption || !normalizedOptions.some((option) => option.optionKey === correctOption)) {
+      if (
+        !correctOption ||
+        !normalizedOptions.some((option) => option.optionKey === correctOption)
+      ) {
         skippedCount += 1;
         continue;
       }
@@ -2128,8 +2331,15 @@ export class ToeicPracticeImportService {
         continue;
       }
 
-      const fingerprint = this.buildQuestionFingerprint(part, item.stem, normalizedOptions);
-      if (existingFingerprints.has(fingerprint) || seenInRequest.has(fingerprint)) {
+      const fingerprint = this.buildQuestionFingerprint(
+        part,
+        item.stem,
+        normalizedOptions,
+      );
+      if (
+        existingFingerprints.has(fingerprint) ||
+        seenInRequest.has(fingerprint)
+      ) {
         skippedCount += 1;
         skippedDuplicates.push({
           question_number: questionNumber,
@@ -2184,7 +2394,12 @@ export class ToeicPracticeImportService {
     accountId: number,
     dto: ToeicPracticeAnswerKeyImportDto,
     file: Express.Multer.File,
-    certService?: { parseToeicAnswerKeyFromFile: (file: Express.Multer.File, skillArea: string | null) => Promise<Map<number, ToeicOptionKey>> },
+    certService?: {
+      parseToeicAnswerKeyFromFile: (
+        file: Express.Multer.File,
+        skillArea: string | null,
+      ) => Promise<Map<number, ToeicOptionKey>>;
+    },
   ): Promise<ToeicPracticeAnswerKeyImportResponseDto> {
     void accountId;
 
@@ -2200,17 +2415,25 @@ export class ToeicPracticeImportService {
     // Use the robust parser from CertificateEnrollmentService if available (same as diagnostic import)
     let answerMap: Map<number, ToeicOptionKey>;
     if (certService) {
-      this.logger.log(`[AnswerKey] Using CertificateEnrollmentService parser (robust OCR + multi-format).`);
+      this.logger.log(
+        `[AnswerKey] Using CertificateEnrollmentService parser (robust OCR + multi-format).`,
+      );
       answerMap = await certService.parseToeicAnswerKeyFromFile(file, null);
-      this.logger.log(`[AnswerKey] Parsed ${answerMap.size} answer pairs via certService. Sample: ${JSON.stringify([...answerMap.entries()].slice(0, 10))}`);
+      this.logger.log(
+        `[AnswerKey] Parsed ${answerMap.size} answer pairs via certService. Sample: ${JSON.stringify([...answerMap.entries()].slice(0, 10))}`,
+      );
     } else {
       // Fallback to built-in parser
       let rawText = await this.extractText(file);
-      this.logger.log(`[AnswerKey] Extracted text length: ${rawText.length}, first 500 chars:\n${rawText.substring(0, 500)}`);
+      this.logger.log(
+        `[AnswerKey] Extracted text length: ${rawText.length}, first 500 chars:\n${rawText.substring(0, 500)}`,
+      );
 
       const ext = extname(file.originalname || file.path).toLowerCase();
       if ((!rawText.trim() || rawText.trim().length < 10) && ext === '.pdf') {
-        this.logger.log(`[AnswerKey] PDF text empty/short, attempting OCR fallback...`);
+        this.logger.log(
+          `[AnswerKey] PDF text empty/short, attempting OCR fallback...`,
+        );
         try {
           const { createWorker } = await import('tesseract.js');
           const worker = await createWorker('eng');
@@ -2219,7 +2442,9 @@ export class ToeicPracticeImportService {
             const ocrText = String(result?.data?.text ?? '');
             if (ocrText.trim().length > rawText.trim().length) {
               rawText = ocrText;
-              this.logger.log(`[AnswerKey] OCR fallback yielded ${ocrText.length} chars.`);
+              this.logger.log(
+                `[AnswerKey] OCR fallback yielded ${ocrText.length} chars.`,
+              );
             }
           } finally {
             await worker.terminate();
@@ -2234,7 +2459,9 @@ export class ToeicPracticeImportService {
       }
 
       answerMap = this.extractAnswerKeyMap(rawText);
-      this.logger.log(`[AnswerKey] Parsed ${answerMap.size} answer pairs. Sample: ${JSON.stringify([...answerMap.entries()].slice(0, 10))}`);
+      this.logger.log(
+        `[AnswerKey] Parsed ${answerMap.size} answer pairs. Sample: ${JSON.stringify([...answerMap.entries()].slice(0, 10))}`,
+      );
     }
 
     if (answerMap.size === 0) {
@@ -2318,7 +2545,7 @@ export class ToeicPracticeImportService {
         missingOptionQuestionNumbers.push(questionNumber);
         this.logger.warn(
           `[AnswerKey] Q#${questionNumber} (id=${question.id}) thiếu option "${answerKey}". ` +
-            `Tạo placeholder option "${answerKey}" và đánh dấu is_correct=true.`,
+          `Tạo placeholder option "${answerKey}" và đánh dấu is_correct=true.`,
         );
         operations.push(
           this.prisma.toeicPracticeOption.updateMany({
@@ -2379,15 +2606,18 @@ export class ToeicPracticeImportService {
       matched_questions: matchedQuestions,
       updated_questions: updatedQuestions,
       unanswered_questions: unansweredQuestions,
-      unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
-      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
+      unmatched_question_numbers: unmatchedQuestionNumbers.sort(
+        (a, b) => a - b,
+      ),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort(
+        (a, b) => a - b,
+      ),
     };
   }
 
   async listPracticeQuestions(
     filters: ToeicPracticeListFiltersDto,
   ): Promise<ToeicPracticeListResponseDto> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = {};
 
     if (filters.part !== undefined && filters.part !== null) {
@@ -2494,7 +2724,9 @@ export class ToeicPracticeImportService {
     );
 
     if (!existsSync(scriptPath)) {
-      throw new BadRequestException('audio_chunker.py not found in ml_service/');
+      throw new BadRequestException(
+        'audio_chunker.py not found in ml_service/',
+      );
     }
 
     const args = [
@@ -2564,10 +2796,10 @@ export class ToeicPracticeImportService {
         // là câu đầu nhóm → tự lan ra +1, +2 để cả 3 câu cùng có audio.
         const targets = isGroupedPart
           ? [
-              chunk.question_number,
-              chunk.question_number + 1,
-              chunk.question_number + 2,
-            ]
+            chunk.question_number,
+            chunk.question_number + 1,
+            chunk.question_number + 2,
+          ]
           : [chunk.question_number];
 
         for (const qNum of targets) {
@@ -2623,13 +2855,19 @@ export class ToeicPracticeImportService {
     }>,
   ): Promise<number> {
     if (!this.openRouterService.isAvailable()) {
-      this.logger.debug('OpenRouter not configured — skipping Part 3/4 image mapping.');
+      this.logger.debug(
+        'OpenRouter not configured — skipping Part 3/4 image mapping.',
+      );
       return 0;
     }
 
     // 1. Find Part 3/4 images on disk
     const imagesDir = absoluteUploadsDir(
-      'certificate', 'TOEIC', 'toeic-listening-practice', slug, 'images',
+      'certificate',
+      'TOEIC',
+      'toeic-listening-practice',
+      slug,
+      'images',
     );
 
     if (!existsSync(imagesDir)) {
@@ -2646,7 +2884,13 @@ export class ToeicPracticeImportService {
     // 2. Load questions from DB to know which have images already and which are Part 3/4
     const questions = await this.prisma.toeicPracticeQuestion.findMany({
       where: { source_slug: slug },
-      select: { id: true, source_item_id: true, part: true, stem: true, context_image: true },
+      select: {
+        id: true,
+        source_item_id: true,
+        part: true,
+        stem: true,
+        context_image: true,
+      },
     });
 
     const qNumToId = new Map<number, number>();
@@ -2666,17 +2910,19 @@ export class ToeicPracticeImportService {
 
     // Build question context for LLM
     const questionContexts: QuestionContext[] = questions
-      .filter(q => q.part === 3 || q.part === 4)
-      .map(q => ({
+      .filter((q) => q.part === 3 || q.part === 4)
+      .map((q) => ({
         question_number: q.source_item_id ?? 0,
         part: q.part ?? 3,
         stem: q.stem,
         transcript_hint: transcriptByQNum.get(q.source_item_id ?? 0) ?? '',
       }))
-      .filter(q => q.question_number > 0);
+      .filter((q) => q.question_number > 0);
 
     if (questionContexts.length === 0) {
-      this.logger.debug('No Part 3/4 questions found — skipping image mapping.');
+      this.logger.debug(
+        'No Part 3/4 questions found — skipping image mapping.',
+      );
       return 0;
     }
 
@@ -2702,7 +2948,9 @@ export class ToeicPracticeImportService {
       try {
         const stat = statSync(absPath);
         sizeBytes = stat.size;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Extract page number from filename pattern: {slug}_p{NNN}_img{NN}.webp
       const pageMatch = filename.match(/_p(\d+)_/);
@@ -2743,7 +2991,8 @@ export class ToeicPracticeImportService {
     // 5. Apply mappings to DB
     let mappedCount = 0;
     for (const mapping of result.mappings) {
-      if (mapping.question_numbers.length === 0 || mapping.confidence < 0.3) continue;
+      if (mapping.question_numbers.length === 0 || mapping.confidence < 0.3)
+        continue;
 
       const imageUrl = `/uploads/certificate/TOEIC/toeic-listening-practice/${slug}/images/${mapping.image_filename}`;
 

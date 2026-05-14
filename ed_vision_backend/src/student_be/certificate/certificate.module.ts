@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CertificateEnrollmentController } from './certificate-enrollment.controller';
 import { CertificateEnrollmentService } from './certificate-enrollment.service';
@@ -9,10 +9,16 @@ import { ToeicDiagnosticService } from './toeic-diagnostic.service';
 import { ToeicExamSessionService } from './toeic-exam-session.service';
 import { StudyRoomModule } from '../../study-room/study-room.module';
 import { OpenRouterModule } from '../../common/services/openrouter.module';
+import { RagModule } from '../../rag/rag.module';
 import { ProgramEffectivenessModule } from '../../admin_be/program-effectiveness/program-effectiveness.module';
 
 @Module({
-  imports: [PrismaModule, StudyRoomModule, OpenRouterModule, ProgramEffectivenessModule],
+  imports: [
+    PrismaModule,
+    StudyRoomModule,
+    OpenRouterModule, ProgramEffectivenessModule,
+    forwardRef(() => RagModule),
+  ],
   controllers: [CertificateEnrollmentController],
   providers: [
     CertificateEnrollmentService,
@@ -30,4 +36,4 @@ import { ProgramEffectivenessModule } from '../../admin_be/program-effectiveness
     ToeicExamSessionService,
   ],
 })
-export class CertificateModule {}
+export class CertificateModule { }

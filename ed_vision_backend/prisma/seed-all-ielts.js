@@ -3,16 +3,18 @@
 'use strict';
 
 const { execSync } = require('child_process');
+const path = require('path');
 
+// Cho phép chạy từ bất kỳ cwd (project root, prisma/, ...)
 const scripts = [
     {
         name: 'Band Test Questions',
-        path: 'prisma/seedBandTestQuestions.js',
+        file: 'seedBandTestQuestions.js',
         description: 'Seed câu hỏi Band Test từ band_test_questions.json',
     },
     {
         name: 'Learning Content',
-        path: 'prisma/seedLearningContent.js',
+        file: 'seedLearningContent.js',
         description: 'Seed flashcards, practice, mini-test từ learning_content.json',
     },
     // ❌ KHÔNG dùng seedIeltsAdaptive.js nữa - nó tạo hardcoded content giống nhau
@@ -34,7 +36,8 @@ for (const script of scripts) {
     console.log(`   ${script.description}`);
 
     try {
-        execSync(`node ${script.path}`, {
+        const scriptPath = path.join(__dirname, script.file);
+        execSync(`node "${scriptPath}"`, {
             encoding: 'utf-8',
             stdio: 'inherit',
         });

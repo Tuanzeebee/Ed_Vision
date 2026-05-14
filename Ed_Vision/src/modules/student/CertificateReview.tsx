@@ -144,26 +144,18 @@ export default function CertificateReview() {
     if (!latest) return c
 
     // Tính tiến độ:
-    // - TOEIC: dùng completed_parts từ reserve-points (parts thực sự đã luyện)
-    //   + kết hợp listening/reading sessions để tính chính xác hơn
+    // - TOEIC: dùng điểm gốc / điểm mục tiêu (clamp 0..100)
     // - Còn lại: progress_percent từ API hoặc completed_topics / total_topics
     let progress = 0
     if (c.id === 'toeic') {
-      const toeicTotalParts = 7
-      if (toeicReserve) {
-        // Dùng completed_parts từ reserve-points API (parts student đã luyện thực tế)
-        const partsCompleted = toeicReserve.completed_parts?.length ?? 0
-        const totalSessions = (toeicReserve.listening_sessions_count ?? 0) + (toeicReserve.reading_sessions_count ?? 0)
-        if (partsCompleted > 0) {
-          // Tiến độ chính = số part đã luyện / 7 parts
-          progress = Math.max(0, Math.min(100, Math.round((partsCompleted / toeicTotalParts) * 100)))
-        } else if (totalSessions > 0) {
-          // Có sessions nhưng chưa có completed_parts → ít nhất 1 part
-          progress = Math.max(1, Math.round((1 / toeicTotalParts) * 100))
-        }
-      }
-      // Fallback: dùng progress_percent từ enrollment nếu lớn hơn
-      if (latest.progress_percent != null && latest.progress_percent > progress) {
+      const baseScore = latest.current_score ?? null
+      const targetScore = latest.target_score ?? null
+      if (baseScore && targetScore && targetScore > 0) {
+        progress = Math.max(
+          0,
+          Math.min(100, Math.round((Number(baseScore) / Number(targetScore)) * 100)),
+        )
+      } else if (latest.progress_percent != null) {
         progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
       }
     } else if (latest.progress_percent != null) {

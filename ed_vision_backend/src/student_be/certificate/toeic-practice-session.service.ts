@@ -115,6 +115,7 @@ export interface ReservePointsStatusDto {
     completed_at: Date | null;
   }>;
   // Aggregate stats across ALL practice sessions (not just the 20 recent).
+  exam_sessions_count: number;
   listening_sessions_count: number;
   reading_sessions_count: number;
   listening_correct: number;
@@ -177,7 +178,9 @@ export class ToeicPracticeSessionService {
 
     return Math.max(
       0,
-      Number.isFinite(projectedScore ?? Number.NaN) ? Number(projectedScore) : 0,
+      Number.isFinite(projectedScore ?? Number.NaN)
+        ? Number(projectedScore)
+        : 0,
       Number.isFinite(currentScore) ? currentScore : 0,
       Number.isFinite(latestExamScore) ? latestExamScore : 0,
     );
@@ -214,11 +217,13 @@ export class ToeicPracticeSessionService {
     return 0;
   }
 
-  private sortQuestionsByBandDistance<T extends {
-    id: number;
-    score_band_min: number;
-    score_band_max: number;
-  }>(questions: T[], learnerScore: number): T[] {
+  private sortQuestionsByBandDistance<
+    T extends {
+      id: number;
+      score_band_min: number;
+      score_band_max: number;
+    },
+  >(questions: T[], learnerScore: number): T[] {
     return [...questions].sort((a, b) => {
       const distanceA = this.scoreBandDistance(
         learnerScore,
@@ -318,7 +323,7 @@ export class ToeicPracticeSessionService {
    * GET /student/certificate/toeic/practice-questions/:part
    *
    * Returns `count` shuffled questions suitable for the student's current score
-    * band, excluding questions the learner already completed in previous sessions.
+   * band, excluding questions the learner already completed in previous sessions.
    */
   async getQuestionsForPart(
     accountId: number,
@@ -340,7 +345,10 @@ export class ToeicPracticeSessionService {
     // - If DB has <10: return all available (no throw).
     const targetCount = 10;
 
-    const usedQuestionIds = await this.getUsedQuestionIdSet(enrollment.id, part);
+    const usedQuestionIds = await this.getUsedQuestionIdSet(
+      enrollment.id,
+      part,
+    );
     const usedQuestionIdList = [...usedQuestionIds];
 
     const fetchQuestions = async (opts: {
@@ -368,7 +376,10 @@ export class ToeicPracticeSessionService {
       });
 
     // ── Primary fetch: strict score-band match ───────────────────────────
-    let questions = await fetchQuestions({ strictBand: true, excludeUsed: true });
+    let questions = await fetchQuestions({
+      strictBand: true,
+      excludeUsed: true,
+    });
 
     // Fallback 1: still unseen, but open all score bands for this part.
     if (questions.length < targetCount) {
@@ -414,10 +425,7 @@ export class ToeicPracticeSessionService {
       //    mỗi anchor có context_audio) — kể cả khi sibling đã used hay
       //    không khớp band.
       const anchorsInPool = questions.filter(
-        (q) =>
-          !!q.context_audio &&
-          !!q.source_slug &&
-          q.source_item_id != null,
+        (q) => !!q.context_audio && !!q.source_slug && q.source_item_id != null,
       );
 
       const siblingFilters: { source_slug: string; source_item_id: number }[] =
@@ -453,10 +461,7 @@ export class ToeicPracticeSessionService {
       }
 
       const allAnchors = questions.filter(
-        (q) =>
-          !!q.context_audio &&
-          !!q.source_slug &&
-          q.source_item_id != null,
+        (q) => !!q.context_audio && !!q.source_slug && q.source_item_id != null,
       );
 
       // Sibling được merge vào group khi:
@@ -469,7 +474,9 @@ export class ToeicPracticeSessionService {
       // anchor của nhóm [Q33]) — sắp xếp anchors theo source_item_id tăng
       // dần để nhóm đầu (vd 32) "claim" các sibling trước.
       const sortedAnchors = [...allAnchors].sort((a, b) => {
-        const slugCmp = (a.source_slug ?? '').localeCompare(b.source_slug ?? '');
+        const slugCmp = (a.source_slug ?? '').localeCompare(
+          b.source_slug ?? '',
+        );
         if (slugCmp !== 0) return slugCmp;
         return (a.source_item_id ?? 0) - (b.source_item_id ?? 0);
       });
@@ -575,20 +582,25 @@ export class ToeicPracticeSessionService {
         : learnerScore;
 
     // ── Map to response ───────────────────────────────────────────────────
-    const aiExplanationRaw = (q_: typeof shuffled[0]) => q_.ai_explanation ?? q_.explanation ?? null;
+    const aiExplanationRaw = (q_: (typeof shuffled)[0]) =>
+      q_.ai_explanation ?? q_.explanation ?? null;
     const mappedQuestions: PracticeQuestionDto[] = shuffled.map((q) => ({
       id: q.id,
       part: q.part,
       skill_area: q.skill_area,
       stem: encryptString(q.stem),
-      reading_passage: q.reading_passage ? encryptString(q.reading_passage) : null,
+      reading_passage: q.reading_passage
+        ? encryptString(q.reading_passage)
+        : null,
       context_image: q.context_image,
       context_audio: q.context_audio,
       score_band_min: q.score_band_min,
       score_band_max: q.score_band_max,
       difficulty_label: q.difficulty_label,
       difficulty_score: q.difficulty_score,
-      ai_explanation: aiExplanationRaw(q) ? encryptString(aiExplanationRaw(q)!) : null,
+      ai_explanation: aiExplanationRaw(q)
+        ? encryptString(aiExplanationRaw(q)!)
+        : null,
       options: q.options.map((o) => ({
         id: o.id,
         option_key: o.option_key,
@@ -669,7 +681,10 @@ export class ToeicPracticeSessionService {
     const correctAnswers: Record<string, string> = {};
     const explanations: Record<string, string | null> = {};
     // Track per-question results for EXP calculation
-    const questionResults: Array<{ difficulty_score: number | null; is_correct: boolean }> = [];
+    const questionResults: Array<{
+      difficulty_score: number | null;
+      is_correct: boolean;
+    }> = [];
 
     for (const q of questions) {
       const correctOption = q.options.find((o) => o.is_correct);
@@ -682,10 +697,11 @@ export class ToeicPracticeSessionService {
       explanations[String(q.id)] = q.ai_explanation ?? null;
 
       const chosenKey = dto.answers[String(q.id)] ?? null;
-      const isCorrect =
-        !!(chosenKey &&
+      const isCorrect = !!(
+        chosenKey &&
         correctKey &&
-        chosenKey.toUpperCase() === correctKey.toUpperCase());
+        chosenKey.toUpperCase() === correctKey.toUpperCase()
+      );
 
       if (isCorrect) {
         correctCount++;
@@ -711,15 +727,16 @@ export class ToeicPracticeSessionService {
     const pointsPerCorrect = budget / Math.max(1, totalQuestions);
     const earnedPoints = correctCount * pointsPerCorrect;
 
-    const previousBestAggregate = await this.prisma.toeicPracticePartSession.aggregate({
-      where: {
-        enrollment_id: enrollment.id,
-        toeic_part: dto.toeic_part,
-      },
-      _max: {
-        earned_points: true,
-      },
-    });
+    const previousBestAggregate =
+      await this.prisma.toeicPracticePartSession.aggregate({
+        where: {
+          enrollment_id: enrollment.id,
+          toeic_part: dto.toeic_part,
+        },
+        _max: {
+          earned_points: true,
+        },
+      });
     const previousBestPointsForPart = Number(
       previousBestAggregate._max.earned_points ?? 0,
     );
@@ -798,7 +815,8 @@ export class ToeicPracticeSessionService {
       };
     });
 
-    const newReservePoints = scoringContext.updatedEnrollment.reserve_points ?? 0;
+    const newReservePoints =
+      scoringContext.updatedEnrollment.reserve_points ?? 0;
     const unlockThreshold =
       scoringContext.updatedEnrollment.target_score ?? DEFAULT_UNLOCK_THRESHOLD;
 
@@ -893,14 +911,22 @@ export class ToeicPracticeSessionService {
     const unlockThreshold = enrollment.target_score ?? DEFAULT_UNLOCK_THRESHOLD;
 
     // ── Aggregate across ALL practice sessions (not just the 20 recent) ──
-    const allSessions = await this.prisma.toeicPracticePartSession.findMany({
-      where: { enrollment_id: enrollment.id },
-      select: {
-        toeic_part: true,
-        correct_count: true,
-        total_questions: true,
-      },
-    });
+    const [allSessions, examSessionsCount] = await Promise.all([
+      this.prisma.toeicPracticePartSession.findMany({
+        where: { enrollment_id: enrollment.id },
+        select: {
+          toeic_part: true,
+          correct_count: true,
+          total_questions: true,
+        },
+      }),
+      this.prisma.toeicExamSession.count({
+        where: {
+          account_id: accountId,
+          submitted_at: { not: null },
+        },
+      }),
+    ]);
 
     let listeningSessionsCount = 0;
     let readingSessionsCount = 0;
@@ -928,9 +954,7 @@ export class ToeicPracticeSessionService {
         ? Math.round((listeningCorrect / listeningTotal) * 100)
         : 0;
     const readingAccuracy =
-      readingTotal > 0
-        ? Math.round((readingCorrect / readingTotal) * 100)
-        : 0;
+      readingTotal > 0 ? Math.round((readingCorrect / readingTotal) * 100) : 0;
 
     return {
       reserve_points: reservePoints,
@@ -943,6 +967,7 @@ export class ToeicPracticeSessionService {
         earned_points: s.earned_points,
         completed_at: s.completed_at,
       })),
+      exam_sessions_count: examSessionsCount,
       listening_sessions_count: listeningSessionsCount,
       reading_sessions_count: readingSessionsCount,
       listening_correct: listeningCorrect,

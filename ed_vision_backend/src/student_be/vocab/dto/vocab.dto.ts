@@ -1,4 +1,14 @@
-import { IsArray, IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 // ── Student DTOs ─────────────────────────────────────────────────────────────
 
@@ -6,6 +16,55 @@ export class ToggleKnownDto {
   /** true = mark known, false = mark unknown */
   @IsIn([true, false])
   is_known: boolean;
+}
+
+export class LookupWordDto {
+  @IsString()
+  @MaxLength(50)
+  word: string;
+
+  @IsOptional()
+  @IsString()
+  context?: string;
+
+  @IsOptional()
+  @IsString()
+  skill_area?: string;
+
+  @IsOptional()
+  @IsInt()
+  part?: number;
+}
+
+export class VocabDefinitionDto {
+  @IsString()
+  pos: string;
+
+  @IsString()
+  meaning: string;
+
+  @IsString()
+  example_en: string;
+
+  @IsString()
+  example_vi: string;
+}
+
+export class SaveFromReadingDto {
+  @IsString()
+  word: string;
+
+  @IsString()
+  topic_slug: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VocabDefinitionDto)
+  definitions: VocabDefinitionDto[];
+
+  @IsOptional()
+  @IsString()
+  source_context?: string;
 }
 
 export class StartTestSessionDto {
@@ -75,8 +134,8 @@ export class ConfirmImportDto {
   @IsArray()
   words: Array<{
     word: string;
-    topic_id?: number;      // optional — nếu có dùng luôn
-    topic_slug?: string;    // fallback — tự upsert topic từ predefined list
+    topic_id?: number; // optional — nếu có dùng luôn
+    topic_slug?: string; // fallback — tự upsert topic từ predefined list
     level: string;
     freq: number;
     definitions: Array<{

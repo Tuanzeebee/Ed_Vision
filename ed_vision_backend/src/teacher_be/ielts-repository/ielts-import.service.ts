@@ -69,7 +69,7 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
     // Robust pattern for pairs: "1. B", "1 B", "1 TRUE", "Q1 - A"
     const pairRe =
       /\b(\d{1,3})\s*[.):\-–]?\s*(TRUE|FALSE|NOT\s*GIVEN|NG|[A-E])\b/gi;
-    
+
     const pairs = Array.from(line.matchAll(pairRe));
     if (pairs.length === 0) continue;
 
@@ -77,7 +77,7 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
       const num = parseInt(pair[1], 10);
       let ans = pair[2].toUpperCase().trim();
       if (ans === 'NG') ans = 'NOT GIVEN';
-      
+
       // Basic validation (question numbers are usually 1-40 or 1-100)
       if (num >= 1 && num <= 200) {
         map.set(num, ans);
@@ -363,7 +363,7 @@ function parseIeltsQuestionsFromText(
   function tryMatchQuestion(line: string): { qNum: number; rest: string } | null {
     // FIX: Simplified permissive regex that handles single-space and various delimiters
     const Q_START_RE = /^(?:Q(?:uestion)?\.?\s*)?(\d{1,3})(?:[.):\-–]\s*|\s+)(.*)$/i;
-    
+
     const m = Q_START_RE.exec(line);
     if (m) {
       const qNum = parseInt(m[1], 10);
@@ -550,7 +550,7 @@ export class IeltsImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly irtRefinement: IrtRefinementService,
-  ) {}
+  ) { }
 
   private sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -850,7 +850,8 @@ export class IeltsImportService {
       throw new BadRequestException(`Không tìm thấy IELTS repository: ${slug}`);
     }
 
-    const section = dto.section ?? this.inferSectionFromFilename(file.originalname);
+    const section =
+      dto.section ?? this.inferSectionFromFilename(file.originalname);
     const trackNumber = dto.track_number ?? 1;
 
     const audioRelDir = join('IELTS', 'ielts-listening', slug, 'audio');
@@ -920,6 +921,8 @@ export class IeltsImportService {
     return { slug, is_published: publish };
   }
 
+  // ─── Delete repository ────────────────────────────────────────────────────
+
   async deleteRepository(slug: string): Promise<IeltsRepositoryDeleteResponseDto> {
     const repo = await this.prisma.examRepository.findFirst({
       where: { slug, cert_type: 'ielts' },
@@ -954,11 +957,11 @@ export class IeltsImportService {
 
   private mapItemType(questionType: ParsedIeltsQuestion['questionType']): string {
     switch (questionType) {
-      case 'fill-blank':   return 'fill_blank';
+      case 'fill-blank': return 'fill_blank';
       case 'short-answer': return 'short_answer';
-      case 'true-false':   return 'single_choice';
-      case 'matching':     return 'single_choice';
-      default:             return 'single_choice';
+      case 'true-false': return 'single_choice';
+      case 'matching': return 'single_choice';
+      default: return 'single_choice';
     }
   }
 
@@ -1034,7 +1037,7 @@ export class IeltsImportService {
       }
 
       this.logger.log(`[AI] Refining IRT for Q${parsed.questionNumber || nextOrder}...`);
-      
+
       const irt = await this.irtRefinement.refineIrtB({
         questionText: parsed.stem,
         questionType: parsed.questionType,

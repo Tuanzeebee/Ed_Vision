@@ -87,7 +87,8 @@
     "mlResults": "Kết quả Học máy",
     "notificationManagement": "Quản lý Thông báo",
     "contentApproval": "Phê duyệt Nội dung",
-    "permissions": "Phân quyền"
+    "permissions": "Phân quyền",
+    "ragSystem": "Hệ thống RAG (AI)"
   },
   "programEffectivenessPage": {
     "title": "Hiệu quả chương trình học",

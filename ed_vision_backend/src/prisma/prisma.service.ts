@@ -23,15 +23,17 @@ const ENCRYPTED_FIELDS = [
 
 function processObject(obj: any, encrypt: boolean) {
   if (!obj || typeof obj !== 'object') return;
-  
+
   if (Array.isArray(obj)) {
-    obj.forEach(item => processObject(item, encrypt));
+    obj.forEach((item) => processObject(item, encrypt));
     return;
   }
 
   for (const key of Object.keys(obj)) {
     if (ENCRYPTED_FIELDS.includes(key) && typeof obj[key] === 'string') {
-      obj[key] = encrypt ? tryEncryptString(obj[key]) : tryDecryptString(obj[key]);
+      obj[key] = encrypt
+        ? tryEncryptString(obj[key])
+        : tryDecryptString(obj[key]);
     } else if (typeof obj[key] === 'object' && obj[key] !== null) {
       processObject(obj[key], encrypt);
     }
@@ -65,7 +67,10 @@ export class PrismaService
               const anyArgs = args as any;
               if (['create', 'update'].includes(operation) && anyArgs?.data) {
                 processObject(anyArgs.data, true);
-              } else if (['createMany', 'updateMany'].includes(operation) && anyArgs?.data) {
+              } else if (
+                ['createMany', 'updateMany'].includes(operation) &&
+                anyArgs?.data
+              ) {
                 if (Array.isArray(anyArgs.data)) {
                   anyArgs.data.forEach((d: any) => processObject(d, true));
                 } else {

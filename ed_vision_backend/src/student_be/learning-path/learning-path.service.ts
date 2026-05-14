@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChatOllama } from '@langchain/ollama';
 import { PromptTemplate } from '@langchain/core/prompts';
-import { DiagnosticAnalyzeRequestDto, RecommendPlanRequestDto, DiagnosticAnswerDto } from './dto/learning-path.dto';
+import {
+  DiagnosticAnalyzeRequestDto,
+  RecommendPlanRequestDto,
+  DiagnosticAnswerDto,
+} from './dto/learning-path.dto';
 
 export interface SkillMastery {
   skill: string;
@@ -34,7 +38,17 @@ export class LearningPathService {
     const isGlobalStruggling = easyAccuracy < 0.4; // Weak baseline
 
     const skillAnalysis = new Map<string, SkillMastery>();
-    const subSkillStats = new Map<string, { total: number; correct: number; totalDifficulty: number; totalConfidence: number; skill: string; weightedScore: number }>();
+    const subSkillStats = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalDifficulty: number;
+        totalConfidence: number;
+        skill: string;
+        weightedScore: number;
+      }
+    >();
 
     let totalWeightedScore = 0;
     let maxTotalWeightedScore = 0;
@@ -43,15 +57,23 @@ export class LearningPathService {
     for (const ans of answers) {
       const key = `${ans.skill}:${ans.subSkill}`;
       if (!subSkillStats.has(key)) {
-        subSkillStats.set(key, { total: 0, correct: 0, totalDifficulty: 0, totalConfidence: 0, skill: ans.skill, weightedScore: 0 });
+        subSkillStats.set(key, {
+          total: 0,
+          correct: 0,
+          totalDifficulty: 0,
+          totalConfidence: 0,
+          skill: ans.skill,
+          weightedScore: 0,
+        });
       }
-      
+
       const stats = subSkillStats.get(key)!;
       stats.total += 1;
       stats.totalDifficulty += ans.difficulty;
 
       // Calculate confidence based on behavior
-      const timeRatio = ans.timeSpentSeconds / Math.max(1, ans.expectedTimeSeconds);
+      const timeRatio =
+        ans.timeSpentSeconds / Math.max(1, ans.expectedTimeSeconds);
       let itemConfidence = 1.0;
       let scoreContribution = 0;
 
@@ -98,7 +120,7 @@ export class LearningPathService {
 
       stats.totalConfidence += itemConfidence;
       stats.weightedScore += scoreContribution;
-      
+
       totalWeightedScore += scoreContribution;
       maxTotalWeightedScore += ans.difficulty;
     }
@@ -107,11 +129,14 @@ export class LearningPathService {
     for (const [key, stats] of subSkillStats.entries()) {
       const [, subSkill] = key.split(':');
       const avgConfidence = stats.totalConfidence / stats.total;
-      
+
       // Max possible weighted score is if all were correct with 1.0 multiplier
-      const maxPossibleScore = stats.totalDifficulty; 
-      let masteryPercent = maxPossibleScore > 0 ? (stats.weightedScore / maxPossibleScore) * 100 : 0;
-      
+      const maxPossibleScore = stats.totalDifficulty;
+      let masteryPercent =
+        maxPossibleScore > 0
+          ? (stats.weightedScore / maxPossibleScore) * 100
+          : 0;
+
       // Clamp between 0 and 100
       masteryPercent = Math.max(0, Math.min(100, masteryPercent));
 
@@ -128,17 +153,26 @@ export class LearningPathService {
     // Thích ứng theo mốc điểm khảo sát học viên đã chọn (selectedBand), mặc định max là 500
     const targetBand = selectedBand || 500;
     const MIN_DIAGNOSTIC_SCORE = 10;
-    
-    let overallPercent = maxTotalWeightedScore > 0 ? totalWeightedScore / maxTotalWeightedScore : 0;
+
+    const overallPercent =
+      maxTotalWeightedScore > 0
+        ? totalWeightedScore / maxTotalWeightedScore
+        : 0;
     // Map 0-100% accuracy (weighted) to targetBand scale (e.g., 10 to 200, or 10 to 500)
-    let estimatedScore = Math.round(MIN_DIAGNOSTIC_SCORE + overallPercent * (targetBand - MIN_DIAGNOSTIC_SCORE));
-    
+    let estimatedScore = Math.round(
+      MIN_DIAGNOSTIC_SCORE +
+        overallPercent * (targetBand - MIN_DIAGNOSTIC_SCORE),
+    );
+
     // Ensure it doesn't exceed the selectedBand
-    estimatedScore = Math.min(targetBand, Math.max(MIN_DIAGNOSTIC_SCORE, estimatedScore));
+    estimatedScore = Math.min(
+      targetBand,
+      Math.max(MIN_DIAGNOSTIC_SCORE, estimatedScore),
+    );
 
     // Override with currentScore if provided manually, but typically diagnostic defines it.
     if (currentScore) {
-       estimatedScore = currentScore;
+      estimatedScore = currentScore;
     }
 
     const gap = targetScore - estimatedScore;
@@ -149,7 +183,7 @@ export class LearningPathService {
       gap,
       globalProfile: {
         easyAccuracy: Math.round(easyAccuracy * 100) + '%',
-        isHighPerformer: isGlobalHighPerformer
+        isHighPerformer: isGlobalHighPerformer,
       },
       skills: Array.from(skillAnalysis.values()),
     };
@@ -162,37 +196,39 @@ export class LearningPathService {
 
     // Weight of skills in TOEIC (simplified)
     const examWeight: Record<string, number> = {
-      'Listening': 0.5,
-      'Reading': 0.5,
-      'Grammar': 0.2,
-      'Vocabulary': 0.3,
+      Listening: 0.5,
+      Reading: 0.5,
+      Grammar: 0.2,
+      Vocabulary: 0.3,
     };
 
     // Improvability factor (some skills are faster to improve than others)
     const improvability: Record<string, number> = {
-      'Grammar': 1.2, // Grammar rules can be learned quickly
-      'Vocabulary': 0.9, // Takes time
-      'Reading': 1.0,
-      'Listening': 1.1,
+      Grammar: 1.2, // Grammar rules can be learned quickly
+      Vocabulary: 0.9, // Takes time
+      Reading: 1.0,
+      Listening: 1.1,
     };
 
-    const targetGapFactor = Math.min(2.0, 1.0 + (gap / 400)); // Cap at 2.0
+    const targetGapFactor = Math.min(2.0, 1.0 + gap / 400); // Cap at 2.0
 
     // Priority calculation
-    const prioritizedSkills = skills.map((s: SkillMastery) => {
-      const w = examWeight[s.skill] || 0.5;
-      const imp = improvability[s.subSkill] || 1.0;
-      const confPenalty = s.confidence; // Lower confidence reduces priority slightly, or we could force review if confidence is low. 
-      // Actually, if confidence is low, we might want to prioritize it to re-assess, but let's stick to the formula:
-      // weakness * weight * improvability * gapFactor * confidence
-      
-      const priority = s.weakness * w * imp * targetGapFactor * confPenalty;
-      
-      return {
-        ...s,
-        priority,
-      };
-    }).sort((a, b) => b.priority - a.priority);
+    const prioritizedSkills = skills
+      .map((s: SkillMastery) => {
+        const w = examWeight[s.skill] || 0.5;
+        const imp = improvability[s.subSkill] || 1.0;
+        const confPenalty = s.confidence; // Lower confidence reduces priority slightly, or we could force review if confidence is low.
+        // Actually, if confidence is low, we might want to prioritize it to re-assess, but let's stick to the formula:
+        // weakness * weight * improvability * gapFactor * confidence
+
+        const priority = s.weakness * w * imp * targetGapFactor * confPenalty;
+
+        return {
+          ...s,
+          priority,
+        };
+      })
+      .sort((a, b) => b.priority - a.priority);
 
     // Call LLM / Qwen3 to generate the readable plan
     const llmPlan = await this.generateLlmPlan(prioritizedSkills, dto);
@@ -204,8 +240,12 @@ export class LearningPathService {
     };
   }
 
-  private async generateLlmPlan(prioritizedSkills: any[], dto: RecommendPlanRequestDto) {
-    const baseUrl = process.env.OLLAMA_BASE_URL?.trim() || 'http://127.0.0.1:11434';
+  private async generateLlmPlan(
+    prioritizedSkills: any[],
+    dto: RecommendPlanRequestDto,
+  ) {
+    const baseUrl =
+      process.env.OLLAMA_BASE_URL?.trim() || 'http://127.0.0.1:11434';
     const model = process.env.OLLAMA_CHAT_MODEL?.trim() || 'qwen3';
 
     const llm = new ChatOllama({
@@ -262,12 +302,13 @@ Lưu ý: Chỉ trả về JSON hợp lệ, không có markdown.
       this.logger.error('Failed to generate LLM plan', e);
       // Fallback deterministic plan
       return {
-        summary: "Lộ trình học được tạo tự động dựa trên mức độ ưu tiên của kỹ năng.",
-        weeklyPlan: prioritizedSkills.slice(0, 3).map(s => ({
+        summary:
+          'Lộ trình học được tạo tự động dựa trên mức độ ưu tiên của kỹ năng.',
+        weeklyPlan: prioritizedSkills.slice(0, 3).map((s) => ({
           focus: s.subSkill,
           percentage: 33,
-          reason: `Kỹ năng ${s.subSkill} đang yếu (${Math.round(s.weakness)}% weakness) và có độ ưu tiên cao.`
-        }))
+          reason: `Kỹ năng ${s.subSkill} đang yếu (${Math.round(s.weakness)}% weakness) và có độ ưu tiên cao.`,
+        })),
       };
     }
   }

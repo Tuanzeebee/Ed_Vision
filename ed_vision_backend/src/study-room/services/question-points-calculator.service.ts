@@ -13,9 +13,9 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** EXP per correct answer based on difficulty_score range */
-const EXP_EASY = 5;    // difficulty_score: 0.0 – 0.3
-const EXP_MEDIUM = 7;  // difficulty_score: 0.3 – 0.6
-const EXP_HARD = 10;   // difficulty_score: 0.6 – 1.0
+const EXP_EASY = 5; // difficulty_score: 0.0 – 0.3
+const EXP_MEDIUM = 7; // difficulty_score: 0.3 – 0.6
+const EXP_HARD = 10; // difficulty_score: 0.6 – 1.0
 const EXP_DEFAULT = 7; // fallback when difficulty_score is null
 
 /** Bonus EXP awarded for completing an entire TOEIC part */
@@ -102,9 +102,7 @@ export class QuestionPointsCalculatorService {
   calculateBonusExpForPart(toeicPart: number): number {
     const bonus = PART_COMPLETION_BONUS[toeicPart];
     if (bonus === undefined) {
-      this.logger.warn(
-        `Unknown TOEIC part ${toeicPart}, no bonus EXP awarded`,
-      );
+      this.logger.warn(`Unknown TOEIC part ${toeicPart}, no bonus EXP awarded`);
       return 0;
     }
     return bonus;
@@ -122,7 +120,9 @@ export class QuestionPointsCalculatorService {
     toeicPart: number,
   ): SessionExpResult {
     const questionExp = questions.reduce((sum, q) => {
-      return sum + this.calculateExpForQuestion(q.difficulty_score, q.is_correct);
+      return (
+        sum + this.calculateExpForQuestion(q.difficulty_score, q.is_correct)
+      );
     }, 0);
 
     const bonusExp = this.calculateBonusExpForPart(toeicPart);
@@ -187,7 +187,11 @@ export class QuestionPointsCalculatorService {
       );
 
       // Update Daily Streak
-      await this.streakTracker.updateStreak(accountId, sessionDate, prismaClient);
+      await this.streakTracker.updateStreak(
+        accountId,
+        sessionDate,
+        prismaClient,
+      );
 
       // Store weekly EXP in Redis (outside transaction for performance)
       await this.storeWeeklyPoints(accountId, totalPoints, sessionDate);
@@ -302,7 +306,8 @@ export class QuestionPointsCalculatorService {
         const accId = session.enrollment.student.account_id;
         result.set(accId, (result.get(accId) ?? 0) + session.earned_points);
       }
-      for (const [key, val] of result.entries()) result.set(key, Math.round(val));
+      for (const [key, val] of result.entries())
+        result.set(key, Math.round(val));
       return result;
     } catch (error) {
       this.logger.error(

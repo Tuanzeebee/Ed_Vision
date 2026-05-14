@@ -12,7 +12,13 @@ import { ProgramEffectivenessModule } from '../admin_be/program-effectiveness/pr
 @Module({
   imports: [PrismaModule, GeminiModule, ProgramEffectivenessModule],
   controllers: [IeltsAdaptiveController],
-  providers: [IeltsAdaptiveService, BandEstimationService, EvaluationService, PrismaService, IeltsAiGradingService],
+  providers: [
+    IeltsAdaptiveService,
+    BandEstimationService,
+    EvaluationService,
+    PrismaService,
+    IeltsAiGradingService,
+  ],
   exports: [IeltsAdaptiveService],
 })
 export class IeltsAdaptiveModule {}

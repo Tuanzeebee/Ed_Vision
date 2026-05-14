@@ -61,7 +61,7 @@ export class DiagnosticImportService {
     private readonly prisma: PrismaService,
     private readonly openRouterService: OpenRouterService,
     private readonly practiceImportService: ToeicPracticeImportService,
-  ) { }
+  ) {}
 
   // ── Extract Text ─────────────────────────────────────────────────────────────
 
@@ -109,7 +109,9 @@ export class DiagnosticImportService {
   private normalizeOptionKey(raw: string): string | null {
     const normalized = String(raw).toUpperCase().trim();
     if (!normalized) return null;
-    const match = normalized.match(/^[[(]?\s*([A-D])\s*[\]).:-]?$/) || normalized.match(/\b([A-D])\b/);
+    const match =
+      normalized.match(/^[[(]?\s*([A-D])\s*[\]).:-]?$/) ||
+      normalized.match(/\b([A-D])\b/);
     return match ? match[1] : null;
   }
 
@@ -117,14 +119,27 @@ export class DiagnosticImportService {
     const match = String(raw).match(/\d{1,3}/);
     if (!match?.[0]) return null;
     const parsed = Number(match[0]);
-    return Number.isFinite(parsed) && parsed >= 1 && parsed <= 200 ? parsed : null;
+    return Number.isFinite(parsed) && parsed >= 1 && parsed <= 200
+      ? parsed
+      : null;
   }
 
   private mapPartTokenToNumber(token: string): number | null {
-    const normalized = String(token).toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    const normalized = String(token)
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .trim();
     if (!normalized) return null;
     if (/^[1-7]$/.test(normalized)) return Number(normalized);
-    const romanMap: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7 };
+    const romanMap: Record<string, number> = {
+      I: 1,
+      II: 2,
+      III: 3,
+      IV: 4,
+      V: 5,
+      VI: 6,
+      VII: 7,
+    };
     return romanMap[normalized] ?? null;
   }
 
@@ -137,7 +152,10 @@ export class DiagnosticImportService {
     return null;
   }
 
-  private extractInlineOptionsFromLine(line: string): { stem: string; options: ParsedOption[] } {
+  private extractInlineOptionsFromLine(line: string): {
+    stem: string;
+    options: ParsedOption[];
+  } {
     const markerRegex = /([A-D])[).:-]\s*/g;
     const markers = Array.from(line.matchAll(markerRegex)).filter((match) => {
       const idx = match.index ?? -1;
@@ -156,7 +174,11 @@ export class DiagnosticImportService {
       const end = nextMarker?.index ?? line.length;
       const optionText = line.slice(start, end).replace(/\s+/g, ' ').trim();
       if (optionText) {
-        options.push({ optionKey: marker[1].toUpperCase(), optionText, isCorrect: false });
+        options.push({
+          optionKey: marker[1].toUpperCase(),
+          optionText,
+          isCorrect: false,
+        });
       }
     }
 
@@ -165,7 +187,11 @@ export class DiagnosticImportService {
 
   private extractAnswerKeyMap(rawText: string): Map<number, string> {
     const answerMap = new Map<number, string>();
-    const lines = rawText.replace(/\r/g, '\n').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l.length > 0);
+    const lines = rawText
+      .replace(/\r/g, '\n')
+      .split('\n')
+      .map((l) => l.replace(/\s+/g, ' ').trim())
+      .filter((l) => l.length > 0);
 
     let inAnswerSection = false;
     for (const line of lines) {
@@ -173,11 +199,21 @@ export class DiagnosticImportService {
         inAnswerSection = true;
         continue;
       }
-      const pairs = Array.from(line.matchAll(/\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi));
+      const pairs = Array.from(
+        line.matchAll(/\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi),
+      );
       if (pairs.length === 0) continue;
 
-      const residue = line.replace(/\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi, ' ').replace(/[\s,.;:()\-_/]+/g, '').trim();
-      if (inAnswerSection || pairs.length >= 3 || (pairs.length >= 2 && line.length <= 90) || (pairs.length === 1 && residue.length === 0)) {
+      const residue = line
+        .replace(/\b(\d{1,3})\s*[).:-]?\s*([A-D])\b/gi, ' ')
+        .replace(/[\s,.;:()\-_/]+/g, '')
+        .trim();
+      if (
+        inAnswerSection ||
+        pairs.length >= 3 ||
+        (pairs.length >= 2 && line.length <= 90) ||
+        (pairs.length === 1 && residue.length === 0)
+      ) {
         for (const pair of pairs) {
           const qNum = Number(pair[1]);
           const key = this.normalizeOptionKey(pair[2]);
@@ -189,10 +225,18 @@ export class DiagnosticImportService {
   }
 
   private parseQuestionsFromText(rawText: string): ParsedDiagnosticQuestion[] {
-    const normalized = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\u00a0/g, ' ').replace(/[\t\f\v]+/g, ' ').trim();
+    const normalized = rawText
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[\t\f\v]+/g, ' ')
+      .trim();
     if (!normalized) return [];
 
-    const lines = normalized.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l.length > 0);
+    const lines = normalized
+      .split('\n')
+      .map((l) => l.replace(/\s+/g, ' ').trim())
+      .filter((l) => l.length > 0);
     const answerKeyMap = this.extractAnswerKeyMap(normalized);
     const questions: ParsedDiagnosticQuestion[] = [];
     let currentPart: number | null = null;
@@ -203,11 +247,17 @@ export class DiagnosticImportService {
       if (!wq) return;
       const options: ParsedOption[] = ['A', 'B', 'C', 'D']
         .filter((k) => wq.optionsMap.has(k))
-        .map((k) => ({ optionKey: k, optionText: wq.optionsMap.get(k)!.trim(), isCorrect: false }))
+        .map((k) => ({
+          optionKey: k,
+          optionText: wq.optionsMap.get(k)!.trim(),
+          isCorrect: false,
+        }))
         .filter((o) => o.optionText.length > 0);
 
       if (options.length >= 2) {
-        const correctKey = wq.inlineAnswer ?? (wq.questionNumber ? answerKeyMap.get(wq.questionNumber) : null);
+        const correctKey =
+          wq.inlineAnswer ??
+          (wq.questionNumber ? answerKeyMap.get(wq.questionNumber) : null);
         if (correctKey) {
           const found = options.find((o) => o.optionKey === correctKey);
           if (found) found.isCorrect = true;
@@ -234,7 +284,9 @@ export class DiagnosticImportService {
         continue;
       }
 
-      const qStartMatch = line.match(/^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*[).:\-]\s*(.+)$/i) ?? line.match(/^(\d{1,3})\s+(.+)$/);
+      const qStartMatch =
+        line.match(/^(?:question\s*|c[aâ]u\s*)?(\d{1,3})\s*[).:\-]\s*(.+)$/i) ??
+        line.match(/^(\d{1,3})\s+(.+)$/);
       if (qStartMatch) {
         const rest = qStartMatch[2].trim();
         if (/^[ABCD]\s*\.?\s*$/.test(rest)) {
@@ -291,7 +343,10 @@ export class DiagnosticImportService {
 
       if (wq) {
         if (wq.lastOptionKey && wq.optionsMap.has(wq.lastOptionKey)) {
-          wq.optionsMap.set(wq.lastOptionKey, wq.optionsMap.get(wq.lastOptionKey) + ' ' + line);
+          wq.optionsMap.set(
+            wq.lastOptionKey,
+            wq.optionsMap.get(wq.lastOptionKey) + ' ' + line,
+          );
         } else {
           wq.stemLines.push(line);
         }
@@ -347,12 +402,15 @@ export class DiagnosticImportService {
     else if (wordCount > 5) score += 1;
 
     // 3. Option length factor (0-2 pts)
-    const avgOptionLength = question.options.reduce((sum, opt) => sum + opt.optionText.length, 0) / (question.options.length || 1);
+    const avgOptionLength =
+      question.options.reduce((sum, opt) => sum + opt.optionText.length, 0) /
+      (question.options.length || 1);
     if (avgOptionLength > 40) score += 2;
     else if (avgOptionLength > 15) score += 1;
 
     // 4. Vocabulary Rarity (Simulation - 0-1 pts)
-    const advancedSuffixes = /([a-z]{3,}tion|[a-z]{3,}ment|[a-z]{3,}ity|[a-z]{3,}ness)\b/gi;
+    const advancedSuffixes =
+      /([a-z]{3,}tion|[a-z]{3,}ment|[a-z]{3,}ity|[a-z]{3,}ness)\b/gi;
     const matches = question.stem.match(advancedSuffixes);
     if (matches && matches.length > 1) score += 1;
 
@@ -361,15 +419,35 @@ export class DiagnosticImportService {
     // có stem dài / vocab khó bị mất. Nay giữ lại toàn bộ, các câu rất khó được
     // gom vào band expert (700-990) để đảm bảo đủ số câu nạp vào kho khảo sát.
     if (score <= 3) {
-      return { score_band_min: 0, score_band_max: 150, difficulty_level: 'easy' };
+      return {
+        score_band_min: 0,
+        score_band_max: 150,
+        difficulty_level: 'easy',
+      };
     } else if (score <= 5) {
-      return { score_band_min: 150, score_band_max: 300, difficulty_level: 'medium' };
+      return {
+        score_band_min: 150,
+        score_band_max: 300,
+        difficulty_level: 'medium',
+      };
     } else if (score <= 7) {
-      return { score_band_min: 300, score_band_max: 450, difficulty_level: 'hard' };
+      return {
+        score_band_min: 300,
+        score_band_max: 450,
+        difficulty_level: 'hard',
+      };
     } else if (score <= 8) {
-      return { score_band_min: 450, score_band_max: 500, difficulty_level: 'expert' };
+      return {
+        score_band_min: 450,
+        score_band_max: 500,
+        difficulty_level: 'expert',
+      };
     } else {
-      return { score_band_min: 700, score_band_max: 990, difficulty_level: 'expert_plus' };
+      return {
+        score_band_min: 700,
+        score_band_max: 990,
+        difficulty_level: 'expert_plus',
+      };
     }
   }
 
@@ -383,29 +461,36 @@ export class DiagnosticImportService {
     // Dùng chung pipeline (extractText + parser) với module Nạp Câu Hỏi Ôn Luyện
     // để đảm bảo Reading 100 câu (Part 5/6/7) được nhận diện đầy đủ — bao gồm cả
     // bước trích text 2-cột bằng pdfjs-dist (chống lỗi pdf-parse trộn cột trái/phải).
-    const practiceParsed = await this.practiceImportService.extractAndParseFromFile(file);
+    const practiceParsed =
+      await this.practiceImportService.extractAndParseFromFile(file);
 
     // rawText dùng cho fallback Listening (image-based PDF) bên dưới.
-    const rawText = practiceParsed.length === 0 ? await this.extractText(file) : '';
+    const rawText =
+      practiceParsed.length === 0 ? await this.extractText(file) : '';
     if (practiceParsed.length === 0 && !rawText.trim()) {
       const ext = extname(file.originalname || file.path).toLowerCase();
       const selectedSkillArea = body.skill_area || 'reading';
-      const isListeningPdf = ext === '.pdf' && selectedSkillArea === 'listening';
+      const isListeningPdf =
+        ext === '.pdf' && selectedSkillArea === 'listening';
       if (!isListeningPdf) {
-        throw new BadRequestException('Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.');
+        throw new BadRequestException(
+          'Không thể đọc nội dung file. File rỗng hoặc không đúng định dạng Text/PDF.',
+        );
       }
     }
-    let allParsedQuestions: ParsedDiagnosticQuestion[] = practiceParsed.map((q) => ({
-      questionNumber: q.questionNumber,
-      stem: q.stem,
-      options: q.options.map((opt) => ({
-        optionKey: opt.optionKey,
-        optionText: opt.optionText,
-        isCorrect: opt.isCorrect,
-      })),
-      detectedPart: q.detectedPart,
-      readingPassage: q.readingPassage ?? null,
-    }));
+    let allParsedQuestions: ParsedDiagnosticQuestion[] = practiceParsed.map(
+      (q) => ({
+        questionNumber: q.questionNumber,
+        stem: q.stem,
+        options: q.options.map((opt) => ({
+          optionKey: opt.optionKey,
+          optionText: opt.optionText,
+          isCorrect: opt.isCorrect,
+        })),
+        detectedPart: q.detectedPart,
+        readingPassage: q.readingPassage ?? null,
+      }),
+    );
 
     // Fallback parser cũ phòng khi pipeline practice trả 0 (vd: file Listening
     // toàn ảnh, không có text) — giữ logic placeholder bên dưới hoạt động.
@@ -414,11 +499,16 @@ export class DiagnosticImportService {
     }
     const certType = body.cert_type || 'toeic';
     const selectedSkillArea = body.skill_area || 'reading';
-    const isPdf = extname(file.originalname || file.path).toLowerCase() === '.pdf';
+    const isPdf =
+      extname(file.originalname || file.path).toLowerCase() === '.pdf';
 
     // Xử lý nạp đề Listening dạng ảnh (Image-based PDF)
     let imageAssets: any[] = [];
-    if (selectedSkillArea === 'listening' && allParsedQuestions.length === 0 && isPdf) {
+    if (
+      selectedSkillArea === 'listening' &&
+      allParsedQuestions.length === 0 &&
+      isPdf
+    ) {
       // PDF không có text, tạo placeholder cho Part 1 & 2
       this.logger.log(`Tạo placeholder cho đề Listening (Image-based PDF)...`);
       for (let i = 1; i <= 100; i++) {
@@ -429,10 +519,24 @@ export class DiagnosticImportService {
         allParsedQuestions.push({
           questionNumber: i,
           detectedPart: isPart1 ? 1 : isPart2 ? 2 : isPart3 ? 3 : 4,
-          stem: isPart1 ? `[Part 1 - Câu ${i}: Nhìn vào hình ảnh và chọn mô tả đúng nhất]` : isPart2 ? `[Part 2 - Câu ${i}: Nghe câu hỏi và chọn đáp án phù hợp nhất]` : isPart3 ? `[Part 3 - Câu ${i}: Nghe đoạn hội thoại và chọn đáp án đúng]` : `[Part 4 - Câu ${i}: Nghe bài nói ngắn và chọn đáp án đúng]`,
+          stem: isPart1
+            ? `[Part 1 - Câu ${i}: Nhìn vào hình ảnh và chọn mô tả đúng nhất]`
+            : isPart2
+              ? `[Part 2 - Câu ${i}: Nghe câu hỏi và chọn đáp án phù hợp nhất]`
+              : isPart3
+                ? `[Part 3 - Câu ${i}: Nghe đoạn hội thoại và chọn đáp án đúng]`
+                : `[Part 4 - Câu ${i}: Nghe bài nói ngắn và chọn đáp án đúng]`,
           options: isPart2
-            ? ['A', 'B', 'C'].map(k => ({ optionKey: k, optionText: `(${k})`, isCorrect: false }))
-            : ['A', 'B', 'C', 'D'].map(k => ({ optionKey: k, optionText: `(${k})`, isCorrect: false })),
+            ? ['A', 'B', 'C'].map((k) => ({
+                optionKey: k,
+                optionText: `(${k})`,
+                isCorrect: false,
+              }))
+            : ['A', 'B', 'C', 'D'].map((k) => ({
+                optionKey: k,
+                optionText: `(${k})`,
+                isCorrect: false,
+              })),
         });
       }
 
@@ -444,7 +548,9 @@ export class DiagnosticImportService {
     }
 
     if (allParsedQuestions.length === 0) {
-      throw new BadRequestException('Không nhận diện được câu hỏi nào từ file. Vui lòng kiểm tra lại cấu trúc.');
+      throw new BadRequestException(
+        'Không nhận diện được câu hỏi nào từ file. Vui lòng kiểm tra lại cấu trúc.',
+      );
     }
 
     // Lọc lấy đúng các câu thuộc kỹ năng được chọn
@@ -455,10 +561,14 @@ export class DiagnosticImportService {
     });
 
     if (parsedQuestions.length === 0) {
-      throw new BadRequestException(`Không tìm thấy câu hỏi nào thuộc kỹ năng ${selectedSkillArea} trong file này.`);
+      throw new BadRequestException(
+        `Không tìm thấy câu hỏi nào thuộc kỹ năng ${selectedSkillArea} trong file này.`,
+      );
     }
 
-    const repositorySlug = body._pregeneratedSlug || `diag-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    const repositorySlug =
+      body._pregeneratedSlug ||
+      `diag-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const repositoryTitle = `Khảo Sát Đầu Vào (${certType.toUpperCase()} - ${selectedSkillArea}) - ${new Date().toLocaleDateString()}`;
 
     const newRepo = await this.prisma.diagnosticRepository.create({
@@ -479,30 +589,31 @@ export class DiagnosticImportService {
 
     // Separate Part 1 photos from Part 3/4 graphics using estimated_part
     const part1Images = imageAssets
-      .filter(img => img.estimated_part === 1)
+      .filter((img) => img.estimated_part === 1)
       .sort((a, b) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
 
     const part34Images = imageAssets
-      .filter(img => img.estimated_part !== 1 && (img.size_bytes || 0) > 5000)
+      .filter((img) => img.estimated_part !== 1 && (img.size_bytes || 0) > 5000)
       .sort((a, b) => {
         if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
         return (a.filename || '').localeCompare(b.filename || '');
       });
 
     // Backward-compat: if estimated_part is missing (old extractor), use size heuristic
-    const bestImages = part1Images.length > 0
-      ? part1Images.slice(0, 6)
-      : [...imageAssets]
-          .filter(img => (img.size_bytes || 0) > 10000)
-          .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
-          .slice(0, 6)
-          .sort((a, b) => {
-            if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
-            return (a.filename || '').localeCompare(b.filename || '');
-          });
+    const bestImages =
+      part1Images.length > 0
+        ? part1Images.slice(0, 6)
+        : [...imageAssets]
+            .filter((img) => (img.size_bytes || 0) > 10000)
+            .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
+            .slice(0, 6)
+            .sort((a, b) => {
+              if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+              return (a.filename || '').localeCompare(b.filename || '');
+            });
 
     this.logger.log(
       `[Import] Images: ${imageAssets.length} total, ${bestImages.length} Part 1, ${part34Images.length} Part 3/4`,
@@ -523,7 +634,7 @@ export class DiagnosticImportService {
           part: q.detectedPart,
           stem: tryEncryptString(q.stem) ?? q.stem,
           reading_passage: q.readingPassage
-            ? tryEncryptString(q.readingPassage) ?? q.readingPassage
+            ? (tryEncryptString(q.readingPassage) ?? q.readingPassage)
             : null,
           difficulty_level: difficulty.difficulty_level,
           score_band_min: difficulty.score_band_min,
@@ -546,7 +657,9 @@ export class DiagnosticImportService {
         if (img) {
           await this.prisma.diagnosticRepositoryItem.update({
             where: { id: createdItem.id },
-            data: { media_image_url: `/uploads/${(img.url_path || img.url || '').replace(/\\/g, '/')}` }
+            data: {
+              media_image_url: `/uploads/${(img.url_path || img.url || '').replace(/\\/g, '/')}`,
+            },
           });
         }
         part1ItemsSoFar++;
@@ -583,7 +696,13 @@ export class DiagnosticImportService {
     }
 
     // Sync Audio
-    const audioDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'audio');
+    const audioDir = absoluteUploadsDir(
+      'certificate',
+      'TOEIC',
+      'toeic-listening-survey',
+      slug,
+      'audio',
+    );
     if (existsSync(audioDir)) {
       const audioFiles = readdirSync(audioDir);
       for (const file of audioFiles) {
@@ -604,9 +723,20 @@ export class DiagnosticImportService {
     }
 
     // Sync Images
-    const imagesDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-survey', slug, 'images');
+    const imagesDir = absoluteUploadsDir(
+      'certificate',
+      'TOEIC',
+      'toeic-listening-survey',
+      slug,
+      'images',
+    );
     if (existsSync(imagesDir)) {
-      const imageFiles = readdirSync(imagesDir).filter((f: string) => f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg')).sort();
+      const imageFiles = readdirSync(imagesDir)
+        .filter(
+          (f: string) =>
+            f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg'),
+        )
+        .sort();
       for (let i = 0; i < Math.min(imageFiles.length, 6); i++) {
         const qNum = i + 1;
         const itemId = qNumToItemId.get(qNum);
@@ -622,31 +752,54 @@ export class DiagnosticImportService {
   }
 
   // ── Extract Images (Python) ──────────────────────────────────────────────────
-  private async extractImagesFromPdf(pdfPath: string, slug: string): Promise<any[]> {
+  private async extractImagesFromPdf(
+    pdfPath: string,
+    slug: string,
+  ): Promise<any[]> {
     const imagesRelDir = surveyImagesRelDir(slug);
     const outputDir = absoluteUploadsDir(...imagesRelDir.split(/[\\/]/));
     if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
     const pythonExe = process.platform === 'win32' ? 'python' : 'python3';
-    const scriptPath = resolve(join(process.cwd(), '..', 'ml_service', 'pdf_image_extractor.py'));
+    const scriptPath = resolve(
+      join(process.cwd(), '..', 'ml_service', 'pdf_image_extractor.py'),
+    );
 
     if (!existsSync(scriptPath)) {
       this.logger.warn(`[extractImages] Script not found: ${scriptPath}`);
       return [];
     }
 
-    this.logger.log(`[extractImages] Running: ${pythonExe} "${scriptPath}" "${pdfPath}" "${outputDir}" ${slug}`);
-    this.logger.log(`[extractImages] Script exists: ${existsSync(scriptPath)}, PDF exists: ${existsSync(pdfPath)}`);
+    this.logger.log(
+      `[extractImages] Running: ${pythonExe} "${scriptPath}" "${pdfPath}" "${outputDir}" ${slug}`,
+    );
+    this.logger.log(
+      `[extractImages] Script exists: ${existsSync(scriptPath)}, PDF exists: ${existsSync(pdfPath)}`,
+    );
 
     let stdout = '';
     try {
-      const result = await execFileAsync(pythonExe, [
-        scriptPath, pdfPath, outputDir, slug, '--min-width', String(IMG_MIN_WIDTH),
-        '--min-height', String(IMG_MIN_HEIGHT), '--skill-area', 'listening'
-      ], { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
+      const result = await execFileAsync(
+        pythonExe,
+        [
+          scriptPath,
+          pdfPath,
+          outputDir,
+          slug,
+          '--min-width',
+          String(IMG_MIN_WIDTH),
+          '--min-height',
+          String(IMG_MIN_HEIGHT),
+          '--skill-area',
+          'listening',
+        ],
+        { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 },
+      );
       stdout = result.stdout;
       if (result.stderr) {
-        this.logger.debug(`[extractImages] stderr: ${result.stderr.substring(0, 500)}`);
+        this.logger.debug(
+          `[extractImages] stderr: ${result.stderr.substring(0, 500)}`,
+        );
       }
     } catch (err: any) {
       const errMsg = err?.stderr || err?.stdout || err?.message || String(err);
@@ -655,12 +808,16 @@ export class DiagnosticImportService {
       );
       // If script output JSON error to stdout before crashing, try to parse it
       if (err?.stdout) {
-        this.logger.error(`[extractImages] stdout was: ${String(err.stdout).substring(0, 500)}`);
+        this.logger.error(
+          `[extractImages] stdout was: ${String(err.stdout).substring(0, 500)}`,
+        );
       }
       return [];
     }
 
-    this.logger.debug(`[extractImages] stdout (first 500 chars): ${stdout.substring(0, 500)}`);
+    this.logger.debug(
+      `[extractImages] stdout (first 500 chars): ${stdout.substring(0, 500)}`,
+    );
 
     try {
       const parsed = JSON.parse(stdout.trim());
@@ -675,10 +832,14 @@ export class DiagnosticImportService {
         estimated_part: img.estimated_part ?? null,
         part_hint: img.part_hint,
       }));
-      this.logger.log(`[extractImages] Extracted ${images.length} image(s) for slug "${slug}".`);
+      this.logger.log(
+        `[extractImages] Extracted ${images.length} image(s) for slug "${slug}".`,
+      );
       return images;
     } catch (err) {
-      this.logger.error(`[extractImages] Failed to parse JSON: ${String(err)} — stdout: ${stdout.substring(0, 300)}`);
+      this.logger.error(
+        `[extractImages] Failed to parse JSON: ${String(err)} — stdout: ${stdout.substring(0, 300)}`,
+      );
       return [];
     }
   }
@@ -718,7 +879,9 @@ export class DiagnosticImportService {
     );
 
     if (!existsSync(scriptPath)) {
-      throw new BadRequestException('audio_chunker.py not found in ml_service/');
+      throw new BadRequestException(
+        'audio_chunker.py not found in ml_service/',
+      );
     }
 
     const args = [
@@ -734,7 +897,10 @@ export class DiagnosticImportService {
 
     let stdout = '';
     try {
-      const result = await execFileAsync(pythonExe, args, { timeout: 900_000, maxBuffer: 50 * 1024 * 1024 });
+      const result = await execFileAsync(pythonExe, args, {
+        timeout: 900_000,
+        maxBuffer: 50 * 1024 * 1024,
+      });
       stdout = result.stdout;
     } catch (err: any) {
       throw new BadRequestException(
@@ -802,7 +968,11 @@ export class DiagnosticImportService {
     // ── LLM Image Mapping: map Part 3/4 images to questions ─────────────────
     let imageMappedCount = 0;
     try {
-      imageMappedCount = await this.mapDiagnosticPart34Images(slug, repository.id, chunks);
+      imageMappedCount = await this.mapDiagnosticPart34Images(
+        slug,
+        repository.id,
+        chunks,
+      );
     } catch (err) {
       this.logger.warn(
         `[chunkDiagnosticAudio] LLM image mapping failed (non-blocking): ${String(err)}`,
@@ -831,12 +1001,18 @@ export class DiagnosticImportService {
     }>,
   ): Promise<number> {
     if (!this.openRouterService.isAvailable()) {
-      this.logger.debug('OpenRouter not configured — skipping Part 3/4 image mapping.');
+      this.logger.debug(
+        'OpenRouter not configured — skipping Part 3/4 image mapping.',
+      );
       return 0;
     }
 
     const imagesDir = absoluteUploadsDir(
-      'certificate', 'TOEIC', 'toeic-listening-survey', slug, 'images',
+      'certificate',
+      'TOEIC',
+      'toeic-listening-survey',
+      slug,
+      'images',
     );
 
     if (!existsSync(imagesDir)) return 0;
@@ -850,7 +1026,13 @@ export class DiagnosticImportService {
     // Load items from DB
     const items = await this.prisma.diagnosticRepositoryItem.findMany({
       where: { repository_id: repositoryId },
-      select: { id: true, metadata: true, part: true, stem: true, media_image_url: true },
+      select: {
+        id: true,
+        metadata: true,
+        part: true,
+        stem: true,
+        media_image_url: true,
+      },
     });
 
     const qNumToItemId = new Map<number, number>();
@@ -870,13 +1052,13 @@ export class DiagnosticImportService {
 
     // Build question context for LLM
     const questionContexts: QuestionContext[] = items
-      .filter(item => item.part === 3 || item.part === 4)
-      .map(item => ({
+      .filter((item) => item.part === 3 || item.part === 4)
+      .map((item) => ({
         question_number: (item.metadata as any)?.question_number ?? 0,
         part: item.part ?? 3,
         stem: item.stem,
       }))
-      .filter(q => q.question_number > 0);
+      .filter((q) => q.question_number > 0);
 
     if (questionContexts.length === 0) return 0;
 
@@ -889,7 +1071,11 @@ export class DiagnosticImportService {
 
       const absPath = join(imagesDir, filename);
       let sizeBytes = 0;
-      try { sizeBytes = statSync(absPath).size; } catch { /* ignore */ }
+      try {
+        sizeBytes = statSync(absPath).size;
+      } catch {
+        /* ignore */
+      }
 
       const pageMatch = filename.match(/_p(\d+)_/);
       const page = pageMatch ? parseInt(pageMatch[1], 10) : 0;
@@ -912,7 +1098,10 @@ export class DiagnosticImportService {
       `[DiagImageMapping] Found ${unmappedImages.length} unmapped image(s). Calling OpenRouter...`,
     );
 
-    const result = await this.openRouterService.mapImagesToQuestions(unmappedImages, questionContexts);
+    const result = await this.openRouterService.mapImagesToQuestions(
+      unmappedImages,
+      questionContexts,
+    );
 
     if (result.error) {
       this.logger.warn(`[DiagImageMapping] OpenRouter error: ${result.error}`);
@@ -920,7 +1109,8 @@ export class DiagnosticImportService {
 
     let mappedCount = 0;
     for (const mapping of result.mappings) {
-      if (mapping.question_numbers.length === 0 || mapping.confidence < 0.3) continue;
+      if (mapping.question_numbers.length === 0 || mapping.confidence < 0.3)
+        continue;
 
       const imageUrl = `/uploads/certificate/TOEIC/toeic-listening-survey/${slug}/images/${mapping.image_filename}`;
 
@@ -940,7 +1130,9 @@ export class DiagnosticImportService {
       );
     }
 
-    this.logger.log(`[DiagImageMapping] Mapped ${mappedCount} question(s) via ${result.model_used}.`);
+    this.logger.log(
+      `[DiagImageMapping] Mapped ${mappedCount} question(s) via ${result.model_used}.`,
+    );
     return mappedCount;
   }
 
@@ -970,7 +1162,9 @@ export class DiagnosticImportService {
     });
 
     if (!repository || repository.cert_type !== 'toeic') {
-      throw new BadRequestException('Không tìm thấy repository khảo sát TOEIC cần cập nhật.');
+      throw new BadRequestException(
+        'Không tìm thấy repository khảo sát TOEIC cần cập nhật.',
+      );
     }
 
     // Call the public parse method from CertificateEnrollmentService
@@ -980,7 +1174,9 @@ export class DiagnosticImportService {
     );
 
     if (answerKeyMap.size === 0) {
-      throw new BadRequestException('Không tìm thấy cặp question_number + answer (A/B/C/D) hợp lệ trong file.');
+      throw new BadRequestException(
+        'Không tìm thấy cặp question_number + answer (A/B/C/D) hợp lệ trong file.',
+      );
     }
 
     const items = await this.prisma.diagnosticRepositoryItem.findMany({
@@ -992,11 +1188,13 @@ export class DiagnosticImportService {
     });
 
     if (items.length === 0) {
-      throw new BadRequestException('Repository hiện chưa có câu hỏi để gán đáp án.');
+      throw new BadRequestException(
+        'Repository hiện chưa có câu hỏi để gán đáp án.',
+      );
     }
 
     // Load options for all items
-    const itemIds = items.map(i => i.id);
+    const itemIds = items.map((i) => i.id);
     const options = await this.prisma.diagnosticRepositoryOption.findMany({
       where: { item_id: { in: itemIds } },
     });
@@ -1031,7 +1229,9 @@ export class DiagnosticImportService {
       if (!correctAnsKey) continue;
 
       const itemOptions = optionsByItemId.get(item.id) || [];
-      const correctOpt = itemOptions.find(o => o.option_key.toUpperCase() === correctAnsKey.toUpperCase());
+      const correctOpt = itemOptions.find(
+        (o) => o.option_key.toUpperCase() === correctAnsKey.toUpperCase(),
+      );
 
       if (correctOpt) {
         // Reset all options for this item to false, then set correct to true
@@ -1041,7 +1241,7 @@ export class DiagnosticImportService {
               this.prisma.diagnosticRepositoryOption.update({
                 where: { id: opt.id },
                 data: { is_correct: false },
-              })
+              }),
             );
           }
         }
@@ -1051,7 +1251,7 @@ export class DiagnosticImportService {
             this.prisma.diagnosticRepositoryOption.update({
               where: { id: correctOpt.id },
               data: { is_correct: true },
-            })
+            }),
           );
         }
         updatedCount++;
@@ -1083,8 +1283,12 @@ export class DiagnosticImportService {
       updated_count: updatedCount,
       total_answer_keys: answerKeyMap.size,
       total_db_items: items.length,
-      unmatched_question_numbers: unmatchedQuestionNumbers.sort((a, b) => a - b),
-      missing_option_question_numbers: missingOptionQuestionNumbers.sort((a, b) => a - b),
+      unmatched_question_numbers: unmatchedQuestionNumbers.sort(
+        (a, b) => a - b,
+      ),
+      missing_option_question_numbers: missingOptionQuestionNumbers.sort(
+        (a, b) => a - b,
+      ),
     };
   }
 }

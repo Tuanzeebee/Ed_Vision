@@ -45,6 +45,7 @@ model Account {
   toeicExamSessions          ToeicExamSession[]
   activityLogs               UserActivityLog[]
   dailyActivitySummaries     UserDailyActivitySummary[]
+  ragDocuments               RagDocument[]
 
   @@map("Account")
 }
@@ -2005,4 +2006,57 @@ model ProgramEffectivenessMetric {
   @@unique([cert_type, program_component, period_start])
   @@index([cert_type, effectiveness_rank])
   @@map("ProgramEffectivenessMetric")
+}
+
+// -----------------------------------------------------------------------------
+// RAG Knowledge Base (Admin)
+// -----------------------------------------------------------------------------
+
+/// T�i li?u RAG do Admin n?p v�o Knowledge Base
+model RagDocument {
+  id           Int       @id @default(autoincrement())
+  title        String    @db.VarChar(500)
+  source_type  String    @db.VarChar(30)    // "pdf" | "docx" | "txt" | "csv"
+  cert_type    String    @db.VarChar(20)    // "toeic" | "ielts" | "general"
+  category     String?   @db.VarChar(100)   // AI-generated category
+  language     String    @default("en") @db.VarChar(10)
+  file_url     String?   @db.VarChar(1000)
+  file_size    Int?                         // bytes
+  status       String    @default("pending") @db.VarChar(20) // pending|processing|ready|error
+  error_msg    String?   @db.Text
+  chunk_count  Int       @default(0)
+  created_by   Int
+  deleted_at   DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @updatedAt @db.Timestamptz(6)
+
+  chunks     RagChunk[]
+  createdBy  Account    @relation(fields: [created_by], references: [account_id])
+
+  @@index([cert_type, status])
+  @@map("RagDocument")
+}
+
+/// Chunk van b?n sau khi chia nh?, k�m vector embedding (pgvector)
+model RagChunk {
+  id          Int      @id @default(autoincrement())
+  document_id Int
+  content     String   @db.Text
+  chunk_index Int
+  /// pgvector vector(768) — Ollama nomic-embed-text (local, no API key needed); managed via raw SQL
+  embedding    Unsupported("vector(768)")?
+  token_count Int      @default(0)
+  page_number Int?
+  section     String?  @db.VarChar(500)
+  metadata    Json?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  // NOTE: embedding column (vector(768)) is managed via raw SQL migration
+  //       because Prisma does not natively support pgvector type.
+  //       See: prisma/migrations/add_pgvector.sql
+
+  document RagDocument @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@index([document_id])
+  @@map("RagChunk")
 }

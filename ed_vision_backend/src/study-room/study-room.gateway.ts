@@ -476,13 +476,13 @@ export class StudyRoomGateway
         user.accountId,
       );
 
-        // Set user as offline when leaving a room
-        await this.onlineStatusManager.setOffline(user.accountId);
+      // Set user as offline when leaving a room
+      await this.onlineStatusManager.setOffline(user.accountId);
 
-        this.getJoinedRooms(client).delete(payload.roomId);
-        client.leave(this.getRoomChannel(payload.roomId));
-        const users = await this.studyRoomService.removeUserFromRoomSocketList(
-          payload.roomId,
+      this.getJoinedRooms(client).delete(payload.roomId);
+      client.leave(this.getRoomChannel(payload.roomId));
+      const users = await this.studyRoomService.removeUserFromRoomSocketList(
+        payload.roomId,
         user.accountId,
       );
 

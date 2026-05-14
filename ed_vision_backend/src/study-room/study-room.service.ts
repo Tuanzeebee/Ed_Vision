@@ -1769,13 +1769,13 @@ export class StudyRoomService {
     setImmediate(async () => {
       try {
         const weekStart = getWeekStart(safeEndedAt);
-        
+
         // Recalculate weekly ranking
         await this.rankingEngine.calculateWeeklyRanking(weekStart);
-        
+
         // Recalculate total ranking
         await this.rankingEngine.calculateTotalRanking();
-        
+
         // Invalidate caches to force refresh
         await this.rankingEngine.invalidateAllCaches();
       } catch (error) {
@@ -1865,7 +1865,6 @@ export class StudyRoomService {
     // Legacy method - kept for backward compatibility
     // The new leaderboard system is handled in completeActiveStudySession
     // This method is now a no-op but kept to avoid breaking existing code
-    
     // Note: The actual leaderboard update is now done by RankingEngineService
     // which is called asynchronously in completeActiveStudySession
   }

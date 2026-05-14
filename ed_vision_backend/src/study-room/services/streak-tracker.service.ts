@@ -12,9 +12,9 @@ export interface StreakInfo {
 
 /**
  * Streak Tracker Service
- * 
+ *
  * Responsible for tracking and updating consecutive study day streaks.
- * 
+ *
  * Logic:
  * - Same day: No change to streak
  * - Consecutive day (gap = 1): Increment streak
@@ -98,13 +98,17 @@ export class StreakTrackerService {
 
   /**
    * Update streak for a user after completing a study session
-   * 
+   *
    * @param accountId - User account ID
    * @param studyDate - Date of the study session (in user's timezone)
    * @param client - Optional Prisma transaction client
    * @returns Promise<StreakInfo> - Updated streak information
    */
-  async updateStreak(accountId: number, studyDate: Date, client?: any): Promise<StreakInfo> {
+  async updateStreak(
+    accountId: number,
+    studyDate: Date,
+    client?: any,
+  ): Promise<StreakInfo> {
     try {
       const prismaClient = client || this.prisma;
 
@@ -173,7 +177,7 @@ export class StreakTrackerService {
 
   /**
    * Calculate new streak based on last study date and current date
-   * 
+   *
    * @param lastStudyDate - Last study date (or null if first time)
    * @param currentDate - Current study date
    * @param currentStreak - Current streak count
@@ -221,7 +225,7 @@ export class StreakTrackerService {
 
   /**
    * Get current streak for a user
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<number> - Current streak count (0 if not found)
    */
@@ -246,7 +250,7 @@ export class StreakTrackerService {
 
   /**
    * Get longest streak for a user
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<number> - Longest streak count (0 if not found)
    */
@@ -268,7 +272,7 @@ export class StreakTrackerService {
 
   /**
    * Get full streak info for a user
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<StreakInfo> - Streak information
    */
@@ -308,11 +312,13 @@ export class StreakTrackerService {
 
   /**
    * Get streak info for multiple users (batch operation)
-   * 
+   *
    * @param accountIds - Array of user account IDs
    * @returns Promise<Map<number, StreakInfo>> - Map of accountId -> StreakInfo
    */
-  async getStreakInfoBatch(accountIds: number[]): Promise<Map<number, StreakInfo>> {
+  async getStreakInfoBatch(
+    accountIds: number[],
+  ): Promise<Map<number, StreakInfo>> {
     const result = new Map<number, StreakInfo>();
 
     try {
@@ -366,7 +372,7 @@ export class StreakTrackerService {
 
   /**
    * Calculate days difference between two dates
-   * 
+   *
    * @param date1 - First date
    * @param date2 - Second date
    * @returns Number of days difference (absolute value)

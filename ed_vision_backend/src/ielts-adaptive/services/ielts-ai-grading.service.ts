@@ -38,9 +38,7 @@ export class IeltsAiGradingService {
     }
   }
 
-  async gradeWriting(
-    input: WritingGradingInput,
-  ): Promise<IeltsGradingResult> {
+  async gradeWriting(input: WritingGradingInput): Promise<IeltsGradingResult> {
     const prompt = buildWritingGradingPrompt(input);
 
     try {
@@ -183,9 +181,7 @@ export class IeltsAiGradingService {
 
   private toStringArray(val: any): string[] {
     if (!Array.isArray(val)) return [];
-    return val
-      .filter((s) => typeof s === 'string' && s.trim())
-      .slice(0, 5);
+    return val.filter((s) => typeof s === 'string' && s.trim()).slice(0, 5);
   }
 
   private parseConfidence(val: any): 'low' | 'medium' | 'high' {

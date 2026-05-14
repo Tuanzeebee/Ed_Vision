@@ -37,8 +37,9 @@ export const adminMenu: MenuItemConfig[] = [
     children: [
       { label: "Quản lý Thông báo", to: "/admin/notifications", iconKey: "bell" },
       { label: "Phân quyền", to: "/admin/permissions", iconKey: "shield" },
+      { label: "Hệ thống RAG (AI)", to: "/admin/knowledge-base", iconKey: "robot" },
     ]
   }
 ];
 
-export type IconKey = "home" | "cog" | "users" | "student" | "teacher" | "poll" | "chart" | "bar" | "server" | "bell" | "shield" | "certificate" | "activity" | "studentMenu" | "award";
+export type IconKey = "home" | "cog" | "users" | "student" | "teacher" | "poll" | "chart" | "bar" | "server" | "bell" | "shield" | "certificate" | "activity" | "studentMenu" | "award" | "robot";
