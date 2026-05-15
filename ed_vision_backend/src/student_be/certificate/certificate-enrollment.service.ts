@@ -4574,7 +4574,29 @@ export class CertificateEnrollmentService {
       : 'Học viên chưa có enrollment active cho chứng chỉ này.';
 
     const model = this.resolveOllamaModel(certType);
-    const basePrompt = this.buildTutorPrompt(certType, dto, enrollmentSummary);
+
+    // Build RAG context for tutor (skip when clearly off-topic to avoid latency)
+    const OFF_TOPIC_KEYWORDS =
+      /\b(c\+\+|python|java\b|javascript|php|sql|mysql|linux|docker|git|toán|vật lý|hóa học|sinh học|lịch sử|địa lý|covid|chính trị|nấu ăn|thể thao|bóng đá)\b/i;
+    const isOffTopic = OFF_TOPIC_KEYWORDS.test(dto.question);
+    const ragContext = isOffTopic
+      ? null
+      : await this.ragRetrieval
+          .buildRagContext(dto.question, certType)
+          .catch(() => null);
+
+    const ragBlock = ragContext
+      ? `\n\nTÀI LIỆU THAM KHẢO:\n${ragContext.contextBlock}`
+      : '';
+    const mergedLearningContext = [dto.learning_context?.trim(), ragBlock]
+      .filter((value) => Boolean(value && value.length > 0))
+      .join('\n');
+
+    const basePrompt = this.buildTutorPrompt(
+      certType,
+      { ...dto, learning_context: mergedLearningContext },
+      enrollmentSummary,
+    );
     const hintOnlyMode = this.isHintOnlyTutorRequest(dto);
 
     const cacheKey = [

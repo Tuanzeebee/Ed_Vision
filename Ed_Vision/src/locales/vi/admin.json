@@ -266,6 +266,10 @@
     "mlResults": "Kết quả Học máy",
     "permissions": "Phân quyền",
     "notifications": "Quản lý Thông báo & Phản hồi",
-    "contentApproval": "Phê duyệt Nội dung"
+    "contentApproval": "Phê duyệt Nội dung",
+    "certificateDashboard": "Dashboard Chứng chỉ",
+    "usageBehavior": "Hành vi Sử dụng",
+    "programEffectiveness": "Hiệu quả Chương trình",
+    "ragSystem": "Hệ thống RAG (AI)"
   }
 }

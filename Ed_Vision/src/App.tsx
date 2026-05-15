@@ -25,7 +25,7 @@ import TeacherSchedule from "./modules/admin/TeacherSchedule";
 import TeacherSupportHistory from "./modules/admin/TeacherSupportHistory";
 import QuestionManagement from "./modules/admin/QuestionManagement";
 import AddQuestion from "./modules/admin/AddQuestion";
-import GeneralStatistics from "./modules/admin/GeneralStatistics";
+
 import PermissionManagement from "./modules/admin/PermissionManagement";
 import RolePermissionManagement from "./modules/admin/RolePermissionManagement";
 import NotificationManagement from "./modules/admin/NotificationManagement";
@@ -220,7 +220,7 @@ function App() {
           <Route path="/admin/questions/add" element={<ProtectedRoute permission="admin_questions_add"><AddQuestion /></ProtectedRoute>} />
 
           {/* Admin routes - Reports & Analytics (protected by permission) */}
-          <Route path="/admin/reports/learning" element={<ProtectedRoute permission="admin_reports"><GeneralStatistics /></ProtectedRoute>} />
+
 
           {/* Admin routes - Knowledge Base (protected by permission) */}
           <Route path="/admin/knowledge-base" element={<ProtectedRoute permission="admin_dashboard"><AdminRagKnowledgeBase /></ProtectedRoute>} />

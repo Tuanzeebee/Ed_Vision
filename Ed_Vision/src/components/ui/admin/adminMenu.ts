@@ -24,7 +24,7 @@ export const adminMenu: MenuItemData[] = [
     label: "Dữ liệu & Báo cáo",
     iconKey: "chart",
     children: [
-      { label: "Thống kê Tổng quát", to: "/admin/reports/learning", iconKey: "bar" },
+
       { label: "Hành vi sử dụng", to: "/admin/reports/usage-behavior", iconKey: "bar" },
     ]
   },
