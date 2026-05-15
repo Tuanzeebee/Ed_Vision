@@ -10,6 +10,7 @@ import {
   BookMarked,
   Star,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import type { ToeicFoundationTopic, ToeicIntakeProfile } from "./toeicIntake";
 import {
@@ -28,6 +29,7 @@ import {
   getPersonalScores,
   getToeicLeaderboard,
   getToeicReservePoints,
+  getToeicSkillFeedback,
 } from "@/services/api/certificateService";
 import StudentLeaderboard from "./components/StudentLeaderboard";
 
@@ -96,6 +98,10 @@ export default function ToeicRoadmapBoard({
   const [readingCorrect, setReadingCorrect] = useState<number>(0);
   const [readingTotal, setReadingTotal] = useState<number>(0);
   const [skillPracticeScore, setSkillPracticeScore] = useState<ToeicScoreResult | null>(null);
+  const [skillFeedback, setSkillFeedback] = useState<string>("");
+  const [skillFeedbackLoading, setSkillFeedbackLoading] = useState(false);
+  const [skillFeedbackError, setSkillFeedbackError] = useState<string | null>(null);
+  const [skillFeedbackWindow, setSkillFeedbackWindow] = useState<"week" | "day">("week");
 
   // Compute earned-based percentages for strongest/weakest comparison
   const earnedPctBySkill = useMemo(() => {
@@ -117,6 +123,45 @@ export default function ToeicRoadmapBoard({
   const weakest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[earnedPctBySkill.indexOf(minVal)]?.label ?? "Nghe";
 
   // Fetch accuracy from recent practice sessions
+  type SkillFeedbackCache = {
+    signature: string;
+    answer: string;
+    window: "week" | "day";
+    current: { listening: number; reading: number };
+    previous: { listening: number; reading: number };
+    updatedAt: string;
+  };
+
+  const SKILL_FEEDBACK_CACHE_KEY = "edvision.toeic.skill-feedback.v2";
+
+  const loadSkillFeedbackCache = (): SkillFeedbackCache | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(SKILL_FEEDBACK_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as SkillFeedbackCache;
+      if (!parsed || typeof parsed !== "object") return null;
+      if (!parsed.answer || !parsed.current) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveSkillFeedbackCache = (payload: SkillFeedbackCache) => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SKILL_FEEDBACK_CACHE_KEY, JSON.stringify(payload));
+  };
+
+  const normalizeFeedback = (text: string): string =>
+    text
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/__(.+?)__/g, "$1")
+      .replace(/`(.+?)`/g, "$1")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
   useEffect(() => {
     getToeicReservePoints()
       .then((data) => {
@@ -146,10 +191,10 @@ export default function ToeicRoadmapBoard({
             readingAcc = rTotal > 0 ? Math.round((rCorrect / rTotal) * 100) : 0;
         }
 
-        setHasListeningData(listeningTotal > 0);
-        setHasReadingData(readingTotal > 0);
-        setListeningAccuracy(listeningAcc || 0);
-        setReadingAccuracy(readingAcc || 0);
+        const hasListening = listeningTotal > 0;
+        const hasReading = readingTotal > 0;
+        setHasListeningData(hasListening);
+        setHasReadingData(hasReading);
 
         // Build per-part best correct from part_sessions for per-part cap scoring
         const bestCorrectByPart: Record<string, number> = {};
@@ -168,10 +213,67 @@ export default function ToeicRoadmapBoard({
             rTotalAgg += s.total_questions || 0;
           }
         }
-        setListeningCorrect(Number.isFinite(Number(data.listening_correct)) ? Number(data.listening_correct) : lCorrectAgg);
-        setListeningTotal(Number.isFinite(Number(data.listening_total)) ? Number(data.listening_total) : lTotalAgg);
-        setReadingCorrect(Number.isFinite(Number(data.reading_correct)) ? Number(data.reading_correct) : rCorrectAgg);
-        setReadingTotal(Number.isFinite(Number(data.reading_total)) ? Number(data.reading_total) : rTotalAgg);
+        const listeningCorrectValue = Number.isFinite(Number(data.listening_correct))
+          ? Number(data.listening_correct)
+          : lCorrectAgg;
+        const listeningTotalValue = Number.isFinite(Number(data.listening_total))
+          ? Number(data.listening_total)
+          : lTotalAgg;
+        const readingCorrectValue = Number.isFinite(Number(data.reading_correct))
+          ? Number(data.reading_correct)
+          : rCorrectAgg;
+        const readingTotalValue = Number.isFinite(Number(data.reading_total))
+          ? Number(data.reading_total)
+          : rTotalAgg;
+
+        setListeningCorrect(listeningCorrectValue);
+        setListeningTotal(listeningTotalValue);
+        setReadingCorrect(readingCorrectValue);
+        setReadingTotal(readingTotalValue);
+
+        const signature = [
+          `l:${listeningCorrectValue}/${listeningTotalValue}`,
+          `r:${readingCorrectValue}/${readingTotalValue}`,
+        ].join("|");
+
+        const cached = loadSkillFeedbackCache();
+        if (cached && cached.signature === signature) {
+          setSkillFeedback(cached.answer);
+          setSkillFeedbackWindow(cached.window);
+          setListeningAccuracy(cached.current.listening ?? 0);
+          setReadingAccuracy(cached.current.reading ?? 0);
+          setSkillFeedbackError(null);
+          setSkillFeedbackLoading(false);
+          setIsAccuracyLoaded(true);
+          return;
+        }
+
+        setSkillFeedbackLoading(true);
+        getToeicSkillFeedback()
+          .then((res) => {
+            const normalized = normalizeFeedback(res.answer);
+            setSkillFeedback(normalized);
+            setSkillFeedbackWindow(res.window);
+            setListeningAccuracy(res.current.listening ?? 0);
+            setReadingAccuracy(res.current.reading ?? 0);
+            setSkillFeedbackError(null);
+            saveSkillFeedbackCache({
+              signature,
+              answer: normalized,
+              window: res.window,
+              current: res.current,
+              previous: res.previous,
+              updatedAt: new Date().toISOString(),
+            });
+          })
+          .catch(() => {
+            setSkillFeedbackError(
+              "Chưa thể tải nhận xét lúc này. Vui lòng thử lại sau.",
+            );
+          })
+          .finally(() => {
+            setSkillFeedbackLoading(false);
+          });
 
         // Calculate per-part cap score (same logic as ToeicLearningMapPage)
         const hasAnyPart = Object.keys(bestCorrectByPart).length > 0;
@@ -502,13 +604,10 @@ export default function ToeicRoadmapBoard({
                 const hasData = skill.id === "listening" ? hasListeningData : hasReadingData;
 
                 // Per-part cap data from calculateToeicPracticeScore
-                const skillDetail = skillPracticeScore?.skills.find((s) => s.key === skill.id);
-                const earned = skillDetail?.totalEarned ?? 0;
-                const cap = skillDetail?.totalCap ?? 0;
                 const correctCount = skill.id === "listening" ? listeningCorrect : readingCorrect;
                 const totalCount = skill.id === "listening" ? listeningTotal : readingTotal;
-                const pct = cap > 0 ? Math.round((earned / cap) * 100) : 0;
-                const displayPct = hasData ? pct : 0;
+                const aiPct = skill.id === "listening" ? listeningAccuracy : readingAccuracy;
+                const displayPct = hasData ? Math.max(0, Math.min(100, Math.round(aiPct))) : 0;
 
                 return (
                   <div
@@ -536,14 +635,14 @@ export default function ToeicRoadmapBoard({
                       {!hasData
                         ? "Chưa ôn tập lần nào. Bắt đầu luyện tập ngay!"
                         : displayPct >= 75
-                          ? "Đang ổn định, tập trung nâng cao tốc độ."
+                          ? "Tỷ lệ đúng cao, tập trung nâng tốc độ và độ ổn định."
                           : displayPct >= 50
                             ? "Mức trung bình, cần duy trì ôn luyện đều đặn."
                             : "Đang yếu, ưu tiên luyện tập để tránh mất điểm!"}
                     </p>
                     {hasData && (
                       <p className="mt-0.5 text-[10px] text-slate-400 italic">
-                        Mỗi part có trần điểm riêng — luyện lại 1 part không thể tăng thêm khi đã đạt trần
+                        Tỷ lệ đúng dựa trên {skillFeedbackWindow === "day" ? "24 giờ gần nhất" : "7 ngày gần nhất"}.
                       </p>
                     )}
                   </div>
@@ -562,6 +661,29 @@ export default function ToeicRoadmapBoard({
                     {weakest}
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-purple-100 bg-purple-50/60 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-purple-700">
+                  <Sparkles className="h-4 w-4" />
+                  Nhận xét của Trợ lý ảo
+                </div>
+                {skillFeedbackLoading && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Đang tạo nhận xét dựa trên dữ liệu luyện tập gần nhất...
+                  </p>
+                )}
+                {!skillFeedbackLoading && skillFeedbackError && (
+                  <p className="mt-2 text-xs text-rose-600">
+                    {skillFeedbackError}
+                  </p>
+                )}
+                {!skillFeedbackLoading && !skillFeedbackError && (
+                  <p className="mt-2 text-xs text-slate-600 whitespace-pre-line">
+                    {skillFeedback ||
+                      "Chưa có đủ dữ liệu để nhận xét. Hãy luyện tập vài bộ để hệ thống phân tích."}
+                  </p>
+                )}
               </div>
 
             </div>

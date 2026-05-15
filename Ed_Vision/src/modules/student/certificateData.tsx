@@ -159,34 +159,7 @@ export const CERTIFICATES: Certificate[] = [
     coverImg:
       "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=500&q=80",
   },
-  {
-    id: "mos-excel",
-    label: "MOS Excel",
-    sublabel: "Data & Spreadsheets",
-    color: "text-green-700",
-    bgFrom: "from-green-600",
-    bgTo: "to-emerald-400",
-    icon: "X",
-    progress: 0,
-    status: "not-started",
-    type: "mos",
-    coverImg:
-      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: "hsk-2",
-    label: "HSK 2",
-    sublabel: "Tiếng Trung cơ bản",
-    color: "text-rose-600",
-    bgFrom: "from-rose-500",
-    bgTo: "to-amber-400",
-    icon: "汉",
-    progress: 0,
-    status: "not-started",
-    type: "chinese",
-    coverImg:
-      "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?auto=format&fit=crop&w=500&q=80",
-  },
+
 ];
 
 export const IELTS_ROADMAP: RoadmapStep[] = [

@@ -266,6 +266,10 @@
     "mlResults": "ML Results",
     "permissions": "Permissions",
     "notifications": "Notification & Feedback Management",
-    "contentApproval": "Content Approval"
+    "contentApproval": "Content Approval",
+    "certificateDashboard": "Certificate Dashboard",
+    "usageBehavior": "Usage Behavior",
+    "programEffectiveness": "Program Effectiveness",
+    "ragSystem": "RAG System (AI)"
   }
 }

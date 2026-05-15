@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Header from '../../components/layout/Header'
 import Footer from '../../components/layout/Footer'
-import { TrendingUp, Flame, Award, Lock, Diamond, Trophy } from 'lucide-react'
+import { TrendingUp, Flame, Award, Lock, Diamond, Trophy, FileCheck, MessageSquare, BarChart, Zap } from 'lucide-react'
 import { CERTIFICATES, StatCard, CertCard } from './certificateData'
 import type { CertId, Certificate } from './certificateData'
 import { getAllEnrollments, getToeicReservePoints } from '@/services/api/certificateService'
@@ -11,17 +11,10 @@ import type { EnrollmentResponse, ToeicReservePointsResponse } from '@/services/
 import { studyRoomService } from '@/services/student/studyRoomService'
 import { getPersonalStats } from '@/services/api/leaderboardService'
 
-const BACKGROUND_VIDEO_URL =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4'
-
 export default function CertificateReview() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const IELTS_SURVEY_KEY = 'ieltsSurveyCompleted'
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const frameRef = useRef<number | null>(null)
-  const replayTimeoutRef = useRef<number | null>(null)
-  const initializedRef = useRef(false)
 
   // ── Load dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
@@ -50,92 +43,7 @@ export default function CertificateReview() {
     })
   }, [])
 
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
 
-    const fadeWindow = 0.5
-
-    const stopFrame = () => {
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current)
-        frameRef.current = null
-      }
-    }
-
-    const tick = () => {
-      const duration = video.duration
-      const currentTime = video.currentTime
-
-      if (Number.isFinite(duration) && duration > 0) {
-        let opacity = 1
-
-        if (currentTime < fadeWindow) {
-          opacity = currentTime / fadeWindow
-        } else if (duration - currentTime < fadeWindow) {
-          opacity = (duration - currentTime) / fadeWindow
-        }
-
-        video.style.opacity = String(Math.max(0, Math.min(1, opacity)))
-      }
-
-      frameRef.current = requestAnimationFrame(tick)
-    }
-
-    const startFrame = () => {
-      stopFrame()
-      frameRef.current = requestAnimationFrame(tick)
-    }
-
-    const playVideo = () => {
-      void video
-        .play()
-        .then(() => {
-          startFrame()
-        })
-        .catch(() => {})
-    }
-
-    const handleCanPlay = () => {
-      if (initializedRef.current) return
-      initializedRef.current = true
-      video.style.opacity = '0'
-      playVideo()
-    }
-
-    const handleEnded = () => {
-      stopFrame()
-      video.style.opacity = '0'
-
-      if (replayTimeoutRef.current !== null) {
-        window.clearTimeout(replayTimeoutRef.current)
-      }
-
-      replayTimeoutRef.current = window.setTimeout(() => {
-        video.currentTime = 0
-        playVideo()
-      }, 100)
-    }
-
-    video.addEventListener('canplay', handleCanPlay)
-    video.addEventListener('ended', handleEnded)
-
-    if (video.readyState >= 2) {
-      handleCanPlay()
-    }
-
-    return () => {
-      stopFrame()
-
-      if (replayTimeoutRef.current !== null) {
-        window.clearTimeout(replayTimeoutRef.current)
-      }
-
-      video.removeEventListener('canplay', handleCanPlay)
-      video.removeEventListener('ended', handleEnded)
-      video.pause()
-    }
-  }, [])
 
   // ── Gắn progress/status thật vào từng chứng chỉ ──────────────────────────────────
   const certsWithProgress: Certificate[] = CERTIFICATES.map((c) => {
@@ -221,20 +129,8 @@ export default function CertificateReview() {
   return (
     <div className="relative min-h-screen bg-slate-50 flex flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <video
-          ref={videoRef}
-          src={BACKGROUND_VIDEO_URL}
-          muted
-          playsInline
-          preload="auto"
-          className="absolute inset-0 h-full w-full object-cover opacity-0"
-          style={{
-            filter: 'blur(0.8px) saturate(1.55) contrast(1.1) brightness(1)',
-            transform: 'scale(1.04)',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50/56 via-white/24 to-slate-50/60" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_22%,rgba(56,189,248,0.3),transparent_42%),radial-gradient(circle_at_84%_76%,rgba(251,191,36,0.24),transparent_48%),radial-gradient(circle_at_52%_14%,rgba(59,130,246,0.18),transparent_42%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-slate-50/80" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_22%,rgba(56,189,248,0.05),transparent_42%),radial-gradient(circle_at_84%_76%,rgba(59,130,246,0.05),transparent_48%)]" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
@@ -302,8 +198,6 @@ export default function CertificateReview() {
                     {[
                       { cert: 'IELTS', rank: 16, icon: '🏅' },
                       { cert: 'TOEIC', rank: 1, icon: '🥇' },
-                      { cert: 'MOS Excel', rank: 8, icon: '🏅' },
-                      { cert: 'HSK 2', rank: 3, icon: '🥉' },
                     ].map((r) => (
                       <span
                         key={`${setIdx}-${r.cert}`}
@@ -330,7 +224,7 @@ export default function CertificateReview() {
                 {startedCerts.length}/{CERTIFICATES.length} đã bắt đầu
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
               {certsWithProgress.map((c) => (
                 <CertCard key={c.id} cert={c} selected={false} onClick={() => handleCertClick(c.id)} />
               ))}
