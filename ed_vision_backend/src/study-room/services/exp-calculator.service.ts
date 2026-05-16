@@ -11,9 +11,9 @@ import {
 
 /**
  * EXP Calculator Service
- * 
+ *
  * Responsible for calculating and awarding EXP (Experience Points) based on study session duration.
- * 
+ *
  * Formula: EXP = Math.floor(durationMinutes) * EXP_PER_MINUTE
  * Minimum session: 1 minute (< 1 minute = 0 EXP)
  */
@@ -28,13 +28,16 @@ export class ExpCalculatorService {
 
   /**
    * Calculate EXP points from session duration
-   * 
+   *
    * @param durationMinutes - Duration of study session in minutes
    * @returns EXP points to award (0 if duration < MIN_SESSION_DURATION_MINUTES)
    */
   calculateExp(durationMinutes: number): number {
     // Validate input
-    if (typeof durationMinutes !== 'number' || !Number.isFinite(durationMinutes)) {
+    if (
+      typeof durationMinutes !== 'number' ||
+      !Number.isFinite(durationMinutes)
+    ) {
       this.logger.warn(`Invalid duration provided: ${durationMinutes}`);
       return 0;
     }
@@ -57,11 +60,11 @@ export class ExpCalculatorService {
 
   /**
    * Award EXP to a user and update StudyStat
-   * 
+   *
    * This method:
    * 1. Updates StudyStat.total_minutes and total_sessions
    * 2. Stores weekly EXP in Redis for weekly ranking
-   * 
+   *
    * @param accountId - User account ID
    * @param exp - EXP points to award
    * @param sessionId - Study session ID (for audit trail)
@@ -69,7 +72,7 @@ export class ExpCalculatorService {
    * @param sessionDate - Date of the study session (defaults to now)
    * @param client - Optional Prisma transaction client
    * @returns Promise<StudyStat> - Updated StudyStat record
-   * 
+   *
    * @throws Error if database transaction fails
    */
   async awardExp(
@@ -121,7 +124,7 @@ export class ExpCalculatorService {
 
   /**
    * Store weekly EXP in Redis for weekly ranking
-   * 
+   *
    * @param accountId - User account ID
    * @param exp - EXP points to add
    * @param sessionDate - Date of the study session
@@ -142,18 +145,20 @@ export class ExpCalculatorService {
       const key = REDIS_KEY_WEEKLY_EXP(accountId, weekStart);
 
       // Get current weekly EXP
-      const currentExpStr = await this.redis.getClient()?.get(this.redis.getKey(key));
+      const currentExpStr = await this.redis
+        .getClient()
+        ?.get(this.redis.getKey(key));
       const currentExp = currentExpStr ? parseInt(currentExpStr, 10) : 0;
 
       // Add new EXP
       const newExp = currentExp + exp;
 
       // Store with TTL
-      await this.redis.getClient()?.set(
-        this.redis.getKey(key),
-        newExp.toString(),
-        { EX: TTL_WEEKLY_EXP },
-      );
+      await this.redis
+        .getClient()
+        ?.set(this.redis.getKey(key), newExp.toString(), {
+          EX: TTL_WEEKLY_EXP,
+        });
 
       this.logger.debug(
         `Stored weekly EXP for account ${accountId}, week ${weekStart}: ${newExp} (added ${exp})`,
@@ -168,7 +173,7 @@ export class ExpCalculatorService {
 
   /**
    * Get weekly EXP for a user
-   * 
+   *
    * @param accountId - User account ID
    * @param weekStart - Week start date (ISO string YYYY-MM-DD)
    * @returns Promise<number> - Weekly EXP points (0 if not found)
@@ -199,7 +204,7 @@ export class ExpCalculatorService {
 
   /**
    * Get weekly EXP for multiple users (batch operation)
-   * 
+   *
    * @param accountIds - Array of user account IDs
    * @param weekStart - Week start date (ISO string YYYY-MM-DD)
    * @returns Promise<Map<number, number>> - Map of accountId -> weeklyExp
@@ -211,7 +216,9 @@ export class ExpCalculatorService {
     const result = new Map<number, number>();
 
     if (!this.redis.isReady()) {
-      this.logger.warn('Redis not available, returning empty map for weekly EXP batch');
+      this.logger.warn(
+        'Redis not available, returning empty map for weekly EXP batch',
+      );
       return result;
     }
 
@@ -242,7 +249,9 @@ export class ExpCalculatorService {
         const [error, value] = results[i] as [Error | null, string | null];
 
         if (error) {
-          this.logger.error(`Error getting weekly EXP for account ${accountId}: ${error.message}`);
+          this.logger.error(
+            `Error getting weekly EXP for account ${accountId}: ${error.message}`,
+          );
           result.set(accountId, 0);
           continue;
         }

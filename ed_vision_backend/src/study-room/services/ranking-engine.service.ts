@@ -28,13 +28,13 @@ export interface RankingEntry {
 
 /**
  * Ranking Engine Service
- * 
+ *
  * Responsible for calculating and managing user rankings.
- * 
+ *
  * Ranking Types:
  * - Weekly Ranking: Based on EXP earned in current week (Monday-Sunday)
  * - Total Ranking: Based on StudyStat.total_minutes
- * 
+ *
  * Tied Ranks: Same score = same rank, skip subsequent numbers
  */
 @Injectable()
@@ -51,7 +51,7 @@ export class RankingEngineService {
 
   /**
    * Calculate weekly ranking based on EXP earned in current week
-   * 
+   *
    * @param weekStart - Week start date (ISO string YYYY-MM-DD)
    * @param limit - Maximum number of entries to return
    * @param offset - Offset for pagination
@@ -81,7 +81,10 @@ export class RankingEngineService {
 
       // Get weekly points for all eligible users
       const accountIds = eligibleUsers.map((u) => u.accountId);
-      const weeklyExpMap = await this.pointsCalculator.getWeeklyPointsBatch(accountIds, weekStart);
+      const weeklyExpMap = await this.pointsCalculator.getWeeklyPointsBatch(
+        accountIds,
+        weekStart,
+      );
 
       // Get streak info for all users
       const streakMap = await this.streakTracker.getStreakInfoBatch(accountIds);
@@ -134,12 +137,15 @@ export class RankingEngineService {
 
   /**
    * Calculate total ranking based on StudyStat.total_minutes
-   * 
+   *
    * @param limit - Maximum number of entries to return
    * @param offset - Offset for pagination
    * @returns Promise<RankingEntry[]> - Sorted ranking entries
    */
-  async calculateTotalRanking(limit?: number, offset?: number): Promise<RankingEntry[]> {
+  async calculateTotalRanking(
+    limit?: number,
+    offset?: number,
+  ): Promise<RankingEntry[]> {
     try {
       // Check cache first
       const cached = await this.getCachedTotalRanking();
@@ -210,12 +216,15 @@ export class RankingEngineService {
 
   /**
    * Get user's rank in weekly or total ranking
-   * 
+   *
    * @param accountId - User account ID
    * @param type - Ranking type ('weekly' or 'total')
    * @returns Promise<number | null> - User's rank (null if not eligible or not found)
    */
-  async getUserRank(accountId: number, type: 'weekly' | 'total'): Promise<number | null> {
+  async getUserRank(
+    accountId: number,
+    type: 'weekly' | 'total',
+  ): Promise<number | null> {
     try {
       // Check eligibility first
       const eligible = await this.eligibilityChecker.isEligible(accountId);
@@ -254,7 +263,7 @@ export class RankingEngineService {
 
   /**
    * Assign ranks to entries (handle tied scores)
-   * 
+   *
    * @param entries - Sorted entries (by score descending)
    * @returns RankingEntry[] - Entries with ranks assigned
    */
@@ -299,7 +308,7 @@ export class RankingEngineService {
 
   /**
    * Get all eligible users (with profile info)
-   * 
+   *
    * @returns Promise<Array> - Array of eligible users
    */
   private async getEligibleUsers(): Promise<
@@ -332,7 +341,8 @@ export class RankingEngineService {
 
       // Batch eligibility — 1 round-trip của 3 query song song, thay vì N call.
       const candidateIds = accounts.map((a) => a.account_id);
-      const eligibleSet = await this.eligibilityChecker.getEligibleAccountIdsBatch(candidateIds);
+      const eligibleSet =
+        await this.eligibilityChecker.getEligibleAccountIdsBatch(candidateIds);
 
       const eligibleUsers: Array<{
         accountId: number;
@@ -362,7 +372,7 @@ export class RankingEngineService {
 
   /**
    * Get all eligible users with their study stats
-   * 
+   *
    * @returns Promise<Array> - Array of eligible users with stats
    */
   private async getEligibleUsersWithStats(): Promise<
@@ -404,7 +414,8 @@ export class RankingEngineService {
 
       // Batch eligibility — 1 round-trip của 3 query song song, thay vì N call.
       const candidateIds = accounts.map((a) => a.account_id);
-      const eligibleSet = await this.eligibilityChecker.getEligibleAccountIdsBatch(candidateIds);
+      const eligibleSet =
+        await this.eligibilityChecker.getEligibleAccountIdsBatch(candidateIds);
 
       const eligibleUsers: Array<{
         accountId: number;
@@ -415,7 +426,12 @@ export class RankingEngineService {
       }> = [];
 
       for (const account of accounts) {
-        if (!eligibleSet.has(account.account_id) || !account.profile || !account.studyStat) continue;
+        if (
+          !eligibleSet.has(account.account_id) ||
+          !account.profile ||
+          !account.studyStat
+        )
+          continue;
         eligibleUsers.push({
           accountId: account.account_id,
           fullName: account.profile.full_name,
@@ -436,7 +452,7 @@ export class RankingEngineService {
 
   /**
    * Update Leaderboard table with total rankings
-   * 
+   *
    * @param entries - Ranking entries
    * @returns Promise<void>
    */
@@ -462,7 +478,9 @@ export class RankingEngineService {
         ),
       );
 
-      this.logger.debug(`Updated Leaderboard table with ${entries.length} entries`);
+      this.logger.debug(
+        `Updated Leaderboard table with ${entries.length} entries`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to update Leaderboard table: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -472,11 +490,13 @@ export class RankingEngineService {
 
   /**
    * Get cached weekly ranking
-   * 
+   *
    * @param weekStart - Week start date
    * @returns Promise<RankingEntry[] | null>
    */
-  private async getCachedWeeklyRanking(weekStart: string): Promise<RankingEntry[] | null> {
+  private async getCachedWeeklyRanking(
+    weekStart: string,
+  ): Promise<RankingEntry[] | null> {
     if (!this.redis.isReady()) {
       return null;
     }
@@ -494,12 +514,15 @@ export class RankingEngineService {
 
   /**
    * Cache weekly ranking
-   * 
+   *
    * @param weekStart - Week start date
    * @param entries - Ranking entries
    * @returns Promise<void>
    */
-  private async cacheWeeklyRanking(weekStart: string, entries: RankingEntry[]): Promise<void> {
+  private async cacheWeeklyRanking(
+    weekStart: string,
+    entries: RankingEntry[],
+  ): Promise<void> {
     if (!this.redis.isReady()) {
       return;
     }
@@ -507,7 +530,9 @@ export class RankingEngineService {
     try {
       const key = REDIS_KEY_WEEKLY_LEADERBOARD(weekStart);
       await this.redis.setJson(key, entries, TTL_WEEKLY_LEADERBOARD);
-      this.logger.debug(`Cached weekly ranking for week ${weekStart}: ${entries.length} entries`);
+      this.logger.debug(
+        `Cached weekly ranking for week ${weekStart}: ${entries.length} entries`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to cache weekly ranking: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -517,7 +542,7 @@ export class RankingEngineService {
 
   /**
    * Get cached total ranking
-   * 
+   *
    * @returns Promise<RankingEntry[] | null>
    */
   private async getCachedTotalRanking(): Promise<RankingEntry[] | null> {
@@ -526,7 +551,9 @@ export class RankingEngineService {
     }
 
     try {
-      return await this.redis.getJson<RankingEntry[]>(REDIS_KEY_TOTAL_LEADERBOARD);
+      return await this.redis.getJson<RankingEntry[]>(
+        REDIS_KEY_TOTAL_LEADERBOARD,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to get cached total ranking: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -537,7 +564,7 @@ export class RankingEngineService {
 
   /**
    * Cache total ranking
-   * 
+   *
    * @param entries - Ranking entries
    * @returns Promise<void>
    */
@@ -547,7 +574,11 @@ export class RankingEngineService {
     }
 
     try {
-      await this.redis.setJson(REDIS_KEY_TOTAL_LEADERBOARD, entries, TTL_TOTAL_LEADERBOARD);
+      await this.redis.setJson(
+        REDIS_KEY_TOTAL_LEADERBOARD,
+        entries,
+        TTL_TOTAL_LEADERBOARD,
+      );
       this.logger.debug(`Cached total ranking: ${entries.length} entries`);
     } catch (error) {
       this.logger.error(
@@ -558,7 +589,7 @@ export class RankingEngineService {
 
   /**
    * Invalidate all ranking caches
-   * 
+   *
    * @returns Promise<void>
    */
   async invalidateAllCaches(): Promise<void> {

@@ -90,11 +90,12 @@ export class PlacementController {
     const transcript = await this.speakingService.transcribe(file.path);
 
     // 2. AI Scoring
-    const { band, feedback, skipped } = await this.speakingService.scoreSpeaking(
-      transcript,
-      body.speakingPrompt,
-      file.path,
-    );
+    const { band, feedback, skipped } =
+      await this.speakingService.scoreSpeaking(
+        transcript,
+        body.speakingPrompt,
+        file.path,
+      );
 
     // ⚠️ CHÚ Ý: Với logic mới, skipped sẽ LUÔN là false
     // Vì nếu có audio gửi lên (đã qua check blob.size ở FE) thì PHẢI chấm điểm

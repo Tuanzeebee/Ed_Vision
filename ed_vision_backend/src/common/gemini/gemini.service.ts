@@ -18,7 +18,8 @@ export class GeminiService {
 
   private getClient(): GoogleGenerativeAI {
     if (!this.client) {
-      const apiKey = process.env.GEMINI_API_KEY ?? '';
+      const apiKey =
+        process.env.GEMINI_API_KEY ?? 'AIzaSyBJKJ0EFrKxPN6_CS0oWmCMRE2EIt9BAAg';
       if (!apiKey) {
         throw new Error('GEMINI_API_KEY environment variable is not set');
       }
@@ -53,7 +54,8 @@ export class GeminiService {
 
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
-        () => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)),
+        () =>
+          reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)),
         timeoutMs,
       ),
     );
@@ -118,7 +120,9 @@ export class GeminiService {
           mimeType,
         },
       },
-      { text: 'Transcribe exactly what is spoken in this audio. Return only the transcript text, nothing else.' },
+      {
+        text: 'Transcribe exactly what is spoken in this audio. Return only the transcript text, nothing else.',
+      },
     ]);
 
     const result = await Promise.race([generatePromise, timeoutPromise]);

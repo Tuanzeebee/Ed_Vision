@@ -93,14 +93,17 @@ export class BandEstimationService {
     // Tạo danh sách cảnh báo
     const warnings: string[] = [];
     if (!isBelowBand4 && suspiciousFastAnswers > 0) {
-      const suspiciousCorrect = suspiciousFastList.filter((r) => r.isCorrect).length;
+      const suspiciousCorrect = suspiciousFastList.filter(
+        (r) => r.isCorrect,
+      ).length;
       const suspiciousWrong = suspiciousFastAnswers - suspiciousCorrect;
       warnings.push(
         `⚠️ ${suspiciousFastAnswers} câu trả lời quá nhanh (< 30% thời gian kỳ vọng): ` +
         `${suspiciousCorrect} đúng, ${suspiciousWrong} sai – có thể đoán mò.`,
       );
     }
-    const suspiciousRatio = totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
+    const suspiciousRatio =
+      totalQuestions > 0 ? suspiciousFastAnswers / totalQuestions : 0;
     if (!isBelowBand4 && suspiciousRatio >= 0.2) {
       warnings.push(
         `🚨 Hơn ${Math.round(suspiciousRatio * 100)}% số câu làm quá nhanh – kết quả band không đáng tin cậy.`,

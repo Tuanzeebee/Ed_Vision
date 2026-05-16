@@ -30,14 +30,35 @@ interface ParsedIeltsOption {
   rationale: string | null;
 }
 
+type IeltsQuestionType =
+  | 'mcq'
+  | 'fill-blank'
+  | 'true-false'
+  | 'matching'
+  | 'short-answer';
+
+type IeltsTfVariant = 'tf' | 'yn';
+
 interface ParsedIeltsQuestion {
   questionNumber: number | null;
   section: number | null;
   stem: string;
   context: string | null;
-  questionType: 'mcq' | 'fill-blank' | 'true-false' | 'matching' | 'short-answer';
+  questionType: IeltsQuestionType;
+  /** When questionType === 'true-false', whether the option labels are TRUE/FALSE/NOT GIVEN ('tf') or YES/NO/NOT GIVEN ('yn'). */
+  tfVariant?: IeltsTfVariant;
   options: ParsedIeltsOption[];
   explanation: string | null;
+}
+
+type IeltsGroupVariant = 'tf' | 'yn' | 'fill' | 'matching' | 'mcq' | 'multi-mcq' | 'unknown';
+
+interface IeltsQuestionGroup {
+  from: number;
+  to: number;
+  variant: IeltsGroupVariant;
+  /** Hint letters available for matching (e.g. 'A-J'). */
+  matchingMaxLetter?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,43 +67,219 @@ interface ParsedIeltsQuestion {
 
 type IeltsAnswerKey = string;
 
+function normaliseAnswerToken(raw: string): string {
+  const t = raw.trim().toUpperCase().replace(/\s+/g, ' ');
+  if (t === 'NG') return 'NOT GIVEN';
+  return t;
+}
+
+/**
+ * Extract a mapping question_number -> answer from the raw OCR text of an
+ * IELTS answer key.  Supports:
+ *   • Letter answers A–J (matching, MCQ, multi-letter MCQ)
+ *   • Boolean answers TRUE / FALSE / NOT GIVEN
+ *   • Stance answers   YES / NO / NOT GIVEN
+ *   • Free-text answers for gap-fill / short-answer (lower-case word(s))
+ *
+ * The parser is line-oriented and tolerant of multi-column layouts produced by
+ * IELTS official answer sheets (e.g. "1 population   22 shops").
+ */
+/**
+ * Pre-normalise an OCR'd answer-key line:
+ *  • Collapse a digit followed immediately by a confusable letter (M/I/L)
+ *    into a two-digit number, e.g. "3M" → "31", "1I" → "11".  These mis-OCRs
+ *    are common for thin sans-serif "1" glyphs.
+ *  • Strip a trailing lowercase suffix from an uppercase letter answer
+ *    ("Cc" → "C", "Bb" → "B") — Tesseract sometimes duplicates bold letters.
+ *  • Normalise "NOTGIVEN" → "NOT GIVEN".
+ */
+function preprocessAnswerLine(line: string): string {
+  return line
+    .replace(/(\d)([MIL])(?=\s|$)/g, (_, d) => `${d}1`)
+    .replace(/\bNOTGIVEN\b/gi, 'NOT GIVEN')
+    .replace(/\b([A-J])[a-j]{1,2}\b/g, (_, up) => up);
+}
+
+/** A single answer-sheet cell after column splitting. */
+type CellShape =
+  | { kind: 'pair'; a: number; b: number }
+  | { kind: 'token'; num: number; ans: string }
+  | { kind: 'word'; num: number; text: string }
+  | { kind: 'lonely-letter'; letter: string }
+  | { kind: 'header' }
+  | { kind: 'unknown' };
+
+const CELL_TOKEN_RE =
+  /^(\d{1,3})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J])\s*$/i;
+const CELL_WORD_RE =
+  /^(\d{1,3})\s+([a-z][a-z\-']{1,30}(?:\s+[a-z][a-z\-']{1,30}){0,3})\s*$/;
+const CELL_PAIR_RE =
+  /^(\d{1,3})\s*[&8]\s*(\d{1,3})\s*(?:IN\s+EITHER\s+ORDER)?\s*$/i;
+const CELL_LETTER_RE = /^([A-J])\s*$/;
+const CELL_HEADER_RE =
+  /^(questions?|reading\s+passage|section|test\s+\d|passage|in\s+either\s+order|answer\s+key)\b/i;
+
+function classifyCell(cell: string): CellShape {
+  const c = cell.trim();
+  if (!c) return { kind: 'unknown' };
+  if (CELL_HEADER_RE.test(c)) return { kind: 'header' };
+
+  const p = CELL_PAIR_RE.exec(c);
+  if (p) return { kind: 'pair', a: parseInt(p[1], 10), b: parseInt(p[2], 10) };
+
+  const t = CELL_TOKEN_RE.exec(c);
+  if (t) return { kind: 'token', num: parseInt(t[1], 10), ans: normaliseAnswerToken(t[2]) };
+
+  const w = CELL_WORD_RE.exec(c);
+  if (w) return { kind: 'word', num: parseInt(w[1], 10), text: w[2].trim() };
+
+  const l = CELL_LETTER_RE.exec(c);
+  if (l) return { kind: 'lonely-letter', letter: l[1].toUpperCase() };
+
+  return { kind: 'unknown' };
+}
+
+function isStopword(text: string): boolean {
+  return /^(the|and|or|of|to|in|on|at|by|for|is|are|was|were|be|a|an)\b/i.test(text);
+}
+
+function isLetterAnswer(s: string): boolean {
+  return /^[A-J]$/.test(s);
+}
+
+function isBooleanAnswer(s: string): boolean {
+  return /^(TRUE|FALSE|YES|NO|NOT GIVEN)$/i.test(s);
+}
+
 function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
-  // Step 1: Clean OCR noise from answer sheet
-  const cleaned = cleanOcrText(rawText);
-
   const map = new Map<number, IeltsAnswerKey>();
-  const lines = cleaned
-    .replace(/\r/g, '\n')
-    .split('\n')
-    .map((l) => l.replace(/\s+/g, ' ').trim())
-    .filter((l) => l.length > 0);
+  // Numbers awaiting a letter answer (from "X&Y IN EITHER ORDER" headers).
+  const pendingPairNumbers: number[] = [];
+  let leftLast = 0;
+  let rightLast = 0;
 
-  let inAnswerSection = false;
-
-  for (const line of lines) {
-    // Detect start of answer section if keywords exist
-    if (/\b(answer\s*key|đáp\s*án|dap\s*an|keys|listening\s*answers|reading\s*answers)\b/i.test(line)) {
-      inAnswerSection = true;
-      continue;
-    }
-
-    // Robust pattern for pairs: "1. B", "1 B", "1 TRUE", "Q1 - A"
-    const pairRe =
-      /\b(\d{1,3})\s*[.):\-–]?\s*(TRUE|FALSE|NOT\s*GIVEN|NG|[A-E])\b/gi;
-    
-    const pairs = Array.from(line.matchAll(pairRe));
-    if (pairs.length === 0) continue;
-
-    for (const pair of pairs) {
-      const num = parseInt(pair[1], 10);
-      let ans = pair[2].toUpperCase().trim();
-      if (ans === 'NG') ans = 'NOT GIVEN';
-      
-      // Basic validation (question numbers are usually 1-40 or 1-100)
-      if (num >= 1 && num <= 200) {
-        map.set(num, ans);
+  /**
+   * Apply an entry to the map, preferring longer / more informative answers
+   * over shorter ones for the same question, and never letting a single-letter
+   * or boolean token clobber a previously-recorded free-text answer.
+   */
+  function applyEntry(num: number, ans: string): void {
+    if (num < 1 || num > 200) return;
+    const existing = map.get(num);
+    if (existing == null) { map.set(num, ans); return; }
+    if (isLetterAnswer(existing) || isBooleanAnswer(existing)) {
+      // Replace only with a longer / more specific same-class value.
+      if (isLetterAnswer(ans) || isBooleanAnswer(ans)) {
+        if (ans.length > existing.length) map.set(num, ans);
       }
+      return;
     }
+    // Existing is free-text.
+    if (!isLetterAnswer(ans) && !isBooleanAnswer(ans)) {
+      // Prefer the longer / cleaner free-text answer.
+      if (ans.length > existing.length) map.set(num, ans);
+    }
+    // Never overwrite free-text with a single letter / boolean — those are
+    // almost always OCR fragment misattributions.
+  }
+
+  // Pre-process line by line, preserving inter-cell whitespace so we can
+  // split into cells.
+  const rawLines = rawText.replace(/\r\n?/g, '\n').split('\n');
+
+  for (const rawLine of rawLines) {
+    if (!rawLine.trim()) continue;
+    if (/[.…]{4,}/.test(rawLine)) continue;
+
+    const processed = preprocessAnswerLine(rawLine.replace(/\s+$/, ''));
+
+    // Split into cells by 2+ consecutive spaces — the canonical answer-key
+    // column separator after Tesseract preserves inter-word spacing.
+    const cells = processed.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+
+    cells.forEach((cell, ci) => {
+      const shape = classifyCell(cell);
+
+      // Determine left vs right column.
+      //   * Multi-cell line: first cell = L, others = R.
+      //   * Single-cell line: use the cell's parsed number, falling back to
+      //     range (≤ ~21 likely left; ≥ ~22 likely right for a 40Q test).
+      let col: 'L' | 'R';
+      if (cells.length >= 2) {
+        col = ci === 0 ? 'L' : 'R';
+      } else {
+        const parsedNum =
+          shape.kind === 'token' ? shape.num :
+            shape.kind === 'word' ? shape.num :
+              shape.kind === 'pair' ? shape.a :
+                0;
+        if (parsedNum === 0) {
+          col = 'L';
+        } else if (parsedNum <= leftLast + 2 && parsedNum <= 25) {
+          col = 'L';
+        } else if (parsedNum > Math.max(leftLast, 21)) {
+          col = 'R';
+        } else {
+          col = 'L';
+        }
+      }
+      const colLast = () => (col === 'L' ? leftLast : rightLast);
+      const setColLast = (n: number) => {
+        if (col === 'L') leftLast = Math.max(leftLast, n);
+        else rightLast = Math.max(rightLast, n);
+      };
+
+      switch (shape.kind) {
+        case 'header':
+        case 'unknown':
+          return;
+
+        case 'pair': {
+          // Register a pair like 23&24 / 25&26.
+          const { a, b } = shape;
+          if (b === a + 1 && a >= 1 && a <= 200) {
+            if (!map.has(a) && !pendingPairNumbers.includes(a)) pendingPairNumbers.push(a);
+            if (!map.has(b) && !pendingPairNumbers.includes(b)) pendingPairNumbers.push(b);
+            setColLast(b);
+          }
+          return;
+        }
+
+        case 'token': {
+          let num = shape.num;
+          // Snap 1-digit OCR fragments to the expected next number for the
+          // active column when a clear backward jump from a 2-digit context
+          // is detected (e.g. "3 C" appearing between "36 B" and "38 A" →
+          // really "37 C").
+          if (num < 10 && colLast() >= 10) {
+            const expected = colLast() + 1;
+            if (expected <= 200 && !map.has(expected) && expected - num <= 40) {
+              num = expected;
+            }
+          }
+          applyEntry(num, shape.ans);
+          setColLast(num);
+          return;
+        }
+
+        case 'word': {
+          const { num, text } = shape;
+          if (text.length < 2 || isStopword(text)) return;
+          applyEntry(num, text);
+          setColLast(num);
+          return;
+        }
+
+        case 'lonely-letter': {
+          // Assign to the next pending pair number, if any.
+          if (pendingPairNumbers.length === 0) return;
+          const num = pendingPairNumbers.shift()!;
+          applyEntry(num, shape.letter);
+          setColLast(num);
+          return;
+        }
+      }
+    });
   }
 
   return map;
@@ -118,10 +315,13 @@ function cleanOcrText(raw: string): string {
       // Barcode / exam header junk: random uppercase with no vowels or mostly consonants
       (/^[A-Z\s#\d.()]+$/.test(trimmed) &&
         trimmed.length < 40 &&
-        !/\b(READING|LISTENING|PASSAGE|SECTION|QUESTION|TRUE|FALSE)\b/.test(trimmed) &&
-        (trimmed.replace(/[^A-Z]/g, '').length > 0
-          ? (trimmed.replace(/[AEIOU]/g, '').length / trimmed.replace(/[^A-Z]/g, '').length) > 0.75
-          : false)) ||
+        !/\b(READING|LISTENING|PASSAGE|SECTION|QUESTION|TRUE|FALSE|YES|NO|NOT\s*GIVEN|NG)\b/.test(trimmed) &&
+        (() => {
+          const letters = trimmed.replace(/[^A-Z]/g, '');
+          if (letters.length === 0) return false;
+          const consonants = letters.replace(/[AEIOU]/g, '').length;
+          return consonants / letters.length > 0.75;
+        })()) ||
       // Standalone page number
       /^\d{1,3}$/.test(trimmed) ||
       // Test metadata lines
@@ -160,13 +360,56 @@ function detectIeltsSection(line: string): number | null {
 function detectQuestionType(
   stem: string,
   context: string = '',
-): ParsedIeltsQuestion['questionType'] {
+): IeltsQuestionType {
   const combined = `${stem} ${context}`.toLowerCase();
-  if (/true|false|not\s*given/i.test(combined)) return 'true-false';
-  if (/complete|fill\s*in|no\s*more\s*than|one\s*word|word(?:s)?\s*(?:and\/or\s*a?\s*number)?/i.test(combined)) return 'fill-blank';
-  if (/match|which\s+paragraph|which\s+section|which\s+letter/i.test(combined)) return 'matching';
-  if (/write\s+(?:a\s+)?(?:word|number|name)|short\s+answer/i.test(combined)) return 'short-answer';
+  if (/\b(yes|no|not\s*given)\b/.test(combined) && /\bagrees?\s+with\s+the\s+claims?/.test(combined)) {
+    return 'true-false';
+  }
+  if (/true|false|not\s*given/.test(combined)) return 'true-false';
+  if (/complete|fill\s*in|no\s*more\s*than|one\s*word|word(?:s)?\s*(?:and\/or\s*a?\s*number)?/.test(combined)) return 'fill-blank';
+  if (/match|which\s+paragraph|which\s+section|which\s+letter/.test(combined)) return 'matching';
+  if (/write\s+(?:a\s+)?(?:word|number|name)|short\s+answer/.test(combined)) return 'short-answer';
   return 'mcq';
+}
+
+/**
+ * Classify an IELTS question-group header.  Examples:
+ *   "Complete the notes below."           → fill
+ *   "Choose the correct letter, A, B, C or D." → mcq
+ *   "Which section contains the following…"   → matching
+ *   "TRUE if the statement…"             → tf
+ *   "YES if the statement agrees with…"  → yn
+ *   "Choose TWO letters, A-E."          → multi-mcq
+ */
+function classifyGroupVariant(header: string): {
+  variant: IeltsGroupVariant;
+  matchingMaxLetter?: string;
+} {
+  const h = header.toLowerCase();
+  if (/\byes\b[^\n]*\bno\b[^\n]*\bnot\s*given\b/.test(h)) return { variant: 'yn' };
+  if (/\btrue\b[^\n]*\bfalse\b[^\n]*\bnot\s*given\b/.test(h)) return { variant: 'tf' };
+  if (/\b(yes|no)\s+if\s+the\s+statement\b/.test(h)) return { variant: 'yn' };
+  if (/\b(true|false)\s+if\s+the\s+statement\b/.test(h)) return { variant: 'tf' };
+  if (/\bchoose\s+two\s+letters\b/.test(h)) return { variant: 'multi-mcq' };
+  if (/\bcomplete\s+the\s+(?:notes|summary|table|sentences|flow-?chart|diagram|labels?)\b/.test(h)) {
+    return { variant: 'fill' };
+  }
+  if (/\bfill\s+in\s+the\s+blanks?\b/.test(h)) return { variant: 'fill' };
+  if (/\bwhich\s+(section|paragraph)\s+contains\b/.test(h)) return { variant: 'matching' };
+  const letterRange = /\bcorrect\s+letter,?\s*([a-j])\s*[-–]\s*([a-j])\b/.exec(h);
+  if (letterRange) {
+    return {
+      variant: 'matching',
+      matchingMaxLetter: letterRange[2].toUpperCase(),
+    };
+  }
+  if (/\bcorrect\s+letter,?\s*[abcd](?:\s*,\s*[abcd]){1,3}\s*(?:or\s*[abcd])?\b/.test(h)) {
+    return { variant: 'mcq' };
+  }
+  if (/\bcomplete\s+the\s+summary\s+using\s+the\s+list\s+of\s+phrases\b/.test(h)) {
+    return { variant: 'matching', matchingMaxLetter: 'J' };
+  }
+  return { variant: 'unknown' };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,19 +443,30 @@ function parseIeltsQuestionsFromText(
   /** "Questions X–Y  Complete the notes …" */
   const RANGE_RE = /^Questions?\s+(\d{1,3})\s*[-–]\s*(\d{1,3})/i;
 
-  /** "A. text" / "A) text" / "A text" — supports space-only separator and A-E options */
-  const OPT_RE = /^([A-E])(?:[.):\-]\s*|\s+)(.{2,})$/i;
+  /** "Questions 23 and 24" — IELTS multi-letter MCQ. */
+  const PAIR_RE = /^Questions?\s+(\d{1,3})\s+and\s+(\d{1,3})\b/i;
 
-  /** Inline options on one line: "A. foo B. bar C. baz D. qux" */
-  const INLINE_MARKER_RE = /(?:^|(?<=[\s(]))([A-D])[).:\-]\s*/g;
+  /** "A. text" / "A) text" / "A text" — A-J for matching question lists. */
+  const OPT_RE = /^([A-J])(?:[.):\-]\s*|\s+)(.{2,})$/i;
+
+  /** Inline options on one line: "A. foo B. bar C. baz D. qux" (A-J). */
+  const INLINE_MARKER_RE = /(?:^|(?<=[\s(]))([A-J])[).:\-]\s*/g;
 
   // ── State ─────────────────────────────────────────────────────────────────
 
   const questions: ParsedIeltsQuestion[] = [];
+  const groups: IeltsQuestionGroup[] = [];
   let currentSection = 1;
   let contextBuffer: string[] = [];
   let passageRange: [number, number] | null = null;
   let passageLines: string[] = [];
+  /**
+   * The currently-open question group (e.g. Questions 7-13 = TF/NG).
+   * Used to label TF questions as YES/NO vs TRUE/FALSE, and to synthesize
+   * placeholder questions for unparsed numbers in the range.
+   */
+  let currentGroup: IeltsQuestionGroup | null = null;
+  let pendingHeaderLines: string[] = [];
 
   // Track the highest question number seen so far to avoid duplicates
   // from false-positive matches
@@ -223,12 +477,33 @@ function parseIeltsQuestionsFromText(
     section: number;
     stemLines: string[];
     optionsMap: Map<string, string>;
-    questionType: ParsedIeltsQuestion['questionType'];
+    questionType: IeltsQuestionType;
+    tfVariant?: IeltsTfVariant;
     inlineAnswer: string | null;
     lastOptKey: string | null;
   }
 
   let wq: WorkingQ | null = null;
+
+  function registerGroup(from: number, to: number): void {
+    const headerText = pendingHeaderLines.join(' ');
+    const cls = classifyGroupVariant(headerText);
+    const group: IeltsQuestionGroup = {
+      from,
+      to,
+      variant: cls.variant,
+      matchingMaxLetter: cls.matchingMaxLetter,
+    };
+    currentGroup = group;
+    groups.push(group);
+    pendingHeaderLines = [];
+  }
+
+  function tfVariantForNumber(n: number): IeltsTfVariant {
+    const g = groups.find((gr) => n >= gr.from && n <= gr.to);
+    if (g?.variant === 'yn') return 'yn';
+    return 'tf';
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -252,7 +527,7 @@ function parseIeltsQuestionsFromText(
   }
 
   function buildOptions(map: Map<string, string>): ParsedIeltsOption[] {
-    return ['A', 'B', 'C', 'D']
+    return ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
       .filter((k) => map.has(k))
       .map((k) => ({
         optionKey: k,
@@ -289,10 +564,18 @@ function parseIeltsQuestionsFromText(
       if (found) found.isCorrect = true;
     }
 
-    // Synthesise True/False/Not Given options
+    // Resolve TF variant (TRUE/FALSE vs YES/NO) from the active group.
+    if (wq.questionType === 'true-false' && !wq.tfVariant && wq.questionNumber !== null) {
+      wq.tfVariant = tfVariantForNumber(wq.questionNumber);
+    }
+
+    // Synthesise True/False/Not Given (or Yes/No/Not Given) options.
     if (wq.questionType === 'true-false' && options.length === 0) {
-      const tfKeys = ['TRUE', 'FALSE', 'NOT GIVEN'];
-      options = tfKeys.map((k) => ({
+      const variant = wq.tfVariant ?? 'tf';
+      const keys = variant === 'yn'
+        ? ['YES', 'NO', 'NOT GIVEN']
+        : ['TRUE', 'FALSE', 'NOT GIVEN'];
+      options = keys.map((k) => ({
         optionKey: k,
         optionText: k,
         isCorrect: k === correctKey,
@@ -300,13 +583,22 @@ function parseIeltsQuestionsFromText(
       }));
     }
 
-    // Fallback T/F from context
+    // Fallback T/F or Y/N from context
     if (options.length === 0 && wq.questionNumber !== null) {
       const ctx = contextBuffer.slice(-10).join(' ');
-      if (/true|false|not\s*given/i.test(ctx)) {
+      if (/yes\b[^\n]*\bno\b[^\n]*\bnot\s*given/i.test(ctx)) {
         wq.questionType = 'true-false';
-        const tfKeys = ['TRUE', 'FALSE', 'NOT GIVEN'];
-        options = tfKeys.map((k) => ({
+        wq.tfVariant = 'yn';
+        options = ['YES', 'NO', 'NOT GIVEN'].map((k) => ({
+          optionKey: k,
+          optionText: k,
+          isCorrect: k === correctKey,
+          rationale: null,
+        }));
+      } else if (/true|false|not\s*given/i.test(ctx)) {
+        wq.questionType = 'true-false';
+        wq.tfVariant = 'tf';
+        options = ['TRUE', 'FALSE', 'NOT GIVEN'].map((k) => ({
           optionKey: k,
           optionText: k,
           isCorrect: k === correctKey,
@@ -341,6 +633,7 @@ function parseIeltsQuestionsFromText(
       stem,
       context: resolvePassage(),
       questionType: wq.questionType,
+      tfVariant: wq.tfVariant,
       options,
       explanation: null,
     });
@@ -363,7 +656,7 @@ function parseIeltsQuestionsFromText(
   function tryMatchQuestion(line: string): { qNum: number; rest: string } | null {
     // FIX: Simplified permissive regex that handles single-space and various delimiters
     const Q_START_RE = /^(?:Q(?:uestion)?\.?\s*)?(\d{1,3})(?:[.):\-–]\s*|\s+)(.*)$/i;
-    
+
     const m = Q_START_RE.exec(line);
     if (m) {
       const qNum = parseInt(m[1], 10);
@@ -413,14 +706,47 @@ function parseIeltsQuestionsFromText(
         passageLines = [];
         passageRange = r;
       } else {
+        flushQuestion();
         contextBuffer.push(line);
         passageRange = r;
-        // If this is a new question group, update lastQNum sentinel
         if (lastQNum === 0 || r[0] > lastQNum) {
           lastQNum = Math.max(0, r[0] - 1);
         }
+        pendingHeaderLines = [line];
+        registerGroup(r[0], r[1]);
       }
       continue;
+    }
+
+    // ── Pair header: "Questions 23 and 24" ──────────────────────────────
+    const pairMatch = PAIR_RE.exec(line);
+    if (pairMatch) {
+      const a = parseInt(pairMatch[1], 10);
+      const b = parseInt(pairMatch[2], 10);
+      flushQuestion();
+      contextBuffer.push(line);
+      passageRange = [a, b];
+      if (lastQNum === 0 || a > lastQNum) {
+        lastQNum = Math.max(0, a - 1);
+      }
+      pendingHeaderLines = [line];
+      registerGroup(a, b);
+      continue;
+    }
+
+    // Capture instruction lines that follow a range header so we can
+    // classify the active group correctly.
+    {
+      const cg = currentGroup as IeltsQuestionGroup | null;
+      if (cg && /^(complete|choose|do the following|which section|which paragraph|write the correct|in boxes|true|false|yes|no|not given)\b/i.test(line)) {
+        pendingHeaderLines.push(line);
+        // Re-classify whenever a new instruction line is seen.
+        const cls = classifyGroupVariant(pendingHeaderLines.join(' '));
+        if (cls.variant !== 'unknown') {
+          cg.variant = cls.variant;
+          if (cls.matchingMaxLetter) cg.matchingMaxLetter = cls.matchingMaxLetter;
+        }
+      }
     }
 
     // ── Answer-key line (skip) ────────────────────────────────────────────
@@ -481,9 +807,9 @@ function parseIeltsQuestionsFromText(
         continue;
       }
 
-      const ansMatch = /^(?:answer|correct|đáp\s*án)\s*[:\-]\s*([A-D]|TRUE|FALSE|NOT\s*GIVEN)/i.exec(line);
+      const ansMatch = /^(?:answer|correct|đáp\s*án)\s*[:\-]\s*([A-J]|TRUE|FALSE|YES|NO|NOT\s*GIVEN|NG)/i.exec(line);
       if (ansMatch) {
-        wq.inlineAnswer = ansMatch[1].toUpperCase();
+        wq.inlineAnswer = normaliseAnswerToken(ansMatch[1]);
         flushQuestion();
         continue;
       }
@@ -516,6 +842,126 @@ function parseIeltsQuestionsFromText(
   }
 
   flushQuestion();
+
+  // ── Placeholder synthesis ───────────────────────────────────────────────
+  // For each tracked question group, fill in any missing question numbers in
+  // the range with a typed placeholder.  This is essential for IELTS
+  // gap-fill / matching blocks where the question numbers are embedded
+  // inline (e.g. "The 1 ........ of London ...") and almost never survive
+  // OCR cleanly.
+  const seenNumbers = new Set<number>(
+    questions
+      .map((q) => q.questionNumber)
+      .filter((n): n is number => typeof n === 'number'),
+  );
+
+  for (const group of groups) {
+    if (group.variant === 'unknown') continue;
+    if (group.from < 1 || group.to < group.from) continue;
+    if (group.to - group.from > 30) continue; // sanity guard
+
+    for (let n = group.from; n <= group.to; n++) {
+      if (seenNumbers.has(n)) continue;
+
+      const correctKey = answerKeyMap.get(n) ?? null;
+      let qType: IeltsQuestionType;
+      let tfVariant: IeltsTfVariant | undefined;
+      let options: ParsedIeltsOption[] = [];
+      let stem: string;
+
+      switch (group.variant) {
+        case 'tf':
+          qType = 'true-false';
+          tfVariant = 'tf';
+          options = ['TRUE', 'FALSE', 'NOT GIVEN'].map((k) => ({
+            optionKey: k,
+            optionText: k,
+            isCorrect: k === correctKey,
+            rationale: null,
+          }));
+          stem = `[Câu ${n}] (TRUE / FALSE / NOT GIVEN)`;
+          break;
+        case 'yn':
+          qType = 'true-false';
+          tfVariant = 'yn';
+          options = ['YES', 'NO', 'NOT GIVEN'].map((k) => ({
+            optionKey: k,
+            optionText: k,
+            isCorrect: k === correctKey,
+            rationale: null,
+          }));
+          stem = `[Câu ${n}] (YES / NO / NOT GIVEN)`;
+          break;
+        case 'matching': {
+          qType = 'matching';
+          const max = group.matchingMaxLetter ?? 'G';
+          const maxIdx = max.charCodeAt(0) - 'A'.charCodeAt(0);
+          const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].slice(0, maxIdx + 1);
+          options = letters.map((k) => ({
+            optionKey: k,
+            optionText: k,
+            isCorrect: k === correctKey,
+            rationale: null,
+          }));
+          stem = `[Câu ${n}] (Matching A–${max})`;
+          break;
+        }
+        case 'mcq':
+          qType = 'mcq';
+          options = ['A', 'B', 'C', 'D'].map((k) => ({
+            optionKey: k,
+            optionText: k,
+            isCorrect: k === correctKey,
+            rationale: null,
+          }));
+          stem = `[Câu ${n}]`;
+          break;
+        case 'multi-mcq':
+          qType = 'mcq';
+          options = ['A', 'B', 'C', 'D', 'E'].map((k) => ({
+            optionKey: k,
+            optionText: k,
+            isCorrect: k === correctKey,
+            rationale: null,
+          }));
+          stem = `[Câu ${n}] (Choose TWO letters)`;
+          break;
+        case 'fill':
+        default:
+          qType = 'fill-blank';
+          options = [
+            {
+              optionKey: 'A',
+              optionText: typeof correctKey === 'string' ? correctKey : '(blank)',
+              isCorrect: !!correctKey,
+              rationale: null,
+            },
+          ];
+          stem = `[Câu ${n}] (gap-fill)`;
+          break;
+      }
+
+      questions.push({
+        questionNumber: n,
+        section: null,
+        stem,
+        context: null,
+        questionType: qType,
+        tfVariant,
+        options,
+        explanation: null,
+      });
+      seenNumbers.add(n);
+    }
+  }
+
+  // Sort by question number for stable downstream processing.
+  questions.sort((a, b) => {
+    const an = a.questionNumber ?? 1e9;
+    const bn = b.questionNumber ?? 1e9;
+    return an - bn;
+  });
+
   return questions;
 }
 
@@ -523,10 +969,10 @@ function parseIeltsQuestionsFromText(
 function isAnswerKeyLine(line: string): boolean {
   if (/[.…]{3,}/.test(line)) return false;
 
-  const re = /\b\d{1,3}\s*[).:\-]?\s*(?:[ABCD]|TRUE|FALSE|NOT\s*GIVEN)\b/gi;
+  const re = /\b\d{1,3}\s*[).:\-]?\s*(?:[A-J]|TRUE|FALSE|YES|NO|NOT\s*GIVEN|NG)\b/gi;
   const matches = line.match(re) ?? [];
   if (matches.length === 0) return false;
-  const residue = line.replace(re, ' ').replace(/[\s,.;:()\-_/]+/g, '').trim();
+  const residue = line.replace(re, ' ').replace(/[\s,.;:()\-_/&]+/g, '').trim();
   if (residue.length > 0) return false;
   return matches.length >= 2 || (matches.length === 1 && line.length <= 20);
 }
@@ -550,7 +996,7 @@ export class IeltsImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly irtRefinement: IrtRefinementService,
-  ) {}
+  ) { }
 
   private sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -779,19 +1225,29 @@ export class IeltsImportService {
     const rawText = await extractTextFromFile(file);
     const answerKeyMap = extractAnswerKeyMap(rawText);
 
-    const items = await this.prisma.examRepositoryItem.findMany({
+    const itemsFull = await this.prisma.examRepositoryItem.findMany({
       where: { repository_id: repository.id },
       select: {
         id: true,
+        item_type: true,
         metadata: true,
-        options: { select: { id: true, option_key: true } },
+        options: { select: { id: true, option_key: true, option_text: true } },
       },
     });
 
+    // If requested, clear all existing is_correct flags before re-applying.
+    if (dto.clear_existing) {
+      await this.prisma.examRepositoryOption.updateMany({
+        where: { item: { repository_id: repository.id } },
+        data: { is_correct: false },
+      });
+    }
+
     let updatedCount = 0;
     let skippedCount = 0;
+    const unknownNumbers: number[] = [];
 
-    for (const item of items) {
+    for (const item of itemsFull) {
       const meta = item.metadata as Record<string, unknown> | null;
       const qNum =
         typeof meta?.question_number === 'number' ? (meta.question_number as number) : null;
@@ -799,16 +1255,48 @@ export class IeltsImportService {
       if (qNum === null) { skippedCount++; continue; }
 
       const correctKey = answerKeyMap.get(qNum);
-      if (!correctKey) { skippedCount++; continue; }
+      if (!correctKey) { skippedCount++; unknownNumbers.push(qNum); continue; }
 
+      // Reset existing flags for this item before re-applying.
       await this.prisma.examRepositoryOption.updateMany({
         where: { item_id: item.id },
         data: { is_correct: false },
       });
 
-      const matchingOpt = item.options.find(
-        (o) => o.option_key.toUpperCase() === correctKey.toUpperCase(),
-      );
+      const upper = correctKey.toUpperCase();
+      const isLetterAnswer = /^[A-J]$/.test(upper);
+      const isBooleanAnswer = /^(TRUE|FALSE|YES|NO|NOT GIVEN)$/.test(upper);
+
+      // 1) Try direct option_key match (letters, TRUE/FALSE/NG, YES/NO/NG).
+      let matchingOpt =
+        item.options.find((o) => o.option_key.toUpperCase() === upper) ?? null;
+
+      // 2) For boolean answers, also accept option_text equality.
+      if (!matchingOpt && isBooleanAnswer) {
+        matchingOpt =
+          item.options.find((o) => (o.option_text ?? '').toUpperCase() === upper) ?? null;
+      }
+
+      // 3) Free-text answers (gap-fill / short-answer).  Update the placeholder
+      //    option's text and mark it correct.
+      if (
+        !matchingOpt &&
+        !isLetterAnswer &&
+        !isBooleanAnswer &&
+        (item.item_type === 'fill_blank' || item.item_type === 'short_answer') &&
+        item.options.length > 0
+      ) {
+        const placeholder = item.options[0];
+        await this.prisma.examRepositoryOption.update({
+          where: { id: placeholder.id },
+          data: {
+            option_text: correctKey,
+            is_correct: true,
+          },
+        });
+        updatedCount++;
+        continue;
+      }
 
       if (matchingOpt) {
         await this.prisma.examRepositoryOption.update({
@@ -830,8 +1318,19 @@ export class IeltsImportService {
       slug: repository.slug,
       updated_count: updatedCount,
       skipped_count: skippedCount,
-      answer_key_complete: totalConfigured >= items.length && items.length > 0,
-    };
+      answer_key_complete: totalConfigured >= itemsFull.length && itemsFull.length > 0,
+      // Aliases consumed by the frontend (IeltsAnswerKeyImportResponse).
+      skill_area:
+        ((await this.prisma.examRepository.findUnique({
+          where: { id: repository.id },
+          select: { skill_area: true },
+        }))?.skill_area) ?? 'unknown',
+      source_filename: basename(file.originalname || file.path),
+      total_answers_detected: answerKeyMap.size,
+      applied_items: updatedCount,
+      unanswered_items: Math.max(0, itemsFull.length - updatedCount),
+      unknown_question_numbers: unknownNumbers,
+    } as IeltsAnswerKeyImportResponseDto;
   }
 
   async uploadListeningAudio(
@@ -850,7 +1349,8 @@ export class IeltsImportService {
       throw new BadRequestException(`Không tìm thấy IELTS repository: ${slug}`);
     }
 
-    const section = dto.section ?? this.inferSectionFromFilename(file.originalname);
+    const section =
+      dto.section ?? this.inferSectionFromFilename(file.originalname);
     const trackNumber = dto.track_number ?? 1;
 
     const audioRelDir = join('IELTS', 'ielts-listening', slug, 'audio');
@@ -920,6 +1420,8 @@ export class IeltsImportService {
     return { slug, is_published: publish };
   }
 
+  // ─── Delete repository ────────────────────────────────────────────────────
+
   async deleteRepository(slug: string): Promise<IeltsRepositoryDeleteResponseDto> {
     const repo = await this.prisma.examRepository.findFirst({
       where: { slug, cert_type: 'ielts' },
@@ -954,11 +1456,11 @@ export class IeltsImportService {
 
   private mapItemType(questionType: ParsedIeltsQuestion['questionType']): string {
     switch (questionType) {
-      case 'fill-blank':   return 'fill_blank';
+      case 'fill-blank': return 'fill_blank';
       case 'short-answer': return 'short_answer';
-      case 'true-false':   return 'single_choice';
-      case 'matching':     return 'single_choice';
-      default:             return 'single_choice';
+      case 'true-false': return 'single_choice';
+      case 'matching': return 'single_choice';
+      default: return 'single_choice';
     }
   }
 
@@ -1034,7 +1536,7 @@ export class IeltsImportService {
       }
 
       this.logger.log(`[AI] Refining IRT for Q${parsed.questionNumber || nextOrder}...`);
-      
+
       const irt = await this.irtRefinement.refineIrtB({
         questionText: parsed.stem,
         questionType: parsed.questionType,
@@ -1133,4 +1635,4 @@ export class IeltsImportService {
   }
 }
 
-export { cleanOcrText };
+export { cleanOcrText, parseIeltsQuestionsFromText, extractAnswerKeyMap };

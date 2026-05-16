@@ -109,19 +109,13 @@ export class IeltsAdaptiveController {
 
   @UseGuards(DevAuthGuard)
   @Get('me/progress')
-  async getMyProgress(
-    @Req() req: any,
-  ): Promise<SkillProgressResponseDto[]> {
-    return this.service.getSkillProgressByAccount(
-      this.resolveAccountId(req),
-    );
+  async getMyProgress(@Req() req: any): Promise<SkillProgressResponseDto[]> {
+    return this.service.getSkillProgressByAccount(this.resolveAccountId(req));
   }
 
   @UseGuards(DevAuthGuard)
   @Get('me/learning-analysis')
-  async getLearningAnalysis(
-    @Req() req: any,
-  ) {
+  async getLearningAnalysis(@Req() req: any) {
     return this.service.getLearningAnalysisByAccount(
       this.resolveAccountId(req),
     );
@@ -137,10 +131,7 @@ export class IeltsAdaptiveController {
     @Req() req: any,
     @Param('lessonId', ParseIntPipe) lessonId: number,
   ): Promise<LessonResponseDto> {
-    return this.service.getLesson(
-      lessonId,
-      this.resolveAccountId(req),
-    );
+    return this.service.getLesson(lessonId, this.resolveAccountId(req));
   }
 
   @UseGuards(DevAuthGuard)
@@ -201,9 +192,7 @@ export class IeltsAdaptiveController {
 
   @UseGuards(DevAuthGuard)
   @Get('band-test/:testId')
-  async getBandTest(
-    @Param('testId') testId: string,
-  ): Promise<any> {
+  async getBandTest(@Param('testId') testId: string): Promise<any> {
     return this.service.getBandTestWithQuestions(testId);
   }
 
@@ -254,10 +243,7 @@ export class IeltsAdaptiveController {
     @Req() req: any,
     @Param('lessonId', ParseIntPipe) lessonId: number,
   ): Promise<LessonResponseDto> {
-    return this.service.getLesson(
-      lessonId,
-      this.resolveAccountId(req),
-    );
+    return this.service.getLesson(lessonId, this.resolveAccountId(req));
   }
 
   // ============================================
@@ -300,7 +286,8 @@ export class IeltsAdaptiveController {
   )
   async gradeSpeakingAudio(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: {
+    @Body()
+    body: {
       item_prompt: string;
       target_band: string;
       part_type?: string;
@@ -319,9 +306,21 @@ export class IeltsAdaptiveController {
       skill: 'speaking',
       transcript: '(mock transcript)',
       criteria: [
-        { name: 'Fluency & Coherence', score: rand(4, 8), feedback: 'Mock feedback' },
-        { name: 'Lexical Resource', score: rand(4, 8), feedback: 'Mock feedback' },
-        { name: 'Grammatical Range', score: rand(4, 8), feedback: 'Mock feedback' },
+        {
+          name: 'Fluency & Coherence',
+          score: rand(4, 8),
+          feedback: 'Mock feedback',
+        },
+        {
+          name: 'Lexical Resource',
+          score: rand(4, 8),
+          feedback: 'Mock feedback',
+        },
+        {
+          name: 'Grammatical Range',
+          score: rand(4, 8),
+          feedback: 'Mock feedback',
+        },
         { name: 'Pronunciation', score: rand(4, 8), feedback: 'Mock feedback' },
       ],
       overallFeedback: 'This is a mock grading response.',

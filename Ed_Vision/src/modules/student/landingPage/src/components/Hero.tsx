@@ -1,13 +1,63 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+const normalizeOptions = (value: unknown, fallback: string) => {
+  const list = Array.isArray(value)
+    ? value.filter(item => typeof item === 'string' && item.trim().length > 0)
+    : typeof value === 'string' && value.trim().length > 0
+      ? [value]
+      : [];
+
+  if (list.length > 0) return list;
+  return fallback ? [fallback] : [];
+};
+
+const pickRandomOption = (value: unknown, fallback: string, storageKey: string) => {
+  const options = normalizeOptions(value, fallback);
+  if (options.length === 0) return '';
+
+  let index = Math.floor(Math.random() * options.length);
+
+  if (options.length > 1 && typeof window !== 'undefined') {
+    try {
+      const lastIndexRaw = sessionStorage.getItem(storageKey);
+      const lastIndex = lastIndexRaw ? Number(lastIndexRaw) : -1;
+
+      if (!Number.isNaN(lastIndex) && lastIndex >= 0 && lastIndex < options.length) {
+        while (index === lastIndex) {
+          index = Math.floor(Math.random() * options.length);
+        }
+      }
+
+      sessionStorage.setItem(storageKey, String(index));
+    } catch {}
+  }
+
+  return options[index];
+};
+
 export default function Hero() {
   const navigate = useNavigate();
-  const { t } = useTranslation('student');
+  const { t, i18n } = useTranslation('student');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [opacity, setOpacity] = useState(0);
+  const heroTitle = useMemo(() => {
+    const titleOptions = t('landingV2.hero.titleOptions', { returnObjects: true });
+    const fallbackTitle = t('landingV2.hero.titlePrefix');
+    const titleStorageKey = `landingV2-hero-title-${i18n.language}`;
+
+    return pickRandomOption(titleOptions, fallbackTitle, titleStorageKey);
+  }, [i18n.language, t]);
+
+  const heroDescription = useMemo(() => {
+    const descriptionOptions = t('landingV2.hero.descriptionOptions', { returnObjects: true });
+    const fallbackDescription = t('landingV2.hero.description');
+    const descriptionStorageKey = `landingV2-hero-description-${i18n.language}`;
+
+    return pickRandomOption(descriptionOptions, fallbackDescription, descriptionStorageKey);
+  }, [i18n.language, t]);
 
   const handleStartNow = () => {
     navigate('/student/instructions');
@@ -89,11 +139,9 @@ export default function Hero() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="font-serif text-6xl md:text-8xl lg:text-[10rem] text-white tracking-tight leading-none mb-10"
+          className="font-serif text-[2.6rem] sm:text-[3.2rem] md:text-[3.2rem] lg:text-[3.9rem] xl:text-[4.8rem] text-white tracking-tight leading-none mb-10"
         >
-          {t('landingV2.hero.titlePrefix')}{' '}
-          <em className="italic font-serif-italic">{t('landingV2.hero.titleEmphasis')}</em>
-          {t('landingV2.hero.titleSuffix') ? ` ${t('landingV2.hero.titleSuffix')}` : ''}
+          {heroTitle}
         </motion.h1>
 
         <motion.p 
@@ -102,7 +150,7 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="text-white/90 text-sm md:text-base leading-relaxed max-w-lg px-4 mb-10 font-medium drop-shadow-md"
         >
-          {t('landingV2.hero.description')}
+          {heroDescription}
         </motion.p>
 
         <motion.button

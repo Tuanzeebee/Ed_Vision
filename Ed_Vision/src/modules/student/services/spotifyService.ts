@@ -157,3 +157,103 @@ export function getTrackArtists(track: SpotifyTrack): string {
 export function getAlbumImage(track: SpotifyTrack): string {
   return track.album.images[0]?.url || 'https://via.placeholder.com/300';
 }
+
+export const spotifyService = {
+  async fetchFeaturedHero() {
+    try {
+      const playlists = await getFeaturedPlaylists(1);
+      if (playlists.length === 0) return null;
+      const pl = playlists[0];
+      return {
+        title: pl.name,
+        subtitle: pl.description,
+        imageUrl: pl.images[0]?.url,
+        spotifyUrl: pl.external_urls.spotify,
+      };
+    } catch {
+      return null;
+    }
+  },
+  async fetchTopArtists() {
+    try {
+      const tracks = await getTopTracks(20);
+      const seen = new Set<string>();
+      return tracks
+        .flatMap((t) => t.artists)
+        .filter((a) => {
+          if (seen.has(a.name)) return false;
+          seen.add(a.name);
+          return true;
+        })
+        .slice(0, 10)
+        .map((a) => ({ id: a.name, name: a.name }));
+    } catch {
+      return [];
+    }
+  },
+  async fetchTopCharts() {
+    try {
+      const tracks = await getTopTracks(20);
+      return tracks.map((t) => ({
+        id: t.id,
+        source: 'spotify' as const,
+        title: t.name,
+        artist: getTrackArtists(t),
+        album: t.album.name,
+        duration: formatDuration(t.duration_ms),
+        durationMs: t.duration_ms,
+        imageUrl: getAlbumImage(t),
+        previewUrl: t.preview_url ?? undefined,
+        spotifyUrl: t.external_urls.spotify,
+      }));
+    } catch {
+      return [];
+    }
+  },
+  async fetchDiscover() {
+    try {
+      const [releases, tracks] = await Promise.all([getNewReleases(10), getTopTracks(10)]);
+      return {
+        newReleases: releases,
+        topBillboard: tracks.map((t) => ({
+          id: t.id,
+          source: 'spotify' as const,
+          title: t.name,
+          artist: getTrackArtists(t),
+          imageUrl: getAlbumImage(t),
+          duration: formatDuration(t.duration_ms),
+        })),
+      };
+    } catch {
+      return { newReleases: [], topBillboard: [] };
+    }
+  },
+  async fetchPodcasts() {
+    return { shows: [] as any[], episodes: [] as any[] };
+  },
+  async searchAllSpotify(query: string) {
+    try {
+      const tracks = await searchTracks(query, 20);
+      return {
+        tracks: tracks.map((t) => ({
+          id: t.id,
+          source: 'spotify' as const,
+          title: t.name,
+          artist: getTrackArtists(t),
+          album: t.album.name,
+          imageUrl: getAlbumImage(t),
+          duration: formatDuration(t.duration_ms),
+          durationMs: t.duration_ms,
+          previewUrl: t.preview_url ?? undefined,
+          spotifyUrl: t.external_urls.spotify,
+        })),
+        artists: [],
+        albums: [],
+        shows: [],
+        episodes: [],
+      };
+    } catch {
+      return { tracks: [], artists: [], albums: [], shows: [], episodes: [] };
+    }
+  },
+};

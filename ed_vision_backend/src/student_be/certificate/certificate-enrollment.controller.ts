@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
@@ -32,7 +33,10 @@ import {
   SubmitPartSessionResponseDto,
   ReservePointsStatusDto,
 } from './toeic-practice-session.service';
-import { ToeicDiagnosticService, SubmitDiagnosticDto } from './toeic-diagnostic.service';
+import {
+  ToeicDiagnosticService,
+  SubmitDiagnosticDto,
+} from './toeic-diagnostic.service';
 import {
   ToeicExamSessionService,
   StartExamSessionDto,
@@ -102,9 +106,7 @@ export class CertificateEnrollmentController {
   }
 
   @Post('toeic-diagnostic/submit')
-  async submitDiagnosticTest(
-    @Body() dto: SubmitDiagnosticDto,
-  ) {
+  async submitDiagnosticTest(@Body() dto: SubmitDiagnosticDto) {
     return this.diagnosticService.submitDiagnosticTest(dto);
   }
 
@@ -386,6 +388,19 @@ export class CertificateEnrollmentController {
   }
 
   /**
+   * POST /student/certificate/ai-tutor/stream-chat
+   * Streaming chat: primary qwen2.5:14b (cloud), fallback Groq
+   */
+  @Post('ai-tutor/stream-chat')
+  async streamChatTutor(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: import('./dto/certificate.dto').ToeicChatGroqDto,
+    @Res() res: import('express').Response,
+  ) {
+    await this.service.streamChatTutor(req.user.account_id, dto, res);
+  }
+
+  /**
    * GET /student/certificate/toeic/practice-questions/:part
    * Returns up to 10 questions for one TOEIC part in the learner score band.
    */
@@ -436,6 +451,15 @@ export class CertificateEnrollmentController {
     return this.practiceSessionService.getReservePointsStatus(
       req.user.account_id,
     );
+  }
+
+  /**
+   * GET /student/certificate/toeic/skill-feedback
+   * Returns AI feedback for TOEIC skill progress with weekly/day comparisons.
+   */
+  @Get('toeic/skill-feedback')
+  async getToeicSkillFeedback(@Request() req: AuthenticatedRequest) {
+    return this.service.getToeicSkillFeedback(req.user.account_id);
   }
 
   // ── TOEIC Exam Simulation Session ──────────────────────────────────────────

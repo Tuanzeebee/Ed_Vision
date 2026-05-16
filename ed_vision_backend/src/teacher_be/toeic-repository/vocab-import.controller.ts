@@ -35,7 +35,19 @@ const vocabUploadStorage = diskStorage({
   },
 });
 
-const ALLOWED_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.pdf', '.txt', '.csv', '.xlsx', '.json', '.md'];
+const ALLOWED_EXTS = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.bmp',
+  '.pdf',
+  '.txt',
+  '.csv',
+  '.xlsx',
+  '.json',
+  '.md',
+];
 
 @Controller('teacher/vocab')
 @UseGuards(DevAuthGuard)

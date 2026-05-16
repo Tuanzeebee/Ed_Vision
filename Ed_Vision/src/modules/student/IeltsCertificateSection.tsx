@@ -393,7 +393,7 @@ export default function IeltsCertificateSection({
             (vocabSection?.topics ?? []).map((item) => (
               <div
                 key={item.topicKey}
-                className={`bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer ${item.done ? 'bg-emerald-50/30' : ''}`}
+                className={`bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer`}
               >
                 <div className="text-2xl mb-1">
                   {item.title.toLowerCase().includes('edu') ? '📚' :
@@ -407,11 +407,6 @@ export default function IeltsCertificateSection({
                 </div>
                 <p className="font-semibold text-slate-800 text-sm">{item.title}</p>
                 <p className="text-xs text-slate-400">{item.desc}</p>
-                {item.done && (
-                  <div className="mt-2 text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Đã hoàn thành
-                  </div>
-                )}
               </div>
             ))
           ) : (
@@ -446,23 +441,12 @@ export default function IeltsCertificateSection({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {(grammarSection?.topics ?? []).length > 0 ? (
             (grammarSection?.topics ?? []).map((item, idx) => (
-              <div key={item.topicKey} className={`bg-white rounded-xl border border-slate-100 p-5 ${item.done ? 'bg-violet-50/30' : ''}`}>
+              <div key={item.topicKey} className="bg-white rounded-xl border border-slate-100 p-5">
                 <div className="flex justify-between items-center mb-3">
                   <span className="font-bold text-slate-800">Part {idx + 1}</span>
-                  {item.done ? (
-                    <span className="text-xs font-bold text-emerald-500">100%</span>
-                  ) : (
-                    <span className="text-sm text-slate-500">Chưa bắt đầu</span>
-                  )}
                 </div>
                 <h4 className="text-sm font-bold text-slate-700 mb-1">{item.title}</h4>
                 <p className="text-xs text-slate-500 mb-3">{item.desc}</p>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full transition-all`}
-                    style={{ width: item.done ? '100%' : '0%' }}
-                  />
-                </div>
               </div>
             ))
           ) : (

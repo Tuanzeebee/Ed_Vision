@@ -10,33 +10,39 @@ export interface ExtractedWord {
 
 // ─── POS normalization map ────────────────────────────────────────────────────
 export const POS_MAP: Record<string, string> = {
-  'n': 'n.',
-  'v': 'v.',
-  'adj': 'adj.',
-  'adv': 'adv.',
-  'prep': 'prep.',
-  'pron': 'pron.',
+  n: 'n.',
+  v: 'v.',
+  adj: 'adj.',
+  adv: 'adv.',
+  prep: 'prep.',
+  pron: 'pron.',
   'v & n': 'v./n.',
   'n & v': 'n./v.',
-  'a': 'adj.',
+  a: 'adj.',
   'n.': 'n.',
   'v.': 'v.',
   'adj.': 'adj.',
   'adv.': 'adv.',
-  'conj': 'conj.',
-  'interj': 'interj.',
+  conj: 'conj.',
+  interj: 'interj.',
 };
 
 export function normPos(raw: string): string {
-  const k = (raw ?? '').trim().toLowerCase().replace(/\.$/, '').replace(/[^a-z &\/\.]/g, '');
+  const k = (raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, '')
+    .replace(/[^a-z &\/\.]/g, '');
   return POS_MAP[k] ?? (raw.trim() ? raw.trim().slice(0, 6) + '.' : 'n.');
 }
 
 // ─── RegexExtractor class ─────────────────────────────────────────────────────
 export class RegexExtractor {
-
   extract(rawText: string): ExtractedWord[] {
-    const lines = rawText.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = rawText
+      .split(/\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     const merged = this.mergeLines(lines);
     // Pre-split: tách các dòng chứa nhiều entry (OCR merge adjacent entries)
     const split = this.splitMultiEntry(merged);
@@ -46,7 +52,8 @@ export class RegexExtractor {
 
     for (const line of split) {
       // Bỏ qua dòng header/footer
-      if (/^(từ vựng|toeic|phần|page|\d{3,}$)/i.test(line) && line.length < 80) continue;
+      if (/^(từ vựng|toeic|phần|page|\d{3,}$)/i.test(line) && line.length < 80)
+        continue;
 
       const parsed = this.parseLine(line);
       if (!parsed) continue;
@@ -58,7 +65,7 @@ export class RegexExtractor {
       // 1. Dừng tại "NN. CapitalWord" (vd: " 2. Word")
       // 2. Dừng tại từ tiếng Anh có dạng " Word (pos)" hoặc " Word (pos):"
       // 3. Xóa các dấu câu thừa ở đầu nghĩa (vd: ": khả năng" -> "khả năng")
-      let cleanMeaning = meaning
+      const cleanMeaning = meaning
         .replace(/\s*[^a-z0-9]*\d+\s*[\.\'\),;:]\s*[A-Z][a-z].*$/i, '') // " 2. Word" / " 2, Word" / " Š. 2. Word"
         .replace(/\s*[^a-z0-9]*[A-Z][a-z]{2,}\s*\([a-z.]+\).*$/i, '') // " Š. Able (adj)"
         .replace(/^[:;.,\-\s]+/, '') // Strip leading punctuations
@@ -90,10 +97,13 @@ export class RegexExtractor {
       // - Dòng chứa separator (: ; –) hoặc (pos) → khả năng cao là entry mới
       // - VÀ không phải continuation tiếng Việt (có dấu, ngắn)
       const startsWithCapital = /^[A-Z][a-z]{2,}/.test(line);
-      const looksLikeEntry = startsWithCapital && (/\([a-zA-Z.&\/ ]{1,15}\)/.test(line) || /[:;–]/.test(line));
+      const looksLikeEntry =
+        startsWithCapital &&
+        (/\([a-zA-Z.&\/ ]{1,15}\)/.test(line) || /[:;–]/.test(line));
 
       // Nếu dòng ngắn (<30 ký tự) và bắt đầu bằng chữ hoa nhưng KHÔNG có dấu hiệu entry → continuation
-      const isViContinuation = startsWithCapital && !looksLikeEntry && line.length < 50;
+      const isViContinuation =
+        startsWithCapital && !looksLikeEntry && line.length < 50;
 
       const isNew = startsWithNumber || (startsWithCapital && looksLikeEntry);
 
@@ -138,14 +148,22 @@ export class RegexExtractor {
     const pA = line.match(
       /^\d+\s*[\.\'\),;:]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*[\(\[]([^)\]]{1,20})[\)\]]\s*[:;–\-]+\s*(.{2,})$/,
     );
-    if (pA) { word = pA[1]; pos = pA[2]; meaning = pA[3]; }
+    if (pA) {
+      word = pA[1];
+      pos = pA[2];
+      meaning = pA[3];
+    }
 
     // ── Pattern B: "Word (pos) : meaning"  (không số thứ tự) ──────────────
     if (!word) {
       const pB = line.match(
         /^([A-Za-z][A-Za-z\s\-']{1,40}?)\s*\(([^)]{1,20})\)\s*[:;–\-]+\s*(.{2,})$/,
       );
-      if (pB) { word = pB[1]; pos = pB[2]; meaning = pB[3]; }
+      if (pB) {
+        word = pB[1];
+        pos = pB[2];
+        meaning = pB[3];
+      }
     }
 
     // ── Pattern C: "1. Word : meaning"  (không có pos) ────────────────────
@@ -153,7 +171,10 @@ export class RegexExtractor {
       const pC = line.match(
         /^\d+\s*[\.\'\),;:]\s*([A-Za-z][A-Za-z\s\-']{1,40}?)\s*[:;–\-]+\s*(.{2,})$/,
       );
-      if (pC) { word = pC[1]; meaning = pC[2]; }
+      if (pC) {
+        word = pC[1];
+        meaning = pC[2];
+      }
     }
 
     // ── Pattern D: OCR-noisy — "1.Word(pos):meaning" (thiếu khoảng trắng) ─
@@ -161,7 +182,11 @@ export class RegexExtractor {
       const pD = line.match(
         /^\d+\s*[\.\'\),;:]\s*([A-Za-z][A-Za-z\-']{1,30})\s*[\(\[]([a-zA-Z\s&\/]{1,15})[\)\]]\s*[:\-;]+\s*(.{2,})$/,
       );
-      if (pD) { word = pD[1]; pos = pD[2]; meaning = pD[3]; }
+      if (pD) {
+        word = pD[1];
+        pos = pD[2];
+        meaning = pD[3];
+      }
     }
 
     // ── Pattern E: OCR-noisy — ký tự ":" bị OCR thành ";" hoặc "." ───────
@@ -170,7 +195,11 @@ export class RegexExtractor {
       const pE = line.match(
         /^\d+\s*[\.\'\),;:]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*[\(\[]([^)\]]{1,20})[\)\]]\s*[\.']\s+(.{2,})$/,
       );
-      if (pE) { word = pE[1]; pos = pE[2]; meaning = pE[3]; }
+      if (pE) {
+        word = pE[1];
+        pos = pE[2];
+        meaning = pE[3];
+      }
     }
 
     // ── Pattern F: OCR bỏ mất separator — chỉ có space sau ")" ──────────────
@@ -179,7 +208,11 @@ export class RegexExtractor {
       const pF = line.match(
         /^\d+\s*[\.\'\),;:]\s*([A-Za-z][A-Za-z\s\-']{0,40}?)\s*[\(\[]([^)\]]{1,20})[\)\]]\s{1,4}([^\d\(A-Z].{1,})$/,
       );
-      if (pF) { word = pF[1]; pos = pF[2]; meaning = pF[3]; }
+      if (pF) {
+        word = pF[1];
+        pos = pF[2];
+        meaning = pF[3];
+      }
     }
 
     // ── Pattern G: không có POS, không có separator rõ ràng ─────────────────
@@ -190,7 +223,8 @@ export class RegexExtractor {
         /^\d+\s*[\.\'\),;:]\s*([A-Za-z][A-Za-z\-']{1,30})\s+([^\(A-Z].{1,})$/,
       );
       if (pG && /[\u00C0-\u024F\u1E00-\u1EFF]/.test(pG[2])) {
-        word = pG[1]; meaning = pG[2];
+        word = pG[1];
+        meaning = pG[2];
       }
     }
 
@@ -202,7 +236,8 @@ export class RegexExtractor {
         /^\d+\s*[^A-Za-z]{0,3}\s*([A-Za-z][A-Za-z\-']{2,30})\b\s*[^A-Za-z]{0,6}\s*(.{3,})$/,
       );
       if (pH && /[\u00C0-\u024F\u1E00-\u1EFF]/.test(pH[2])) {
-        word = pH[1]; meaning = pH[2];
+        word = pH[1];
+        meaning = pH[2];
       }
     }
 

@@ -1,7 +1,17 @@
-import { defineConfig } from 'vite'
+import { defineConfig, createLogger } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+
+// Suppress noisy WS proxy errors that appear when backend restarts in watch mode.
+// Vite logs these before calling the configure handler so we must filter at logger level.
+const WS_PROXY_NOISE = ['ECONNABORTED', 'ECONNREFUSED', 'ws proxy error', 'ws proxy socket error']
+const logger = createLogger()
+const _error = logger.error.bind(logger)
+logger.error = (msg, opts) => {
+  if (WS_PROXY_NOISE.some((s) => msg.includes(s))) return
+  _error(msg, opts)
+}
 
 // https://vite.dev/config/
 // Hostname public qua Cloudflare Tunnel (đổi nếu bạn dùng domain khác)
@@ -11,6 +21,7 @@ const PUBLIC_TUNNEL_HOST = process.env.PUBLIC_TUNNEL_HOST || 'www.teamnghiencuu.
 const BACKEND_TARGET = process.env.BACKEND_TARGET || 'http://127.0.0.1:3000'
 
 export default defineConfig({
+  customLogger: logger,
   plugins: [react(),
     tailwindcss()
   ],
@@ -43,10 +54,17 @@ export default defineConfig({
         changeOrigin: true,
       },
       // Socket.IO (notifications + study room presence) — cần ws
+      // configure dùng để tắt noise ECONNABORTED/ECONNREFUSED khi backend restart
       '/socket.io': {
         target: BACKEND_TARGET,
         changeOrigin: true,
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', () => {
+            // Intentionally swallow WS proxy errors (ECONNABORTED / ECONNREFUSED)
+            // These fire naturally when the backend restarts in watch mode.
+          })
+        },
       },
     },
   },

@@ -5,12 +5,12 @@ import {
   Ear,
   Flag,
   Lock,
-  Sparkles,
   BookOpenCheck,
   Brain,
   BookMarked,
   Star,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import type { ToeicFoundationTopic, ToeicIntakeProfile } from "./toeicIntake";
 import {
@@ -25,8 +25,12 @@ import {
   calculateToeicPracticeScore,
   type ToeicScoreResult,
 } from "./toeicPracticeScore";
-import { askCertificateTutor, getPersonalScores, getToeicReservePoints } from "../../services/api/certificateService";
-import { getToeicLeaderboard } from "@/services/api/certificateService";
+import {
+  getPersonalScores,
+  getToeicLeaderboard,
+  getToeicReservePoints,
+  getToeicSkillFeedback,
+} from "@/services/api/certificateService";
 import StudentLeaderboard from "./components/StudentLeaderboard";
 
 type Props = {
@@ -55,15 +59,15 @@ const FOUNDATION_TRACK_FALLBACK: FoundationTrackItem[] = [
     topic: "grammar",
     title: "Ngữ pháp nền tảng",
     key: "grammar.articles_pron",
-    hint: "Gồm các mảng: 12 thì, loại từ, cấu trúc câu, mệnh đề, danh từ/tính từ/động từ.",
+    hint: "Hệ thống ngữ pháp đa dạng với nhiều chuyên đề quan trọng như thì, từ loại, cấu trúc câu… giúp bạn xây chắc nền tảng tiếng Anh từ gốc.",
     badge: "Grammar Core",
   },
   {
     topic: "vocabulary",
     title: "Từ vựng theo chủ đề",
     key: "vocab.office_basics_1000",
-    hint: "Mỗi chủ đề tập trung khoảng 1000 từ, ưu tiên nhóm từ dùng trong TOEIC thực tế.",
-    badge: "Topic 1000 Words",
+    hint: "Kho từ vựng phong phú với nhiều chủ đề đa dạng, giúp bạn mở rộng vốn từ và ứng dụng tự tin trong học tập cũng như TOEIC.",
+    badge: "Various Topics",
   },
 ];
 
@@ -84,7 +88,6 @@ export default function ToeicRoadmapBoard({
     (s) => s.id === "listening" || s.id === "reading"
   ), [profile.recommendedBand]);
 
-  const [aiFeedback, setAiFeedback] = useState<string>("Đang lấy dữ liệu phân tích...");
   const [listeningAccuracy, setListeningAccuracy] = useState<number>(0);
   const [readingAccuracy, setReadingAccuracy] = useState<number>(0);
   const [hasListeningData, setHasListeningData] = useState(false);
@@ -95,6 +98,10 @@ export default function ToeicRoadmapBoard({
   const [readingCorrect, setReadingCorrect] = useState<number>(0);
   const [readingTotal, setReadingTotal] = useState<number>(0);
   const [skillPracticeScore, setSkillPracticeScore] = useState<ToeicScoreResult | null>(null);
+  const [skillFeedback, setSkillFeedback] = useState<string>("");
+  const [skillFeedbackLoading, setSkillFeedbackLoading] = useState(false);
+  const [skillFeedbackError, setSkillFeedbackError] = useState<string | null>(null);
+  const [skillFeedbackWindow, setSkillFeedbackWindow] = useState<"week" | "day">("week");
 
   // Compute earned-based percentages for strongest/weakest comparison
   const earnedPctBySkill = useMemo(() => {
@@ -116,6 +123,45 @@ export default function ToeicRoadmapBoard({
   const weakest = (!hasListeningData && !hasReadingData) ? "Chưa rõ" : toeicSkills[earnedPctBySkill.indexOf(minVal)]?.label ?? "Nghe";
 
   // Fetch accuracy from recent practice sessions
+  type SkillFeedbackCache = {
+    signature: string;
+    answer: string;
+    window: "week" | "day";
+    current: { listening: number; reading: number };
+    previous: { listening: number; reading: number };
+    updatedAt: string;
+  };
+
+  const SKILL_FEEDBACK_CACHE_KEY = "edvision.toeic.skill-feedback.v2";
+
+  const loadSkillFeedbackCache = (): SkillFeedbackCache | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(SKILL_FEEDBACK_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as SkillFeedbackCache;
+      if (!parsed || typeof parsed !== "object") return null;
+      if (!parsed.answer || !parsed.current) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveSkillFeedbackCache = (payload: SkillFeedbackCache) => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SKILL_FEEDBACK_CACHE_KEY, JSON.stringify(payload));
+  };
+
+  const normalizeFeedback = (text: string): string =>
+    text
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/__(.+?)__/g, "$1")
+      .replace(/`(.+?)`/g, "$1")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
   useEffect(() => {
     getToeicReservePoints()
       .then((data) => {
@@ -145,10 +191,10 @@ export default function ToeicRoadmapBoard({
             readingAcc = rTotal > 0 ? Math.round((rCorrect / rTotal) * 100) : 0;
         }
 
-        setHasListeningData(listeningTotal > 0);
-        setHasReadingData(readingTotal > 0);
-        setListeningAccuracy(listeningAcc || 0);
-        setReadingAccuracy(readingAcc || 0);
+        const hasListening = listeningTotal > 0;
+        const hasReading = readingTotal > 0;
+        setHasListeningData(hasListening);
+        setHasReadingData(hasReading);
 
         // Build per-part best correct from part_sessions for per-part cap scoring
         const bestCorrectByPart: Record<string, number> = {};
@@ -167,10 +213,67 @@ export default function ToeicRoadmapBoard({
             rTotalAgg += s.total_questions || 0;
           }
         }
-        setListeningCorrect(Number.isFinite(Number(data.listening_correct)) ? Number(data.listening_correct) : lCorrectAgg);
-        setListeningTotal(Number.isFinite(Number(data.listening_total)) ? Number(data.listening_total) : lTotalAgg);
-        setReadingCorrect(Number.isFinite(Number(data.reading_correct)) ? Number(data.reading_correct) : rCorrectAgg);
-        setReadingTotal(Number.isFinite(Number(data.reading_total)) ? Number(data.reading_total) : rTotalAgg);
+        const listeningCorrectValue = Number.isFinite(Number(data.listening_correct))
+          ? Number(data.listening_correct)
+          : lCorrectAgg;
+        const listeningTotalValue = Number.isFinite(Number(data.listening_total))
+          ? Number(data.listening_total)
+          : lTotalAgg;
+        const readingCorrectValue = Number.isFinite(Number(data.reading_correct))
+          ? Number(data.reading_correct)
+          : rCorrectAgg;
+        const readingTotalValue = Number.isFinite(Number(data.reading_total))
+          ? Number(data.reading_total)
+          : rTotalAgg;
+
+        setListeningCorrect(listeningCorrectValue);
+        setListeningTotal(listeningTotalValue);
+        setReadingCorrect(readingCorrectValue);
+        setReadingTotal(readingTotalValue);
+
+        const signature = [
+          `l:${listeningCorrectValue}/${listeningTotalValue}`,
+          `r:${readingCorrectValue}/${readingTotalValue}`,
+        ].join("|");
+
+        const cached = loadSkillFeedbackCache();
+        if (cached && cached.signature === signature) {
+          setSkillFeedback(cached.answer);
+          setSkillFeedbackWindow(cached.window);
+          setListeningAccuracy(cached.current.listening ?? 0);
+          setReadingAccuracy(cached.current.reading ?? 0);
+          setSkillFeedbackError(null);
+          setSkillFeedbackLoading(false);
+          setIsAccuracyLoaded(true);
+          return;
+        }
+
+        setSkillFeedbackLoading(true);
+        getToeicSkillFeedback()
+          .then((res) => {
+            const normalized = normalizeFeedback(res.answer);
+            setSkillFeedback(normalized);
+            setSkillFeedbackWindow(res.window);
+            setListeningAccuracy(res.current.listening ?? 0);
+            setReadingAccuracy(res.current.reading ?? 0);
+            setSkillFeedbackError(null);
+            saveSkillFeedbackCache({
+              signature,
+              answer: normalized,
+              window: res.window,
+              current: res.current,
+              previous: res.previous,
+              updatedAt: new Date().toISOString(),
+            });
+          })
+          .catch(() => {
+            setSkillFeedbackError(
+              "Chưa thể tải nhận xét lúc này. Vui lòng thử lại sau.",
+            );
+          })
+          .finally(() => {
+            setSkillFeedbackLoading(false);
+          });
 
         // Calculate per-part cap score (same logic as ToeicLearningMapPage)
         const hasAnyPart = Object.keys(bestCorrectByPart).length > 0;
@@ -194,30 +297,6 @@ export default function ToeicRoadmapBoard({
         setIsAccuracyLoaded(true);
       });
   }, []);
-
-  useEffect(() => {
-    if (!isAccuracyLoaded) return;
-
-    if (!hasListeningData && !hasReadingData) {
-      setAiFeedback("Bạn chưa hoàn thành bất kỳ bài tập ôn luyện nào gần đây. Hãy bắt đầu ôn tập để hệ thống có thể phân tích năng lực và đưa ra nhận xét chính xác nhất!");
-      return;
-    }
-    
-    setAiFeedback("Trợ lý ảo đang phân tích...");
-    const listScore = listeningAccuracy;
-    const readScore = readingAccuracy;
-    
-    askCertificateTutor({
-      cert_type: "toeic",
-      question: `Dựa trên dữ liệu ôn tập thực tế của tôi: kỹ năng Nghe đạt tỉ lệ đúng ${listScore}%, kỹ năng Đọc đạt tỉ lệ đúng ${readScore}%. Hãy đóng vai một chuyên gia giáo dục, phân tích ngắn gọn điểm mạnh yếu của tôi dựa trên 2 tỉ lệ phần trăm này và đưa ra 1 lời khuyên thực tế nhất để cải thiện. Không chào hỏi, đi thẳng vào vấn đề.`,
-      topic_key: `toeic_skill_analysis_${listScore}_${readScore}`,
-      concise: true
-    }).then(res => {
-      setAiFeedback(res.answer);
-    }).catch(err => {
-      setAiFeedback("Hệ thống AI đang bận. Vui lòng thử lại sau.");
-    });
-  }, [isAccuracyLoaded, listeningAccuracy, readingAccuracy, hasListeningData, hasReadingData]);
 
   // Fetch real Điểm Gốc and Điểm Ôn Tập from backend
   useEffect(() => {
@@ -270,10 +349,7 @@ export default function ToeicRoadmapBoard({
         key:
           grammarSection?.topics[0]?.topicKey ??
           FOUNDATION_TRACK_FALLBACK[0].key,
-        hint:
-          grammarTopicCount > 0
-            ? `${grammarTopicCount} chuyên đề: thì, loại từ, cấu trúc câu và các điểm ngữ pháp TOEIC.`
-            : FOUNDATION_TRACK_FALLBACK[0].hint,
+        hint: "Hệ thống ngữ pháp đa dạng với nhiều chuyên đề quan trọng như thì, từ loại, cấu trúc câu… giúp bạn xây chắc nền tảng tiếng Anh từ gốc.",
         badge: "Grammar Core",
       },
       {
@@ -282,11 +358,8 @@ export default function ToeicRoadmapBoard({
         key:
           vocabularySection?.topics[0]?.topicKey ??
           FOUNDATION_TRACK_FALLBACK[1].key,
-        hint:
-          vocabularyTopicCount > 0
-            ? `${vocabularyTopicCount} chủ đề, mỗi chủ đề định hướng khoảng 1000 từ trọng tâm.`
-            : FOUNDATION_TRACK_FALLBACK[1].hint,
-        badge: "Topic 1000 Words",
+        hint: "Kho từ vựng phong phú với nhiều chủ đề đa dạng, giúp bạn mở rộng vốn từ và ứng dụng tự tin trong học tập cũng như TOEIC.",
+        badge: "Various Topics",
       },
     ];
   }, [profile.recommendedBand]);
@@ -462,8 +535,7 @@ export default function ToeicRoadmapBoard({
               <h3 className="font-bold">Nền tảng cho người mất gốc</h3>
             </div>
             <p className="text-sm text-slate-600">
-              Mặc định hệ thống khóa nhánh tăng tốc cho đến khi hoàn thành tối
-              thiểu 2 chủ đề nền tảng. Bạn có thể bỏ qua nếu đã vững.
+              Xây nền móng vững chắc với ngữ pháp cốt lõi và kho từ vựng thiết yếu - bước khởi đầu hoàn hảo cho hành trình chinh phục TOEIC.
             </p>
             <div className="mt-3 space-y-2">
               {foundationTrack.map((item) => {
@@ -490,11 +562,6 @@ export default function ToeicRoadmapBoard({
                         </p>
                         <p className="text-xs text-slate-500">{item.hint}</p>
                       </div>
-                      {done && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
-                          Done
-                        </span>
-                      )}
                     </div>
                     <button
                       onClick={() => openFoundationTheory(item.topic, item.key)}
@@ -537,13 +604,10 @@ export default function ToeicRoadmapBoard({
                 const hasData = skill.id === "listening" ? hasListeningData : hasReadingData;
 
                 // Per-part cap data from calculateToeicPracticeScore
-                const skillDetail = skillPracticeScore?.skills.find((s) => s.key === skill.id);
-                const earned = skillDetail?.totalEarned ?? 0;
-                const cap = skillDetail?.totalCap ?? 0;
                 const correctCount = skill.id === "listening" ? listeningCorrect : readingCorrect;
                 const totalCount = skill.id === "listening" ? listeningTotal : readingTotal;
-                const pct = cap > 0 ? Math.round((earned / cap) * 100) : 0;
-                const displayPct = hasData ? pct : 0;
+                const aiPct = skill.id === "listening" ? listeningAccuracy : readingAccuracy;
+                const displayPct = hasData ? Math.max(0, Math.min(100, Math.round(aiPct))) : 0;
 
                 return (
                   <div
@@ -571,14 +635,14 @@ export default function ToeicRoadmapBoard({
                       {!hasData
                         ? "Chưa ôn tập lần nào. Bắt đầu luyện tập ngay!"
                         : displayPct >= 75
-                          ? "Đang ổn định, tập trung nâng cao tốc độ."
+                          ? "Tỷ lệ đúng cao, tập trung nâng tốc độ và độ ổn định."
                           : displayPct >= 50
                             ? "Mức trung bình, cần duy trì ôn luyện đều đặn."
                             : "Đang yếu, ưu tiên luyện tập để tránh mất điểm!"}
                     </p>
                     {hasData && (
                       <p className="mt-0.5 text-[10px] text-slate-400 italic">
-                        Mỗi part có trần điểm riêng — luyện lại 1 part không thể tăng thêm khi đã đạt trần
+                        Tỷ lệ đúng dựa trên {skillFeedbackWindow === "day" ? "24 giờ gần nhất" : "7 ngày gần nhất"}.
                       </p>
                     )}
                   </div>
@@ -599,16 +663,29 @@ export default function ToeicRoadmapBoard({
                 </div>
               </div>
 
-              {/* AI Feedback */}
-              <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-3.5">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm font-bold text-indigo-900">Nhận xét của Trợ lý ảo</span>
+              <div className="mt-4 rounded-xl border border-purple-100 bg-purple-50/60 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-purple-700">
+                  <Sparkles className="h-4 w-4" />
+                  Nhận xét của Trợ lý ảo
                 </div>
-                <p className="text-xs text-indigo-800/80 leading-relaxed text-justify">
-                  {aiFeedback}
-                </p>
+                {skillFeedbackLoading && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Đang tạo nhận xét dựa trên dữ liệu luyện tập gần nhất...
+                  </p>
+                )}
+                {!skillFeedbackLoading && skillFeedbackError && (
+                  <p className="mt-2 text-xs text-rose-600">
+                    {skillFeedbackError}
+                  </p>
+                )}
+                {!skillFeedbackLoading && !skillFeedbackError && (
+                  <p className="mt-2 text-xs text-slate-600 whitespace-pre-line">
+                    {skillFeedback ||
+                      "Chưa có đủ dữ liệu để nhận xét. Hãy luyện tập vài bộ để hệ thống phân tích."}
+                  </p>
+                )}
               </div>
+
             </div>
           </div>
         </div>

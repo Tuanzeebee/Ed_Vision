@@ -25,4 +25,3 @@ import { VocabModule } from './vocab/vocab.module';
   ],
 })
 export class StudentBeModule {}
-

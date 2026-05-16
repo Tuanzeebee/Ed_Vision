@@ -1,5 +1,5 @@
 // D:\Ed_Vision\Ed_Vision\src\modules\student\ToeicFoundationStudyPage.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Archive,
@@ -78,8 +78,6 @@ interface VocabWordDefinition {
 interface VocabWord {
   id: string;
   word: string;
-  level?: string;
-  freq: 1 | 2 | 3;
   meaning?: string;
   pos?: string;
   example?: GrammarExample;
@@ -768,6 +766,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Email & Office Communication",
     titleVI: "Email & Văn phòng",
     count: 25,
+    level: "Cơ bản",
     words: [
       {
         id: "v1-1",
@@ -1177,6 +1176,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Contracts & Agreements",
     titleVI: "Hợp đồng & Thỏa thuận",
     count: 30,
+    level: "Cơ bản",
     words: [
       {
         id: "v2-1",
@@ -1586,6 +1586,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Finance & Banking",
     titleVI: "Tài chính & Ngân hàng",
     count: 45,
+    level: "Trung bình",
     isPremiumPreview: true,
     words: [
       {
@@ -1756,6 +1757,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Manufacturing & Production",
     titleVI: "Sản xuất",
     count: 35,
+    level: "Trung bình",
     isPremiumPreview: true,
     words: [
       {
@@ -1926,6 +1928,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Human Resources",
     titleVI: "Nhân sự",
     count: 40,
+    level: "Trung bình",
     isPremiumPreview: true,
     words: [
       {
@@ -2096,6 +2099,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Travel & Transportation",
     titleVI: "Du lịch & Vận tải",
     count: 20,
+    level: "Nâng cao",
     isPremiumPreview: true,
     words: [
       {
@@ -2266,6 +2270,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Healthcare",
     titleVI: "Y tế & Sức khỏe",
     count: 25,
+    level: "Nâng cao",
     isPremiumPreview: true,
     words: [
       {
@@ -2436,6 +2441,7 @@ const VOCAB_TOPICS: VocabTopic[] = [
     title: "Technology & Equipment",
     titleVI: "Công nghệ & Thiết bị",
     count: 30,
+    level: "Nâng cao",
     isPremiumPreview: true,
     words: [
       {
@@ -2709,12 +2715,66 @@ function PosBadge({ pos }: { pos: string }) {
   );
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightExampleText(
+  example: string | null | undefined,
+  word: string,
+): string | null | undefined {
+  if (!example || !word) return example;
+  if (example.includes('data-vocab-highlight')) return example;
+
+  const trimmedWord = word.trim();
+  if (!trimmedWord) return example;
+
+  const escapedWord = escapeRegExp(trimmedWord);
+  const pattern = new RegExp(`(^|[^\\w])(${escapedWord})(?=[^\\w]|$)`, 'gi');
+  if (!pattern.test(example)) return example;
+
+  return example.replace(
+    pattern,
+    (_match, lead, term) =>
+      `${lead}<span data-vocab-highlight="1" class="underline decoration-amber-500/70 font-semibold">${term}</span>`,
+  );
+}
+
 function resolveWordDefinitions(word: VocabWord): VocabWordDefinition[] {
-  if (word.definitions && word.definitions.length > 0) return word.definitions;
+  if (word.definitions && word.definitions.length > 0) {
+    return word.definitions.map((def) => {
+      if (!def.example?.en) return def;
+      return {
+        ...def,
+        example: {
+          ...def.example,
+          en: highlightExampleText(def.example.en, word.word) ?? def.example.en,
+        },
+      };
+    });
+  }
   if (word.meaning && word.pos && word.example) {
-    return [{ pos: word.pos, meaning: word.meaning, example: word.example }];
+    return [
+      {
+        pos: word.pos,
+        meaning: word.meaning,
+        example: {
+          ...word.example,
+          en: highlightExampleText(word.example.en, word.word) ?? word.example.en,
+        },
+      },
+    ];
   }
   return [];
+}
+
+function resolveLevelLabel(value?: string): string | undefined {
+  if (!value) return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'basic') return 'Cơ bản';
+  if (normalized === 'intermediate') return 'Trung bình';
+  if (normalized === 'advanced') return 'Nâng cao';
+  return value;
 }
 
 function normalizeMeaningText(value: string): string {
@@ -2843,6 +2903,7 @@ function WordCard({
 }) {
   const definitions = resolveWordDefinitions(word);
   const knownText = knownLabel ?? "Đã biết";
+
   const handlePlayAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
     if ('speechSynthesis' in window) {
@@ -2877,17 +2938,7 @@ function WordCard({
             >
               <Volume2 size={16} />
             </button>
-            {word.level && (
-              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
-                word.level === "Cơ bản" ? "bg-green-50 text-green-600 border-green-200" :
-                word.level === "Trung bình" ? "bg-yellow-50 text-yellow-600 border-yellow-200" :
-                "bg-red-50 text-red-600 border-red-200"
-              }`}>
-                {word.level}
-              </span>
-            )}
           </div>
-          <FreqStars freq={word.freq} />
         </div>
         <button
           onClick={() => onToggleKnown(word.id)}
@@ -2982,7 +3033,7 @@ function FlashcardStudy({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-50 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">
         <div className="p-4 flex justify-between items-center bg-white border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -3087,10 +3138,11 @@ function WriteMeaningStudy({
   const [userInput, setUserInput] = useState('');
   const [isChecked, setIsChecked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   if (words.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-sm flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6 text-center">
           <p className="text-sm text-slate-600">Không có từ vựng để luyện.</p>
           <button
@@ -3144,8 +3196,37 @@ function WriteMeaningStudy({
     setIsCorrect(null);
   };
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [currentIndex]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.isComposing) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Enter' || event.shiftKey) return;
+
+      if (isChecked) {
+        event.preventDefault();
+        handleNext();
+        return;
+      }
+
+      if (userInput.trim().length === 0) return;
+      event.preventDefault();
+      handleCheck();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isChecked, onClose, userInput]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-50 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">
         <div className="p-4 flex justify-between items-center bg-white border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -3175,11 +3256,11 @@ function WriteMeaningStudy({
                   <Volume2 size={18} />
                 </button>
               </div>
-              <FreqStars freq={currentWord.freq} />
             </div>
 
             <label className="text-xs font-semibold text-slate-500">Viết lại nghĩa</label>
             <textarea
+              ref={inputRef}
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               placeholder="Nhập nghĩa tiếng Việt của từ này..."
@@ -3552,8 +3633,6 @@ function VocabWordListApi({
   const mapApiWordToVocabWord = (w: VocabWordApi): VocabWord => ({
     id: String(w.id),
     word: w.word,
-    level: w.level,
-    freq: w.freq as 1 | 2 | 3,
     definitions: w.definitions.map((d) => ({
       pos: d.pos,
       meaning: d.meaning,
@@ -3778,7 +3857,7 @@ export default function ToeicFoundationStudyPage() {
   // ── Vocab API data ───────────────────────────────────────────────────────────
   const { topics: apiTopics, loading: topicsLoading, refetch: refetchTopics, resolvedId: activeEnrollmentId } =
     useVocabTopics(enrollmentId);
-  const vocabStats = useVocabStats(activeEnrollmentId);
+  const vocabStats = useVocabStats(activeEnrollmentId, "toeic");
 
   const [expandedGrammar, setExpandedGrammar] = useState<Set<number>>(
     new Set([1]),
@@ -4194,7 +4273,7 @@ export default function ToeicFoundationStudyPage() {
 
                 {/* Stats row — from API */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
                     <div>
                       <p className="text-2xl font-black text-teal-600">
                         {vocabStats?.knownWords ?? 0}
@@ -4212,12 +4291,6 @@ export default function ToeicFoundationStudyPage() {
                         {vocabStats?.topics ?? 0}
                       </p>
                       <p className="text-xs text-slate-500 font-medium mt-0.5">Chủ đề</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-amber-500">
-                        {vocabStats?.highFreqKnown ?? 0}
-                      </p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">Từ rất hay ra ⭐⭐⭐</p>
                     </div>
                   </div>
                 </div>

@@ -4,9 +4,9 @@ import { REDIS_KEY_ONLINE_USERS } from '../leaderboard.constants';
 
 /**
  * Online Status Manager Service
- * 
+ *
  * Responsible for managing user online status for the leaderboard.
- * 
+ *
  * Uses Redis Set to track currently online users.
  * A user is considered online when they are actively in a study room.
  */
@@ -18,7 +18,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Mark a user as online
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<void>
    */
@@ -40,7 +40,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Mark a user as offline
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<void>
    */
@@ -51,7 +51,10 @@ export class OnlineStatusManagerService {
     }
 
     try {
-      await this.redis.removeFromSet(REDIS_KEY_ONLINE_USERS, accountId.toString());
+      await this.redis.removeFromSet(
+        REDIS_KEY_ONLINE_USERS,
+        accountId.toString(),
+      );
       this.logger.debug(`Set account ${accountId} as offline`);
     } catch (error) {
       this.logger.error(
@@ -62,7 +65,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Check if a user is online
-   * 
+   *
    * @param accountId - User account ID
    * @returns Promise<boolean> - True if online, false otherwise
    */
@@ -84,7 +87,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Get online status for multiple users (batch operation)
-   * 
+   *
    * @param accountIds - Array of user account IDs
    * @returns Promise<Set<number>> - Set of online user IDs
    */
@@ -116,7 +119,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Get all online users
-   * 
+   *
    * @returns Promise<number[]> - Array of online user account IDs
    */
   async getAllOnlineUsers(): Promise<number[]> {
@@ -137,7 +140,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Get online user count
-   * 
+   *
    * @returns Promise<number> - Number of online users
    */
   async getOnlineUserCount(): Promise<number> {
@@ -158,7 +161,7 @@ export class OnlineStatusManagerService {
 
   /**
    * Clear all online users (for maintenance/testing)
-   * 
+   *
    * @returns Promise<void>
    */
   async clearAllOnlineUsers(): Promise<void> {

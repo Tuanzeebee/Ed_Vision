@@ -30,6 +30,14 @@ export const iconComponents = {
     <i className={`fas fa-check-circle ${isActive ? 'text-blue-600': 'text-gray-400'}`}></i>,
   shield: ({ isActive = false }: { isActive?: boolean }) => 
     <i className={`fas fa-user-shield ${isActive ? 'text-blue-600': 'text-gray-400'}`}></i>,
+  certificate: ({ isActive = false }: { isActive?: boolean }) => 
+    <i className={`fas fa-certificate ${isActive ? 'text-blue-600': 'text-gray-400'}`}></i>,
+  activity: ({ isActive = false }: { isActive?: boolean }) => 
+    <i className={`fas fa-chart-line ${isActive ? 'text-blue-600': 'text-gray-400'}`}></i>,
+  studentMenu: ({ isActive = false }: { isActive?: boolean }) => 
+    <i className={`fas fa-user-graduate ${isActive ? 'text-blue-600': 'text-gray-400'}`}></i>,
+  award: ({ isActive = false }: { isActive?: boolean }) => 
+    <i className={`fas fa-trophy ${isActive ? 'text-blue-600': 'text-gray-400'}`}></i>,
 } as const;
 
 // Helper để get icon component

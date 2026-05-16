@@ -312,10 +312,36 @@
       "community": "Cộng đồng"
     },
     "hero": {
-      "titlePrefix": "Dự đoán",
-      "titleEmphasis": "tương lai",
-      "titleSuffix": "của bạn.",
-      "description": "Dự đoán điểm số và chứng chỉ chính xác. Trao quyền cho sinh viên với insight từ AI để làm chủ GPA và chinh phục các kỳ thi quốc tế như IELTS, TOEIC, MOS.",
+      "titlePrefix": "Chạm tới phiên bản giỏi hơn của bạn.",
+      "titleEmphasis": "",
+      "titleSuffix": "",
+      "titleOptions": [
+        "Chạm tới phiên bản tốt hơn của chính mình.",
+        "Cùng bạn tiến gần hơn đến mục tiêu.",
+        "Học tập theo cách phù hợp với bạn.",
+        "Tiến bộ mỗi ngày, theo nhịp riêng của bạn.",
+        "Đồng hành trên hành trình nâng cấp bản thân.",
+        "Mỗi ngày một bước gần hơn tới thành công.",
+        "Khởi đầu hành trình học tập tốt hơn.",
+        "Chạm tới mục tiêu theo cách của riêng bạn.",
+        "Phát triển bản thân từ những bước nhỏ mỗi ngày.",
+        "Hành trình học tập được thiết kế dành riêng cho bạn.",
+        "Chạm tới phiên bản giỏi hơn của bạn."
+      ],
+      "description": "Quản lý và hỗ trợ chinh phục IELTS, TOEIC, MOS với hành trình học tập cá nhân",
+      "descriptionOptions": [
+        "Quản lý và hỗ trợ chinh phục IELTS, TOEIC, MOS với lộ trình học tập cá nhân hóa.",
+        "Đồng hành cùng bạn trong hành trình học IELTS, TOEIC và MOS hiệu quả hơn.",
+        "Theo dõi tiến độ, xây dựng lộ trình và hỗ trợ học tập thông minh.",
+        "Cá nhân hóa trải nghiệm học tập để giúp bạn tiến bộ mỗi ngày.",
+        "Hỗ trợ quản lý học tập và ôn luyện theo mục tiêu của riêng bạn.",
+        "Nền tảng học tập giúp bạn duy trì động lực và phát triển bền vững.",
+        "Tối ưu hành trình học tập với trải nghiệm cá nhân hóa và trực quan.",
+        "Hỗ trợ bạn xây dựng thói quen học tập hiệu quả cho IELTS, TOEIC và MOS.",
+        "Quản lý mục tiêu học tập dễ dàng với hệ thống đồng hành thông minh.",
+        "Một không gian học tập hiện đại dành cho hành trình phát triển kỹ năng và chứng chỉ.",
+        "Quản lý và hỗ trợ chinh phục IELTS, TOEIC, MOS với hành trình học tập cá nhân"
+      ],
       "cta": "Bắt đầu ngay"
     },
     "about": {
@@ -330,13 +356,18 @@
       "items": [
         {
           "tag": "Tính năng cốt lõi",
-          "title": "Grade Forecast AI",
+          "title": "AI Dự báo điểm số",
           "description": "Phân tích thông minh dự đoán điểm cuối kỳ dựa trên hiệu suất hiện tại, bài tập và lịch sử học tập với độ chính xác 98%."
         },
         {
           "tag": "Trung tâm học tập",
-          "title": "Certificate Mastery",
+          "title": "Làm chủ chứng chỉ",
           "description": "Lộ trình toàn diện cho IELTS, TOEIC và MOS. Bao gồm phân tích kỹ năng thời gian thực, mô phỏng và tài nguyên học tập từ cộng đồng."
+        },
+        {
+          "tag": "Không gian học tập",
+          "title": "Không gian học tập",
+          "description": "Không gian học tập cá nhân hóa giúp bạn duy trì tập trung, theo dõi tiến độ và phát triển kỹ năng bền vững."
         }
       ]
     },
@@ -378,7 +409,7 @@
     },
     "partner": {
       "title": "Đồng hành cùng chúng tôi",
-      "cta": "Bắt đầu chat với Viktor"
+      "cta": "Bắt đầu chat"
     },
     "testimonials": {
       "titlePrefix": "Mọi người",

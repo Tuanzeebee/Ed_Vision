@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { RagRetrievalService } from '../../rag/rag-retrieval.service';
 import { encryptString, encryptRecord } from '../../common/crypto.util';
 import {
   access,
@@ -134,26 +135,25 @@ type ToeicRepositoryWithItemsForSubmit = Prisma.ExamRepositoryGetPayload<{
   };
 }>;
 
-type ToeicRepositoryItemForPregenerate =
-  Prisma.ExamRepositoryItemGetPayload<{
-    select: {
-      id: true;
-      item_order: true;
-      title: true;
-      stem: true;
-      reading_passage: true;
-      metadata: true;
-      updated_at: true;
-      options: {
-        select: {
-          option_key: true;
-          option_text: true;
-          is_correct: true;
-          sort_order: true;
-        };
+type ToeicRepositoryItemForPregenerate = Prisma.ExamRepositoryItemGetPayload<{
+  select: {
+    id: true;
+    item_order: true;
+    title: true;
+    stem: true;
+    reading_passage: true;
+    metadata: true;
+    updated_at: true;
+    options: {
+      select: {
+        option_key: true;
+        option_text: true;
+        is_correct: true;
+        sort_order: true;
       };
     };
-  }>;
+  };
+}>;
 
 type ToeicEnrollmentLeaderboardRow = Prisma.CertificateEnrollmentGetPayload<{
   include: {
@@ -283,7 +283,8 @@ export class CertificateEnrollmentService {
     private readonly prisma: PrismaService,
     private readonly questionPointsCalculator: QuestionPointsCalculatorService,
     private readonly openRouter: OpenRouterService,
-  ) { }
+    private readonly ragRetrieval: RagRetrievalService,
+  ) {}
 
   private readonly inFlightExplanationGenerations = new Map<
     string,
@@ -449,8 +450,8 @@ export class CertificateEnrollmentService {
         new Set(
           Array.isArray(state.foundation_completed)
             ? state.foundation_completed.filter(
-              (x): x is string => typeof x === 'string',
-            )
+                (x): x is string => typeof x === 'string',
+              )
             : fromMeta.foundation_completed,
         ),
       ),
@@ -1323,10 +1324,10 @@ export class CertificateEnrollmentService {
     const goalStartScore = targetChanged
       ? currentScore
       : Number(
-        rawExistingState?.goal_start_score ??
-        enrollment.current_score ??
-        currentScore,
-      );
+          rawExistingState?.goal_start_score ??
+            enrollment.current_score ??
+            currentScore,
+        );
 
     const nextState: ToeicPlanStateRaw = {
       current_score: currentScore,
@@ -1348,8 +1349,8 @@ export class CertificateEnrollmentService {
       ),
       foundation_completed: Array.isArray(dto.foundation_completed)
         ? dto.foundation_completed.filter(
-          (x): x is string => typeof x === 'string' && x.length > 0,
-        )
+            (x): x is string => typeof x === 'string' && x.length > 0,
+          )
         : existingState.foundation_completed,
       foundation_skipped: Boolean(
         dto.foundation_skipped ?? existingState.foundation_skipped,
@@ -1360,11 +1361,11 @@ export class CertificateEnrollmentService {
     const hasActivity =
       dto.has_activity === true ||
       Number(nextState.total_boost ?? 0) >
-      Number(existingState.total_boost ?? 0) ||
+        Number(existingState.total_boost ?? 0) ||
       Number(nextState.listening_sessions ?? 0) >
-      Number(existingState.listening_sessions ?? 0) ||
+        Number(existingState.listening_sessions ?? 0) ||
       Number(nextState.reading_sessions ?? 0) >
-      Number(existingState.reading_sessions ?? 0);
+        Number(existingState.reading_sessions ?? 0);
     const progressPercent = toPercent(
       currentScore,
       goalStartScore,
@@ -1475,9 +1476,7 @@ export class CertificateEnrollmentService {
         : 0;
 
     const remainingPoints =
-      targetScore !== null
-        ? Math.max(0, targetScore - reservePoints)
-        : null;
+      targetScore !== null ? Math.max(0, targetScore - reservePoints) : null;
 
     return {
       current_score: enrollment?.current_score ?? null,
@@ -1697,27 +1696,27 @@ export class CertificateEnrollmentService {
       text: string;
       rationale: string;
     }> = [
-        {
-          key: 'A',
-          text: this.rowValue(row, ['option_a', 'a', 'choice_a']),
-          rationale: this.rowValue(row, ['rationale_a']),
-        },
-        {
-          key: 'B',
-          text: this.rowValue(row, ['option_b', 'b', 'choice_b']),
-          rationale: this.rowValue(row, ['rationale_b']),
-        },
-        {
-          key: 'C',
-          text: this.rowValue(row, ['option_c', 'c', 'choice_c']),
-          rationale: this.rowValue(row, ['rationale_c']),
-        },
-        {
-          key: 'D',
-          text: this.rowValue(row, ['option_d', 'd', 'choice_d']),
-          rationale: this.rowValue(row, ['rationale_d']),
-        },
-      ];
+      {
+        key: 'A',
+        text: this.rowValue(row, ['option_a', 'a', 'choice_a']),
+        rationale: this.rowValue(row, ['rationale_a']),
+      },
+      {
+        key: 'B',
+        text: this.rowValue(row, ['option_b', 'b', 'choice_b']),
+        rationale: this.rowValue(row, ['rationale_b']),
+      },
+      {
+        key: 'C',
+        text: this.rowValue(row, ['option_c', 'c', 'choice_c']),
+        rationale: this.rowValue(row, ['rationale_c']),
+      },
+      {
+        key: 'D',
+        text: this.rowValue(row, ['option_d', 'd', 'choice_d']),
+        rationale: this.rowValue(row, ['rationale_d']),
+      },
+    ];
 
     const options = optionEntries
       .filter((entry) => entry.text.length > 0)
@@ -1938,15 +1937,16 @@ export class CertificateEnrollmentService {
         let mimeType = file.mimetype || 'image/jpeg';
         if (mimeType === 'application/octet-stream') mimeType = 'image/jpeg';
 
-        const prompt = 'Please extract all the text from this image exactly as it appears. Ensure you capture all columns. Output only the text, no markdown, no conversational filler.';
+        const prompt =
+          'Please extract all the text from this image exactly as it appears. Ensure you capture all columns. Output only the text, no markdown, no conversational filler.';
         const result = await model.generateContent([
           prompt,
           {
             inlineData: {
               data: fileData.toString('base64'),
-              mimeType: mimeType
-            }
-          }
+              mimeType: mimeType,
+            },
+          },
         ]);
         const response = await result.response;
         const text = response.text();
@@ -1954,7 +1954,10 @@ export class CertificateEnrollmentService {
           return text.trim();
         }
       } catch (err: any) {
-        Logger.warn('Gemini OCR failed, falling back to Tesseract: ' + err.message, 'CertificateEnrollmentService');
+        Logger.warn(
+          'Gemini OCR failed, falling back to Tesseract: ' + err.message,
+          'CertificateEnrollmentService',
+        );
       }
     }
 
@@ -2188,9 +2191,13 @@ export class CertificateEnrollmentService {
           return parsed;
         }
       } catch (err: any) {
-        throw new BadRequestException('Lỗi trích xuất chữ từ ảnh/PDF: ' + (err.message || 'Unknown error'));
+        throw new BadRequestException(
+          'Lỗi trích xuất chữ từ ảnh/PDF: ' + (err.message || 'Unknown error'),
+        );
       }
-      throw new BadRequestException('Không quét được đáp án (1A, 2B...) nào từ file ảnh/PDF.');
+      throw new BadRequestException(
+        'Không quét được đáp án (1A, 2B...) nào từ file ảnh/PDF.',
+      );
     }
 
     if (extension === '.json') {
@@ -2347,7 +2354,6 @@ export class CertificateEnrollmentService {
     return passage.slice(sentenceStart, sentenceEnd).trim();
   }
 
-
   private parseToeicQuestionsFromOcrText(
     rawText: string,
     skillArea: 'reading' | 'listening',
@@ -2385,7 +2391,8 @@ export class CertificateEnrollmentService {
     let part6GroupRange: { start: number; end: number } | null = null;
     // Buffer of Part 6 option blocks: each element = one question's options (in order A,B,C,D)
     let part6OptionBlocks: Array<Map<'A' | 'B' | 'C' | 'D', string>> = [];
-    let part6CurrentOptionBlock: Map<'A' | 'B' | 'C' | 'D', string> | null = null;
+    let part6CurrentOptionBlock: Map<'A' | 'B' | 'C' | 'D', string> | null =
+      null;
     let part6BlankNumbers: number[] = [];
 
     type WorkingQuestion = {
@@ -2441,7 +2448,7 @@ export class CertificateEnrollmentService {
 
       const answerFromQuestion =
         current.answerKey &&
-          options.some((opt) => opt.optionKey === current.answerKey)
+        options.some((opt) => opt.optionKey === current.answerKey)
           ? current.answerKey
           : null;
 
@@ -2451,7 +2458,7 @@ export class CertificateEnrollmentService {
 
       const answerFromKeyMap =
         typeof mappedAnswer === 'string' &&
-          options.some((opt) => opt.optionKey === mappedAnswer)
+        options.some((opt) => opt.optionKey === mappedAnswer)
           ? mappedAnswer
           : null;
 
@@ -2542,7 +2549,11 @@ export class CertificateEnrollmentService {
           flushQuestion();
 
           // If we were in Part 6, flush remaining group before switching parts
-          if (currentPart === 6 && part6GroupRange && part6BlankNumbers.length > 0) {
+          if (
+            currentPart === 6 &&
+            part6GroupRange &&
+            part6BlankNumbers.length > 0
+          ) {
             if (part6CurrentOptionBlock && part6CurrentOptionBlock.size > 0) {
               part6OptionBlocks.push(part6CurrentOptionBlock);
               part6CurrentOptionBlock = null;
@@ -2565,7 +2576,8 @@ export class CertificateEnrollmentService {
               questions.push({
                 questionNumber: blankNum,
                 part: 6,
-                stem: blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
+                stem:
+                  blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
                 context: passage || null,
                 options: opts,
                 explanation: null,
@@ -2589,9 +2601,10 @@ export class CertificateEnrollmentService {
         continue;
       }
 
-      const rangeMatch = line.match(
-        /Questions?\s*(\d{1,3})\s*(?:to|-|–|—)\s*(\d{1,3})\s*(?:refer|are based on|relate|correspond)/i,
-      ) ?? line.match(/Questions?\s*(\d{1,3})\s*-\s*(\d{1,3})/i);
+      const rangeMatch =
+        line.match(
+          /Questions?\s*(\d{1,3})\s*(?:to|-|–|—)\s*(\d{1,3})\s*(?:refer|are based on|relate|correspond)/i,
+        ) ?? line.match(/Questions?\s*(\d{1,3})\s*-\s*(\d{1,3})/i);
       if (rangeMatch?.[1] && rangeMatch?.[2]) {
         flushQuestion();
         const rangeStart = Number(rangeMatch[1]);
@@ -2612,8 +2625,8 @@ export class CertificateEnrollmentService {
               // Extract the sentence containing the blank as stem
               const blankStem = this.extractPart6BlankStem(passage, blankNum);
               const opts = (['A', 'B', 'C', 'D'] as const)
-                .filter(k => optBlock.has(k))
-                .map(k => ({
+                .filter((k) => optBlock.has(k))
+                .map((k) => ({
                   optionKey: k,
                   optionText: optBlock.get(k)!,
                   isCorrect: answerKeyMap.get(blankNum) === k,
@@ -2623,7 +2636,8 @@ export class CertificateEnrollmentService {
               questions.push({
                 questionNumber: blankNum,
                 part: 6,
-                stem: blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
+                stem:
+                  blankStem || `(${blankNum}) _______ — Chọn từ phù hợp nhất`,
                 context: passage || null,
                 options: opts,
                 explanation: null,
@@ -2852,8 +2866,8 @@ export class CertificateEnrollmentService {
         if (!optBlock || optBlock.size < 2) continue;
         const blankStem = this.extractPart6BlankStem(passage, blankNum);
         const opts = (['A', 'B', 'C', 'D'] as const)
-          .filter(k => optBlock.has(k))
-          .map(k => ({
+          .filter((k) => optBlock.has(k))
+          .map((k) => ({
             optionKey: k,
             optionText: optBlock.get(k)!,
             isCorrect: answerKeyMap.get(blankNum) === k,
@@ -2875,7 +2889,7 @@ export class CertificateEnrollmentService {
       questions.length === 0
         ? 0
         : questions.filter((q) => typeof q.questionNumber === 'number').length /
-        questions.length;
+          questions.length;
 
     if (numberedRatio >= 0.8) {
       return [...questions].sort(
@@ -2897,7 +2911,12 @@ export class CertificateEnrollmentService {
       part: number | null;
       stem: string;
       context?: string | null;
-      options: Array<{ optionKey: string; optionText: string; isCorrect: boolean; rationale?: string | null }>;
+      options: Array<{
+        optionKey: string;
+        optionText: string;
+        isCorrect: boolean;
+        rationale?: string | null;
+      }>;
     }>,
   ): Promise<ToeicOcrImportResponseDto> {
     if (!file) {
@@ -2938,10 +2957,7 @@ export class CertificateEnrollmentService {
         }
       }
 
-      parsedQuestions = this.parseToeicQuestionsFromOcrText(
-        rawText,
-        skillArea,
-      );
+      parsedQuestions = this.parseToeicQuestionsFromOcrText(rawText, skillArea);
 
       if (parsedQuestions.length === 0) {
         if (!allowEmpty) {
@@ -3310,9 +3326,9 @@ export class CertificateEnrollmentService {
           metadata:
             sectionText || partNumber
               ? {
-                source_section: sectionText || null,
-                part: partNumber,
-              }
+                  source_section: sectionText || null,
+                  part: partNumber,
+                }
               : undefined,
           estimated_seconds: Number(
             this.rowValue(row, ['estimated_seconds']) || 60,
@@ -3551,9 +3567,19 @@ export class CertificateEnrollmentService {
     cachePath: string,
     payload: FileCacheExplanation,
   ): Promise<void> {
-    await mkdir(join(process.cwd(), 'uploads', 'certificate', 'TOEIC', 'toeic-reading-practice', 'ai-cache'), {
-      recursive: true,
-    });
+    await mkdir(
+      join(
+        process.cwd(),
+        'uploads',
+        'certificate',
+        'TOEIC',
+        'toeic-reading-practice',
+        'ai-cache',
+      ),
+      {
+        recursive: true,
+      },
+    );
     await writeFile(cachePath, JSON.stringify(payload), 'utf8');
   }
 
@@ -3706,7 +3732,15 @@ export class CertificateEnrollmentService {
     payload: FileCacheTutorAnswer,
   ): Promise<void> {
     await mkdir(
-      join(process.cwd(), 'uploads', 'certificate', 'TOEIC', 'toeic-reading-practice', 'ai-cache', 'tutor'),
+      join(
+        process.cwd(),
+        'uploads',
+        'certificate',
+        'TOEIC',
+        'toeic-reading-practice',
+        'ai-cache',
+        'tutor',
+      ),
       {
         recursive: true,
       },
@@ -3766,8 +3800,8 @@ export class CertificateEnrollmentService {
     const uniqueOptions = Array.from(new Set(optionMatches));
     const alternatives = selectedText
       ? uniqueOptions.filter(
-        (option) => option.toLowerCase() !== selectedText.toLowerCase(),
-      )
+          (option) => option.toLowerCase() !== selectedText.toLowerCase(),
+        )
       : uniqueOptions;
 
     const normalizedParts: string[] = [];
@@ -4167,25 +4201,45 @@ export class CertificateEnrollmentService {
     prompt: string,
     model: string,
   ): Promise<string> {
-    const provider = (process.env.AI_TUTOR_PROVIDER ?? 'openrouter').trim().toLowerCase();
+    // ── Primary: Groq (cloud) ──
+    try {
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!groqKey) throw new Error('GROQ_API_KEY missing');
 
-    // ── Try OpenRouter first (unless explicitly set to ollama-only) ──
-    if (provider !== 'ollama' && this.openRouter.isAvailable()) {
-      try {
-        const result = await this.openRouter.chatCompletion(prompt, {
-          temperature: 0.2,
-          max_tokens: 600,
-        });
-        const answer = this.extractTutorAnswerFromRaw(result.answer);
-        const finalAnswer = answer.length > 0 ? answer : result.answer.trim();
-        if (finalAnswer.length >= 5) {
-          return finalAnswer;
-        }
-      } catch (err) {
-        // OpenRouter failed — fall through to Ollama
-        const logger = new Logger('CertificateEnrollmentService');
-        logger.warn(`OpenRouter tutor failed, falling back to Ollama: ${String(err)}`);
+      const groqRes = await fetch(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.2,
+            max_tokens: 600,
+          }),
+        },
+      );
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        throw new Error(`Groq API error: ${groqRes.status} - ${errText}`);
       }
+
+      const data = (await groqRes.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      const content = data.choices?.[0]?.message?.content ?? '';
+      const answer = this.extractTutorAnswerFromRaw(content);
+      const finalAnswer = answer.length > 0 ? answer : content.trim();
+      if (finalAnswer.length >= 5) {
+        return finalAnswer;
+      }
+    } catch (err) {
+      const logger = new Logger('CertificateEnrollmentService');
+      logger.warn(`Groq tutor failed, falling back to Ollama: ${String(err)}`);
     }
 
     // ── Fallback: Ollama local ──
@@ -4253,6 +4307,242 @@ export class CertificateEnrollmentService {
     return buildTutorFallback(hintOnly, dto.concise ?? false);
   }
 
+  private summarizeToeicSkillAccuracy(rows: Array<{
+    skill_area: string;
+    toeic_part: number;
+    correct_count: number;
+    total_questions: number;
+  }>): {
+    listening: { correct: number; total: number; accuracy: number };
+    reading: { correct: number; total: number; accuracy: number };
+  } {
+    let listeningCorrect = 0;
+    let listeningTotal = 0;
+    let readingCorrect = 0;
+    let readingTotal = 0;
+
+    for (const row of rows) {
+      const isListening =
+        row.skill_area === 'listening' ||
+        (row.toeic_part >= 1 && row.toeic_part <= 4);
+      if (isListening) {
+        listeningCorrect += row.correct_count ?? 0;
+        listeningTotal += row.total_questions ?? 0;
+      } else {
+        readingCorrect += row.correct_count ?? 0;
+        readingTotal += row.total_questions ?? 0;
+      }
+    }
+
+    const listeningAccuracy =
+      listeningTotal > 0
+        ? Math.round((listeningCorrect / listeningTotal) * 100)
+        : 0;
+    const readingAccuracy =
+      readingTotal > 0
+        ? Math.round((readingCorrect / readingTotal) * 100)
+        : 0;
+
+    return {
+      listening: {
+        correct: listeningCorrect,
+        total: listeningTotal,
+        accuracy: listeningAccuracy,
+      },
+      reading: {
+        correct: readingCorrect,
+        total: readingTotal,
+        accuracy: readingAccuracy,
+      },
+    };
+  }
+
+  private async loadToeicSkillWindowStats(
+    enrollmentId: number,
+    from: Date,
+    to: Date,
+  ): Promise<{
+    listening: { correct: number; total: number; accuracy: number };
+    reading: { correct: number; total: number; accuracy: number };
+  }> {
+    const rows = await this.prisma.toeicPracticePartSession.findMany({
+      where: {
+        enrollment_id: enrollmentId,
+        completed_at: {
+          gte: from,
+          lt: to,
+        },
+      },
+      select: {
+        skill_area: true,
+        toeic_part: true,
+        correct_count: true,
+        total_questions: true,
+      },
+    });
+
+    return this.summarizeToeicSkillAccuracy(rows);
+  }
+
+  async getToeicSkillFeedback(accountId: number): Promise<{
+    answer: string;
+    model: string;
+    source: 'cache' | 'ollama' | 'fallback' | 'static';
+    window: 'week' | 'day';
+    current: { listening: number; reading: number };
+    previous: { listening: number; reading: number };
+  }> {
+    const studentId = await this.getStudentId(accountId);
+    const enrollment = await this.prisma.certificateEnrollment.findFirst({
+      where: {
+        student_id: studentId,
+        cert_type: 'toeic',
+        status: 'active',
+      },
+      select: { id: true },
+      orderBy: { enrolled_at: 'desc' },
+    });
+
+    if (!enrollment) {
+      return {
+        answer:
+          'Bạn chưa có enrollment TOEIC đang hoạt động. Hãy đăng ký để bắt đầu ôn luyện.',
+        model: 'system',
+        source: 'static',
+        window: 'week',
+        current: { listening: 0, reading: 0 },
+        previous: { listening: 0, reading: 0 },
+      };
+    }
+
+    const now = new Date();
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const prevWeekStart = new Date(
+      now.getTime() - 14 * 24 * 60 * 60 * 1000,
+    );
+    const dayStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const prevDayStart = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    const weekStats = await this.loadToeicSkillWindowStats(
+      enrollment.id,
+      weekStart,
+      now,
+    );
+    const prevWeekStats = await this.loadToeicSkillWindowStats(
+      enrollment.id,
+      prevWeekStart,
+      weekStart,
+    );
+
+    const weekTotal =
+      weekStats.listening.total + weekStats.reading.total;
+    const prevWeekTotal =
+      prevWeekStats.listening.total + prevWeekStats.reading.total;
+
+    let window: 'week' | 'day' = 'week';
+    let currentStats = weekStats;
+    let previousStats = prevWeekStats;
+
+    if (weekTotal === 0) {
+      const dayStats = await this.loadToeicSkillWindowStats(
+        enrollment.id,
+        dayStart,
+        now,
+      );
+      const prevDayStats = await this.loadToeicSkillWindowStats(
+        enrollment.id,
+        prevDayStart,
+        dayStart,
+      );
+      const dayTotal = dayStats.listening.total + dayStats.reading.total;
+
+      if (dayTotal === 0) {
+        return {
+          answer:
+            'Bạn chưa hoàn thành bất kỳ bài tập ôn luyện nào gần đây. Hãy bắt đầu ôn tập để hệ thống có thể phân tích năng lực và đưa ra nhận xét chính xác nhất!',
+          model: 'system',
+          source: 'static',
+          window: 'day',
+          current: { listening: 0, reading: 0 },
+          previous: { listening: 0, reading: 0 },
+        };
+      }
+
+      window = 'day';
+      currentStats = dayStats;
+      previousStats = prevDayStats;
+    } else if (prevWeekTotal === 0) {
+      const dayStats = await this.loadToeicSkillWindowStats(
+        enrollment.id,
+        dayStart,
+        now,
+      );
+      const prevDayStats = await this.loadToeicSkillWindowStats(
+        enrollment.id,
+        prevDayStart,
+        dayStart,
+      );
+      const dayTotal = dayStats.listening.total + dayStats.reading.total;
+      const prevDayTotal =
+        prevDayStats.listening.total + prevDayStats.reading.total;
+
+      if (dayTotal > 0 && prevDayTotal > 0) {
+        window = 'day';
+        currentStats = dayStats;
+        previousStats = prevDayStats;
+      }
+    }
+
+    const currentListening = currentStats.listening.accuracy;
+    const currentReading = currentStats.reading.accuracy;
+    const previousListening = previousStats.listening.accuracy;
+    const previousReading = previousStats.reading.accuracy;
+
+    const periodLabel = window === 'week' ? '7 ngày gần nhất' : '24 giờ gần nhất';
+    const previousLabel = window === 'week' ? '7 ngày trước đó' : '24 giờ trước đó';
+
+    const comparisonHint =
+      previousStats.listening.total + previousStats.reading.total > 0
+        ? `So sánh với ${previousLabel}: Nghe ${previousListening}%, Đọc ${previousReading}%.`
+        : `Chưa có đủ dữ liệu ở ${previousLabel} để so sánh xu hướng.`;
+
+    const prompt = [
+      `Dữ liệu ${periodLabel}: Nghe ${currentListening}% (${currentStats.listening.correct}/${currentStats.listening.total}), Đọc ${currentReading}% (${currentStats.reading.correct}/${currentStats.reading.total}).`,
+      comparisonHint,
+      'Hãy phân tích ngắn gọn (2-3 câu) điểm mạnh/yếu và nêu rõ mức cải thiện hoặc giảm sút nếu có. Kết thúc bằng 1 lời khuyên thực tế nhất để cải thiện.',
+      'Không chào hỏi, đi thẳng vào vấn đề.',
+    ].join(' ');
+
+    const topicKey = [
+      'toeic_skill_feedback_v2',
+      window,
+      String(currentListening),
+      String(currentReading),
+      String(previousListening),
+      String(previousReading),
+      String(currentStats.listening.total),
+      String(currentStats.reading.total),
+      String(previousStats.listening.total),
+      String(previousStats.reading.total),
+    ].join('_');
+
+    const tutorResult = await this.askCertificateTutor(accountId, {
+      cert_type: 'toeic',
+      question: prompt,
+      topic_key: topicKey,
+      concise: true,
+    });
+
+    return {
+      answer: tutorResult.answer,
+      model: tutorResult.model,
+      source: tutorResult.source,
+      window,
+      current: { listening: currentListening, reading: currentReading },
+      previous: { listening: previousListening, reading: previousReading },
+    };
+  }
+
   async askCertificateTutor(
     accountId: number,
     dto: CertificateTutorAskDto,
@@ -4284,7 +4574,29 @@ export class CertificateEnrollmentService {
       : 'Học viên chưa có enrollment active cho chứng chỉ này.';
 
     const model = this.resolveOllamaModel(certType);
-    const basePrompt = this.buildTutorPrompt(certType, dto, enrollmentSummary);
+
+    // Build RAG context for tutor (skip when clearly off-topic to avoid latency)
+    const OFF_TOPIC_KEYWORDS =
+      /\b(c\+\+|python|java\b|javascript|php|sql|mysql|linux|docker|git|toán|vật lý|hóa học|sinh học|lịch sử|địa lý|covid|chính trị|nấu ăn|thể thao|bóng đá)\b/i;
+    const isOffTopic = OFF_TOPIC_KEYWORDS.test(dto.question);
+    const ragContext = isOffTopic
+      ? null
+      : await this.ragRetrieval
+          .buildRagContext(dto.question, certType)
+          .catch(() => null);
+
+    const ragBlock = ragContext
+      ? `\n\nTÀI LIỆU THAM KHẢO:\n${ragContext.contextBlock}`
+      : '';
+    const mergedLearningContext = [dto.learning_context?.trim(), ragBlock]
+      .filter((value) => Boolean(value && value.length > 0))
+      .join('\n');
+
+    const basePrompt = this.buildTutorPrompt(
+      certType,
+      { ...dto, learning_context: mergedLearningContext },
+      enrollmentSummary,
+    );
     const hintOnlyMode = this.isHintOnlyTutorRequest(dto);
 
     const cacheKey = [
@@ -4320,7 +4632,7 @@ export class CertificateEnrollmentService {
         // Cache cũ chất lượng thấp/stale -> xoá để lần gọi hiện tại regenerate.
         void this.prisma.toeicNodeQuestionCache
           .delete({ where: { topic_key: dbTopicKey } })
-          .catch(() => { });
+          .catch(() => {});
       }
     }
 
@@ -4350,7 +4662,7 @@ export class CertificateEnrollmentService {
                 model: cached.model,
               },
             })
-            .catch(() => { });
+            .catch(() => {});
         }
         return {
           cert_type: certType,
@@ -4394,7 +4706,7 @@ export class CertificateEnrollmentService {
               model,
             },
           })
-          .catch(() => { });
+          .catch(() => {});
       }
 
       return {
@@ -4416,103 +4728,418 @@ export class CertificateEnrollmentService {
     };
   }
 
+  /**
+   * Streaming chat tutor:
+   *   Primary:  qwen2.5:14b qua QWEN_BASE_URL (OpenAI-compatible, cloud)
+   *   Fallback: Groq llama-3.3-70b-versatile
+   *
+   * Biến env liên quan (không trùng với Ollama local):
+   *   QWEN_BASE_URL  = http://...server.../v1   (remote cloud)
+   *   QWEN_MODEL     = qwen2.5:14b
+   *   GROQ_API_KEY   = gsk_...
+   *   OLLAMA_MODEL / OLLAMA_BASE_URL = qwen3 local (không đụng tới)
+   */
+  async streamChatTutor(
+    accountId: number,
+    dto: import('./dto/certificate.dto').ToeicChatGroqDto,
+    res: import('express').Response,
+  ): Promise<void> {
+    const logger = new Logger('StreamChatTutor');
+
+    // ── SSE helpers ────────────────────────────────────────────────────────
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const sendToken = (token: string) =>
+      res.write(`data: ${JSON.stringify({ token })}\n\n`);
+    const sendDone = () => {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    };
+    const sendError = (msg: string) => {
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    };
+
+    // ── Build context: DB query + RAG chạy SONG SONG để giảm latency ─────────
+    //
+    // Phát hiện off-topic trước để skip RAG (tiết kiệm 2-4s embed time).
+    // Off-topic: câu hỏi không liên quan TOEIC/tiếng Anh — model sẽ từ chối
+    // ngay trong 1 câu nên không cần RAG context.
+    const OFF_TOPIC_KEYWORDS =
+      /\b(c\+\+|python|java\b|javascript|php|sql|mysql|linux|docker|git|toán|vật lý|hóa học|sinh học|lịch sử|địa lý|covid|chính trị|nấu ăn|thể thao|bóng đá)\b/i;
+    const isOffTopic = OFF_TOPIC_KEYWORDS.test(dto.user_message);
+
+    // Chạy DB query và RAG song song (RAG chỉ khi on-topic)
+    const [question, ragResult] = await Promise.all([
+      this.prisma.toeicPracticeQuestion.findUnique({
+        where: { id: dto.question_id },
+        // Không include options — không cần thiết cho chatbot context
+        select: {
+          id: true,
+          stem: true,
+          ai_explanation: true,
+          explanation: true,
+          reading_passage: true,
+        },
+      }),
+      isOffTopic
+        ? Promise.resolve(null)
+        : this.ragRetrieval.buildRagContext(dto.user_message, 'toeic').catch(
+            () => null,
+          ),
+    ]);
+
+    if (!question) {
+      sendError('Không tìm thấy câu hỏi.');
+      return;
+    }
+
+    const explanation =
+      question.ai_explanation || question.explanation || 'Chưa có giải thích.';
+    const readingPassage = question.reading_passage
+      ? `Đoạn văn: ${question.reading_passage.slice(0, 600)}`
+      : '';
+
+    const ragBlock =
+      ragResult
+        ? `\n\nTÀI LIỆU THAM KHẢO:\n${ragResult.contextBlock}`
+        : '';
+
+    // ── Phát hiện user đồng ý xem ví dụ ─────────────────────────────────────
+    const lastAssistant =
+      (dto.chat_history ?? [])
+        .slice()
+        .reverse()
+        .find((m) => m.role === 'assistant')?.content ?? '';
+    const assistantAskedExample =
+      lastAssistant.includes('muốn xem ví dụ') ||
+      lastAssistant.includes('cần ví dụ') ||
+      lastAssistant.includes('ví dụ minh hoạ');
+    const userConfirmedExample =
+      assistantAskedExample &&
+      /^(có|ok|okay|dạ|được|sure|yes|vâng|muốn|cho|cần|hiểu)/i.test(
+        dto.user_message.trim(),
+      );
+
+    // ── System prompt ─────────────────────────────────────────────────────────
+    // QUAN TRỌNG: Toàn bộ prompt PHẢI viết tiếng Việt CÓ DẤU đầy đủ.
+    // qwen2.5 bắt chước ngôn ngữ của system prompt — nếu prompt không dấu
+    // thì model cũng trả lời không dấu. Không được dùng tiếng Việt không dấu.
+    const systemPrompt = [
+      // [1] Vai trò + ngôn ngữ bắt buộc — đặt TRƯỚC TIÊN để model ưu tiên cao nhất
+      'Bạn là trợ lý học tiếng Anh TOEIC/IELTS chuyên nghiệp.',
+      'NGÔN NGỮ BẮT BUỘC: Luôn luôn trả lời bằng tiếng Việt CÓ DẤU đầy đủ (ví dụ: "được", "có thể", "giải thích"). TUYỆT ĐỐI không dùng tiếng Việt không dấu (ví dụ: "duoc", "co the", "giai thich"). Giữ nguyên thuật ngữ tiếng Anh chuyên ngành.',
+      '',
+      // [2] Phạm vi — QUAN TRỌNG: Chỉ xây dựng xung quanh câu hỏi đang hiển thị
+      'PHẠM VI: Chỉ hỗ trợ câu hỏi liên quan đến câu hỏi và đáp án đang hiển thị, hoặc ngữ pháp/từ vựng liên quan.',
+      'Nếu câu hỏi hoàn toàn không liên quan (đời sống, lập trình, khoa học...): trả lời ngắn "Tôi chỉ giúp được câu hỏi tiếng Anh đang làm." rồi dừng — đây không ảnh hưởng đến câu hỏi kế tiếp.',
+      '',
+      // [3] Ngữ cảnh câu hỏi (cắt ngắn để giảm token)
+      readingPassage,
+      `Giải thích đáp án: ${explanation.slice(0, 500)}`,
+      ragBlock,
+      '',
+      // [4] Quy tắc phản hồi
+      'QUY TẮC:',
+      '- Ngắn gọn, đúng trọng tâm, không dùng markdown (không **, ##, không gạch đầu dòng).',
+      '- Dựa vào giải thích đáp án và tài liệu tham khảo ở trên; bổ sung kiến thức nếu phù hợp.',
+      userConfirmedExample
+        ? '- VÍ DỤ: BẮT BUỘC câu ví dụ phải viết 100% bằng tiếng Anh (không chèn tiếng Việt vào giữa câu ví dụ). Sau khi viết xong câu ví dụ tiếng Anh, dùng tiếng Việt để giải thích. Format: "Ví dụ: \'She ___ looking at him\' -> Đáp án \'is\' đúng vì \'she\' là chủ ngữ..."'
+        : '- Không tự thêm ví dụ. Nếu cần, kết thúc bằng: "Bạn muốn xem ví dụ minh hoạ không?"',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    // Lọc bỏ các cặp off-topic khỏi history trước khi gửi cho LLM.
+    // Vấn đề "context poisoning": nếu history chứa cặp
+    //   [user: off-topic] → [assistant: "Tôi chỉ giúp được..."]
+    // thì model đọc context đó và tiếp tục từ chối cả câu hỏi hợp lệ kế tiếp.
+    // Fix: xóa cả user message lẫn assistant refusal khỏi history.
+    const OFF_TOPIC_REFUSAL_RE =
+      /^(Tôi chỉ giúp được|Xin lỗi.*chỉ hỗ trợ|Xin lỗi.*TOEIC)/i;
+
+    const rawHistory = (dto.chat_history ?? []).slice(-4);
+    const filteredHistory: { role: string; content: string }[] = [];
+    for (let i = 0; i < rawHistory.length; i++) {
+      const msg = rawHistory[i];
+      // Nếu assistant trả lời từ chối off-topic: bỏ cả assistant message
+      // lẫn user message đứng trước nó
+      if (
+        msg.role === 'assistant' &&
+        OFF_TOPIC_REFUSAL_RE.test(msg.content.trim())
+      ) {
+        // Xóa user message đứng trước (nếu có)
+        if (
+          filteredHistory.length > 0 &&
+          filteredHistory[filteredHistory.length - 1].role === 'user'
+        ) {
+          filteredHistory.pop();
+        }
+        // Bỏ qua assistant refusal này
+        continue;
+      }
+      filteredHistory.push({ role: msg.role, content: msg.content });
+    }
+
+    const messages: { role: string; content: string }[] = [
+      { role: 'system', content: systemPrompt },
+      ...filteredHistory,
+      { role: 'user', content: dto.user_message },
+    ];
+
+    // ── Primary: qwen2.5:14b streaming ────────────────────────────────────
+    const qwenBase = (process.env.QWEN_BASE_URL ?? '').replace(/\/+$/, '');
+    const qwenModel = process.env.QWEN_MODEL || 'qwen2.5:14b';
+
+    if (qwenBase) {
+      try {
+        const controller = new AbortController();
+        // Timeout 25s — đủ cho first token trên cloud model đã warm
+        const tid = setTimeout(() => controller.abort(), 25_000);
+
+        const qwenRes = await fetch(`${qwenBase}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: qwenModel,
+            messages,
+            stream: true,
+            temperature: 0,        // 0 = deterministic, nhanh hơn
+            max_tokens: 280,       // giảm nhẹ để first-token đến sớm hơn
+            top_p: 0.8,            // giới hạn sampling space = nhanh hơn
+            repetition_penalty: 1.05, // tránh lặp token
+          }),
+        });
+
+        clearTimeout(tid);
+
+        if (!qwenRes.ok || !qwenRes.body) {
+          throw new Error(`Qwen HTTP ${qwenRes.status}`);
+        }
+
+        const reader = (qwenRes.body as unknown as AsyncIterable<Uint8Array>)[
+          Symbol.asyncIterator
+        ]
+          ? (qwenRes.body as unknown as AsyncIterable<Uint8Array>)
+          : null;
+
+        if (!reader) throw new Error('No readable stream');
+
+        const decoder = new TextDecoder();
+        let buf = '';
+        let hasContent = false;
+
+        for await (const chunk of reader as AsyncIterable<Uint8Array>) {
+          buf += decoder.decode(chunk, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() ?? '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const data = trimmed.slice(5).trim();
+            if (data === '[DONE]') {
+              sendDone();
+              return;
+            }
+            try {
+              const parsed = JSON.parse(data) as {
+                choices?: { delta?: { content?: string } }[];
+              };
+              const token = parsed.choices?.[0]?.delta?.content;
+              if (token) {
+                sendToken(token);
+                hasContent = true;
+              }
+            } catch {
+              /* ignore parse errors */
+            }
+          }
+        }
+
+        if (!hasContent) throw new Error('Empty qwen stream');
+        sendDone();
+        return;
+      } catch (err) {
+        logger.warn(
+          `Qwen stream failed, falling back to Groq: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    // ── Fallback: Groq (non-streaming, send as single chunk) ───────────────
+    try {
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!groqKey) throw new Error('GROQ_API_KEY missing');
+
+      const groqRes = await fetch(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages,
+            temperature: 0.3,
+            max_tokens: 600,
+          }),
+        },
+      );
+
+      const data = (await groqRes.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      const answer = data.choices?.[0]?.message?.content ?? '';
+      if (answer) sendToken(answer);
+      sendDone();
+    } catch (err) {
+      logger.error(`Groq fallback also failed: ${(err as Error).message}`);
+      sendError('Lỗi kết nối trợ lý AI. Vui lòng thử lại sau.');
+    }
+  }
+
   async chatGroqTutor(
     accountId: number,
     dto: import('./dto/certificate.dto').ToeicChatGroqDto,
   ) {
-    const question = await this.prisma.toeicPracticeQuestion.findUnique({
-      where: { id: dto.question_id },
-      include: { options: true },
-    });
-
-    if (!question) {
-      throw new BadRequestException('Question not found');
-    }
-
-    const qwenExplanation = question.ai_explanation || question.explanation || 'Chưa có giải thích chi tiết.';
-
-    const ragContext = question.reading_passage ? `Reading Passage:\n${question.reading_passage}` : 'None';
-
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
       throw new Error('GROQ_API_KEY is missing in environment variables');
     }
 
-    const sysPrompt = `ROLE:
-You are an English tutor helping a student understand a specific TOEIC/IELTS question.
+    // Phát hiện off-topic sớm để skip RAG (tiết kiệm 2-4s embed time)
+    const OFF_TOPIC_KEYWORDS =
+      /\b(c\+\+|python|java\b|javascript|php|sql|mysql|linux|docker|git|toán|vật lý|hóa học|sinh học|lịch sử|địa lý|covid|chính trị|nấu ăn|thể thao|bóng đá)\b/i;
+    const isOffTopic = OFF_TOPIC_KEYWORDS.test(dto.user_message);
 
-CONTEXT PRIORITY:
-Main Explanation (from Qwen3) -> highest priority
-Additional Context (from RAG) -> use if needed
-Your general knowledge (only if consistent)
+    // Chạy DB query và RAG song song
+    const [question, ragResult] = await Promise.all([
+      this.prisma.toeicPracticeQuestion.findUnique({
+        where: { id: dto.question_id },
+        select: {
+          id: true,
+          ai_explanation: true,
+          explanation: true,
+          reading_passage: true,
+        },
+      }),
+      isOffTopic
+        ? Promise.resolve(null)
+        : this.ragRetrieval
+            .buildRagContext(dto.user_message, 'toeic')
+            .catch(() => null),
+    ]);
 
-INPUT:
-Main Explanation: ${qwenExplanation}
-Additional Context: ${ragContext}
-
-INSTRUCTIONS:
-- Explain clearly and simply
-- Focus ONLY on the current question
-- Do NOT contradict the explanation
-- Do NOT go out of scope (no unrelated knowledge)
-- If student is confused: simplify explanation, give short examples
-- Keep response concise
-
-ASK-BACK RULE:
-- Only ask 1 short follow-up question IF the student seems confused (Example: "Bạn chưa rõ phần nào mình giải thích kỹ hơn nhé?")
-- Do NOT overuse this
-- Do NOT interrupt explanation flow
-
-LANGUAGE:
-- Vietnamese (primary)
-- Keep English grammar terms when needed
-
-OUTPUT:
-- Natural text
-- No markdown formatting (like asterisks or bold tags)
-- No system explanation`;
-
-    const messages: any[] = [
-      { role: 'system', content: sysPrompt },
-    ];
-
-    if (dto.chat_history && dto.chat_history.length > 0) {
-      const recentHistory = dto.chat_history.slice(-5).map(m => ({
-        role: m.role,
-        content: m.content,
-      }));
-      messages.push(...recentHistory);
+    if (!question) {
+      throw new BadRequestException('Question not found');
     }
+
+    const qwenExplanation =
+      question.ai_explanation ||
+      question.explanation ||
+      'Chưa có giải thích chi tiết.';
+
+    const readingPassageSnippet = question.reading_passage
+      ? `Đoạn văn:\n${question.reading_passage.slice(0, 600)}`
+      : '';
+
+    const ragContextBlock = ragResult
+      ? `\n\nTÀI LIỆU THAM KHẢO TỪ KNOWLEDGE BASE:\n${ragResult.contextBlock}`
+      : '';
+
+    // System prompt: Tiếng Việt CÓ DẤU — bắt buộc để model trả lời đúng ngôn ngữ
+    const sysPrompt = [
+      'Bạn là gia sư tiếng Anh TOEIC/IELTS chuyên nghiệp.',
+      'NGÔN NGỮ BẮT BUỘC: Luôn luôn trả lời bằng tiếng Việt CÓ DẤU đầy đủ (ví dụ: "được", "có thể", "giải thích"). TUYỆT ĐỐI không dùng tiếng Việt không dấu (ví dụ: "duoc", "co the", "giai thich"). Giữ nguyên thuật ngữ tiếng Anh chuyên ngành.',
+      '',
+      'PHẠM VI: Chỉ hỗ trợ câu hỏi liên quan đến câu hỏi và đáp án đang hiển thị, hoặc ngữ pháp/từ vựng liên quan. Nếu câu hỏi hoàn toàn không liên quan: trả lời ngắn "Tôi chỉ giúp được câu hỏi tiếng Anh đang làm." rồi dừng.',
+      '',
+      readingPassageSnippet,
+      `Giải thích đáp án: ${qwenExplanation.slice(0, 500)}`,
+      ragContextBlock,
+      '',
+      'QUY TẮC:',
+      '- Giải thích rõ ràng, ngắn gọn, đúng trọng tâm.',
+      '- Không mâu thuẫn giải thích đã có. Không dùng markdown.',
+      '- VÍ DỤ: Nếu học viên yêu cầu, BẮT BUỘC câu ví dụ phải viết 100% bằng tiếng Anh (không chèn tiếng Việt vào giữa câu ví dụ). Sau đó dùng tiếng Việt để giải thích. Format: "Ví dụ: \'She ___ looking at him\' -> Đáp án \'is\' đúng vì..."',
+      '- Chỉ hỏi lại 1 câu ngắn nếu học viên có vẻ chưa hiểu.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    // Lọc bỏ các cặp off-topic khỏi history (fix context poisoning)
+    const GROQ_OFF_TOPIC_REFUSAL_RE =
+      /^(Tôi chỉ giúp được|Xin lỗi.*chỉ hỗ trợ|Xin lỗi.*TOEIC)/i;
+
+    const groqRawHistory = (dto.chat_history ?? []).slice(-4);
+    const groqFilteredHistory: { role: string; content: string }[] = [];
+    for (let i = 0; i < groqRawHistory.length; i++) {
+      const msg = groqRawHistory[i];
+      if (
+        msg.role === 'assistant' &&
+        GROQ_OFF_TOPIC_REFUSAL_RE.test(msg.content.trim())
+      ) {
+        if (
+          groqFilteredHistory.length > 0 &&
+          groqFilteredHistory[groqFilteredHistory.length - 1].role === 'user'
+        ) {
+          groqFilteredHistory.pop();
+        }
+        continue;
+      }
+      groqFilteredHistory.push({ role: msg.role, content: msg.content });
+    }
+
+    const messages: { role: string; content: string }[] = [
+      { role: 'system', content: sysPrompt },
+      ...groqFilteredHistory,
+    ];
 
     messages.push({ role: 'user', content: dto.user_message });
 
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${groqApiKey}`,
+      const res = await fetch(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groqApiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages,
+            temperature: 0.2,
+            max_tokens: 400,
+          }),
         },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages,
-          temperature: 0.3,
-          max_tokens: 500,
-        }),
-      });
+      );
 
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Groq API error: ${res.status} - ${errText}`);
       }
 
-      const data = (await res.json()) as any;
+      const data = (await res.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
       return {
-        answer: data.choices?.[0]?.message?.content || '',
+        answer: data.choices?.[0]?.message?.content ?? '',
       };
     } catch (error) {
       console.error(`Groq Chat Tutor error: ${error}`);
-      throw new BadRequestException('Lỗi kết nối đến trợ lý AI. Vui lòng thử lại sau.');
+      throw new BadRequestException(
+        'Lỗi kết nối đến trợ lý AI. Vui lòng thử lại sau.',
+      );
     }
   }
 
@@ -4612,7 +5239,7 @@ OUTPUT:
         where: { id: itemId },
         data: {}, // removed ai_explanation update
       })
-      .catch(() => { });
+      .catch(() => {});
   }
 
   private triggerToeicLookaheadPrefetch(
@@ -4657,7 +5284,7 @@ OUTPUT:
           batch.map((nextItem) => this.prefetchItemExplanation(nextItem, slug)),
         );
       }
-    })().catch(() => { });
+    })().catch(() => {});
   }
 
   // ─── Prefetch: được gọi bởi ToeicExplanationPrefetchService ───────────────
@@ -4807,7 +5434,7 @@ OUTPUT:
           where: { id: item.id },
           data: {}, // removed ai_explanation
         })
-        .catch(() => { });
+        .catch(() => {});
       return {
         item_id: item.id,
         selected_option_id: selectedOption.id,
@@ -4986,13 +5613,13 @@ OUTPUT:
         const metadata = (repo.metadata ?? {}) as Prisma.JsonObject;
         const milestoneScore = Number(
           readJsonNumber(metadata, 'milestone_score') ??
-          repo.target_score_min ??
-          targetScore,
+            repo.target_score_min ??
+            targetScore,
         );
         const unlockScore = Number(
           readJsonNumber(metadata, 'unlock_score') ??
-          repo.target_score_min ??
-          milestoneScore,
+            repo.target_score_min ??
+            milestoneScore,
         );
         const topicKeyFromMetadata = readJsonString(metadata, 'topic_key');
         const fallbackTopicKey = `${repo.skill_area ?? 'reading'}.repo_${repo.id}`;
@@ -5075,7 +5702,9 @@ OUTPUT:
         item_type: String(item.item_type),
         title: item.title ?? null,
         stem: encryptString(String(item.stem)),
-        reading_passage: item.reading_passage ? encryptString(item.reading_passage) : null,
+        reading_passage: item.reading_passage
+          ? encryptString(item.reading_passage)
+          : null,
         media_audio_url: item.media_audio_url ?? null,
         media_image_url: item.media_image_url ?? null,
         estimated_seconds: item.estimated_seconds ?? null,
@@ -5213,9 +5842,9 @@ OUTPUT:
     const scaledScore =
       gradableTotal > 0
         ? Math.round(
-          (gradableCorrect / Math.max(gradableTotal, FULL_SKILL_QUESTIONS)) *
-          MAX_SKILL_SCORE,
-        )
+            (gradableCorrect / Math.max(gradableTotal, FULL_SKILL_QUESTIONS)) *
+              MAX_SKILL_SCORE,
+          )
         : 0;
 
     const newSkillScore = Math.max(
@@ -5284,7 +5913,7 @@ OUTPUT:
         },
         data: enrollmentPatchData,
       })
-      .catch(() => { });
+      .catch(() => {});
 
     const passScore = Number(
       repository.pass_score ?? Math.max(1, Math.ceil(totalCount * 0.7)),

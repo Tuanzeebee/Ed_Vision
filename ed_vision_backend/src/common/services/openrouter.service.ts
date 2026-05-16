@@ -49,9 +49,10 @@ export class OpenRouterService {
   private readonly logger = new Logger(OpenRouterService.name);
   private readonly apiKey = process.env.OPENROUTER_API_KEY;
   private readonly model =
-    process.env.OPENROUTER_MODEL_NAME || process.env.OPENROUTER_MODEL || 'google/gemma-3-27b-it';
-  private readonly apiUrl =
-    'https://openrouter.ai/api/v1/chat/completions';
+    process.env.OPENROUTER_MODEL_NAME ||
+    process.env.OPENROUTER_MODEL ||
+    'google/gemma-3-27b-it';
+  private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
   isAvailable(): boolean {
     return !!this.apiKey;
@@ -80,16 +81,28 @@ export class OpenRouterService {
     }
 
     // Build question context for the prompt
-    const part34Questions = questions.filter(q => q.part === 3 || q.part === 4);
+    const part34Questions = questions.filter(
+      (q) => q.part === 3 || q.part === 4,
+    );
     if (part34Questions.length === 0) {
       return { mappings: [], model_used: this.model };
     }
 
     // Group questions by talk (every 3 consecutive questions)
-    const talkGroups: Array<{ start: number; end: number; part: number; hints: string[] }> = [];
+    const talkGroups: Array<{
+      start: number;
+      end: number;
+      part: number;
+      hints: string[];
+    }> = [];
     for (const q of part34Questions) {
       const lastGroup = talkGroups[talkGroups.length - 1];
-      if (lastGroup && lastGroup.part === q.part && q.question_number === lastGroup.end + 1 && (q.question_number - lastGroup.start) < 3) {
+      if (
+        lastGroup &&
+        lastGroup.part === q.part &&
+        q.question_number === lastGroup.end + 1 &&
+        q.question_number - lastGroup.start < 3
+      ) {
         lastGroup.end = q.question_number;
         if (q.transcript_hint) lastGroup.hints.push(q.transcript_hint);
       } else {
@@ -103,7 +116,10 @@ export class OpenRouterService {
     }
 
     const talkGroupsSummary = talkGroups
-      .map(g => `Q${g.start}-${g.end} (Part ${g.part})${g.hints.length > 0 ? ': ' + g.hints.join(' ').slice(0, 100) : ''}`)
+      .map(
+        (g) =>
+          `Q${g.start}-${g.end} (Part ${g.part})${g.hints.length > 0 ? ': ' + g.hints.join(' ').slice(0, 100) : ''}`,
+      )
       .join('\n');
 
     const allMappings: ImageQuestionMapping[] = [];
@@ -111,7 +127,9 @@ export class OpenRouterService {
     let hitRateLimit = !this.apiKey; // Skip LLM entirely if no API key
 
     if (!this.apiKey) {
-      this.logger.warn('OPENROUTER_API_KEY not set — using page-based heuristic only.');
+      this.logger.warn(
+        'OPENROUTER_API_KEY not set — using page-based heuristic only.',
+      );
     }
 
     // Process images one at a time with inter-request delay to respect rate limits
@@ -127,14 +145,19 @@ export class OpenRouterService {
       try {
         // Delay between requests to avoid 429 on free tier (skip first)
         if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
-        const mapping = await this.mapSingleImage(image, talkGroupsSummary, talkGroups);
+        const mapping = await this.mapSingleImage(
+          image,
+          talkGroupsSummary,
+          talkGroups,
+        );
         if (mapping) {
           allMappings.push(mapping);
         }
       } catch (err: any) {
-        const is429 = String(err).includes('429') || err?.response?.status === 429;
+        const is429 =
+          String(err).includes('429') || err?.response?.status === 429;
         if (is429) {
           hitRateLimit = true;
           this.logger.warn(
@@ -147,9 +170,11 @@ export class OpenRouterService {
 
     // Fallback: map failed images using page-based heuristic
     if (failedImages.length > 0) {
-      const alreadyMappedFiles = new Set(allMappings.map(m => m.image_filename));
+      const alreadyMappedFiles = new Set(
+        allMappings.map((m) => m.image_filename),
+      );
       const heuristicMappings = this.mapImagesWithPageHeuristic(
-        failedImages.filter(img => !alreadyMappedFiles.has(img.filename)),
+        failedImages.filter((img) => !alreadyMappedFiles.has(img.filename)),
         talkGroups,
       );
       allMappings.push(...heuristicMappings);
@@ -179,12 +204,17 @@ export class OpenRouterService {
    */
   private mapImagesWithPageHeuristic(
     images: ImageAssetForMapping[],
-    talkGroups: Array<{ start: number; end: number; part: number; hints: string[] }>,
+    talkGroups: Array<{
+      start: number;
+      end: number;
+      part: number;
+      hints: string[];
+    }>,
   ): ImageQuestionMapping[] {
     if (images.length === 0 || talkGroups.length === 0) return [];
 
     // Find the total page range from images
-    const allPages = images.map(img => img.page).filter(p => p > 0);
+    const allPages = images.map((img) => img.page).filter((p) => p > 0);
     if (allPages.length === 0) return [];
     const maxPage = Math.max(...allPages);
 
@@ -248,16 +278,25 @@ export class OpenRouterService {
   private async mapSingleImage(
     image: ImageAssetForMapping,
     talkGroupsSummary: string,
-    talkGroups: Array<{ start: number; end: number; part: number; hints: string[] }>,
+    talkGroups: Array<{
+      start: number;
+      end: number;
+      part: number;
+      hints: string[];
+    }>,
   ): Promise<ImageQuestionMapping | null> {
     const base64 = this.imageToBase64(image.abs_path);
     if (!base64) return null;
 
     const ext = extname(image.filename).toLowerCase().replace('.', '');
-    const mimeType = ext === 'webp' ? 'image/webp'
-      : ext === 'png' ? 'image/png'
-        : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
-          : 'image/webp';
+    const mimeType =
+      ext === 'webp'
+        ? 'image/webp'
+        : ext === 'png'
+          ? 'image/png'
+          : ext === 'jpg' || ext === 'jpeg'
+            ? 'image/jpeg'
+            : 'image/webp';
 
     const prompt = `You are analyzing a TOEIC Listening test image. This image was extracted from a PDF containing a TOEIC Listening test (Part 3 and Part 4).
 
@@ -311,7 +350,7 @@ If you cannot determine which group this image belongs to, respond with:
           },
           {
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
+              Authorization: `Bearer ${this.apiKey}`,
               'Content-Type': 'application/json',
               'HTTP-Referer': 'https://ed-vision.app',
               'X-Title': 'Ed Vision TOEIC Import',
@@ -329,7 +368,10 @@ If you cannot determine which group this image belongs to, respond with:
         const parsed = JSON.parse(cleaned);
         const qStart = Number(parsed.question_start) || 0;
         const qEnd = Number(parsed.question_end) || 0;
-        const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0));
+        const confidence = Math.min(
+          1,
+          Math.max(0, Number(parsed.confidence) || 0),
+        );
         const description = String(parsed.description || '');
 
         if (qStart === 0 || qEnd === 0 || confidence < 0.3) {
@@ -341,7 +383,7 @@ If you cannot determine which group this image belongs to, respond with:
 
         // Validate that the question range matches a known talk group
         const matchedGroup = talkGroups.find(
-          g => g.start === qStart || (qStart >= g.start && qStart <= g.end),
+          (g) => g.start === qStart || (qStart >= g.start && qStart <= g.end),
         );
 
         const questionNumbers: number[] = [];
@@ -376,7 +418,7 @@ If you cannot determine which group this image belongs to, respond with:
           this.logger.warn(
             `OpenRouter 429 rate limit. Retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
           );
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 
@@ -399,8 +441,18 @@ If you cannot determine which group this image belongs to, respond with:
     return null;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Generic text chat completion (non-vision) — for AI Tutor, explanations, etc.
+  // ─────────────────────────────────────────────────────────────────────────
+
   /**
-   * Generic text generation via OpenRouter (Alias for chat completion).
+   * Send a text-only chat completion to OpenRouter.
+   * Uses a fast/cheap model suitable for tutor responses.
+   *
+   * @param prompt  - The full prompt (system + user combined or user-only)
+   * @param options - Optional overrides for model, temperature, max_tokens
+   * @returns The assistant's text response
+   * @throws Error on API failure or empty response
    */
   async chatCompletion(
     prompt: string,

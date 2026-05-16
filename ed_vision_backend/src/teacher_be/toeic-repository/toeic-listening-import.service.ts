@@ -285,7 +285,7 @@ export class ToeicListeningImportService {
       // Ảnh Part 1 là ảnh chụp (photographs) nên dung lượng (size_bytes) thường lớn nhất.
       // Các logo/watermark thường có dung lượng nhỏ hơn nhiều (dưới 10KB).
       const bestImages = [...imageAssets]
-        .filter(img => (img.size_bytes || 0) > 10000) // Lọc bỏ logo < 10KB
+        .filter((img) => (img.size_bytes || 0) > 10000) // Lọc bỏ logo < 10KB
         .sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0))
         .slice(0, part1Items.length)
         .sort((a, b) => {
@@ -351,7 +351,13 @@ export class ToeicListeningImportService {
     }
 
     // Sync Audio
-    const audioDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-exam', slug, 'audio');
+    const audioDir = absoluteUploadsDir(
+      'certificate',
+      'TOEIC',
+      'toeic-listening-exam',
+      slug,
+      'audio',
+    );
     if (existsSync(audioDir)) {
       const { readdirSync } = require('fs');
       const audioFiles = readdirSync(audioDir);
@@ -373,17 +379,36 @@ export class ToeicListeningImportService {
     }
 
     // Sync Images
-    const imagesDir = absoluteUploadsDir('certificate', 'TOEIC', 'toeic-listening-exam', slug, 'images');
+    const imagesDir = absoluteUploadsDir(
+      'certificate',
+      'TOEIC',
+      'toeic-listening-exam',
+      slug,
+      'images',
+    );
     if (existsSync(imagesDir)) {
       const { readdirSync } = require('fs');
-      const imageFiles = readdirSync(imagesDir).filter((f: string) => f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg')).sort();
-      
+      const imageFiles = readdirSync(imagesDir)
+        .filter(
+          (f: string) =>
+            f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg'),
+        )
+        .sort();
+
       const part1ItemIds = items
         .filter((i) => (i.metadata as any)?.part === 1)
-        .sort((a, b) => ((a.metadata as any)?.question_number || 0) - ((b.metadata as any)?.question_number || 0))
+        .sort(
+          (a, b) =>
+            ((a.metadata as any)?.question_number || 0) -
+            ((b.metadata as any)?.question_number || 0),
+        )
         .map((i) => i.id);
 
-      for (let i = 0; i < Math.min(imageFiles.length, part1ItemIds.length); i++) {
+      for (
+        let i = 0;
+        i < Math.min(imageFiles.length, part1ItemIds.length);
+        i++
+      ) {
         const itemId = part1ItemIds[i];
         if (itemId) {
           const url = `certificate/TOEIC/toeic-listening-exam/${slug}/images/${imageFiles[i]}`;
@@ -482,8 +507,6 @@ export class ToeicListeningImportService {
 
     return { slug, deleted: true, items_deleted: itemCount };
   }
-
-
 
   // ──────────────────────────────────────────────────────────────────────────
   // PRIVATE helpers
@@ -641,8 +664,6 @@ export class ToeicListeningImportService {
     );
   }
 
-
-
   // ──────────────────────────────────────────────────────────────────────────
   // PUBLIC: chunkListeningAudio
   // ──────────────────────────────────────────────────────────────────────────
@@ -699,7 +720,10 @@ export class ToeicListeningImportService {
 
     let stdout = '';
     try {
-      const result = await execFileAsync(pythonExe, args, { timeout: 900_000, maxBuffer: 50 * 1024 * 1024 });
+      const result = await execFileAsync(pythonExe, args, {
+        timeout: 900_000,
+        maxBuffer: 50 * 1024 * 1024,
+      });
       stdout = result.stdout;
     } catch (err: any) {
       throw new BadRequestException(
@@ -793,7 +817,8 @@ export class ToeicListeningImportService {
     );
     if (!existsSync(audioAbsDir)) mkdirSync(audioAbsDir, { recursive: true });
 
-    const ext = extname(file.originalname || file.filename || '').toLowerCase() || '.mp3';
+    const ext =
+      extname(file.originalname || file.filename || '').toLowerCase() || '.mp3';
     const destFilename = `full_audio${ext}`;
     const destPath = join(audioAbsDir, destFilename);
 
@@ -811,7 +836,9 @@ export class ToeicListeningImportService {
       },
     });
 
-    this.logger.log(`[FullAudio] Saved ${destFilename} for ${slug} → ${fullAudioUrl}`);
+    this.logger.log(
+      `[FullAudio] Saved ${destFilename} for ${slug} → ${fullAudioUrl}`,
+    );
 
     return { slug: repository.slug, full_audio_url: fullAudioUrl };
   }

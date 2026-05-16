@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import './index.css';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
-import FeaturedVideoSection from './components/FeaturedVideoSection';
 import PhilosophySection from './components/PhilosophySection';
 import HowItWorks from './components/HowItWorks';
 import ServicesSection from './components/ServicesSection';
@@ -21,8 +20,8 @@ export default function App() {
   useEffect(() => {
     // Basic smooth scroll implementation for anchors
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        const href = this.getAttribute('href');
+      anchor.addEventListener('click', (e) => {
+        const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href');
         if (href && href.startsWith('#')) {
           e.preventDefault();
           const targetId = href.substring(1);
@@ -36,6 +35,16 @@ export default function App() {
         }
       });
     });
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.add('landing-v2-active');
+    document.body.classList.add('landing-v2-active');
+
+    return () => {
+      document.documentElement.classList.remove('landing-v2-active');
+      document.body.classList.remove('landing-v2-active');
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -56,7 +65,6 @@ export default function App() {
       <div id="features">
         <ServicesSection />
       </div>
-      <FeaturedVideoSection />
       <HowItWorks />
       <PhilosophySection />
       <TestimonialCarousel />

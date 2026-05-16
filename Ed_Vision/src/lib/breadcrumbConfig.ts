@@ -88,10 +88,31 @@ export const breadcrumbConfig: Record<string, {
     parent: '/admin/accounts'
   },
   // Reports and analytics
-  '/admin/reports/learning': {
-    labelKey: 'admin:breadcrumb.generalStats',
+  '/admin/dashboard/certificate': {
+    labelKey: 'admin:breadcrumb.certificateDashboard',
     parent: '/admin/dashboard'
   },
+  '/admin/dashboard/usage-behavior': {
+    labelKey: 'admin:breadcrumb.usageBehavior',
+    parent: '/admin/dashboard'
+  },
+  '/admin/reports/usage-behavior': {
+    labelKey: 'admin:breadcrumb.usageBehavior',
+    parent: '/admin/dashboard'
+  },
+  '/admin/program-effectiveness': {
+    labelKey: 'admin:breadcrumb.programEffectiveness',
+    parent: '/admin/dashboard'
+  },
+  '/admin/knowledge-base': {
+    labelKey: 'admin:breadcrumb.ragSystem',
+    parent: '/admin/dashboard'
+  },
+  '/admin/rag': {
+    labelKey: 'admin:breadcrumb.ragSystem',
+    parent: '/admin/dashboard'
+  },
+
   '/admin/permissions': {
     labelKey: 'admin:breadcrumb.permissions',
     parent: '/admin/dashboard'

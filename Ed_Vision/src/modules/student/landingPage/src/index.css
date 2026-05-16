@@ -5,8 +5,25 @@
   font-family: "Inter", ui-sans-serif, system-ui;
 }
 
+.landing-v2,
+html.landing-v2-active,
+body.landing-v2-active {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.landing-v2::-webkit-scrollbar,
+html.landing-v2-active::-webkit-scrollbar,
+body.landing-v2-active::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-v2 .font-serif,
 .landing-v2 .font-serif-italic {
-  font-family: "Instrument Serif", serif;
+  font-family: var(--font-display);
+}
+
+.landing-v2 .font-serif-italic {
   font-style: italic;
 }
 

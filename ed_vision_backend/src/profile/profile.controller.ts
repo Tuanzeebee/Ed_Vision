@@ -128,9 +128,7 @@ export class ProfileController {
       },
     }),
   )
-  async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
-  ) {
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Không có file được upload');
     }

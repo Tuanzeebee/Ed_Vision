@@ -186,6 +186,15 @@ export interface CertificateTutorAskResponse {
   source: "cache" | "ollama" | "fallback";
 }
 
+export interface ToeicSkillFeedbackResponse {
+  answer: string;
+  model: string;
+  source: "cache" | "ollama" | "fallback" | "static";
+  window: "week" | "day";
+  current: { listening: number; reading: number };
+  previous: { listening: number; reading: number };
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // API calls
 // ──────────────────────────────────────────────────────────────────────────────
@@ -381,7 +390,8 @@ export async function explainToeicAnswer(
   );
   const data = res.data;
   if (data.explanation) {
-    data.explanation = (await tryDecryptString(data.explanation)) ?? data.explanation;
+    data.explanation =
+      (await tryDecryptString(data.explanation)) ?? data.explanation;
   }
   return data;
 }
@@ -407,6 +417,15 @@ export async function askCertificateTutor(
   );
 
   const res = await Promise.race([requestPromise, timeoutPromise]);
+  return res.data;
+}
+
+export async function getToeicSkillFeedback(): Promise<
+  ToeicSkillFeedbackResponse
+> {
+  const res = await apiClient.get<ToeicSkillFeedbackResponse>(
+    "/student/certificate/toeic/skill-feedback",
+  );
   return res.data;
 }
 
@@ -460,6 +479,91 @@ export async function chatIeltsGroqTutor(
     payload,
   );
   return res.data;
+}
+/**
+ * Stream chat tutor qua SSE.
+ * onToken: callback nhận từng token text
+ * onDone: callback khi stream kết thúc
+ * onError: callback khi có lỗi
+ * Returns: abort function để cancel stream
+ */
+export function streamChatTutor(
+  payload: ToeicChatGroqPayload,
+  onToken: (token: string) => void,
+  onDone: () => void,
+  onError: (msg: string) => void,
+): () => void {
+  const controller = new AbortController();
+
+  const token = localStorage.getItem("token") ?? "";
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string) ?? "";
+
+  (async () => {
+    try {
+      const res = await fetch(
+        `${baseUrl}/student/certificate/ai-tutor/stream-chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          signal: controller.signal,
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!res.ok || !res.body) {
+        onError("Lỗi kết nối trợ lý AI.");
+        onDone();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (data === "[DONE]") {
+            onDone();
+            return;
+          }
+          try {
+            const parsed = JSON.parse(data) as {
+              token?: string;
+              error?: string;
+            };
+            if (parsed.error) {
+              onError(parsed.error);
+              onDone();
+              return;
+            }
+            if (parsed.token) onToken(parsed.token);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      onDone();
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      onError("Đã có lỗi xảy ra. Vui lòng thử lại sau.");
+      onDone();
+    }
+  })();
+
+  return () => controller.abort();
 }
 
 export async function importToeicExamFromOcrFile(
@@ -827,6 +931,7 @@ export interface ToeicReservePointsResponse {
   unlock_threshold: number;
   part_sessions: ToeicReservePointsPartSession[];
   // Aggregate stats across ALL practice sessions (not just the 20 recent).
+  exam_sessions_count?: number;
   listening_sessions_count?: number;
   reading_sessions_count?: number;
   listening_correct?: number;
@@ -867,15 +972,15 @@ export async function getToeicReservePoints(): Promise<ToeicReservePointsRespons
 // ─── Personal Scores (Điểm Gốc + Điểm Ôn Tập + EXP) ──────────────────────
 
 export interface PersonalScoresResponse {
-  current_score: number | null;       // Điểm Gốc (from diagnostic test)
-  reserve_points: number;             // Điểm Ôn Tập (accumulated from practice)
-  target_score: number | null;        // Điểm mục tiêu
-  exam_score: number | null;          // Điểm thi thử gần nhất
-  total_exp: number;                  // Tổng EXP tích lũy
-  weekly_exp: number;                 // EXP tuần này
-  exam_simulation_unlocked: boolean;  // Đã mở khóa thi thử chưa
-  progress_percent: number;           // % tiến độ đến target_score
-  remaining_points: number | null;    // Điểm còn cần tích lũy
+  current_score: number | null; // Điểm Gốc (from diagnostic test)
+  reserve_points: number; // Điểm Ôn Tập (accumulated from practice)
+  target_score: number | null; // Điểm mục tiêu
+  exam_score: number | null; // Điểm thi thử gần nhất
+  total_exp: number; // Tổng EXP tích lũy
+  weekly_exp: number; // EXP tuần này
+  exam_simulation_unlocked: boolean; // Đã mở khóa thi thử chưa
+  progress_percent: number; // % tiến độ đến target_score
+  remaining_points: number | null; // Điểm còn cần tích lũy
 }
 
 export async function getPersonalScores(): Promise<PersonalScoresResponse> {
@@ -1103,7 +1208,6 @@ export async function importPracticeAudio(
   return res.data;
 }
 
-
 // ── Practice Listening Image Import ──────────────────────────────────────────
 
 export interface ImportPracticeImagesResponse {
@@ -1193,9 +1297,9 @@ async function decryptPracticeQuestionsResponse(
 async function decryptPracticeSessionSubmitResponse(
   data: ToeicPracticeSessionSubmitResponse,
 ): Promise<ToeicPracticeSessionSubmitResponse> {
-  const correct_answers = await decryptRecord(
+  const correct_answers = (await decryptRecord(
     data.correct_answers as Record<string, string | null>,
-  ) as Record<string, string>;
+  )) as Record<string, string>;
   const explanations = await decryptRecord(
     data.explanations as Record<string, string | null>,
   );
@@ -1303,11 +1407,13 @@ export async function generateDiagnosticTest(
     res.data.map(async (q) => ({
       ...q,
       stem: (await tryDecryptString(q.stem)) ?? q.stem,
-      reading_passage: (await tryDecryptString(q.reading_passage)) ?? q.reading_passage,
+      reading_passage:
+        (await tryDecryptString(q.reading_passage)) ?? q.reading_passage,
       options: await Promise.all(
         q.options.map(async (opt) => ({
           ...opt,
-          option_text: (await tryDecryptString(opt.option_text)) ?? opt.option_text,
+          option_text:
+            (await tryDecryptString(opt.option_text)) ?? opt.option_text,
         })),
       ),
     })),
@@ -1321,6 +1427,72 @@ export async function submitDiagnosticTest(
   const res = await apiClient.post<DiagnosticSubmitResult>(
     `/student/certificate/toeic-diagnostic/submit`,
     { question_ids: questionIds, answers },
+  );
+  return res.data;
+}
+
+// ── Vocabulary Highlight ──────────────────────────────────────────────────────
+
+export interface VocabDefinition {
+  pos: string;
+  meaning: string;
+  example_en: string;
+  example_vi: string;
+}
+
+export interface LookupWordPayload {
+  word: string;
+  context?: string;
+  skill_area?: string;
+  part?: number;
+}
+
+export interface LookupWordResponse {
+  status: "exists" | "new";
+  wordId?: number;
+  word: string;
+  topicId?: number;
+  topicSlug?: string;
+  topicTitleVI?: string;
+  alreadyInBank?: boolean;
+  suggestedTopicSlug?: string;
+  suggestedTopicTitleVI?: string;
+  definitions: VocabDefinition[];
+  level?: string;
+  freq?: number;
+}
+
+export interface SaveFromReadingPayload {
+  word: string;
+  topic_slug: string;
+  definitions: VocabDefinition[];
+  source_context?: string;
+}
+
+export interface SaveFromReadingResponse {
+  wordId: number;
+  added: boolean;
+  message: string;
+}
+
+export async function lookupVocabWord(
+  enrollmentId: number,
+  payload: LookupWordPayload,
+): Promise<LookupWordResponse> {
+  const res = await apiClient.post<LookupWordResponse>(
+    `/student/vocab/lookup?enrollment_id=${enrollmentId}`,
+    payload,
+  );
+  return res.data;
+}
+
+export async function saveVocabFromReading(
+  enrollmentId: number,
+  payload: SaveFromReadingPayload,
+): Promise<SaveFromReadingResponse> {
+  const res = await apiClient.post<SaveFromReadingResponse>(
+    `/student/vocab/save-from-reading?enrollment_id=${enrollmentId}`,
+    payload,
   );
   return res.data;
 }

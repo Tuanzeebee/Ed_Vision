@@ -24,7 +24,8 @@ export const adminMenu: MenuItemData[] = [
     label: "Dữ liệu & Báo cáo",
     iconKey: "chart",
     children: [
-      { label: "Thống kê Tổng quát", to: "/admin/reports/learning", iconKey: "bar" },
+
+      { label: "Hành vi sử dụng", to: "/admin/reports/usage-behavior", iconKey: "bar" },
     ]
   },
   {
@@ -33,6 +34,7 @@ export const adminMenu: MenuItemData[] = [
     children: [
       { label: "Quản lý Thông báo", to: "/admin/notifications", iconKey: "bell" },
       { label: "Phân quyền", to: "/admin/permissions", iconKey: "shield" },
+      { label: "Knowledge Base (RAG)", to: "/admin/knowledge-base", iconKey: "book" },
     ]
   }
 ];

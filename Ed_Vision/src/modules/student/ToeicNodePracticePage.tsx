@@ -33,6 +33,8 @@ import {
   submitToeicPracticeSession,
   getPersonalScores,
   chatGroqTutor,
+  streamChatTutor,
+  getEnrollment,
   type ToeicChatGroqMessage,
 } from "../../services/api/certificateService";
 import {
@@ -45,6 +47,8 @@ import {
   getAllTotalQuestions,
   getPartCap,
 } from "./toeicPracticeScore";
+import { useVocabHighlight } from "./hooks/useVocabHighlight";
+import { VocabHighlightPopup } from "./components/VocabHighlightPopup";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface QuestionOption {
@@ -125,7 +129,9 @@ const PRACTICE_MISTAKE_HISTORY_STORAGE_KEY =
 
 /** Storage key scoped theo user — tránh acc mới đọc data acc cũ */
 function getMapStorageKey(userId: string | number | undefined): string {
-  return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
+  return userId
+    ? `${MAP_STORAGE_KEY_PREFIX}.${userId}`
+    : MAP_STORAGE_KEY_PREFIX;
 }
 const PRACTICE_MISTAKE_HISTORY_LIMIT = 120;
 const AI_PREFETCH_PRIORITY_AHEAD = 1;
@@ -1182,8 +1188,9 @@ function saveMapState(state: LearningMapState, userId?: string | number): void {
 function buildPracticeDraftStorageKey(
   skill: "listening" | "reading",
   toeicPart: number,
+  userId: string | number,
 ): string {
-  return `${PRACTICE_DRAFT_STORAGE_KEY_PREFIX}.${skill}.part_${toeicPart}`;
+  return `${PRACTICE_DRAFT_STORAGE_KEY_PREFIX}.${userId}.${skill}.part_${toeicPart}`;
 }
 
 function loadPracticeRunDraft(storageKey: string): PracticeRunDraft | null {
@@ -1236,8 +1243,13 @@ function loadPracticeMistakeHistoryStore(): PracticeMistakeHistoryStore {
   }
 }
 
-function savePracticeMistakeHistoryStore(store: PracticeMistakeHistoryStore): void {
-  localStorage.setItem(PRACTICE_MISTAKE_HISTORY_STORAGE_KEY, JSON.stringify(store));
+function savePracticeMistakeHistoryStore(
+  store: PracticeMistakeHistoryStore,
+): void {
+  localStorage.setItem(
+    PRACTICE_MISTAKE_HISTORY_STORAGE_KEY,
+    JSON.stringify(store),
+  );
 }
 
 function getPracticeMistakeHistory(
@@ -1313,7 +1325,9 @@ export default function ToeicNodePracticePage() {
 
   const isListening = activeSkill === "listening";
   const nodeInfoList = isListening ? LISTENING_NODE_INFO : READING_NODE_INFO;
-  const questionsBank = isListening ? LISTENING_QUESTIONS : EMPTY_QUESTIONS_BANK;
+  const questionsBank = isListening
+    ? LISTENING_QUESTIONS
+    : EMPTY_QUESTIONS_BANK;
 
   const nodeInfo = nodeInfoList[parsedNodeIndex] ?? null;
   const toeicPart = nodeIndexToToeicPart(activeSkill, parsedNodeIndex);
@@ -1335,6 +1349,10 @@ export default function ToeicNodePracticePage() {
   }, [toeicPart, dbQuestions, questionsBank, parsedNodeIndex, isListening]);
 
   // ── State ────────────────────────────────────────────────────────────────
+  const [toeicEnrollmentId, setToeicEnrollmentId] = useState<number | null>(
+    null,
+  );
+  const vocabHighlight = useVocabHighlight(toeicEnrollmentId, !isListening);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   // firstAnswers: the FIRST option chosen per question index (used for scoring)
   const [firstAnswers, setFirstAnswers] = useState<Record<number, string>>({});
@@ -1365,7 +1383,7 @@ export default function ToeicNodePracticePage() {
 
     try {
       const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(
-        question.question + "\n\n" + optionsText
+        question.question + "\n\n" + optionsText,
       )}`;
       const res = await fetch(url);
       const data = await res.json();
@@ -1375,7 +1393,10 @@ export default function ToeicNodePracticePage() {
         for (let i = 0; i < data[0].length; i++) {
           translatedText += data[0][i][0];
         }
-        setTranslations((prev) => ({ ...prev, [questionId]: translatedText.trim() }));
+        setTranslations((prev) => ({
+          ...prev,
+          [questionId]: translatedText.trim(),
+        }));
       } else {
         throw new Error("Invalid translation response");
       }
@@ -1431,7 +1452,8 @@ export default function ToeicNodePracticePage() {
       const cache = audioCacheRef.current;
       const cached = cache.get(fullUrl);
       if (cached) {
-        if (mode === "metadata" && cached.readyState >= 1) return Promise.resolve();
+        if (mode === "metadata" && cached.readyState >= 1)
+          return Promise.resolve();
         if (mode === "full" && cached.readyState >= 4) return Promise.resolve();
       }
 
@@ -1498,38 +1520,91 @@ export default function ToeicNodePracticePage() {
   const [chatHistory, setChatHistory] = useState<ToeicChatGroqMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const streamAbortRef = useRef<(() => void) | null>(null);
 
-  const handleSendChat = async () => {
+  /**
+   * Loại bỏ markdown syntax mà model AI vô tình sinh ra.
+   * Xử lý: **bold**, *italic*, __bold__, _italic_, ### heading, `code`, > blockquote
+   * Giữ nguyên: dấu câu, dấu nháy, ký tự đặc biệt hợp lệ.
+   */
+  const stripMarkdown = (text: string): string =>
+    text
+      // Xoá ### heading
+      .replace(/^#{1,6}\s+/gm, '')
+      // Xoá **bold** hoặc __bold__
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      // Xoá *italic* hoặc _italic_
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      // Xoá `inline code`
+      .replace(/`(.+?)`/g, '$1')
+      // Xoá > blockquote
+      .replace(/^>\s*/gm, '')
+      // Xoá dấu --- hoặc *** (separator)
+      .replace(/^[-*]{3,}$/gm, '')
+      // Dọn dẹp khoảng trắng thừa cuối dòng
+      .replace(/[ \t]+$/gm, '')
+      // Xoá nhiều dòng trống liên tiếp → tối đa 1 dòng trống
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+  const handleSendChat = () => {
     if (!chatMessage.trim() || isChatLoading) return;
     const currentMsg = chatMessage.trim();
     setChatMessage("");
     setChatHistory((prev) => [...prev, { role: "user", content: currentMsg }]);
     setIsChatLoading(true);
     setIsChatExpanded(true);
+    setStreamingText("");
 
-    try {
-      const res = await chatGroqTutor({
+    let accumulated = "";
+
+    const abort = streamChatTutor(
+      {
         question_id: parseInt(currentQuestion.id),
         user_message: currentMsg,
         chat_history: chatHistory,
-      });
+      },
+      (token) => {
+        accumulated += token;
+        setStreamingText(accumulated);
+      },
+      () => {
+        // Stream done — strip markdown rồi mới lưu vào history
+        const cleaned = stripMarkdown(accumulated);
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: cleaned || "Đã có lỗi xảy ra. Vui lòng thử lại sau.",
+          },
+        ]);
+        setStreamingText("");
+        setIsChatLoading(false);
+      },
+      (errMsg) => {
+        setChatHistory((prev) => [
+          ...prev,
+          { role: "assistant", content: errMsg },
+        ]);
+        setStreamingText("");
+        setIsChatLoading(false);
+      },
+    );
 
-      setChatHistory((prev) => [...prev, { role: "assistant", content: res.answer }]);
-    } catch (error) {
-      console.error("Chat error:", error);
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "assistant", content: "Đã có lỗi xảy ra. Vui lòng thử lại sau." },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
+    streamAbortRef.current = abort;
   };
 
   useEffect(() => {
+    // Abort any ongoing stream khi chuyển câu hỏi
+    streamAbortRef.current?.();
+    streamAbortRef.current = null;
     setChatHistory([]);
     setChatMessage("");
     setIsChatExpanded(false);
+    setStreamingText("");
   }, [currentQuestionIndex]);
 
   const [submitResult, setSubmitResult] = useState<{
@@ -1542,9 +1617,9 @@ export default function ToeicNodePracticePage() {
   const partSummaryRequestedKeyRef = useRef<string | null>(null);
   const [questionRefreshVersion, setQuestionRefreshVersion] = useState(0);
   const practiceDraftStorageKey = useMemo(() => {
-    if (toeicPart === null) return null;
-    return buildPracticeDraftStorageKey(activeSkill, toeicPart);
-  }, [activeSkill, toeicPart]);
+    if (toeicPart === null || !userId) return null;
+    return buildPracticeDraftStorageKey(activeSkill, toeicPart, userId);
+  }, [activeSkill, toeicPart, userId]);
 
   const resetPracticeRunState = useCallback(() => {
     setFirstAnswers({});
@@ -1572,6 +1647,19 @@ export default function ToeicNodePracticePage() {
     aiLoadingRef.current = aiLoadingByAttempt;
   }, [aiLoadingByAttempt]);
 
+  // Fetch TOEIC enrollment_id for vocab highlight feature
+  useEffect(() => {
+    if (!isListening) {
+      getEnrollment("toeic")
+        .then((enrollment) => {
+          if (enrollment?.id) setToeicEnrollmentId(enrollment.id);
+        })
+        .catch(() => {
+          /* non-critical */
+        });
+    }
+  }, [isListening]);
+
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1586,7 +1674,45 @@ export default function ToeicNodePracticePage() {
 
   // Fetch questions from API for mapped TOEIC parts
   useEffect(() => {
-    if (toeicPart === null) return; // Advanced node — use hardcoded
+    if (toeicPart === null || !userId) return; // Advanced node — use hardcoded
+
+    const draftKey = buildPracticeDraftStorageKey(
+      activeSkill,
+      toeicPart,
+      userId,
+    );
+    const draft = loadPracticeRunDraft(draftKey);
+
+    if (draft) {
+      setDbQuestions(draft.questions);
+      setSessionQuestionIds(draft.sessionQuestionIds);
+      setFirstAnswers(draft.firstAnswers);
+      setSolvedCorrectly(new Set(draft.solvedCorrectly));
+      setCurrentQuestionIndex(draft.currentQuestionIndex);
+      setCurrentAttempt(draft.currentAttempt);
+      setAiExplanationByAttempt(draft.aiExplanationByAttempt);
+      setAiErrorByAttempt(draft.aiErrorByAttempt);
+      setReservePoints(draft.reservePoints ?? 0);
+      setUnlockThreshold(draft.unlockThreshold);
+      setExamUnlocked(draft.examUnlocked);
+
+      const uniqueAudioUrls: string[] = [];
+      const seen = new Set<string>();
+      for (const q of draft.questions) {
+        if (!q.audioUrl) continue;
+        if (seen.has(q.audioUrl)) continue;
+        seen.add(q.audioUrl);
+        uniqueAudioUrls.push(q.audioUrl);
+      }
+      Promise.allSettled(
+        uniqueAudioUrls
+          .slice(0, 5)
+          .map((url) => prefetchAudio(url, "metadata", 10000)),
+      ).finally(() => {
+        setDbLoading(false);
+      });
+      return;
+    }
 
     setDbLoading(true);
     setDbError(null);
@@ -1691,12 +1817,14 @@ export default function ToeicNodePracticePage() {
       });
   }, [
     toeicPart,
+    userId,
+    activeSkill,
     questionRefreshVersion,
     practiceDraftStorageKey,
     resetPracticeRunState,
   ]);
 
-    // Draft saving disabled for real-time practice.
+  // Draft saving disabled for real-time practice.
 
   const isInvalidRoute =
     !nodeInfo || isNaN(parsedNodeIndex) || parsedNodeIndex < 0;
@@ -1738,8 +1866,12 @@ export default function ToeicNodePracticePage() {
     const totalQ = getAllTotalQuestions();
     const range = 200; // dải điểm cố định
     const cap = getPartCap(partConfig, range, totalQ);
-    const accuracy = partConfig.questions > 0 ? correctCount / partConfig.questions : 0;
-    const earned = Math.min(cap, Math.pow(accuracy, DEFAULT_SCORING_CONFIG.curveExponent) * cap);
+    const accuracy =
+      partConfig.questions > 0 ? correctCount / partConfig.questions : 0;
+    const earned = Math.min(
+      cap,
+      Math.pow(accuracy, DEFAULT_SCORING_CONFIG.curveExponent) * cap,
+    );
     return parseFloat(earned.toFixed(1));
   }, [correctCount, nodeInfo, toeicPart]);
 
@@ -1853,7 +1985,12 @@ export default function ToeicNodePracticePage() {
   const detectWeaknessTopic = useCallback(
     (questionData: PracticeQuestion, explanation: string): string => {
       const optionTokens = questionData.options
-        .map((option) => option.text.trim().toLowerCase().replace(/[^a-z]/g, ""))
+        .map((option) =>
+          option.text
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z]/g, ""),
+        )
         .filter((token) => token.length > 0);
       const prepositionSet = new Set([
         "in",
@@ -1953,7 +2090,10 @@ export default function ToeicNodePracticePage() {
           "Đáp án đúng là ",
         )
         .replace(/^\s*correct\s+answer\s*[:\-]\s*/gim, "Đáp án đúng là ")
-        .replace(/^\s*option\s+breakdown\s*[:\-]?\s*/gim, "Phân tích phương án:")
+        .replace(
+          /^\s*option\s+breakdown\s*[:\-]?\s*/gim,
+          "Phân tích phương án:",
+        )
         .replace(/^\s*option\s*([A-D])\s*[:\-]\s*/gim, "- $1: ")
         .replace(/^\s*choice\s*([A-D])\s*[:\-]\s*/gim, "- $1: ")
         .replace(/^\s*([A-D])\s*[.)\-:]\s*/gim, "- $1: ")
@@ -1977,7 +2117,11 @@ export default function ToeicNodePracticePage() {
       if (explicitCorrectLine) {
         const detected = explicitCorrectLine.match(/\b([A-D])\b/i)?.[1];
         if (detected) {
-          detectedCorrectAnswer = detected.toUpperCase() as "A" | "B" | "C" | "D";
+          detectedCorrectAnswer = detected.toUpperCase() as
+            | "A"
+            | "B"
+            | "C"
+            | "D";
         }
 
         correctLeadReason = explicitCorrectLine
@@ -2005,9 +2149,15 @@ export default function ToeicNodePracticePage() {
           return;
         }
 
-        const optionMatch = line.match(/^(?:[-•]\s*)?([A-D])\s*[:.)\-]\s*(.+)$/i);
+        const optionMatch = line.match(
+          /^(?:[-•]\s*)?([A-D])\s*[:.)\-]\s*(.+)$/i,
+        );
         if (optionMatch) {
-          const optionKey = optionMatch[1].toUpperCase() as "A" | "B" | "C" | "D";
+          const optionKey = optionMatch[1].toUpperCase() as
+            | "A"
+            | "B"
+            | "C"
+            | "D";
           const optionReason = optionMatch[2].trim();
           optionReasonByKey.set(optionKey, optionReason);
           activeOptionKey = optionKey;
@@ -2016,17 +2166,17 @@ export default function ToeicNodePracticePage() {
 
         if (activeOptionKey) {
           const previous = optionReasonByKey.get(activeOptionKey) ?? "";
-          optionReasonByKey.set(
-            activeOptionKey,
-            `${previous} ${line}`.trim(),
-          );
+          optionReasonByKey.set(activeOptionKey, `${previous} ${line}`.trim());
           return;
         }
 
         narrativeLines.push(line);
       });
 
-      const isWeakReason = (reason: string, optionKey: "A" | "B" | "C" | "D") => {
+      const isWeakReason = (
+        reason: string,
+        optionKey: "A" | "B" | "C" | "D",
+      ) => {
         const compact = reason.replace(/\s+/g, " ").trim();
         if (compact.length < 18) return true;
 
@@ -2050,12 +2200,11 @@ export default function ToeicNodePracticePage() {
       const canonicalOptionLines = questionData.options.map((option) => {
         const currentReason = (optionReasonByKey.get(option.key) ?? "").trim();
 
-        const resolvedReason =
-          isWeakReason(currentReason, option.key)
-            ? option.key === detectedCorrectAnswer
-              ? inferredCorrectReason
-              : `"${option.text}" không phù hợp với ngữ cảnh hoặc yêu cầu ngữ pháp của câu.`
-            : currentReason;
+        const resolvedReason = isWeakReason(currentReason, option.key)
+          ? option.key === detectedCorrectAnswer
+            ? inferredCorrectReason
+            : `"${option.text}" không phù hợp với ngữ cảnh hoặc yêu cầu ngữ pháp của câu.`
+          : currentReason;
 
         return `- ${option.key}: ${resolvedReason}`;
       });
@@ -2072,6 +2221,13 @@ export default function ToeicNodePracticePage() {
     },
     [],
   );
+
+  const fallbackDbExplanation = currentQuestion?.explanation?.trim() ?? "";
+  const hasFallbackDbExplanation =
+    !!currentQuestion && shouldUseDbExplanationDirectly(fallbackDbExplanation);
+  const formattedFallbackDbExplanation = hasFallbackDbExplanation
+    ? formatAiExplanationForDisplay(fallbackDbExplanation, currentQuestion)
+    : "";
 
   const resolveReviewExplanation = useCallback(
     (
@@ -2148,7 +2304,9 @@ export default function ToeicNodePracticePage() {
     const weaknessTopicCounts = new Map<string, number>();
 
     summaryRows.forEach((row) => {
-      const target = row.gotItFirstTry ? strengthTopicCounts : weaknessTopicCounts;
+      const target = row.gotItFirstTry
+        ? strengthTopicCounts
+        : weaknessTopicCounts;
       target.set(row.topic, (target.get(row.topic) ?? 0) + 1);
     });
 
@@ -2275,43 +2433,43 @@ export default function ToeicNodePracticePage() {
   // Theme colors
   const theme = isListening
     ? {
-      primary: "teal",
-      gradient: "from-teal-600 to-cyan-500",
-      gradientLight: "from-teal-50 to-cyan-50",
-      border: "border-teal-200",
-      borderStrong: "border-teal-400",
-      bg: "bg-teal-50",
-      bgStrong: "bg-teal-600",
-      bgMedium: "bg-teal-100",
-      text: "text-teal-700",
-      textStrong: "text-teal-900",
-      textMuted: "text-teal-600",
-      ring: "ring-teal-400",
-      progressBar: "bg-gradient-to-r from-teal-500 to-cyan-400",
-      buttonPrimary: "bg-teal-600 hover:bg-teal-700 text-white",
-      optionSelected: "border-teal-500 bg-teal-50",
-      pageGradient:
-        "linear-gradient(160deg, #f0fdfa 0%, #e0f7f8 40%, #f0fdf4 100%)",
-    }
+        primary: "teal",
+        gradient: "from-teal-600 to-cyan-500",
+        gradientLight: "from-teal-50 to-cyan-50",
+        border: "border-teal-200",
+        borderStrong: "border-teal-400",
+        bg: "bg-teal-50",
+        bgStrong: "bg-teal-600",
+        bgMedium: "bg-teal-100",
+        text: "text-teal-700",
+        textStrong: "text-teal-900",
+        textMuted: "text-teal-600",
+        ring: "ring-teal-400",
+        progressBar: "bg-gradient-to-r from-teal-500 to-cyan-400",
+        buttonPrimary: "bg-teal-600 hover:bg-teal-700 text-white",
+        optionSelected: "border-teal-500 bg-teal-50",
+        pageGradient:
+          "linear-gradient(160deg, #f0fdfa 0%, #e0f7f8 40%, #f0fdf4 100%)",
+      }
     : {
-      primary: "emerald",
-      gradient: "from-emerald-600 to-green-500",
-      gradientLight: "from-emerald-50 to-green-50",
-      border: "border-emerald-200",
-      borderStrong: "border-emerald-400",
-      bg: "bg-emerald-50",
-      bgStrong: "bg-emerald-600",
-      bgMedium: "bg-emerald-100",
-      text: "text-emerald-700",
-      textStrong: "text-emerald-900",
-      textMuted: "text-emerald-600",
-      ring: "ring-emerald-400",
-      progressBar: "bg-gradient-to-r from-emerald-500 to-green-400",
-      buttonPrimary: "bg-emerald-600 hover:bg-emerald-700 text-white",
-      optionSelected: "border-emerald-500 bg-emerald-50",
-      pageGradient:
-        "linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #f0fdfa 100%)",
-    };
+        primary: "emerald",
+        gradient: "from-emerald-600 to-green-500",
+        gradientLight: "from-emerald-50 to-green-50",
+        border: "border-emerald-200",
+        borderStrong: "border-emerald-400",
+        bg: "bg-emerald-50",
+        bgStrong: "bg-emerald-600",
+        bgMedium: "bg-emerald-100",
+        text: "text-emerald-700",
+        textStrong: "text-emerald-900",
+        textMuted: "text-emerald-600",
+        ring: "ring-emerald-400",
+        progressBar: "bg-gradient-to-r from-emerald-500 to-green-400",
+        buttonPrimary: "bg-emerald-600 hover:bg-emerald-700 text-white",
+        optionSelected: "border-emerald-500 bg-emerald-50",
+        pageGradient:
+          "linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #f0fdfa 100%)",
+      };
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const buildTutorQuestion = useCallback(
@@ -2334,15 +2492,15 @@ export default function ToeicNodePracticePage() {
         `Học viên chọn: ${selectedOption.key}. ${selectedOption.text}`,
         shouldRevealCorrectAnswer
           ? [
-            `Đáp án đúng: ${questionData.correctAnswer}.`,
-            "FORMAT TRẢ LỜI BẮT BUỘC:",
-            `Đáp án đúng là ${questionData.correctAnswer}.`,
-            "Phân tích phương án:",
-            "- A: ...",
-            "- B: ...",
-            "- C: ...",
-            "- D: ...",
-          ].join("\n")
+              `Đáp án đúng: ${questionData.correctAnswer}.`,
+              "FORMAT TRẢ LỜI BẮT BUỘC:",
+              `Đáp án đúng là ${questionData.correctAnswer}.`,
+              "Phân tích phương án:",
+              "- A: ...",
+              "- B: ...",
+              "- C: ...",
+              "- D: ...",
+            ].join("\n")
           : "Ràng buộc: TUYỆT ĐỐI KHÔNG nêu đáp án đúng, không nêu chữ cái đáp án đúng, không gợi ý chọn phương án khác.",
       ].join("\n");
 
@@ -2354,23 +2512,23 @@ export default function ToeicNodePracticePage() {
         `Options:\n${optionsText}`,
         shouldRevealCorrectAnswer
           ? [
-            "Yêu cầu chất lượng:",
-            '- Mở đầu trực tiếp theo mẫu: "Đáp án đúng là ...".',
-            "- Chỉ dùng đúng 1 heading duy nhất: \"Phân tích phương án:\".",
-            "- Bắt buộc nhắc lại ít nhất 1 dấu hiệu trong câu (keyword/time marker/collocation).",
-            "- Bắt buộc có đủ 4 dòng A/B/C/D, trong đó phương án đúng cũng phải giải thích rõ vì sao đúng.",
-            "- Không mở đầu bằng câu: lựa chọn học viên hiện tại là ĐÚNG/SAI.",
-            "- Không trả lời chung chung; phải gắn trực tiếp vào câu hỏi này.",
-          ].join("\n")
+              "Yêu cầu chất lượng:",
+              '- Mở đầu trực tiếp theo mẫu: "Đáp án đúng là ...".',
+              '- Chỉ dùng đúng 1 heading duy nhất: "Phân tích phương án:".',
+              "- Bắt buộc nhắc lại ít nhất 1 dấu hiệu trong câu (keyword/time marker/collocation).",
+              "- Bắt buộc có đủ 4 dòng A/B/C/D, trong đó phương án đúng cũng phải giải thích rõ vì sao đúng.",
+              "- Không mở đầu bằng câu: lựa chọn học viên hiện tại là ĐÚNG/SAI.",
+              "- Không trả lời chung chung; phải gắn trực tiếp vào câu hỏi này.",
+            ].join("\n")
           : [
-            "Yêu cầu chất lượng:",
-            "- Không tiết lộ đáp án đúng hoặc chữ cái đáp án đúng.",
-            "- Tuyệt đối không gợi ý đáp án khác, không đề xuất phương án nên chọn.",
-            "- Kết luận rõ lựa chọn học viên hiện tại sai/chưa phù hợp.",
-            "- Nêu dấu hiệu nhận biết trong câu và quy tắc liên quan (word form/tense/S-V agreement/collocation/preposition).",
-            "- Giải thích trực tiếp vì sao lựa chọn học viên không khớp chỗ trống.",
-            "- Không trả lời kiểu chung chung hoặc chỉ khuyên 'xem lại ngữ pháp'.",
-          ].join("\n"),
+              "Yêu cầu chất lượng:",
+              "- Không tiết lộ đáp án đúng hoặc chữ cái đáp án đúng.",
+              "- Tuyệt đối không gợi ý đáp án khác, không đề xuất phương án nên chọn.",
+              "- Kết luận rõ lựa chọn học viên hiện tại sai/chưa phù hợp.",
+              "- Nêu dấu hiệu nhận biết trong câu và quy tắc liên quan (word form/tense/S-V agreement/collocation/preposition).",
+              "- Giải thích trực tiếp vì sao lựa chọn học viên không khớp chỗ trống.",
+              "- Không trả lời kiểu chung chung hoặc chỉ khuyên 'xem lại ngữ pháp'.",
+            ].join("\n"),
       ]
         .filter((line) => line.length > 0)
         .join("\n\n");
@@ -2583,7 +2741,10 @@ export default function ToeicNodePracticePage() {
   useEffect(() => {
     if (questions.length === 0) return;
     const AHEAD = 2;
-    const endIndex = Math.min(questions.length - 1, currentQuestionIndex + AHEAD);
+    const endIndex = Math.min(
+      questions.length - 1,
+      currentQuestionIndex + AHEAD,
+    );
     for (let i = currentQuestionIndex; i <= endIndex; i++) {
       const url = questions[i]?.audioUrl;
       if (url) void prefetchAudio(url, "full", 60000);
@@ -2640,11 +2801,18 @@ export default function ToeicNodePracticePage() {
       setPartSummaryText(fallbackSummary);
 
       try {
-        const historyRows = getPracticeMistakeHistory(activeSkill, toeicPart, 24);
+        const historyRows = getPracticeMistakeHistory(
+          activeSkill,
+          toeicPart,
+          24,
+        );
 
         const sessionRows = questions.map((questionData, questionIndex) => {
           const firstAttempt = firstAnswers[questionIndex] ?? "-";
-          const explanation = resolveReviewExplanation(questionData, questionIndex);
+          const explanation = resolveReviewExplanation(
+            questionData,
+            questionIndex,
+          );
           const topic = detectWeaknessTopic(questionData, explanation);
 
           return [
@@ -2659,11 +2827,11 @@ export default function ToeicNodePracticePage() {
           historyRows.length === 0
             ? "Không có dữ liệu lịch sử sai trước đó."
             : historyRows
-              .map(
-                (item, idx) =>
-                  `${idx + 1}. topic=${item.topic}; first=${item.firstAttempt}; correct=${item.correctAnswer}; question=${item.question}; explanation=${item.explanation}`,
-              )
-              .join("\n");
+                .map(
+                  (item, idx) =>
+                    `${idx + 1}. topic=${item.topic}; first=${item.firstAttempt}; correct=${item.correctAnswer}; question=${item.question}; explanation=${item.explanation}`,
+                )
+                .join("\n");
 
         const summaryQuestion = [
           `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau ${questions.length} câu vừa làm.`,
@@ -2707,7 +2875,9 @@ export default function ToeicNodePracticePage() {
           isLikelyEnglishAnswer(normalizedSummary)
         ) {
           setPartSummaryText(fallbackSummary);
-          setPartSummaryError("AI summary chưa ổn định, đang hiển thị tóm tắt chuẩn hóa.");
+          setPartSummaryError(
+            "AI summary chưa ổn định, đang hiển thị tóm tắt chuẩn hóa.",
+          );
           return;
         }
 
@@ -2715,7 +2885,9 @@ export default function ToeicNodePracticePage() {
       } catch {
         if (cancelled) return;
         setPartSummaryText(fallbackSummary);
-        setPartSummaryError("Không gọi được AI summary, đang hiển thị tóm tắt chuẩn hóa.");
+        setPartSummaryError(
+          "Không gọi được AI summary, đang hiển thị tóm tắt chuẩn hóa.",
+        );
       } finally {
         if (!cancelled) setPartSummaryLoading(false);
       }
@@ -2751,10 +2923,48 @@ export default function ToeicNodePracticePage() {
     navigate(`/student/certificate-review/toeic/skill/${activeSkill}`);
   }, [activeSkill, navigate]);
 
+  // Save practice draft whenever state changes
+  useEffect(() => {
+    if (!practiceDraftStorageKey || questions.length === 0 || showSummary)
+      return;
+
+    savePracticeRunDraft(practiceDraftStorageKey, {
+      questions,
+      sessionQuestionIds,
+      currentQuestionIndex,
+      firstAnswers,
+      solvedCorrectly: Array.from(solvedCorrectly),
+      currentAttempt,
+      aiExplanationByAttempt,
+      aiErrorByAttempt,
+      reservePoints,
+      unlockThreshold,
+      examUnlocked,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [
+    practiceDraftStorageKey,
+    questions,
+    sessionQuestionIds,
+    currentQuestionIndex,
+    firstAnswers,
+    solvedCorrectly,
+    currentAttempt,
+    aiExplanationByAttempt,
+    aiErrorByAttempt,
+    reservePoints,
+    unlockThreshold,
+    examUnlocked,
+    showSummary,
+  ]);
+
   // Guards
   if (dbLoading) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: theme.pageGradient }}>
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ background: theme.pageGradient }}
+      >
         <Header />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="w-full max-w-md rounded-2xl border border-white/60 bg-white/85 backdrop-blur-sm shadow-xl p-8 text-center space-y-4">
@@ -2795,52 +3005,168 @@ export default function ToeicNodePracticePage() {
     };
 
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: theme.pageGradient }}>
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ background: theme.pageGradient }}
+      >
         <Header />
         <main className="flex-1 py-10 px-4">
           <div className="max-w-3xl mx-auto">
             <div
               className="relative overflow-hidden rounded-3xl"
               style={{
-                background: "linear-gradient(145deg, #ffffff 0%, #f9fffe 60%, #f0fdfa 100%)",
+                background:
+                  "linear-gradient(145deg, #ffffff 0%, #f9fffe 60%, #f0fdfa 100%)",
                 border: `1px solid ${accentMid}33`,
                 boxShadow: `0 12px 48px ${accentShadow}, 0 2px 8px rgba(0,0,0,0.03)`,
               }}
             >
               {/* Gradient top accent */}
-              <div style={{
-                height: "4px",
-                background: `linear-gradient(90deg, ${accent}, ${accentMid}, ${accent})`,
-              }} />
+              <div
+                style={{
+                  height: "4px",
+                  background: `linear-gradient(90deg, ${accent}, ${accentMid}, ${accent})`,
+                }}
+              />
 
               {/* Decorative bg shapes — using theme-compatible tints */}
-              <div style={{ position: "absolute", top: "-40px", right: "-40px", width: "160px", height: "160px", borderRadius: "50%", background: `${accentLight}88` }} />
-              <div style={{ position: "absolute", bottom: "-60px", left: "-30px", width: "200px", height: "200px", borderRadius: "50%", background: `${accentPale}cc` }} />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-40px",
+                  right: "-40px",
+                  width: "160px",
+                  height: "160px",
+                  borderRadius: "50%",
+                  background: `${accentLight}88`,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "-60px",
+                  left: "-30px",
+                  width: "200px",
+                  height: "200px",
+                  borderRadius: "50%",
+                  background: `${accentPale}cc`,
+                }}
+              />
 
               <div className="relative px-8 py-10 sm:px-12 sm:py-12">
                 {/* SVG Illustration — slate + accent harmony */}
                 <div className="flex justify-center mb-8">
-                  <div style={{ position: "relative", width: "140px", height: "140px" }}>
-                    <svg viewBox="0 0 140 140" style={{ width: "100%", height: "100%" }}>
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "140px",
+                      height: "140px",
+                    }}
+                  >
+                    <svg
+                      viewBox="0 0 140 140"
+                      style={{ width: "100%", height: "100%" }}
+                    >
                       <circle cx="70" cy="70" r="65" fill={accentPale} />
-                      <circle cx="70" cy="70" r="55" fill="none" stroke={accentMid} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.5" />
+                      <circle
+                        cx="70"
+                        cy="70"
+                        r="55"
+                        fill="none"
+                        stroke={accentMid}
+                        strokeWidth="1.5"
+                        strokeDasharray="6 4"
+                        opacity="0.5"
+                      />
                       {/* Document body */}
-                      <rect x="45" y="35" width="40" height="52" rx="6" fill="white" stroke={accentMid} strokeWidth="1.8" />
-                      <rect x="52" y="48" width="26" height="3" rx="1.5" fill={accentLight} />
-                      <rect x="52" y="55" width="20" height="3" rx="1.5" fill={accentLight} />
-                      <rect x="52" y="62" width="14" height="3" rx="1.5" fill={accentLight} />
+                      <rect
+                        x="45"
+                        y="35"
+                        width="40"
+                        height="52"
+                        rx="6"
+                        fill="white"
+                        stroke={accentMid}
+                        strokeWidth="1.8"
+                      />
+                      <rect
+                        x="52"
+                        y="48"
+                        width="26"
+                        height="3"
+                        rx="1.5"
+                        fill={accentLight}
+                      />
+                      <rect
+                        x="52"
+                        y="55"
+                        width="20"
+                        height="3"
+                        rx="1.5"
+                        fill={accentLight}
+                      />
+                      <rect
+                        x="52"
+                        y="62"
+                        width="14"
+                        height="3"
+                        rx="1.5"
+                        fill={accentLight}
+                      />
                       {/* Question mark badge */}
                       <circle cx="85" cy="42" r="16" fill={accent} />
-                      <text x="85" y="48" textAnchor="middle" fill="white" fontSize="18" fontWeight="bold">?</text>
+                      <text
+                        x="85"
+                        y="48"
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize="18"
+                        fontWeight="bold"
+                      >
+                        ?
+                      </text>
                       {/* Floating dots */}
-                      <circle cx="25" cy="50" r="4" fill={accentMid} opacity="0.5">
-                        <animate attributeName="cy" values="50;44;50" dur="3s" repeatCount="indefinite" />
+                      <circle
+                        cx="25"
+                        cy="50"
+                        r="4"
+                        fill={accentMid}
+                        opacity="0.5"
+                      >
+                        <animate
+                          attributeName="cy"
+                          values="50;44;50"
+                          dur="3s"
+                          repeatCount="indefinite"
+                        />
                       </circle>
-                      <circle cx="115" cy="85" r="3" fill={accentMid} opacity="0.4">
-                        <animate attributeName="cy" values="85;78;85" dur="4s" repeatCount="indefinite" />
+                      <circle
+                        cx="115"
+                        cy="85"
+                        r="3"
+                        fill={accentMid}
+                        opacity="0.4"
+                      >
+                        <animate
+                          attributeName="cy"
+                          values="85;78;85"
+                          dur="4s"
+                          repeatCount="indefinite"
+                        />
                       </circle>
-                      <circle cx="30" cy="100" r="2.5" fill="#94a3b8" opacity="0.35">
-                        <animate attributeName="cy" values="100;93;100" dur="3.5s" repeatCount="indefinite" />
+                      <circle
+                        cx="30"
+                        cy="100"
+                        r="2.5"
+                        fill="#94a3b8"
+                        opacity="0.35"
+                      >
+                        <animate
+                          attributeName="cy"
+                          values="100;93;100"
+                          dur="3.5s"
+                          repeatCount="indefinite"
+                        />
                       </circle>
                     </svg>
                   </div>
@@ -2851,8 +3177,10 @@ export default function ToeicNodePracticePage() {
                   <div
                     className="inline-flex items-center gap-2 rounded-full px-4 py-1.5"
                     style={{
-                      fontSize: "11px", fontWeight: 700,
-                      textTransform: "uppercase" as const, letterSpacing: "0.08em",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      textTransform: "uppercase" as const,
+                      letterSpacing: "0.08em",
                       background: accentPale,
                       color: accentDark,
                       border: `1.5px solid ${accentMid}66`,
@@ -2867,13 +3195,24 @@ export default function ToeicNodePracticePage() {
                 <div className="text-center space-y-3 mb-8">
                   <h1
                     className="font-bold leading-tight"
-                    style={{ fontSize: "clamp(22px, 4vw, 30px)", color: "#1e293b" }}
+                    style={{
+                      fontSize: "clamp(22px, 4vw, 30px)",
+                      color: "#1e293b",
+                    }}
                   >
                     {isQuestionPoolIssue
                       ? `Part ${toeicPart ?? "?"} tạm thời chưa đủ bộ câu hỏi phù hợp`
                       : "Không thể tải dữ liệu luyện tập"}
                   </h1>
-                  <p style={{ fontSize: "14px", color: "#64748b", lineHeight: 1.7, maxWidth: "480px", margin: "0 auto" }}>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#64748b",
+                      lineHeight: 1.7,
+                      maxWidth: "480px",
+                      margin: "0 auto",
+                    }}
+                  >
                     {isQuestionPoolIssue
                       ? "Bạn có thể thử tải lại ngay. Khi hệ thống có thêm câu hỏi hợp lệ, lượt luyện tập sẽ tự hoạt động bình thường."
                       : "Kết nối tới server đang không ổn định hoặc dữ liệu chưa đồng bộ. Bạn hãy thử lại sau vài giây."}
@@ -2888,17 +3227,39 @@ export default function ToeicNodePracticePage() {
                     background: `linear-gradient(135deg, ${accentPale} 0%, #f8fafc 100%)`,
                   }}
                 >
-                  <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${accentMid}33` }}>
-                    <div style={{
-                      width: "6px", height: "6px", borderRadius: "50%",
-                      background: accent,
-                    }} />
-                    <span style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>
+                  <div
+                    className="px-5 py-3 flex items-center gap-2"
+                    style={{ borderBottom: `1px solid ${accentMid}33` }}
+                  >
+                    <div
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        background: accent,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase" as const,
+                        letterSpacing: "0.1em",
+                      }}
+                    >
                       Chi tiết hệ thống
                     </span>
                   </div>
                   <div className="px-5 py-3">
-                    <p className="whitespace-pre-line" style={{ fontSize: "13px", color: "#475569", lineHeight: 1.7 }}>
+                    <p
+                      className="whitespace-pre-line"
+                      style={{
+                        fontSize: "13px",
+                        color: "#475569",
+                        lineHeight: 1.7,
+                      }}
+                    >
                       {compactError}
                     </p>
                   </div>
@@ -2915,15 +3276,28 @@ export default function ToeicNodePracticePage() {
                       background: `linear-gradient(135deg, ${accentDark} 0%, ${accent} 100%)`,
                       boxShadow: `0 4px 16px ${accentShadow}, inset 0 1px 0 rgba(255,255,255,0.15)`,
                     }}
-                    onMouseEnter={(e) => { if (!dbLoading) { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 24px ${accentShadow}`; } }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 16px ${accentShadow}`; }}
+                    onMouseEnter={(e) => {
+                      if (!dbLoading) {
+                        (e.currentTarget as HTMLElement).style.transform =
+                          "translateY(-2px)";
+                        (e.currentTarget as HTMLElement).style.boxShadow =
+                          `0 6px 24px ${accentShadow}`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.transform =
+                        "translateY(0)";
+                      (e.currentTarget as HTMLElement).style.boxShadow =
+                        `0 4px 16px ${accentShadow}`;
+                    }}
                   >
                     {dbLoading ? (
                       <>
                         <div
                           className="animate-spin"
                           style={{
-                            width: "16px", height: "16px",
+                            width: "16px",
+                            height: "16px",
                             border: "2.5px solid rgba(255,255,255,0.3)",
                             borderTopColor: "#fff",
                             borderRadius: "50%",
@@ -2948,8 +3322,24 @@ export default function ToeicNodePracticePage() {
                       color: accent,
                       background: "#ffffff",
                     }}
-                    onMouseEnter={(e) => { if (!dbLoading) { (e.currentTarget as HTMLElement).style.borderColor = accent; (e.currentTarget as HTMLElement).style.background = accentPale; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; } }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = `${accentMid}55`; (e.currentTarget as HTMLElement).style.background = "#ffffff"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    onMouseEnter={(e) => {
+                      if (!dbLoading) {
+                        (e.currentTarget as HTMLElement).style.borderColor =
+                          accent;
+                        (e.currentTarget as HTMLElement).style.background =
+                          accentPale;
+                        (e.currentTarget as HTMLElement).style.transform =
+                          "translateY(-1px)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.borderColor =
+                        `${accentMid}55`;
+                      (e.currentTarget as HTMLElement).style.background =
+                        "#ffffff";
+                      (e.currentTarget as HTMLElement).style.transform =
+                        "translateY(0)";
+                    }}
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Quay lại Learning Map
@@ -2966,7 +3356,10 @@ export default function ToeicNodePracticePage() {
 
   if (isInvalidRoute || questions.length === 0 || !currentQuestion) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: theme.pageGradient }}>
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ background: theme.pageGradient }}
+      >
         <Header />
         <main className="flex-1 py-10 px-4">
           <div className="max-w-3xl mx-auto">
@@ -2984,14 +3377,17 @@ export default function ToeicNodePracticePage() {
                     Chưa có câu hỏi khả dụng cho node này
                   </h1>
                   <p className="text-sm sm:text-base text-slate-600">
-                    Hệ thống chỉ mở khi có đủ bộ câu hỏi hợp lệ theo part và band điểm hiện tại.
+                    Hệ thống chỉ mở khi có đủ bộ câu hỏi hợp lệ theo part và
+                    band điểm hiện tại.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setQuestionRefreshVersion((prev) => prev + 1)}
+                    onClick={() =>
+                      setQuestionRefreshVersion((prev) => prev + 1)
+                    }
                     className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-cyan-500 shadow-md hover:brightness-105 active:scale-[0.99] transition-all"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -3099,7 +3495,11 @@ export default function ToeicNodePracticePage() {
     // retry sending the practice session to the backend so DB stays in sync
     // with localStorage (fixes: listening page shows "Đã hoàn thành" but
     // detail page counts 0).
-    if (!submitSucceeded && toeicPart !== null && sessionQuestionIds.length > 0) {
+    if (
+      !submitSucceeded &&
+      toeicPart !== null &&
+      sessionQuestionIds.length > 0
+    ) {
       const answersPayload: Record<string, string> = {};
       sessionQuestionIds.forEach((qId, idx) => {
         if (firstAnswers[idx]) answersPayload[String(qId)] = firstAnswers[idx];
@@ -3262,15 +3662,17 @@ export default function ToeicNodePracticePage() {
                 return (
                   <div
                     key={q.id}
-                    className={`rounded-2xl border-2 overflow-hidden shadow-sm ${gotItFirstTry
-                      ? "border-emerald-200 bg-white"
-                      : "border-amber-200 bg-white"
-                      }`}
+                    className={`rounded-2xl border-2 overflow-hidden shadow-sm ${
+                      gotItFirstTry
+                        ? "border-emerald-200 bg-white"
+                        : "border-amber-200 bg-white"
+                    }`}
                   >
                     {/* Question header */}
                     <div
-                      className={`px-5 py-3 flex items-center justify-between ${gotItFirstTry ? "bg-emerald-50" : "bg-amber-50"
-                        }`}
+                      className={`px-5 py-3 flex items-center justify-between ${
+                        gotItFirstTry ? "bg-emerald-50" : "bg-amber-50"
+                      }`}
                     >
                       <span className="text-sm font-semibold text-slate-600">
                         Câu {idx + 1}
@@ -3332,10 +3734,11 @@ export default function ToeicNodePracticePage() {
 
                       {/* First attempt */}
                       <div
-                        className={`rounded-xl px-4 py-2.5 border flex items-start gap-2.5 ${gotItFirstTry
-                          ? "bg-emerald-50 border-emerald-200"
-                          : "bg-red-50 border-red-200"
-                          }`}
+                        className={`rounded-xl px-4 py-2.5 border flex items-start gap-2.5 ${
+                          gotItFirstTry
+                            ? "bg-emerald-50 border-emerald-200"
+                            : "bg-red-50 border-red-200"
+                        }`}
                       >
                         {gotItFirstTry ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
@@ -3396,7 +3799,9 @@ export default function ToeicNodePracticePage() {
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                       Điểm Gốc
                     </p>
-                    <p className="text-2xl font-bold text-slate-700">{currentScore}</p>
+                    <p className="text-2xl font-bold text-slate-700">
+                      {currentScore}
+                    </p>
                   </div>
                 )}
                 {/* Điểm Ôn Tập */}
@@ -3435,7 +3840,12 @@ export default function ToeicNodePracticePage() {
                       />
                     </div>
                     <p className="text-xs text-amber-500 mt-1">
-                      Còn {Math.max(0, unlockThreshold - (reservePoints ?? 0)).toFixed(1)} điểm để mở khóa thi thử
+                      Còn{" "}
+                      {Math.max(
+                        0,
+                        unlockThreshold - (reservePoints ?? 0),
+                      ).toFixed(1)}{" "}
+                      điểm để mở khóa thi thử
                     </p>
                   </div>
                 )}
@@ -3458,7 +3868,8 @@ export default function ToeicNodePracticePage() {
 
                 {partSummaryLoading && !partSummaryText ? (
                   <p className="text-sm text-slate-500">
-                    AI đang tổng hợp tóm tắt từ các câu vừa làm và lịch sử sai...
+                    AI đang tổng hợp tóm tắt từ các câu vừa làm và lịch sử
+                    sai...
                   </p>
                 ) : (
                   <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
@@ -3519,8 +3930,21 @@ export default function ToeicNodePracticePage() {
     >
       <Header />
 
-      <main className="flex-1 py-6 px-4">
-        <div className={`mx-auto space-y-5 transition-all duration-300 ${isChatExpanded ? "max-w-7xl" : "max-w-5xl"}`}>
+      <main className="flex-1 py-6 px-4 relative">
+        <VocabHighlightPopup
+          isOpen={vocabHighlight.isOpen}
+          position={vocabHighlight.position}
+          word={vocabHighlight.selectedText}
+          loading={vocabHighlight.loading}
+          result={vocabHighlight.result}
+          error={vocabHighlight.error}
+          saving={vocabHighlight.saving}
+          onSave={vocabHighlight.handleSave}
+          onClose={vocabHighlight.closePopup}
+        />
+        <div
+          className={`mx-auto space-y-5 transition-all duration-300 ${isChatExpanded ? "max-w-7xl" : "max-w-5xl"}`}
+        >
           {/* Top bar: back + node label */}
           <div className="flex items-center justify-between">
             <button
@@ -3573,14 +3997,15 @@ export default function ToeicNodePracticePage() {
               {questions.map((_, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-full transition-all duration-300 ${idx === currentQuestionIndex
-                    ? `w-4 h-2 ${theme.bgStrong}`
-                    : solvedCorrectly.has(idx)
-                      ? firstAnswers[idx] === questions[idx].correctAnswer
-                        ? "w-2 h-2 bg-emerald-400"
-                        : "w-2 h-2 bg-amber-400"
-                      : "w-2 h-2 bg-slate-200"
-                    }`}
+                  className={`rounded-full transition-all duration-300 ${
+                    idx === currentQuestionIndex
+                      ? `w-4 h-2 ${theme.bgStrong}`
+                      : solvedCorrectly.has(idx)
+                        ? firstAnswers[idx] === questions[idx].correctAnswer
+                          ? "w-2 h-2 bg-emerald-400"
+                          : "w-2 h-2 bg-amber-400"
+                        : "w-2 h-2 bg-slate-200"
+                  }`}
                 />
               ))}
             </div>
@@ -3588,15 +4013,17 @@ export default function ToeicNodePracticePage() {
 
           {/* Question Card */}
           <div
-            className={`rounded-2xl border-2 shadow-md overflow-hidden bg-white transition-all duration-200 ${animatingIn
-              ? "opacity-0 translate-y-2"
-              : "opacity-100 translate-y-0"
-              } ${isCurrentSolved || isCurrentCorrect
+            className={`rounded-2xl border-2 shadow-md overflow-hidden bg-white transition-all duration-200 ${
+              animatingIn
+                ? "opacity-0 translate-y-2"
+                : "opacity-100 translate-y-0"
+            } ${
+              isCurrentSolved || isCurrentCorrect
                 ? "border-emerald-300"
                 : currentAttempt !== null && !isCurrentCorrect
                   ? "border-red-200"
                   : theme.border
-              }`}
+            }`}
           >
             {/* Card header */}
             <div
@@ -3645,7 +4072,10 @@ export default function ToeicNodePracticePage() {
                   chuyển câu trong cùng nhóm. */}
               {isListening && currentQuestion.audioUrl ? (
                 <audio
-                  key={resolveAudioUrl(currentQuestion.audioUrl) ?? currentQuestion.id}
+                  key={
+                    resolveAudioUrl(currentQuestion.audioUrl) ??
+                    currentQuestion.id
+                  }
                   controls
                   preload="auto"
                   className="w-full"
@@ -3660,19 +4090,21 @@ export default function ToeicNodePracticePage() {
                   accentClass={theme.textMuted}
                   bgClass={theme.bgMedium}
                   borderClass={theme.border}
-                  onPlay={() => { }}
+                  onPlay={() => {}}
                 />
               ) : (
-                <p className="text-sm text-slate-700 leading-relaxed italic whitespace-pre-line">
+                <p
+                  data-vocab-zone
+                  className="reading-passage text-sm text-slate-700 leading-relaxed italic whitespace-pre-line"
+                >
                   {currentQuestion.context}
                 </p>
               )}
             </div>
 
-            <div className="flex flex-col lg:flex-row">
+            <div data-vocab-zone className="flex flex-col lg:flex-row">
               {/* Left Column: Question, Options, Script Reveal */}
               <div className="flex-1 flex flex-col">
-
                 {/* Question text */}
                 <div className="px-5 pt-4 pb-2">
                   <p className="font-semibold text-slate-800 text-base leading-snug">
@@ -3688,7 +4120,9 @@ export default function ToeicNodePracticePage() {
                       option.key === currentQuestion.correctAnswer;
                     // A wrong option that was just tried (and not the correct one)
                     const isWrongAttempt =
-                      isThisSelected && !isCorrectOption && currentAttempt !== null;
+                      isThisSelected &&
+                      !isCorrectOption &&
+                      currentAttempt !== null;
 
                     let optionStyle =
                       "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
@@ -3699,7 +4133,8 @@ export default function ToeicNodePracticePage() {
                         optionStyle =
                           "border-emerald-400 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200";
                       } else {
-                        optionStyle = "border-slate-100 bg-slate-50 text-slate-400";
+                        optionStyle =
+                          "border-slate-100 bg-slate-50 text-slate-400";
                       }
                     } else if (currentAttempt !== null) {
                       // Attempted but not yet correct
@@ -3719,21 +4154,23 @@ export default function ToeicNodePracticePage() {
                         key={option.key}
                         onClick={() => handleSelectAnswer(option.key)}
                         disabled={isDisabled}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all duration-150 ${optionStyle} ${!isDisabled
-                          ? "cursor-pointer active:scale-[0.99]"
-                          : "cursor-default"
-                          }`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all duration-150 ${optionStyle} ${
+                          !isDisabled
+                            ? "cursor-pointer active:scale-[0.99]"
+                            : "cursor-default"
+                        }`}
                       >
                         {/* Option key badge */}
                         <span
-                          className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border transition-all ${isCurrentSolved && isCorrectOption
-                            ? "bg-emerald-500 border-emerald-500 text-white"
-                            : isWrongAttempt
-                              ? "bg-red-400 border-red-400 text-white"
-                              : isCurrentSolved
-                                ? "bg-slate-100 border-slate-200 text-slate-400"
-                                : "bg-slate-100 border-slate-200 text-slate-500"
-                            }`}
+                          className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border transition-all ${
+                            isCurrentSolved && isCorrectOption
+                              ? "bg-emerald-500 border-emerald-500 text-white"
+                              : isWrongAttempt
+                                ? "bg-red-400 border-red-400 text-white"
+                                : isCurrentSolved
+                                  ? "bg-slate-100 border-slate-200 text-slate-400"
+                                  : "bg-slate-100 border-slate-200 text-slate-500"
+                          }`}
                         >
                           {option.key}
                         </span>
@@ -3757,14 +4194,19 @@ export default function ToeicNodePracticePage() {
                 {/* Translation Block - Chỉ hiển thị khi đã chọn đúng */}
                 {isCurrentSolved && (
                   <div className="px-5 pb-5">
-                    {!translations[currentQuestion.id] && !translatingIds.has(currentQuestion.id.toString()) && (
-                      <button
-                        onClick={() => handleTranslateQuestion(currentQuestion)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors w-max"
-                      >
-                        <span className="text-xs font-semibold uppercase tracking-wide">Dịch câu hỏi & đáp án</span>
-                      </button>
-                    )}
+                    {!translations[currentQuestion.id] &&
+                      !translatingIds.has(currentQuestion.id.toString()) && (
+                        <button
+                          onClick={() =>
+                            handleTranslateQuestion(currentQuestion)
+                          }
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors w-max"
+                        >
+                          <span className="text-xs font-semibold uppercase tracking-wide">
+                            Dịch câu hỏi & đáp án
+                          </span>
+                        </button>
+                      )}
 
                     {translatingIds.has(currentQuestion.id.toString()) && (
                       <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-sky-100 bg-sky-50/50">
@@ -3773,46 +4215,57 @@ export default function ToeicNodePracticePage() {
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:150ms]" />
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:300ms]" />
                         </div>
-                        <span className="text-sm font-medium text-sky-600 italic ml-1">Đang dịch...</span>
+                        <span className="text-sm font-medium text-sky-600 italic ml-1">
+                          Đang dịch...
+                        </span>
                       </div>
                     )}
 
                     {translations[currentQuestion.id.toString()] && (
                       <div className="rounded-xl border border-sky-200 bg-sky-50/60 shadow-sm overflow-hidden mt-1">
                         <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-                          <span className="text-sm font-bold text-blue-700">Dịch câu hỏi</span>
+                          <span className="text-sm font-bold text-blue-700">
+                            Dịch câu hỏi
+                          </span>
                         </div>
                         <div className="px-5 pb-5 pt-1 space-y-2.5">
-                          {translations[currentQuestion.id.toString()].split("\n").map((line, idx) => {
-                            const lineStr = line.trim();
-                            if (!lineStr) return null;
+                          {translations[currentQuestion.id.toString()]
+                            .split("\n")
+                            .map((line, idx) => {
+                              const lineStr = line.trim();
+                              if (!lineStr) return null;
 
-                            const optionMatch = lineStr.match(/^([A-D])[.)]\s*(.*)$/i);
-                            if (optionMatch) {
-                              const optKey = optionMatch[1].toUpperCase();
-                              const isCorrectOption = optKey === currentQuestion.correctAnswer;
-                              const shouldHighlight = isCurrentSolved && isCorrectOption;
+                              const optionMatch =
+                                lineStr.match(/^([A-D])[.)]\s*(.*)$/i);
+                              if (optionMatch) {
+                                const optKey = optionMatch[1].toUpperCase();
+                                const isCorrectOption =
+                                  optKey === currentQuestion.correctAnswer;
+                                const shouldHighlight =
+                                  isCurrentSolved && isCorrectOption;
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`flex text-[15px] ${shouldHighlight ? "text-emerald-600 font-medium" : "text-slate-700 hover:text-slate-900 transition-colors"} ml-3`}
+                                  >
+                                    <span className="w-6 shrink-0">
+                                      {optKey}.
+                                    </span>
+                                    <span>{optionMatch[2]}</span>
+                                  </div>
+                                );
+                              }
 
                               return (
-                                <div
+                                <p
                                   key={idx}
-                                  className={`flex text-[15px] ${shouldHighlight ? "text-emerald-600 font-medium" : "text-slate-700 hover:text-slate-900 transition-colors"} ml-3`}
+                                  className="text-[15px] font-medium text-slate-800 mb-3"
                                 >
-                                  <span className="w-6 shrink-0">{optKey}.</span>
-                                  <span>{optionMatch[2]}</span>
-                                </div>
+                                  {lineStr}
+                                </p>
                               );
-                            }
-
-                            return (
-                              <p
-                                key={idx}
-                                className="text-[15px] font-medium text-slate-800 mb-3"
-                              >
-                                {lineStr}
-                              </p>
-                            );
-                          })}
+                            })}
                         </div>
                       </div>
                     )}
@@ -3820,12 +4273,14 @@ export default function ToeicNodePracticePage() {
                 )}
 
                 {/* Wrong attempt hint */}
-                {!isCurrentCorrect && !isCurrentSolved && currentAttempt !== null && (
-                  <div className="mx-5 mb-5 bg-red-50 px-4 py-3 text-xs text-red-700 rounded-xl border border-red-200">
-                    💡 Đáp án <strong>{currentAttempt}</strong> chưa đúng. Đọc
-                    lại context và chọn đáp án khác để tiếp tục.
-                  </div>
-                )}
+                {!isCurrentCorrect &&
+                  !isCurrentSolved &&
+                  currentAttempt !== null && (
+                    <div className="mx-5 mb-5 bg-red-50 px-4 py-3 text-xs text-red-700 rounded-xl border border-red-200">
+                      💡 Đáp án <strong>{currentAttempt}</strong> chưa đúng. Đọc
+                      lại context và chọn đáp án khác để tiếp tục.
+                    </div>
+                  )}
 
                 {/* Correct attempt hint */}
                 {(isCurrentCorrect || isCurrentSolved) && (
@@ -3858,12 +4313,18 @@ export default function ToeicNodePracticePage() {
               {(isCurrentCorrect || isCurrentSolved) && (
                 <div
                   className={`shrink-0 border-t lg:border-t-0 lg:border-l border-emerald-100 flex flex-col transition-all duration-300 ${
-                    isChatExpanded ? "w-full lg:w-[800px]" : "w-full lg:w-[450px]"
+                    isChatExpanded
+                      ? "w-full lg:w-[800px]"
+                      : "w-full lg:w-[450px]"
                   }`}
                 >
-                  <div className={`flex-1 flex flex-col ${isChatExpanded ? "lg:flex-row" : ""} overflow-hidden`}>
+                  <div
+                    className={`flex-1 flex flex-col ${isChatExpanded ? "lg:flex-row" : ""} overflow-hidden`}
+                  >
                     {/* Explanation Area */}
-                    <div className={`p-6 lg:p-7 overflow-y-auto custom-scrollbar flex flex-col ${isChatExpanded ? "lg:w-1/2 lg:border-r border-emerald-100" : "flex-1"}`}>
+                    <div
+                      className={`p-6 lg:p-7 overflow-y-auto custom-scrollbar flex flex-col ${isChatExpanded ? "lg:w-1/2 lg:border-r border-emerald-100" : "flex-1"}`}
+                    >
                       <div className="flex items-center gap-2 mb-4 border-b border-emerald-50 pb-3 shrink-0">
                         <span className="text-lg">💡</span>
                         <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
@@ -3890,14 +4351,25 @@ export default function ToeicNodePracticePage() {
                         </p>
                       )}
 
+                      {/* Fallback DB explanation (if AI cache missed) */}
+                      {!currentAttemptAiLoading &&
+                        !currentAttemptAi &&
+                        hasFallbackDbExplanation && (
+                          <p className="text-[15px] text-slate-700 leading-relaxed whitespace-pre-line">
+                            {formattedFallbackDbExplanation}
+                          </p>
+                        )}
+
                       {/* AI lỗi hoặc không có giải thích */}
                       {!currentAttemptAiLoading &&
                         !currentAttemptAi &&
+                        !hasFallbackDbExplanation &&
                         currentAttemptAiError && (
                           <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
                             <span className="text-4xl">🥺</span>
                             <p className="text-sm text-slate-500 font-medium leading-relaxed px-2">
-                              Hiện tại chưa có phần giải thích từng đáp án cho câu hỏi, bạn thông cảm nhé!
+                              Hiện tại chưa có phần giải thích từng đáp án cho
+                              câu hỏi, bạn thông cảm nhé!
                             </p>
                           </div>
                         )}
@@ -3905,6 +4377,7 @@ export default function ToeicNodePracticePage() {
                       {/* Chưa load gì */}
                       {!currentAttemptAiLoading &&
                         !currentAttemptAi &&
+                        !hasFallbackDbExplanation &&
                         !currentAttemptAiError && (
                           <p className="text-sm text-emerald-400 italic text-center py-4">
                             Phân tích đang được chuẩn bị...
@@ -3914,16 +4387,18 @@ export default function ToeicNodePracticePage() {
 
                     {/* --- GROQ AI CHAT UI --- */}
                     {!currentAttemptAiLoading && (
-                      <div className={`p-6 lg:p-7 flex flex-col gap-4 ${isChatExpanded ? "lg:w-1/2 overflow-y-auto custom-scrollbar" : "border-t border-emerald-100 mt-auto"}`}>
+                      <div
+                        className={`p-6 lg:p-7 flex flex-col gap-4 ${isChatExpanded ? "lg:w-1/2 overflow-y-auto custom-scrollbar" : "border-t border-emerald-100 mt-auto"}`}
+                      >
                         <div className="flex items-center gap-2 mb-2 shrink-0">
                           <span className="text-lg">🧑‍🏫</span>
                           <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
                             Trợ lý học tập
                           </span>
                         </div>
-                        
+
                         {/* Chat History */}
-                        {chatHistory.length > 0 && (
+                        {(chatHistory.length > 0 || isChatLoading) && (
                           <div className="flex flex-col gap-3 mb-2 flex-1 overflow-y-auto custom-scrollbar">
                             {chatHistory.map((msg, idx) => (
                               <div
@@ -3934,9 +4409,37 @@ export default function ToeicNodePracticePage() {
                                     : "bg-slate-100 text-slate-700 self-start rounded-tl-sm whitespace-pre-line"
                                 }`}
                               >
-                                {msg.content}
+                                {msg.role === "assistant"
+                                  ? stripMarkdown(msg.content)
+                                  : msg.content}
                               </div>
                             ))}
+                            {/* Streaming bubble — hiện text khi đang nhận từng token */}
+                            {isChatLoading && (
+                              <div className="p-3 rounded-2xl text-[14.5px] leading-relaxed max-w-[90%] bg-slate-100 text-slate-700 self-start rounded-tl-sm whitespace-pre-line">
+                                {streamingText ? (
+                                  <>
+                                    {stripMarkdown(streamingText)}
+                                    <span className="inline-block w-1 h-4 ml-0.5 bg-slate-400 animate-pulse align-middle" />
+                                  </>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 text-slate-400 text-xs">
+                                    <span
+                                      className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                                      style={{ animationDelay: "0ms" }}
+                                    />
+                                    <span
+                                      className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                                      style={{ animationDelay: "150ms" }}
+                                    />
+                                    <span
+                                      className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                                      style={{ animationDelay: "300ms" }}
+                                    />
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -3947,7 +4450,7 @@ export default function ToeicNodePracticePage() {
                             value={chatMessage}
                             onChange={(e) => setChatMessage(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSendChat();
+                              if (e.key === "Enter") handleSendChat();
                             }}
                             placeholder="Hỏi trợ lý nếu bạn chưa hiểu rõ..."
                             disabled={isChatLoading}
@@ -4035,5 +4538,3 @@ export default function ToeicNodePracticePage() {
     </div>
   );
 }
-
-

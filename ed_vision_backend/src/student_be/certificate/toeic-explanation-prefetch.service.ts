@@ -65,7 +65,9 @@ export class ToeicExplanationPrefetchService implements OnApplicationBootstrap {
   // ─── Core prefetch logic ──────────────────────────────────────────────────
 
   private async runPrefetch(): Promise<void> {
-    this.logger.log('Prefetch bị vô hiệu hóa vì đề thi không cần giải thích nữa.');
+    this.logger.log(
+      'Prefetch bị vô hiệu hóa vì đề thi không cần giải thích nữa.',
+    );
     return;
   }
 

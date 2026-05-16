@@ -15,6 +15,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TestResultRecorderService } from '../../admin_be/program-effectiveness/test-result-recorder.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DTOs
@@ -112,7 +113,10 @@ export class ToeicExamSessionService {
   /** Sàn thời gian (5 phút). */
   private readonly MIN_DURATION_SEC = 5 * 60;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly testResultRecorder: TestResultRecorderService,
+  ) {}
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -131,7 +135,10 @@ export class ToeicExamSessionService {
     if (typeof hint === 'number' && Number.isFinite(hint) && hint > 0) {
       base = Math.round(hint);
     }
-    return Math.min(this.MAX_DURATION_SEC, Math.max(this.MIN_DURATION_SEC, base));
+    return Math.min(
+      this.MAX_DURATION_SEC,
+      Math.max(this.MIN_DURATION_SEC, base),
+    );
   }
 
   private elapsedSec(startedAt: Date): number {
@@ -166,7 +173,12 @@ export class ToeicExamSessionService {
       where: { id: sessionId },
       include: {
         repository: {
-          select: { id: true, slug: true, title: true, _count: { select: { items: true } } },
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            _count: { select: { items: true } },
+          },
         },
         answers: {
           select: {
@@ -229,7 +241,9 @@ export class ToeicExamSessionService {
       },
     });
     if (!repository || !repository.is_published) {
-      throw new NotFoundException('Đề thi không tồn tại hoặc chưa được công bố.');
+      throw new NotFoundException(
+        'Đề thi không tồn tại hoặc chưa được công bố.',
+      );
     }
     if (repository._count.items === 0) {
       throw new BadRequestException('Đề thi chưa có câu hỏi nào.');
@@ -246,9 +260,13 @@ export class ToeicExamSessionService {
     });
 
     if (active) {
-      const remaining = this.remainingSec(active.started_at, active.duration_sec);
+      const remaining = this.remainingSec(
+        active.started_at,
+        active.duration_sec,
+      );
       const overGrace =
-        this.elapsedSec(active.started_at) > active.duration_sec + this.GRACE_SEC;
+        this.elapsedSec(active.started_at) >
+        active.duration_sec + this.GRACE_SEC;
 
       if (remaining > 0 && !overGrace) {
         // Còn thời gian → resume
@@ -281,7 +299,10 @@ export class ToeicExamSessionService {
     return this.buildState(created.id);
   }
 
-  async getState(accountId: number, sessionId: number): Promise<ExamSessionStateDto> {
+  async getState(
+    accountId: number,
+    sessionId: number,
+  ): Promise<ExamSessionStateDto> {
     await this.loadSessionOrThrow(accountId, sessionId);
     return this.buildState(sessionId);
   }
@@ -295,7 +316,10 @@ export class ToeicExamSessionService {
     if (session.submitted_at) {
       throw new BadRequestException('Phiên thi đã nộp, không thể cập nhật.');
     }
-    const remaining = this.remainingSec(session.started_at, session.duration_sec);
+    const remaining = this.remainingSec(
+      session.started_at,
+      session.duration_sec,
+    );
     if (remaining <= 0) {
       // Quá hạn → reject + auto-submit nếu chưa
       await this.gradeAndFinalize(sessionId, true);
@@ -335,7 +359,9 @@ export class ToeicExamSessionService {
       },
       update: {
         selected_key: selectedKey,
-        ...(typeof dto.is_flagged === 'boolean' ? { is_flagged: dto.is_flagged } : {}),
+        ...(typeof dto.is_flagged === 'boolean'
+          ? { is_flagged: dto.is_flagged }
+          : {}),
       },
     });
 
@@ -370,7 +396,10 @@ export class ToeicExamSessionService {
       return this.buildSubmitResult(sessionId);
     }
 
-    const remaining = this.remainingSec(session.started_at, session.duration_sec);
+    const remaining = this.remainingSec(
+      session.started_at,
+      session.duration_sec,
+    );
     const auto = remaining <= 0; // hết giờ thì coi như auto
 
     return this.gradeAndFinalize(sessionId, auto);
@@ -405,7 +434,8 @@ export class ToeicExamSessionService {
 
     const correctMap = new Map<number, string | null>();
     for (const item of session.repository.items) {
-      const correct = item.options.find((o) => o.is_correct)?.option_key ?? null;
+      const correct =
+        item.options.find((o) => o.is_correct)?.option_key ?? null;
       correctMap.set(item.id, correct ? correct.toUpperCase() : null);
     }
     const answerMap = new Map<number, string | null>();
@@ -434,9 +464,7 @@ export class ToeicExamSessionService {
 
     // Quy đổi điểm theo tỉ lệ trên câu chấm được, scale lên 495 (TOEIC half).
     const scaledScore =
-      gradableCount > 0
-        ? Math.round((correctCount / gradableCount) * 495)
-        : 0;
+      gradableCount > 0 ? Math.round((correctCount / gradableCount) * 495) : 0;
 
     const submittedAt = new Date();
     await this.prisma.toeicExamSession.update({
@@ -450,7 +478,7 @@ export class ToeicExamSessionService {
       },
     });
 
-    return {
+    const result: SubmitExamResultDto = {
       session_id: sessionId,
       correct_count: correctCount,
       total_count: gradableCount,
@@ -459,9 +487,75 @@ export class ToeicExamSessionService {
       submitted_at: submittedAt.toISOString(),
       question_results: questionResults,
     };
+
+    // Fire-and-forget: record to StudentTestResult for analytics
+    this.recordTestResult(session.account_id, session, result).catch(() => {});
+
+    return result;
   }
 
-  private async buildSubmitResult(sessionId: number): Promise<SubmitExamResultDto> {
+  private async recordTestResult(
+    accountId: number,
+    session: {
+      id: number;
+      repository_id: number;
+      started_at: Date;
+      duration_sec: number;
+      repository: { skill_area?: string | null };
+    },
+    result: SubmitExamResultDto,
+  ): Promise<void> {
+    // Resolve enrollment from the active TOEIC enrollment for this account
+    const student = await this.prisma.student.findUnique({
+      where: { account_id: accountId },
+      select: { student_id: true },
+    });
+    let enrollmentId: number | null = null;
+    if (student) {
+      const enrollment = await this.prisma.certificateEnrollment.findFirst({
+        where: { student_id: student.student_id, cert_type: 'toeic', status: 'active' },
+        select: { id: true },
+      });
+      enrollmentId = enrollment?.id ?? null;
+    }
+
+    // TOEIC only has Listening + Reading. Map score to the correct skill
+    // based on the exam's skill_area. 'full' tests report total only.
+    const skillArea = session.repository?.skill_area;
+    const listeningScore = skillArea === 'listening' ? result.total_score
+      : skillArea === 'full' ? Math.round(result.total_score / 2)
+      : null;
+    const readingScore = skillArea === 'reading' ? result.total_score
+      : skillArea === 'full' ? Math.round(result.total_score / 2)
+      : null;
+
+    await this.testResultRecorder.record({
+      accountId,
+      certType: 'toeic',
+      testType: 'mock',
+      testPhase: 'midterm',
+      enrollmentId,
+      sessionId: session.id,
+      repositoryId: session.repository_id,
+      listeningScore,
+      readingScore,
+      writingScore: null,
+      speakingScore: null,
+      totalScore: result.total_score,
+      totalQuestions: result.total_count,
+      correctCount: result.correct_count,
+      accuracyPercent: result.total_count > 0
+        ? Math.round((result.correct_count / result.total_count) * 100)
+        : 0,
+      durationMinutes: Math.ceil(session.duration_sec / 60),
+      startedAt: session.started_at,
+      completedAt: new Date(),
+    });
+  }
+
+  private async buildSubmitResult(
+    sessionId: number,
+  ): Promise<SubmitExamResultDto> {
     const session = await this.prisma.toeicExamSession.findUniqueOrThrow({
       where: { id: sessionId },
       include: {
@@ -481,7 +575,8 @@ export class ToeicExamSessionService {
 
     const correctMap = new Map<number, string | null>();
     for (const item of session.repository.items) {
-      const correct = item.options.find((o) => o.is_correct)?.option_key ?? null;
+      const correct =
+        item.options.find((o) => o.is_correct)?.option_key ?? null;
       correctMap.set(item.id, correct ? correct.toUpperCase() : null);
     }
     const answerMap = new Map<number, string | null>();

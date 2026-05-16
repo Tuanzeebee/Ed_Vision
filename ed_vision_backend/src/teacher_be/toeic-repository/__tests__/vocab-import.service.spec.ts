@@ -103,7 +103,8 @@ describe('RegexExtractor', () => {
   });
 
   it('splitMultiEntry: OCR merge 2 entry liền nhau — tách đúng', () => {
-    const input = '22. Accessible (a) : có thể tiếp cận được, tới được.23. Accommodate (v) : thích ứng';
+    const input =
+      '22. Accessible (a) : có thể tiếp cận được, tới được.23. Accommodate (v) : thích ứng';
     const result = extractor.extract(input);
     expect(result.length).toBe(2);
     expect(result.map((r) => r.word)).toContain('accessible');
@@ -113,7 +114,8 @@ describe('RegexExtractor', () => {
   it('OCR Tesseract VI nhầm dấu chấm thành dấu phẩy sau số — vẫn parse đủ', () => {
     // Tesseract VN thường nhầm "23." → "23," (đặc biệt ở chữ in nhỏ)
     // Trước fix: entry 23 dính vào meaning của entry 22 → mất 1 entry
-    const input = '22. Accessible (a) : có thể tiếp cận được, tới được.23, Accommodate (v) : thích ứng';
+    const input =
+      '22. Accessible (a) : có thể tiếp cận được, tới được.23, Accommodate (v) : thích ứng';
     const result = extractor.extract(input);
     expect(result.length).toBe(2);
     expect(result.map((r) => r.word)).toContain('accessible');
@@ -121,7 +123,8 @@ describe('RegexExtractor', () => {
   });
 
   it('OCR mất hẳn dấu chấm sau số ("23 Accommodate") — vẫn split & parse được', () => {
-    const input = '22. Accessible (a) : có thể tiếp cận được, tới được. 23 Accommodate (v) : thích ứng';
+    const input =
+      '22. Accessible (a) : có thể tiếp cận được, tới được. 23 Accommodate (v) : thích ứng';
     const result = extractor.extract(input);
     expect(result.length).toBeGreaterThanOrEqual(2);
     expect(result.map((r) => r.word)).toContain('accessible');
@@ -227,7 +230,9 @@ describe('PreviewBuilder', () => {
 
   describe('classifyTopic', () => {
     it('"bank" + "ngân hàng" → "finance-banking"', () => {
-      expect(builder.classifyTopic('bank', 'ngân hàng')).toBe('finance-banking');
+      expect(builder.classifyTopic('bank', 'ngân hàng')).toBe(
+        'finance-banking',
+      );
     });
 
     it('"xyz" + "xyz" → "general-business" (fallback)', () => {
@@ -268,7 +273,9 @@ describe('PreviewBuilder', () => {
 describe('Backward Compatibility', () => {
   it('ParsedVocabWord interface có đủ fields bắt buộc', () => {
     const builder = new PreviewBuilder();
-    const result = builder.build([{ word: 'abandon', pos: 'v.', meaning: 'từ bỏ' }]);
+    const result = builder.build([
+      { word: 'abandon', pos: 'v.', meaning: 'từ bỏ' },
+    ]);
     expect(result).toHaveLength(1);
     const item = result[0];
 
@@ -284,7 +291,9 @@ describe('Backward Compatibility', () => {
 
   it('definitions[0] có đủ fields: pos, meaning, example_en, example_vi', () => {
     const builder = new PreviewBuilder();
-    const result = builder.build([{ word: 'abandon', pos: 'v.', meaning: 'từ bỏ' }]);
+    const result = builder.build([
+      { word: 'abandon', pos: 'v.', meaning: 'từ bỏ' },
+    ]);
     const def = result[0].definitions[0];
 
     expect(def).toHaveProperty('pos');
@@ -303,37 +312,58 @@ describe('Backward Compatibility', () => {
   // ── Kiểm tra source file ────────────────────────────────────────────────────
 
   it('vocab-import.service.ts KHÔNG chứa @google/generative-ai (Gemini đã xóa)', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).not.toContain('@google/generative-ai');
   });
 
   it('vocab-import.service.ts KHÔNG chứa VisionOllamaClient (vision model đã xóa)', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).not.toContain('VisionOllamaClient');
   });
 
   it('vocab-import.service.ts KHÔNG chứa openrouter (OpenRouter đã xóa)', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).not.toContain('openrouter');
   });
 
   it('vocab-import.service.ts có parseAndPreview method', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).toContain('parseAndPreview');
   });
 
   it('vocab-import.service.ts có confirmImport method', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).toContain('confirmImport');
   });
 
   it('vocab-import.service.ts export ParsedVocabWord interface', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).toContain('export interface ParsedVocabWord');
   });
 
   it('vocab-import.service.ts có extractWithRegex method', () => {
-    const content = fs.readFileSync(path.join(__dirname, '../vocab-import.service.ts'), 'utf8');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../vocab-import.service.ts'),
+      'utf8',
+    );
     expect(content).toContain('extractWithRegex');
   });
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Target, Headphones, Languages, BookOpenCheck, Calendar } from "lucide-react";
 import {
-  getToeicPlanSync,
   getToeicReservePoints,
 } from "@/services/api/certificateService";
 import { useVocabStats } from "@/hooks/useVocab";
@@ -38,43 +37,30 @@ function StatCard({ title, value, todayAdd, yesterdayAdd, icon, iconBg, iconColo
 
 type StudentPersonalStatisticsProps = {
   enrollmentId?: number | null;
+  certType?: string;
 };
 
-export default function StudentPersonalStatistics({ enrollmentId }: StudentPersonalStatisticsProps) {
-  const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0]
-  });
-
+export default function StudentPersonalStatistics({
+  enrollmentId,
+  certType = "toeic",
+}: StudentPersonalStatisticsProps) {
   const [listeningSessions, setListeningSessions] = useState(0);
   const [readingSessions, setReadingSessions] = useState(0);
   const [examAttempts, setExamAttempts] = useState(0);
-  const vocabStats = useVocabStats(enrollmentId ?? null);
+  const vocabStats = useVocabStats(enrollmentId ?? null, certType);
   const knownWords = vocabStats?.knownWords ?? 0;
   const knownWordsDisplay = knownWords.toLocaleString('en-US');
 
   useEffect(() => {
-    // Full mock-exam attempts (counted in plan_sync whenever a full exam is submitted)
-    getToeicPlanSync()
-      .then((data) => {
-        if (data) {
-          setExamAttempts(
-            (data.listening_sessions || 0) + (data.reading_sessions || 0),
-          );
-        }
-      })
-      .catch(() => {
-        // Silent catch
-      });
-
-    // Practice part sessions (Listening: parts 1-4, Reading: parts 5-7).
+    // Tính toán dựa trên thực tế số bản ghi trong bảng ToeicPracticePartSession (trả về qua getToeicReservePoints)
+    // Cách này giúp số liệu chính xác 100% kể cả khi xóa test data.
     getToeicReservePoints()
       .then((data) => {
-        console.log("[StudentPersonalStatistics] reserve-points response:", data);
-        // Prefer aggregate fields from backend (total across all sessions).
-        // Fallback: derive from part_sessions (last 20) for older backends.
         let listening = Number(data.listening_sessions_count ?? NaN);
         let reading = Number(data.reading_sessions_count ?? NaN);
+        // Số liệu này giờ lấy từ examSessionsCount (số bài thi thật đã nộp trong bảng ToeicExamSession)
+        const examCount = Number(data.exam_sessions_count ?? 0);
+        
         if (!Number.isFinite(listening) || !Number.isFinite(reading)) {
           let l = 0;
           let r = 0;
@@ -87,6 +73,8 @@ export default function StudentPersonalStatistics({ enrollmentId }: StudentPerso
         }
         setListeningSessions(listening);
         setReadingSessions(reading);
+        // Tổng số lượt = số lượt bài thi thật (full test) đã làm.
+        setExamAttempts(examCount);
       })
       .catch((err) => {
         console.error("[StudentPersonalStatistics] reserve-points error:", err);
@@ -99,24 +87,6 @@ export default function StudentPersonalStatistics({ enrollmentId }: StudentPerso
         <div className="flex items-center gap-3">
           <div className="h-7 w-1 rounded-full bg-gradient-to-b from-blue-400 to-indigo-400" />
           <h2 className="text-xl font-bold text-slate-800">Tiến trình học tập cá nhân</h2>
-        </div>
-        
-        {/* Date Filter */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
-          <Calendar className="w-4 h-4 text-slate-400" />
-          <input 
-            type="date" 
-            value={dateRange.from}
-            onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
-            className="text-xs text-slate-600 outline-none bg-transparent cursor-pointer [color-scheme:light]"
-          />
-          <span className="text-slate-300">-</span>
-          <input 
-            type="date" 
-            value={dateRange.to}
-            onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
-            className="text-xs text-slate-600 outline-none bg-transparent cursor-pointer [color-scheme:light]"
-          />
         </div>
       </div>
 
