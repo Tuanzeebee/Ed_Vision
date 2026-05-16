@@ -6,6 +6,10 @@ import {
     ChevronRight, Trophy, ArrowLeft, Zap, Target, AlertTriangle, Clock,
     RefreshCw, XCircle,
 } from 'lucide-react';
+import {
+    chatIeltsGroqTutor,
+    type IeltsChatMessage,
+} from "@/services/api/certificateService";
 import { ieltsAdaptiveApi } from '@/services/ielts-adaptive/api';
 import type { BandTest, Roadmap, LearningAnalysis, QuestionResult } from '../../types/ielts-adaptive.types';
 import { SkillArea, BandChange, Recommendation } from '../../types/ielts-adaptive.types';
@@ -15,11 +19,9 @@ import type { AiGradingResult } from './components/AiScoreCard';
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string; label: string }> = {
     [SkillArea.READING]: { icon: <BookOpen className="w-5 h-5" />, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', label: 'Reading' },
-    [SkillArea.LISTENING]: { icon: <Headphones className="w-5 h-5" />, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', label: 'Listening' },
-    [SkillArea.WRITING]: { icon: <PenLine className="w-5 h-5" />, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Writing' },
-    [SkillArea.SPEAKING]: { icon: <Mic2 className="w-5 h-5" />, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', label: 'Speaking' }
-    // [SkillArea.GRAMMAR]: { icon: <BookMarked className="w-5 h-5" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Grammar' },
-    // [SkillArea.VOCABULARY]: { icon: <Layers className="w-5 h-5" />, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200', label: 'Vocabulary' },
+    [SkillArea.LISTENING]: { icon: <Headphones className="w-5 h-5" />, color: 'text-blue-500', bg: 'bg-blue-50/50', border: 'border-blue-100', label: 'Listening' },
+    [SkillArea.WRITING]: { icon: <PenLine className="w-5 h-5" />, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Writing' },
+    [SkillArea.SPEAKING]: { icon: <Mic2 className="w-5 h-5" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Speaking' }
 };
 
 
@@ -50,6 +52,12 @@ export const BandTestPage: React.FC = () => {
     // Developer mode: tap result hero 5 times to reveal accept button
     const [devTapCount, setDevTapCount] = useState(0);
     const [showDevAccept, setShowDevAccept] = useState(false);
+    
+    // --- AI Chat State ---
+    const [chatHistory, setChatHistory] = useState<IeltsChatMessage[]>([]);
+    const [chatMessage, setChatMessage] = useState("");
+    const [isChatLoading, setIsChatLoading] = useState(false);
+    const [isChatExpanded, setIsChatExpanded] = useState(false);
     // isPracticeMode = true when not all lessons are unlocked/completed
     const isPracticeMode = progressPercent < 100;
 
@@ -88,6 +96,50 @@ export const BandTestPage: React.FC = () => {
             setShowDevAccept(true);
         }
     };
+
+    // Reset chat history when question changes
+    useEffect(() => {
+        setChatHistory([]);
+        setChatMessage("");
+        setIsChatExpanded(false);
+    }, [currentQuestionIndex, phase]);
+
+    const sendChatMessage = async (overrideMsg?: string) => {
+        const msgToSend = overrideMsg || chatMessage;
+        if (!msgToSend.trim() || isChatLoading) return;
+
+        const userMsg: IeltsChatMessage = { role: "user", content: msgToSend.trim() };
+        if (!overrideMsg) setChatMessage("");
+        setChatHistory(prev => [...prev, userMsg]);
+        setIsChatLoading(true);
+        setIsChatExpanded(true);
+
+        try {
+            const currentQuestion = questions[currentQuestionIndex];
+            const skill = currentQuestion?.skill_area?.toLowerCase() || 'reading';
+            const contextText = currentQuestion 
+                ? `Câu hỏi: ${currentQuestion.stem}\nĐoạn văn: ${currentQuestion.reading_passage || 'N/A'}`
+                : 'Học sinh đang làm bài kiểm tra IELTS.';
+
+            const res = await chatIeltsGroqTutor({
+                skill: skill as any,
+                context_text: contextText,
+                user_message: msgToSend.trim(),
+                chat_history: chatHistory,
+                band_target: roadmap?.target_band ? (roadmap.target_band + 0.5) : undefined,
+            });
+
+            setChatHistory(prev => [...prev, { role: "assistant", content: res.answer }]);
+        } catch (err) {
+            console.error("Chat error:", err);
+            setChatHistory(prev => [...prev, { role: "assistant", content: "AI đang gặp lỗi. Bạn thử lại sau nhé!" }]);
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+
+    const handleQuickAction = (prompt: string) => sendChatMessage(prompt);
+    const toggleChat = () => setIsChatExpanded(!isChatExpanded);
 
     const handleStartTest = async () => {
         if (!roadmapId) return;
@@ -141,7 +193,7 @@ export const BandTestPage: React.FC = () => {
                 const wordCount = input.split(/\s+/).filter(Boolean).length;
                 const result = await ieltsAdaptiveApi.gradeWriting({
                     essay: input,
-                    task_prompt: question.questionText,
+                    task_prompt: question.questionText || 'Vui lòng cung cấp bài viết theo yêu cầu.',
                     task_type: taskType,
                     target_band: targetBand,
                     word_count: wordCount,
@@ -263,38 +315,47 @@ export const BandTestPage: React.FC = () => {
     // ── Setup Phase ────────────────────────────────────────────────────────────
     if (phase === 'setup') {
         return (
-            <div className="min-h-screen bg-slate-50 py-8 px-4">
-                <div className="max-w-2xl mx-auto flex flex-col gap-6">
+            <div className="min-h-screen bg-[#F0F4FF] py-12 px-4">
+                <div className="max-w-2xl mx-auto flex flex-col gap-8">
+                    <div>
+                        <button
+                            onClick={() => navigate('/student/certificate-review/ielts')}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-widest text-slate-500 shadow-sm transition-colors hover:bg-slate-50"
+                        >
+                            <ArrowLeft className="w-4 h-4" /> Thoát
+                        </button>
+                    </div>
                     {/* Hero */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center">
-                        <Trophy className="w-14 h-14 text-amber-400 mx-auto mb-4" />
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <h1 className="text-2xl font-bold text-slate-800">Bài Kiểm Tra Band</h1>
+                    <div className="bg-white rounded-[40px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-10 text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
+                        <Trophy className="w-20 h-20 text-amber-500 mx-auto mb-6 drop-shadow-lg" />
+                        <div className="flex flex-col items-center gap-3 mb-4">
+                            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Bài Kiểm Tra Band</h1>
                             {isPracticeMode ? (
-                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">Làm thử</span>
+                                <span className="px-4 py-1 rounded-full bg-amber-50 text-amber-600 text-[11px] font-black uppercase tracking-widest border border-amber-100">Làm thử</span>
                             ) : (
-                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">Thi thật</span>
+                                <span className="px-4 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-black uppercase tracking-widest border border-emerald-100">Thi thật</span>
                             )}
                         </div>
                         {isPracticeMode ? (
-                            <p className="text-slate-500 text-sm leading-relaxed max-w-md mx-auto">
-                                Bạn đang ở <strong>chế độ làm thử</strong>. Kết quả sẽ được hiển thị nhưng chưa áp dụng vào lộ trình.
+                            <p className="text-slate-500 text-[15px] leading-relaxed max-w-md mx-auto font-medium">
+                                Bạn đang ở <strong className="text-slate-900 font-black">chế độ làm thử</strong>. Kết quả sẽ được hiển thị nhưng chưa áp dụng vào lộ trình.
                                 Hoàn thành 100% bài học để mở khoá bài thi thật.
                             </p>
                         ) : (
-                            <p className="text-slate-500 text-sm leading-relaxed max-w-md mx-auto">
-                                Bạn đã hoàn thành toàn bộ chương trình. Kết quả bài thi này sẽ được <strong>áp dụng</strong> vào lộ trình học của bạn.
+                            <p className="text-slate-500 text-[15px] leading-relaxed max-w-md mx-auto font-medium">
+                                Bạn đã hoàn thành toàn bộ chương trình. Kết quả bài thi này sẽ được <strong className="text-slate-900 font-black">áp dụng</strong> vào lộ trình học của bạn.
                             </p>
                         )}
                         {/* Progress bar */}
-                        <div className="mt-4 max-w-xs mx-auto">
-                            <div className="flex justify-between text-xs text-slate-400 mb-1">
+                        <div className="mt-8 max-w-xs mx-auto">
+                            <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
                                 <span>Tiến độ bài học</span>
-                                <span>{progressPercent}%</span>
+                                <span className="text-blue-600">{progressPercent}%</span>
                             </div>
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-3 bg-blue-50 rounded-full overflow-hidden border border-blue-100">
                                 <div
-                                    className={`h-full rounded-full transition-all duration-700 ${progressPercent >= 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`}
+                                    className={`h-full rounded-full transition-all duration-1000 ${progressPercent >= 100 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.3)]'}`}
                                     style={{ width: `${progressPercent}%` }}
                                 />
                             </div>
@@ -303,9 +364,9 @@ export const BandTestPage: React.FC = () => {
 
                     {/* Skill selection — only in practice mode */}
                     {isPracticeMode ? (
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                            <h2 className="text-base font-bold text-slate-800 mb-4">Chọn kỹ năng kiểm tra</h2>
-                            <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="bg-white rounded-[32px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-8">
+                            <h2 className="text-lg font-black text-slate-800 mb-6 tracking-tight">Chọn kỹ năng kiểm tra</h2>
+                            <div className="grid sm:grid-cols-2 gap-4">
                                 {Object.values(SkillArea).map((skill) => {
                                     const meta = SKILL_META[skill];
                                     const selected = selectedSkills.includes(skill);
@@ -316,15 +377,17 @@ export const BandTestPage: React.FC = () => {
                                             onClick={() => setSelectedSkills((prev) =>
                                                 prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
                                             )}
-                                            className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${selected
-                                                ? `${meta.bg} ${meta.border} ${meta.color}`
-                                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                                            className={`relative flex items-center gap-4 px-5 py-4 rounded-[24px] border-2 text-[13px] font-black transition-all active:scale-95 ${selected
+                                                ? `${meta.bg} ${meta.border} ${meta.color} shadow-lg shadow-blue-900/5`
+                                                : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-blue-100 hover:bg-blue-50/30'
                                                 }`}
                                         >
-                                            <span className={selected ? meta.color : 'text-slate-400'}>{meta.icon}</span>
-                                            <span>{meta.label}</span>
+                                            <span className={selected ? meta.color : 'text-slate-300'}>{meta.icon}</span>
+                                            <span className="uppercase tracking-widest">{meta.label}</span>
                                             {selected && (
-                                                <CheckCircle2 className={`w-4 h-4 absolute top-2 right-2 ${meta.color}`} />
+                                                <div className={`w-5 h-5 rounded-full absolute -top-1.5 -right-1.5 flex items-center justify-center text-white bg-blue-600 shadow-md`}>
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                </div>
                                             )}
                                         </button>
                                     );
@@ -332,20 +395,20 @@ export const BandTestPage: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                            <h2 className="text-base font-bold text-slate-800 mb-3">Kỹ năng kiểm tra</h2>
-                            <p className="text-xs text-slate-400 mb-4">Bài thi thật kiểm tra toàn bộ 6 kỹ năng</p>
-                            <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="bg-white rounded-[32px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-8">
+                            <h2 className="text-lg font-black text-slate-800 mb-3 tracking-tight">Kỹ năng kiểm tra</h2>
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6">Bài thi thật kiểm tra toàn bộ kỹ năng</p>
+                            <div className="grid sm:grid-cols-2 gap-4">
                                 {ALL_SKILLS.map((skill) => {
                                     const meta = SKILL_META[skill];
                                     if (!meta) return null;
                                     return (
                                         <div
                                             key={skill}
-                                            className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-sm font-semibold ${meta.bg} ${meta.border} ${meta.color}`}
+                                            className={`relative flex items-center gap-4 px-5 py-4 rounded-[24px] border-2 text-[13px] font-black ${meta.bg} ${meta.border} ${meta.color} shadow-sm opacity-80`}
                                         >
                                             <span>{meta.icon}</span>
-                                            <span>{meta.label}</span>
+                                            <span className="uppercase tracking-widest">{meta.label}</span>
                                             <CheckCircle2 className={`w-4 h-4 absolute top-2 right-2 ${meta.color}`} />
                                         </div>
                                     );
@@ -355,32 +418,32 @@ export const BandTestPage: React.FC = () => {
                     )}
 
                     {/* Info */}
-                    <div className="bg-indigo-50 rounded-2xl border border-indigo-100 px-5 py-4 flex items-center gap-6">
+                    <div className="bg-blue-600 rounded-[32px] px-8 py-6 flex items-center justify-between text-white shadow-xl shadow-blue-600/20">
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-indigo-600">{activeSkills.length * 5}</p>
-                            <p className="text-xs text-indigo-400 font-medium">Câu hỏi</p>
+                            <p className="text-3xl font-black">{activeSkills.length * 5}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-200">Câu hỏi</p>
                         </div>
-                        <div className="w-px h-10 bg-indigo-200" />
+                        <div className="w-px h-10 bg-white/20" />
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-indigo-600">~{activeSkills.length * 5}</p>
-                            <p className="text-xs text-indigo-400 font-medium">Phút</p>
+                            <p className="text-3xl font-black">~{activeSkills.length * 5}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-200">Phút</p>
                         </div>
-                        <div className="w-px h-10 bg-indigo-200" />
+                        <div className="w-px h-10 bg-white/20" />
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-indigo-600">{activeSkills.length}</p>
-                            <p className="text-xs text-indigo-400 font-medium">Kỹ năng</p>
+                            <p className="text-3xl font-black">{activeSkills.length}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-200">Kỹ năng</p>
                         </div>
                     </div>
 
                     <button
                         onClick={handleStartTest}
                         disabled={activeSkills.length === 0 || loading}
-                        className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-5 rounded-[24px] bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-sm transition-all shadow-xl shadow-amber-500/30 active:scale-95 flex items-center justify-center gap-3"
                     >
                         {loading ? (
-                            <><Loader2 className="w-5 h-5 animate-spin" /> Đang tạo bài thi…</>
+                            <><Loader2 className="w-6 h-6 animate-spin" /> Đang tạo bài thi…</>
                         ) : (
-                            <><Zap className="w-5 h-5" /> Bắt đầu kiểm tra</>
+                            <><Zap className="w-6 h-6 fill-white" /> Bắt đầu kiểm tra ngay</>
                         )}
                     </button>
                 </div>
@@ -402,79 +465,97 @@ export const BandTestPage: React.FC = () => {
         const canProceed = isAiQuestion ? !!aiResult : !!answers[currentQuestion.id];
 
         return (
-            <div className="min-h-screen bg-slate-50 py-6 px-4">
-                <div className="max-w-2xl mx-auto flex flex-col gap-4">
+            <div className="min-h-screen bg-[#F0F4FF] py-10 px-4">
+                <div className="max-w-2xl mx-auto flex flex-col gap-6">
+                    <div>
+                        <button
+                            onClick={() => navigate('/student/certificate-review/ielts')}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-widest text-slate-500 shadow-sm transition-colors hover:bg-slate-50"
+                        >
+                            <ArrowLeft className="w-4 h-4" /> Thoát
+                        </button>
+                    </div>
 
                     {/* ── Non-blocking fast-answer warning banner ── */}
                     {fastWarning && (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
-                            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="rounded-[24px] border-2 border-amber-200 bg-amber-50 px-6 py-4 flex items-start gap-4 shadow-lg shadow-amber-900/5">
+                            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-amber-800">Cảnh báo: bạn đang làm bài rất nhanh</p>
-                                <p className="text-xs text-amber-700 mt-0.5">
-                                    <span className="font-semibold">{fastWarning.count}/{fastWarning.total}</span> câu trả lời trong dưới 18 giây — có thể ảnh hưởng đến độ tin cậy của kết quả.
-                                    Hãy đọc kỹ từng câu trước khi trả lời.
+                                <p className="text-sm font-black text-amber-800 uppercase tracking-tight">Cảnh báo: Tốc độ làm bài quá nhanh</p>
+                                <p className="text-[13px] text-amber-700 mt-1 font-medium leading-relaxed">
+                                    <span className="font-black underline">{fastWarning.count}/{fastWarning.total}</span> câu trả lời trong dưới 18 giây — có thể ảnh hưởng đến độ tin cậy của kết quả.
                                 </p>
                             </div>
-                            <button onClick={() => setFastWarning(null)} className="shrink-0 text-amber-400 hover:text-amber-600">
-                                <XCircle className="w-4 h-4" />
+                            <button onClick={() => setFastWarning(null)} className="shrink-0 text-amber-400 hover:text-amber-600 transition-colors">
+                                <XCircle className="w-5 h-5" />
                             </button>
                         </div>
                     )}
 
                     {/* Header */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 px-5 py-4 flex items-center gap-4">
-                        <Target className="w-5 h-5 text-indigo-500 shrink-0" />
+                    <div className="bg-white rounded-[32px] shadow-2xl shadow-blue-900/5 border border-blue-50 px-8 py-5 flex items-center gap-6">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                            <Target className="w-6 h-6" />
+                        </div>
                         <div className="flex-1">
-                            <p className="text-xs text-slate-400 font-medium mb-0.5">Band Test</p>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${skillMeta.bg} ${skillMeta.color}`}>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1">Band Test Mode</p>
+                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-current/10 ${skillMeta.bg} ${skillMeta.color}`}>
                                 {skillMeta.icon}{skillMeta.label}
                             </span>
                         </div>
-                        <span className="shrink-0 text-sm font-semibold text-slate-500">
-                            {currentQuestionIndex + 1}<span className="text-slate-300">/{questions.length}</span>
-                        </span>
+                        <div className="text-right">
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Tiến độ</p>
+                            <span className="text-lg font-black text-slate-700">
+                                {currentQuestionIndex + 1}<span className="text-slate-300 mx-1">/</span>{questions.length}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Progress */}
-                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div className="h-3 bg-white rounded-full overflow-hidden border border-blue-100 shadow-inner">
                         <div
-                            className="h-full bg-linear-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500"
+                            className="h-full bg-linear-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-700 shadow-[0_0_10px_rgba(37,99,235,0.4)]"
                             style={{ width: `${progress}%` }}
                         />
                     </div>
 
                     {/* Question card */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <div className="bg-white rounded-[40px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-8 sm:p-10">
                         {/* Listening audio player */}
                         {currentQuestion.skill === SkillArea.LISTENING && (
-                            <AudioPlayer
-                                key={currentQuestion.id}
-                                url={currentQuestion.mediaAudioUrl}
-                                autoPlay
-                            />
+                            <div className="mb-8">
+                                <AudioPlayer
+                                    key={currentQuestion.id}
+                                    url={currentQuestion.mediaAudioUrl}
+                                    autoPlay
+                                />
+                            </div>
                         )}
-                        <p className="text-slate-800 font-medium text-base leading-relaxed mb-5">
-                            {currentQuestion.questionText}
-                        </p>
+                        <div className="relative mb-8">
+                            <div className="absolute -left-10 top-0 w-1 h-full bg-amber-400 rounded-full" />
+                            <p className="text-slate-800 font-black text-lg sm:text-xl leading-relaxed tracking-tight">
+                                {currentQuestion.questionText}
+                            </p>
+                        </div>
+
                         {isChoiceQuestion ? (
-                            <div className="flex flex-col gap-2.5 mb-6">
+                            <div className="flex flex-col gap-4 mb-8">
                                 {optionsEntries.map(([key, text]) => {
                                     const selected = answers[currentQuestion.id] === key;
                                     return (
                                         <button
                                             key={key}
                                             onClick={() => handleAnswer(currentQuestion.id, key)}
-                                            className={`w-full text-left px-4 py-3 rounded-2xl border-2 text-sm transition-all flex items-center gap-3 ${selected
-                                                ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
-                                                : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'
+                                            className={`w-full text-left px-6 py-4 rounded-[24px] border-2 text-[15px] font-black transition-all flex items-center gap-4 active:scale-[0.98] ${selected
+                                                ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-lg shadow-blue-900/5'
+                                                : 'border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/30 text-slate-600'
                                                 }`}
                                         >
-                                            <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${selected ? 'bg-indigo-500 text-white' : 'bg-white border border-slate-300 text-slate-500'
+                                            <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-black ${selected ? 'bg-blue-600 text-white shadow-md' : 'bg-white border-2 border-slate-200 text-slate-400'
                                                 }`}>
                                                 {key}
                                             </span>
-                                            <span>{text as string}</span>
+                                            <span className="flex-1 leading-tight">{text as string}</span>
                                         </button>
                                     );
                                 })}
@@ -495,38 +576,41 @@ export const BandTestPage: React.FC = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="mb-6">
-                                <label className="block text-xs font-semibold text-slate-500 mb-2">
-                                    {isAiQuestion ? 'Câu trả lời của bạn' : 'Điền đáp án'}
+                            <div className="mb-8">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                                    {isAiQuestion ? 'Câu trả lời của bạn' : 'Điền đáp án chính xác'}
                                 </label>
                                 <textarea
                                     value={answers[currentQuestion.id] ?? ''}
                                     onChange={(e) => handleAnswer(currentQuestion.id, e.target.value)}
-                                    placeholder={isAiQuestion ? 'Nhập bài viết hoặc transcript...' : 'Nhập đáp án...'}
-                                    className="w-full min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    placeholder={isAiQuestion ? 'Bắt đầu nhập nội dung bài viết tại đây...' : 'Nhập đáp án của bạn...'}
+                                    className="w-full min-h-[180px] rounded-[24px] border-2 border-slate-100 bg-slate-50 px-6 py-5 text-[15px] text-slate-700 font-medium focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all"
                                 />
 
                                 {isAiQuestion && (
-                                    <div className="mt-4">
+                                    <div className="mt-6">
                                         <button
                                             onClick={() => handleAiGrade(currentQuestion)}
                                             disabled={aiBusy}
-                                            className="w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                                            className="w-full py-4 rounded-[20px] bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:bg-slate-50 disabled:text-slate-300 font-black text-[13px] uppercase tracking-widest transition-all flex items-center justify-center gap-3"
                                         >
                                             {aiBusy ? (
-                                                <><Loader2 className="w-4 h-4 animate-spin" /> Đang chấm điểm…</>
+                                                <><Loader2 className="w-5 h-5 animate-spin" /> Đang chấm điểm…</>
                                             ) : (
-                                                <>Chấm điểm AI</>
+                                                <><CheckCircle2 className="w-5 h-5" /> Chấm điểm bằng AI</>
                                             )}
                                         </button>
                                         {aiError && (
-                                            <p className="mt-2 text-xs text-rose-600">{aiError}</p>
+                                            <p className="mt-3 text-xs text-rose-500 font-bold ml-1">{aiError}</p>
                                         )}
                                         {aiResult && (
-                                            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                                                <p className="text-sm font-semibold text-emerald-700">Band AI: {aiResult.bandScore?.toFixed?.(1) ?? aiResult.bandScore}</p>
+                                            <div className="mt-6 rounded-[28px] border-2 border-emerald-100 bg-emerald-50/50 p-6 shadow-lg shadow-emerald-900/5">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Kết quả đánh giá AI</span>
+                                                    <span className="text-xl font-black text-emerald-700">Band {aiResult.bandScore?.toFixed?.(1) ?? aiResult.bandScore}</span>
+                                                </div>
                                                 {aiResult.overallFeedback && (
-                                                    <p className="text-xs text-emerald-700 mt-1">{aiResult.overallFeedback}</p>
+                                                    <p className="text-[13px] text-emerald-800 leading-relaxed font-medium">{aiResult.overallFeedback}</p>
                                                 )}
                                             </div>
                                         )}
@@ -537,14 +621,14 @@ export const BandTestPage: React.FC = () => {
                         <button
                             onClick={handleNext}
                             disabled={!canProceed || submitting}
-                            className="w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-5 rounded-[24px] bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-sm transition-all shadow-xl shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-3"
                         >
                             {submitting ? (
-                                <><Loader2 className="w-4 h-4 animate-spin" /> Đang nộp…</>
+                                <><Loader2 className="w-6 h-6 animate-spin" /> Đang xử lý…</>
                             ) : currentQuestionIndex < questions.length - 1 ? (
-                                <>Câu tiếp theo <ChevronRight className="w-4 h-4" /></>
+                                <>Câu tiếp theo <ChevronRight className="w-5 h-5" /></>
                             ) : (
-                                <>Nộp bài <CheckCircle2 className="w-4 h-4" /></>
+                                <>Nộp bài và xem kết quả <Trophy className="w-5 h-5 fill-white" /></>
                             )}
                         </button>
                     </div>
@@ -559,56 +643,63 @@ export const BandTestPage: React.FC = () => {
         const recCfg = getRecommendationCfg(bandTest.recommendation);
 
         return (
-            <div className="min-h-screen bg-slate-50 py-8 px-4">
-                <div className="max-w-2xl mx-auto flex flex-col gap-5">
+            <div className="min-h-screen bg-[#F0F4FF] py-12 px-4">
+                <div className="max-w-2xl mx-auto flex flex-col gap-8">
                     {/* Band comparison hero — tap 5x in dev mode to unlock accept button */}
                     <div
-                        className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center cursor-default select-none"
+                        className="bg-white rounded-[40px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-10 text-center cursor-default select-none relative overflow-hidden"
                         onClick={handleDevTap}
                     >
-                        <div className="flex items-center justify-center gap-2 mb-3">
-                            <Trophy className="w-12 h-12 text-amber-400" />
+                        <div className="absolute top-0 left-0 w-40 h-40 bg-blue-50 rounded-full blur-3xl -ml-20 -mt-20 pointer-events-none" />
+                        <div className="flex flex-col items-center gap-3 mb-8">
+                            <Trophy className="w-16 h-16 text-amber-500 drop-shadow-md" />
+                            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Kết quả Band Test</h1>
                             {isPracticeMode && (
-                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">Làm thử</span>
+                                <span className="px-4 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest border border-amber-100">Làm thử</span>
                             )}
                         </div>
-                        <h1 className="text-2xl font-bold text-slate-800 mb-5">Kết quả Band Test</h1>
 
-                        <div className="flex items-center justify-center gap-6">
+                        <div className="flex items-center justify-center gap-8 sm:gap-12 relative z-10">
                             <div className="text-center">
-                                <div className="w-20 h-20 rounded-full border-4 border-slate-200 bg-slate-50 flex flex-col items-center justify-center mx-auto mb-2">
-                                    <p className="text-2xl font-bold text-slate-600">{bandTest.previous_band.toFixed(1)}</p>
+                                <div className="w-24 h-24 rounded-[32px] border-4 border-slate-100 bg-slate-50 flex flex-col items-center justify-center mx-auto mb-3 shadow-inner">
+                                    <p className="text-3xl font-black text-slate-400">{bandTest.previous_band.toFixed(1)}</p>
                                 </div>
-                                <p className="text-xs text-slate-400 font-medium">Band cũ</p>
+                                <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest">Band cũ</p>
                             </div>
-                            <div className={`flex flex-col items-center gap-1 ${changeCfg.color}`}>
-                                {changeCfg.icon}
-                                <span className="text-xs font-semibold">{changeCfg.label}</span>
+
+                            <div className={`flex flex-col items-center gap-2 ${changeCfg.color} bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-50`}>
+                                <div className="p-2 rounded-full bg-current/10">
+                                    {changeCfg.icon}
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">{changeCfg.label}</span>
                             </div>
+
                             <div className="text-center">
-                                <div className={`w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center mx-auto mb-2 ${changeCfg.bg} ${changeCfg.border}`}>
-                                    <p className={`text-2xl font-bold ${changeCfg.color}`}>{bandTest.estimated_band.toFixed(1)}</p>
+                                <div className={`w-24 h-24 rounded-[32px] border-4 flex flex-col items-center justify-center mx-auto mb-3 shadow-xl ${changeCfg.bg} ${changeCfg.border}`}>
+                                    <p className={`text-4xl font-black ${changeCfg.color}`}>{bandTest.estimated_band.toFixed(1)}</p>
                                 </div>
-                                <p className="text-xs text-slate-400 font-medium">Band mới</p>
+                                <p className="text-[11px] text-slate-500 font-black uppercase tracking-widest">Band mới</p>
                             </div>
                         </div>
 
-                        <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                            Độ tin cậy: {bandTest.confidence_level}
+                        <div className="mt-10 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-50 text-blue-600 text-[11px] font-black uppercase tracking-widest border border-blue-100">
+                            <Zap className="w-3.5 h-3.5 fill-blue-600" /> Độ tin cậy: {bandTest.confidence_level}
                         </div>
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {[
-                            { label: 'Chính xác', value: `${bandTest.accuracy_percent.toFixed(0)}%`, bg: 'bg-indigo-50', color: 'text-indigo-600' },
-                            { label: 'Câu đúng', value: bandTest.correct_count, bg: 'bg-emerald-50', color: 'text-emerald-600' },
-                            { label: 'Tốc độ', value: `${bandTest.response_time_factor.toFixed(2)}x`, bg: 'bg-amber-50', color: 'text-amber-600' },
-                            ...(bandTest.consistency_score != null ? [{ label: 'Nhất quán', value: `${bandTest.consistency_score.toFixed(0)}%`, bg: 'bg-purple-50', color: 'text-purple-600' }] : []),
+                            { label: 'Chính xác', value: `${bandTest.accuracy_percent.toFixed(0)}%`, bg: 'bg-blue-600', color: 'text-white' },
+                            { label: 'Câu đúng', value: bandTest.correct_count, bg: 'bg-white', color: 'text-emerald-600' },
+                            { label: 'Tốc độ', value: `${bandTest.response_time_factor.toFixed(2)}x`, bg: 'bg-white', color: 'text-amber-600' },
+                            ...(bandTest.consistency_score != null ? [{ label: 'Nhất quán', value: `${bandTest.consistency_score.toFixed(0)}%`, bg: 'bg-white', color: 'text-indigo-600' }] : []),
                         ].map((s) => (
-                            <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
-                                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-                                <p className={`text-xs font-medium mt-1 ${s.color} opacity-70`}>{s.label}</p>
+                            <div key={s.label} className={`${s.bg} rounded-[28px] p-5 text-center shadow-xl shadow-blue-900/5 border border-slate-50 flex flex-col items-center justify-center`}>
+                                <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                                <p className={`text-[10px] font-black uppercase tracking-widest mt-1 opacity-60 ${s.color}`}>
+                                    {s.label}
+                                </p>
                             </div>
                         ))}
                     </div>
@@ -622,27 +713,30 @@ export const BandTestPage: React.FC = () => {
                         const hasWarnings = bandTest.warnings && bandTest.warnings.length > 0;
                         if (!isSuspicious && !hasWarnings) return null;
                         return (
-                            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex gap-3">
-                                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                            <div className="rounded-[32px] border-2 border-amber-100 bg-amber-50/30 p-6 flex gap-4 shadow-lg shadow-amber-900/5">
+                                <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
                                 <div className="flex-1">
-                                    <p className="text-sm font-bold text-amber-800">Cảnh báo về hành vi làm bài</p>
+                                    <p className="text-[13px] font-black text-amber-800 uppercase tracking-tight">Cảnh báo về hành vi làm bài</p>
                                     {isSuspicious && (
-                                        <p className="text-xs text-amber-700 mt-1">
-                                            {bandTest.suspicious_fast_answers} / {bandTest.total_questions} câu trả lời trong &lt;30% thời gian kỳ vọng.
+                                        <p className="text-[13px] text-amber-700 mt-2 font-medium leading-relaxed">
+                                            {bandTest.suspicious_fast_answers} / {bandTest.total_questions} câu trả lời trong <span className="font-black">&lt;30%</span> thời gian kỳ vọng.
                                             Hệ thống nghi ngờ đoán mò — kết quả band có thể chưa phản ánh đúng năng lực thực sự của bạn.
                                         </p>
                                     )}
                                     {hasWarnings && (
-                                        <ul className="mt-1.5 flex flex-col gap-0.5">
+                                        <ul className="mt-3 flex flex-col gap-1.5">
                                             {bandTest.warnings!.map((w, i) => (
-                                                <li key={i} className="text-xs text-amber-700">• {w}</li>
+                                                <li key={i} className="text-[13px] text-amber-700 font-medium flex items-start gap-2">
+                                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                                    {w}
+                                                </li>
                                             ))}
                                         </ul>
                                     )}
-                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                                    <div className="mt-4 flex items-center gap-2 text-[11px] text-amber-600 font-black uppercase tracking-widest bg-white/50 w-fit px-3 py-1 rounded-full border border-amber-100">
                                         <Clock className="w-3.5 h-3.5" />
                                         Hệ số tốc độ: {bandTest.response_time_factor.toFixed(2)}
-                                        {bandTest.response_time_factor < 0.7 && ' — ảnh hưởng đến band ước lượng'}
+                                        {bandTest.response_time_factor < 0.7 && ' (Quá nhanh)'}
                                     </div>
                                 </div>
                             </div>
@@ -650,34 +744,34 @@ export const BandTestPage: React.FC = () => {
                     })()}
 
                     {/* Recommendation */}
-                    <div className={`rounded-2xl border p-5 ${recCfg.bg} ${recCfg.border}`}>
-                        <h2 className={`font-bold text-sm mb-1.5 ${recCfg.text}`}>{recCfg.title}</h2>
+                    <div className={`rounded-[32px] border-2 p-6 shadow-xl shadow-blue-900/5 ${recCfg.bg} ${recCfg.border}`}>
+                        <h2 className={`font-black text-[13px] uppercase tracking-widest mb-2 ${recCfg.text}`}>{recCfg.title}</h2>
                         {bandTest.recommendation === Recommendation.MAINTAIN && bandTest.weak_skills?.length > 0 && (
-                            <p className={`text-sm ${recCfg.text}`}>
-                                Tập trung vào: {bandTest.weak_skills.join(', ')}.
+                            <p className={`text-[15px] font-medium leading-relaxed ${recCfg.text}`}>
+                                Tập trung cải thiện các kỹ năng: <span className="font-black underline">{bandTest.weak_skills.join(', ')}</span>.
                             </p>
                         )}
                     </div>
 
                     {/* Skill breakdown */}
                     {Object.keys(bandTest.skill_breakdown).length > 0 && (
-                        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                            <h2 className="text-base font-bold text-slate-800 mb-4">Chi tiết kỹ năng</h2>
-                            <div className="flex flex-col gap-3">
+                        <div className="bg-white rounded-[32px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-8">
+                            <h2 className="text-lg font-black text-slate-800 mb-6 tracking-tight">Chi tiết kỹ năng</h2>
+                            <div className="flex flex-col gap-5">
                                 {Object.entries(bandTest.skill_breakdown).map(([skill, data]) => {
                                     const meta = SKILL_META[skill] ?? {};
                                     const acc = data.accuracy;
                                     return (
                                         <div key={skill}>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className={`text-xs font-semibold ${(meta as any).color ?? 'text-slate-600'}`}>
-                                                    {(meta as any).label ?? skill.toUpperCase()}
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className={`text-[11px] font-black uppercase tracking-widest ${(meta as any).color ?? 'text-slate-600'}`}>
+                                                    {(meta as any).label ?? skill}
                                                 </span>
-                                                <span className="text-xs text-slate-500">{data.correct}/{data.total} đúng · {acc.toFixed(0)}%</span>
+                                                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{data.correct}/{data.total} đúng <span className="mx-2 opacity-30">|</span> <span className="text-blue-600">{acc.toFixed(0)}%</span></span>
                                             </div>
-                                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-2.5 bg-blue-50 rounded-full overflow-hidden border border-blue-100 shadow-inner">
                                                 <div
-                                                    className={`h-full rounded-full transition-all duration-700 ${acc >= 60 ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                                                    className={`h-full rounded-full transition-all duration-1000 ${acc >= 60 ? 'bg-blue-600' : 'bg-amber-400'}`}
                                                     style={{ width: `${acc}%` }}
                                                 />
                                             </div>
@@ -891,19 +985,19 @@ export const BandTestPage: React.FC = () => {
                     )}
 
                     {/* Navigation buttons */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                         <button
                             onClick={() => navigate('/student/certificate-review/ielts')}
-                            className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                            className="flex-1 py-4 rounded-[20px] border-2 border-slate-200 bg-white text-slate-500 hover:bg-slate-50 font-black text-[13px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-slate-900/5"
                         >
                             <ArrowLeft className="w-4 h-4" /> Về lộ trình
                         </button>
                         {bandApplied && (
                             <button
                                 onClick={() => navigate('/student/certificate-review/ielts')}
-                                className="flex-1 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 py-4 rounded-[20px] bg-blue-600 hover:bg-blue-700 text-white font-black text-[13px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30"
                             >
-                                {applyResult?.roadmap_regenerated ? 'Xem lộ trình mới' : 'Về lộ trình'} <ChevronRight className="w-4 h-4" />
+                                {applyResult?.roadmap_regenerated ? 'Xem lộ trình mới' : 'Tiếp tục học'} <ChevronRight className="w-4 h-4" />
                             </button>
                         )}
                     </div>

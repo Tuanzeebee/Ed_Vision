@@ -74,6 +74,7 @@ export interface Certificate {
   type: "english" | "mos" | "chinese";
   coverImg: string;
   hasBaseScore?: boolean; // true khi đã làm khảo sát và có điểm gốc
+  progressLabel?: string;
 }
 
 export interface RoadmapStep {
@@ -2884,6 +2885,11 @@ export function CertCard({
               style={{ width: `${cert.progress}%` }}
             />
           </div>
+          {cert.progressLabel && (
+            <div className="text-[11px] text-slate-500 truncate">
+              {cert.progressLabel}
+            </div>
+          )}
           <button
             className={`w-full py-2 mt-1 text-sm font-medium rounded-xl cursor-pointer transition-colors ${
               cert.progress > 0

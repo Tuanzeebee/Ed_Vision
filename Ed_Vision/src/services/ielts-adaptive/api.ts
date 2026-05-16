@@ -115,7 +115,7 @@ export const ieltsAdaptiveApi = {
     essay: string;
     task_prompt: string;
     task_type: 'task1' | 'task2';
-    target_band: number;
+    target_band?: number;
     word_count?: number;
     lesson_id?: number;
   }) => {

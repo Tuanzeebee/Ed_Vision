@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { LearningRepositoryItem } from '../../../types/ielts-adaptive.types';
 import { API_BASE_URL } from '@/services/api/config';
-import AiScoreCard from './AiScoreCard';
+import IeltsWritingResult from './IeltsWritingResult';
 import type { AiGradingResult } from './AiScoreCard';
 
 interface WritingItemProps {
@@ -75,7 +75,7 @@ const WritingItem: React.FC<WritingItemProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     essay,
-                    task_prompt: item.stem,
+                    task_prompt: item.stem || 'Vui lòng cung cấp bài viết theo yêu cầu.',
                     task_type: taskType,
                     target_band: targetBand,
                     word_count: wordCount,
@@ -147,32 +147,24 @@ const WritingItem: React.FC<WritingItemProps> = ({
                 </div>
             )}
 
-            {/* Essay preview when graded */}
-            {writingState === 'graded' && essay && (
-                <details className="bg-gray-50 border border-gray-200 rounded-lg">
-                    <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-600">
-                        Bài viết của bạn ({wordCount} từ)
-                    </summary>
-                    <p className="px-4 pb-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{essay}</p>
-                </details>
-            )}
-
             {/* Grading result */}
             {gradingResult && (
-                <div>
-                    <AiScoreCard result={gradingResult} />
+                <div className="-mx-6 -mb-6">
+                    <IeltsWritingResult result={gradingResult} essay={essay} />
                     {!showResult && (
-                        <button
-                            onClick={() => {
-                                setWritingState('writing');
-                                setGradingResult(null);
-                                setElapsedSeconds(0);
-                                timerRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
-                            }}
-                            className="mt-3 text-sm text-blue-600 hover:underline"
-                        >
-                            Viết lại
-                        </button>
+                        <div className="px-6 pb-6 text-center mt-4">
+                            <button
+                                onClick={() => {
+                                    setWritingState('writing');
+                                    setGradingResult(null);
+                                    setElapsedSeconds(0);
+                                    timerRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+                                }}
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-700 underline underline-offset-4 decoration-2"
+                            >
+                                Viết lại bài khác
+                            </button>
+                        </div>
                     )}
                 </div>
             )}

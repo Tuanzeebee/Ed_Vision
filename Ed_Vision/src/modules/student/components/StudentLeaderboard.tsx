@@ -151,27 +151,26 @@ export default function StudentLeaderboard() {
   return (
     <div className="flex flex-col gap-4">
       {/* Current User Profile Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
         <div
           className="p-4 flex items-center gap-3 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #6b4f3a 0%, #8b6f5e 60%, #7a5c4a 100%)",
+            background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 60%, #4f46e5 100%)",
           }}
         >
-          {/* Shimmer overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%)",
+              background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)",
             }}
           />
           <div
-            className="absolute top-0 right-0 w-40 h-20 pointer-events-none"
+            className="absolute top-0 right-0 w-36 h-16 pointer-events-none"
             style={{
               background: "radial-gradient(ellipse at top right, rgba(255,255,255,0.2) 0%, transparent 70%)",
             }}
           />
-          <div className="relative w-14 h-14 rounded-full bg-white/20 p-0.5 shrink-0 border border-white/30 flex items-center justify-center overflow-hidden">
+          <div className="relative w-12 h-12 rounded-full bg-white/20 p-0.5 shrink-0 border border-white/30 flex items-center justify-center overflow-hidden">
             {currentUserAvatar ? (
               <img src={currentUserAvatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
             ) : (
@@ -179,30 +178,30 @@ export default function StudentLeaderboard() {
             )}
           </div>
           <div className="relative">
-            <h3 className="text-lg font-bold text-white drop-shadow">{currentUserName}</h3>
-            <div className={`${rankBadge.bg} w-max px-1.5 py-0.5 rounded text-[10px] text-white border ${rankBadge.border}`}>
+            <h3 className="text-base font-bold text-white drop-shadow">{currentUserName}</h3>
+            <div className={`${rankBadge.bg} w-max px-2 py-0.5 rounded-full text-[10px] text-white border ${rankBadge.border}`}>
               {rankBadge.emoji} {rankBadge.label}
             </div>
           </div>
         </div>
-        <div className="p-4 bg-slate-50 grid grid-cols-2 gap-3">
-          <div className="bg-slate-100/80 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-500">Điểm tuần này</p>
-            <p className="text-2xl font-black text-slate-700">{personalStats.weeklyExp}</p>
+        <div className="p-4 bg-slate-50 grid grid-cols-2 gap-2">
+          <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+            <p className="text-[10px] text-slate-500">Điểm tuần này</p>
+            <p className="text-lg font-black text-slate-700">{personalStats.weeklyExp}</p>
           </div>
-          <div className="bg-slate-100/80 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-500">Hạng tuần này</p>
-            <p className="text-2xl font-black text-slate-700">
+          <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+            <p className="text-[10px] text-slate-500">Hạng tuần này</p>
+            <p className="text-lg font-black text-slate-700">
               {personalStats.weeklyRank ? personalStats.weeklyRank : "Chưa xếp hạng"}
             </p>
           </div>
-          <div className="bg-slate-100/80 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-500">Tổng điểm tích lũy</p>
-            <p className="text-2xl font-black text-green-500">{personalStats.totalScore.toFixed(1)}</p>
+          <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+            <p className="text-[10px] text-slate-500">Tổng điểm tích lũy</p>
+            <p className="text-lg font-black text-emerald-600">{personalStats.totalScore.toFixed(1)}</p>
           </div>
-          <div className="bg-slate-100/80 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-500">Hạng tổng</p>
-            <p className="text-2xl font-black text-sky-500">
+          <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+            <p className="text-[10px] text-slate-500">Hạng tổng</p>
+            <p className="text-lg font-black text-sky-600">
               {personalStats.totalRank ? personalStats.totalRank : "Chưa xếp hạng"}
             </p>
           </div>
@@ -210,30 +209,30 @@ export default function StudentLeaderboard() {
       </div>
 
       {/* Leaderboard List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-0 overflow-hidden relative">
-        <div className="pt-5 pb-3 px-6 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-slate-100 p-0 overflow-hidden relative shadow-sm">
+        <div className="pt-4 pb-2 px-5 flex items-center gap-2">
           <Trophy className="w-6 h-6 text-amber-500 fill-amber-400" />
-          <h3 className="text-lg font-bold text-slate-800">Bảng xếp hạng</h3>
+          <h3 className="text-base font-bold text-slate-800">Bảng xếp hạng</h3>
           <HelpCircle className="w-4 h-4 text-slate-300" />
         </div>
 
         <div className="flex border-b border-slate-100">
           <button
-            className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 cursor-pointer ${tab === "week" ? "border-sky-500 text-sky-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            className={`flex-1 py-2.5 text-[13px] font-semibold transition-colors border-b-2 cursor-pointer ${tab === "week" ? "border-sky-500 text-sky-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
             onClick={() => setTab("week")}
           >
             Xếp hạng tuần
           </button>
           <button
-            className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 cursor-pointer ${tab === "total" ? "border-sky-500 text-sky-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            className={`flex-1 py-2.5 text-[13px] font-semibold transition-colors border-b-2 cursor-pointer ${tab === "total" ? "border-sky-500 text-sky-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
             onClick={() => setTab("total")}
           >
             Tổng xếp hạng
           </button>
         </div>
 
-        <div className="px-4 py-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto overflow-x-hidden relative">
-          <div className="absolute left-8 top-4 bottom-4 w-px bg-slate-100 z-0"></div>
+        <div className="px-4 py-2 flex flex-col gap-1 max-h-[420px] overflow-y-auto overflow-x-hidden relative">
+          <div className="absolute left-7 top-4 bottom-4 w-px bg-slate-100 z-0"></div>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-4 border-slate-200 border-t-sky-500 rounded-full animate-spin"></div>
@@ -242,9 +241,9 @@ export default function StudentLeaderboard() {
             data.map((user, idx) => {
               const rank = idx + 1;
               return (
-                <div key={user.id} className={`relative z-10 flex items-center justify-between p-3 mb-2 rounded-2xl border transition-all ${user.isCurrentUser ? "bg-amber-50 border-amber-200 shadow-sm" : "bg-white border-slate-100 hover:border-sky-200 shadow-sm"}`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-8 flex items-center justify-center shrink-0`}>
+                <div key={user.id} className={`relative z-10 flex items-center justify-between p-2.5 mb-2 rounded-2xl border transition-all ${user.isCurrentUser ? "bg-amber-50 border-amber-200" : "bg-white border-slate-100 hover:border-sky-200"}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 flex items-center justify-center shrink-0`}>
                       {rank === 1 && <Crown className="w-6 h-6 text-amber-500 fill-amber-400" />}
                       {rank === 2 && <Crown className="w-6 h-6 text-slate-400 fill-slate-300" />}
                       {rank === 3 && <Crown className="w-6 h-6 text-orange-600 fill-orange-500" />}
@@ -252,26 +251,26 @@ export default function StudentLeaderboard() {
                     </div>
                     <div className="relative shrink-0">
                       {user.avatar ? (
-                        <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-full object-cover" />
+                        <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover" />
                       ) : (
-                        <div className="w-11 h-11 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg uppercase">
+                        <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm uppercase">
                           {user.name.charAt(0)}
                         </div>
                       )}
                       {user.isOnline && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full"></div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
                       )}
                     </div>
                     <div>
-                      <p className="text-[15px] font-bold text-slate-800 leading-tight mb-1">{user.name}</p>
-                      <div className="flex items-center gap-1 text-sky-500 font-semibold text-xs">
+                      <p className="text-[13px] font-bold text-slate-800 leading-tight mb-1">{user.name}</p>
+                      <div className="flex items-center gap-1 text-sky-500 font-semibold text-[11px]">
                         <Trophy className="w-3.5 h-3.5" />
                         <span>{user.score.toLocaleString()} điểm</span>
                       </div>
                     </div>
                   </div>
-                  <div className="shrink-0 flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-full text-orange-500 font-bold text-[13px]">
-                    <Flame className={`w-4 h-4 ${user.streak > 0 ? "fill-orange-500" : "fill-none text-orange-300"}`} />
+                  <div className="shrink-0 flex items-center gap-1.5 bg-orange-50 px-2.5 py-1 rounded-full text-orange-500 font-bold text-[12px]">
+                    <Flame className={`w-3.5 h-3.5 ${user.streak > 0 ? "fill-orange-500" : "fill-none text-orange-300"}`} />
                     <span className={user.streak > 0 ? "" : "text-orange-400"}>{user.streak}</span>
                   </div>
                 </div>

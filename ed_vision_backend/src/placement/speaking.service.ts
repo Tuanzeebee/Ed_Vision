@@ -36,7 +36,7 @@ export class SpeakingService {
               : 'audio/webm';
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY_SPEAKING}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY_SPEAKING}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

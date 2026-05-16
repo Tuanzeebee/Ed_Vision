@@ -305,3 +305,30 @@ export interface LearningAnalysis {
   weak_points: WeakPoint[];
   recommendations: LearningRecommendation[];
 }
+
+// Speaking types
+export interface SpeakingCriteria {
+  name: string;
+  band: number;
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  keyPhrases?: string[];
+}
+
+export interface SpeakingResult {
+  overallBand: number;
+  transcript: string;
+  question: string;
+  part: number;
+  criteria: {
+    fluencyCoherence: SpeakingCriteria;
+    lexicalResource: SpeakingCriteria;
+    grammaticalRange: SpeakingCriteria;
+    pronunciation: SpeakingCriteria;
+  };
+  generalFeedback: string;
+  modelAnswer: string;
+  keyVocabulary: { word: string; definition: string; example: string }[];
+  pronunciationNotes: { word: string; ipa: string; tip: string }[];
+}

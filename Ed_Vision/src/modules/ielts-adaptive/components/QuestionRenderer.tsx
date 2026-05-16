@@ -19,6 +19,10 @@ interface QuestionRendererProps {
     targetBand?: number;
     /** Skill area of the lesson/test — used to force correct UI regardless of item_type */
     skillArea?: string | null;
+    layout?: 'split' | 'stack';
+    hideQuestion?: boolean;
+    hidePassage?: boolean;
+    hideAudio?: boolean;
 }
 
 // ── Flashcard ─────────────────────────────────────────────────────────────────
@@ -26,12 +30,12 @@ interface QuestionRendererProps {
 const FlashcardItem: React.FC<{ item: LearningRepositoryItem; onNext: () => void }> = ({ item }) => {
     return (
         <div className="flex flex-col gap-4">
-            <div className="min-h-40 flex flex-col rounded-2xl border-2 border-indigo-200 overflow-hidden">
-                <div className="bg-indigo-500 px-6 py-5 flex items-center justify-center text-center">
-                    <p className="text-lg font-bold text-white">{item.stem}</p>
+            <div className="min-h-40 flex flex-col rounded-[32px] border-2 border-blue-100 overflow-hidden shadow-xl shadow-blue-900/5">
+                <div className="bg-blue-600 px-8 py-6 flex items-center justify-center text-center">
+                    <p className="text-xl font-black text-white tracking-tight">{item.stem}</p>
                 </div>
-                <div className="bg-indigo-50 px-6 py-5 flex items-center justify-center text-center flex-1">
-                    <p className="text-base text-indigo-800 leading-relaxed">{item.hint ?? item.explanation ?? '(Không có nội dung)'}</p>
+                <div className="bg-blue-50 px-8 py-6 flex items-center justify-center text-center flex-1">
+                    <p className="text-base text-blue-900 font-medium leading-relaxed">{item.hint ?? item.explanation ?? '(Không có nội dung)'}</p>
                 </div>
             </div>
         </div>
@@ -49,12 +53,12 @@ const SingleChoiceItem: React.FC<{
 }> = ({ item, selected, onAnswer, showResult }) => {
     const options = item.options ?? [];
     return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
             {options.map((opt) => {
                 const isSelected = selected === opt.option_key;
                 const isCorrect = opt.is_correct;
-                let cls = 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700';
-                if (isSelected && !showResult) cls = 'border-indigo-500 bg-indigo-50 text-indigo-800';
+                let cls = 'border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/30 text-slate-600';
+                if (isSelected && !showResult) cls = 'border-blue-500 bg-blue-50 text-blue-800 shadow-lg shadow-blue-900/5';
                 if (showResult && isCorrect) cls = 'border-emerald-500 bg-emerald-50 text-emerald-800';
                 if (showResult && isSelected && !isCorrect) cls = 'border-rose-400 bg-rose-50 text-rose-700';
 
@@ -63,18 +67,18 @@ const SingleChoiceItem: React.FC<{
                         key={opt.id ?? opt.option_key}
                         onClick={() => !showResult && onAnswer(opt.option_key)}
                         disabled={showResult}
-                        className={`w-full text-left px-4 py-3 rounded-2xl border-2 text-sm transition-all flex items-center gap-3 ${cls}`}
+                        className={`w-full text-left px-6 py-4 rounded-[20px] border-2 text-[15px] font-black transition-all flex items-center gap-4 active:scale-[0.98] ${cls}`}
                     >
-                        <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isSelected && !showResult ? 'bg-indigo-500 text-white' :
-                            showResult && isCorrect ? 'bg-emerald-500 text-white' :
-                                showResult && isSelected && !isCorrect ? 'bg-rose-400 text-white' :
-                                    'bg-white border border-slate-300 text-slate-500'
+                        <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black ${isSelected && !showResult ? 'bg-blue-600 text-white shadow-md' :
+                            showResult && isCorrect ? 'bg-emerald-500 text-white shadow-md' :
+                                showResult && isSelected && !isCorrect ? 'bg-rose-400 text-white shadow-md' :
+                                    'bg-white border-2 border-slate-200 text-slate-400'
                             }`}>
                             {showResult && isCorrect ? <CheckCircle2 className="w-4 h-4" /> :
                                 showResult && isSelected && !isCorrect ? <XCircle className="w-4 h-4" /> :
                                     opt.option_key}
                         </span>
-                        <span>{opt.option_text}</span>
+                        <span className="flex-1 leading-tight">{opt.option_text}</span>
                     </button>
                 );
             })}
@@ -105,12 +109,12 @@ const TrueFalseNGItem: React.FC<{
         ];
 
     return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
             {choices.map(({ key, label }) => {
                 const isSelected = selected === key;
                 const isCorrect = key === correctKey;
-                let cls = 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700';
-                if (isSelected && !showResult) cls = 'border-indigo-500 bg-indigo-50 text-indigo-800';
+                let cls = 'border-slate-100 bg-slate-50 hover:border-blue-200 hover:bg-blue-50/30 text-slate-600';
+                if (isSelected && !showResult) cls = 'border-blue-500 bg-blue-50 text-blue-800 shadow-lg shadow-blue-900/5';
                 if (showResult && isCorrect) cls = 'border-emerald-500 bg-emerald-50 text-emerald-800';
                 if (showResult && isSelected && !isCorrect) cls = 'border-rose-400 bg-rose-50 text-rose-700';
 
@@ -119,18 +123,18 @@ const TrueFalseNGItem: React.FC<{
                         key={key}
                         onClick={() => !showResult && onAnswer(key)}
                         disabled={showResult}
-                        className={`w-full text-left px-4 py-3 rounded-2xl border-2 text-sm font-medium transition-all flex items-center gap-3 ${cls}`}
+                        className={`w-full text-left px-6 py-4 rounded-[20px] border-2 text-[15px] font-black transition-all flex items-center gap-4 active:scale-[0.98] ${cls}`}
                     >
-                        <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isSelected && !showResult ? 'bg-indigo-500 text-white' :
-                            showResult && isCorrect ? 'bg-emerald-500 text-white' :
-                                showResult && isSelected && !isCorrect ? 'bg-rose-400 text-white' :
-                                    'bg-white border border-slate-300 text-slate-500'
+                        <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-black ${isSelected && !showResult ? 'bg-blue-600 text-white shadow-md' :
+                            showResult && isCorrect ? 'bg-emerald-500 text-white shadow-md' :
+                                showResult && isSelected && !isCorrect ? 'bg-rose-400 text-white shadow-md' :
+                                    'bg-white border-2 border-slate-200 text-slate-400'
                             }`}>
-                            {showResult && isCorrect ? <CheckCircle2 className="w-3.5 h-3.5" /> :
-                                showResult && isSelected && !isCorrect ? <XCircle className="w-3.5 h-3.5" /> :
+                            {showResult && isCorrect ? <CheckCircle2 className="w-4 h-4" /> :
+                                showResult && isSelected && !isCorrect ? <XCircle className="w-4 h-4" /> :
                                     key === 'True' ? '✓' : key === 'False' ? '✗' : '?'}
                         </span>
-                        <span>{label}</span>
+                        <span className="flex-1 leading-tight">{label}</span>
                     </button>
                 );
             })}
@@ -153,18 +157,18 @@ const GapFillItem: React.FC<{
     const isCorrect = showResult && value.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
             <input
                 type="text"
                 value={value}
                 onChange={(e) => !showResult && onChange(e.target.value)}
                 disabled={showResult}
-                placeholder="Nhập câu trả lời…"
-                className={`w-full px-4 py-3 rounded-2xl border-2 text-sm outline-none transition-colors bg-white text-slate-800 placeholder:text-slate-400 ${showResult
+                placeholder="Bắt đầu nhập đáp án của bạn…"
+                className={`w-full px-6 py-4 rounded-[20px] border-2 text-[15px] font-black outline-none transition-all shadow-inner ${showResult
                     ? isCorrect
                         ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
                         : 'border-rose-400 bg-rose-50 text-rose-700'
-                    : 'border-slate-300 focus:border-indigo-400'
+                    : 'border-slate-100 bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/5'
                     }`}
             />
             {showResult && !isCorrect && correctAnswer && (
@@ -342,16 +346,16 @@ MatchingItem.displayName = 'MatchingItem';
 const ReadingPassage: React.FC<{ passage: string }> = ({ passage }) => {
     const [expanded, setExpanded] = useState(true);
     return (
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl overflow-hidden mb-4">
+        <div className="bg-blue-50/50 border-2 border-blue-100 rounded-[28px] overflow-hidden mb-6 shadow-lg shadow-blue-900/5">
             <button
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-blue-700"
+                className="w-full flex items-center justify-between px-6 py-4 text-[13px] font-black text-blue-700 uppercase tracking-widest bg-blue-50"
                 onClick={() => setExpanded(!expanded)}
             >
-                <span>📖 Đoạn văn</span>
+                <span className="flex items-center gap-2">📖 Đoạn văn đọc hiểu</span>
                 <Eye className="w-4 h-4" />
             </button>
             {expanded && (
-                <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed border-t border-blue-100 pt-3 whitespace-pre-line">
+                <div className="px-6 pb-6 text-[15px] text-slate-700 leading-relaxed font-medium border-t-2 border-blue-100 pt-5 whitespace-pre-line">
                     {passage}
                 </div>
             )}
@@ -395,6 +399,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     lessonId,
     targetBand,
     skillArea,
+    layout = 'stack',
+    hideQuestion = false,
+    hidePassage = false,
+    hideAudio = false,
 }) => {
     const rawType = item.item_type ?? 'single_choice';
     const skill = skillArea?.toLowerCase() ?? '';
@@ -413,56 +421,89 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     // Show audio player for listening skill OR when audio content is present (except speaking)
     const isListening = skill === 'listening' || !!audioUrl || !!audioScript;
 
-    return (
+    const answerInput = type === 'speaking' ? (
+        <SpeakingItem item={item} lessonId={lessonId ?? 0} targetBand={targetBand ?? 5.0}
+            selectedAnswer={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
+    ) : type === 'writing' ? (
+        <WritingItem item={item} lessonId={lessonId ?? 0} targetBand={targetBand ?? 5.0}
+            selectedAnswer={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
+    ) : type === 'flashcard' ? (
+        <FlashcardItem item={item} onNext={() => { }} />
+    ) : type === 'true_false_ng' ? (
+        <TrueFalseNGItem item={item} selected={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
+    ) : type === 'gap_fill' || type === 'short_answer' || type === 'sentence_completion' ? (
+        <GapFillItem item={item} value={selectedAnswer ?? ''} onChange={onAnswer} showResult={showResult} />
+    ) : type === 'matching' ? (
+        <MatchingItem item={item} selected={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
+    ) : (
+        <SingleChoiceItem item={item} selected={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
+    );
+
+    const passageBlock = !hidePassage ? (
         <div className="flex flex-col gap-3">
-            {/* Reading passage */}
-            {itemReadingPassage && <ReadingPassage passage={itemReadingPassage} />}
+            <p className="text-xs font-semibold text-blue-600">📖 Đoạn văn</p>
+            {itemReadingPassage ? <ReadingPassage passage={itemReadingPassage} /> : (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-6 text-xs text-slate-400">
+                    Không có passage cho câu hỏi này.
+                </div>
+            )}
 
             {/* Audio player — always shown for listening lessons; also shown when audioUrl/audioScript present */}
-            {isListening && type !== 'speaking' && (
+            {isListening && type !== 'speaking' && !hideAudio && (
                 <AudioPlayer url={audioUrl} autoPlay />
             )}
 
             {/* Audio script transcript — collapsible panel shown when available */}
-            {audioScript && <AudioScript script={audioScript} />}
+            {audioScript && !hideAudio && <AudioScript script={audioScript} />}
+        </div>
+    ) : null;
 
-            {/* Question stem (not shown for speaking/writing — they render their own prompt) */}
-            {type !== 'speaking' && type !== 'writing' && (
-                <p className="text-slate-800 font-medium text-base leading-relaxed">{item.stem}</p>
-            )}
-
-            {/* Hint */}
-            {item.hint && !showResult && type !== 'speaking' && type !== 'writing' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700">
-                    💡 {item.hint}
+    const questionBlock = !hideQuestion && type !== 'speaking' && type !== 'writing' ? (
+        <div className="space-y-4 mb-6 relative">
+            <div className="absolute -left-6 top-0 w-1 h-full bg-amber-400 rounded-full" />
+            <p className="text-slate-800 font-black text-lg sm:text-xl leading-relaxed tracking-tight">{item.stem}</p>
+            {item.hint && !showResult && (
+                <div className="bg-amber-50 border-2 border-amber-100 rounded-[20px] px-5 py-3 text-[13px] text-amber-700 font-black shadow-lg shadow-amber-900/5">
+                    💡 <span className="uppercase tracking-widest text-[10px] opacity-60 mr-2">Gợi ý:</span> {item.hint}
                 </div>
             )}
+        </div>
+    ) : null;
 
-            {/* Answer input */}
-            {type === 'speaking' ? (
-                <SpeakingItem item={item} lessonId={lessonId ?? 0} targetBand={targetBand ?? 5.0}
-                    selectedAnswer={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
-            ) : type === 'writing' ? (
-                <WritingItem item={item} lessonId={lessonId ?? 0} targetBand={targetBand ?? 5.0}
-                    selectedAnswer={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
-            ) : type === 'flashcard' ? (
-                <FlashcardItem item={item} onNext={() => { }} />
-            ) : type === 'true_false_ng' ? (
-                <TrueFalseNGItem item={item} selected={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
-            ) : type === 'gap_fill' || type === 'short_answer' || type === 'sentence_completion' ? (
-                <GapFillItem item={item} value={selectedAnswer ?? ''} onChange={onAnswer} showResult={showResult} />
-            ) : type === 'matching' ? (
-                <MatchingItem item={item} selected={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
-            ) : (
-                <SingleChoiceItem item={item} selected={selectedAnswer} onAnswer={onAnswer} showResult={showResult} />
-            )}
+    const explanationBlock = showResult && item.explanation && type !== 'speaking' && type !== 'writing' ? (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 leading-relaxed">
+            📝 {item.explanation}
+        </div>
+    ) : null;
 
-            {/* Explanation after result (not for AI-graded types) */}
-            {showResult && item.explanation && type !== 'speaking' && type !== 'writing' && (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 leading-relaxed">
-                    📝 {item.explanation}
+    const useSplitLayout = layout === 'split' && !['writing', 'speaking', 'flashcard'].includes(type);
+
+    return useSplitLayout ? (
+        <div className="flex flex-col gap-5">
+            <div className="flex gap-5 min-h-[360px] max-h-[520px]">
+                <div className="flex-1 rounded-xl border border-slate-200 p-5 bg-white overflow-y-auto">
+                    {passageBlock}
+                </div>
+                <div className="flex-1 rounded-xl border border-slate-200 p-5 bg-white overflow-y-auto">
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Chọn đáp án</p>
+                    <div className="space-y-3">
+                        {answerInput}
+                    </div>
+                    {explanationBlock && <div className="mt-4">{explanationBlock}</div>}
+                </div>
+            </div>
+            {questionBlock && (
+                <div className="pt-5 border-t border-slate-100">
+                    {questionBlock}
                 </div>
             )}
+        </div>
+    ) : (
+        <div className="flex flex-col gap-3">
+            {passageBlock}
+            {questionBlock}
+            {answerInput}
+            {explanationBlock}
         </div>
     );
 };

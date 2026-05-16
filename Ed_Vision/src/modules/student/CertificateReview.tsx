@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef , useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Header from '../../components/layout/Header'
@@ -6,8 +6,8 @@ import Footer from '../../components/layout/Footer'
 import { TrendingUp, Flame, Award, Lock, Diamond, Trophy, FileCheck, MessageSquare, BarChart, Zap } from 'lucide-react'
 import { CERTIFICATES, StatCard, CertCard } from './certificateData'
 import type { CertId, Certificate } from './certificateData'
-import { getAllEnrollments, getToeicReservePoints } from '@/services/api/certificateService'
-import type { EnrollmentResponse, ToeicReservePointsResponse } from '@/services/api/certificateService'
+import { getAllEnrollments } from '@/services/api/certificateService'
+import type { EnrollmentResponse } from '@/services/api/certificateService'
 import { studyRoomService } from '@/services/student/studyRoomService'
 import { getPersonalStats } from '@/services/api/leaderboardService'
 
@@ -18,19 +18,17 @@ export default function CertificateReview() {
 
   // ── Load dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
-  const [toeicReserve, setToeicReserve] = useState<ToeicReservePointsResponse | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [streak, setStreak] = useState(0)
   const [totalExp, setTotalExp] = useState(0)
+  const [currentStudyMap, setCurrentStudyMap] = useState<Record<string, string>>({})
   useEffect(() => {
     Promise.all([
       getAllEnrollments(),
-      getToeicReservePoints().catch(() => null),
       studyRoomService.getMyStudyStats().catch(() => null),
       getPersonalStats().catch(() => null),
-    ]).then(([enrollData, reserveData, statsData, personalStats]) => {
+    ]).then(([enrollData, statsData, personalStats]) => {
       setEnrollments(enrollData)
-      setToeicReserve(reserveData)
       if (statsData) {
         setStreak(statsData.streak.current ?? 0)
       }
@@ -43,7 +41,27 @@ export default function CertificateReview() {
     })
   }, [])
 
-
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const skillLabelMap: Record<string, string> = {
+      reading: 'Reading',
+      listening: 'Listening',
+      writing: 'Writing',
+      speaking: 'Speaking',
+      grammar: 'Grammar',
+      vocabulary: 'Vocabulary',
+    }
+    const ieltsLessonTitle = window.localStorage.getItem('ieltsCurrentLessonTitle') ?? ''
+    const ieltsLessonSkill = window.localStorage.getItem('ieltsCurrentLessonSkill') ?? ''
+    const skillLabel = skillLabelMap[ieltsLessonSkill] ?? ieltsLessonSkill
+    const ieltsProgressLabel = ieltsLessonTitle
+      ? `Đang học: ${skillLabel ? `${skillLabel} · ` : ''}${ieltsLessonTitle}`
+      : ''
+    setCurrentStudyMap((prev) => ({
+      ...prev,
+      ielts: ieltsProgressLabel,
+    }))
+  }, [])
 
   // ── Gắn progress/status thật vào từng chứng chỉ ──────────────────────────────────
   const certsWithProgress: Certificate[] = CERTIFICATES.map((c) => {
@@ -75,7 +93,7 @@ export default function CertificateReview() {
     const status: Certificate['status'] = latest.status === 'active' ? 'active' : 'in-progress'
     // "Đang học" chỉ hiện khi đã làm khảo sát và có điểm gốc (current_score)
     const hasBaseScore = !!(latest.current_score && latest.current_score > 0)
-    return { ...c, progress, status, hasBaseScore }
+    return { ...c, progress, status, hasBaseScore, progressLabel: currentStudyMap[c.id] }
   })
 
   // ── Tổng hợp thống kê từ dữ liệu thật ────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   Allow,
   IsArray,
@@ -54,6 +54,11 @@ export enum Recommendation {
   MAINTAIN = 'maintain',
   REVIEW = 'review',
   REMEDIAL = 'remedial',
+}
+
+export enum WritingTaskType {
+  TASK1 = 'task1',
+  TASK2 = 'task2',
 }
 
 // ============================================
@@ -399,21 +404,28 @@ export class GradeWritingDto {
   @IsNotEmpty()
   task_prompt: string;
 
-  @IsString()
-  task_type: 'task1' | 'task2';
+  @IsOptional()
+  @IsEnum(WritingTaskType)
+  task_type?: 'task1' | 'task2';
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(9)
-  target_band: number;
+  target_band?: number;
 
   @IsOptional()
   @IsInt()
   word_count?: number;
 
   @IsOptional()
-  @IsInt()
-  lesson_id?: number;
+  @Transform(({ value }) => (value !== undefined && value !== null ? String(value) : value))
+  @IsString()
+  lesson_id?: string;
+
+  @IsOptional()
+  @IsString()
+  lesson_level?: string;
 }
 
 export class IeltsCriterionDto {
@@ -439,4 +451,35 @@ export class IeltsGradingResultDto {
   correctedExamples?: CorrectedExampleDto[];
   estimatedCefrLevel: string;
   confidence: 'low' | 'medium' | 'high';
+}
+
+export class IeltsChatMessageDto {
+  @IsString()
+  role: 'user' | 'assistant';
+
+  @IsString()
+  content: string;
+}
+
+export class IeltsChatGroqDto {
+  @IsEnum(SkillArea)
+  @IsNotEmpty()
+  skill: SkillArea;
+
+  @IsString()
+  @IsNotEmpty()
+  context_text: string;
+
+  @IsString()
+  @IsNotEmpty()
+  user_message: string;
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => IeltsChatMessageDto)
+  chat_history?: IeltsChatMessageDto[];
+
+  @IsOptional()
+  @IsNumber()
+  band_target?: number;
 }
