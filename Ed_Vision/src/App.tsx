@@ -87,6 +87,7 @@ import RoadmapPage from "./modules/ielts-adaptive/RoadmapPage";
 import { LessonPage } from "./modules/ielts-adaptive/LessonPage";
 import { BandTestPage } from "./modules/ielts-adaptive/BandTestPage";
 import WritingPracticePage from "./modules/ielts-adaptive/WritingPracticePage";
+import IeltsSpeakingPage from "./modules/ielts-adaptive/IeltsSpeakingPage";
 
 function RoadmapRouteWrapper() {
   const { enrollmentId } = useParams<{ enrollmentId: string }>();
@@ -141,6 +142,8 @@ function App() {
             <Route path="/demo/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
             <Route path="/demo/ielts-adaptive/writing" element={<WritingPracticePage />} />
             <Route path="/demo/ielts-adaptive/writing/:lessonId" element={<WritingPracticePage />} />
+            <Route path="/demo/ielts-adaptive/speaking" element={<IeltsSpeakingPage />} />
+            <Route path="/demo/ielts-adaptive/speaking/:lessonId" element={<IeltsSpeakingPage />} />
 
             {/* IELTS Adaptive direct routes for in-page navigation */}
             <Route path="/ielts-adaptive/roadmap" element={<RoadmapPage enrollmentId={1} />} />
@@ -149,6 +152,8 @@ function App() {
             <Route path="/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
             <Route path="/ielts-adaptive/writing" element={<WritingPracticePage />} />
             <Route path="/ielts-adaptive/writing/:lessonId" element={<WritingPracticePage />} />
+            <Route path="/ielts-adaptive/speaking" element={<IeltsSpeakingPage />} />
+            <Route path="/ielts-adaptive/speaking/:lessonId" element={<IeltsSpeakingPage />} />
 
 
             {/* Auth routes (used by updated components) */}

@@ -4,7 +4,7 @@ import {
     ArrowLeft, BookOpen, Headphones, PenLine, Mic2, BookMarked, Layers,
     Loader2, CheckCircle2, XCircle, Zap, ChevronRight, Trophy,
     FlipHorizontal, Settings, Clock, Play, FileText, ClipboardList,
-    GraduationCap, Lightbulb, ChevronLeft,
+    GraduationCap, Lightbulb, ChevronLeft, Check,
 } from 'lucide-react';
 import { ieltsAdaptiveApi } from '@/services/ielts-adaptive/api';
 import Header from "../../components/layout/Header";
@@ -21,6 +21,9 @@ import {
     type IeltsChatMessage,
 } from "@/services/api/certificateService";
 import IeltsChatPanel from './components/IeltsChatPanel';
+import IeltsVocabPanel, { type VocabWord } from './components/IeltsVocabPanel';
+import FloatingVocabCard from './components/FloatingVocabCard';
+import { syncToMasterVocab } from './components/MasterVocabModal';
 
 const QUICK_ACTIONS_CONFIG = {
     writing: [
@@ -87,25 +90,163 @@ export const LessonPage: React.FC = () => {
     const [chatMessage, setChatMessage] = useState("");
     const [isChatLoading, setIsChatLoading] = useState(false);
     const [isChatExpanded, setIsChatExpanded] = useState(false);
+    const [vocabWords, setVocabWords] = useState<VocabWord[]>([]);
+    const [isExtractingVocab, setIsExtractingVocab] = useState(false);
+
+    const [floatingWord, setFloatingWord] = useState<{ word: string, x: number, y: number } | null>(null);
+    const [toast, setToast] = useState<string | null>(null);
 
     const [isFlipped, setIsFlipped] = useState(false);
 
     useEffect(() => { if (lessonId) loadLesson(); }, [lessonId]);
     useEffect(() => { setIsFlipped(false); }, [currentItemIndex, phase]);
 
-    // Reset chat history when question or phase changes
+    // Keep chat history throughout the lesson session
+    // Removed reset on currentItemIndex or phase change
+
+    // --- Vocab Management ---
     useEffect(() => {
-        setChatHistory([]);
-        setChatMessage("");
-        setIsChatExpanded(false);
-    }, [currentItemIndex, phase]);
+        const saved = localStorage.getItem(`ielts_vocab_${lessonId}`);
+        if (saved) {
+            try { setVocabWords(JSON.parse(saved)); } catch (e) { console.error(e); }
+        }
+    }, [lessonId]);
+
+    useEffect(() => {
+        if (lessonId) {
+            localStorage.setItem(`ielts_vocab_${lessonId}`, JSON.stringify(vocabWords));
+        }
+    }, [vocabWords, lessonId]);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const handleAddVocab = (w: Omit<VocabWord, 'id' | 'created_at'>) => {
+        const word: VocabWord = {
+            ...w,
+            id: Date.now(),
+            created_at: new Date().toISOString()
+        };
+        setVocabWords(prev => [word, ...prev]);
+        showToast(`Đã thêm "${w.en}" vào Note`);
+
+        // Sync to Master
+        if (lesson) {
+            syncToMasterVocab(word, lesson.id, lesson.lesson_title, (lesson.skill_area as any) || 'reading');
+        }
+    };
+
+    const handleDeleteVocab = (id: string | number) => {
+        setVocabWords(prev => prev.filter(w => w.id !== id));
+    };
+
+    const handleToggleStarVocab = (id: string | number) => {
+        setVocabWords(prev => {
+            const updated = prev.map(w => w.id === id ? { ...w, starred: !w.starred } : w);
+            const word = updated.find(w => w.id === id);
+            if (word && lesson) {
+                syncToMasterVocab(word, lesson.id, lesson.lesson_title, (lesson.skill_area as any) || 'reading');
+            }
+            return updated;
+        });
+    };
+
+    const handleUpdateVocabNote = (id: string | number, note: string) => {
+        setVocabWords(prev => prev.map(w => w.id === id ? { ...w, note } : w));
+    };
+
+    const handleExtractVocabAI = async () => {
+        if (!lesson || isExtractingVocab) return;
+        setIsExtractingVocab(true);
+        try {
+            const items = getCurrentItems();
+            const currentPassage =
+                (lesson?.practiceRepo?.metadata as any)?.content?.passage ??
+                (lesson?.miniTestRepo?.metadata as any)?.content?.passage ??
+                items[currentItemIndex]?.reading_passage ??
+                items.find(i => i.reading_passage)?.reading_passage ??
+                '';
+
+            console.log("📖 Passage found:", currentPassage.slice(0, 100));
+
+            if (!currentPassage.trim()) {
+                const fallbackText = items.map(i => i.stem).join(' ');
+                if (!fallbackText.trim()) return;
+            }
+
+            const prompt = `You are a JSON API. Return ONLY a raw JSON array, no explanation, no markdown, no Vietnamese conversational text.
+            Extract 5 advanced or important vocabulary words from this passage.
+            IMPORTANT: Keep the EXACT word form as it appears in the passage (do NOT lemmatize).
+            For example, if "contrasting" appears, use "contrasting", not "contrast".
+            Format: [{"en": "exact_word_in_passage", "vn": "nghĩa tiếng Việt", "type": "noun/verb/adjective/adverb"}]
+            
+            Passage: "${currentPassage.slice(0, 2000)}"`;
+
+            const res = await chatIeltsGroqTutor({
+                skill: 'vocabulary',
+                context_text: 'Học sinh đang yêu cầu trích xuất từ vựng từ bài đọc.',
+                user_message: prompt,
+                band_target: lesson?.band_level ? (lesson.band_level + 0.5) : undefined,
+            });
+
+            const rawResponse = res.answer.trim();
+            const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+            if (!jsonMatch) throw new Error("No JSON array found in AI response");
+
+            const extracted = JSON.parse(jsonMatch[0]);
+
+            const newWords = extracted.map((item: any) => {
+                if (!vocabWords.find(w => w.en.toLowerCase() === item.en.toLowerCase())) {
+                    return {
+                        ...item,
+                        id: Date.now() + Math.random(),
+                        source: 'ai',
+                        starred: false,
+                        note: '',
+                        created_at: new Date().toISOString()
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+
+            if (newWords.length > 0) {
+                setVocabWords(prev => [...newWords, ...prev]);
+            }
+        } catch (err) {
+            console.error("Vocab extraction error:", err);
+        } finally {
+            setIsExtractingVocab(false);
+        }
+    };
+
+    const fetchWordInfoAI = async (word: string, context?: string) => {
+        const prompt = `Return ONLY a JSON object, no markdown, no explanation, no Vietnamese preamble.
+        For the English word "${word}" used in this context: "${context?.slice(0, 500) ?? ''}"
+        Return exactly this format: {"en": "${word}", "phonetic": "IPA here", "type": "noun/verb/adj/adv", "vn": "nghĩa tiếng Việt", "example": "short example sentence using the word in similar context"}`;
+
+        try {
+            const res = await chatIeltsGroqTutor({
+                skill: 'vocabulary',
+                context_text: context || 'Tra cứu từ vựng lẻ.',
+                user_message: prompt,
+            });
+            const jsonMatch = res.answer.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("No JSON found");
+            return JSON.parse(jsonMatch[0]);
+        } catch (err) {
+            console.error("Fetch word info error:", err);
+            throw err;
+        }
+    };
 
     const sendChatMessage = async (overrideMsg?: string) => {
         const msgToSend = overrideMsg || chatMessage;
         if (!msgToSend.trim() || isChatLoading) return;
 
         const userMsg: IeltsChatMessage = { role: "user", content: msgToSend.trim() };
-        if (!overrideMsg) setChatMessage("");
+        if (!overrideMsg || overrideMsg === chatMessage.trim()) setChatMessage("");
         setChatHistory(prev => [...prev, userMsg]);
         setIsChatLoading(true);
         setIsChatExpanded(true);
@@ -139,12 +280,78 @@ export const LessonPage: React.FC = () => {
         }
     };
 
-    const handleTextSelection = () => {
+    const handleTextSelection = (e: React.MouseEvent) => {
         const selection = window.getSelection();
         const selectedText = selection?.toString().trim();
-        if (selectedText && selectedText.length > 0 && selectedText.length < 100) {
-            handleQuickAction(`Giải thích từ "${selectedText}" trong ngữ cảnh này`);
+        if (selectedText && selectedText.length > 0 && selectedText.length < 50) {
+            setFloatingWord({
+                word: selectedText,
+                x: e.clientX,
+                y: e.clientY
+            });
         }
+    };
+
+    const handleWordClick = (word: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const cleanWord = word.replace(/[.,!?;:'"()—–-]/g, "").trim();
+        console.log("🖱️ Word clicked:", cleanWord, "at", e.clientX, e.clientY);
+        if (cleanWord) {
+            setFloatingWord({
+                word: cleanWord,
+                x: e.clientX,
+                y: e.clientY
+            });
+        }
+    };
+
+    const renderPassageWithHighlights = (text: string) => {
+        if (!text) return null;
+
+        // Build map: stem/inflection -> base word for reliable highlighting
+        const vocabMap = new Map<string, string>();
+        vocabWords.forEach(w => {
+            const base = w.en.toLowerCase();
+            vocabMap.set(base, base);
+            // Handle common inflections
+            vocabMap.set(base + 's', base);
+            vocabMap.set(base + 'ing', base);
+            vocabMap.set(base + 'ed', base);
+            vocabMap.set(base + 'ly', base);
+            if (base.endsWith('e')) {
+                vocabMap.set(base.slice(0, -1) + 'ing', base);
+            }
+        });
+
+        // Tách passage thành words, giữ nguyên spaces/punctuation
+        const parts = text.split(/(\s+|[.,!?;:'"()—–-])/);
+
+        return parts.map((part, i) => {
+            const clean = part.replace(/[.,!?;:'"()—–-]/g, '').toLowerCase();
+            const matchedBase = vocabMap.get(clean);
+
+            if (!clean) return <React.Fragment key={i}>{part}</React.Fragment>;
+
+            return (
+                <span
+                    key={i}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setFloatingWord({
+                            word: matchedBase || clean,
+                            x: e.clientX,
+                            y: e.clientY
+                        });
+                    }}
+                    className={`cursor-pointer transition-all duration-150 rounded-md px-0.5 ${matchedBase
+                            ? 'font-bold text-blue-700 underline decoration-dotted decoration-blue-400 underline-offset-4 bg-blue-50/50 hover:bg-blue-100'
+                            : 'hover:bg-slate-200/50 hover:text-blue-600'
+                        }`}
+                >
+                    {part}
+                </span>
+            );
+        });
     };
 
     const handleQuickAction = (p: string) => sendChatMessage(p);
@@ -160,14 +367,37 @@ export const LessonPage: React.FC = () => {
                 Array.isArray(repo?.items) && repo.items.some((item: any) =>
                     WRITING_TYPES.has(String(item?.item_type ?? '')),
                 );
+            const hasSpeakingItem = (repo: any) =>
+                Array.isArray(repo?.items) && repo.items.some((item: any) =>
+                    SPEAKING_TYPES.has(String(item?.item_type ?? '')),
+                );
 
+            // 1. Prioritize explicit skill_area
+            if (skillKey === 'writing') {
+                navigate(`/ielts-adaptive/writing/${data.id}`);
+                return;
+            }
+            if (skillKey === 'speaking') {
+                navigate(`/ielts-adaptive/speaking/${data.id}`);
+                return;
+            }
+
+            // 2. Fallback to item types only if skillKey is not explicitly set to a specific skill
             if (
-                skillKey === 'writing' ||
                 hasWritingItem(data?.practiceRepo) ||
                 hasWritingItem(data?.miniTestRepo) ||
                 hasWritingItem(data?.flashcardRepo)
             ) {
                 navigate(`/ielts-adaptive/writing/${data.id}`);
+                return;
+            }
+
+            if (
+                hasSpeakingItem(data?.practiceRepo) ||
+                hasSpeakingItem(data?.miniTestRepo) ||
+                hasSpeakingItem(data?.flashcardRepo)
+            ) {
+                navigate(`/ielts-adaptive/speaking/${data.id}`);
                 return;
             }
             setLesson(data);
@@ -415,11 +645,11 @@ export const LessonPage: React.FC = () => {
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="h-[calc(100vh-56px)] flex overflow-hidden min-h-0">
                 {phase !== 'results' && (
-                    <aside className="w-[300px] border-r border-slate-200 bg-white flex flex-col shrink-0">
+                    <aside className="w-[300px] border-r border-slate-200 bg-white flex flex-col shrink-0 min-h-0 h-full">
                         <div className="px-6 py-5 shrink-0">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">AI TOOLS</p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">TRỢ LÝ AI</p>
                         </div>
 
                         {/* Tabs */}
@@ -429,7 +659,7 @@ export const LessonPage: React.FC = () => {
                                 className={`pb-3 text-[13px] font-black transition-all relative ${assistantTab === 'ai' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
                                     }`}
                             >
-                                AI hỗ trợ
+                                Trợ lý AI
                                 {assistantTab === 'ai' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full" />}
                             </button>
                             <button
@@ -442,9 +672,9 @@ export const LessonPage: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-hidden flex flex-col">
+                        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                             {assistantTab === 'ai' ? (
-                                <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                                     <IeltsChatPanel
                                         skill={(lesson?.skill_area?.toLowerCase() || 'reading') as any}
                                         chatHistory={chatHistory}
@@ -456,21 +686,15 @@ export const LessonPage: React.FC = () => {
                                     />
                                 </div>
                             ) : (
-                                <div className="p-6 space-y-4">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Từ vựng quan trọng</p>
-                                    <div className="space-y-2.5">
-                                        {[
-                                            { w: 'Sustainable', m: 'bền vững' },
-                                            { w: 'Compelling', m: 'thuyết phục' },
-                                            { w: 'Diverse', m: 'đa dạng' }
-                                        ].map((v, i) => (
-                                            <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                                <span className="text-xs font-black text-slate-700">{v.w}</span>
-                                                <span className="text-[11px] text-slate-500 font-bold">{v.m}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <IeltsVocabPanel
+                                    words={vocabWords}
+                                    onAddWord={handleAddVocab}
+                                    onDeleteWord={handleDeleteVocab}
+                                    onToggleStar={handleToggleStarVocab}
+                                    onUpdateNote={handleUpdateVocabNote}
+                                    onExtractAI={handleExtractVocabAI}
+                                    isExtracting={isExtractingVocab}
+                                />
                             )}
                         </div>
                     </aside>
@@ -560,9 +784,12 @@ export const LessonPage: React.FC = () => {
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-200">
                                         <div className="prose prose-slate max-w-none">
-                                            <p className="text-[16px] text-slate-700 leading-relaxed whitespace-pre-line font-medium">
-                                                {currentPassage || 'Nội dung đoạn văn đang được cập nhật...'}
-                                            </p>
+                                            <div className="text-[16px] text-slate-700 leading-[2.2] font-medium">
+                                                {currentPassage
+                                                    ? renderPassageWithHighlights(currentPassage)
+                                                    : 'Nội dung đoạn văn đang được cập nhật...'
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -644,7 +871,46 @@ export const LessonPage: React.FC = () => {
                     </button>
                 </div>
             </footer>
-            <Footer />
+
+            {toast && (
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 bg-slate-900/90 backdrop-blur-md text-white text-[13px] font-bold rounded-2xl shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-4 z-[1001] flex items-center gap-2 border border-white/10">
+                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                    </div>
+                    {toast}
+                </div>
+            )}
+
+            {floatingWord && (
+                <>
+                    {/* Click outside to close */}
+                    <div
+                        className="fixed inset-0 z-[999]"
+                        onClick={() => setFloatingWord(null)}
+                    />
+                    <FloatingVocabCard
+                        word={floatingWord.word}
+                        position={{ x: floatingWord.x, y: floatingWord.y }}
+                        onClose={() => setFloatingWord(null)}
+                        isAdded={vocabWords.some(w => w.en.toLowerCase() === floatingWord.word.toLowerCase())}
+                        onAdd={(data) => {
+                            handleAddVocab({
+                                en: floatingWord.word,
+                                vn: data.vn,
+                                type: data.type,
+                                phonetic: data.phonetic,
+                                example: data.example,
+                                source: 'user',
+                                note: '',
+                                starred: false
+                            });
+                            setFloatingWord(null);
+                        }}
+                        context={currentPassage}
+                        aiService={fetchWordInfoAI}
+                    />
+                </>
+            )}
         </div>
     );
 };
@@ -714,6 +980,8 @@ const ResultsView: React.FC<{ results: any, lesson: any, skillMeta: any, onBack:
                     Quay lại lộ trình
                 </button>
             </div>
+
+
         </div>
     );
 };

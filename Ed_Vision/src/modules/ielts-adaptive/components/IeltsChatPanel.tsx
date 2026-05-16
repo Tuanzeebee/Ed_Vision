@@ -22,11 +22,10 @@ const IeltsChatPanel: React.FC<IeltsChatPanelProps> = ({
   quickActions,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [chatHistory, isChatLoading]);
 
   const handleSend = () => {
@@ -36,25 +35,25 @@ const IeltsChatPanel: React.FC<IeltsChatPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+  <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
       {/* Header */}
       <div className="flex items-center gap-2 p-4 border-b border-blue-50 bg-blue-50/20 shrink-0">
         <Sparkles className="w-4 h-4 text-blue-600" />
         <span className="text-xs font-black text-blue-900 uppercase tracking-widest">
-          IELTS {skill} Tutor
+          Trợ lý AI IELTS · {skill}
         </span>
       </div>
 
       {/* Chat Area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth custom-scrollbar"
+        className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 scroll-smooth custom-scrollbar"
       >
         {chatHistory.length === 0 && !isChatLoading && (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 opacity-60">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-xl">🧑‍🏫</div>
             <p className="text-sm font-bold text-slate-500">
-              Chào bạn! Mình là IELTS Tutor. <br /> Bạn có câu hỏi nào về phần này không?
+              Chào bạn! Mình là trợ lý AI IELTS. <br /> Bạn có câu hỏi nào về phần này không?
             </p>
           </div>
         )}
@@ -65,9 +64,9 @@ const IeltsChatPanel: React.FC<IeltsChatPanelProps> = ({
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[85%] p-3 rounded-2xl text-[14px] font-medium leading-relaxed shadow-sm ${msg.role === 'user'
+              className={`max-w-[85%] px-3 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm whitespace-pre-wrap break-words ${msg.role === 'user'
                 ? 'bg-blue-600 text-white rounded-tr-sm'
-                : 'bg-slate-100 text-slate-700 rounded-tl-sm whitespace-pre-line'
+                : 'bg-slate-100 text-slate-700 rounded-tl-sm'
                 }`}
             >
               {msg.content}
@@ -84,10 +83,11 @@ const IeltsChatPanel: React.FC<IeltsChatPanelProps> = ({
             </div>
           </div>
         )}
+        <div ref={bottomRef} />
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-slate-100 space-y-3 bg-white shrink-0">
+  <div className="p-4 border-t border-slate-100 space-y-3 bg-white shrink-0">
         {/* Quick Actions */}
         {quickActions.length > 0 && chatHistory.length < 2 && (
           <div className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ const IeltsChatPanel: React.FC<IeltsChatPanelProps> = ({
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSend();
             }}
-            placeholder="Đặt câu hỏi cho AI..."
+            placeholder="Đặt câu hỏi cho trợ lý AI..."
             disabled={isChatLoading}
             className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-2xl py-3.5 pl-4 pr-12 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-bold"
           />

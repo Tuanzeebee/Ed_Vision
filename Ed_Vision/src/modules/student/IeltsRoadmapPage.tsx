@@ -30,23 +30,22 @@ import Footer from "../../components/layout/Footer";
 import { ieltsAdaptiveApi } from "@/services/ielts-adaptive/api";
 import { LessonStatus, type Lesson, type Roadmap } from "../../types/ielts-adaptive.types";
 import StudentLeaderboard from "./components/StudentLeaderboard";
-
-// ── helpers ───────────────────────────────────────────────────────────────────
+import { MasterVocabModal } from "../ielts-adaptive/components/MasterVocabModal";
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string; label: string }> = {
-    reading:    { icon: <BookOpen   className="w-4 h-4" />, color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-200",   label: "Reading"    },
-    listening:  { icon: <Headphones className="w-4 h-4" />, color: "text-sky-500",    bg: "bg-sky-50",    border: "border-sky-100",    label: "Listening"  },
-    writing:    { icon: <PenLine    className="w-4 h-4" />, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100", label: "Writing"    },
-    speaking:   { icon: <Mic2      className="w-4 h-4" />, color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200",  label: "Speaking"   },
-    grammar:    { icon: <BookMarked className="w-4 h-4" />, color: "text-rose-600",   bg: "bg-rose-50",   border: "border-rose-200",   label: "Grammar"    },
-    vocabulary: { icon: <Layers    className="w-4 h-4" />, color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200", label: "Vocabulary" },
+    reading: { icon: <BookOpen className="w-4 h-4" />, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", label: "Reading" },
+    listening: { icon: <Headphones className="w-4 h-4" />, color: "text-sky-500", bg: "bg-sky-50", border: "border-sky-100", label: "Listening" },
+    writing: { icon: <PenLine className="w-4 h-4" />, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100", label: "Writing" },
+    speaking: { icon: <Mic2 className="w-4 h-4" />, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", label: "Speaking" },
+    grammar: { icon: <BookMarked className="w-4 h-4" />, color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200", label: "Grammar" },
+    vocabulary: { icon: <Layers className="w-4 h-4" />, color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200", label: "Vocabulary" },
 };
 
 const STATUS_CFG = {
-    [LessonStatus.COMPLETED]:  {
+    [LessonStatus.COMPLETED]: {
         icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
         badge: "bg-emerald-50 text-emerald-700", bar: "bg-emerald-500",
-        btnLabel: "Review",   btnClass: "bg-emerald-100 hover:bg-emerald-200 text-emerald-700",
+        btnLabel: "Review", btnClass: "bg-emerald-100 hover:bg-emerald-200 text-emerald-700",
         label: "Hoàn thành",
     },
     [LessonStatus.IN_PROGRESS]: {
@@ -55,16 +54,16 @@ const STATUS_CFG = {
         btnLabel: "Tiếp tục", btnClass: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200",
         label: "Đang học",
     },
-    [LessonStatus.UNLOCKED]:   {
+    [LessonStatus.UNLOCKED]: {
         icon: <PlayCircle className="w-4 h-4 text-blue-500" />,
         badge: "bg-blue-50 text-blue-700", bar: "bg-blue-400",
         btnLabel: "Bắt đầu", btnClass: "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200",
         label: "Sẵn sàng",
     },
-    [LessonStatus.LOCKED]:     {
+    [LessonStatus.LOCKED]: {
         icon: <Lock className="w-4 h-4 text-slate-400" />,
         badge: "bg-slate-100 text-slate-500", bar: "bg-slate-200",
-        btnLabel: "Khoá",    btnClass: "bg-slate-100 text-slate-400 cursor-not-allowed",
+        btnLabel: "Khoá", btnClass: "bg-slate-100 text-slate-400 cursor-not-allowed",
         label: "Khoá",
     },
 };
@@ -77,19 +76,20 @@ const normalizeBand = (val: string | number) => {
 // ── main ──────────────────────────────────────────────────────────────────────
 
 export const IeltsRoadmapPage: React.FC = () => {
-    const navigate  = useNavigate();
-    const location  = useLocation();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    const [roadmap,             setRoadmap]             = useState<Roadmap | null>(null);
-    const [loading,             setLoading]             = useState(true);
-    const [error,               setError]               = useState<string | null>(null);
-    const [activeSkill,         setActiveSkill]         = useState<string | null>(null);
-    const [showPlacementSuccess,setShowPlacementSuccess]= useState(false);
-    const [showTargetModal,     setShowTargetModal]     = useState(false);
-    const [draftTargetBand,     setDraftTargetBand]     = useState("");
+    const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [activeSkill, setActiveSkill] = useState<string | null>(null);
+    const [showPlacementSuccess, setShowPlacementSuccess] = useState(false);
+    const [showTargetModal, setShowTargetModal] = useState(false);
+    const [draftTargetBand, setDraftTargetBand] = useState("");
     const [draftCompletionDate, setDraftCompletionDate] = useState("");
-    const [saving,              setSaving]              = useState(false);
-    const [saveError,           setSaveError]           = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [isVocabModalOpen, setIsVocabModalOpen] = useState(false);
 
     // ── load ─────────────────────────────────────────────────────────────────
     const loadRoadmap = useCallback(async () => {
@@ -125,9 +125,15 @@ export const IeltsRoadmapPage: React.FC = () => {
     useEffect(() => { loadRoadmap(); }, [loadRoadmap]);
 
     // ── actions ───────────────────────────────────────────────────────────────
-    const handleStartLesson  = (lesson: Lesson) => {
+    const handleStartLesson = (lesson: Lesson) => {
         if (lesson.status === LessonStatus.LOCKED) return;
         navigate(`/ielts-adaptive/lesson/${lesson.id}`);
+    };
+    const handleOpenAiModule = () => {
+        const fallbackLesson = roadmap?.lessons?.find(l => l.status !== LessonStatus.LOCKED)
+            || roadmap?.lessons?.[0];
+        if (!fallbackLesson) return;
+        navigate(`/ielts-adaptive/lesson/${fallbackLesson.id}`);
     };
     const handleOpenTargetModal = () => {
         if (!roadmap) return;
@@ -150,32 +156,32 @@ export const IeltsRoadmapPage: React.FC = () => {
 
     // ── derived ───────────────────────────────────────────────────────────────
     const completedLessons = roadmap?.lessons?.filter(l => l.status === LessonStatus.COMPLETED).length ?? 0;
-    const currentLesson    = roadmap?.lessons?.find(l => l.status === LessonStatus.IN_PROGRESS)
-                          || roadmap?.lessons?.find(l => l.status === LessonStatus.UNLOCKED);
-    const totalLessons     = roadmap?.lessons?.length ?? 0;
-    const progressPercent  = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const currentLesson = roadmap?.lessons?.find(l => l.status === LessonStatus.IN_PROGRESS)
+        || roadmap?.lessons?.find(l => l.status === LessonStatus.UNLOCKED);
+    const totalLessons = roadmap?.lessons?.length ?? 0;
+    const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-    const parseDateParts = (iso: string): [number,number,number] | null => {
+    const parseDateParts = (iso: string): [number, number, number] | null => {
         const parts = iso.split(/[T ]/)[0].split("-").map(Number);
-        return parts.length === 3 && !parts.some(isNaN) ? [parts[0],parts[1],parts[2]] : null;
+        return parts.length === 3 && !parts.some(isNaN) ? [parts[0], parts[1], parts[2]] : null;
     };
     const dDayValue = (() => {
         if (!roadmap?.target_completion_date) return null;
         const p = parseDateParts(roadmap.target_completion_date); if (!p) return null;
-        const today = new Date(); today.setHours(0,0,0,0);
-        return Math.max(0, Math.ceil((new Date(p[0],p[1]-1,p[2]).getTime() - today.getTime()) / 86400000));
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        return Math.max(0, Math.ceil((new Date(p[0], p[1] - 1, p[2]).getTime() - today.getTime()) / 86400000));
     })();
     const examDateLabel = (() => {
         if (!roadmap?.target_completion_date) return null;
         const p = parseDateParts(roadmap.target_completion_date); if (!p) return null;
-        return new Date(p[0],p[1]-1,p[2]).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit",year:"numeric"});
+        return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
     })();
 
-    const skillKeys  = ["reading","listening","writing","speaking","grammar","vocabulary"];
+    const skillKeys = ["reading", "listening", "writing", "speaking", "grammar", "vocabulary"];
     const skillStats = skillKeys.map(sk => {
         const lessons = roadmap?.lessons?.filter(l => l.skill_area === sk) ?? [];
         const done = lessons.filter(l => l.status === LessonStatus.COMPLETED).length;
-        return { key: sk, total: lessons.length, done, pct: lessons.length > 0 ? Math.round((done/lessons.length)*100) : 0 };
+        return { key: sk, total: lessons.length, done, pct: lessons.length > 0 ? Math.round((done / lessons.length) * 100) : 0 };
     });
     const filteredLessons = activeSkill ? (roadmap?.lessons?.filter(l => l.skill_area === activeSkill) ?? []) : [];
 
@@ -232,7 +238,7 @@ export const IeltsRoadmapPage: React.FC = () => {
                 <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#1A4A7A] via-[#1D5A96] to-[#1E3F6E] border border-white/10 p-8 shadow-[0_20px_60px_rgba(26,74,122,0.35)]">
                     <div className="absolute top-0 right-0 w-[360px] h-[360px] bg-[radial-gradient(circle,rgba(106,174,224,0.18),transparent_70%)] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
                     <div className="absolute bottom-0 left-[30%] w-[200px] h-[200px] bg-[radial-gradient(circle,rgba(43,125,196,0.25),transparent_70%)] translate-y-1/2 pointer-events-none" />
-                    <div className="absolute inset-0 rounded-[24px] opacity-70 pointer-events-none" style={{ backgroundImage:"linear-gradient(rgba(195,220,247,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(195,220,247,0.06) 1px,transparent 1px)", backgroundSize:"40px 40px" }} />
+                    <div className="absolute inset-0 rounded-[24px] opacity-70 pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(195,220,247,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(195,220,247,0.06) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
 
                     <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-center">
                         <div className="flex-1 space-y-6">
@@ -253,11 +259,11 @@ export const IeltsRoadmapPage: React.FC = () => {
                             {/* KPI Pills */}
                             <div className="flex flex-wrap gap-3">
                                 {[
-                                    { label:"Current",  val: roadmap.current_band.toFixed(1), icon:<TrendingUp className="w-3.5 h-3.5"/>, color:"text-white" },
-                                    { label:"Target",   val: roadmap.target_band.toFixed(1),  icon:<Target className="w-3.5 h-3.5"/>,     color:"text-amber-300" },
-                                    { label:"D-Day",    val: dDayValue ?? "—",                icon:<Calendar className="w-3.5 h-3.5"/>,   color:"text-emerald-300" },
-                                    { label:"Progress", val: `${progressPercent}%`,           icon:<Star className="w-3.5 h-3.5"/>,       color:"text-[#6AAEE0]" },
-                                ].map((kpi,i) => (
+                                    { label: "Current", val: roadmap.current_band.toFixed(1), icon: <TrendingUp className="w-3.5 h-3.5" />, color: "text-white" },
+                                    { label: "Target", val: roadmap.target_band.toFixed(1), icon: <Target className="w-3.5 h-3.5" />, color: "text-amber-300" },
+                                    { label: "D-Day", val: dDayValue ?? "—", icon: <Calendar className="w-3.5 h-3.5" />, color: "text-emerald-300" },
+                                    { label: "Progress", val: `${progressPercent}%`, icon: <Star className="w-3.5 h-3.5" />, color: "text-[#6AAEE0]" },
+                                ].map((kpi, i) => (
                                     <div key={i} className="px-4 py-3 rounded-2xl border bg-white/10 border-white/15 flex flex-col gap-0.5 min-w-[100px] backdrop-blur-md">
                                         <span className="text-[9px] font-bold text-[#6AAEE0] uppercase tracking-widest flex items-center gap-1">{kpi.icon} {kpi.label}</span>
                                         <span className={`text-xl font-black ${kpi.color}`}>{kpi.val}</span>
@@ -272,7 +278,7 @@ export const IeltsRoadmapPage: React.FC = () => {
                                     <span className="text-[#6AAEE0]">{progressPercent}%</span>
                                 </div>
                                 <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-[#2B7DC4] to-[#6AAEE0] rounded-full transition-all duration-700" style={{ width:`${progressPercent}%` }} />
+                                    <div className="h-full bg-gradient-to-r from-[#2B7DC4] to-[#6AAEE0] rounded-full transition-all duration-700" style={{ width: `${progressPercent}%` }} />
                                 </div>
                             </div>
 
@@ -295,18 +301,18 @@ export const IeltsRoadmapPage: React.FC = () => {
                                 {currentLesson ? (
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${SKILL_META[currentLesson.skill_area]?.color.replace("text-","bg-")}`} />
+                                            <div className={`w-1.5 h-1.5 rounded-full ${SKILL_META[currentLesson.skill_area]?.color.replace("text-", "bg-")}`} />
                                             <span className={`text-[11px] font-bold uppercase ${SKILL_META[currentLesson.skill_area]?.color}`}>{SKILL_META[currentLesson.skill_area]?.label}</span>
                                         </div>
                                         <h3 className="text-sm font-bold text-white leading-snug">{currentLesson.lesson_title}</h3>
                                         <div className="flex items-center gap-3 text-[11px] text-[#C3DCF7]/70 font-medium">
-                                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5"/> {currentLesson.estimated_minutes} phút</span>
-                                            <span className="flex items-center gap-1"><Target className="w-3.5 h-3.5"/> Band {currentLesson.band_level.toFixed(1)}</span>
+                                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {currentLesson.estimated_minutes} phút</span>
+                                            <span className="flex items-center gap-1"><Target className="w-3.5 h-3.5" /> Band {currentLesson.band_level.toFixed(1)}</span>
                                         </div>
                                         <div className="flex gap-1.5 flex-wrap">
-                                            {currentLesson.flashcard_repo_id  && <span className="px-2 py-0.5 rounded-md bg-indigo-400/15 text-indigo-200 text-[9px] font-bold uppercase">Flashcard</span>}
-                                            {currentLesson.practice_repo_id   && <span className="px-2 py-0.5 rounded-md bg-emerald-400/15 text-emerald-200 text-[9px] font-bold uppercase">Practice</span>}
-                                            {currentLesson.mini_test_repo_id  && <span className="px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-200 text-[9px] font-bold uppercase">Mock Test</span>}
+                                            {currentLesson.flashcard_repo_id && <span className="px-2 py-0.5 rounded-md bg-indigo-400/15 text-indigo-200 text-[9px] font-bold uppercase">Flashcard</span>}
+                                            {currentLesson.practice_repo_id && <span className="px-2 py-0.5 rounded-md bg-emerald-400/15 text-emerald-200 text-[9px] font-bold uppercase">Practice</span>}
+                                            {currentLesson.mini_test_repo_id && <span className="px-2 py-0.5 rounded-md bg-amber-400/15 text-amber-200 text-[9px] font-bold uppercase">Mock Test</span>}
                                         </div>
                                         <button onClick={() => handleStartLesson(currentLesson)} className="w-full py-2.5 rounded-xl bg-[#2B7DC4] text-white font-bold text-[12px] hover:bg-[#3589cf] transition-all flex items-center justify-center gap-1">
                                             Bắt đầu →
@@ -334,15 +340,14 @@ export const IeltsRoadmapPage: React.FC = () => {
                         <p className="text-[11px] text-slate-500 mt-0.5">Duy trì mỗi ngày để nhận phần thưởng tuần!</p>
                     </div>
                     <div className="flex gap-1.5">
-                        {["T2","T3","T4","T5","T6","T7","CN"].map((d,i) => {
-                            const isDone  = i < completedLessons % 7;
+                        {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d, i) => {
+                            const isDone = i < completedLessons % 7;
                             const isToday = i === (new Date().getDay() + 6) % 7;
                             return (
-                                <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${
-                                    isDone  ? "bg-orange-50 border-orange-200 text-orange-500" :
+                                <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${isDone ? "bg-orange-50 border-orange-200 text-orange-500" :
                                     isToday ? "bg-indigo-50/70 border-indigo-300 text-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.2)]" :
-                                              "bg-white/70 border-slate-100 text-slate-300"
-                                }`}>{d}</div>
+                                        "bg-white/70 border-slate-100 text-slate-300"
+                                    }`}>{d}</div>
                             );
                         })}
                     </div>
@@ -371,16 +376,15 @@ export const IeltsRoadmapPage: React.FC = () => {
                             </div>
                             {/* 4-column skill grid — always 4 cols on md+ */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {skillStats.slice(0,4).map(sk => {
-                                    const meta    = SKILL_META[sk.key] || SKILL_META.reading;
+                                {skillStats.slice(0, 4).map(sk => {
+                                    const meta = SKILL_META[sk.key] || SKILL_META.reading;
                                     const isActive = activeSkill === sk.key;
                                     return (
                                         <div
                                             key={sk.key}
                                             onClick={() => setActiveSkill(isActive ? null : sk.key)}
-                                            className={`group relative bg-white/85 border rounded-2xl p-4 transition-all cursor-pointer hover:-translate-y-1 hover:shadow-md ${
-                                                isActive ? "border-indigo-300 ring-1 ring-indigo-100 shadow-md -translate-y-1" : "border-slate-100/80"
-                                            }`}
+                                            className={`group relative bg-white/85 border rounded-2xl p-4 transition-all cursor-pointer hover:-translate-y-1 hover:shadow-md ${isActive ? "border-indigo-300 ring-1 ring-indigo-100 shadow-md -translate-y-1" : "border-slate-100/80"
+                                                }`}
                                         >
                                             {isActive && (
                                                 <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center">
@@ -395,10 +399,10 @@ export const IeltsRoadmapPage: React.FC = () => {
                                             </div>
                                             <h3 className="text-sm font-bold text-slate-800 mb-0.5">{meta.label}</h3>
                                             <p className="text-[11px] text-slate-500 mb-3">
-                                                {sk.done}/{sk.total} bài · {sk.pct===100 ? "Đã xong" : sk.pct>0 ? "Đang ôn" : "Mới bắt đầu"}
+                                                {sk.done}/{sk.total} bài · {sk.pct === 100 ? "Đã xong" : sk.pct > 0 ? "Đang ôn" : "Mới bắt đầu"}
                                             </p>
                                             <div className="h-1 bg-slate-100/70 rounded-full overflow-hidden">
-                                                <div className={`h-full ${meta.color.replace("text-","bg-")} transition-all duration-1000`} style={{ width:`${sk.pct}%` }} />
+                                                <div className={`h-full ${meta.color.replace("text-", "bg-")} transition-all duration-1000`} style={{ width: `${sk.pct}%` }} />
                                             </div>
                                             <div className="mt-2 flex justify-between text-[10px] font-bold text-slate-400">
                                                 <span>0%</span><span className={meta.color}>{sk.pct}%</span>
@@ -417,24 +421,31 @@ export const IeltsRoadmapPage: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {[
-                                    { icon:"📰", type:"Từ vựng",  title:"Academic Word List — Top 200", desc:"200 từ quan trọng cho Reading & Writing", color:"indigo" },
-                                    { icon:"🧠", type:"Grammar",  title:"Sửa lỗi ngữ pháp với AI",      desc:"Nộp bài viết để AI phân tích và sửa lỗi", color:"emerald" },
-                                ].map((rec,i) => (
-                                    <div key={i} className="bg-white/85 border border-slate-100/80 rounded-xl p-4 flex items-start gap-4 hover:bg-white transition-colors cursor-pointer group shadow-xs">
+                                    { icon: "📰", type: "Từ vựng", title: "Academic Word List", desc: "", color: "indigo" },
+                                    { icon: "🧠", type: "Trợ lý AI", title: "Trợ lý AI — Sửa lỗi ngữ pháp", desc: "Nộp bài để AI sửa lỗi; gợi ý thêm sẽ do Gemini cung cấp ở màn hình ngoài", color: "emerald", onClick: handleOpenAiModule },
+                                ].map((rec, i) => (
+                                    <div
+                                        key={i}
+                                        onClick={rec.onClick || (rec.title.includes("Academic Word List") ? () => setIsVocabModalOpen(true) : undefined)}
+                                        className={`bg-white/85 border border-slate-100/80 rounded-xl p-4 flex items-start gap-4 transition-colors ${rec.onClick || rec.title.includes("Academic Word List") ? "cursor-pointer hover:bg-white group shadow-xs" : "cursor-default"}`}
+                                    >
                                         <div className={`w-12 h-12 rounded-xl bg-${rec.color}-50 flex items-center justify-center text-xl shrink-0`}>{rec.icon}</div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{rec.type}</p>
                                             <h4 className="text-[13px] font-bold text-slate-800">{rec.title}</h4>
                                             <p className="text-[11px] text-slate-400">{rec.desc}</p>
                                         </div>
-                                        <span className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">→</span>
+                                        <span className={`text-xs font-bold text-indigo-600 transition-opacity shrink-0 ${rec.onClick ? "opacity-0 group-hover:opacity-100" : "opacity-0"}`}>→</span>
                                     </div>
                                 ))}
                             </div>
                         </section>
 
                         {/* AI Insight */}
-                        <section className="bg-white/95 border border-indigo-100/60 rounded-[22px] p-5 shadow-sm">
+                        <section
+                            onClick={handleOpenAiModule}
+                            className="bg-white/95 border border-indigo-100/60 rounded-[22px] p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        >
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg">✦</div>
                                 <div>
@@ -444,6 +455,7 @@ export const IeltsRoadmapPage: React.FC = () => {
                             </div>
                             <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
                                 Chào bạn! Hiện tại hệ thống chưa đủ dữ liệu để phân tích chi tiết. Hãy hoàn thành ít nhất 1 bài tập nhé.
+                                Gợi ý bổ sung sẽ được Gemini cung cấp ở màn hình ngoài.
                             </p>
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <div className="flex items-start gap-2 text-[11px] text-slate-500">
@@ -518,23 +530,22 @@ export const IeltsRoadmapPage: React.FC = () => {
                             {filteredLessons.length === 0 ? (
                                 <div className="text-center py-10 text-slate-400 text-sm">Không có bài học nào.</div>
                             ) : filteredLessons.map((lesson) => {
-                                const cfg     = STATUS_CFG[lesson.status] || STATUS_CFG[LessonStatus.LOCKED];
-                                const skill   = SKILL_META[lesson.skill_area] || SKILL_META.reading;
+                                const cfg = STATUS_CFG[lesson.status] || STATUS_CFG[LessonStatus.LOCKED];
+                                const skill = SKILL_META[lesson.skill_area] || SKILL_META.reading;
                                 const isLocked = lesson.status === LessonStatus.LOCKED;
-                                const isCurrent= currentLesson?.id === lesson.id;
+                                const isCurrent = currentLesson?.id === lesson.id;
                                 return (
                                     <div
                                         key={lesson.id}
                                         onClick={() => handleStartLesson(lesson)}
-                                        className={`rounded-xl p-4 border flex flex-col gap-3 transition-all ${
-                                            isLocked
-                                                ? "opacity-55 cursor-not-allowed border-slate-100 bg-white/60"
-                                                : `cursor-pointer bg-white border-slate-100 hover:border-indigo-200 hover:shadow-sm ${isCurrent ? "ring-1 ring-indigo-200 border-indigo-200" : ""}`
-                                        }`}
+                                        className={`rounded-xl p-4 border flex flex-col gap-3 transition-all ${isLocked
+                                            ? "opacity-55 cursor-not-allowed border-slate-100 bg-white/60"
+                                            : `cursor-pointer bg-white border-slate-100 hover:border-indigo-200 hover:shadow-sm ${isCurrent ? "ring-1 ring-indigo-200 border-indigo-200" : ""}`
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${skill.color.replace("text-","bg-")}`} />
+                                                <div className={`w-1.5 h-1.5 rounded-full ${skill.color.replace("text-", "bg-")}`} />
                                                 <span className={`text-[10px] font-bold uppercase tracking-wider ${skill.color}`}>{skill.label}</span>
                                             </div>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.badge}`}>{cfg.label}</span>
@@ -542,14 +553,14 @@ export const IeltsRoadmapPage: React.FC = () => {
                                         <div>
                                             <h3 className="text-[13px] font-bold text-slate-800 leading-snug mb-1">{lesson.lesson_title}</h3>
                                             <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
-                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {lesson.estimated_minutes}m</span>
-                                                <span className="flex items-center gap-1"><Target className="w-3 h-3"/> Band {lesson.band_level.toFixed(1)}</span>
+                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {lesson.estimated_minutes}m</span>
+                                                <span className="flex items-center gap-1"><Target className="w-3 h-3" /> Band {lesson.band_level.toFixed(1)}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex gap-1">
                                                 {lesson.flashcard_repo_id && <span className="text-[10px]" title="Flashcard">📇</span>}
-                                                {lesson.practice_repo_id  && <span className="text-[10px]" title="Practice">✍️</span>}
+                                                {lesson.practice_repo_id && <span className="text-[10px]" title="Practice">✍️</span>}
                                                 {lesson.mini_test_repo_id && <span className="text-[10px]" title="Mock Test">🎯</span>}
                                             </div>
                                             <button className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${cfg.btnClass}`}>
@@ -622,6 +633,11 @@ export const IeltsRoadmapPage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <MasterVocabModal
+                isOpen={isVocabModalOpen}
+                onClose={() => setIsVocabModalOpen(false)}
+            />
         </div>
     );
 };

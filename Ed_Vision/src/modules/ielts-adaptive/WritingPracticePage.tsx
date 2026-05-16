@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, PenLine } from "lucide-react";
+import { ArrowLeft, ChevronRight, PenLine, Settings } from "lucide-react";
 import { ieltsAdaptiveApi } from "@/services/ielts-adaptive/api";
+import { syncToMasterVocab } from "./components/MasterVocabModal";
 import type { LearningRepositoryItem, Lesson } from "@/types/ielts-adaptive.types";
 import {
   chatIeltsGroqTutor,
@@ -9,6 +10,7 @@ import {
 } from "@/services/api/certificateService";
 import IeltsWritingResult from "./components/IeltsWritingResult";
 import IeltsChatPanel from "./components/IeltsChatPanel";
+import IeltsVocabPanel, { type VocabWord } from "./components/IeltsVocabPanel";
 
 const QUICK_ACTIONS = [
   { label: "Kiểm tra ngữ pháp", prompt: "Kiểm tra ngữ pháp bài viết này và chỉ ra các lỗi cụ thể" },
@@ -246,6 +248,8 @@ export default function WritingPracticePage() {
   const [chatMessage, setChatMessage] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [vocabWords, setVocabWords] = useState<VocabWord[]>([]);
+  const [isExtractingVocab, setIsExtractingVocab] = useState(false);
 
   const assistantRef = useRef<HTMLDivElement | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
@@ -272,19 +276,112 @@ export default function WritingPracticePage() {
 
   const writingItem = useMemo(() => pickWritingItem(lesson), [lesson]);
 
-  // Reset chat when question changes
+  // Keep chat history throughout the writing practice session
+  // Removed reset on lessonId or writingItem change
+
+  // --- Vocab Management ---
   useEffect(() => {
-    setChatHistory([]);
-    setChatMessage("");
-    setIsChatExpanded(false);
-  }, [lessonId, writingItem?.id]);
+    const saved = localStorage.getItem(`ielts_vocab_${lessonId}`);
+    if (saved) {
+      try { setVocabWords(JSON.parse(saved)); } catch (e) { console.error(e); }
+    }
+  }, [lessonId]);
+
+  useEffect(() => {
+    if (lessonId) {
+      localStorage.setItem(`ielts_vocab_${lessonId}`, JSON.stringify(vocabWords));
+    }
+  }, [vocabWords, lessonId]);
+
+  const handleAddVocab = (w: Omit<VocabWord, "id" | "created_at">) => {
+    const word: VocabWord = {
+      ...w,
+      id: Date.now(),
+      created_at: new Date().toISOString(),
+    };
+    setVocabWords((prev) => [word, ...prev]);
+
+    // Sync to Master
+    if (lesson) {
+        syncToMasterVocab(word, lesson.id, lesson.lesson_title, 'writing');
+    }
+  };
+
+  const handleDeleteVocab = (id: string | number) => {
+    setVocabWords((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleToggleStarVocab = (id: string | number) => {
+    setVocabWords((prev) => {
+        const updated = prev.map((w) => (w.id === id ? { ...w, starred: !w.starred } : w));
+        const word = updated.find(w => w.id === id);
+        if (word && lesson) {
+            syncToMasterVocab(word, lesson.id, lesson.lesson_title, 'writing');
+        }
+        return updated;
+    });
+  };
+
+  const handleUpdateVocabNote = (id: string | number, note: string) => {
+    setVocabWords((prev) => prev.map((w) => (w.id === id ? { ...w, note } : w)));
+  };
+
+  const handleExtractVocabAI = async () => {
+    if (!prompt || isExtractingVocab) return;
+    setIsExtractingVocab(true);
+    console.log("📝 Writing Prompt found:", prompt.slice(0, 100));
+    console.log("✍️ Student Essay length:", essay.length);
+    try {
+      const aiPrompt = `You are a JSON API. Return ONLY a raw JSON array, no explanation, no markdown, no Vietnamese conversational text.
+      Extract 5 advanced or important vocabulary words from this IELTS prompt and essay.
+      Format: [{"en": "word", "vn": "nghĩa tiếng Việt", "type": "noun/verb/adjective/adverb"}]
+      
+      Task Prompt: "${prompt}"
+      Student Essay: "${essay}"`;
+
+      const res = await chatIeltsGroqTutor({
+        skill: "vocabulary",
+        context_text: "Học sinh đang yêu cầu trích xuất từ vựng từ bài viết Writing.",
+        user_message: aiPrompt,
+        band_target: lesson?.band_level ? (lesson.band_level + 0.5) : undefined,
+      });
+
+      const rawResponse = res.answer.trim();
+      const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error("No JSON array found in AI response");
+
+      const extracted = JSON.parse(jsonMatch[0]);
+
+      const newWords = extracted.map((item: any) => {
+        if (!vocabWords.find((w) => w.en.toLowerCase() === item.en.toLowerCase())) {
+          return {
+            ...item,
+            id: Date.now() + Math.random(),
+            source: "ai",
+            starred: false,
+            note: "",
+            created_at: new Date().toISOString(),
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (newWords.length > 0) {
+        setVocabWords((prev) => [...newWords, ...prev]);
+      }
+    } catch (err) {
+      console.error("Vocab extraction error:", err);
+    } finally {
+      setIsExtractingVocab(false);
+    }
+  };
 
   const sendChatMessage = async (overrideMsg?: string) => {
     const msgToSend = overrideMsg || chatMessage;
     if (!msgToSend.trim() || isChatLoading) return;
 
     const userMsg: IeltsChatMessage = { role: "user", content: msgToSend.trim() };
-    if (!overrideMsg) setChatMessage("");
+    if (!overrideMsg || overrideMsg === chatMessage.trim()) setChatMessage("");
 
     setChatHistory((prev) => [...prev, userMsg]);
     setIsChatLoading(true);
@@ -337,6 +434,9 @@ export default function WritingPracticePage() {
   const bandSummary = baseBandValue != null
     ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}`
     : "--";
+  const lessonProgress = result
+    ? 100
+    : Math.min(100, Math.round((wordCount / Math.max(minWords, 1)) * 100));
 
   async function handleSubmit() {
     if (!prompt.trim() || !essay.trim()) {
@@ -473,23 +573,48 @@ export default function WritingPracticePage() {
           </div>
         </div>
 
-        {result && (
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", padding: "6px 10px", borderRadius: 999, border: "1px solid #e2e8f0" }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", letterSpacing: ".12em" }}>LESSON PROGRESS</span>
+            <div style={{ width: 90, height: 6, background: "#e2e8f0", borderRadius: 999, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${lessonProgress}%`, background: "#2563eb", borderRadius: 999, transition: "width 0.3s ease" }} />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#2563eb" }}>{lessonProgress}%</span>
+          </div>
           <button
-            onClick={handleReset}
             style={{
-              background: "transparent",
-              border: "1px solid #bfdbfe",
-              color: "#475569",
-              borderRadius: 8,
-              padding: "6px 14px",
-              fontSize: 13,
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              border: "1px solid #e2e8f0",
+              background: "#ffffff",
+              color: "#64748b",
               cursor: "pointer",
-              fontFamily: "inherit",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            ← Chấm bài mới
+            <Settings size={16} />
           </button>
-        )}
+          {result && (
+            <button
+              onClick={handleReset}
+              style={{
+                background: "transparent",
+                border: "1px solid #bfdbfe",
+                color: "#475569",
+                borderRadius: 8,
+                padding: "6px 14px",
+                fontSize: 13,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              ← Chấm bài mới
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ maxWidth: "100%", margin: "0 auto", padding: "32px 48px" }}>
@@ -511,7 +636,7 @@ export default function WritingPracticePage() {
               }}
             >
               <div style={{ padding: "0 18px 12px" }}>
-                <p style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", letterSpacing: ".18em" }}>AI TOOLS</p>
+                <p style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", letterSpacing: ".18em" }}>TRỢ LÝ AI</p>
               </div>
 
               <div style={{ padding: "0 18px", display: "flex", gap: 20, borderBottom: "1px solid #eef2ff" }}>
@@ -528,7 +653,7 @@ export default function WritingPracticePage() {
                     borderBottom: assistantTab === "ai" ? "3px solid #2563eb" : "3px solid transparent",
                   }}
                 >
-                  AI hỗ trợ
+                  Trợ lý AI
                 </button>
                 <button
                   onClick={() => setAssistantTab("vocab")}
@@ -559,18 +684,15 @@ export default function WritingPracticePage() {
                     quickActions={QUICK_ACTIONS}
                   />
                 ) : (
-                  <div style={{ padding: "18px", display: "flex", flexDirection: "column", gap: 12 }}>
-                    {[
-                      { w: "Sustainable", m: "bền vững, lâu dài" },
-                      { w: "Evidence", m: "bằng chứng, chứng cứ" },
-                      { w: "Proponent", m: "người đề xướng" },
-                    ].map((v, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#475569" }}>
-                        <span style={{ fontWeight: 700 }}>{v.w}</span>
-                        <span>{v.m}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <IeltsVocabPanel
+                    words={vocabWords}
+                    onAddWord={handleAddVocab}
+                    onDeleteWord={handleDeleteVocab}
+                    onToggleStar={handleToggleStarVocab}
+                    onUpdateNote={handleUpdateVocabNote}
+                    onExtractAI={handleExtractVocabAI}
+                    isExtracting={isExtractingVocab}
+                  />
                 )}
               </div>
             </aside>
@@ -737,7 +859,7 @@ export default function WritingPracticePage() {
                           animation: "spin 1s linear infinite",
                         }}
                       />
-                      Gemini đang chấm bài...
+                      Đang chấm bài...
                     </span>
                   ) : (
                     "🎯 Chấm điểm ngay"
