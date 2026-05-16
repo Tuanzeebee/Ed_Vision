@@ -14,7 +14,7 @@ import { GeminiModule } from '../common/gemini/gemini.module';
 import { ProgramEffectivenessModule } from '../admin_be/program-effectiveness/program-effectiveness.module';
 
 @Module({
-  imports: [PrismaModule, GeminiModule],
+  imports: [PrismaModule, GeminiModule, ProgramEffectivenessModule],
   controllers: [IeltsAdaptiveController, IeltsSpeakingController],
   providers: [
     IeltsAdaptiveService,

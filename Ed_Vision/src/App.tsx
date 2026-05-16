@@ -154,7 +154,10 @@ function App() {
             <Route path="/ielts-adaptive/roadmap/:enrollmentId" element={<RoadmapRouteWrapper />} />
             <Route path="/ielts-adaptive/lesson/:lessonId" element={<LessonPage />} />
             <Route path="/ielts-adaptive/band-test/:roadmapId" element={<BandTestPage />} />
-
+            <Route path="/ielts-adaptive/writing" element={<WritingPracticePage />} />
+            <Route path="/ielts-adaptive/writing/:lessonId" element={<WritingPracticePage />} />
+            <Route path="/ielts-adaptive/speaking" element={<IeltsSpeakingPage />} />
+            <Route path="/ielts-adaptive/speaking/:lessonId" element={<IeltsSpeakingPage />} />
 
           {/* Auth routes (used by updated components) */}
           <Route path="/auth/login" element={<AuthRedirectWrapper><AuthStudentLogin /></AuthRedirectWrapper>} />
@@ -182,6 +185,8 @@ function App() {
               <Route path="certificate-review/ielts" element={<ProtectedRoute permission="student_course_overview"><IeltsRoadmapPage /></ProtectedRoute>} />
               <Route path="certificate-review/ielts/writing" element={<ProtectedRoute permission="student_course_overview"><WritingPracticePage /></ProtectedRoute>} />
               <Route path="certificate-review/ielts/writing/:lessonId" element={<ProtectedRoute permission="student_course_overview"><WritingPracticePage /></ProtectedRoute>} />
+              <Route path="certificate-review/ielts/speaking" element={<ProtectedRoute permission="student_course_overview"><IeltsSpeakingPage /></ProtectedRoute>} />
+              <Route path="certificate-review/ielts/speaking/:lessonId" element={<ProtectedRoute permission="student_course_overview"><IeltsSpeakingPage /></ProtectedRoute>} />
               <Route path="certificate-review/:certId" element={<ProtectedRoute permission="student_course_overview"><CertificateDetail /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/skill/:skillId" element={<ProtectedRoute permission="student_course_overview"><ToeicLearningMapPage /></ProtectedRoute>} />
               <Route path="certificate-review/toeic/skill/:skillId/node/:nodeIndex/practice" element={<ProtectedRoute permission="student_course_overview"><ToeicNodePracticePage /></ProtectedRoute>} />
