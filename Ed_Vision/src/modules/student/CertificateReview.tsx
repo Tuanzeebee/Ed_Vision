@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef , useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Header from '../../components/layout/Header'
@@ -6,8 +6,8 @@ import Footer from '../../components/layout/Footer'
 import { TrendingUp, Flame, Award, Lock, Diamond, Trophy, FileCheck, MessageSquare, BarChart, Zap } from 'lucide-react'
 import { CERTIFICATES, StatCard, CertCard } from './certificateData'
 import type { CertId, Certificate } from './certificateData'
-import { getAllEnrollments } from '@/services/api/certificateService'
-import type { EnrollmentResponse } from '@/services/api/certificateService'
+import { getAllEnrollments, getToeicReservePoints } from '@/services/api/certificateService'
+import type { EnrollmentResponse, ToeicReservePointsResponse } from '@/services/api/certificateService'
 import { studyRoomService } from '@/services/student/studyRoomService'
 import { getPersonalStats } from '@/services/api/leaderboardService'
 
@@ -18,6 +18,7 @@ export default function CertificateReview() {
 
   // ── Load dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
+  const [toeicReserve, setToeicReserve] = useState<ToeicReservePointsResponse | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [streak, setStreak] = useState(0)
   const [totalExp, setTotalExp] = useState(0)
@@ -25,10 +26,12 @@ export default function CertificateReview() {
   useEffect(() => {
     Promise.all([
       getAllEnrollments(),
+      getToeicReservePoints().catch(() => null),
       studyRoomService.getMyStudyStats().catch(() => null),
       getPersonalStats().catch(() => null),
-    ]).then(([enrollData, statsData, personalStats]) => {
+    ]).then(([enrollData, reserveData, statsData, personalStats]) => {
       setEnrollments(enrollData)
+      setToeicReserve(reserveData)
       if (statsData) {
         setStreak(statsData.streak.current ?? 0)
       }
