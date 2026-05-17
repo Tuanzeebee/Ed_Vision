@@ -30,7 +30,7 @@ type BandPreset = (typeof BAND_PRESETS)[number];
 
 // ─── Shared style tokens ──────────────────────────────────────────────────────
 const fieldClass =
-  "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition";
+  "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition";
 
 const btnPrimary =
   "flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed";
@@ -255,7 +255,7 @@ export default function IeltsRepositoryImport({ mode }: { mode: string }) {
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-gray-700">Kỹ năng</label>
               <select className={fieldClass} value={examSkill} onChange={(e) => setExamSkill(e.target.value as SkillArea)}>
-                {SKILL_AREAS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                {SKILL_AREAS.map(s => <option className="bg-white text-gray-900" key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
               </select>
             </div>
             <div>
@@ -264,7 +264,7 @@ export default function IeltsRepositoryImport({ mode }: { mode: string }) {
                 const p = BAND_PRESETS.find(b => b.value === e.target.value);
                 if (p) setExamBandPreset(p);
               }}>
-                {BAND_PRESETS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+                {BAND_PRESETS.map(b => <option className="bg-white text-gray-900" key={b.value} value={b.value}>{b.label}</option>)}
               </select>
             </div>
             <div>
@@ -349,7 +349,7 @@ export default function IeltsRepositoryImport({ mode }: { mode: string }) {
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-gray-700">Kỹ năng</label>
               <select className={fieldClass} value={prSkill} onChange={(e) => setPrSkill(e.target.value as SkillArea)}>
-                {SKILL_AREAS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                {SKILL_AREAS.map(s => <option className="bg-white text-gray-900" key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
               </select>
             </div>
             <div>
@@ -358,7 +358,7 @@ export default function IeltsRepositoryImport({ mode }: { mode: string }) {
                 const p = BAND_PRESETS.find(b => b.value === e.target.value);
                 if (p) setPrBandPreset(p);
               }}>
-                {BAND_PRESETS.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+                {BAND_PRESETS.map(b => <option className="bg-white text-gray-900" key={b.value} value={b.value}>{b.label}</option>)}
               </select>
             </div>
           </div>

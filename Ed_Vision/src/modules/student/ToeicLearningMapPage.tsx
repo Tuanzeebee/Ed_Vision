@@ -958,32 +958,6 @@ export default function ToeicLearningMapPage() {
 
   const skillState = mapState[activeSkill];
 
-  const currentNodeIndex = useMemo(() => {
-    const { unlockedUpTo, completedNodes } = skillState;
-    for (let i = unlockedUpTo; i >= 0; i--) {
-      if (!completedNodes.includes(i)) return i;
-    }
-    return unlockedUpTo;
-  }, [skillState]);
-
-  const selectedNodeData = nodes[selectedNode] ?? nodes[0];
-
-  useEffect(() => {
-    setSelectedNode(currentNodeIndex);
-  }, [currentNodeIndex, activeSkill]);
-
-  const isNodeUnlocked = (idx: number) => idx <= skillState.unlockedUpTo;
-  const isNodeCompleted = (idx: number) =>
-    skillState.completedNodes.includes(idx);
-  const isNodeCurrent = (idx: number) =>
-    idx === currentNodeIndex && !isNodeCompleted(idx);
-  const isSummitNode = (idx: number) => idx === nodes.length - 1;
-
-  const totalNodes = nodes.length;
-  const completedCount = skillState.completedNodes.length;
-  const completionPercent = Math.round((completedCount / totalNodes) * 100);
-  const mascotNode = nodes[currentNodeIndex] ?? nodes[0];
-
   // ── Tính điểm TOEIC ôn luyện (per-part cap, chống spam) ──
   const practiceScore: ToeicScoreResult | null = useMemo(() => {
     const listeningState = mapState.listening;
@@ -1046,6 +1020,61 @@ export default function ToeicLearningMapPage() {
 
   // ── currentScore giờ do per-part cap quyết định, không phải totalBoost ──
   const currentScore = practiceScore?.finalScore ?? baseScore;
+
+  const currentNodeIndex = useMemo(() => {
+    const { completedNodes } = skillState;
+    
+    // Find the first incomplete node
+    let firstIncomplete = -1;
+    for (let i = 0; i < nodes.length; i++) {
+      if (!completedNodes.includes(i)) {
+        firstIncomplete = i;
+        break;
+      }
+    }
+
+    if (firstIncomplete !== -1) {
+      // If the first incomplete node is Mock Exam (the last node in the skill map)
+      if (firstIncomplete === nodes.length - 1) {
+        // Mock Exam strictly depends on score >= targetScore
+        const isExamUnlocked = currentScore >= targetScore;
+        if (isExamUnlocked) {
+          return firstIncomplete;
+        } else {
+          // Point mascot to the last completed practice node instead of the locked Mock Exam node
+          return Math.max(0, nodes.length - 2);
+        }
+      }
+      return firstIncomplete;
+    }
+
+    // All nodes completed
+    return nodes.length - 1;
+  }, [skillState, nodes, currentScore, targetScore]);
+
+  const selectedNodeData = nodes[selectedNode] ?? nodes[0];
+
+  useEffect(() => {
+    setSelectedNode(currentNodeIndex);
+  }, [currentNodeIndex, activeSkill]);
+
+
+  const totalNodes = nodes.length;
+  const completedCount = skillState.completedNodes.length;
+  const completionPercent = Math.round((completedCount / totalNodes) * 100);
+  const mascotNode = nodes[currentNodeIndex] ?? nodes[0];
+
+  const isSummitNode = (idx: number) => idx === nodes.length - 1;
+  const isNodeUnlocked = (idx: number) => {
+    if (isSummitNode(idx)) {
+      return currentScore >= targetScore;
+    }
+    return idx <= skillState.unlockedUpTo;
+  };
+  const isNodeCompleted = (idx: number) =>
+    skillState.completedNodes.includes(idx);
+  const isNodeCurrent = (idx: number) =>
+    idx === currentNodeIndex && !isNodeCompleted(idx);
 
   // ── Map node index → per-part cap earned (thay thế nodeScores cũ để UI khớp) ──
   const PART_KEYS_BY_SKILL: Record<string, string[]> = {
@@ -1224,7 +1253,7 @@ export default function ToeicLearningMapPage() {
                     isSelected={selectedNode === i}
                     isSummit={isSummitNode(i)}
                     onClick={() => {
-                      if (i <= skillState.unlockedUpTo) setSelectedNode(i);
+                      if (isNodeUnlocked(i)) setSelectedNode(i);
                     }}
                   />
                 ))}
@@ -1333,7 +1362,9 @@ export default function ToeicLearningMapPage() {
               {!isNodeUnlocked(selectedNode) && (
                 <div className="mb-3 bg-slate-50 rounded-xl p-3 text-sm text-slate-500 flex items-center gap-2">
                   <Lock className="w-4 h-4" />
-                  Hoàn thành node {selectedNode} để mở khóa node này
+                  {isSummitNode(selectedNode) 
+                    ? `Đạt đủ điểm mục tiêu (${targetScore}) để mở khóa thi thử` 
+                    : `Hoàn thành node ${selectedNode} để mở khóa node này`}
                 </div>
               )}
 
@@ -1371,7 +1402,7 @@ export default function ToeicLearningMapPage() {
                     {selectedNode === nodes.length - 1 ? "🔄 Thi lại" : "🔄 Luyện tập lại"}
                   </button>
                 )}
-                {selectedNode !== nodes.length - 1 && (
+                {selectedNode !== nodes.length - 1 && isNodeUnlocked(nodes.length - 1) && (
                   <button
                     onClick={() =>
                       navigate(

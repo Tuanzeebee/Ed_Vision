@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/lib/useToast";
@@ -21,6 +21,7 @@ import {
   Trophy,
   CheckCircle2,
   Zap,
+  Lock,
 } from "lucide-react";
 import {
   CERTIFICATES,
@@ -49,6 +50,7 @@ import {
   saveToeicPlanSync,
   getToeicReservePoints,
 } from "@/services/api/certificateService";
+import { calculateToeicPracticeScore } from "./toeicPracticeScore";
 import { studyRoomService, type MyStudyStats } from "@/services/student/studyRoomService";
 // Community discussions per cert type
 const DISCUSSIONS: Record<
@@ -132,6 +134,12 @@ export default function CertificateDetail() {
   const radarDataRaw = getRadarData(cert.id);
   const discussions = DISCUSSIONS[cert.id] ?? [];
   const [showFirstGuidePopup, setShowFirstGuidePopup] = useState(false);
+  const [showScoreGatePopup, setShowScoreGatePopup] = useState(false);
+  const [gatePopupData, setGatePopupData] = useState<{
+    current: number;
+    target: number;
+    skill: string;
+  } | null>(null);
   const [guideStep, setGuideStep] = useState(0);
   const [toeicGuideCompleted, setToeicGuideCompleted] = useState<boolean>(true);
   const [isSavingGuide, setIsSavingGuide] = useState(false);
@@ -144,6 +152,7 @@ export default function CertificateDetail() {
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
   const [studyStats, setStudyStats] = useState<MyStudyStats | null>(null);
   const [completedToeicParts, setCompletedToeicParts] = useState<number[]>([]);
+  const [toeicReservePoints, setToeicReservePoints] = useState<any>(null);
   useEffect(() => {
     getEnrollment(cert.id)
       .then(setEnrollment)
@@ -157,11 +166,13 @@ export default function CertificateDetail() {
 
   useEffect(() => {
     if (cert.id !== "toeic") {
+      setToeicReservePoints(null);
       setCompletedToeicParts([]);
       return;
     }
     getToeicReservePoints()
       .then((data) => {
+        setToeicReservePoints(data);
         if (Array.isArray(data.completed_parts) && data.completed_parts.length > 0) {
           setCompletedToeicParts(data.completed_parts);
           return;
@@ -173,7 +184,10 @@ export default function CertificateDetail() {
         }
         setCompletedToeicParts(Array.from(parts).sort((a, b) => a - b));
       })
-      .catch(() => setCompletedToeicParts([]));
+      .catch(() => {
+        setToeicReservePoints(null);
+        setCompletedToeicParts([]);
+      });
   }, [cert.id]);
 
   // ── MOS Word Simulator ────────────────────────────────────────────────
@@ -210,17 +224,86 @@ export default function CertificateDetail() {
     guideDismissedInSessionRef.current = false;
   }, [cert.id]);
 
+  // ── Tính điểm TOEIC ôn luyện thực tế (giống bên LearningMapPage) ──
+  const calculatedToeicPracticeScore = useMemo(() => {
+    if (cert.id !== "toeic" || !toeicReservePoints) return null;
+
+    const baseScoreVal =
+      (toeicProfile?.milestoneState.currentScore ?? null) ??
+      (enrollment?.current_score ?? null) ??
+      300;
+
+    const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
+    const READING_PART_KEYS  = ["part5", "part6", "part7"];
+    const bestCorrectByPart: Record<string, number> = {};
+
+    const LISTENING_NODES_CONFIG = [
+      { id: 0, scorePerCorrect: 2 },
+      { id: 1, scorePerCorrect: 2.5 },
+      { id: 2, scorePerCorrect: 2.5 },
+      { id: 3, scorePerCorrect: 2.5 },
+    ];
+    const READING_NODES_CONFIG = [
+      { id: 0, scorePerCorrect: 2 },
+      { id: 1, scorePerCorrect: 2.5 },
+      { id: 2, scorePerCorrect: 2.5 },
+    ];
+
+    const completedPartsSet = new Set(completedToeicParts);
+
+    // Điền Listening
+    LISTENING_NODES_CONFIG.forEach((node, i) => {
+      const partKey = LISTENING_PART_KEYS[i];
+      const partNum = i + 1;
+      if (completedPartsSet.has(partNum)) {
+        const session = (toeicReservePoints.part_sessions ?? []).find(
+          (s: any) => s.toeic_part === partNum,
+        );
+        const earned = session?.earned_points ?? 0;
+        const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
+        bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
+      }
+    });
+
+    // Điền Reading
+    READING_NODES_CONFIG.forEach((node, i) => {
+      const partKey = READING_PART_KEYS[i];
+      const partNum = i + 5;
+      if (completedPartsSet.has(partNum)) {
+        const session = (toeicReservePoints.part_sessions ?? []).find(
+          (s: any) => s.toeic_part === partNum,
+        );
+        const earned = session?.earned_points ?? 0;
+        const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
+        bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
+      }
+    });
+
+    return calculateToeicPracticeScore({
+      bestCorrectByPart,
+      minScore: baseScoreVal,
+      maxScore: baseScoreVal + 200,
+    });
+  }, [cert.id, toeicReservePoints, completedToeicParts, toeicProfile, enrollment]);
+
+  const latestToeicScore = calculatedToeicPracticeScore?.finalScore ?? (
+    (enrollment?.current_score ?? null) ??
+    (toeicProfile?.milestoneState.currentScore ?? null) ??
+    300
+  );
+
+  const latestToeicTargetScore =
+    (enrollment?.target_score ?? null) ??
+    (toeicProfile?.milestoneState.targetScore ?? null) ??
+    650;
+
   // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
   // TOEIC: dùng điểm gốc / điểm mục tiêu (clamp 0..100).
   // Khác: dùng progress_percent từ enrollment.
   const realProgress = (() => {
     if (isToeic) {
-      const baseScore =
-        (enrollment?.current_score ?? null) ??
-        (toeicProfile?.milestoneState.currentScore ?? null);
-      const targetScore =
-        (enrollment?.target_score ?? null) ??
-        (toeicProfile?.milestoneState.targetScore ?? null);
+      const baseScore = latestToeicScore;
+      const targetScore = latestToeicTargetScore;
 
       if (baseScore && targetScore && targetScore > 0) {
         const ratio = (Number(baseScore) / Number(targetScore)) * 100;
@@ -952,11 +1035,22 @@ export default function CertificateDetail() {
                             Luyện tập
                           </button>
                           <button
-                            onClick={() =>
+                            onClick={() => {
+                              const cur = latestToeicScore;
+                              const tar = latestToeicTargetScore;
+                              if (cur < tar) {
+                                setGatePopupData({
+                                  current: cur,
+                                  target: tar,
+                                  skill: activeSkill,
+                                });
+                                setShowScoreGatePopup(true);
+                                return;
+                              }
                               navigate(
                                 `/student/certificate-review/toeic/exam/${activeSkill}`,
-                              )
-                            }
+                              );
+                            }}
                             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors cursor-pointer"
                           >
                             🏆 Bắt đầu thi
@@ -1007,12 +1101,7 @@ export default function CertificateDetail() {
                         activeSkill === "reading") && (
                         <p className="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
                           <span>🔒</span>
-                          Bài thi mở khóa sau khi hoàn thành tất cả node luyện
-                          tập{" "}
-                          {activeSkill === "listening"
-                            ? "Listening (5 node)"
-                            : "Reading (4 node)"}
-                          .
+                          Bài thi Mock Exam chỉ mở khóa khi đạt đủ điểm ôn tập mục tiêu ({latestToeicTargetScore} điểm).
                         </p>
                       )}
                   </div>
@@ -1267,6 +1356,69 @@ export default function CertificateDetail() {
           onNext={handleNextGuide}
           onClose={handleCloseGuide}
         />
+      )}
+
+      {showScoreGatePopup && gatePopupData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[3px]">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center relative overflow-hidden transform scale-100 transition-all duration-300">
+            {/* Background design elements */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-full -mr-8 -mt-8 -z-10" />
+            <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-50 rounded-full -ml-8 -mb-8 -z-10" />
+
+            {/* Lock illustration */}
+            <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-rose-500 shadow-inner">
+              <Lock className="w-8 h-8 animate-bounce" />
+            </div>
+
+            <h3 className="text-2xl font-black text-slate-800 mb-2 leading-tight">
+              Chưa đủ điều kiện!
+            </h3>
+            
+            <p className="text-slate-500 text-sm leading-relaxed mb-6 px-2">
+              Bạn chưa đạt đủ điểm ôn tập mục tiêu để thi thử <strong className="text-slate-700">Mock Exam</strong>. 
+              Hãy tiếp tục tích lũy thêm điểm số trong phòng luyện tập để mở khóa nhé!
+            </p>
+
+            {/* Progress indicators */}
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 flex justify-around items-center">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Điểm hiện tại</p>
+                <p className="text-2xl font-extrabold text-rose-500">{gatePopupData.current}</p>
+              </div>
+              <div className="h-8 w-px bg-slate-200" />
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Mục tiêu</p>
+                <p className="text-2xl font-extrabold text-teal-600">{gatePopupData.target}</p>
+              </div>
+            </div>
+
+            {/* Button controls */}
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={() => {
+                  const targetSkill = gatePopupData.skill;
+                  setShowScoreGatePopup(false);
+                  setGatePopupData(null);
+                  navigate(`/student/certificate-review/toeic/skill/${targetSkill}`);
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg shadow-teal-100 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <PlayCircle className="w-5 h-5" />
+                Vào học ngay
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowScoreGatePopup(false);
+                  setGatePopupData(null);
+                }}
+                className="w-full py-3 hover:bg-slate-50 text-slate-400 hover:text-slate-600 text-sm font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
