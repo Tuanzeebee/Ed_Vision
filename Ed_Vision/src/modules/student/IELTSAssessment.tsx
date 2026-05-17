@@ -861,16 +861,16 @@ const IELTSTestView: React.FC<{
       </header>
 
       {/* ── Main ── */}
-      <main className="flex-1 w-full max-w-[1300px] mx-auto px-5 py-8">
+      <main className="flex-1 w-full max-w-[1300px] mx-auto px-5 py-8 overflow-hidden flex flex-col">
         <div
           className={`grid ${
             currentQuestion.passage ? "lg:grid-cols-2" : "max-w-2xl mx-auto w-full"
-          } gap-6 items-start`}
+          } gap-6 items-stretch flex-1 min-h-0`}
         >
           {/* Passage panel */}
           {currentQuestion.passage && (
             <div
-              className="rounded-3xl border overflow-hidden flex flex-col max-h-[calc(100vh-160px)] shadow-sm"
+              className="rounded-3xl border overflow-hidden flex flex-col h-full shadow-sm"
               style={{ borderColor: "#DBEAFE", background: "#F8FAFF" }}
             >
               {/* Panel header */}
@@ -910,237 +910,242 @@ const IELTSTestView: React.FC<{
           )}
 
           {/* Question panel */}
-          <div className="space-y-5">
-            {/* Question number chip */}
-            <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
-                style={{ background: "#3B82F6" }}
-              >
-                {currentQuestion.progress.current}
-              </div>
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Question {currentQuestion.progress.current} of {TOTAL_QUESTIONS}
-              </span>
-            </div>
-
-            {currentQuestion.skill === "listening" && !audioDone ? (
-              <div
-                className="bg-white rounded-3xl border p-10 shadow-sm text-center mt-4"
-                style={{ borderColor: "#DBEAFE" }}
-              >
+          <div
+            className="rounded-3xl border overflow-hidden flex flex-col h-full shadow-sm bg-white"
+            style={{ borderColor: "#DBEAFE" }}
+          >
+            <div className="flex-1 overflow-y-auto p-7 custom-scrollbar space-y-6">
+              {/* Question number chip */}
+              <div className="flex items-center gap-2">
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: "#EFF6FF", color: "#3B82F6" }}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
+                  style={{ background: "#3B82F6" }}
                 >
-                  <Clock className="w-8 h-8 animate-pulse" />
+                  {currentQuestion.progress.current}
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-2">
-                  Đang phát audio...
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Hãy tập trung nghe. Câu hỏi sẽ tự động hiển thị sau khi đoạn audio kết thúc.
-                </p>
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Question {currentQuestion.progress.current} of {TOTAL_QUESTIONS}
+                </span>
               </div>
-            ) : (
-              <>
-                {/* Question text */}
+
+              {currentQuestion.skill === "listening" && !audioDone ? (
                 <div
-                  className="bg-white rounded-3xl border p-7 shadow-sm relative"
+                  className="bg-white rounded-3xl border p-10 shadow-sm text-center mt-4"
                   style={{ borderColor: "#DBEAFE" }}
                 >
-                  {/* Green left accent */}
                   <div
-                    className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full"
-                    style={{ background: "linear-gradient(180deg,#93C5FD,#3B82F6)" }}
-                  />
-                  <p className="text-lg font-bold text-gray-800 leading-snug pl-2">
-                    {currentQuestion.questionText.replace(/^\[AUDIO\][^?]*?(?=\s+\w)/i, '').trim()}
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "#EFF6FF", color: "#3B82F6" }}
+                  >
+                    <Clock className="w-8 h-8 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    Đang phát audio...
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Hãy tập trung nghe. Câu hỏi sẽ tự động hiển thị sau khi đoạn audio kết thúc.
                   </p>
                 </div>
+              ) : (
+                <>
+                  {/* Question text */}
+                  <div
+                    className="bg-white rounded-3xl border p-7 shadow-sm relative"
+                    style={{ borderColor: "#DBEAFE" }}
+                  >
+                    {/* Green left accent */}
+                    <div
+                      className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full"
+                      style={{ background: "linear-gradient(180deg,#93C5FD,#3B82F6)" }}
+                    />
+                    <p className="text-lg font-bold text-gray-800 leading-snug pl-2">
+                      {currentQuestion.questionText.replace(/^\[AUDIO\][^?]*?(?=\s+\w)/i, '').trim()}
+                    </p>
+                  </div>
 
-                {/* Answer area */}
-                <div className="space-y-3">
-                  {isGapFill ? (
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        value={freeTextAnswer}
-                        onChange={(e) => setFreeTextAnswer(e.target.value)}
-                        placeholder="Nhập câu trả lời của bạn..."
-                        className="w-full h-16 px-6 rounded-2xl text-base font-bold text-gray-800 outline-none transition-all placeholder:text-gray-300"
-                        style={{
-                          border: "2px solid #DBEAFE",
-                          background: "white",
-                        }}
-                        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
-                        onBlur={(e) => (e.target.style.borderColor = "#DBEAFE")}
-                      />
-                      <button
-                        onClick={() => void submitCurrentAnswer(freeTextAnswer)}
-                        disabled={isSubmitting || !freeTextAnswer.trim()}
-                        className="w-full h-14 rounded-2xl text-white font-black text-base transition-all active:scale-95 disabled:opacity-50"
-                        style={{
-                          background: "linear-gradient(135deg,#93C5FD,#3B82F6)",
-                          boxShadow: "0 4px 0 #1D4ED8",
-                        }}
-                      >
-                        {isSubmitting ? "Đang xử lý..." : "Xác nhận →"}
-                      </button>
-                    </div>
-                  ) : currentQuestion.skill === "speaking" ||
-                    currentQuestion.questionType === "speaking" ? (
-                    <div className="space-y-5">
-                      <SpeakingRecorder
-                        sessionId={sessionId}
-                        questionId={currentQuestion.id}
-                        speakingPrompt={currentQuestion.questionText}
-                        onResult={async (res) => {
-                          if (res.skipped) {
-                            setSpeakingResult({ band: null, feedback: "Câu hỏi đã được bỏ qua.", skipped: true });
-                            try {
-                              const skipResult = await submitPlacementAnswer({
-                                sessionId,
-                                questionId: currentQuestion.id,
-                                userAnswer: "SPEAKING_SKIPPED",
-                                timeTakenSec: 5,
-                              });
-                              setTimeout(() => {
-                                if (!skipResult.nextQuestion) {
-                                  getPlacementResult(sessionId).then((final) => {
-                                    setResult(final);
-                                    setIsFinished(true);
-                                  });
-                                } else {
-                                  setCurrentQuestion(skipResult.nextQuestion);
-                                  setTimeLeft(skipResult.nextQuestion.timeLimitSec || 60);
-                                  setQuestionStartedAt(Date.now());
-                                  setAudioDone(false);
-                                  setSpeakingResult(null);
-                                  setResetKey((k) => k + 1);
-                                  submittedRef.current = false;
-                                }
-                              }, 3000);
-                            } catch {
-                              setIsFinished(true);
-                            }
-                            return;
-                          }
-                          setSpeakingResult({ band: res.band, feedback: res.feedback });
-                          setTimeout(() => {
-                            if (!res.nextQuestion) {
-                              getPlacementResult(sessionId).then((final) => {
-                                setResult(final);
-                                setIsFinished(true);
-                              });
-                            } else {
-                              setCurrentQuestion(res.nextQuestion);
-                              setTimeLeft(res.nextQuestion.timeLimitSec || 60);
-                              setQuestionStartedAt(Date.now());
-                              setAudioDone(false);
-                              setSpeakingResult(null);
-                              setResetKey((k) => k + 1);
-                              submittedRef.current = false;
-                            }
-                          }, 3000);
-                        }}
-                      />
-                      {speakingResult && (
-                        <div
-                          className="p-5 rounded-2xl border"
+                  {/* Answer area */}
+                  <div className="space-y-3">
+                    {isGapFill ? (
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={freeTextAnswer}
+                          onChange={(e) => setFreeTextAnswer(e.target.value)}
+                          placeholder="Nhập câu trả lời của bạn..."
+                          className="w-full h-16 px-6 rounded-2xl text-base font-bold text-gray-800 outline-none transition-all placeholder:text-gray-300"
                           style={{
-                            background: speakingResult.skipped ? "#F9FAFB" : "#EFF6FF",
-                            borderColor: speakingResult.skipped ? "#E5E7EB" : "#DBEAFE",
+                            border: "2px solid #DBEAFE",
+                            background: "white",
+                          }}
+                          onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+                          onBlur={(e) => (e.target.style.borderColor = "#DBEAFE")}
+                        />
+                        <button
+                          onClick={() => void submitCurrentAnswer(freeTextAnswer)}
+                          disabled={isSubmitting || !freeTextAnswer.trim()}
+                          className="w-full h-14 rounded-2xl text-white font-black text-base transition-all active:scale-95 disabled:opacity-50"
+                          style={{
+                            background: "linear-gradient(135deg,#93C5FD,#3B82F6)",
+                            boxShadow: "0 4px 0 #1D4ED8",
                           }}
                         >
-                          <div className="flex items-center gap-2 mb-1">
-                            {speakingResult.skipped ? (
-                              <>
-                                <AlertCircle className="w-4 h-4 text-gray-400" />
-                                <span className="font-bold text-gray-500 text-sm">Đã bỏ qua</span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                <span className="font-bold text-green-800 text-sm">
-                                  AI Band: {speakingResult.band}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <p className="text-xs italic text-gray-500">"{speakingResult.feedback}"</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {options.map((opt: any) => {
-                        const isSelected = selectedOption === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            onClick={() => setSelectedOption(opt.value)}
-                            className="group w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all duration-200 text-left"
+                          {isSubmitting ? "Đang xử lý..." : "Xác nhận →"}
+                        </button>
+                      </div>
+                    ) : currentQuestion.skill === "speaking" ||
+                      currentQuestion.questionType === "speaking" ? (
+                      <div className="space-y-5">
+                        <SpeakingRecorder
+                          sessionId={sessionId}
+                          questionId={currentQuestion.id}
+                          speakingPrompt={currentQuestion.questionText}
+                          onResult={async (res) => {
+                            if (res.skipped) {
+                              setSpeakingResult({ band: null, feedback: "Câu hỏi đã được bỏ qua.", skipped: true });
+                              try {
+                                const skipResult = await submitPlacementAnswer({
+                                  sessionId,
+                                  questionId: currentQuestion.id,
+                                  userAnswer: "SPEAKING_SKIPPED",
+                                  timeTakenSec: 5,
+                                });
+                                setTimeout(() => {
+                                  if (!skipResult.nextQuestion) {
+                                    getPlacementResult(sessionId).then((final) => {
+                                      setResult(final);
+                                      setIsFinished(true);
+                                    });
+                                  } else {
+                                    setCurrentQuestion(skipResult.nextQuestion);
+                                    setTimeLeft(skipResult.nextQuestion.timeLimitSec || 60);
+                                    setQuestionStartedAt(Date.now());
+                                    setAudioDone(false);
+                                    setSpeakingResult(null);
+                                    setResetKey((k) => k + 1);
+                                    submittedRef.current = false;
+                                  }
+                                }, 3000);
+                              } catch {
+                                setIsFinished(true);
+                              }
+                              return;
+                            }
+                            setSpeakingResult({ band: res.band, feedback: res.feedback });
+                            setTimeout(() => {
+                              if (!res.nextQuestion) {
+                                getPlacementResult(sessionId).then((final) => {
+                                  setResult(final);
+                                  setIsFinished(true);
+                                });
+                              } else {
+                                setCurrentQuestion(res.nextQuestion);
+                                setTimeLeft(res.nextQuestion.timeLimitSec || 60);
+                                setQuestionStartedAt(Date.now());
+                                setAudioDone(false);
+                                setSpeakingResult(null);
+                                setResetKey((k) => k + 1);
+                                submittedRef.current = false;
+                              }
+                            }, 3000);
+                          }}
+                        />
+                        {speakingResult && (
+                          <div
+                            className="p-5 rounded-2xl border"
                             style={{
-                              background: isSelected ? "#3B82F6" : "white",
-                              borderColor: isSelected ? "#1D4ED8" : "#DBEAFE",
-                              boxShadow: isSelected ? "0 4px 0 #1D4ED8" : "none",
-                              transform: isSelected ? "translateY(-1px)" : "none",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                (e.currentTarget as HTMLElement).style.borderColor = "#3B82F6";
-                                (e.currentTarget as HTMLElement).style.background = "#EFF6FF";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) {
-                                (e.currentTarget as HTMLElement).style.borderColor = "#DBEAFE";
-                                (e.currentTarget as HTMLElement).style.background = "white";
-                              }
+                              background: speakingResult.skipped ? "#F9FAFB" : "#EFF6FF",
+                              borderColor: speakingResult.skipped ? "#E5E7EB" : "#DBEAFE",
                             }}
                           >
-                            {/* Badge */}
-                            <div
-                              className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 transition-colors"
+                            <div className="flex items-center gap-2 mb-1">
+                              {speakingResult.skipped ? (
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-gray-400" />
+                                  <span className="font-bold text-gray-500 text-sm">Đã bỏ qua</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  <span className="font-bold text-green-800 text-sm">
+                                    AI Band: {speakingResult.band}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <p className="text-xs italic text-gray-500">"{speakingResult.feedback}"</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {options.map((opt: any) => {
+                          const isSelected = selectedOption === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => setSelectedOption(opt.value)}
+                              className="group w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all duration-200 text-left"
                               style={{
-                                background: isSelected ? "rgba(255,255,255,0.25)" : "#DBEAFE",
-                                color: isSelected ? "white" : "#1D4ED8",
+                                background: isSelected ? "#3B82F6" : "white",
+                                borderColor: isSelected ? "#1D4ED8" : "#DBEAFE",
+                                boxShadow: isSelected ? "0 4px 0 #1D4ED8" : "none",
+                                transform: isSelected ? "translateY(-1px)" : "none",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) {
+                                  (e.currentTarget as HTMLElement).style.borderColor = "#3B82F6";
+                                  (e.currentTarget as HTMLElement).style.background = "#EFF6FF";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) {
+                                  (e.currentTarget as HTMLElement).style.borderColor = "#DBEAFE";
+                                  (e.currentTarget as HTMLElement).style.background = "white";
+                                }
                               }}
                             >
-                              {opt.badge}
-                            </div>
-                            <span
-                              className="text-base font-semibold flex-1"
-                              style={{ color: isSelected ? "white" : "#374151" }}
-                            >
-                              {opt.label}
-                            </span>
-                            {isSelected && (
-                              <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0" />
-                            )}
-                          </button>
-                        );
-                      })}
+                              {/* Badge */}
+                              <div
+                                className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 transition-colors"
+                                style={{
+                                  background: isSelected ? "rgba(255,255,255,0.25)" : "#DBEAFE",
+                                  color: isSelected ? "white" : "#1D4ED8",
+                                }}
+                              >
+                                {opt.badge}
+                              </div>
+                              <span
+                                className="text-base font-semibold flex-1"
+                                style={{ color: isSelected ? "white" : "#374151" }}
+                              >
+                                {opt.label}
+                              </span>
+                              {isSelected && (
+                                <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })}
 
-                      <button
-                        onClick={() => void submitCurrentAnswer(selectedOption || "")}
-                        disabled={isSubmitting || !selectedOption}
-                        className="w-full h-14 rounded-2xl text-white font-black text-base mt-3 transition-all active:scale-95 disabled:opacity-40"
-                        style={{
-                          background: selectedOption
-                            ? "linear-gradient(135deg,#93C5FD,#3B82F6)"
-                            : "#DBEAFE",
-                          boxShadow: selectedOption ? "0 4px 0 #1D4ED8" : "none",
-                        }}
-                      >
-                        {isSubmitting ? "Đang xử lý..." : "Xác nhận →"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+                        <button
+                          onClick={() => void submitCurrentAnswer(selectedOption || "")}
+                          disabled={isSubmitting || !selectedOption}
+                          className="w-full h-14 rounded-2xl text-white font-black text-base mt-3 transition-all active:scale-95 disabled:opacity-40"
+                          style={{
+                            background: selectedOption
+                              ? "linear-gradient(135deg,#93C5FD,#3B82F6)"
+                              : "#DBEAFE",
+                            boxShadow: selectedOption ? "0 4px 0 #1D4ED8" : "none",
+                          }}
+                        >
+                          {isSubmitting ? "Đang xử lý..." : "Xác nhận →"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -1150,8 +1155,8 @@ const IELTSTestView: React.FC<{
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap');
         .custom-scrollbar::-webkit-scrollbar { width:5px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background:#DBEAFE; border-radius:99px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background:#93C5FD; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background:#DBEAFE; border-radius:99px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background:#93C5FD; }
         @keyframes bubblePop {
           0%{opacity:0;transform:translateX(-50%) rotate(4deg) scale(0.5);}
           100%{opacity:1;transform:translateX(-50%) rotate(4deg) scale(1);}
