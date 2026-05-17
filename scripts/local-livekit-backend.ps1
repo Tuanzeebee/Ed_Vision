@@ -234,9 +234,9 @@ function Start-Backend([hashtable]$State) {
 
     $backendCommand = @(
         "Set-Location '$backendDir'"
-        "`$env:LIVEKIT_API_KEY = 'devkey'"
-        "`$env:LIVEKIT_API_SECRET = 'secret'"
-        "`$env:LIVEKIT_URL = 'ws://localhost:7880'"
+        "`$env:LIVEKIT_API_KEY = 'APIJSYhgBvHPWEb'"
+        "`$env:LIVEKIT_API_SECRET = 'PTjwf4eJYgVMs9lN4aF6diUWwULqGNlLhJf4IwECBqbB'"
+        "`$env:LIVEKIT_URL = 'wss://edvision-auffy3x6.livekit.cloud'"
         "`$env:LIVEKIT_TOKEN_TTL = '2h'"
         "npm run start:dev"
     ) -join "; "

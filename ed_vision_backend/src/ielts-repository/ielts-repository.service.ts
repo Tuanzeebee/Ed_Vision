@@ -143,7 +143,7 @@ export class IeltsRepositoryService {
           audio_url: dto.audioUrl ?? null,
           band_min: bandMin,
           band_max: bandMax,
-          status: 'approved',
+          status: 'active',
         },
       });
 
