@@ -8,22 +8,27 @@
         transform: translateY(0px) rotate(-4deg);
         filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.2));
     }
+
     20% {
         transform: translateY(-7px) rotate(0deg) scaleY(1.05);
         filter: drop-shadow(0 12px 6px rgba(0, 0, 0, 0.1));
     }
+
     40% {
         transform: translateY(-1px) rotate(4deg);
         filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.2));
     }
+
     60% {
         transform: translateY(-8px) rotate(0deg) scaleY(1.05);
         filter: drop-shadow(0 13px 6px rgba(0, 0, 0, 0.09));
     }
+
     80% {
         transform: translateY(-1px) rotate(-3deg);
         filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.19));
     }
+
     100% {
         transform: translateY(0px) rotate(-4deg);
         filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.2));
@@ -31,11 +36,13 @@
 }
 
 @keyframes owl-shadow {
+
     0%,
     100% {
         transform: translateX(-50%) scaleX(1);
         opacity: 0.25;
     }
+
     40%,
     60% {
         transform: translateX(-50%) scaleX(0.55);
@@ -195,12 +202,15 @@ input[type="checkbox"]:hover:not(:disabled) {
 
 /* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    display: none;
+    /* Chrome, Safari, Opera */
 }
 
 /* Custom Range Slider for Volume Control - Removed to allow component-specific styles */
@@ -234,4 +244,22 @@ input[type="range"]::-moz-range-thumb {
 input[type="range"]::-moz-range-thumb:hover {
     transform: scale(1.2);
     /* box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); Removed global green shadow */
+}
+
+/* ── 3D Flashcard Utilities ── */
+.perspective-1000 {
+    perspective: 1000px;
+}
+
+.preserve-3d {
+    transform-style: preserve-3d;
+}
+
+.backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+    transform: rotateY(180deg);
 }

@@ -32,11 +32,11 @@ interface RoadmapPageProps {
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
     reading: { icon: <BookOpen className="w-4 h-4" />, color: 'text-blue-600', bg: 'bg-blue-50' },
-    listening: { icon: <Headphones className="w-4 h-4" />, color: 'text-purple-600', bg: 'bg-purple-50' },
-    writing: { icon: <PenLine className="w-4 h-4" />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    speaking: { icon: <Mic2 className="w-4 h-4" />, color: 'text-rose-600', bg: 'bg-rose-50' },
-    grammar: { icon: <BookMarked className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-50' },
-    vocabulary: { icon: <Layers className="w-4 h-4" />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    listening: { icon: <Headphones className="w-4 h-4" />, color: 'text-blue-500', bg: 'bg-blue-50/50' },
+    writing: { icon: <PenLine className="w-4 h-4" />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    speaking: { icon: <Mic2 className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-50' },
+    grammar: { icon: <BookMarked className="w-4 h-4" />, color: 'text-amber-700', bg: 'bg-amber-50' },
+    vocabulary: { icon: <Layers className="w-4 h-4" />, color: 'text-blue-700', bg: 'bg-blue-50' },
 };
 
 const STATUS_CFG = {
@@ -55,11 +55,11 @@ const STATUS_CFG = {
         btnClass: 'bg-amber-500 hover:bg-amber-600 text-white',
     },
     [LessonStatus.UNLOCKED]: {
-        icon: <PlayCircle className="w-5 h-5 text-indigo-500" />,
-        badge: 'bg-indigo-100 text-indigo-700',
-        border: 'border-indigo-200',
+        icon: <PlayCircle className="w-5 h-5 text-blue-500" />,
+        badge: 'bg-blue-50 text-blue-700',
+        border: 'border-blue-100',
         btnLabel: 'Start',
-        btnClass: 'bg-indigo-500 hover:bg-indigo-600 text-white',
+        btnClass: 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200',
     },
     [LessonStatus.LOCKED]: {
         icon: <Lock className="w-5 h-5 text-slate-400" />,
@@ -182,9 +182,9 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-                <p className="text-slate-500 text-sm">Đang tải lộ trình học của bạn…</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-[#F0F4FF]">
+                <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                <p className="text-slate-500 text-sm font-black uppercase tracking-widest">Đang tải lộ trình học…</p>
             </div>
         );
     }
@@ -217,78 +217,75 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
     // ── main render ───────────────────────────────────────────────────────────────
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 bg-[#F0F4FF] min-h-screen">
 
             {/* ── Hero header ──────────────────────────────────────────────────────── */}
-            <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-600 via-violet-600 to-purple-700 p-6 sm:p-8 text-white shadow-xl">
+            <div className="relative overflow-hidden rounded-[40px] bg-linear-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 sm:p-10 text-white shadow-2xl">
                 {/* decorative circle */}
-                <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-10 -right-10 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60 mb-2">IELTS Adaptive Roadmap</p>
-                    <h1 className="text-2xl sm:text-3xl font-black leading-tight">
-                        Lộ trình cá nhân hoá của bạn
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-3">Adaptive Learning Roadmap</p>
+                    <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight">
+                        Lộ trình cá nhân hoá <span className="text-amber-400">.</span>
                     </h1>
-                    <p className="text-white/75 text-sm mt-1">
-                        Hệ thống tự động điều chỉnh bài học theo năng lực thực tế.
+                    <p className="text-white/70 text-base mt-2 font-medium max-w-lg">
+                        Hệ thống tự động điều chỉnh bài học theo năng lực thực tế để tối ưu thời gian học của bạn.
                     </p>
 
                     {/* Stat cards */}
-                    <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {/* Current band */}
-                        <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-3 backdrop-blur">
-                            <p className="text-white/60 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
-                                <TrendingUp className="w-3 h-3" /> Current
+                        <div className="bg-white/10 border border-white/10 rounded-[24px] px-6 py-4 backdrop-blur-md">
+                            <p className="text-white/60 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-1">
+                                <TrendingUp className="w-3.5 h-3.5" /> Current
                             </p>
                             <p className="text-3xl font-black mt-1">{roadmap.current_band.toFixed(1)}</p>
                         </div>
 
                         {/* Target band */}
-                        <div className="bg-amber-400/20 border border-amber-300/30 rounded-2xl px-4 py-3 backdrop-blur">
-                            <p className="text-amber-200 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
-                                <Target className="w-3 h-3" /> Target
+                        <div className="bg-amber-400/20 border border-amber-300/20 rounded-[24px] px-6 py-4 backdrop-blur-md shadow-xl shadow-amber-900/10">
+                            <p className="text-amber-200 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-1">
+                                <Target className="w-3.5 h-3.5" /> Target
                             </p>
-                            <p className="text-3xl font-black mt-1 text-amber-200">{roadmap.target_band.toFixed(1)}</p>
+                            <p className="text-3xl font-black mt-1 text-amber-300">{roadmap.target_band.toFixed(1)}</p>
                         </div>
 
                         {/* D-Day */}
-                        <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-3 backdrop-blur">
-                            <p className="text-white/60 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
-                                <Calendar className="w-3 h-3" /> D-Day
+                        <div className="bg-white/10 border border-white/10 rounded-[24px] px-6 py-4 backdrop-blur-md">
+                            <p className="text-white/60 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-1">
+                                <Calendar className="w-3.5 h-3.5" /> D-Day
                             </p>
                             <p className="text-3xl font-black mt-1">
                                 {dDayValue != null ? dDayValue : '—'}
                             </p>
-                            {examDateLabel && (
-                                <p className="text-white/50 text-xs mt-0.5">{examDateLabel}</p>
-                            )}
                         </div>
 
                         {/* Progress */}
-                        <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-3 backdrop-blur">
-                            <p className="text-white/60 text-xs font-semibold uppercase tracking-wide flex items-center gap-1">
-                                <BookOpen className="w-3 h-3" /> Progress
+                        <div className="bg-white/10 border border-white/10 rounded-[24px] px-6 py-4 backdrop-blur-md">
+                            <p className="text-white/60 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-1">
+                                <BookOpen className="w-3.5 h-3.5" /> Progress
                             </p>
                             <p className="text-3xl font-black mt-1">{progressPercent}%</p>
-                            <p className="text-white/50 text-xs mt-0.5">{completedLessons}/{totalLessons} bài</p>
                         </div>
                     </div>
 
                     {/* Progress bar */}
-                    <div className="mt-5">
-                        <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+                    <div className="mt-8">
+                        <div className="h-3 bg-white/20 rounded-full overflow-hidden border border-white/10">
                             <div
-                                className="h-full bg-linear-to-r from-amber-400 to-yellow-300 rounded-full transition-all duration-700"
+                                className="h-full bg-linear-to-r from-amber-400 to-yellow-300 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(251,191,36,0.5)]"
                                 style={{ width: `${progressPercent}%` }}
                             />
                         </div>
                     </div>
 
                     {/* Action buttons */}
-                    <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="mt-8 flex flex-wrap gap-4">
                         <button
                             onClick={handleOpenTargetModal}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 text-sm font-bold hover:bg-white/90 transition-colors"
+                            className="inline-flex items-center gap-2 px-8 py-4 rounded-[20px] bg-white text-blue-700 text-[13px] font-black hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/10 active:scale-95"
                         >
                             <Target className="w-4 h-4" /> Cập nhật mục tiêu
                         </button>
@@ -297,9 +294,12 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
             </div>
 
             {/* ── Lessons grid ─────────────────────────────────────────────────────── */}
-            <div>
-                <h2 className="text-lg font-bold text-slate-800 mb-4">Danh sách bài học</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-6">
+                <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                    <Layers className="w-6 h-6 text-blue-600" />
+                    Danh sách bài học
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {roadmap.lessons?.map((lesson, index) => {
                         const cfg = STATUS_CFG[lesson.status] ?? STATUS_CFG[LessonStatus.LOCKED];
                         const skill = SKILL_META[lesson.skill_area] ?? SKILL_META.reading;
@@ -309,63 +309,50 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
                             <div
                                 key={lesson.id}
                                 onClick={() => handleStartLesson(lesson)}
-                                className={`bg-white rounded-2xl border-2 ${cfg.border} p-4 flex flex-col gap-3 transition-all duration-200 ${isLocked ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1 hover:shadow-lg'
+                                className={`bg-white rounded-[32px] border-2 ${cfg.border} p-6 flex flex-col gap-4 transition-all duration-300 shadow-xl shadow-blue-900/5 ${isLocked ? 'opacity-60 cursor-not-allowed grayscale' : 'cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:border-blue-200 hover:shadow-blue-900/10'
                                     }`}
                             >
                                 {/* card top */}
                                 <div className="flex items-center justify-between">
-                                    <span className={`inline-flex items-center gap-1 ${skill.bg} ${skill.color} text-xs font-semibold px-2.5 py-1 rounded-full`}>
+                                    <span className={`inline-flex items-center gap-1.5 ${skill.bg} ${skill.color} text-[10px] font-black px-3 py-1.5 rounded-full border border-current/10 uppercase tracking-widest`}>
                                         {skill.icon}
-                                        {lesson.skill_area.toUpperCase()}
+                                        {lesson.skill_area}
                                     </span>
-                                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.badge}`}>
+                                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full ${cfg.badge} uppercase tracking-widest`}>
                                         {cfg.icon}
                                         {lesson.status.replace('_', ' ')}
                                     </span>
                                 </div>
 
                                 {/* title */}
-                                <div className="flex-1">
-                                    <p className="text-xs text-slate-400 font-medium mb-0.5">
+                                <div className="flex-1 py-2">
+                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">
                                         Bài {index + 1}
                                         {lesson.lesson_code && (
-                                            <span className="ml-2 font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px]">{lesson.lesson_code}</span>
+                                            <span className="ml-3 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[9px]">{lesson.lesson_code}</span>
                                         )}
                                     </p>
-                                    <h3 className="text-sm font-bold text-slate-800 leading-snug">{lesson.lesson_title}</h3>
+                                    <h3 className="text-[15px] font-black text-slate-800 leading-tight tracking-tight">{lesson.lesson_title}</h3>
                                 </div>
 
                                 {/* meta */}
-                                <div className="flex items-center gap-3 text-xs text-slate-500">
-                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{lesson.estimated_minutes} phút</span>
-                                    <span className="flex items-center gap-1"><Target className="w-3 h-3" />Band {lesson.band_level.toFixed(1)}</span>
+                                <div className="flex items-center gap-4 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{lesson.estimated_minutes}m</span>
+                                    <span className="flex items-center gap-1.5 text-blue-600"><Target className="w-3.5 h-3.5" />Band {lesson.band_level.toFixed(1)}</span>
                                 </div>
 
                                 {/* scheduled date */}
                                 {lesson.scheduled_date && (
-                                    <div className="flex items-center gap-1 text-xs text-indigo-500 font-medium">
-                                        <Calendar className="w-3 h-3" />
+                                    <div className="flex items-center gap-1.5 text-[11px] text-indigo-500 font-black bg-indigo-50 px-3 py-1.5 rounded-xl w-fit">
+                                        <Calendar className="w-3.5 h-3.5" />
                                         {new Date(lesson.scheduled_date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                     </div>
                                 )}
 
-                                {/* components */}
-                                <div className="flex flex-wrap gap-1.5">
-                                    {lesson.flashcard_repo_id && (
-                                        <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">Flashcard</span>
-                                    )}
-                                    {lesson.practice_repo_id && (
-                                        <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">Practice</span>
-                                    )}
-                                    {lesson.mini_test_repo_id && (
-                                        <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">Mini Test</span>
-                                    )}
-                                </div>
-
                                 {/* button */}
                                 <button
                                     disabled={isLocked}
-                                    className={`w-full py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1 ${cfg.btnClass}`}
+                                    className={`w-full py-3.5 rounded-[20px] text-[13px] font-black transition-all flex items-center justify-center gap-2 active:scale-95 ${cfg.btnClass}`}
                                 >
                                     {cfg.btnLabel} {!isLocked && <ChevronRight className="w-4 h-4" />}
                                 </button>
@@ -376,37 +363,40 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
             </div>
 
             {/* ── Band test CTA ─────────────────────────────────────────────────────── */}
+            <div className="pt-10">
             {progressPercent < 100 ? (
-                <div className="rounded-3xl bg-linear-to-r from-indigo-500 via-violet-500 to-purple-600 p-6 text-white text-center shadow-xl">
-                    <Trophy className="w-10 h-10 mx-auto mb-3 text-yellow-200" />
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold mb-2">Làm thử</div>
-                    <h2 className="text-xl font-black mb-1">Luyện tập với Band Test</h2>
-                    <p className="text-white/80 text-sm mb-4">
-                        {completedLessons}/{totalLessons} bài hoàn thành ({progressPercent}%). Kết quả chỉ hiển thị, chưa áp dụng vào lộ trình.
+                <div className="rounded-[40px] bg-linear-to-r from-blue-600 to-indigo-700 p-10 text-white text-center shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
+                    <Trophy className="w-16 h-16 mx-auto mb-6 text-amber-300" />
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Luyện tập</div>
+                    <h2 className="text-3xl font-black mb-3 tracking-tight">Kiểm tra năng lực thực tế</h2>
+                    <p className="text-white/70 text-sm mb-8 max-w-md mx-auto font-medium">
+                        Hoàn thành {completedLessons}/{totalLessons} bài ({progressPercent}%). Hãy thử sức với bài Band Test để xem trình độ hiện tại!
                     </p>
                     <button
                         onClick={() => navigate(`/ielts-adaptive/band-test/${roadmap.id}`)}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-indigo-600 font-bold text-sm hover:bg-white/90 transition-colors"
+                        className="inline-flex items-center gap-3 px-10 py-4 rounded-[24px] bg-white text-blue-700 font-black text-sm hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/10 active:scale-95"
                     >
-                        <Trophy className="w-4 h-4" /> Làm thử Band Test
+                        <Trophy className="w-5 h-5" /> Bắt đầu Band Test
                     </button>
                 </div>
             ) : (
-                <div className="rounded-3xl bg-linear-to-r from-rose-500 via-pink-500 to-fuchsia-500 p-6 text-white text-center shadow-xl">
-                    <Trophy className="w-10 h-10 mx-auto mb-3 text-yellow-200" />
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold mb-2">Thi thật</div>
-                    <h2 className="text-xl font-black mb-1">Sẵn sàng kiểm tra Band?</h2>
-                    <p className="text-white/80 text-sm mb-4">
-                        Bạn đã hoàn thành toàn bộ {totalLessons} bài! Kết quả sẽ được áp dụng vào lộ trình.
+                <div className="rounded-[40px] bg-linear-to-r from-amber-500 to-orange-600 p-10 text-white text-center shadow-2xl relative overflow-hidden">
+                    <Trophy className="w-16 h-16 mx-auto mb-6 text-white" />
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Mục tiêu đã đạt</div>
+                    <h2 className="text-3xl font-black mb-3 tracking-tight">Sẵn sàng vượt ngưỡng?</h2>
+                    <p className="text-white/80 text-sm mb-8 max-w-md mx-auto font-medium">
+                        Bạn đã xuất sắc hoàn thành toàn bộ lộ trình! Làm bài Band Test cuối cùng để cập nhật Band điểm mới.
                     </p>
                     <button
                         onClick={() => navigate(`/ielts-adaptive/band-test/${roadmap.id}`)}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-rose-600 font-bold text-sm hover:bg-white/90 transition-colors"
+                        className="inline-flex items-center gap-3 px-10 py-4 rounded-[24px] bg-white text-orange-600 font-black text-sm hover:bg-blue-50 transition-all shadow-xl shadow-orange-900/10 active:scale-95"
                     >
-                        <Trophy className="w-4 h-4" /> Bắt đầu Band Test
+                        <Trophy className="w-5 h-5" /> Bắt đầu Band Test
                     </button>
                 </div>
             )}
+            </div>
 
             {/* ── Update targets modal ──────────────────────────────────────────────── */}
             {showTargetModal && (
@@ -495,17 +485,17 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ enrollmentId }) => {
                         </div>
 
                         {/* actions */}
-                        <div className="mt-5 flex gap-3">
+                        <div className="mt-8 flex gap-4">
                             <button
                                 onClick={() => setShowTargetModal(false)}
-                                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                className="flex-1 py-3.5 rounded-[20px] border-2 border-slate-100 text-slate-500 text-[13px] font-black hover:bg-slate-50 transition-all"
                             >
                                 Huỷ
                             </button>
                             <button
                                 onClick={handleSaveTargets}
                                 disabled={saving || !draftTargetBand}
-                                className="flex-1 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 py-3.5 rounded-[24px] bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-[13px] font-black transition-all flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20"
                             >
                                 {saving ? (
                                     <><Loader2 className="w-4 h-4 animate-spin" /> Đang lưu…</>

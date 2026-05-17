@@ -23,6 +23,10 @@ import {
   getWordAccuracy,
 } from './certificateSpeakingData'
 import type { SpeakingExercise } from './certificateSpeakingData'
+import {
+  chatIeltsGroqTutor,
+  type IeltsChatMessage,
+} from "@/services/api/certificateService";
 
 // ─── Score helpers ─────────────────────────────────────────────────────────────
 
@@ -148,6 +152,12 @@ const SpeakingPractice: React.FC<Props> = ({ topicKey }) => {
   const [error, setError]                   = useState<string | null>(null)
   const [completedCount, setCompletedCount] = useState(0)
 
+  // --- AI Chat State ---
+  const [chatHistory, setChatHistory] = useState<IeltsChatMessage[]>([]);
+  const [chatMessage, setChatMessage] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+
   const streamRef    = useRef<MediaStream | null>(null)
   const recorderRef  = useRef<MediaRecorder | null>(null)
   const chunksRef    = useRef<BlobPart[]>([])
@@ -167,6 +177,43 @@ const SpeakingPractice: React.FC<Props> = ({ topicKey }) => {
     setExerciseIndex(0)
     resetState()
   }, [topicKey])
+
+  // Reset chat when exercise changes
+  useEffect(() => {
+    setChatHistory([]);
+    setChatMessage("");
+    setIsChatExpanded(false);
+  }, [exerciseIndex, topicKey]);
+
+  const sendChatMessage = async (overrideMsg?: string) => {
+    const msgToSend = overrideMsg || chatMessage;
+    if (!msgToSend.trim() || isChatLoading) return;
+
+    const userMsg: IeltsChatMessage = { role: "user", content: msgToSend.trim() };
+    if (!overrideMsg) setChatMessage("");
+    setChatHistory(prev => [...prev, userMsg]);
+    setIsChatLoading(true);
+    setIsChatExpanded(true);
+
+    try {
+      const res = await chatIeltsGroqTutor({
+        skill: "speaking",
+        context_text: `Topic: ${pack?.title}\nQuestion: ${exercise?.question || exercise?.target}\nUser spoke: ${spokenText || 'N/A'}`,
+        user_message: msgToSend.trim(),
+        chat_history: chatHistory,
+      });
+
+      setChatHistory(prev => [...prev, { role: "assistant", content: res.answer }]);
+    } catch (err) {
+      console.error("Chat error:", err);
+      setChatHistory(prev => [...prev, { role: "assistant", content: "Lỗi AI. Thử lại sau nhé!" }]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const handleQuickAction = (p: string) => sendChatMessage(p);
+  const toggleChat = () => setIsChatExpanded(!isChatExpanded);
 
   const resetState = () => {
     recorderRef.current?.stop()

@@ -285,6 +285,9 @@ export class IeltsAdaptiveService {
       throw new NotFoundException('Roadmap not found');
     }
 
+    // Tự động đồng bộ tiến độ lên Dashboard (Healing)
+    await this.syncOverallProgress(enrollment.id);
+
     return this.formatRoadmapResponse(roadmap);
   }
 
@@ -311,15 +314,15 @@ export class IeltsAdaptiveService {
 
     const generated = roadmap
       ? await this.regenerateRoadmap(
-          roadmap.id,
-          currentBand,
-          Recommendation.MAINTAIN,
-        )
+        roadmap.id,
+        currentBand,
+        Recommendation.MAINTAIN,
+      )
       : await this.generateRoadmapForEnrollment(
-          enrollment.id,
-          currentBand,
-          targetBand,
-        );
+        enrollment.id,
+        currentBand,
+        targetBand,
+      );
 
     const roadmapWithLessons =
       await this.prisma.ieltsAdaptiveRoadmap.findUnique({
@@ -339,6 +342,9 @@ export class IeltsAdaptiveService {
     if (!roadmapWithLessons) {
       throw new NotFoundException('Roadmap not found after generation');
     }
+
+    // Đồng bộ tiến độ (thường là 0% nếu tạo mới, hoặc % mới nếu tái tạo)
+    await this.syncOverallProgress(enrollment.id);
 
     return this.formatRoadmapResponse(roadmapWithLessons);
   }
@@ -519,22 +525,24 @@ export class IeltsAdaptiveService {
         : null,
     );
 
-    // Lưu từng bài học: bài đầu mở khoá, còn lại khoá chờ mở tuần tự
+    // Lưu từng bài học: mở khoá tất cả bài cùng band_level đầu tiên, còn lại khoá
+    const firstBandLevel = lessons[0]?.band_level ?? dto.current_band;
     const createdLessons: any[] = [];
     for (let i = 0; i < lessons.length; i++) {
       const lesson = lessons[i];
+      const bandLevel = lesson.band_level ?? dto.current_band;
       const created = await this.prisma.ieltsLesson.create({
         data: {
           roadmap_id: roadmap.id,
           skill_area: lesson.skill_area,
           lesson_title: lesson.lesson_title,
           lesson_order: i,
-          band_level: lesson.band_level ?? dto.current_band,
+          band_level: bandLevel,
           flashcard_repo_id: lesson.flashcard_repo_id,
           practice_repo_id: lesson.practice_repo_id,
           mini_test_repo_id: lesson.mini_test_repo_id,
           estimated_minutes: lesson.estimated_minutes,
-          status: i === 0 ? LessonStatus.UNLOCKED : LessonStatus.LOCKED,
+          status: bandLevel === firstBandLevel ? LessonStatus.UNLOCKED : LessonStatus.LOCKED,
           scheduled_date: scheduledDates[i] ?? undefined,
         },
       });
@@ -543,6 +551,9 @@ export class IeltsAdaptiveService {
 
     // Khởi tạo tiến độ từng kỹ năng ban đầu (band mặc định = current_band)
     await this.initializeSkillProgress(dto.enrollment_id, dto.current_band);
+
+    // Cập nhật tiến độ tổng thể lên Dashboard
+    await this.syncOverallProgress(dto.enrollment_id);
 
     return {
       ...roadmap,
@@ -675,6 +686,9 @@ export class IeltsAdaptiveService {
       });
       createdLessons.push(created);
     }
+
+    // Đồng bộ tiến độ 0% (reset) hoặc tiến độ mới sau khi tái tạo
+    await this.syncOverallProgress(roadmap.enrollment_id);
 
     return {
       ...updated,
@@ -822,14 +836,14 @@ export class IeltsAdaptiveService {
   }
 
   /**
-   * Mở khoá bài học tiếp theo trong lộ trình sau khi hoàn thành bài hiện tại.
+   * Mở khoá tất cả bài học cùng band_level tiếp theo trong lộ trình.
    *
    * Luồng:
    *   1. Load roadmap kèm danh sách lessons (sắp xếp theo lesson_order).
-   *   2. Tính nextIndex = current_lesson_index + 1.
-   *   3. Nếu còn bài tiếp theo: đổi status của bài đó thành UNLOCKED
-   *      và tăng current_lesson_index trong roadmap.
-   *   4. Nếu không còn bài nào → không làm gì (học sinh đã hoàn thành lộ trình).
+   *   2. Tìm tất cả bài còn LOCKED.
+   *   3. Xác định band_level nhỏ nhất trong số bài LOCKED.
+   *   4. Mở khoá tất cả bài có cùng band_level đó.
+   *   5. Cập nhật current_lesson_index đến bài cuối cùng vừa mở khoá.
    */
   async unlockNextLesson(roadmapId: number): Promise<void> {
     const roadmap = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
@@ -841,22 +855,37 @@ export class IeltsAdaptiveService {
       throw new NotFoundException('Roadmap not found');
     }
 
-    const nextIndex = roadmap.current_lesson_index + 1;
-    if (nextIndex < roadmap.lessons.length) {
-      const nextLesson = roadmap.lessons[nextIndex];
+    // Tìm tất cả bài còn khoá
+    const lockedLessons = roadmap.lessons.filter(
+      (l) => l.status === LessonStatus.LOCKED,
+    );
+    if (lockedLessons.length === 0) return;
 
-      // Mở khoá bài kế tiếp
+    // Band level nhỏ nhất trong các bài còn khoá = band tiếp theo cần mở
+    const nextBandLevel = Math.min(
+      ...lockedLessons.map((l) => Number(l.band_level)),
+    );
+
+    // Mở khoá tất cả bài cùng band_level đó
+    const toUnlock = lockedLessons.filter(
+      (l) => Number(l.band_level) === nextBandLevel,
+    );
+
+    for (const lesson of toUnlock) {
       await this.prisma.ieltsLesson.update({
-        where: { id: nextLesson.id },
+        where: { id: lesson.id },
         data: { status: LessonStatus.UNLOCKED },
       });
-
-      // Tiến con trỏ lộ trình lên 1 vị trí
-      await this.prisma.ieltsAdaptiveRoadmap.update({
-        where: { id: roadmapId },
-        data: { current_lesson_index: nextIndex },
-      });
     }
+
+    // Cập nhật con trỏ đến vị trí bài cuối cùng vừa mở khoá
+    const lastUnlockedOrder = Math.max(
+      ...toUnlock.map((l) => l.lesson_order),
+    );
+    await this.prisma.ieltsAdaptiveRoadmap.update({
+      where: { id: roadmapId },
+      data: { current_lesson_index: lastUnlockedOrder },
+    });
   }
 
   /**
@@ -893,7 +922,55 @@ export class IeltsAdaptiveService {
           last_practiced_at: new Date(),
         },
       });
+
+      // Kiểm tra nếu tất cả bài cùng band_level đã hoàn thành → mở khoá band tiếp theo
+      const sameBandLessons = await this.prisma.ieltsLesson.findMany({
+        where: {
+          roadmap_id: lesson.roadmap_id,
+          band_level: lesson.band_level,
+        },
+      });
+      const allSameBandCompleted = sameBandLessons.every(
+        (l) => l.status === LessonStatus.COMPLETED,
+      );
+      if (allSameBandCompleted) {
+        await this.unlockNextLesson(lesson.roadmap_id);
+      }
+
+      // Đồng bộ tiến độ tổng thể lên Dashboard
+      await this.syncOverallProgress(lesson.roadmap.enrollment_id);
     }
+  }
+
+  /**
+   * Đồng bộ tiến độ từ Roadmap sang CertificateEnrollment để hiển thị trên Dashboard.
+   * Tính theo công thức: (số bài đã hoàn thành / tổng số bài trong roadmap) * 100.
+   */
+  private async syncOverallProgress(enrollmentId: number): Promise<void> {
+    const roadmap = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+      where: { enrollment_id: enrollmentId },
+      include: { lessons: true },
+    });
+
+    if (!roadmap) return;
+
+    const lessons = roadmap.lessons || [];
+    const completedCount = lessons.filter(
+      (l) => l.status === LessonStatus.COMPLETED,
+    ).length;
+    const progressPercent =
+      lessons.length > 0
+        ? Math.round((completedCount / lessons.length) * 100)
+        : 0;
+
+    await this.prisma.certificateEnrollment.update({
+      where: { id: enrollmentId },
+      data: { progress_percent: progressPercent },
+    });
+
+    this.logger.log(
+      `Synced overall progress for enrollment ${enrollmentId}: ${progressPercent}%`,
+    );
   }
 
   // ============================================
@@ -1063,13 +1140,15 @@ export class IeltsAdaptiveService {
     if (isMiniTest) {
       await this.completeLesson(dto.lesson_id);
       if (lesson) {
-        await this.unlockNextLesson(lesson.roadmap_id);
-        // Find the newly unlocked lesson
+        // completeLesson đã tự động gọi unlockNextLesson khi tất cả bài cùng band hoàn thành
+        // Tìm bài tiếp theo đã được mở khoá
         const nextLesson = await this.prisma.ieltsLesson.findFirst({
           where: {
             roadmap_id: lesson.roadmap_id,
-            lesson_order: lesson.lesson_order + 1,
+            status: LessonStatus.UNLOCKED,
+            lesson_order: { gt: lesson.lesson_order },
           },
+          orderBy: { lesson_order: 'asc' },
         });
         unlockedLessonId = nextLesson?.id;
       }
@@ -1786,7 +1865,7 @@ export class IeltsAdaptiveService {
         if (!flashcardRepo && !practiceRepo && !miniTestRepo) {
           this.logger.warn(
             `No IELTS repositories found for skill=${skill} band=${bandStep}. ` +
-              'Run: node prisma/seedIeltsAdaptive.js',
+            'Run: node prisma/seedIeltsAdaptive.js',
           );
           continue;
         }

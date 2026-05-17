@@ -71,6 +71,19 @@ export class IeltsOcrImportResponseDto {
 export class IeltsAnswerKeyImportDto {
   @IsString()
   repository_slug: string;
+
+  /**
+   * If true, all existing is_correct flags on this repository are reset
+   * before applying the new answer key.
+   */
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return false;
+  })
+  clear_existing?: boolean;
 }
 
 export class IeltsAnswerKeyImportResponseDto {
@@ -79,6 +92,14 @@ export class IeltsAnswerKeyImportResponseDto {
   updated_count: number;
   skipped_count: number;
   answer_key_complete: boolean;
+
+  // Aliases / extras consumed by the frontend (IeltsAnswerKeyImportResponse).
+  skill_area?: string;
+  source_filename?: string;
+  total_answers_detected?: number;
+  applied_items?: number;
+  unanswered_items?: number;
+  unknown_question_numbers?: number[];
 }
 
 // ─── Audio upload (Listening) ─────────────────────────────────────────────────
