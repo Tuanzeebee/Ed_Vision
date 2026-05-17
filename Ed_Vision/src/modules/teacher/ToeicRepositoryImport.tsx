@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Upload,
   FileText,
@@ -11,6 +11,8 @@ import {
   FileUp,
   Music,
   Volume2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
 import { buildAssetUrl } from "@/services/api/config";
@@ -136,6 +138,8 @@ export function ToeicRepositoryImportBody({
   const [answerKeyRepositorySlug, setAnswerKeyRepositorySlug] = useState("");
   const [answerKeyClearExisting, setAnswerKeyClearExisting] = useState(true);
   const [isAnswerKeySubmitting, setIsAnswerKeySubmitting] = useState(false);
+  const [showAnswerKeyGuideModal, setShowAnswerKeyGuideModal] = useState(false);
+  const answerKeyFileInputRef = useRef<HTMLInputElement>(null);
   const [answerKeyError, setAnswerKeyError] = useState<string | null>(null);
   const [answerKeyResult, setAnswerKeyResult] =
     useState<ToeicAnswerKeyImportResponse | null>(null);
@@ -166,6 +170,7 @@ export function ToeicRepositoryImportBody({
   const [repoList, setRepoList] = useState<RepositoryListItem[]>([]);
   const [repoListLoading, setRepoListLoading] = useState(false);
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<string | null>(null);
 
   const fieldClass =
     "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors";
@@ -182,6 +187,22 @@ export function ToeicRepositoryImportBody({
       // silently ignore – list is optional
     } finally {
       setRepoListLoading(false);
+    }
+  };
+
+  const executeDeleteRepo = async (slug: string) => {
+    setDeletingSlug(slug);
+    try {
+      if (examType === "toeic") {
+        await deleteToeicRepository(slug);
+      } else {
+        await deleteIeltsRepository(slug);
+      }
+      await loadRepoList();
+    } catch (err) {
+      alert("Xóa đề thi thất bại.");
+    } finally {
+      setDeletingSlug(null);
     }
   };
 
@@ -422,7 +443,7 @@ export function ToeicRepositoryImportBody({
             className="flex items-center gap-2 text-sm font-bold text-gray-800 hover:text-indigo-600 transition-colors"
           >
             <FolderOpen className="h-4 w-4" />
-            Kho Đề {examType.toUpperCase()} Hiện Có
+            Kho Đề Thi {examType.toUpperCase()} Hiện Có
             {repoList.length > 0 && (
               <span className="ml-1 inline-flex items-center justify-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                 {repoList.length}
@@ -473,7 +494,8 @@ export function ToeicRepositoryImportBody({
                       <th className="pb-2 pr-4">Slug</th>
                       <th className="pb-2 pr-4">Tiêu đề</th>
                       <th className="pb-2 pr-4 text-right">Câu hỏi</th>
-                      <th className="pb-2 text-right">Xóa</th>
+                      <th className="pb-2 pr-4 text-left">Ngày nạp</th>
+                      <th className="pb-2 text-right">Hành động</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -495,35 +517,29 @@ export function ToeicRepositoryImportBody({
                         <td className="py-2.5 pr-4 font-mono text-xs text-gray-600 max-w-[160px] truncate">
                           {repo.slug}
                         </td>
-                        <td className="py-2.5 pr-4 text-gray-800 max-w-[200px] truncate">
+                        <td className="py-2.5 pr-4 text-gray-800 max-w-[200px] truncate font-medium">
                           {repo.title}
                         </td>
                         <td className="py-2.5 pr-4 text-right tabular-nums text-gray-600">
                           {repo.total_items}
                         </td>
-                        <td className="py-2.5 text-right">
+                        <td className="py-2.5 pr-4 text-left text-gray-600 text-xs whitespace-nowrap">
+                          {repo.created_at ? new Date(repo.created_at).toLocaleString("vi-VN") : "—"}
+                        </td>
+                        <td className="py-2.5 text-right flex items-center justify-end gap-2">
+                          {!repo.has_answer_key && (
+                            <button
+                              type="button"
+                              onClick={() => setRepositorySlug(repo.slug)}
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                            >
+                              Chọn Nạp Đáp Án
+                            </button>
+                          )}
                           <button
                             type="button"
                             disabled={deletingSlug === repo.slug}
-                            onClick={async () => {
-                              if (
-                                !window.confirm(
-                                  `Xóa repository ${examType.toUpperCase()} "${repo.slug}"?\nHành động này không thể hoàn tác. Tất cả ${repo.total_items} câu hỏi sẽ bị xóa.`,
-                                )
-                              )
-                                return;
-                              setDeletingSlug(repo.slug);
-                              try {
-                                if (examType === "toeic") {
-                                  await deleteToeicRepository(repo.slug);
-                                } else {
-                                  await deleteIeltsRepository(repo.slug);
-                                }
-                                await loadRepoList();
-                              } finally {
-                                setDeletingSlug(null);
-                              }
-                            }}
+                            onClick={() => setConfirmDeleteTarget(repo.slug)}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
                           >
                             {deletingSlug === repo.slug ? (
@@ -1235,26 +1251,47 @@ export function ToeicRepositoryImportBody({
             </div>
 
             {/* Answer key file upload */}
-            <div className="group rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/30 p-5 transition-colors hover:border-emerald-400 hover:bg-emerald-50/60">
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Chọn file đáp án
-              </label>
+            <div 
+              onClick={() => setShowAnswerKeyGuideModal(true)}
+              className="group rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/20 p-5 text-center cursor-pointer transition-all duration-200 hover:border-emerald-500 hover:bg-emerald-50/50 hover:shadow-sm"
+            >
               <input
                 type="file"
-                accept=".txt,.md,.csv,.json,.xls,.xlsx,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff"
-                onChange={(e) =>
-                  setAnswerKeyFile(e.target.files?.[0] ?? null)
-                }
-                className="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer"
+                ref={answerKeyFileInputRef}
+                accept=".xlsx,.xls,.csv"
+                onChange={(e) => setAnswerKeyFile(e.target.files?.[0] ?? null)}
+                onClick={(e) => e.stopPropagation()} // Prevent double-triggering
+                className="hidden"
               />
-              <p className="mt-2 text-xs text-gray-400">
-                Hỗ trợ: ảnh (PNG/JPG/WEBP/BMP/TIF), PDF, DOC/DOCX, TXT, CSV,
-                JSON, XLS/XLSX. Có thể OCR bảng đáp án dạng 1.A 2.D 3.C ...
-              </p>
+              <div className="flex flex-col items-center justify-center gap-2 text-emerald-800">
+                <div className="rounded-full bg-emerald-100 p-2.5 group-hover:scale-115 transition-transform duration-200">
+                  <FileUp className="h-5 w-5 text-emerald-600" />
+                </div>
+                <span className="text-sm font-bold text-gray-700">
+                  Tải Lên Bảng Đáp Án Excel / CSV
+                </span>
+                <p className="text-[11px] text-gray-500 max-w-md mx-auto">
+                  Chỉ hỗ trợ file Excel <span className="font-semibold text-emerald-600">.xlsx, .xls</span> hoặc file <span className="font-semibold text-emerald-600">.csv</span> định dạng cột Question - Answer. Click để xem hướng dẫn chi tiết và chọn file.
+                </p>
+              </div>
+
               {answerKeyFile && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-700">
-                  <FileText className="h-4 w-4 shrink-0" />
-                  {answerKeyFile.name}
+                <div 
+                  onClick={(e) => e.stopPropagation()} // Prevent triggering guide popup when clicking clear/details
+                  className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm animate-fadeIn"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="truncate max-w-[180px] font-bold">{answerKeyFile.name}</span>
+                    <span className="text-[10px] text-gray-400">({(answerKeyFile.size / 1024).toFixed(1)} KB)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAnswerKeyFile(null)}
+                    className="text-gray-400 hover:text-red-500 rounded-lg p-1 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-4.5 w-4.5" />
+                  </button>
                 </div>
               )}
             </div>
@@ -1268,10 +1305,17 @@ export function ToeicRepositoryImportBody({
                   !answerKeyRepositorySlug.trim() ||
                   isAnswerKeySubmitting
                 }
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border border-emerald-600 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Upload className="h-4 w-4" />
-                {isAnswerKeySubmitting ? "Đang gán đáp án..." : "Gán đáp án"}
+                {isAnswerKeySubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Đang gán đáp án...
+                  </>
+                ) : (
+                  <>
+                    <FileUp className="h-4 w-4" /> Nạp Đáp Án
+                  </>
+                )}
               </button>
             </div>
 
@@ -1349,6 +1393,137 @@ export function ToeicRepositoryImportBody({
             {activeSlug}
           </code>
         </p>
+      )}
+
+      {showAnswerKeyGuideModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                Hướng Dẫn File Đáp Án Đề Thi
+              </h3>
+              <button 
+                onClick={() => setShowAnswerKeyGuideModal(false)} 
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4 text-sm text-slate-600 bg-slate-50/50">
+              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-xs text-amber-900 space-y-1 text-left">
+                <p className="font-bold text-amber-900">⚠️ Thay đổi phương thức nạp đáp án</p>
+                <p>Để đảm bảo tính chính xác 100% cho hệ thống thi và chấm điểm, chức năng nạp đáp án hiện tại <strong>chỉ chấp nhận các file bảng tính Excel hoặc CSV</strong>. Hệ thống <strong>không chấp nhận</strong> các định dạng không cấu trúc như hình ảnh, PDF hay TXT để tránh sai sót nhận diện.</p>
+              </div>
+
+              <p className="font-bold text-slate-800 text-sm text-left">Cấu trúc bảng dữ liệu Excel/CSV bắt buộc:</p>
+              
+              <ul className="list-disc ml-6 space-y-2 text-xs text-left">
+                <li><span className="font-semibold text-slate-800">Cột A (Question):</span> Chứa số thứ tự câu hỏi (ví dụ: <code className="bg-slate-100 px-1 rounded font-mono">1</code>, <code className="bg-slate-100 px-1 rounded font-mono">2</code> hoặc số câu gốc <code className="bg-slate-100 px-1 rounded font-mono">101</code>, <code className="bg-slate-100 px-1 rounded font-mono">154</code>).</li>
+                <li><span className="font-semibold text-slate-800">Cột B (Answer):</span> Ký tự đáp án đúng (ví dụ: <code className="bg-slate-100 px-1 rounded font-mono">A</code>, <code className="bg-slate-100 px-1 rounded font-mono">B</code>, <code className="bg-slate-100 px-1 rounded font-mono">C</code>, <code className="bg-slate-100 px-1 rounded font-mono">D</code>).</li>
+                <li>Dòng đầu tiên của Excel nên là dòng tiêu đề (ví dụ: <code className="bg-slate-100 px-1 rounded font-mono">Question</code> và <code className="bg-slate-100 px-1 rounded font-mono">Answer</code>).</li>
+                <li>Đáp án không nhạy cảm chữ hoa/thường (A hay a đều được).</li>
+              </ul>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2.5">
+                <p className="font-bold text-xs text-slate-700 text-left">Mẫu xem trước cấu trúc Excel chuẩn:</p>
+                <div className="overflow-hidden border border-slate-150 rounded-lg text-xs">
+                  <table className="w-full text-center border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-700">
+                        <th className="py-2 border-r border-slate-200 w-1/12 bg-slate-100"></th>
+                        <th className="py-2 border-r border-slate-200 w-5/12">Cột A (Question)</th>
+                        <th className="py-2 w-5/12">Cột B (Answer)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-slate-150">
+                        <td className="py-1.5 bg-slate-50 border-r border-slate-200 text-slate-400 font-mono text-[10px]">1</td>
+                        <td className="py-1.5 border-r border-slate-200 font-semibold text-slate-800">Question</td>
+                        <td className="py-1.5 font-semibold text-slate-800">Answer</td>
+                      </tr>
+                      <tr className="border-b border-slate-150 bg-slate-50/20">
+                        <td className="py-1.5 bg-slate-50 border-r border-slate-200 text-slate-400 font-mono text-[10px]">2</td>
+                        <td className="py-1.5 border-r border-slate-200 font-medium text-slate-600">1</td>
+                        <td className="py-1.5 font-bold text-emerald-600">A</td>
+                      </tr>
+                      <tr className="border-b border-slate-150">
+                        <td className="py-1.5 bg-slate-50 border-r border-slate-200 text-slate-400 font-mono text-[10px]">3</td>
+                        <td className="py-1.5 border-r border-slate-200 font-medium text-slate-600">2</td>
+                        <td className="py-1.5 font-bold text-emerald-600">C</td>
+                      </tr>
+                      <tr className="bg-slate-50/20">
+                        <td className="py-1.5 bg-slate-50 border-r border-slate-200 text-slate-400 font-mono text-[10px]">4</td>
+                        <td className="py-1.5 border-r border-slate-200 font-medium text-slate-600">3</td>
+                        <td className="py-1.5 font-bold text-emerald-600">B</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50">
+              <button 
+                onClick={() => setShowAnswerKeyGuideModal(false)} 
+                className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={() => {
+                  setShowAnswerKeyGuideModal(false);
+                  setTimeout(() => {
+                    answerKeyFileInputRef.current?.click();
+                  }, 100);
+                }} 
+                className="px-6 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all flex items-center gap-2 active:scale-95"
+              >
+                <CheckCircle2 className="h-4 w-4" /> Đã Hiểu, Chọn File Ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDeleteTarget && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/35 backdrop-blur-[1px] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-250">
+            <div className="p-6 text-center space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-600 animate-bounce">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="space-y-2 text-center">
+                <h3 className="text-lg font-bold text-gray-900">
+                  Xác Nhận Xóa Đề Thi
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Bạn có chắc chắn muốn xóa đề thi <span className="font-semibold text-gray-800">"{confirmDeleteTarget}"</span>? Hành động này sẽ xóa toàn bộ câu hỏi và đáp án liên quan và không thể hoàn tác.
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteTarget(null)}
+                className="px-4 py-2 text-sm font-semibold bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-all shadow-sm active:scale-95 text-gray-700 hover:text-gray-900"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = confirmDeleteTarget;
+                  setConfirmDeleteTarget(null);
+                  void executeDeleteRepo(target);
+                }}
+                className="px-5 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-all active:scale-95"
+              >
+                Đồng ý xóa
+              </button>
+            </div>
+          </div>
+        </div>
       )}
         </>
       )}
