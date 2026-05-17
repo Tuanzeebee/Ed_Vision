@@ -285,6 +285,9 @@ export class IeltsAdaptiveService {
       throw new NotFoundException('Roadmap not found');
     }
 
+    // Tự động đồng bộ tiến độ lên Dashboard (Healing)
+    await this.syncOverallProgress(enrollment.id);
+
     return this.formatRoadmapResponse(roadmap);
   }
 
@@ -339,6 +342,9 @@ export class IeltsAdaptiveService {
     if (!roadmapWithLessons) {
       throw new NotFoundException('Roadmap not found after generation');
     }
+
+    // Đồng bộ tiến độ (thường là 0% nếu tạo mới, hoặc % mới nếu tái tạo)
+    await this.syncOverallProgress(enrollment.id);
 
     return this.formatRoadmapResponse(roadmapWithLessons);
   }
@@ -546,6 +552,9 @@ export class IeltsAdaptiveService {
     // Khởi tạo tiến độ từng kỹ năng ban đầu (band mặc định = current_band)
     await this.initializeSkillProgress(dto.enrollment_id, dto.current_band);
 
+    // Cập nhật tiến độ tổng thể lên Dashboard
+    await this.syncOverallProgress(dto.enrollment_id);
+
     return {
       ...roadmap,
       current_band: Number(roadmap.current_band),
@@ -677,6 +686,9 @@ export class IeltsAdaptiveService {
       });
       createdLessons.push(created);
     }
+
+    // Đồng bộ tiến độ 0% (reset) hoặc tiến độ mới sau khi tái tạo
+    await this.syncOverallProgress(roadmap.enrollment_id);
 
     return {
       ...updated,
@@ -924,7 +936,41 @@ export class IeltsAdaptiveService {
       if (allSameBandCompleted) {
         await this.unlockNextLesson(lesson.roadmap_id);
       }
+
+      // Đồng bộ tiến độ tổng thể lên Dashboard
+      await this.syncOverallProgress(lesson.roadmap.enrollment_id);
     }
+  }
+
+  /**
+   * Đồng bộ tiến độ từ Roadmap sang CertificateEnrollment để hiển thị trên Dashboard.
+   * Tính theo công thức: (số bài đã hoàn thành / tổng số bài trong roadmap) * 100.
+   */
+  private async syncOverallProgress(enrollmentId: number): Promise<void> {
+    const roadmap = await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+      where: { enrollment_id: enrollmentId },
+      include: { lessons: true },
+    });
+
+    if (!roadmap) return;
+
+    const lessons = roadmap.lessons || [];
+    const completedCount = lessons.filter(
+      (l) => l.status === LessonStatus.COMPLETED,
+    ).length;
+    const progressPercent =
+      lessons.length > 0
+        ? Math.round((completedCount / lessons.length) * 100)
+        : 0;
+
+    await this.prisma.certificateEnrollment.update({
+      where: { id: enrollmentId },
+      data: { progress_percent: progressPercent },
+    });
+
+    this.logger.log(
+      `Synced overall progress for enrollment ${enrollmentId}: ${progressPercent}%`,
+    );
   }
 
   // ============================================
