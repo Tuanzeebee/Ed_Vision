@@ -6,7 +6,7 @@ import type { SpeakingResult, SpeakingCriteria } from "@/types/ielts-adaptive.ty
 const CRITERIA_CONFIG = {
   fluencyCoherence: {
     label: "Fluency & Coherence",
-    short: "FC",
+    short: "Độ lưu loát & Mạch lạc",
     color: "#6366f1",
     bg: "#eef2ff",
     ring: "#6366f1",
@@ -14,7 +14,7 @@ const CRITERIA_CONFIG = {
   },
   lexicalResource: {
     label: "Lexical Resource",
-    short: "LR",
+    short: "Vốn từ vựng",
     color: "#f59e0b",
     bg: "#fffbeb",
     ring: "#f59e0b",
@@ -22,7 +22,7 @@ const CRITERIA_CONFIG = {
   },
   grammaticalRange: {
     label: "Grammatical Range & Accuracy",
-    short: "GRA",
+    short: "Ngữ pháp & Độ chính xác",
     color: "#3b82f6",
     bg: "#eff6ff",
     ring: "#3b82f6",
@@ -30,7 +30,7 @@ const CRITERIA_CONFIG = {
   },
   pronunciation: {
     label: "Pronunciation",
-    short: "PRO",
+    short: "Phát âm",
     color: "#10b981",
     bg: "#f0fdf4",
     ring: "#10b981",
@@ -191,11 +191,32 @@ const IeltsSpeakingResult: React.FC<{
   const [activeCriteria, setActiveCriteria] = useState<string | null>("fluencyCoherence");
   const [activeTab, setActiveTab] = useState<"feedback" | "model" | "vocab" | "pronunciation">("feedback");
 
-  const { criteria, overallBand, transcript, question, part, generalFeedback, modelAnswer, keyVocabulary, pronunciationNotes } = result;
+  const handleSpeak = (text: string) => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  };
 
-  const avgBand = (
-    (criteria.fluencyCoherence.band + criteria.lexicalResource.band + criteria.grammaticalRange.band + criteria.pronunciation.band) / 4
-  ).toFixed(1);
+  const { criteria, transcript, question, part, generalFeedback, modelAnswer, keyVocabulary, pronunciationNotes } = result;
+
+  // Tự tính overallBand từ 4 criteria — KHÔNG tin AI tự báo
+  // IELTS Speaking: average of 4 bands, rounded to nearest 0.5
+  const computedBand = (() => {
+    const avg = (
+      criteria.fluencyCoherence.band +
+      criteria.lexicalResource.band +
+      criteria.grammaticalRange.band +
+      criteria.pronunciation.band
+    ) / 4;
+    return Math.round(avg * 2) / 2;
+  })();
+
+  // Guard: transcript quá ngắn → cap band ≤ 4.0
+  const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+  const overallBand = wordCount < 20 ? Math.min(computedBand, 4.0) : computedBand;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'DM Sans', sans-serif" }}>
@@ -252,7 +273,7 @@ const IeltsSpeakingResult: React.FC<{
                 const cfg = CRITERIA_CONFIG[key];
                 return (
                   <div key={key} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "8px 14px", backdropFilter: "blur(8px)" }}>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.06em" }}>{cfg.short}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.06em" }}>{cfg.label}</div>
                     <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 800, color: "#fff" }}>{val.band.toFixed(1)}</div>
                   </div>
                 );
@@ -354,6 +375,22 @@ const IeltsSpeakingResult: React.FC<{
                     <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "14px 16px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                         <span style={{ fontWeight: 700, fontSize: 15, color: "#6366f1", fontFamily: "'Lora', serif" }}>{v.word}</span>
+                        <button
+                          onClick={() => handleSpeak(v.word)}
+                          style={{
+                            background: "none", border: "none", padding: "4px", cursor: "pointer",
+                            color: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: "50%", transition: "background 0.2s"
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#eef2ff")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                          title="Nghe phát âm"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                          </svg>
+                        </button>
                         <span style={{ fontSize: 11, color: "#94a3b8", background: "#f8fafc", padding: "2px 8px", borderRadius: 20 }}>vocab</span>
                       </div>
                       <p style={{ margin: "0 0 6px", fontSize: 13, color: "#64748b" }}>{v.definition}</p>
@@ -377,8 +414,24 @@ const IeltsSpeakingResult: React.FC<{
                     </div>
                   ) : pronunciationNotes.map((n, i) => (
                     <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "14px 16px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                         <span style={{ fontWeight: 700, fontSize: 15, color: "#1e293b" }}>{n.word}</span>
+                        <button
+                          onClick={() => handleSpeak(n.word)}
+                          style={{
+                            background: "none", border: "none", padding: "4px", cursor: "pointer",
+                            color: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: "50%", transition: "background 0.2s"
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#eef2ff")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                          title="Nghe phát âm"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                          </svg>
+                        </button>
                         <span style={{ fontSize: 13, color: "#6366f1", fontFamily: "monospace", background: "#eef2ff", padding: "1px 8px", borderRadius: 4 }}>{n.ipa}</span>
                       </div>
                       <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>{n.tip}</p>

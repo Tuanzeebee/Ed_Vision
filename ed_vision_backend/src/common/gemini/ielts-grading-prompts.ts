@@ -223,7 +223,15 @@ export function buildHighFidelitySpeakingGradingPrompt(input: HighFidelitySpeaki
 
   return `You are a senior IELTS Speaking examiner with 15+ years of experience. You MUST provide EXHAUSTIVE, DETAILED analysis.
 
-LANGUAGE RULE: ALL feedback, labels, tips, summaries, strengths, improvements MUST be in VIETNAMESE. Only English quotes from transcript and English example sentences are allowed in English.
+LANGUAGE RULES — STRICT:
+- feedback, labels, tips, summaries, strengths, improvements → VIETNAMESE only
+- "modelAnswer" field → ENGLISH ONLY. This is an English speaking model answer. Do NOT write Vietnamese here under any circumstances.
+- "keyVocabulary[].word" → English word only
+- "keyVocabulary[].definition" → Vietnamese translation
+- "keyVocabulary[].example" → ENGLISH sentence only (Band 7+ English, no Vietnamese)
+- "pronunciationNotes[].word" → English word
+- "pronunciationNotes[].ipa" → IPA notation
+- "pronunciationNotes[].tip" → Vietnamese advice
 
 ## Task
 - Part: ${part}
@@ -329,15 +337,15 @@ PRO: intelligibility, stress patterns, intonation, segmental accuracy
 
   "generalFeedback": "<6-8 sentences in Vietnamese: tóm tắt toàn bộ bài → điểm mạnh nhất với quote → điểm yếu nghiêm trọng nhất với quote → so sánh với band ${nextBand} → lộ trình cải thiện cụ thể 2-3 tuần>",
 
-  "modelAnswer": "<Band 8.5+ model answer in English for the same question. Use advanced vocabulary, complex grammar, discourse markers. Part 1: 120-150 words. Part 2: 220-250 words. Part 3: 150-200 words>",
+  "modelAnswer": "<WRITE IN ENGLISH ONLY — NO VIETNAMESE. This is a spoken English model answer at Band 8.5+. Use advanced vocabulary, discourse markers, complex grammar. Part 1: 120-150 words. Part 2: 220-250 words. Part 3: 150-200 words. Start directly with the answer, e.g. 'Absolutely, I do like my hometown...' — do not include any Vietnamese text here>",
 
   "keyVocabulary": [
-    { "word": "<word from transcript or related to topic>", "definition": "<định nghĩa tiếng Việt>", "example": "<example sentence Band 7+ in English>" },
-    { "word": "<word>", "definition": "<định nghĩa>", "example": "<example>" },
-    { "word": "<word>", "definition": "<định nghĩa>", "example": "<example>" },
-    { "word": "<word>", "definition": "<định nghĩa>", "example": "<example>" },
-    { "word": "<word>", "definition": "<định nghĩa>", "example": "<example>" },
-    { "word": "<word>", "definition": "<định nghĩa>", "example": "<example>" }
+    { "word": "<ENGLISH word — must be useful for IELTS Speaking>", "definition": "<nghĩa tiếng Việt>", "example": "<ENGLISH example sentence at Band 7+ level — no Vietnamese>" },
+    { "word": "<ENGLISH word>", "definition": "<nghĩa tiếng Việt>", "example": "<ENGLISH sentence>" },
+    { "word": "<ENGLISH word>", "definition": "<nghĩa tiếng Việt>", "example": "<ENGLISH sentence>" },
+    { "word": "<ENGLISH word>", "definition": "<nghĩa tiếng Việt>", "example": "<ENGLISH sentence>" },
+    { "word": "<ENGLISH word>", "definition": "<nghĩa tiếng Việt>", "example": "<ENGLISH sentence>" },
+    { "word": "<ENGLISH word>", "definition": "<nghĩa tiếng Việt>", "example": "<ENGLISH sentence>" }
   ],
 
   "pronunciationNotes": [

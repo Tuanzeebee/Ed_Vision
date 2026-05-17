@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Check, Mic, ChevronDown, Settings } from "lucide-react";
@@ -401,14 +401,19 @@ const IeltsSpeakingPage: React.FC = () => {
 
   const baseBandValue = lesson?.band_level ? lesson.band_level : null;
   const bandSummary = baseBandValue != null ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}` : "--";
-  const totalQuestions = lessonQuestion ? 1 : QUESTIONS[part].length;
+  const currentQuestions = QUESTIONS[part] || [];
+  const totalQuestions = lessonQuestion ? 1 : currentQuestions.length;
   const practiceProgress = totalQuestions > 0
     ? (questionIdx + (recordingState === "done" ? 1 : 0)) / totalQuestions
     : 0;
-  const baseProgress = flowStep === "instructions" ? 10 : flowStep === "mic-check" ? 30 : flowStep === "part-intro" ? 50 : 70;
-  const lessonProgress = flowStep === "practice"
-    ? Math.min(100, Math.round(baseProgress + practiceProgress * 30))
-    : baseProgress;
+
+  // Tính lessonProgress trực tiếp, tránh useMemo nếu không cần thiết để giảm lỗi runtime
+  let lessonProgress = 0;
+  if (flowStep === "practice" || recordingState === "done") {
+    const partBase = (part - 1) * 33.33;
+    const bonus = recordingState === "done" ? 33.33 : practiceProgress * 33.33;
+    lessonProgress = Math.min(100, Math.round(partBase + bonus));
+  }
 
   const renderFlow = () => {
     switch (flowStep) {

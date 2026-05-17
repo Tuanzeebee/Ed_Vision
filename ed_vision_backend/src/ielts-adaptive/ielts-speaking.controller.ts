@@ -54,12 +54,39 @@ export class IeltsSpeakingController {
     }
 
     try {
-      return await this.gradingService.gradeSpeakingHighFidelity({
+      const result = await this.gradingService.gradeSpeakingHighFidelity({
         transcript,
         itemPrompt: question,
         part,
         targetBand,
       });
+
+      // ✅ GUARD: tự tính lại overallBand từ 4 criteria — không tin AI
+      const c = result.criteria;
+      if (c) {
+        const bands = [
+          c.fluencyCoherence?.band ?? 0,
+          c.lexicalResource?.band ?? 0,
+          c.grammaticalRange?.band ?? 0,
+          c.pronunciation?.band ?? 0,
+        ];
+        const avg = bands.reduce((a, b) => a + b, 0) / bands.length;
+        const computedBand = Math.round(avg * 2) / 2;
+
+        // Nếu transcript quá ngắn: cap tất cả về ≤ 4.0
+        const wc = transcript.trim().split(/\s+/).filter(Boolean).length;
+        if (wc < 20) {
+          result.overallBand = Math.min(computedBand, 4.0);
+          // Cap từng criterion cũng
+          for (const key of ['fluencyCoherence', 'lexicalResource', 'grammaticalRange', 'pronunciation']) {
+            if (c[key]) c[key].band = Math.min(c[key].band, 4.0);
+          }
+        } else {
+          result.overallBand = computedBand;
+        }
+      }
+
+      return result;
     } catch (err) {
       throw new BadRequestException('Grading failed: ' + (err as Error).message);
     }

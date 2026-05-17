@@ -431,12 +431,21 @@ export default function WritingPracticePage() {
   const minWords = resolveMinWords(taskType, writingItem);
   const wordOk = wordCount >= minWords;
   const baseBandValue = lesson?.band_level ? lesson.band_level : null;
-  const bandSummary = baseBandValue != null
-    ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}`
-    : "--";
-  const lessonProgress = result
-    ? 100
-    : Math.min(100, Math.round((wordCount / Math.max(minWords, 1)) * 100));
+  const bandSummary = baseBandValue != null ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}` : "--";
+  // Tính lessonProgress trực tiếp
+  let lessonProgress = 0;
+  if (result) {
+    lessonProgress = taskType === "task1" ? 50 : 100;
+  } else {
+    const currentTaskCompletion = Math.min(100, (wordCount / Math.max(minWords, 1)) * 100);
+    if (taskType === "task1") {
+      lessonProgress = Math.round(currentTaskCompletion / 2);
+    } else {
+      // Chỉ hiện 50% + nếu đã bắt đầu viết Task 2 (hoặc giả định Task 1 đã xong nếu có chữ)
+      const base = wordCount > 0 ? 50 : 0;
+      lessonProgress = Math.min(100, Math.round(base + currentTaskCompletion / 2));
+    }
+  }
 
   async function handleSubmit() {
     if (!prompt.trim() || !essay.trim()) {
