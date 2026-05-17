@@ -771,7 +771,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v1-1",
         word: "regarding",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "prep.",
@@ -782,12 +781,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-2",
         word: "attached",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "adj.",
@@ -798,12 +795,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-3",
         word: "pursuant",
-        level: "Trung bình",
         definitions: [
           {
             pos: "adj.",
@@ -814,12 +809,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-4",
         word: "agenda",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -830,12 +823,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-5",
         word: "correspondence",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -846,12 +837,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-6",
         word: "acknowledge",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -862,12 +851,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-7",
         word: "facilitate",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -878,12 +865,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-8",
         word: "inquiry",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -894,12 +879,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-9",
         word: "notify",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -910,12 +893,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-10",
         word: "confirm",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -926,12 +907,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-11",
         word: "postpone",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -942,12 +921,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-12",
         word: "available",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "adj.",
@@ -958,12 +935,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-13",
         word: "forward",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -974,12 +949,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-14",
         word: "update",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v./n.",
@@ -990,12 +963,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-15",
         word: "deadline",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1006,12 +977,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-16",
         word: "draft",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n./v.",
@@ -1022,12 +991,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-17",
         word: "circulate",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -1038,12 +1005,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-18",
         word: "minutes",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1054,12 +1019,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-19",
         word: "confidential",
-        level: "Trung bình",
         definitions: [
           {
             pos: "adj.",
@@ -1070,12 +1033,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-20",
         word: "reference",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1086,12 +1047,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-21",
         word: "schedule",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v./n.",
@@ -1102,12 +1061,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-22",
         word: "revise",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -1118,12 +1075,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-23",
         word: "submit",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1134,12 +1089,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v1-24",
         word: "clarify",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -1150,12 +1103,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v1-25",
         word: "urgent",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "adj.",
@@ -1166,7 +1117,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
     ],
   },
@@ -1181,7 +1131,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v2-1",
         word: "contract",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1192,12 +1141,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-2",
         word: "negotiate",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1208,12 +1155,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-3",
         word: "clause",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1224,12 +1169,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-4",
         word: "vendor",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1240,12 +1183,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-5",
         word: "proposal",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1256,12 +1197,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-6",
         word: "invoice",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1272,12 +1211,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-7",
         word: "comply",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1288,12 +1225,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-8",
         word: "incentive",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1304,12 +1239,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-9",
         word: "merger",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1320,12 +1253,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-10",
         word: "acquisition",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1336,12 +1267,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-11",
         word: "revenue",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1352,12 +1281,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-12",
         word: "profit",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1368,12 +1295,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-13",
         word: "budget",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1384,12 +1309,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-14",
         word: "expenditure",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1400,12 +1323,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-15",
         word: "reimburse",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1416,12 +1337,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-16",
         word: "audit",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n./v.",
@@ -1432,12 +1351,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-17",
         word: "liability",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1448,12 +1365,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-18",
         word: "stakeholder",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1464,12 +1379,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-19",
         word: "priority",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1480,12 +1393,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-20",
         word: "launch",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v./n.",
@@ -1496,12 +1407,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-21",
         word: "implement",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1512,12 +1421,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-22",
         word: "terminate",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -1528,12 +1435,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v2-23",
         word: "prior",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "adj.",
@@ -1544,12 +1449,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-24",
         word: "loss",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1560,12 +1463,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v2-25",
         word: "compliance",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1576,7 +1477,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
     ],
   },
@@ -1592,7 +1492,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v3-1",
         word: "budget",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1603,12 +1502,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v3-2",
         word: "revenue",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1619,12 +1516,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v3-3",
         word: "profit",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1635,12 +1530,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v3-4",
         word: "expenditure",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1651,12 +1544,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v3-5",
         word: "reimburse",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1667,12 +1558,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v3-6",
         word: "audit",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n./v.",
@@ -1683,12 +1572,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v3-7",
         word: "liability",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1699,12 +1586,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v3-8",
         word: "quarterly",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "adj./adv.",
@@ -1715,12 +1600,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v3-9",
         word: "fiscal",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "adj.",
@@ -1731,12 +1614,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v3-10",
         word: "dividend",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1747,7 +1628,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
     ],
   },
@@ -1763,7 +1643,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v4-1",
         word: "shipment",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1774,12 +1653,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v4-2",
         word: "inventory",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1790,12 +1667,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v4-3",
         word: "dispatch",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -1806,12 +1681,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v4-4",
         word: "warehouse",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1822,12 +1695,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v4-5",
         word: "freight",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1838,12 +1709,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v4-6",
         word: "cargo",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1854,12 +1723,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v4-7",
         word: "consignment",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -1870,12 +1737,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v4-8",
         word: "customs",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1886,12 +1751,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v4-9",
         word: "delivery",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1902,12 +1765,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v4-10",
         word: "tracking",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1918,7 +1779,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
     ],
   },
@@ -1934,7 +1794,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v5-1",
         word: "recruit",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v.",
@@ -1945,12 +1804,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v5-2",
         word: "candidate",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1961,12 +1818,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v5-3",
         word: "vacancy",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -1977,12 +1832,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v5-4",
         word: "onboard",
-        level: "Trung bình",
         definitions: [
           {
             pos: "v.",
@@ -1993,12 +1846,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v5-5",
         word: "performance",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2009,12 +1860,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v5-6",
         word: "appraisal",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2025,12 +1874,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v5-7",
         word: "resignation",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2041,12 +1888,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v5-8",
         word: "benefits",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2057,12 +1902,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v5-9",
         word: "payroll",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2073,12 +1916,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v5-10",
         word: "reference",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2089,7 +1930,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
     ],
   },
@@ -2105,7 +1945,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v6-1",
         word: "reservation",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2116,12 +1955,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-2",
         word: "itinerary",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2132,12 +1969,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-3",
         word: "accommodation",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2148,12 +1983,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-4",
         word: "check-in",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n./v.",
@@ -2164,12 +1997,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-5",
         word: "departure",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2180,12 +2011,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-6",
         word: "arrival",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2196,12 +2025,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-7",
         word: "transit",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2212,12 +2039,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v6-8",
         word: "baggage",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2228,12 +2053,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-9",
         word: "confirmation",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2244,12 +2067,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v6-10",
         word: "hospitality",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2260,7 +2081,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
     ],
   },
@@ -2276,7 +2096,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v7-1",
         word: "appointment",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2287,12 +2106,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v7-2",
         word: "prescription",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2303,12 +2120,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v7-3",
         word: "insurance",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2319,12 +2134,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v7-4",
         word: "diagnosis",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2335,12 +2148,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v7-5",
         word: "treatment",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2351,12 +2162,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v7-6",
         word: "referral",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2367,12 +2176,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v7-7",
         word: "clinic",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2383,12 +2190,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v7-8",
         word: "symptom",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2399,12 +2204,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v7-9",
         word: "physician",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2415,12 +2218,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v7-10",
         word: "coverage",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2431,7 +2232,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
     ],
   },
@@ -2447,7 +2247,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
       {
         id: "v8-1",
         word: "software",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2458,12 +2257,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-2",
         word: "upgrade",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "v./n.",
@@ -2474,12 +2271,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-3",
         word: "maintenance",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2490,12 +2285,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-4",
         word: "network",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2506,12 +2299,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-5",
         word: "security",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2522,12 +2313,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-6",
         word: "database",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n.",
@@ -2538,12 +2327,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-7",
         word: "server",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2554,12 +2341,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v8-8",
         word: "interface",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2570,12 +2355,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
       {
         id: "v8-9",
         word: "backup",
-        level: "Cơ bản",
         definitions: [
           {
             pos: "n./v.",
@@ -2586,12 +2369,10 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 3
       },
       {
         id: "v8-10",
         word: "installation",
-        level: "Trung bình",
         definitions: [
           {
             pos: "n.",
@@ -2602,7 +2383,6 @@ const VOCAB_TOPICS: VocabTopic[] = [
         }
           }
         ],
-        freq: 2
       },
     ],
   },
