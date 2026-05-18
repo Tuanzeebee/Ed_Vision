@@ -61,6 +61,18 @@ export const BandTestPage: React.FC = () => {
     // isPracticeMode = true when not all lessons are unlocked/completed
     const isPracticeMode = progressPercent < 100;
 
+    const [showScoreModal, setShowScoreModal] = useState(false);
+    const [currentBandInput, setCurrentBandInput] = useState('');
+    const [targetBandInput, setTargetBandInput] = useState('');
+
+    const handleSkipToRoadmap = () => {
+        const cur = parseFloat(currentBandInput);
+        const tgt = parseFloat(targetBandInput);
+        if (isNaN(cur) || isNaN(tgt) || cur < 0 || cur > 9 || tgt < 0 || tgt > 9) return;
+        setShowScoreModal(false);
+        navigate(`/student/certificate-review/ielts?currentBand=${cur}&targetBand=${tgt}`, { state: { currentBand: cur, targetBand: tgt } });
+    };
+
     const ALL_SKILLS = Object.values(SkillArea);
     const [selectedSkills, setSelectedSkills] = useState<SkillArea[]>([
         SkillArea.READING,
@@ -446,6 +458,75 @@ export const BandTestPage: React.FC = () => {
                             <><Zap className="w-6 h-6 fill-white" /> Bắt đầu kiểm tra ngay</>
                         )}
                     </button>
+
+                    <button
+                        onClick={() => setShowScoreModal(true)}
+                        className="w-full py-4 rounded-[24px] border-2 border-blue-100 bg-white text-blue-600 font-black text-sm transition-all hover:bg-blue-50 active:scale-95 flex items-center justify-center gap-3"
+                    >
+                        <Trophy className="w-5 h-5" />
+                        Nhập Điểm Mong Muốn
+                    </button>
+
+                    {/* Score Modal */}
+                    {showScoreModal && (
+                        <div
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                            onClick={() => setShowScoreModal(false)}
+                        >
+                            <div
+                                className="bg-white rounded-[32px] p-8 w-full max-w-sm mx-4 shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center">
+                                        <Trophy className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <h2 className="text-xl font-black text-slate-800">Nhập Điểm Mong Muốn</h2>
+                                </div>
+                                <p className="text-sm text-slate-400 mb-6">Bỏ qua bài test và nhập điểm trực tiếp để xem lộ trình học</p>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Điểm hiện tại (0 – 9)</label>
+                                        <input
+                                            type="number" min="0" max="9" step="0.5"
+                                            value={currentBandInput}
+                                            onChange={(e) => setCurrentBandInput(e.target.value)}
+                                            placeholder="Ví dụ: 5.0"
+                                            className="w-full h-14 px-5 rounded-[20px] text-lg font-black text-slate-800 outline-none transition-colors border-2 border-blue-100 focus:border-blue-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Điểm mục tiêu (0 – 9)</label>
+                                        <input
+                                            type="number" min="0" max="9" step="0.5"
+                                            value={targetBandInput}
+                                            onChange={(e) => setTargetBandInput(e.target.value)}
+                                            placeholder="Ví dụ: 7.0"
+                                            className="w-full h-14 px-5 rounded-[20px] text-lg font-black text-slate-800 outline-none transition-colors border-2 border-blue-100 focus:border-blue-400"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={() => setShowScoreModal(false)}
+                                        className="flex-1 py-3 rounded-[20px] font-black text-sm text-slate-400 border-2 border-slate-100 hover:bg-slate-50 transition-colors"
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        onClick={handleSkipToRoadmap}
+                                        disabled={!currentBandInput || !targetBandInput}
+                                        className="py-3 rounded-[20px] bg-blue-600 hover:bg-blue-700 text-white font-black text-sm transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
+                                        style={{ flex: 2 }}
+                                    >
+                                        Xem lộ trình →
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -458,7 +539,8 @@ export const BandTestPage: React.FC = () => {
         const skillMeta = SKILL_META[currentQuestion.skill?.toLowerCase()] ?? SKILL_META[SkillArea.READING];
         const optionsEntries = Object.entries(currentQuestion.options || {});
         const isChoiceQuestion = optionsEntries.length > 0;
-        const isAiQuestion = currentQuestion.skill === SkillArea.WRITING || currentQuestion.skill === SkillArea.SPEAKING;
+        // AI grading only applies to free-text writing and speaking (not MCQ writing)
+        const isAiQuestion = !isChoiceQuestion && (currentQuestion.skill === SkillArea.WRITING || currentQuestion.skill === SkillArea.SPEAKING);
         const aiResult = aiGrades[currentQuestion.id];
         const aiBusy = !!aiGrading[currentQuestion.id];
         const aiError = aiGradeErrors[currentQuestion.id];
@@ -521,8 +603,8 @@ export const BandTestPage: React.FC = () => {
 
                     {/* Question card */}
                     <div className="bg-white rounded-[40px] shadow-2xl shadow-blue-900/5 border border-blue-50 p-8 sm:p-10">
-                        {/* Listening audio player */}
-                        {currentQuestion.skill === SkillArea.LISTENING && (
+                        {/* Listening audio player — only when audio URL is available */}
+                        {currentQuestion.skill === SkillArea.LISTENING && currentQuestion.mediaAudioUrl && (
                             <div className="mb-8">
                                 <AudioPlayer
                                     key={currentQuestion.id}

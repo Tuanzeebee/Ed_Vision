@@ -140,7 +140,7 @@ export class IeltsRepositoryController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: ieltsUploadStorage,
-      limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
       fileFilter: (_req, file, cb) => {
         const allowed = ['.pdf', '.txt', '.csv', '.docx', '.png', '.jpg', '.jpeg'];
         if (allowed.includes(extname(file.originalname).toLowerCase())) {

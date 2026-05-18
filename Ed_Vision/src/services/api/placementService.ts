@@ -59,6 +59,11 @@ export interface PlacementResult {
   }
 }
 
+export async function getAvailablePlacementSkills(): Promise<string[]> {
+  const res = await apiClient.get<{ skills: string[] }>('/placement/available-skills')
+  return res.data.skills
+}
+
 export async function startPlacementTest(
   payload: StartPlacementInput,
 ): Promise<StartPlacementResult> {

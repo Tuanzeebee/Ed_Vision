@@ -71,6 +71,11 @@ type IeltsAnswerKey = string;
 function normaliseAnswerToken(raw: string): string {
   const t = raw.trim().toUpperCase().replace(/\s+/g, ' ');
   if (t === 'NG') return 'NOT GIVEN';
+  // Expand single-letter T/F shorthand (common in compact answer keys) to
+  // TRUE/FALSE.  Safe because IELTS letter answers are limited to A-J,
+  // so T and F can never be ambiguous with a real MCQ option key.
+  if (t === 'T') return 'TRUE';
+  if (t === 'F') return 'FALSE';
   return t;
 }
 
@@ -102,7 +107,15 @@ function preprocessAnswerLine(line: string): string {
     // Collapse "NOT  GIVEN" (multiple spaces) into single-space to prevent
     // the column splitter from breaking it into two cells.
     .replace(/\bNOT\s{2,}GIVEN\b/gi, 'NOT GIVEN')
-    .replace(/\b([A-J])[a-j]{1,2}\b/g, (_, up) => up);
+    .replace(/\b([A-J])[a-j]{1,2}\b/g, (_, up) => up)
+    // Strip OCR pipe / bracket / period / colon noise that lands between a
+    // question number and its answer letter:
+    //   "11 . |T PARAGRAPH 9..."  →  "11 T PARAGRAPH 9..."
+    //   "21 :[B Some text"        →  "21 B Some text"
+    //   "5 |F"                    →  "5 F"
+    // Note: [A-J] covers MCQ keys; T/F added for TRUE/FALSE shorthand.
+    .replace(/\b(\d{1,3})\s*[.):\-–]?\s*[|\[\]{}]+\s*([A-J]|T|F|TRUE|FALSE|YES|NO|NOT\s*GIVEN|NG)\b/gi,
+      (_, num, ans) => `${num} ${ans}`);
 }
 
 /** A single answer-sheet cell after column splitting. */
@@ -116,7 +129,7 @@ type CellShape =
   | { kind: 'unknown' };
 
 const CELL_TOKEN_RE =
-  /^(\d{1,3})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J])\s*$/i;
+  /^(\d{1,3})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J]|T|F)\s*$/i;
 /** Free-text answers: allow uppercase/lowercase start, digits, parens, slashes. */
 const CELL_WORD_RE =
   /^(\d{1,3})\s+([\(]?[a-zA-Z][a-zA-Z0-9\-'()\/ ]{0,50})\s*$/;
@@ -255,7 +268,7 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
     if (seqNext !== null && seqEnd !== null && seqNext <= seqEnd) {
       const trimmed = processed.trim();
       const isBareAnswer =
-        /^(TRUE|FALSE|NOT\s*GIVEN|YES|NO|[A-J])\s*$/i.test(trimmed) ||
+        /^(TRUE|FALSE|NOT\s*GIVEN|YES|NO|[A-J]|T|F)\s*$/i.test(trimmed) ||
         /^[a-z][a-z\-']{1,25}$/i.test(trimmed);
       const startsWithNumber = /^\d{1,3}\s/.test(trimmed);
       // Garbled chars from PDF font extraction (single special chars)
@@ -386,7 +399,7 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
   // cell-based parser missed (garbled column splits, unusual formatting).
   // Only fills in question numbers that are still missing from the map.
   const TOKEN_SWEEP_RE =
-    /\b(\d{1,2})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J])\b/gi;
+    /\b(\d{1,2})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J]|T|F)\b/gi;
   const WORD_SWEEP_RE =
     /\b(\d{1,2})\s+([a-zA-Z][a-zA-Z\-']{1,25})\b/g;
   const PAIR_SWEEP_RE =
@@ -1166,6 +1179,46 @@ function parseIeltsQuestionsFromText(
     deduped.push(q);
   }
 
+  // ── Guarantee full 40-question coverage ──────────────────────────────────
+  // IELTS Reading & Listening both have exactly 40 questions.  If the OCR
+  // missed some "Questions X-Y" group headers, the placeholder-synthesis
+  // step above won't have created entries for those numbers.  We fill any
+  // remaining gap (1–40) with a generic placeholder so the imported
+  // repository always has exactly 40 slots.  The correct answer can still
+  // be populated later via the answer-key import flow.
+  for (let n = 1; n <= MAX_IELTS_QUESTIONS; n++) {
+    if (usedNumbers.has(n)) continue;
+    const correctKey = answerKeyMap.get(n);
+    const inferredSection =
+      skillArea === 'listening'
+        ? (n <= 10 ? 1 : n <= 20 ? 2 : n <= 30 ? 3 : 4)
+        : null;
+    deduped.push({
+      questionNumber: n,
+      section: inferredSection,
+      stem: `[Câu ${n}]`,
+      context: null,
+      questionType: 'fill-blank',
+      options: [
+        {
+          optionKey: 'A',
+          optionText: typeof correctKey === 'string' ? correctKey : '(blank)',
+          isCorrect: !!correctKey,
+          rationale: null,
+        },
+      ],
+      explanation: null,
+    });
+    usedNumbers.add(n);
+  }
+
+  // Re-sort after gap fill so questions are in order 1..40.
+  deduped.sort((a, b) => {
+    const an = a.questionNumber ?? 1e9;
+    const bn = b.questionNumber ?? 1e9;
+    return an - bn;
+  });
+
   return deduped;
 }
 
@@ -1517,7 +1570,7 @@ export class IeltsImportService {
         data: {
           correctAnswer: newCorrectAnswer,
           options: newOptions as any,
-          status: 'active',
+          status: 'approved',
         },
       });
 
@@ -1580,6 +1633,11 @@ export class IeltsImportService {
 
     const audioUrl = `/uploads/IELTS/ielts-listening/${slug}/audio/${filename}`;
     const mappedItemIds = await this.mapAudioToItems(repository.id, section, audioUrl);
+
+    // ── Also update IeltsPassage.audio_url for placement questions ──
+    // Find IeltsQuestion records tagged with this repo slug that belong to the
+    // target section, then update their linked IeltsPassage records.
+    await this.mapAudioToPlacementPassages(slug, section, audioUrl);
 
     return {
       repository_id: repository.id,
@@ -1698,6 +1756,20 @@ export class IeltsImportService {
     return m ? parseInt(m[1], 10) : 1;
   }
 
+  /**
+   * Infer IELTS Listening section from question number.
+   * Standard layout: Section 1 = Q1–10, Section 2 = Q11–20,
+   * Section 3 = Q21–30, Section 4 = Q31–40.
+   */
+  private inferSectionFromQuestionNumber(qNum: number | null): number | null {
+    if (qNum === null || qNum < 1) return null;
+    if (qNum <= 10) return 1;
+    if (qNum <= 20) return 2;
+    if (qNum <= 30) return 3;
+    if (qNum <= 40) return 4;
+    return null;
+  }
+
   private async mapAudioToItems(
     repositoryId: number,
     section: number,
@@ -1726,6 +1798,59 @@ export class IeltsImportService {
     return ids;
   }
 
+  /**
+   * Update IeltsPassage.audio_url for placement-pool questions.
+   *
+   * Questions are identified by topicTag "repo:<slug>".  The section is
+   * inferred from the question number (Q1–10 → Section 1, etc.).
+   * All distinct passage_ids belonging to the matched questions are updated.
+   */
+  private async mapAudioToPlacementPassages(
+    repoSlug: string,
+    section: number,
+    audioUrl: string,
+  ): Promise<void> {
+    const repoTag = `repo:${repoSlug}`;
+
+    // Find all IeltsQuestion records tagged with this repo + matching section
+    const questions = await this.prisma.ieltsQuestion.findMany({
+      where: {
+        topicTags: { has: repoTag },
+        skill: 'listening',
+        passage_id: { not: null },
+      },
+      select: { id: true, topicTags: true, passage_id: true },
+    });
+
+    // Filter to questions in the target section by their question number
+    const passageIds = new Set<string>();
+    for (const q of questions) {
+      const qnumTag = q.topicTags.find((t) => t.startsWith('qnum:'));
+      const qNum = qnumTag ? parseInt(qnumTag.split(':')[1], 10) : null;
+      const qSection = this.inferSectionFromQuestionNumber(qNum);
+      if (qSection === section && q.passage_id) {
+        passageIds.add(q.passage_id);
+      }
+    }
+
+    if (passageIds.size === 0) {
+      this.logger.log(
+        `[Audio→Passage] No placement passages found for repo="${repoSlug}" section=${section}`,
+      );
+      return;
+    }
+
+    // Update all matching passages with the audio URL
+    await this.prisma.ieltsPassage.updateMany({
+      where: { id: { in: [...passageIds] } },
+      data: { audio_url: audioUrl },
+    });
+
+    this.logger.log(
+      `[Audio→Passage] Updated ${passageIds.size} IeltsPassage(s) with audio "${audioUrl}" for section ${section}`,
+    );
+  }
+
   private async saveQuestionsToRepositoryAndPlacement(
     repositoryId: number,
     skillArea: 'listening' | 'reading',
@@ -1750,6 +1875,32 @@ export class IeltsImportService {
 
     const passageCache = new Map<string, string>();
 
+    // ── For Listening: pre-create one IeltsPassage per section (1–4) ──
+    // This allows audio to be attached later via uploadListeningAudio.
+    const sectionPassageMap = new Map<number, string>();
+    if (skillArea === 'listening') {
+      const sections = new Set(
+        parsedQuestions
+          .map((q) => q.section ?? this.inferSectionFromQuestionNumber(q.questionNumber))
+          .filter((s): s is number => s !== null),
+      );
+      for (const sec of sections) {
+        const passage = await this.prisma.ieltsPassage.create({
+          data: {
+            skill: 'listening',
+            title: `${repoSlug} – Section ${sec}`,
+            content: `IELTS Listening Section ${sec}`,
+            band_min: config.bandMin,
+            band_max: config.bandMax,
+          },
+          select: { id: true },
+        });
+        sectionPassageMap.set(sec, passage.id);
+        // Also cache by section key for consistency
+        passageCache.set(`__section_${sec}`, passage.id);
+      }
+    }
+
     for (const parsed of parsedQuestions) {
       // Skip questions without any identifiable content.
       if (!parsed.questionNumber && !parsed.stem) {
@@ -1757,14 +1908,32 @@ export class IeltsImportService {
         continue;
       }
 
-      // Use fast heuristic IRT bootstrap.
-      const targetBand = (config.bandMin + config.bandMax) / 2;
-      const heuristicIrt = bootstrapIrt(targetBand, this.mapPlacementType(parsed.questionType));
+      // ── IRT bootstrap with per-question difficulty spread ─────────────────
+      // Instead of assigning the same irt_b (band midpoint) to every question,
+      // we spread difficulty linearly across the imported band range based on
+      // question number. For Listening this mirrors the standard IELTS structure:
+      //   Section 1 (Q1–10)  → easiest  (band_min)
+      //   Section 4 (Q31–40) → hardest  (band_max)
+      // For Reading a similar pattern holds (questions increase in difficulty).
+      // We map each question's number onto [band_min, band_max] and convert to θ.
+      const irtQNum = parsed.questionNumber ?? (importedCount + 1);
+      const totalQ = parsedQuestions.length || 40;
+      // Linear interpolation: question 1 → bandMin, question totalQ → bandMax
+      const frac = Math.max(0, Math.min(1, (irtQNum - 1) / Math.max(totalQ - 1, 1)));
+      const spreadBand = config.bandMin + frac * (config.bandMax - config.bandMin);
+      const heuristicIrt = bootstrapIrt(spreadBand, this.mapPlacementType(parsed.questionType));
       const irt = { irt_b: heuristicIrt.irt_b, confidence: 'low' as const };
 
       // ── Create IeltsPassage for passage content ──
       let passageId: string | null = null;
-      if (parsed.context && parsed.context.trim().length > 50) {
+
+      if (skillArea === 'listening') {
+        // For listening: use the pre-created section passage
+        const sec = parsed.section ?? this.inferSectionFromQuestionNumber(parsed.questionNumber);
+        if (sec !== null && sectionPassageMap.has(sec)) {
+          passageId = sectionPassageMap.get(sec)!;
+        }
+      } else if (parsed.context && parsed.context.trim().length > 50) {
         const contextKey = parsed.context.trim();
         if (passageCache.has(contextKey)) {
           passageId = passageCache.get(contextKey)!;
@@ -1841,7 +2010,10 @@ export class IeltsImportService {
           irtB: irt.irt_b,
           irtC: 0.25,
           isPlacement: true,
-          status: ieltsCorrectAnswer ? 'active' : 'draft',
+          // 'approved' is required by the placement query (status = 'approved').
+          // Questions without a correct answer are saved as 'draft' until the
+          // answer key import fills them in (importAnswerKey updates status too).
+          status: ieltsCorrectAnswer ? 'approved' : 'draft',
           passage_id: passageId,
           contextType: skillArea === 'listening' ? 'audio' : (passageId ? 'passage' : 'standalone'),
           topicTags: [`repo:${repoSlug}`, `qnum:${qNum}`],

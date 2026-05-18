@@ -91,22 +91,49 @@ export const IeltsRoadmapPage: React.FC = () => {
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isVocabModalOpen, setIsVocabModalOpen] = useState(false);
 
+    const readIncomingBand = (stateValue: unknown, queryValue: string | null) => {
+        if (stateValue !== undefined && stateValue !== null) {
+            return normalizeBand(stateValue as string | number);
+        }
+        if (queryValue != null) {
+            return normalizeBand(queryValue);
+        }
+        return null;
+    };
+
     // ── load ─────────────────────────────────────────────────────────────────
     const loadRoadmap = useCallback(async () => {
         try {
             setLoading(true); setError(null);
-            const placementBand = location.state?.currentBand;
-            if (placementBand && typeof placementBand === "number") {
+            const params = new URLSearchParams(location.search);
+            const incomingCurrentBand = readIncomingBand(location.state?.currentBand, params.get("currentBand"));
+            const incomingTargetBand = readIncomingBand(location.state?.targetBand, params.get("targetBand"));
+            const hasIncomingBands = incomingCurrentBand != null || incomingTargetBand != null;
+
+            if (hasIncomingBands) {
                 try {
                     const existing = await ieltsAdaptiveApi.getMyRoadmap();
                     if (existing?.roadmap) {
-                        await ieltsAdaptiveApi.updateMyTargets({ current_band: placementBand, target_band: existing.roadmap.target_band || placementBand + 1 });
+                        const updatePayload: { current_band?: number; target_band?: number } = {};
+                        if (incomingCurrentBand != null) updatePayload.current_band = incomingCurrentBand;
+                        if (incomingTargetBand != null) updatePayload.target_band = incomingTargetBand;
+                        if (Object.keys(updatePayload).length === 0) {
+                            updatePayload.current_band = existing.roadmap.current_band;
+                            updatePayload.target_band = existing.roadmap.target_band || (existing.roadmap.current_band + 1);
+                        }
+                        await ieltsAdaptiveApi.updateMyTargets(updatePayload);
                     } else {
-                        await ieltsAdaptiveApi.generateMyRoadmap({ current_band: placementBand, target_band: placementBand + 1 });
+                        const baseCurrent = incomingCurrentBand ?? 4.0;
+                        const baseTarget = incomingTargetBand ?? (baseCurrent + 1);
+                        await ieltsAdaptiveApi.generateMyRoadmap({ current_band: baseCurrent, target_band: baseTarget });
                     }
                     setShowPlacementSuccess(true);
                     setTimeout(() => setShowPlacementSuccess(false), 5000);
-                    window.history.replaceState({}, document.title);
+                    if (location.search) {
+                        window.history.replaceState({}, document.title, location.pathname);
+                    } else {
+                        window.history.replaceState({}, document.title);
+                    }
                 } catch (e) { console.error(e); }
             }
             const my = await ieltsAdaptiveApi.getMyRoadmap();
@@ -120,7 +147,7 @@ export const IeltsRoadmapPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [location.state]);
+    }, [location.state, location.search, location.pathname]);
 
     useEffect(() => { loadRoadmap(); }, [loadRoadmap]);
 

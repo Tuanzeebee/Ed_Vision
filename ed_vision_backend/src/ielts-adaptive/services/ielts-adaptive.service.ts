@@ -1280,24 +1280,40 @@ export class IeltsAdaptiveService {
       const reviewCount = Math.round(questionsPerSkill * 0.35);
       const challengeCount = questionsPerSkill - coreCount - reviewCount;
 
+      // For listening: only select questions whose linked passage has audio_url set.
+      // Seed/generated questions without audio are excluded.
+      const listeningAudioFilter =
+        skill === 'listening'
+          ? { passage: { audio_url: { not: null } } }
+          : {};
+
+      // reading skill also pulls vocabulary questions (alias — same MCQ format,
+      // no dedicated reading question seed exists until teacher imports reading content)
+      const skillFilter =
+        skill === 'reading'
+          ? { skill: { in: ['reading', 'vocabulary'] } }
+          : { skill };
+
       // Core: câu ở mức band hiện tại
       const coreQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill,
+          ...skillFilter,
           bandMin: { lte: currentBand + 0.5 },
           bandMax: { gte: currentBand - 0.5 },
-          status: 'active',
+          status: { in: ['active', 'approved'] },
+          ...listeningAudioFilter,
         },
         orderBy: { usedCount: 'asc' },
-        take: coreCount * 3, // Lấy dư để shuffle
+        take: coreCount * 3,
       });
 
       // Review: câu dễ hơn (band thấp hơn)
       const reviewQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill,
+          ...skillFilter,
           bandMax: { lt: currentBand - 0.4 },
-          status: 'active',
+          status: { in: ['active', 'approved'] },
+          ...listeningAudioFilter,
         },
         orderBy: { usedCount: 'asc' },
         take: reviewCount * 3,
@@ -1306,9 +1322,10 @@ export class IeltsAdaptiveService {
       // Challenge: câu khó hơn (band cao hơn)
       const challengeQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill,
+          ...skillFilter,
           bandMin: { gt: currentBand + 0.4 },
-          status: 'active',
+          status: { in: ['active', 'approved'] },
+          ...listeningAudioFilter,
         },
         orderBy: { usedCount: 'asc' },
         take: challengeCount * 3,
@@ -1405,6 +1422,21 @@ export class IeltsAdaptiveService {
       where: { id: { in: bandTest.question_ids } },
     });
 
+    // ── Resolve passage audio for listening questions ──────────────────────
+    const passageIds = [
+      ...new Set(questions.map((q) => q.passage_id).filter((id): id is string => !!id)),
+    ];
+    const passageMap = new Map<string, { audioUrl: string | null }>();
+    if (passageIds.length > 0) {
+      const passages = await this.prisma.ieltsPassage.findMany({
+        where: { id: { in: passageIds } },
+        select: { id: true, audio_url: true },
+      });
+      for (const p of passages) {
+        passageMap.set(p.id, { audioUrl: p.audio_url ?? null });
+      }
+    }
+
     const orderMap = new Map<string, number>(
       bandTest.question_ids.map((id, index) => [id, index]),
     );
@@ -1448,6 +1480,10 @@ export class IeltsAdaptiveService {
         questionType: q.questionType,
         options: mapOptions(q.options),
         expectedTimeSec: q.expectedTimeSec,
+        contextType: q.contextType ?? 'standalone',
+        mediaAudioUrl: q.passage_id
+          ? (passageMap.get(q.passage_id)?.audioUrl ?? null)
+          : null,
       })),
     };
   }

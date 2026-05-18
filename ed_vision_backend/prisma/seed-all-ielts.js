@@ -17,6 +17,11 @@ const scripts = [
         file: 'seedLearningContent.js',
         description: 'Seed flashcards, practice, mini-test từ learning_content.json',
     },
+    {
+        name: 'Placement Extra (Vocab+Listening+Writing)',
+        file: 'seed-placement-extra.cjs',
+        description: 'Seed +90 câu bổ sung cho placement test (Vocabulary 30 + Listening 30 + Writing 30)',
+    },
     // ❌ KHÔNG dùng seedIeltsAdaptive.js nữa - nó tạo hardcoded content giống nhau
     // {
     //     name: 'IELTS Adaptive (Hardcoded)',

@@ -18,6 +18,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   abandonPlacementSession,
+  getAvailablePlacementSkills,
   getPlacementResult,
   startPlacementTest,
   submitPlacementAnswer,
@@ -361,7 +362,20 @@ const IELTSIntroView: React.FC<{
   onStart: () => void;
   isLoading: boolean;
   error?: string | null;
-}> = ({ onStart, isLoading, error }) => {
+  onSkipToRoadmap: (currentBand: number, targetBand: number) => void;
+}> = ({ onStart, isLoading, error, onSkipToRoadmap }) => {
+  const [showScoreModal, setShowScoreModal] = useState(false);
+  const [currentBandInput, setCurrentBandInput] = useState('');
+  const [targetBandInput, setTargetBandInput] = useState('');
+
+  const handleSubmitScores = () => {
+    const cur = parseFloat(currentBandInput);
+    const tgt = parseFloat(targetBandInput);
+    if (isNaN(cur) || isNaN(tgt) || cur < 0 || cur > 9 || tgt < 0 || tgt > 9) return;
+    setShowScoreModal(false);
+    onSkipToRoadmap(cur, tgt);
+  };
+
   return (
     <div
       className="min-h-screen flex flex-col relative overflow-hidden"
@@ -439,26 +453,105 @@ const IELTSIntroView: React.FC<{
               <p className="text-sm text-red-500 font-medium">{error}</p>
             )}
 
-            <button
-              onClick={onStart}
-              disabled={isLoading}
-              className="group inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white font-black text-base transition-all active:scale-95 disabled:opacity-70"
-              style={{
-                background: isLoading
-                  ? "#93C5FD"
-                  : "linear-gradient(135deg, #93C5FD 0%, #3B82F6 100%)",
-                boxShadow: "0 6px 0 #1D4ED8, 0 8px 20px rgba(59,130,246,0.30)",
-              }}
-              onMouseEnter={(e) => {
-                if (!isLoading) (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-              }}
-            >
-              {isLoading ? "Đang chuẩn bị..." : "Bắt đầu kiểm tra"}
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={onStart}
+                disabled={isLoading}
+                className="group inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white font-black text-base transition-all active:scale-95 disabled:opacity-70"
+                style={{
+                  background: isLoading
+                    ? "#93C5FD"
+                    : "linear-gradient(135deg, #93C5FD 0%, #3B82F6 100%)",
+                  boxShadow: "0 6px 0 #1D4ED8, 0 8px 20px rgba(59,130,246,0.30)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading) (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                }}
+              >
+                {isLoading ? "Đang chuẩn bị..." : "Bắt đầu kiểm tra"}
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              <button
+                onClick={() => setShowScoreModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 border-2"
+                style={{ borderColor: "#DBEAFE", color: "#1D4ED8", background: "white" }}
+              >
+                <Trophy className="w-4 h-4" />
+                Nhập Điểm Mong Muốn
+              </button>
+            </div>
+
+            {/* Score Modal */}
+            {showScoreModal && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                onClick={() => setShowScoreModal(false)}
+              >
+                <div
+                  className="bg-white rounded-3xl p-8 w-full max-w-sm mx-4 shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#DBEAFE" }}>
+                      <Trophy className="w-5 h-5" style={{ color: "#1D4ED8" }} />
+                    </div>
+                    <h2 className="text-xl font-black" style={{ color: "#1E3A8A" }}>Nhập Điểm Mong Muốn</h2>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-6">Bỏ qua bài test và nhập điểm để xem lộ trình học phù hợp</p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Điểm hiện tại (0 – 9)</label>
+                      <input
+                        type="number" min="0" max="9" step="0.5"
+                        value={currentBandInput}
+                        onChange={(e) => setCurrentBandInput(e.target.value)}
+                        placeholder="Ví dụ: 5.0"
+                        className="w-full h-14 px-5 rounded-2xl text-lg font-black text-slate-800 outline-none transition-colors"
+                        style={{ border: "2px solid #DBEAFE" }}
+                        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+                        onBlur={(e) => (e.target.style.borderColor = "#DBEAFE")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Điểm mục tiêu (0 – 9)</label>
+                      <input
+                        type="number" min="0" max="9" step="0.5"
+                        value={targetBandInput}
+                        onChange={(e) => setTargetBandInput(e.target.value)}
+                        placeholder="Ví dụ: 7.0"
+                        className="w-full h-14 px-5 rounded-2xl text-lg font-black text-slate-800 outline-none transition-colors"
+                        style={{ border: "2px solid #DBEAFE" }}
+                        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+                        onBlur={(e) => (e.target.style.borderColor = "#DBEAFE")}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() => setShowScoreModal(false)}
+                      className="flex-1 py-3 rounded-2xl font-black text-sm transition-colors"
+                      style={{ border: "2px solid #E5E7EB", color: "#9CA3AF" }}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={handleSubmitScores}
+                      disabled={!currentBandInput || !targetBandInput}
+                      className="py-3 rounded-2xl text-white font-black text-sm transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ flex: 2, background: "linear-gradient(135deg, #93C5FD, #3B82F6)", boxShadow: "0 4px 0 #1D4ED8" }}
+                    >
+                      Xem lộ trình →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto lg:mx-0 pt-2">
@@ -898,7 +991,7 @@ const IELTSTestView: React.FC<{
                     onFinished={() => setAudioDone(true)}
                   />
                 ) : currentQuestion.skill === "listening" ? (
-                  <div className="text-sm italic text-gray-500 text-center mt-10">Audio đang được tải...</div>
+                  null
                 ) : currentQuestion.skill === "speaking" ||
                   currentQuestion.questionType === "speaking" ? null : (
                   <div className="text-sm leading-7 text-gray-600 font-serif whitespace-pre-wrap">
@@ -928,7 +1021,7 @@ const IELTSTestView: React.FC<{
                 </span>
               </div>
 
-              {currentQuestion.skill === "listening" && !audioDone ? (
+              {currentQuestion.skill === "listening" && !!currentQuestion.passage?.audioUrl && !audioDone ? (
                 <div
                   className="bg-white rounded-3xl border p-10 shadow-sm text-center mt-4"
                   style={{ borderColor: "#DBEAFE" }}
@@ -1190,9 +1283,13 @@ const IELTSAssessment: React.FC = () => {
     }
     setIsLoading(true);
     try {
+      const availableSkills = await getAvailablePlacementSkills();
+      const skillsToTest = availableSkills.length > 0
+        ? availableSkills
+        : ["vocabulary", "reading", "listening", "writing", "speaking"];
       const started = await startPlacementTest({
         accountId,
-        skillsToTest: ["vocabulary", "reading", "listening", "writing", "speaking"],
+        skillsToTest,
       });
       setSessionId(started.sessionId);
       setFirstQuestion(started.firstQuestion);
@@ -1206,7 +1303,17 @@ const IELTSAssessment: React.FC = () => {
 
   if (currentView === "intro")
     return (
-      <IELTSIntroView onStart={handleStartTest} isLoading={isLoading} error={startError} />
+      <IELTSIntroView
+        onStart={handleStartTest}
+        isLoading={isLoading}
+        error={startError}
+        onSkipToRoadmap={(currentBand, targetBand) =>
+          navigate(
+            `${nextPath}${nextPath.includes('?') ? '&' : '?'}currentBand=${currentBand}&targetBand=${targetBand}`,
+            { state: { currentBand, targetBand } },
+          )
+        }
+      />
     );
 
   if (!sessionId || !firstQuestion) {

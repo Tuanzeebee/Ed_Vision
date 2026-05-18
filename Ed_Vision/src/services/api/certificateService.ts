@@ -1572,6 +1572,36 @@ export async function importIeltsPracticeQuestions(
   return res.data;
 }
 
+// ── IELTS Listening Audio Upload ─────────────────────────────────────────────
+export interface IeltsAudioUploadResponse {
+  repository_id: number;
+  slug: string;
+  audio_url: string;
+  filename: string;
+  section: number;
+  track_number: number;
+  mapped_item_ids: number[];
+}
+
+export async function uploadIeltsListeningAudio(
+  repositorySlug: string,
+  file: File,
+  section?: number,
+): Promise<IeltsAudioUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", repositorySlug);
+  if (section != null) {
+    formData.append("section", String(section));
+  }
+  const res = await apiClient.post<IeltsAudioUploadResponse>(
+    "/teacher/ielts-repository/upload-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
 // ── IELTS IRT Re-calibration ──────────────────────────────────────────────────
 export interface IeltsRecalibratePayload {
   min_responses?: number;
