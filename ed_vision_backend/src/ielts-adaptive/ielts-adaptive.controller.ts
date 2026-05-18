@@ -127,6 +127,12 @@ export class IeltsAdaptiveController {
     return this.service.getAiInsightForAccount(this.resolveAccountId(req));
   }
 
+  @UseGuards(DevAuthGuard)
+  @Get('me/streak')
+  async getMyStreak(@Req() req: any) {
+    return this.service.getStreakInfoByAccount(this.resolveAccountId(req));
+  }
+
   // ============================================
   // LESSON ENDPOINTS
   // ============================================

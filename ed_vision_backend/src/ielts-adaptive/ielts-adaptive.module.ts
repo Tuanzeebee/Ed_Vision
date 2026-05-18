@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeminiModule } from '../common/gemini/gemini.module';
 import { OpenRouterModule } from '../common/services/openrouter.module';
 import { ProgramEffectivenessModule } from '../admin_be/program-effectiveness/program-effectiveness.module';
+import { StreakTrackerService } from '../study-room/services/streak-tracker.service';
 
 @Module({
   imports: [PrismaModule, GeminiModule, OpenRouterModule, ProgramEffectivenessModule],
@@ -26,6 +27,7 @@ import { ProgramEffectivenessModule } from '../admin_be/program-effectiveness/pr
     IeltsGroqTutorService,
     GroqWhisperService,
     GroqGradingService,
+    StreakTrackerService,
   ],
   exports: [IeltsAdaptiveService, IeltsGroqTutorService],
 })

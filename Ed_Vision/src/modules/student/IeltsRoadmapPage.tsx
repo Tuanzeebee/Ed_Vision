@@ -91,6 +91,7 @@ export const IeltsRoadmapPage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isVocabModalOpen, setIsVocabModalOpen] = useState(false);
+    const [streakData, setStreakData] = useState<{ current: number; longest: number; lastStudyDate: string | null } | null>(null);
 
     const readIncomingBand = (stateValue: unknown, queryValue: string | null) => {
         if (stateValue !== undefined && stateValue !== null) {
@@ -142,6 +143,15 @@ export const IeltsRoadmapPage: React.FC = () => {
                 setRoadmap({ ...my.roadmap, lessons: my.lessons || [] });
             } else {
                 setRoadmap(await ieltsAdaptiveApi.getRoadmap(0));
+            }
+
+            // Fetch streak data
+            try {
+                const streak = await ieltsAdaptiveApi.getMyStreak();
+                setStreakData(streak);
+            } catch (e) {
+                console.error("Failed to load streak data:", e);
+                setStreakData({ current: 0, longest: 0, lastStudyDate: null });
             }
         } catch (err: any) {
             setError(err.message || "Failed to load roadmap.");
@@ -370,20 +380,38 @@ export const IeltsRoadmapPage: React.FC = () => {
                     <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl">🔥</div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-slate-800">Streak <span className="text-orange-500">{completedLessons}</span> ngày liên tiếp</span>
-                            <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-bold uppercase">On Fire</span>
+                            <span className="text-sm font-bold text-slate-800">Streak <span className="text-orange-500">{streakData?.current ?? 0}</span> ngày liên tiếp</span>
+                            {(streakData?.current ?? 0) > 0 && (
+                                <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-bold uppercase">On Fire</span>
+                            )}
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Duy trì mỗi ngày để nhận phần thưởng tuần!</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            {(streakData?.current ?? 0) > 0 
+                                ? "Duy trì mỗi ngày để nhận phần thưởng tuần!" 
+                                : "Hoàn thành bài học hôm nay để bắt đầu chuỗi mới!"}
+                        </p>
                     </div>
                     <div className="flex gap-1.5">
                         {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d, i) => {
-                            const isDone = i < completedLessons % 7;
-                            const isToday = i === (new Date().getDay() + 6) % 7;
+                            const currentStreak = streakData?.current ?? 0;
+                            const today = new Date();
+                            const currentDayOfWeek = (today.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+                            const isToday = i === currentDayOfWeek;
+                            
+                            // Calculate if this day should be marked as done
+                            // If current streak is N, mark the last N days including today
+                            let isDone = false;
+                            if (currentStreak > 0) {
+                                const daysAgo = (currentDayOfWeek - i + 7) % 7;
+                                isDone = daysAgo < currentStreak && daysAgo >= 0;
+                            }
+                            
                             return (
-                                <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${isDone ? "bg-orange-50 border-orange-200 text-orange-500" :
+                                <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${
+                                    isDone ? "bg-orange-50 border-orange-200 text-orange-500" :
                                     isToday ? "bg-indigo-50/70 border-indigo-300 text-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.2)]" :
-                                        "bg-white/70 border-slate-100 text-slate-300"
-                                    }`}>{d}</div>
+                                    "bg-white/70 border-slate-100 text-slate-300"
+                                }`}>{d}</div>
                             );
                         })}
                     </div>

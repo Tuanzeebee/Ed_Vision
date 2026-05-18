@@ -9,6 +9,7 @@ import { BandEstimationService } from './band-estimation.service';
 import { EvaluationService } from './evaluation.service';
 import { TestResultRecorderService } from '../../admin_be/program-effectiveness/test-result-recorder.service';
 import { GeminiService } from '../../common/gemini/gemini.service';
+import { StreakTrackerService } from '../../study-room/services/streak-tracker.service';
 import {
   CreateRoadmapDto,
   UpdateRoadmapTargetsDto,
@@ -37,6 +38,7 @@ export class IeltsAdaptiveService {
     private evaluation: EvaluationService,
     private testResultRecorder: TestResultRecorderService,
     private gemini: GeminiService,
+    private streakTracker: StreakTrackerService,
   ) { }
 
   /**
@@ -903,6 +905,7 @@ export class IeltsAdaptiveService {
    *   2. Load lại lesson kèm roadmap để lấy enrollment_id.
    *   3. Tăng lessons_completed và cập nhật last_practiced_at trong IeltsSkillProgress
    *      tương ứng với kỹ năng của bài học.
+   *   4. Cập nhật streak (chuỗi ngày học liên tiếp) cho account.
    */
   async completeLesson(lessonId: number, score?: number, isFullyCompleted: boolean = true): Promise<void> {
     await this.prisma.ieltsLesson.update({
@@ -913,10 +916,28 @@ export class IeltsAdaptiveService {
     // Load lesson để lấy thông tin kỹ năng và enrollment
     const lesson = await this.prisma.ieltsLesson.findUnique({
       where: { id: lessonId },
-      include: { roadmap: true },
+      include: { roadmap: { include: { enrollment: { include: { student: true } } } } },
     });
 
     if (lesson) {
+      // Cập nhật streak khi hoàn thành bài học (chỉ tính 1 lần mỗi ngày, dù học TOEIC hay IELTS)
+      if (isFullyCompleted && lesson.roadmap.enrollment?.student?.account_id) {
+        try {
+          await this.streakTracker.updateStreak(
+            lesson.roadmap.enrollment.student.account_id,
+            new Date(),
+          );
+          this.logger.log(
+            `Updated streak for account ${lesson.roadmap.enrollment.student.account_id} after completing IELTS lesson ${lessonId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to update streak for lesson ${lessonId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+          // Don't throw - streak update failure shouldn't block lesson completion
+        }
+      }
+
       if (score !== undefined) {
         // Cập nhật skill progress (total practice count, accuracy trung bình)
         await this.updateSkillProgress(
@@ -2192,5 +2213,22 @@ Return exactly this JSON format:
         encouragement: 'Cố lên! Bạn đang đi đúng hướng trên con đường chinh phục IELTS.',
       };
     }
+  }
+
+  /**
+   * Lấy thông tin streak (chuỗi ngày học liên tiếp) cho account.
+   * Streak được chia sẻ giữa TOEIC và IELTS - chỉ tính 1 lần mỗi ngày.
+   */
+  async getStreakInfoByAccount(accountId: number): Promise<{
+    current: number;
+    longest: number;
+    lastStudyDate: Date | null;
+  }> {
+    const streakInfo = await this.streakTracker.getStreakInfo(accountId);
+    return {
+      current: streakInfo.currentStreak,
+      longest: streakInfo.longestStreak,
+      lastStudyDate: streakInfo.lastStudyDate,
+    };
   }
 }
