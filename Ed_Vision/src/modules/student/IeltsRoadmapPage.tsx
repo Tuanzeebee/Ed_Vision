@@ -31,6 +31,7 @@ import { ieltsAdaptiveApi } from "@/services/ielts-adaptive/api";
 import { LessonStatus, type Lesson, type Roadmap } from "../../types/ielts-adaptive.types";
 import StudentLeaderboard from "./components/StudentLeaderboard";
 import { MasterVocabModal } from "../ielts-adaptive/components/MasterVocabModal";
+import AiInsightSection from "../ielts-adaptive/components/AiInsightSection";
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string; label: string }> = {
     reading: { icon: <BookOpen className="w-4 h-4" />, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", label: "Reading" },
@@ -180,8 +181,16 @@ export const IeltsRoadmapPage: React.FC = () => {
     const skillKeys = ["reading", "listening", "writing", "speaking", "grammar", "vocabulary"];
     const skillStats = skillKeys.map(sk => {
         const lessons = roadmap?.lessons?.filter(l => l.skill_area === sk) ?? [];
-        const done = lessons.filter(l => l.status === LessonStatus.COMPLETED).length;
-        return { key: sk, total: lessons.length, done, pct: lessons.length > 0 ? Math.round((done / lessons.length) * 100) : 0 };
+        let doneScore = 0;
+        lessons.forEach(l => {
+            if (l.status === LessonStatus.COMPLETED) {
+                doneScore += 1;
+            } else if (l.status === LessonStatus.IN_PROGRESS) {
+                doneScore += 0.5;
+            }
+        });
+        const pct = lessons.length > 0 ? Math.min(100, Math.round((doneScore / lessons.length) * 100)) : 0;
+        return { key: sk, total: lessons.length, done: doneScore, pct };
     });
     const filteredLessons = activeSkill ? (roadmap?.lessons?.filter(l => l.skill_area === activeSkill) ?? []) : [];
 
@@ -399,7 +408,10 @@ export const IeltsRoadmapPage: React.FC = () => {
                                             </div>
                                             <h3 className="text-sm font-bold text-slate-800 mb-0.5">{meta.label}</h3>
                                             <p className="text-[11px] text-slate-500 mb-3">
-                                                {sk.done}/{sk.total} bài · {sk.pct === 100 ? "Đã xong" : sk.pct > 0 ? "Đang ôn" : "Mới bắt đầu"}
+                                                {sk.done % 1 !== 0 
+                                                    ? `Bài ${Math.floor(sk.done) + 1} (Part 1/2) · Đang ôn`
+                                                    : `${sk.done}/${sk.total} bài · ${sk.pct === 100 ? "Đã xong" : sk.pct > 0 ? "Đang ôn" : "Mới bắt đầu"}`
+                                                }
                                             </p>
                                             <div className="h-1 bg-slate-100/70 rounded-full overflow-hidden">
                                                 <div className={`h-full ${meta.color.replace("text-", "bg-")} transition-all duration-1000`} style={{ width: `${sk.pct}%` }} />
@@ -421,13 +433,17 @@ export const IeltsRoadmapPage: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {[
-                                    { icon: "📰", type: "Từ vựng", title: "Academic Word List", desc: "", color: "indigo" },
-                                    { icon: "🧠", type: "Trợ lý AI", title: "Trợ lý AI — Sửa lỗi ngữ pháp", desc: "Nộp bài để AI sửa lỗi; gợi ý thêm sẽ do Gemini cung cấp ở màn hình ngoài", color: "emerald", onClick: handleOpenAiModule },
+                                    { icon: "📖", type: "Từ vựng", title: "Kho từ vựng của tôi", 
+                                      desc: "Từ đã lưu từ tất cả bài học", color: "indigo",
+                                      onClick: () => setIsVocabModalOpen(true) },
+                                    { icon: "🧠", type: "Trợ lý AI", title: "Chat với AI Tutor",
+                                      desc: currentLesson ? `Đang học: ${currentLesson.lesson_title}` : "Hỏi đáp, sửa lỗi ngữ pháp",
+                                      color: "emerald", onClick: handleOpenAiModule },
                                 ].map((rec, i) => (
                                     <div
                                         key={i}
-                                        onClick={rec.onClick || (rec.title.includes("Academic Word List") ? () => setIsVocabModalOpen(true) : undefined)}
-                                        className={`bg-white/85 border border-slate-100/80 rounded-xl p-4 flex items-start gap-4 transition-colors ${rec.onClick || rec.title.includes("Academic Word List") ? "cursor-pointer hover:bg-white group shadow-xs" : "cursor-default"}`}
+                                        onClick={rec.onClick}
+                                        className={`bg-white/85 border border-slate-100/80 rounded-xl p-4 flex items-start gap-4 transition-colors ${typeof rec.onClick === "function" ? "cursor-pointer hover:bg-white group shadow-xs" : "cursor-default"}`}
                                     >
                                         <div className={`w-12 h-12 rounded-xl bg-${rec.color}-50 flex items-center justify-center text-xl shrink-0`}>{rec.icon}</div>
                                         <div className="flex-1 min-w-0">
@@ -435,39 +451,14 @@ export const IeltsRoadmapPage: React.FC = () => {
                                             <h4 className="text-[13px] font-bold text-slate-800">{rec.title}</h4>
                                             <p className="text-[11px] text-slate-400">{rec.desc}</p>
                                         </div>
-                                        <span className={`text-xs font-bold text-indigo-600 transition-opacity shrink-0 ${rec.onClick ? "opacity-0 group-hover:opacity-100" : "opacity-0"}`}>→</span>
+                                        <span className={`text-xs font-bold text-indigo-600 transition-opacity shrink-0 ${typeof rec.onClick === "function" ? "opacity-0 group-hover:opacity-100" : "opacity-0"}`}>→</span>
                                     </div>
                                 ))}
                             </div>
                         </section>
 
                         {/* AI Insight */}
-                        <section
-                            onClick={handleOpenAiModule}
-                            className="bg-white/95 border border-indigo-100/60 rounded-[22px] p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg">✦</div>
-                                <div>
-                                    <p className="text-[12px] font-bold text-slate-800">Trợ lý AI</p>
-                                    <p className="text-[9px] text-slate-400 uppercase tracking-widest">Phân tích thực tế</p>
-                                </div>
-                            </div>
-                            <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
-                                Chào bạn! Hiện tại hệ thống chưa đủ dữ liệu để phân tích chi tiết. Hãy hoàn thành ít nhất 1 bài tập nhé.
-                                Gợi ý bổ sung sẽ được Gemini cung cấp ở màn hình ngoài.
-                            </p>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                <div className="flex items-start gap-2 text-[11px] text-slate-500">
-                                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
-                                    <span>Hoàn thành bài Writing đầu tiên để nhận đánh giá AI.</span>
-                                </div>
-                                <div className="flex items-start gap-2 text-[11px] text-slate-500">
-                                    <Target className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-                                    <span>Tập trung Reading & Listening để xây dựng nền tảng.</span>
-                                </div>
-                            </div>
-                        </section>
+                        <AiInsightSection onNavigateToLesson={handleOpenAiModule} />
 
                         {/* Band Test CTA */}
                         <section className="bg-gradient-to-br from-[#1A4A7A] via-[#1D5A96] to-[#1E3F6E] rounded-[22px] p-6 text-white relative overflow-hidden shadow-[0_18px_40px_rgba(26,74,122,0.28)]">
