@@ -816,6 +816,7 @@ export interface ToeicRepositoryListItem {
   total_items: number;
   is_published: boolean;
   created_at: string;
+  has_answer_key?: boolean;
 }
 
 export interface IeltsRepositoryListItem {
@@ -826,6 +827,7 @@ export interface IeltsRepositoryListItem {
   total_items: number;
   is_published: boolean;
   created_at: string;
+  has_answer_key?: boolean;
 }
 
 export async function listToeicRepositories(
@@ -843,6 +845,59 @@ export async function deleteToeicRepository(
 ): Promise<{ slug: string; deleted: boolean; items_deleted: number }> {
   const res = await apiClient.delete(
     `/teacher/toeic-repository/${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export interface DiagnosticRepositoryListItem {
+  id: number;
+  cert_type: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  total_items: number;
+  created_at: string;
+  has_answer_key?: boolean;
+}
+
+export interface PracticeSetListItem {
+  practice_set_id: string;
+  skill_area: string;
+  score_band_min: number;
+  score_band_max: number;
+  total_items: number;
+  created_at: string;
+  has_answer_key?: boolean;
+}
+
+export async function listDiagnosticRepositories(): Promise<DiagnosticRepositoryListItem[]> {
+  const res = await apiClient.get<DiagnosticRepositoryListItem[]>(
+    "/teacher/toeic-repository/diagnostic/list",
+  );
+  return res.data;
+}
+
+export async function deleteDiagnosticRepository(
+  slug: string,
+): Promise<{ slug: string; deleted: boolean }> {
+  const res = await apiClient.delete(
+    `/teacher/toeic-repository/diagnostic/${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function listToeicPracticeSets(): Promise<PracticeSetListItem[]> {
+  const res = await apiClient.get<PracticeSetListItem[]>(
+    "/teacher/toeic-repository/practice/list",
+  );
+  return res.data;
+}
+
+export async function deleteToeicPracticeSet(
+  practiceSetId: string,
+): Promise<{ practice_set_id: string; deleted: boolean }> {
+  const res = await apiClient.delete(
+    `/teacher/toeic-repository/practice-set/${encodeURIComponent(practiceSetId)}`,
   );
   return res.data;
 }

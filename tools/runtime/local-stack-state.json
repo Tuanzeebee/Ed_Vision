@@ -1,14 +1,14 @@
 ﻿{
-    "livekit":  {
-                    "pid":  17448,
-                    "startedAt":  "2026-05-16T23:44:23",
-                    "outLog":  "E:\\UpLoad\\capstoneprojectedvision\\Ed_Vision\\tools\\runtime\\livekit.out.log",
-                    "errLog":  "E:\\UpLoad\\capstoneprojectedvision\\Ed_Vision\\tools\\runtime\\livekit.err.log"
-                },
-    "backend":  {
-                    "pid":  31728,
-                    "startedAt":  "2026-05-16T23:44:24",
-                    "outLog":  "E:\\UpLoad\\capstoneprojectedvision\\Ed_Vision\\tools\\runtime\\backend.out.log",
-                    "errLog":  "E:\\UpLoad\\capstoneprojectedvision\\Ed_Vision\\tools\\runtime\\backend.err.log"
-                }
+    "livekit": {
+        "pid": 32012,
+        "startedAt": "2026-05-17T00:12:49",
+        "outLog": "D:\\Ed_Vision\\tools\\runtime\\livekit.out.log",
+        "errLog": "D:\\Ed_Vision\\tools\\runtime\\livekit.err.log"
+    },
+    "backend": {
+        "pid": 10672,
+        "startedAt": "2026-05-17T00:12:50",
+        "outLog": "D:\\Ed_Vision\\tools\\runtime\\backend.out.log",
+        "errLog": "D:\\Ed_Vision\\tools\\runtime\\backend.err.log"
+    }
 }

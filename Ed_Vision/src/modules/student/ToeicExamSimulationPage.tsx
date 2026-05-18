@@ -26,9 +26,13 @@ import {
   upsertExamAnswer,
   updateExamCursor,
   submitExamSession,
+  getToeicReservePoints,
+  getToeicPlanSync,
   type ExamSessionState,
   type ToeicRepositoryDetailResponse,
 } from "@/services/api/certificateService";
+import { getToeicIntakeProfile } from "./toeicIntake";
+import { calculateToeicPracticeScore } from "./toeicPracticeScore";
 
 interface LearningMapState {
   listening: {
@@ -362,27 +366,111 @@ export default function ToeicExamSimulationPage() {
     // thì phải hydrate ngay.
   }, [resolvedExamType, sessionParam, applySessionState, setSearchParams]);
 
-  const { isUnlocked, completedCount, requiredCount } = useMemo(() => {
-    const raw = localStorage.getItem(getMapStorageKey(userId));
-    // Listening có 5 node (Part 1-4 + Mock Exam), Reading có 4 node (Part 5-7 + Mock Exam).
-    // Node cuối cùng là chính bài thi thử → chỉ yêu cầu hoàn thành các node luyện tập (tổng - 1).
-    const required = isListening ? 4 : 3;
-    if (!raw) {
-      return { isUnlocked: false, completedCount: 0, requiredCount: required };
-    }
-    try {
-      const state: LearningMapState = JSON.parse(raw);
-      const skill = isListening ? state.listening : state.reading;
-      const completed = skill?.completedNodes?.length ?? 0;
-      return {
-        isUnlocked: completed >= required,
-        completedCount: completed,
-        requiredCount: required,
-      };
-    } catch {
-      return { isUnlocked: false, completedCount: 0, requiredCount: required };
-    }
-  }, [isListening, userId]);
+  const [toeicScoreState, setToeicScoreState] = useState<{
+    currentScore: number;
+    targetScore: number;
+    isUnlocked: boolean;
+    loading: boolean;
+  }>({
+    currentScore: 300,
+    targetScore: 650,
+    isUnlocked: false,
+    loading: true,
+  });
+
+  useEffect(() => {
+    if (!userId) return;
+
+    let cancelled = false;
+    Promise.all([
+      getToeicReservePoints().catch(() => null),
+      getToeicPlanSync().catch(() => null),
+    ]).then(([reserveData, planData]) => {
+      if (cancelled) return;
+
+      const profile = getToeicIntakeProfile();
+      const baseScore = profile ? Math.round(profile.currentScore) : (planData ? Math.round(planData.current_score - (planData.total_boost ?? 0)) : 300);
+      const targetScore = planData?.target_score ?? (profile?.milestoneState.targetScore ?? 650);
+
+      let finalScore = baseScore;
+      if (reserveData) {
+        const completedParts = new Set(
+          Array.isArray(reserveData.completed_parts)
+            ? reserveData.completed_parts
+            : [],
+        );
+        const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
+        const READING_PART_KEYS  = ["part5", "part6", "part7"];
+        const bestCorrectByPart: Record<string, number> = {};
+
+        const LISTENING_NODES_CONFIG = [
+          { id: 0, scorePerCorrect: 2 },
+          { id: 1, scorePerCorrect: 2.5 },
+          { id: 2, scorePerCorrect: 2.5 },
+          { id: 3, scorePerCorrect: 2.5 },
+        ];
+        const READING_NODES_CONFIG = [
+          { id: 0, scorePerCorrect: 2 },
+          { id: 1, scorePerCorrect: 2.5 },
+          { id: 2, scorePerCorrect: 2.5 },
+        ];
+
+        LISTENING_NODES_CONFIG.forEach((node, i) => {
+          const partKey = LISTENING_PART_KEYS[i];
+          const partNum = i + 1;
+          if (completedParts.has(partNum)) {
+            const session = (reserveData.part_sessions ?? []).find(
+              (s: any) => s.toeic_part === partNum,
+            );
+            const earned = session?.earned_points ?? 0;
+            const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
+            bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
+          }
+        });
+
+        READING_NODES_CONFIG.forEach((node, i) => {
+          const partKey = READING_PART_KEYS[i];
+          const partNum = i + 5;
+          if (completedParts.has(partNum)) {
+            const session = (reserveData.part_sessions ?? []).find(
+              (s: any) => s.toeic_part === partNum,
+            );
+            const earned = session?.earned_points ?? 0;
+            const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
+            bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
+          }
+        });
+
+        const practiceResult = calculateToeicPracticeScore({
+          bestCorrectByPart,
+          minScore: baseScore,
+          maxScore: baseScore + 200,
+        });
+        if (practiceResult) {
+          finalScore = practiceResult.finalScore;
+        }
+      }
+
+      setToeicScoreState({
+        currentScore: finalScore,
+        targetScore,
+        isUnlocked: finalScore >= targetScore,
+        loading: false,
+      });
+    }).catch(() => {
+      if (cancelled) return;
+      setToeicScoreState({
+        currentScore: 300,
+        targetScore: 650,
+        isUnlocked: false,
+        loading: false,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Tick mỗi giây để render countdown. Giá trị `timeLeft` luôn được tính lại
   // từ `serverStartedAt + serverDurationSec - now` để bền với F5.
@@ -604,7 +692,24 @@ export default function ToeicExamSimulationPage() {
     );
   }
 
-  if (!isUnlocked) {
+  if (toeicScoreState.loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-500 text-sm">
+              Đang xác thực điều kiện tham gia thi...
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!toeicScoreState.isUnlocked) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header />
@@ -617,14 +722,14 @@ export default function ToeicExamSimulationPage() {
               Bài thi chưa mở khóa
             </h2>
             <p className="text-gray-600 mb-6">
-              Hoàn thành {requiredCount} node luyện tập để mở khóa.
+              Bạn chưa đạt đủ điểm ôn tập mục tiêu để thi Mock Exam. Vui lòng quay lại phòng luyện tập để tích lũy đủ điểm.
             </p>
             <p className="text-sm text-gray-500 mb-5">
-              Tiến độ hiện tại: {completedCount}/{requiredCount} node.
+              Điểm hiện tại: {toeicScoreState.currentScore} / {toeicScoreState.targetScore} điểm.
             </p>
             <button
               onClick={handleGoToMap}
-              className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl transition-colors"
+              className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2 justify-center">
                 <MapIcon className="w-4 h-4" />

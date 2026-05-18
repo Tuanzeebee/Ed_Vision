@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { BandEstimationService } from './band-estimation.service';
 import { EvaluationService } from './evaluation.service';
 import { TestResultRecorderService } from '../../admin_be/program-effectiveness/test-result-recorder.service';
+import { GeminiService } from '../../common/gemini/gemini.service';
 import {
   CreateRoadmapDto,
   UpdateRoadmapTargetsDto,
@@ -35,7 +36,8 @@ export class IeltsAdaptiveService {
     private bandEstimation: BandEstimationService,
     private evaluation: EvaluationService,
     private testResultRecorder: TestResultRecorderService,
-  ) {}
+    private gemini: GeminiService,
+  ) { }
 
   /**
    * Chuyển đổi điểm số nguyên (vd: 450) thành band IELTS (vd: 4.5).
@@ -897,10 +899,10 @@ export class IeltsAdaptiveService {
    *   3. Tăng lessons_completed và cập nhật last_practiced_at trong IeltsSkillProgress
    *      tương ứng với kỹ năng của bài học.
    */
-  async completeLesson(lessonId: number): Promise<void> {
+  async completeLesson(lessonId: number, score?: number, isFullyCompleted: boolean = true): Promise<void> {
     await this.prisma.ieltsLesson.update({
       where: { id: lessonId },
-      data: { status: LessonStatus.COMPLETED },
+      data: { status: isFullyCompleted ? LessonStatus.COMPLETED : LessonStatus.IN_PROGRESS },
     });
 
     // Load lesson để lấy thông tin kỹ năng và enrollment
@@ -910,35 +912,82 @@ export class IeltsAdaptiveService {
     });
 
     if (lesson) {
-      await this.prisma.ieltsSkillProgress.update({
-        where: {
-          enrollment_id_skill_area: {
-            enrollment_id: lesson.roadmap.enrollment_id,
-            skill_area: lesson.skill_area,
-          },
-        },
-        data: {
-          lessons_completed: { increment: 1 },
-          last_practiced_at: new Date(),
-        },
-      });
+      if (score !== undefined) {
+        // Cập nhật skill progress (total practice count, accuracy trung bình)
+        await this.updateSkillProgress(
+          lesson.roadmap.enrollment_id,
+          lesson.skill_area,
+          score,
+          1,
+        );
 
-      // Kiểm tra nếu tất cả bài cùng band_level đã hoàn thành → mở khoá band tiếp theo
-      const sameBandLessons = await this.prisma.ieltsLesson.findMany({
-        where: {
-          roadmap_id: lesson.roadmap_id,
-          band_level: lesson.band_level,
-        },
-      });
-      const allSameBandCompleted = sameBandLessons.every(
-        (l) => l.status === LessonStatus.COMPLETED,
-      );
-      if (allSameBandCompleted) {
-        await this.unlockNextLesson(lesson.roadmap_id);
+        // Tạo IeltsPracticeSession record để lưu lịch sử làm bài Speaking/Writing!
+        const repoId = lesson.practice_repo_id ?? lesson.mini_test_repo_id ?? lesson.flashcard_repo_id ?? 0;
+        await this.prisma.ieltsPracticeSession.create({
+          data: {
+            lesson_id: lesson.id,
+            session_type: lesson.mini_test_repo_id ? 'MINI_TEST' : 'PRACTICE',
+            repository_id: repoId,
+            answers: {},
+            total_questions: 1,
+            correct_count: score >= 50 ? 1 : 0,
+            accuracy_percent: score,
+            total_time_sec: 120,
+            avg_time_per_q: 120,
+            error_analysis: {},
+          },
+        });
+
+        // Chỉ increment lessons_completed cho IeltsSkillProgress khi hoàn thành hoàn toàn bài học
+        if (isFullyCompleted) {
+          await this.prisma.ieltsSkillProgress.update({
+            where: {
+              enrollment_id_skill_area: {
+                enrollment_id: lesson.roadmap.enrollment_id,
+                skill_area: lesson.skill_area,
+              },
+            },
+            data: {
+              lessons_completed: { increment: 1 },
+            },
+          });
+        }
+      } else {
+        // Increment lesson completed count nếu không có score (để giữ logic cũ cho Reading/Listening)
+        if (isFullyCompleted) {
+          await this.prisma.ieltsSkillProgress.update({
+            where: {
+              enrollment_id_skill_area: {
+                enrollment_id: lesson.roadmap.enrollment_id,
+                skill_area: lesson.skill_area,
+              },
+            },
+            data: {
+              lessons_completed: { increment: 1 },
+              last_practiced_at: new Date(),
+            },
+          });
+        }
       }
 
-      // Đồng bộ tiến độ tổng thể lên Dashboard
-      await this.syncOverallProgress(lesson.roadmap.enrollment_id);
+      if (isFullyCompleted) {
+        // Kiểm tra nếu tất cả bài cùng band_level đã hoàn thành → mở khoá band tiếp theo
+        const sameBandLessons = await this.prisma.ieltsLesson.findMany({
+          where: {
+            roadmap_id: lesson.roadmap_id,
+            band_level: lesson.band_level,
+          },
+        });
+        const allSameBandCompleted = sameBandLessons.every(
+          (l) => l.status === LessonStatus.COMPLETED,
+        );
+        if (allSameBandCompleted) {
+          await this.unlockNextLesson(lesson.roadmap_id);
+        }
+
+        // Đồng bộ tiến độ tổng thể lên Dashboard
+        await this.syncOverallProgress(lesson.roadmap.enrollment_id);
+      }
     }
   }
 
@@ -1643,7 +1692,7 @@ export class IeltsAdaptiveService {
     });
 
     // Fire-and-forget: record to StudentTestResult for analytics
-    this.recordBandTestResult(bandTest.roadmap.enrollment_id, updated, estimation, totalTime).catch(() => {});
+    this.recordBandTestResult(bandTest.roadmap.enrollment_id, updated, estimation, totalTime).catch(() => { });
 
     return {
       ...updated,
@@ -2065,5 +2114,78 @@ export class IeltsAdaptiveService {
   async getLearningAnalysisByAccount(accountId: number) {
     const { enrollment } = await this.getOrCreateStudentEnrollment(accountId);
     return this.evaluation.getLearningAnalysis(enrollment.id);
+  }
+
+  /**
+   * Lấy phân tích AI (Gemini) dựa trên tiến độ thực tế các kỹ năng của học viên.
+   */
+  async getAiInsightForAccount(accountId: number): Promise<any> {
+    const skills = await this.getSkillProgressByAccount(accountId);
+    const activeSkills = skills.filter((s) => s.total_practice > 0 || s.lessons_completed > 0);
+
+    if (activeSkills.length === 0) {
+      return null;
+    }
+
+    const summary = activeSkills.map((s) => ({
+      skill: s.skill_area,
+      band: s.current_band,
+      accuracy: s.accuracy_rate,
+      lessons: s.lessons_completed,
+      practice: s.total_practice,
+      trend:
+        s.recent_sessions && s.recent_sessions.length >= 2
+          ? (
+            (s.recent_sessions[s.recent_sessions.length - 1]?.accuracy ?? 0) -
+            (s.recent_sessions[0]?.accuracy ?? 0)
+          ).toFixed(1)
+          : 'N/A',
+      weak_topics: s.weak_topics,
+    }));
+
+    const prompt = `You are an IELTS tutor AI. Analyze this student's skill progress and provide an actionable analysis in Vietnamese.
+Analyze this student's data and return ONLY a JSON object.
+
+Student skill progress data:
+${JSON.stringify(summary)}
+
+Ensure all text/descriptions are in clear, natural Vietnamese and customized based on their actual strengths or weaknesses shown in their scores (e.g. low accuracy vs high accuracy).
+
+Return exactly this JSON format:
+{
+  "summary": "1-2 sentence overall assessment in Vietnamese of their progress.",
+  "weakest_skill": "reading|listening|writing|speaking",
+  "strengths": ["2-3 short, specific strengths or encouraging points"],
+  "improvements": ["2-3 specific actionable tips in Vietnamese for their weak areas"],
+  "today_focus": "One specific task to do today, in Vietnamese.",
+  "encouragement": "One short motivational sentence."
+}`;
+
+    try {
+      const response = await this.gemini.generateJson<any>(prompt);
+      if (!response || typeof response !== 'object') {
+        throw new Error('Gemini did not return a valid object');
+      }
+      return {
+        summary: response.summary || 'Hãy tiếp tục hoàn thành các bài học tiếp theo nhé!',
+        weakest_skill: response.weakest_skill || 'reading',
+        strengths: Array.isArray(response.strengths) ? response.strengths : ['Tập trung học tập tốt'],
+        improvements: Array.isArray(response.improvements) ? response.improvements : ['Luyện tập thêm kỹ năng còn yếu'],
+        today_focus: response.today_focus || 'Làm bài học tiếp theo trong lộ trình',
+        encouragement: response.encouragement || 'Cố lên! Bạn đang đi đúng hướng trên con đường chinh phục IELTS.',
+      };
+    } catch (err) {
+      this.logger.error(`Failed to generate AI insight with Gemini: ${err.message}`);
+      // Fallback
+      const weakest = activeSkills.sort((a, b) => a.accuracy_rate - b.accuracy_rate)[0]?.skill_area ?? 'reading';
+      return {
+        summary: 'Hãy tiếp tục hoàn thành các bài học tiếp theo để AI phân tích chi tiết kỹ năng của bạn nhé!',
+        weakest_skill: weakest,
+        strengths: ['Tập trung học tập tốt', 'Hoàn thành bài tập đều đặn'],
+        improvements: ['Luyện tập thêm kỹ năng còn yếu', 'Xem kỹ giải thích đáp án'],
+        today_focus: 'Làm bài học tiếp theo trong lộ trình',
+        encouragement: 'Cố lên! Bạn đang đi đúng hướng trên con đường chinh phục IELTS.',
+      };
+    }
   }
 }

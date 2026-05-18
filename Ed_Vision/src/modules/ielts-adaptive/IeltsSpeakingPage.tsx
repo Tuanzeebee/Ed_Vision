@@ -284,8 +284,25 @@ const IeltsSpeakingPage: React.FC = () => {
             question: currentQuestion,
             part,
           });
-          setResult(gradeRes.data);
+          const scoreData = gradeRes.data;
+          setResult(scoreData);
           setRecordingState("done");
+
+          if (lessonId) {
+            try {
+              const parsed = Number.parseInt(lessonId, 10);
+              if (!Number.isNaN(parsed)) {
+                const band = scoreData.overallBand || scoreData.bandScore || 6.0;
+                const accuracy = (band / 9) * 100;
+                const isFullyCompleted = part === 3 ||
+                  (part === 1 && !lesson?.lesson_title.toLowerCase().includes("part 2") && !lesson?.lesson_title.toLowerCase().includes("part 3")) ||
+                  (part === 2 && !lesson?.lesson_title.toLowerCase().includes("part 3"));
+                await apiClient.post(`/ielts-adaptive/lesson/${parsed}/complete`, { score: accuracy, isFullyCompleted });
+              }
+            } catch (err) {
+              console.error("Failed to complete speaking lesson:", err);
+            }
+          }
         } catch (err: any) {
           console.error("[Speaking] Error:", err?.response?.data || err);
           const msg = err?.response?.data?.message || "Xử lý thất bại. Vui lòng thử lại.";
