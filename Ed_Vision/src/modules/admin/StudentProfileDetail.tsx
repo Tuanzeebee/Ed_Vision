@@ -105,6 +105,15 @@ const getStatusLabel = (status?: StudentDetail['learningStatus']) => {
   }
 }
 
+const SKILL_LABELS: Record<string, string> = {
+  listening: 'Listening',
+  reading: 'Reading',
+  writing: 'Writing',
+  speaking: 'Speaking',
+  grammar: 'Grammar',
+  vocabulary: 'Vocabulary',
+}
+
 export default function StudentProfileDetail() {
   const { t } = useTranslation(['admin'])
   const navigate = useNavigate()
@@ -138,6 +147,19 @@ export default function StudentProfileDetail() {
   }, [studentId])
 
   const skillProgressData = useMemo(() => {
+    if (student?.skillProgressItems?.length) {
+      return student.skillProgressItems.map((item) => {
+        const percent = clampPercent(item.percent)
+        const isWarning = percent < 50
+        return {
+          name: SKILL_LABELS[item.skill] ?? item.skill,
+          percent,
+          color: isWarning ? 'bg-red-500' : 'bg-blue-600',
+          isWarning,
+        }
+      })
+    }
+
     const progress = student?.skillProgress
     const ieltsSkills = [
       { name: 'Listening', percent: clampPercent(progress?.listening), color: 'bg-blue-600' },
@@ -156,7 +178,7 @@ export default function StudentProfileDetail() {
     }
 
     return ieltsSkills
-  }, [student?.certType, student?.skillProgress])
+  }, [student?.certType, student?.skillProgress, student?.skillProgressItems])
 
   // Score History Chart data
   const scoreHistoryData = useMemo(

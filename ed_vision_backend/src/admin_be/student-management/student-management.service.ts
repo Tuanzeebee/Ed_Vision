@@ -731,12 +731,15 @@ export class StudentManagementService {
         );
       }
 
-      const computedProgressPercent = this.computeProgressPercent(
-        currentNumeric,
-        baselineNumeric,
-        targetNumeric,
-        enrollment?.progress_percent ?? 0,
-      );
+      const computedProgressPercent =
+        certType === 'ielts'
+          ? this.clampPercent(enrollment?.progress_percent)
+          : this.computeProgressPercent(
+              currentNumeric,
+              baselineNumeric,
+              targetNumeric,
+              enrollment?.progress_percent ?? 0,
+            );
 
       return {
         studentId: student.student_id,
@@ -928,17 +931,42 @@ export class StudentManagementService {
       );
     }
 
-    const computedProgressPercent = this.computeProgressPercent(
-      currentNumeric,
-      baselineNumeric,
-      targetNumeric,
-      enrollment?.progress_percent ?? 0,
-    );
+    const roadmap =
+      certType === 'ielts' && enrollment
+        ? await this.prisma.ieltsAdaptiveRoadmap.findUnique({
+            where: { enrollment_id: enrollment.id },
+            include: { lessons: true },
+          })
+        : null;
+    const roadmapLessons = roadmap?.lessons ?? [];
+    const roadmapProgressPercent =
+      certType === 'ielts' && roadmapLessons.length
+        ? this.computeRoadmapProgress(roadmapLessons)
+        : null;
 
-    const skillProgress = this.computeSkillProgress(
-      enrollmentTestResults,
-      certType,
-    );
+    const computedProgressPercent =
+      certType === 'ielts'
+        ? roadmapProgressPercent ??
+          this.clampPercent(enrollment?.progress_percent)
+        : this.computeProgressPercent(
+            currentNumeric,
+            baselineNumeric,
+            targetNumeric,
+            enrollment?.progress_percent ?? 0,
+          );
+
+    let skillProgressItems: Array<{ skill: string; percent: number }> = [];
+    let skillProgress = { listening: 0, reading: 0, writing: 0, speaking: 0 };
+    if (certType === 'ielts' && roadmapLessons.length) {
+      skillProgressItems = this.computeRoadmapSkillProgress(roadmapLessons);
+      skillProgress = this.buildSkillProgressMapFromItems(skillProgressItems);
+    } else {
+      skillProgress = this.computeSkillProgress(enrollmentTestResults, certType);
+      skillProgressItems = this.buildSkillProgressItemsFromMap(
+        skillProgress,
+        certType,
+      );
+    }
 
     const totalStudyMinutes = dailySummaries.reduce(
       (sum, item) => sum + item.total_duration_min,
@@ -1013,6 +1041,7 @@ export class StudentManagementService {
       riskLevel,
       lastActivityAt: recentActivities[0]?.created_at.toISOString(),
       skillProgress,
+      skillProgressItems,
       testResults: enrollmentTestResults
         .slice()
         .reverse()
@@ -1222,5 +1251,89 @@ export class StudentManagementService {
       writing: norm(pickLatest('writing_score'), 'writing'),
       speaking: norm(pickLatest('speaking_score'), 'speaking'),
     };
+  }
+
+  private clampPercent(value: number | null | undefined): number {
+    return Math.max(0, Math.min(100, Math.round(value ?? 0)));
+  }
+
+  private computeRoadmapProgress(
+    lessons: Array<{ status: string }>,
+  ): number {
+    if (!lessons.length) return 0;
+    const completed = lessons.filter((l) => l.status === 'completed').length;
+    return this.clampPercent((completed / lessons.length) * 100);
+  }
+
+  private computeRoadmapSkillProgress(
+    lessons: Array<{ skill_area: string; status: string }>,
+  ): Array<{ skill: string; percent: number }> {
+    const bySkill = new Map<string, { total: number; done: number }>();
+    for (const lesson of lessons) {
+      const skill = String(lesson.skill_area || '').trim();
+      if (!skill) continue;
+      const entry = bySkill.get(skill) ?? { total: 0, done: 0 };
+      entry.total += 1;
+      if (lesson.status === 'completed') entry.done += 1;
+      else if (lesson.status === 'in_progress') entry.done += 0.5;
+      bySkill.set(skill, entry);
+    }
+
+    const order = [
+      'reading',
+      'listening',
+      'writing',
+      'speaking',
+      'grammar',
+      'vocabulary',
+    ];
+    const orderIndex = new Map(order.map((key, idx) => [key, idx]));
+
+    const items = Array.from(bySkill.entries()).map(([skill, stats]) => ({
+      skill,
+      percent: stats.total
+        ? this.clampPercent((stats.done / stats.total) * 100)
+        : 0,
+    }));
+
+    items.sort(
+      (a, b) =>
+        (orderIndex.get(a.skill) ?? 999) -
+        (orderIndex.get(b.skill) ?? 999),
+    );
+
+    return items;
+  }
+
+  private buildSkillProgressItemsFromMap(
+    progress: { listening: number; reading: number; writing: number; speaking: number },
+    certType: string | null,
+  ): Array<{ skill: string; percent: number }> {
+    const items = [
+      { skill: 'listening', percent: this.clampPercent(progress.listening) },
+      { skill: 'reading', percent: this.clampPercent(progress.reading) },
+    ];
+
+    if (certType !== 'toeic') {
+      items.push(
+        { skill: 'writing', percent: this.clampPercent(progress.writing) },
+        { skill: 'speaking', percent: this.clampPercent(progress.speaking) },
+      );
+    }
+
+    return items;
+  }
+
+  private buildSkillProgressMapFromItems(
+    items: Array<{ skill: string; percent: number }>,
+  ): { listening: number; reading: number; writing: number; speaking: number } {
+    const map = { listening: 0, reading: 0, writing: 0, speaking: 0 };
+    for (const item of items) {
+      if (item.skill === 'listening') map.listening = this.clampPercent(item.percent);
+      if (item.skill === 'reading') map.reading = this.clampPercent(item.percent);
+      if (item.skill === 'writing') map.writing = this.clampPercent(item.percent);
+      if (item.skill === 'speaking') map.speaking = this.clampPercent(item.percent);
+    }
+    return map;
   }
 }
