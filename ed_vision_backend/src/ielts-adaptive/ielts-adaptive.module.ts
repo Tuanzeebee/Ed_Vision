@@ -11,10 +11,11 @@ import { GroqGradingService } from '../common/groq/groq-grading.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiModule } from '../common/gemini/gemini.module';
+import { OpenRouterModule } from '../common/services/openrouter.module';
 import { ProgramEffectivenessModule } from '../admin_be/program-effectiveness/program-effectiveness.module';
 
 @Module({
-  imports: [PrismaModule, GeminiModule, ProgramEffectivenessModule],
+  imports: [PrismaModule, GeminiModule, OpenRouterModule, ProgramEffectivenessModule],
   controllers: [IeltsAdaptiveController, IeltsSpeakingController],
   providers: [
     IeltsAdaptiveService,

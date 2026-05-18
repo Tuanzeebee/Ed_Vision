@@ -285,6 +285,9 @@ const IeltsSpeakingPage: React.FC = () => {
             part,
           });
           const scoreData = gradeRes.data;
+          if (scoreData.confidence === "low") {
+            throw new Error("Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.");
+          }
           setResult(scoreData);
           setRecordingState("done");
 
@@ -305,7 +308,10 @@ const IeltsSpeakingPage: React.FC = () => {
           }
         } catch (err: any) {
           console.error("[Speaking] Error:", err?.response?.data || err);
-          const msg = err?.response?.data?.message || "Xử lý thất bại. Vui lòng thử lại.";
+          let msg = err?.response?.data?.message || err.message || "Xử lý thất bại. Vui lòng thử lại.";
+          if (msg.includes("All grading providers failed") || msg.includes("Hệ thống AI đang quá tải")) {
+            msg = "Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.";
+          }
           setError(msg);
           setRecordingState("idle");
         } finally {

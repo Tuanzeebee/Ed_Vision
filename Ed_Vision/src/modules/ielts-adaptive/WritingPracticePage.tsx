@@ -488,6 +488,11 @@ export default function WritingPracticePage() {
         word_count: wordCount,
         lesson_id: lessonId ? Number.parseInt(lessonId, 10) : undefined,
       });
+
+      if (data.confidence === "low") {
+        throw new Error("Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.");
+      }
+
       setResult(data);
 
       if (lessonId && data.bandScore) {
@@ -506,7 +511,11 @@ export default function WritingPracticePage() {
 
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: any) {
-      setError(e?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
+      let errorMsg = e?.response?.data?.message || e?.message || "Có lỗi xảy ra. Vui lòng thử lại.";
+      if (errorMsg.includes("All grading providers failed") || errorMsg.includes("Hệ thống AI đang quá tải")) {
+        errorMsg = "Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.";
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
