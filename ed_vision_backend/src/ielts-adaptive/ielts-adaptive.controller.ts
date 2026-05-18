@@ -121,6 +121,12 @@ export class IeltsAdaptiveController {
     );
   }
 
+  @UseGuards(DevAuthGuard)
+  @Get('me/ai-insight')
+  async getMyAiInsight(@Req() req: any) {
+    return this.service.getAiInsightForAccount(this.resolveAccountId(req));
+  }
+
   // ============================================
   // LESSON ENDPOINTS
   // ============================================
@@ -138,8 +144,11 @@ export class IeltsAdaptiveController {
   @Post('lesson/:lessonId/complete')
   async completeLesson(
     @Param('lessonId', ParseIntPipe) lessonId: number,
+    @Body() body?: { score?: number; isFullyCompleted?: boolean },
   ): Promise<{ message: string }> {
-    await this.service.completeLesson(lessonId);
+    const score = body?.score;
+    const isFullyCompleted = body?.isFullyCompleted ?? true;
+    await this.service.completeLesson(lessonId, score, isFullyCompleted);
     return { message: 'Lesson completed successfully' };
   }
 
