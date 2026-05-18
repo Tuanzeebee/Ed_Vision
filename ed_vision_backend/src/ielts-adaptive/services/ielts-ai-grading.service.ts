@@ -16,7 +16,7 @@ import {
 import fetch from 'node-fetch';
 
 // ─── Fallback chain config ───────────────────────────────────────────────────
-// Priority: Gemini → Groq → OpenRouter → Qwen remote → Ollama local
+// Priority: Gemini → Groq → OpenRouter → Qwen remote → ChatGPT → Ollama local
 // ─────────────────────────────────────────────────────────────────────────────
 
 const GRADING_OPTIONS = {
@@ -36,9 +36,26 @@ export class IeltsAiGradingService {
   private readonly qwenBaseUrl = (process.env.QWEN_BASE_URL ?? '').replace(/\/+$/, '');
   private readonly qwenModel = process.env.QWEN_MODEL || 'qwen2.5:14b';
 
+  // ChatGPT (OpenAI)
+  private readonly openAiApiKey = process.env.OPENAI_API_KEY ?? '';
+  private readonly openAiBaseUrl = (process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+  private readonly openAiModel =
+    process.env.OPENAI_MODEL ??
+    process.env.CHATGPT_MODEL ??
+    process.env.WRITING_EVAL_MODEL ??
+    'gpt-4o-mini';
+
   // Ollama local
   private readonly ollamaBaseUrl = (process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434').replace(/\/+$/, '');
   private readonly ollamaModel = process.env.OLLAMA_MODEL ?? 'qwen3';
+  private readonly ollamaTimeoutMs = (() => {
+    const parsed = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?? '', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 120_000;
+  })();
+  private readonly maxProviderAttempts = (() => {
+    const parsed = Number.parseInt(process.env.IELTS_GRADING_MAX_ATTEMPTS ?? '', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  })();
 
   // ── Circuit breaker: skip providers that recently failed ────────────────
   // Key = provider name, Value = timestamp when cooldown expires
@@ -117,20 +134,28 @@ export class IeltsAiGradingService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Fallback chain: Gemini → Groq → OpenRouter → Qwen remote → Ollama local
+  // Fallback chain: Gemini → Groq → OpenRouter → Qwen remote → ChatGPT → Ollama local
   // With circuit breaker — skip providers on cooldown
   // ═══════════════════════════════════════════════════════════════════════════
 
   private async generateJsonWithFallback<T>(prompt: string): Promise<T> {
     const errors: string[] = [];
+    let attempts = 0;
+
+    const canAttempt = () => attempts < this.maxProviderAttempts;
+    const markAttempt = () => { attempts += 1; };
 
     // ── 1. Gemini (primary) ────────────────────────────────────────────────
     if (this.isOnCooldown('Gemini')) {
       errors.push('Gemini: skipped (on cooldown)');
       this.logger.debug('[Grading] ⏭ Gemini skipped (on cooldown)');
     } else {
+      if (!canAttempt()) {
+        errors.push('Gemini: skipped (max attempts reached)');
+      } else {
       try {
         this.logger.debug('[Grading] Trying Gemini...');
+        markAttempt();
         const result = await this.gemini.generateJson<T>(prompt, {
           temperature: GRADING_OPTIONS.temperature,
           maxOutputTokens: GRADING_OPTIONS.maxTokens,
@@ -144,6 +169,10 @@ export class IeltsAiGradingService {
         errors.push(`Gemini: ${msg}`);
         this.logger.warn(`[Grading] ❌ Gemini failed: ${msg}`);
         this.markFailed('Gemini', msg);
+        if (attempts >= this.maxProviderAttempts) {
+          throw new Error(`All grading providers failed:\n  ${errors.join('\n  ')}`);
+        }
+      }
       }
     }
 
@@ -152,8 +181,12 @@ export class IeltsAiGradingService {
       errors.push('Groq: skipped (on cooldown)');
       this.logger.debug('[Grading] ⏭ Groq skipped (on cooldown)');
     } else {
+      if (!canAttempt()) {
+        errors.push('Groq: skipped (max attempts reached)');
+      } else {
       try {
         this.logger.debug('[Grading] Trying Groq...');
+        markAttempt();
         const result = await this.groq.generateJson<T>(prompt, GRADING_OPTIONS);
         this.logger.log('[Grading] ✅ Groq succeeded');
         this.markSuccess('Groq');
@@ -163,6 +196,10 @@ export class IeltsAiGradingService {
         errors.push(`Groq: ${msg}`);
         this.logger.warn(`[Grading] ❌ Groq failed: ${msg}`);
         this.markFailed('Groq', msg);
+        if (attempts >= this.maxProviderAttempts) {
+          throw new Error(`All grading providers failed:\n  ${errors.join('\n  ')}`);
+        }
+      }
       }
     }
 
@@ -174,8 +211,12 @@ export class IeltsAiGradingService {
       errors.push('OpenRouter: not configured (no API key)');
       this.logger.debug('[Grading] ⏭ OpenRouter skipped (no API key)');
     } else {
+      if (!canAttempt()) {
+        errors.push('OpenRouter: skipped (max attempts reached)');
+      } else {
       try {
         this.logger.debug('[Grading] Trying OpenRouter...');
+        markAttempt();
         const result = await this.openRouter.generateJson<T>(prompt, {
           temperature: GRADING_OPTIONS.temperature,
           max_tokens: GRADING_OPTIONS.maxTokens,
@@ -188,6 +229,10 @@ export class IeltsAiGradingService {
         errors.push(`OpenRouter: ${msg}`);
         this.logger.warn(`[Grading] ❌ OpenRouter failed: ${msg}`);
         this.markFailed('OpenRouter', msg);
+        if (attempts >= this.maxProviderAttempts) {
+          throw new Error(`All grading providers failed:\n  ${errors.join('\n  ')}`);
+        }
+      }
       }
     }
 
@@ -199,8 +244,12 @@ export class IeltsAiGradingService {
       errors.push('Qwen: not configured (no QWEN_BASE_URL)');
       this.logger.debug('[Grading] ⏭ Qwen remote skipped (no QWEN_BASE_URL)');
     } else {
+      if (!canAttempt()) {
+        errors.push('Qwen: skipped (max attempts reached)');
+      } else {
       try {
         this.logger.debug(`[Grading] Trying Qwen remote (${this.qwenModel})...`);
+        markAttempt();
         const result = await this.callOpenAiCompatible<T>(
           this.qwenBaseUrl,
           this.qwenModel,
@@ -215,21 +264,69 @@ export class IeltsAiGradingService {
         errors.push(`Qwen: ${msg}`);
         this.logger.warn(`[Grading] ❌ Qwen remote failed: ${msg}`);
         this.markFailed('Qwen', msg);
+        if (attempts >= this.maxProviderAttempts) {
+          throw new Error(`All grading providers failed:\n  ${errors.join('\n  ')}`);
+        }
+      }
       }
     }
 
-    // ── 5. Ollama local (final fallback) ──────────────────────────────────
+    // ── 5. ChatGPT (OpenAI, 4th fallback) ────────────────────────────────
+    if (this.isOnCooldown('ChatGPT')) {
+      errors.push('ChatGPT: skipped (on cooldown)');
+      this.logger.debug('[Grading] ⏭ ChatGPT skipped (on cooldown)');
+    } else if (!this.openAiApiKey) {
+      errors.push('ChatGPT: not configured (no OPENAI_API_KEY)');
+      this.logger.debug('[Grading] ⏭ ChatGPT skipped (no OPENAI_API_KEY)');
+    } else {
+      if (!canAttempt()) {
+        errors.push('ChatGPT: skipped (max attempts reached)');
+      } else {
+      try {
+        this.logger.debug(`[Grading] Trying ChatGPT (${this.openAiModel})...`);
+        markAttempt();
+        const result = await this.callOpenAiCompatible<T>(
+          this.openAiBaseUrl,
+          this.openAiModel,
+          prompt,
+          'ChatGPT',
+          {
+            headers: { Authorization: `Bearer ${this.openAiApiKey}` },
+            responseFormat: true,
+          },
+        );
+        this.logger.log(`[Grading] ✅ ChatGPT succeeded (${this.openAiModel})`);
+        this.markSuccess('ChatGPT');
+        return result;
+      } catch (err) {
+        const msg = (err as Error).message;
+        errors.push(`ChatGPT: ${msg}`);
+        this.logger.warn(`[Grading] ❌ ChatGPT failed: ${msg}`);
+        this.markFailed('ChatGPT', msg);
+        if (attempts >= this.maxProviderAttempts) {
+          throw new Error(`All grading providers failed:\n  ${errors.join('\n  ')}`);
+        }
+      }
+      }
+    }
+
+    // ── 6. Ollama local (final fallback) ──────────────────────────────────
     if (this.isOnCooldown('Ollama')) {
       errors.push('Ollama: skipped (on cooldown)');
       this.logger.debug('[Grading] ⏭ Ollama skipped (on cooldown)');
     } else {
+      if (!canAttempt()) {
+        errors.push('Ollama: skipped (max attempts reached)');
+      } else {
       try {
         this.logger.debug(`[Grading] Trying Ollama local (${this.ollamaModel})...`);
+        markAttempt();
         const result = await this.callOpenAiCompatible<T>(
           `${this.ollamaBaseUrl}/v1`,
           this.ollamaModel,
           prompt,
           'Ollama',
+          { timeoutMs: this.ollamaTimeoutMs },
         );
         this.logger.log(`[Grading] ✅ Ollama local succeeded (${this.ollamaModel})`);
         this.markSuccess('Ollama');
@@ -239,6 +336,10 @@ export class IeltsAiGradingService {
         errors.push(`Ollama: ${msg}`);
         this.logger.warn(`[Grading] ❌ Ollama local failed: ${msg}`);
         this.markFailed('Ollama', msg);
+        if (attempts >= this.maxProviderAttempts) {
+          throw new Error(`All grading providers failed:\n  ${errors.join('\n  ')}`);
+        }
+      }
       }
     }
 
@@ -247,7 +348,7 @@ export class IeltsAiGradingService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // OpenAI-compatible API caller (for Qwen remote + Ollama local)
+  // OpenAI-compatible API caller (for Qwen remote + ChatGPT + Ollama local)
   // ═══════════════════════════════════════════════════════════════════════════
 
   private async callOpenAiCompatible<T>(
@@ -255,14 +356,20 @@ export class IeltsAiGradingService {
     model: string,
     prompt: string,
     providerLabel: string,
+    options: {
+      headers?: Record<string, string>;
+      timeoutMs?: number;
+      responseFormat?: boolean;
+    } = {},
   ): Promise<T> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), GRADING_OPTIONS.timeoutMs);
+    const timeoutMs = options.timeoutMs ?? GRADING_OPTIONS.timeoutMs;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
         body: JSON.stringify({
           model,
           messages: [
@@ -271,6 +378,7 @@ export class IeltsAiGradingService {
           ],
           temperature: GRADING_OPTIONS.temperature,
           max_tokens: GRADING_OPTIONS.maxTokens,
+          response_format: options.responseFormat ? { type: 'json_object' } : undefined,
           stream: false,
         }),
         signal: controller.signal as any,
@@ -290,7 +398,7 @@ export class IeltsAiGradingService {
       return this.parseJsonResponse<T>(raw, providerLabel);
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        throw new Error(`${providerLabel} request timed out after ${GRADING_OPTIONS.timeoutMs}ms`);
+        throw new Error(`${providerLabel} request timed out after ${timeoutMs}ms`);
       }
       throw err;
     } finally {

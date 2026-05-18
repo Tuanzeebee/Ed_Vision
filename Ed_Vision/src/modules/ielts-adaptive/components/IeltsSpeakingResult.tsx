@@ -186,8 +186,9 @@ const CriteriaPanel: React.FC<{
 // ─── Main Result Component ────────────────────────────────────────────────────
 const IeltsSpeakingResult: React.FC<{
   result: SpeakingResult;
-  onRetry: () => void;
-}> = ({ result, onRetry }) => {
+  onComplete: () => void;
+  onRetry?: () => void;
+}> = ({ result, onComplete, onRetry }) => {
   const [activeCriteria, setActiveCriteria] = useState<string | null>("fluencyCoherence");
   const [activeTab, setActiveTab] = useState<"feedback" | "model" | "vocab" | "pronunciation">("feedback");
 
@@ -232,10 +233,10 @@ const IeltsSpeakingResult: React.FC<{
           </div>
         </div>
         <button
-          onClick={onRetry}
+          onClick={onComplete}
           style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
         >
-          ↺ Thử lại
+          Hoàn thành
         </button>
       </div>
 
@@ -447,19 +448,21 @@ const IeltsSpeakingResult: React.FC<{
       {/* CTA Footer */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px 40px" }}>
         <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onRetry}
-            style={{
-              padding: "14px 32px", borderRadius: 10, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff",
-              fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 15,
-              boxShadow: "0 4px 16px rgba(99,102,241,0.3)",
-            }}
-          >
-            🎙️ Luyện tập lần nữa
-          </motion.button>
+          {onRetry && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onRetry}
+              style={{
+                padding: "14px 32px", borderRadius: 10, border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff",
+                fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 15,
+                boxShadow: "0 4px 16px rgba(99,102,241,0.3)",
+              }}
+            >
+              🎙️ Luyện tập lần nữa
+            </motion.button>
+          )}
         </div>
       </div>
     </div>

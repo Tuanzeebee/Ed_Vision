@@ -13,6 +13,11 @@ const scripts = [
         description: 'Seed câu hỏi Band Test từ band_test_questions.json',
     },
     {
+        name: 'Band Test Pool (1.0-9.0)',
+        file: 'seed-bandtest-1to9.cjs',
+        description: 'Generate band test pool questions for reading, listening, writing, speaking',
+    },
+    {
         name: 'Learning Content',
         file: 'seedLearningContent.js',
         description: 'Seed flashcards, practice, mini-test từ learning_content.json',

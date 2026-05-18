@@ -669,20 +669,25 @@ export class IeltsAdaptiveService {
 
     // Create new lessons
     const createdLessons: any[] = [];
+    const firstBandLevel = lessons[0]?.band_level ?? newBand;
     for (let i = 0; i < lessons.length; i++) {
       const lesson = lessons[i];
+      const bandLevel = lesson.band_level ?? newBand;
       const created = await this.prisma.ieltsLesson.create({
         data: {
           roadmap_id: roadmapId,
           skill_area: lesson.skill_area,
           lesson_title: lesson.lesson_title,
           lesson_order: i,
-          band_level: newBand,
+          band_level: bandLevel,
           flashcard_repo_id: lesson.flashcard_repo_id,
           practice_repo_id: lesson.practice_repo_id,
           mini_test_repo_id: lesson.mini_test_repo_id,
           estimated_minutes: lesson.estimated_minutes,
-          status: i === 0 ? LessonStatus.UNLOCKED : LessonStatus.LOCKED,
+          status:
+            bandLevel === firstBandLevel
+              ? LessonStatus.UNLOCKED
+              : LessonStatus.LOCKED,
           scheduled_date: scheduledDates[i] ?? undefined,
         },
       });
@@ -2175,7 +2180,7 @@ Return exactly this JSON format:
         encouragement: response.encouragement || 'Cố lên! Bạn đang đi đúng hướng trên con đường chinh phục IELTS.',
       };
     } catch (err) {
-      this.logger.error(`Failed to generate AI insight with Gemini: ${err.message}`);
+      this.logger.warn(`Failed to generate AI insight with Gemini: ${err.message}`);
       // Fallback
       const weakest = activeSkills.sort((a, b) => a.accuracy_rate - b.accuracy_rate)[0]?.skill_area ?? 'reading';
       return {
