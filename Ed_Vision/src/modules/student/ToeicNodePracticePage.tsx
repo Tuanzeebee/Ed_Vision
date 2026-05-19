@@ -21,6 +21,7 @@ import {
   Square,
   Send,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import Header from "../../components/layout/Header";
 import { buildAssetUrl } from "@/services/api/config";
@@ -37,11 +38,6 @@ import {
   getEnrollment,
   type ToeicChatGroqMessage,
 } from "../../services/api/certificateService";
-import {
-  getToeicIntakeProfile,
-  saveToeicIntakeProfile,
-  appendToeicPracticeResult,
-} from "./toeicIntake";
 import {
   DEFAULT_SCORING_CONFIG,
   getAllTotalQuestions,
@@ -83,16 +79,7 @@ interface NodeInfo {
   icon: string;
 }
 
-interface LearningMapState {
-  listening: SkillMapState;
-  reading: SkillMapState;
-}
 
-interface SkillMapState {
-  unlockedUpTo: number;
-  completedNodes: number[];
-  nodeScores: number[];
-}
 
 interface PracticeRunDraft {
   questions: PracticeQuestion[];
@@ -122,17 +109,9 @@ interface PracticeMistakeHistoryItem {
 type PracticeMistakeHistoryStore = Record<string, PracticeMistakeHistoryItem[]>;
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
 const PRACTICE_DRAFT_STORAGE_KEY_PREFIX = "edvision.toeic.practice.draft.v1";
 const PRACTICE_MISTAKE_HISTORY_STORAGE_KEY =
   "edvision.toeic.practice.mistakes.v1";
-
-/** Storage key scoped theo user — tránh acc mới đọc data acc cũ */
-function getMapStorageKey(userId: string | number | undefined): string {
-  return userId
-    ? `${MAP_STORAGE_KEY_PREFIX}.${userId}`
-    : MAP_STORAGE_KEY_PREFIX;
-}
 const PRACTICE_MISTAKE_HISTORY_LIMIT = 120;
 const AI_PREFETCH_PRIORITY_AHEAD = 1;
 const EMPTY_QUESTIONS_BANK: Record<number, PracticeQuestion[]> = {};
@@ -1167,23 +1146,6 @@ const LISTENING_QUESTIONS: Record<number, PracticeQuestion[]> = {
 };
 
 // ── localStorage helpers ───────────────────────────────────────────────────
-function loadMapState(userId?: string | number): LearningMapState {
-  try {
-    const key = getMapStorageKey(userId);
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as LearningMapState;
-  } catch {
-    /* ignore */
-  }
-  return {
-    listening: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
-    reading: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
-  };
-}
-
-function saveMapState(state: LearningMapState, userId?: string | number): void {
-  localStorage.setItem(getMapStorageKey(userId), JSON.stringify(state));
-}
 
 function buildPracticeDraftStorageKey(
   skill: "listening" | "reading",
@@ -1363,6 +1325,7 @@ export default function ToeicNodePracticePage() {
     new Set(),
   );
   const [showSummary, setShowSummary] = useState(false);
+  const [showExitWarning, setShowExitWarning] = useState(false);
   const [animatingIn, setAnimatingIn] = useState(false);
   const [aiExplanationByAttempt, setAiExplanationByAttempt] = useState<
     Record<string, AiTutorExplanation>
@@ -1665,6 +1628,21 @@ export default function ToeicNodePracticePage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  // Cảnh báo khi reload hoặc đóng tab trình duyệt
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!showSummary && questions && questions.length > 0) {
+        e.preventDefault();
+        e.returnValue = "Nếu bạn thoát, tiến trình luyện tập của bạn sẽ bị mất và phải làm lại từ đầu.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [showSummary, questions]);
+
   // Scroll to top when going to next question
   useEffect(() => {
     if (!showSummary) {
@@ -1676,44 +1654,6 @@ export default function ToeicNodePracticePage() {
   useEffect(() => {
     if (toeicPart === null || !userId) return; // Advanced node — use hardcoded
 
-    const draftKey = buildPracticeDraftStorageKey(
-      activeSkill,
-      toeicPart,
-      userId,
-    );
-    const draft = loadPracticeRunDraft(draftKey);
-
-    if (draft) {
-      setDbQuestions(draft.questions);
-      setSessionQuestionIds(draft.sessionQuestionIds);
-      setFirstAnswers(draft.firstAnswers);
-      setSolvedCorrectly(new Set(draft.solvedCorrectly));
-      setCurrentQuestionIndex(draft.currentQuestionIndex);
-      setCurrentAttempt(draft.currentAttempt);
-      setAiExplanationByAttempt(draft.aiExplanationByAttempt);
-      setAiErrorByAttempt(draft.aiErrorByAttempt);
-      setReservePoints(draft.reservePoints ?? 0);
-      setUnlockThreshold(draft.unlockThreshold);
-      setExamUnlocked(draft.examUnlocked);
-
-      const uniqueAudioUrls: string[] = [];
-      const seen = new Set<string>();
-      for (const q of draft.questions) {
-        if (!q.audioUrl) continue;
-        if (seen.has(q.audioUrl)) continue;
-        seen.add(q.audioUrl);
-        uniqueAudioUrls.push(q.audioUrl);
-      }
-      Promise.allSettled(
-        uniqueAudioUrls
-          .slice(0, 5)
-          .map((url) => prefetchAudio(url, "metadata", 10000)),
-      ).finally(() => {
-        setDbLoading(false);
-      });
-      return;
-    }
-
     setDbLoading(true);
     setDbError(null);
 
@@ -1722,7 +1662,8 @@ export default function ToeicNodePracticePage() {
     // (audio cũ giữ trong RAM có thể tốn vài chục MB).
     audioCacheRef.current.clear();
 
-    getToeicPracticeQuestions(toeicPart)
+    const practiceCount = (toeicPart === 3 || toeicPart === 4) ? 12 : 10;
+    getToeicPracticeQuestions(toeicPart, practiceCount)
       .then(async (data) => {
         if (!Array.isArray(data.questions) || data.questions.length === 0) {
           setDbQuestions(null);
@@ -1857,23 +1798,9 @@ export default function ToeicNodePracticePage() {
 
   // Điểm earned từ per-part cap (khớp với LearningMapPage)
   const scoreGained = useMemo(() => {
-    if (toeicPart === null || !nodeInfo) return 0;
-    const partKey = `part${toeicPart}`;
-    const partConfig = DEFAULT_SCORING_CONFIG.skills
-      .flatMap((s) => s.parts)
-      .find((p) => p.key === partKey);
-    if (!partConfig) return correctCount * (nodeInfo.scorePerCorrect ?? 2.5);
-    const totalQ = getAllTotalQuestions();
-    const range = 200; // dải điểm cố định
-    const cap = getPartCap(partConfig, range, totalQ);
-    const accuracy =
-      partConfig.questions > 0 ? correctCount / partConfig.questions : 0;
-    const earned = Math.min(
-      cap,
-      Math.pow(accuracy, DEFAULT_SCORING_CONFIG.curveExponent) * cap,
-    );
-    return parseFloat(earned.toFixed(1));
-  }, [correctCount, nodeInfo, toeicPart]);
+    // 1 câu đúng = +5 điểm TOEIC (flat rate, không curve)
+    return correctCount * 5;
+  }, [correctCount]);
 
   const currentAttemptKey =
     currentAttempt !== null && currentQuestion
@@ -2288,68 +2215,54 @@ export default function ToeicNodePracticePage() {
   const buildFallbackPartSummary = useCallback((): string => {
     if (toeicPart === null) return "";
 
-    const summaryRows = questions.map((questionData, questionIndex) => {
+    const strengthTopicCounts = new Map<string, number>();
+    const weaknessTopicCounts = new Map<string, number>();
+    const totalTopicCounts = new Map<string, number>();
+
+    questions.forEach((questionData, questionIndex) => {
       const firstAttempt = firstAnswers[questionIndex] ?? null;
       const gotItFirstTry = firstAttempt === questionData.correctAnswer;
       const explanation = resolveReviewExplanation(questionData, questionIndex);
       const topic = detectWeaknessTopic(questionData, explanation);
-      return {
-        gotItFirstTry,
-        topic,
-        explanation,
-      };
+
+      totalTopicCounts.set(topic, (totalTopicCounts.get(topic) ?? 0) + 1);
+      if (gotItFirstTry) {
+        strengthTopicCounts.set(topic, (strengthTopicCounts.get(topic) ?? 0) + 1);
+      } else {
+        weaknessTopicCounts.set(topic, (weaknessTopicCounts.get(topic) ?? 0) + 1);
+      }
     });
 
-    const strengthTopicCounts = new Map<string, number>();
-    const weaknessTopicCounts = new Map<string, number>();
+    const sortedStrengths = [...strengthTopicCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const sortedWeaknesses = [...weaknessTopicCounts.entries()].sort((a, b) => b[1] - a[1]);
 
-    summaryRows.forEach((row) => {
-      const target = row.gotItFirstTry
-        ? strengthTopicCounts
-        : weaknessTopicCounts;
-      target.set(row.topic, (target.get(row.topic) ?? 0) + 1);
-    });
+    const strongest = sortedStrengths[0];
+    const weakest = sortedWeaknesses.find((w) => w[0] !== strongest?.[0]) ?? sortedWeaknesses[0];
 
-    const strongest =
-      [...strengthTopicCounts.entries()].sort((a, b) => b[1] - a[1])[0] ??
-      (["Độ chính xác lần đầu", correctCount] as const);
-    const weakest =
-      [...weaknessTopicCounts.entries()].sort((a, b) => b[1] - a[1])[0] ??
-      (["Preposition", Math.max(1, questions.length - correctCount)] as const);
+    const strongText = strongest
+      ? `${strongest[0]} (${strongest[1]}/${totalTopicCounts.get(strongest[0])} câu đúng)`
+      : "Đạt độ chính xác cơ bản";
+    
+    const weakText = weakest
+      ? `${weakest[0]} (${weakest[1]}/${totalTopicCounts.get(weakest[0])} câu lỗi)`
+      : "Không có lỗi sai nào đáng kể";
 
-    const knowledgeHints = Array.from(
-      new Set(
-        summaryRows
-          .filter((row) => !row.gotItFirstTry)
-          .flatMap((row) => extractKnowledgeHints(row.explanation)),
-      ),
-    ).slice(0, 2);
-
-    const knowledgeLine =
-      knowledgeHints.length > 0
-        ? knowledgeHints.map((hint) => `"${hint}"`).join(" và ")
-        : weakest[0] === "Preposition"
-          ? 'cụm "responsible for" và "in charge of"'
-          : `${weakest[0]} theo ngữ cảnh câu TOEIC`;
-
-    const weakTopicForPractice =
-      weakest[0] === "Preposition" ? "preposition" : weakest[0].toLowerCase();
+    const suggestionText = weakest
+      ? `Làm thêm các bài tập về chủ đề ${weakest[0]} để khắc phục lỗi sai.`
+      : "Hãy tiếp tục duy trì phong độ tuyệt vời này bằng các bộ đề mới.";
 
     return [
       `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
-      `• Bạn mạnh về ${strongest[0]} (${strongest[1]}/${Math.max(1, correctCount)} đúng).`,
-      `• Điểm yếu lớn: ${weakest[0]} (${weakest[1]}/${Math.max(1, questions.length - correctCount)} lỗi).`,
-      `• Kiến thức cần ôn thêm: ${knowledgeLine}.`,
-      `• Gợi ý: Làm thêm 8 câu về ${weakTopicForPractice} ở mức 550-650.`,
+      `• Kỹ năng mạnh nhất: ${strongText}.`,
+      `• Điểm yếu cần chú ý: ${weakText}.`,
+      `• Lời khuyên: ${suggestionText}`,
     ].join("\n");
   }, [
-    correctCount,
-    detectWeaknessTopic,
-    extractKnowledgeHints,
     firstAnswers,
     questions,
     resolveReviewExplanation,
     toeicPart,
+    detectWeaknessTopic,
   ]);
 
   const normalizePartSummaryOutput = useCallback(
@@ -2790,126 +2703,14 @@ export default function ToeicNodePracticePage() {
 
     partSummaryRequestedKeyRef.current = partSummaryRequestKey;
 
-    let cancelled = false;
+    setPartSummaryLoading(false);
+    setPartSummaryError(null);
+    setPartSummaryText(buildFallbackPartSummary());
 
-    const generatePartSummary = async () => {
-      setPartSummaryLoading(true);
-      setPartSummaryError(null);
-
-      const fallbackSummary = buildFallbackPartSummary();
-      // Show summary immediately; AI response will refine this in background.
-      setPartSummaryText(fallbackSummary);
-
-      try {
-        const historyRows = getPracticeMistakeHistory(
-          activeSkill,
-          toeicPart,
-          24,
-        );
-
-        const sessionRows = questions.map((questionData, questionIndex) => {
-          const firstAttempt = firstAnswers[questionIndex] ?? "-";
-          const explanation = resolveReviewExplanation(
-            questionData,
-            questionIndex,
-          );
-          const topic = detectWeaknessTopic(questionData, explanation);
-
-          return [
-            `Q${questionIndex + 1}: ${questionData.question}`,
-            `first_attempt=${firstAttempt}; correct=${questionData.correctAnswer}; result=${firstAttempt === questionData.correctAnswer ? "first_try_correct" : "retry_then_correct"}`,
-            `topic=${topic}`,
-            `explanation=${explanation}`,
-          ].join("\n");
-        });
-
-        const historyText =
-          historyRows.length === 0
-            ? "Không có dữ liệu lịch sử sai trước đó."
-            : historyRows
-                .map(
-                  (item, idx) =>
-                    `${idx + 1}. topic=${item.topic}; first=${item.firstAttempt}; correct=${item.correctAnswer}; question=${item.question}; explanation=${item.explanation}`,
-                )
-                .join("\n");
-
-        const summaryQuestion = [
-          `[PART_SUMMARY] Viết tóm tắt học tập cho Part ${toeicPart} sau ${questions.length} câu vừa làm.`,
-          "BẮT BUỘC trả lời 100% bằng tiếng Việt (giữ nguyên thuật ngữ TOEIC nếu cần).",
-          "BẮT BUỘC đúng format 5 dòng:",
-          `Tóm tắt Part ${toeicPart} - ${questions.length} câu vừa làm:`,
-          "• Bạn mạnh về ...",
-          "• Điểm yếu lớn: ...",
-          "• Kiến thức cần ôn thêm: ...",
-          "• Gợi ý: ...",
-          "Không thêm markdown, không code block, không thêm phần mở đầu/kết luận khác.",
-        ].join("\n");
-
-        const learningContext = [
-          `Skill: ${activeSkill}`,
-          `Part: ${toeicPart}`,
-          `Đúng lần đầu: ${correctCount}/${questions.length}`,
-          `Dữ liệu RAG - ${questions.length} câu vừa làm:`,
-          sessionRows.join("\n\n"),
-          "Dữ liệu RAG - lịch sử sai của user:",
-          historyText,
-        ].join("\n\n");
-
-        const topicKey = `toeic.practice.summary.v2.part_${toeicPart}.set_${sessionQuestionIds.join("_")}.first_${correctCount}`;
-
-        const response = await askCertificateTutor({
-          cert_type: "toeic",
-          question: summaryQuestion,
-          topic_key: topicKey,
-          learning_context: learningContext,
-          concise: false,
-        });
-
-        if (cancelled) return;
-
-        const normalizedSummary = normalizePartSummaryOutput(response.answer);
-
-        if (
-          response.source === "fallback" ||
-          !normalizedSummary ||
-          isLikelyEnglishAnswer(normalizedSummary)
-        ) {
-          setPartSummaryText(fallbackSummary);
-          setPartSummaryError(
-            "AI summary chưa ổn định, đang hiển thị tóm tắt chuẩn hóa.",
-          );
-          return;
-        }
-
-        setPartSummaryText(normalizedSummary);
-      } catch {
-        if (cancelled) return;
-        setPartSummaryText(fallbackSummary);
-        setPartSummaryError(
-          "Không gọi được AI summary, đang hiển thị tóm tắt chuẩn hóa.",
-        );
-      } finally {
-        if (!cancelled) setPartSummaryLoading(false);
-      }
-    };
-
-    void generatePartSummary();
-
-    return () => {
-      cancelled = true;
-    };
   }, [
-    activeSkill,
     buildFallbackPartSummary,
-    correctCount,
-    detectWeaknessTopic,
-    firstAnswers,
-    isLikelyEnglishAnswer,
-    normalizePartSummaryOutput,
     partSummaryRequestKey,
-    questions,
-    resolveReviewExplanation,
-    sessionQuestionIds,
+    questions.length,
     showSummary,
     toeicPart,
   ]);
@@ -2922,41 +2723,6 @@ export default function ToeicNodePracticePage() {
   const goBackToLearningMap = useCallback(() => {
     navigate(`/student/certificate-review/toeic/skill/${activeSkill}`);
   }, [activeSkill, navigate]);
-
-  // Save practice draft whenever state changes
-  useEffect(() => {
-    if (!practiceDraftStorageKey || questions.length === 0 || showSummary)
-      return;
-
-    savePracticeRunDraft(practiceDraftStorageKey, {
-      questions,
-      sessionQuestionIds,
-      currentQuestionIndex,
-      firstAnswers,
-      solvedCorrectly: Array.from(solvedCorrectly),
-      currentAttempt,
-      aiExplanationByAttempt,
-      aiErrorByAttempt,
-      reservePoints,
-      unlockThreshold,
-      examUnlocked,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [
-    practiceDraftStorageKey,
-    questions,
-    sessionQuestionIds,
-    currentQuestionIndex,
-    firstAnswers,
-    solvedCorrectly,
-    currentAttempt,
-    aiExplanationByAttempt,
-    aiErrorByAttempt,
-    reservePoints,
-    unlockThreshold,
-    examUnlocked,
-    showSummary,
-  ]);
 
   // Guards
   if (dbLoading) {
@@ -3385,9 +3151,7 @@ export default function ToeicNodePracticePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() =>
-                      setQuestionRefreshVersion((prev) => prev + 1)
-                    }
+                    onClick={() => setQuestionRefreshVersion((prev) => prev + 1)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-cyan-500 shadow-md hover:brightness-105 active:scale-[0.99] transition-all"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -3462,9 +3226,6 @@ export default function ToeicNodePracticePage() {
               explanations: result.explanations,
             });
             appendSessionMistakeHistory(result.explanations);
-            if (practiceDraftStorageKey) {
-              clearPracticeRunDraft(practiceDraftStorageKey);
-            }
             setSubmitSucceeded(true);
           })
           .catch((err: any) => {
@@ -3492,9 +3253,7 @@ export default function ToeicNodePracticePage() {
 
   const handleComplete = () => {
     // 0. Safety net — if the per-question submit was skipped or failed,
-    // retry sending the practice session to the backend so DB stays in sync
-    // with localStorage (fixes: listening page shows "Đã hoàn thành" but
-    // detail page counts 0).
+    // retry sending the practice session to the backend so DB stays in sync.
     if (
       !submitSucceeded &&
       toeicPart !== null &&
@@ -3520,50 +3279,8 @@ export default function ToeicNodePracticePage() {
         });
     }
 
-    // 1. Update map state in localStorage (scoped theo user)
-    const mapState = loadMapState(userId);
-    const skillState = mapState[activeSkill];
-
-    const updatedCompleted = skillState.completedNodes.includes(parsedNodeIndex)
-      ? skillState.completedNodes
-      : [...skillState.completedNodes, parsedNodeIndex];
-
-    const updatedScores = [...skillState.nodeScores];
-    updatedScores[parsedNodeIndex] = scoreGained;
-
-    // Unlock next node if exists
-    const maxNodeIndex = nodeInfoList.length - 1;
-    const updatedUnlocked = Math.max(
-      skillState.unlockedUpTo,
-      Math.min(parsedNodeIndex + 1, maxNodeIndex),
-    );
-
-    const newMapState: LearningMapState = {
-      ...mapState,
-      [activeSkill]: {
-        unlockedUpTo: updatedUnlocked,
-        completedNodes: updatedCompleted,
-        nodeScores: updatedScores,
-      },
-    };
-
-    saveMapState(newMapState, userId);
-
-    // 2. Sync TOEIC intake milestone (session counters + usedQuestionIds)
-    // ★ KHÔNG sửa milestoneState.currentScore — per-part cap ở LearningMapPage quản lý điểm.
-    const profile = getToeicIntakeProfile();
-    if (profile) {
-      const updatedProfile = appendToeicPracticeResult(
-        profile,
-        activeSkill,
-        correctCount,
-        questions.map((question) => question.id),
-      );
-
-      saveToeicIntakeProfile(updatedProfile);
-    }
-
-    // 3. Navigate back to map
+    // Navigate back to map — Learning Map will re-fetch from server
+    // to get the authoritative completed/score state.
     navigate(`/student/certificate-review/toeic/skill/${activeSkill}`);
   };
 
@@ -3602,7 +3319,7 @@ export default function ToeicNodePracticePage() {
                   </div>
                   <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4 text-center">
                     <div className="text-5xl font-black mb-1">
-                      +{scoreGained.toFixed(1)}
+                      +{Math.round(scoreGained)}
                     </div>
                     <div className="text-sm text-white/80">TOEIC points</div>
                   </div>
@@ -3942,17 +3659,57 @@ export default function ToeicNodePracticePage() {
           onSave={vocabHighlight.handleSave}
           onClose={vocabHighlight.closePopup}
         />
+
+        {/* Custom Exit Warning Dialog Modal */}
+        {showExitWarning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-amber-50 rounded-full mx-auto mb-5 border border-amber-200">
+                <AlertTriangle className="w-8 h-8 text-amber-500 animate-pulse" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Bạn có chắc chắn muốn thoát?</h3>
+              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                Nếu bạn thoát lúc này, tiến trình luyện tập hiện tại sẽ bị hủy bỏ, các câu hỏi ôn tập trước đó sẽ bị reset và <span className="font-semibold text-rose-500">không được tính điểm</span>. Lần sau quay lại bạn sẽ phải làm từ câu đầu tiên.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowExitWarning(false)}
+                  className="flex-1 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-bold transition-all cursor-pointer"
+                >
+                  Ở lại làm tiếp
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExitWarning(false);
+                    if (practiceDraftStorageKey) {
+                      clearPracticeRunDraft(practiceDraftStorageKey);
+                    }
+                    navigate(`/student/certificate-review/toeic/skill/${activeSkill}`);
+                  }}
+                  className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+                >
+                  Xác nhận thoát
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div
           className={`mx-auto space-y-5 transition-all duration-300 ${isChatExpanded ? "max-w-7xl" : "max-w-5xl"}`}
         >
           {/* Top bar: back + node label */}
           <div className="flex items-center justify-between">
             <button
-              onClick={() =>
-                navigate(
-                  `/student/certificate-review/toeic/skill/${activeSkill}`,
-                )
-              }
+              onClick={() => {
+                if (!showSummary) {
+                  setShowExitWarning(true);
+                } else {
+                  navigate(
+                    `/student/certificate-review/toeic/skill/${activeSkill}`,
+                  );
+                }
+              }}
               className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

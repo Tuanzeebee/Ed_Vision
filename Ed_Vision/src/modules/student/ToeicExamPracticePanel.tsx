@@ -29,6 +29,19 @@ function isLikelyImageUrl(value: string | null | undefined): value is string {
   return /\.(png|jpg|jpeg|webp|gif)$/i.test(value) || value.startsWith('http') || value.startsWith('/thumbs/')
 }
 
+/** Returns true if option_text is a bare placeholder like "(A)" or "A" – should not be shown */
+function isPlaceholderOptionText(text: string, key: string): boolean {
+  const t = (text ?? '').trim().toLowerCase()
+  const k = key.toLowerCase()
+  return (
+    t === '' ||
+    t === k ||
+    t === `(${k})` ||
+    t.startsWith(`(${k}) -`) ||
+    t.includes('vui lòng nhập đáp án')
+  )
+}
+
 type SubmitResult = {
   correctCount: number
   total: number
@@ -548,7 +561,7 @@ export default function ToeicExamPracticePanel({ repository, currentScore, onLiv
                     } ${(submitted || alreadyEvaluated || isEvaluatingCurrent) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
                   >
                     <span className="mr-2 font-bold">{option.option_key}.</span>
-                    {option.option_text}
+                    {isPlaceholderOptionText(option.option_text, option.option_key) ? '' : option.option_text}
                   </button>
                 )
               })}

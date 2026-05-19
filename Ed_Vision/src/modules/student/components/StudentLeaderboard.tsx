@@ -155,31 +155,19 @@ export default function StudentLeaderboard() {
         <div
           className="p-4 flex items-center gap-3 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 60%, #4f46e5 100%)",
+            background: "#E5E5E5",
           }}
         >
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)",
-            }}
-          />
-          <div
-            className="absolute top-0 right-0 w-36 h-16 pointer-events-none"
-            style={{
-              background: "radial-gradient(ellipse at top right, rgba(255,255,255,0.2) 0%, transparent 70%)",
-            }}
-          />
-          <div className="relative w-12 h-12 rounded-full bg-white/20 p-0.5 shrink-0 border border-white/30 flex items-center justify-center overflow-hidden">
+          <div className="relative w-12 h-12 rounded-full bg-slate-200 p-0.5 shrink-0 border border-slate-300 flex items-center justify-center overflow-hidden">
             {currentUserAvatar ? (
               <img src={currentUserAvatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
             ) : (
-              <span className="text-xl font-bold text-white uppercase">{currentUserName.charAt(0)}</span>
+              <span className="text-xl font-bold text-slate-700 uppercase">{currentUserName.charAt(0)}</span>
             )}
           </div>
           <div className="relative">
-            <h3 className="text-base font-bold text-white drop-shadow">{currentUserName}</h3>
-            <div className={`${rankBadge.bg} w-max px-2 py-0.5 rounded-full text-[10px] text-white border ${rankBadge.border}`}>
+            <h3 className="text-base font-bold text-slate-800">{currentUserName}</h3>
+            <div className={`${rankBadge.bg} ${rankBadge.color} w-max px-2 py-0.5 rounded-full text-[10px] font-medium border ${rankBadge.border}`}>
               {rankBadge.emoji} {rankBadge.label}
             </div>
           </div>

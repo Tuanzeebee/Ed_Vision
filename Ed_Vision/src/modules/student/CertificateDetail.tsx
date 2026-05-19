@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/lib/useToast";
 import { getEnrollment } from "@/services/api/certificateService";
-import type { EnrollmentResponse } from "@/services/api/certificateService";
+import type { EnrollmentResponse, ToeicPlanSyncResponse } from "@/services/api/certificateService";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import {
@@ -49,8 +49,9 @@ import {
   getToeicPlanSync,
   saveToeicPlanSync,
   getToeicReservePoints,
+  resetToeicProgress,
 } from "@/services/api/certificateService";
-import { calculateToeicPracticeScore } from "./toeicPracticeScore";
+
 import { studyRoomService, type MyStudyStats } from "@/services/student/studyRoomService";
 // Community discussions per cert type
 const DISCUSSIONS: Record<
@@ -120,6 +121,37 @@ const DISCUSSIONS: Record<
   ],
 };
 
+const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
+
+function getMapStorageKey(userId: string | number | undefined): string {
+  return userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX;
+}
+
+interface SkillMapState {
+  unlockedUpTo: number;
+  completedNodes: number[];
+  nodeScores: number[];
+}
+
+interface LearningMapState {
+  listening: SkillMapState;
+  reading: SkillMapState;
+}
+
+function loadMapState(userId?: string | number): LearningMapState {
+  try {
+    const key = getMapStorageKey(userId);
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as LearningMapState;
+  } catch {
+    /* ignore */
+  }
+  return {
+    listening: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+    reading: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+  };
+}
+
 export default function CertificateDetail() {
   const { certId } = useParams<{ certId: string }>();
   const navigate = useNavigate();
@@ -146,10 +178,130 @@ export default function CertificateDetail() {
   const guideDismissedInSessionRef = useRef(false);
   const { error: showErrorToast } = useToast();
 
+  const [showResetWarningPopup, setShowResetWarningPopup] = useState(false);
+  const [isResettingProgress, setIsResettingProgress] = useState(false);
+
   const [activeSkill, setActiveSkill] = useState<EnglishSkill>("grammar");
+
+  const userId = user?.account_id || user?.id;
+
+  const [mapState, setMapState] = useState<LearningMapState>({
+    listening: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+    reading: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+  });
+
+  useEffect(() => {
+    if (cert.id !== "toeic") return;
+
+    let cancelled = false;
+
+    // Load localStorage state
+    const localState = loadMapState(userId);
+    setMapState(localState);
+
+    const safeArray = (arr: unknown): number[] =>
+      Array.isArray(arr) ? arr.filter((x) => typeof x === "number") : [];
+
+    const mergeSkillStates = (
+      apiState: SkillMapState,
+      local: SkillMapState,
+    ): SkillMapState => {
+      const apiCompleted = safeArray(apiState?.completedNodes);
+      const localCompleted = safeArray(local?.completedNodes);
+      const apiScores = safeArray(apiState?.nodeScores);
+      const localScores = safeArray(local?.nodeScores);
+
+      const mergedCompleted = Array.from(
+        new Set([...apiCompleted, ...localCompleted]),
+      ).sort((a, b) => a - b);
+
+      const mergedScores: number[] = [];
+      const maxLen = Math.max(apiScores.length, localScores.length);
+      for (let i = 0; i < maxLen; i++) {
+        mergedScores[i] = Math.max(apiScores[i] ?? 0, localScores[i] ?? 0);
+      }
+
+      let unlockedUpTo = 0;
+      for (let i = 0; i < mergedCompleted.length; i++) {
+        if (mergedCompleted[i] === i) {
+          unlockedUpTo = i + 1;
+        } else {
+          break;
+        }
+      }
+      unlockedUpTo = Math.max(
+        unlockedUpTo,
+        apiState?.unlockedUpTo ?? 0,
+        local?.unlockedUpTo ?? 0,
+      );
+
+      return { unlockedUpTo, completedNodes: mergedCompleted, nodeScores: mergedScores };
+    };
+
+    getToeicReservePoints()
+      .then((reserveData) => {
+        if (cancelled || !reserveData) return;
+
+        const completedParts = new Set(
+          Array.isArray(reserveData.completed_parts)
+            ? reserveData.completed_parts
+            : [],
+        );
+
+        const buildSkillState = (
+          partNumbers: number[],
+          totalNodes: number,
+        ): SkillMapState => {
+          const completedNodes: number[] = [];
+          const nodeScores: number[] = [];
+
+          partNumbers.forEach((part, nodeIdx) => {
+            if (completedParts.has(part)) {
+              completedNodes.push(nodeIdx);
+              const session = (reserveData.part_sessions ?? []).find(
+                (s) => s.toeic_part === part,
+              );
+              nodeScores[nodeIdx] = session?.earned_points ?? 0;
+            }
+          });
+
+          let unlockedUpTo = 0;
+          for (let i = 0; i < partNumbers.length; i++) {
+            if (completedNodes.includes(i)) {
+              unlockedUpTo = i + 1;
+            } else {
+              break;
+            }
+          }
+          unlockedUpTo = Math.min(unlockedUpTo, totalNodes - 1);
+
+          return { unlockedUpTo, completedNodes, nodeScores };
+        };
+
+        const apiListening = buildSkillState([1, 2, 3, 4], 5);
+        const apiReading = buildSkillState([5, 6, 7], 4);
+
+        const merged: LearningMapState = {
+          listening: mergeSkillStates(apiListening, localState.listening),
+          reading: mergeSkillStates(apiReading, localState.reading),
+        };
+
+        setMapState(merged);
+
+        try {
+          localStorage.setItem(getMapStorageKey(userId), JSON.stringify(merged));
+        } catch { /* ignore quota errors */ }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cert.id, userId]);
 
   // ── Dữ liệu enrollment thật từ API ──────────────────────────────────────────
   const [enrollment, setEnrollment] = useState<EnrollmentResponse | null>(null);
+  const [planData, setPlanData] = useState<ToeicPlanSyncResponse | null>(null);
   const [studyStats, setStudyStats] = useState<MyStudyStats | null>(null);
   const [completedToeicParts, setCompletedToeicParts] = useState<number[]>([]);
   const [toeicReservePoints, setToeicReservePoints] = useState<any>(null);
@@ -200,6 +352,17 @@ export default function CertificateDetail() {
     () => (cert.id === "toeic" ? getToeicIntakeProfile() : null),
   );
 
+  const hasUsedCertificate = useMemo(() => {
+    if (cert.id !== "toeic") return false;
+    const hasEnrollmentProgress = enrollment && enrollment.progress_percent > 0;
+    return (
+      hasEnrollmentProgress ||
+      completedToeicParts.length > 0 ||
+      mapState.listening.completedNodes.length > 0 ||
+      mapState.reading.completedNodes.length > 0
+    );
+  }, [cert.id, enrollment, completedToeicParts, mapState]);
+
   useEffect(() => {
     if (cert.id === "toeic") {
       guideDismissedInSessionRef.current = false;
@@ -212,6 +375,7 @@ export default function CertificateDetail() {
       });
       getToeicPlanSync()
         .then((synced) => {
+          setPlanData(synced);
           if (guideDismissedInSessionRef.current) return;
           setToeicGuideCompleted(Boolean(synced?.first_guide_shown));
         })
@@ -225,98 +389,111 @@ export default function CertificateDetail() {
   }, [cert.id]);
 
   // ── Tính điểm TOEIC ôn luyện thực tế (giống bên LearningMapPage) ──
-  const calculatedToeicPracticeScore = useMemo(() => {
-    if (cert.id !== "toeic" || !toeicReservePoints) return null;
+  const listeningScore = useMemo(() => {
+    if (cert.id !== "toeic") return 300;
+    
+    let baseScoreVal = 0;
+    if (planData) {
+      const examTaken = planData.has_taken_listening_exam ?? false;
+      baseScoreVal = examTaken ? Math.round(planData.listening_baseline ?? 0) : 0;
+    }
+    
+    let totalListeningEarned = 0;
+    const lState = mapState.listening;
+    if (lState.nodeScores) {
+      totalListeningEarned = lState.nodeScores.reduce((sum, score) => sum + (score ?? 0), 0);
+    }
+    return baseScoreVal + totalListeningEarned;
+  }, [cert.id, mapState.listening, planData]);
 
-    const baseScoreVal =
-      (toeicProfile?.milestoneState.currentScore ?? null) ??
-      (enrollment?.current_score ?? null) ??
-      300;
+  const readingScore = useMemo(() => {
+    if (cert.id !== "toeic") return 300;
+    
+    let baseScoreVal = 0;
+    if (planData) {
+      const examTaken = planData.has_taken_reading_exam ?? false;
+      baseScoreVal = examTaken ? Math.round(planData.reading_baseline ?? 0) : 0;
+    }
+    
+    let totalReadingEarned = 0;
+    const rState = mapState.reading;
+    if (rState.nodeScores) {
+      totalReadingEarned = rState.nodeScores.reduce((sum, score) => sum + (score ?? 0), 0);
+    }
+    return baseScoreVal + totalReadingEarned;
+  }, [cert.id, mapState.reading, planData]);
 
-    const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
-    const READING_PART_KEYS  = ["part5", "part6", "part7"];
-    const bestCorrectByPart: Record<string, number> = {};
+  const latestToeicScore = useMemo(() => {
+    if (cert.id !== "toeic") {
+      return (
+        (enrollment?.current_score ?? null) ??
+        (toeicProfile?.currentScore ?? null) ??
+        300
+      );
+    }
+    // For overall progress, use the actual total current score from enrollment/plan,
+    // plus the un-summed earned points if applicable, or just rely on the baseline sums.
+    // The safest is to mirror what the backend computes: baseline + earned.
+    let lBase = 0, rBase = 0;
+    if (planData) {
+      lBase = planData.has_taken_listening_exam ? (planData.listening_baseline ?? 0) : 0;
+      rBase = planData.has_taken_reading_exam ? (planData.reading_baseline ?? 0) : 0;
+    } else {
+      const fallback = (toeicProfile?.currentScore ?? null) ?? (enrollment?.current_score ?? null) ?? 300;
+      lBase = fallback / 2;
+      rBase = fallback / 2;
+    }
 
-    const LISTENING_NODES_CONFIG = [
-      { id: 0, scorePerCorrect: 2 },
-      { id: 1, scorePerCorrect: 2.5 },
-      { id: 2, scorePerCorrect: 2.5 },
-      { id: 3, scorePerCorrect: 2.5 },
-    ];
-    const READING_NODES_CONFIG = [
-      { id: 0, scorePerCorrect: 2 },
-      { id: 1, scorePerCorrect: 2.5 },
-      { id: 2, scorePerCorrect: 2.5 },
-    ];
-
-    const completedPartsSet = new Set(completedToeicParts);
-
-    // Điền Listening
-    LISTENING_NODES_CONFIG.forEach((node, i) => {
-      const partKey = LISTENING_PART_KEYS[i];
-      const partNum = i + 1;
-      if (completedPartsSet.has(partNum)) {
-        const session = (toeicReservePoints.part_sessions ?? []).find(
-          (s: any) => s.toeic_part === partNum,
-        );
-        const earned = session?.earned_points ?? 0;
-        const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
-        bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
-      }
-    });
-
-    // Điền Reading
-    READING_NODES_CONFIG.forEach((node, i) => {
-      const partKey = READING_PART_KEYS[i];
-      const partNum = i + 5;
-      if (completedPartsSet.has(partNum)) {
-        const session = (toeicReservePoints.part_sessions ?? []).find(
-          (s: any) => s.toeic_part === partNum,
-        );
-        const earned = session?.earned_points ?? 0;
-        const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
-        bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
-      }
-    });
-
-    return calculateToeicPracticeScore({
-      bestCorrectByPart,
-      minScore: baseScoreVal,
-      maxScore: baseScoreVal + 200,
-    });
-  }, [cert.id, toeicReservePoints, completedToeicParts, toeicProfile, enrollment]);
-
-  const latestToeicScore = calculatedToeicPracticeScore?.finalScore ?? (
-    (enrollment?.current_score ?? null) ??
-    (toeicProfile?.milestoneState.currentScore ?? null) ??
-    300
-  );
+    const totalListeningEarned = mapState.listening.nodeScores
+      ? mapState.listening.nodeScores.reduce((sum, score) => sum + (score ?? 0), 0)
+      : 0;
+    const totalReadingEarned = mapState.reading.nodeScores
+      ? mapState.reading.nodeScores.reduce((sum, score) => sum + (score ?? 0), 0)
+      : 0;
+    return Math.round(lBase + rBase + totalListeningEarned + totalReadingEarned);
+  }, [cert.id, mapState, toeicProfile, enrollment, planData]);
 
   const latestToeicTargetScore =
     (enrollment?.target_score ?? null) ??
-    (toeicProfile?.milestoneState.targetScore ?? null) ??
+    (toeicProfile?.targetScore ?? null) ??
     650;
 
-  // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
-  // TOEIC: dùng điểm gốc / điểm mục tiêu (clamp 0..100).
-  // Khác: dùng progress_percent từ enrollment.
-  const realProgress = (() => {
-    if (isToeic) {
-      const baseScore = latestToeicScore;
-      const targetScore = latestToeicTargetScore;
+  const activeSkillScore = useMemo(() => {
+    if (activeSkill === "listening") return listeningScore;
+    if (activeSkill === "reading") return readingScore;
+    return latestToeicScore;
+  }, [activeSkill, listeningScore, readingScore, latestToeicScore]);
 
-      if (baseScore && targetScore && targetScore > 0) {
-        const ratio = (Number(baseScore) / Number(targetScore)) * 100;
-        return Math.max(0, Math.min(100, Math.round(ratio)));
-      }
+  const activeSkillTargetScore = latestToeicTargetScore;
 
-      // Fallback: nếu enrollment.progress_percent có sẵn thì dùng nó.
-      return enrollment?.progress_percent != null
-        ? Math.max(0, Math.min(100, Math.round(Number(enrollment.progress_percent))))
-        : 0;
+  // Custom TOEIC Progress: 50% Listening, 50% Reading.
+  const computedToeicProgress = useMemo(() => {
+    if (cert.id !== "toeic") return 0;
+    const startScore =
+      (toeicProfile?.milestoneState.currentScore ?? null) ??
+      (enrollment?.current_score ?? null) ??
+      300;
+    const targetScore = latestToeicTargetScore;
+
+    const totalGap = targetScore - startScore;
+    if (totalGap <= 0) {
+      return latestToeicScore >= targetScore ? 100 : 0;
     }
+
+    const deltaL = Math.max(0, listeningScore - startScore);
+    const deltaR = Math.max(0, readingScore - startScore);
+
+    const lProgress = Math.max(0, Math.min(50, (deltaL / totalGap) * 100));
+    const rProgress = Math.max(0, Math.min(50, (deltaR / totalGap) * 100));
+
+    return Math.max(0, Math.min(100, Math.round(lProgress + rProgress)));
+  }, [cert.id, toeicProfile, enrollment, latestToeicTargetScore, listeningScore, readingScore, latestToeicScore]);
+
+  // Tiến độ và trạng thái thật — ưu tiên dữ liệu API
+  const realProgress = (() => {
+    if (isToeic) return computedToeicProgress;
     return enrollment
-      ? Math.max(0, Math.min(100, Number(enrollment.progress_percent ?? 0)))
+      ? Math.max(0, Math.min(100, Math.round(Number(enrollment.progress_percent ?? 0))))
       : cert.progress;
   })();
   const realStatus: "active" | "not-started" | "in-progress" | "completed" =
@@ -392,11 +569,61 @@ export default function CertificateDetail() {
 
   // "Đổi mục tiêu"— reset về BandSelector, không lưu gì
   const handleChangeBand = useCallback(() => {
-    setSelectedBand(null);
-    const params = new URLSearchParams(searchParams);
-    params.delete("band");
-    setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+    if (cert.id === "toeic" && hasUsedCertificate) {
+      setShowResetWarningPopup(true);
+    } else {
+      setSelectedBand(null);
+      const params = new URLSearchParams(searchParams);
+      params.delete("band");
+      setSearchParams(params, { replace: true });
+    }
+  }, [cert.id, hasUsedCertificate, searchParams, setSearchParams]);
+
+  const handleConfirmResetProgress = useCallback(async () => {
+    setIsResettingProgress(true);
+    try {
+      // 1. Call backend API
+      await resetToeicProgress();
+
+      // 2. Clear local storage map state
+      const emptyState = {
+        listening: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+        reading: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+      };
+      setMapState(emptyState);
+      try {
+        localStorage.setItem(getMapStorageKey(userId), JSON.stringify(emptyState));
+      } catch {}
+
+      // 3. Clear local storage intake profile
+      const intakeKey = userId ? `edvision.toeic.intake.v2.${userId}` : 'edvision.toeic.intake.v2';
+      localStorage.removeItem(intakeKey);
+      setToeicProfile(null);
+
+      // 4. Reset states & navigate
+      setSelectedBand(null);
+      const params = new URLSearchParams(searchParams);
+      params.delete("band");
+      setSearchParams(params, { replace: true });
+      
+      // Reset completed lists locally
+      setCompletedToeicParts([]);
+      setToeicReservePoints(null);
+      if (enrollment) {
+        setEnrollment({
+          ...enrollment,
+          progress_percent: 0,
+          learning_status: "not_started",
+        });
+      }
+
+      setShowResetWarningPopup(false);
+    } catch (err) {
+      showErrorToast("Có lỗi xảy ra khi làm mới tiến trình. Vui lòng thử lại.");
+    } finally {
+      setIsResettingProgress(false);
+    }
+  }, [userId, enrollment, searchParams, setSearchParams, showErrorToast]);
 
   const handleOpenToeicTopic = useCallback(
     (topicKey: string) => {
@@ -413,6 +640,7 @@ export default function CertificateDetail() {
               toeicProfile.milestoneState.foundationCompleted,
             foundation_skipped: toeicProfile.milestoneState.foundationSkipped,
             has_activity: true,
+            progress_percent: computedToeicProgress,
           }).catch(() => { });
         }
         // Route to correct new page based on topic prefix
@@ -496,6 +724,10 @@ export default function CertificateDetail() {
 
   useEffect(() => {
     if (!isToeic || !selectedBand || !toeicProfile) return;
+    if (hasUsedCertificate) {
+      setShowFirstGuidePopup(false);
+      return;
+    }
     if (guideDismissedInSessionRef.current) {
       setShowFirstGuidePopup(false);
       return;
@@ -514,6 +746,7 @@ export default function CertificateDetail() {
     showFirstGuidePopup,
     toeicGuideCompleted,
     toeicProfile,
+    hasUsedCertificate,
   ]);
 
   const handleNextGuide = useCallback(() => {
@@ -540,6 +773,7 @@ export default function CertificateDetail() {
         foundation_completed: toeicProfile.milestoneState.foundationCompleted,
         foundation_skipped: toeicProfile.milestoneState.foundationSkipped,
         first_guide_shown: true,
+        progress_percent: computedToeicProgress,
       });
 
       guideDismissedInSessionRef.current = true;
@@ -1036,8 +1270,8 @@ export default function CertificateDetail() {
                           </button>
                           <button
                             onClick={() => {
-                              const cur = latestToeicScore;
-                              const tar = latestToeicTargetScore;
+                              const cur = activeSkillScore;
+                              const tar = activeSkillTargetScore;
                               if (cur < tar) {
                                 setGatePopupData({
                                   current: cur,
@@ -1099,10 +1333,17 @@ export default function CertificateDetail() {
                     {isToeic &&
                       (activeSkill === "listening" ||
                         activeSkill === "reading") && (
-                        <p className="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-                          <span>🔒</span>
-                          Bài thi Mock Exam chỉ mở khóa khi đạt đủ điểm ôn tập mục tiêu ({latestToeicTargetScore} điểm).
-                        </p>
+                        <div className="mt-3 bg-slate-50 border border-slate-100 rounded-xl p-3.5 text-xs text-slate-500 space-y-1.5 max-w-md">
+                          <p className="font-bold text-slate-600 flex items-center gap-1">
+                            <span>🔒</span>
+                            Điều kiện mở khóa Mock Exam ({activeSkill === "listening" ? "Listening" : "Reading"}):
+                          </p>
+                          <ul className="list-disc pl-4 space-y-1">
+                            <li>Đạt điểm ôn tập mục tiêu từ <strong>{activeSkillTargetScore} điểm</strong> trở lên.</li>
+                            <li>Đã mở khóa đến phần ôn tập cuối cùng (<strong>Part {activeSkill === "listening" ? "4" : "7"}</strong>).</li>
+                            <li>Hoàn thành luyện tập đủ <strong>{activeSkill === "listening" ? "12" : "10"} câu</strong> ở Part cuối cùng này.</li>
+                          </ul>
+                        </div>
                       )}
                   </div>
                 )}
@@ -1359,41 +1600,37 @@ export default function CertificateDetail() {
       )}
 
       {showScoreGatePopup && gatePopupData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[3px]">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center relative overflow-hidden transform scale-100 transition-all duration-300">
-            {/* Background design elements */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-full -mr-8 -mt-8 -z-10" />
-            <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-50 rounded-full -ml-8 -mb-8 -z-10" />
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-[1px]">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl border border-slate-100 text-center relative transform scale-100 transition-all duration-300">
             {/* Lock illustration */}
-            <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-rose-500 shadow-inner">
-              <Lock className="w-8 h-8 animate-bounce" />
+            <div className="flex justify-center mb-4 text-rose-500">
+              <Lock className="w-10 h-10 animate-bounce" />
             </div>
 
-            <h3 className="text-2xl font-black text-slate-800 mb-2 leading-tight">
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
               Chưa đủ điều kiện!
             </h3>
             
-            <p className="text-slate-500 text-sm leading-relaxed mb-6 px-2">
+            <p className="text-slate-500 text-sm leading-relaxed mb-5 px-1">
               Bạn chưa đạt đủ điểm ôn tập mục tiêu để thi thử <strong className="text-slate-700">Mock Exam</strong>. 
-              Hãy tiếp tục tích lũy thêm điểm số trong phòng luyện tập để mở khóa nhé!
+              Hãy tiếp tục luyện tập để tích lũy thêm điểm và mở khóa nhé!
             </p>
 
             {/* Progress indicators */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 flex justify-around items-center">
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mb-5 flex justify-around items-center">
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Điểm hiện tại</p>
-                <p className="text-2xl font-extrabold text-rose-500">{gatePopupData.current}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Điểm hiện tại</p>
+                <p className="text-xl font-black text-rose-500">{gatePopupData.current}</p>
               </div>
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-6 w-px bg-slate-200" />
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Mục tiêu</p>
-                <p className="text-2xl font-extrabold text-teal-600">{gatePopupData.target}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Mục tiêu</p>
+                <p className="text-xl font-black text-teal-600">{gatePopupData.target}</p>
               </div>
             </div>
 
             {/* Button controls */}
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
                   const targetSkill = gatePopupData.skill;
@@ -1401,9 +1638,9 @@ export default function CertificateDetail() {
                   setGatePopupData(null);
                   navigate(`/student/certificate-review/toeic/skill/${targetSkill}`);
                 }}
-                className="w-full py-3.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg shadow-teal-100 transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 text-sm shadow-sm"
               >
-                <PlayCircle className="w-5 h-5" />
+                <PlayCircle className="w-4 h-4" />
                 Vào học ngay
               </button>
               
@@ -1412,9 +1649,64 @@ export default function CertificateDetail() {
                   setShowScoreGatePopup(false);
                   setGatePopupData(null);
                 }}
-                className="w-full py-3 hover:bg-slate-50 text-slate-400 hover:text-slate-600 text-sm font-semibold rounded-xl transition-all cursor-pointer"
+                className="w-full py-2 hover:bg-slate-50 text-slate-400 hover:text-slate-600 text-sm font-semibold rounded-xl transition-all cursor-pointer"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetWarningPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-[2px] animate-fade-in">
+          <div className="bg-white rounded-3xl p-7 max-w-md w-full shadow-2xl border border-slate-100/80 text-center relative transform scale-100 transition-all duration-300 animate-scale-up">
+            
+            {/* Warning icon badge */}
+            <div className="flex justify-center mb-5">
+              <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 border border-amber-100 shadow-sm animate-pulse">
+                <Zap className="w-7 h-7 fill-amber-500 text-amber-500" />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-800 mb-3 tracking-tight">
+              Làm mới tiến trình học tập?
+            </h3>
+            
+            <div className="text-slate-500 text-sm leading-relaxed mb-6 px-1 text-left space-y-3 bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+              <p className="font-medium text-slate-700">
+                ⚠️ Bạn đang ở tiến độ <strong className="text-rose-500 font-bold">{realProgress}%</strong> của mục tiêu hiện tại ({latestToeicTargetScore} điểm).
+              </p>
+              <p className="text-xs">
+                Nếu bạn đổi mục tiêu, toàn bộ quá trình ôn luyện sẽ được làm mới từ đầu.
+              </p>
+              <div className="h-px bg-slate-200/60 my-2" />
+              <ul className="text-xs space-y-1.5 list-disc pl-4 text-slate-500">
+                <li><strong className="text-slate-700">Giữ lại:</strong> Chuỗi ngày học (streak) và điểm trên bảng xếp hạng.</li>
+                <li><strong className="text-rose-600 font-medium">Đặt lại:</strong> Các phần (part) của tất cả kỹ năng quay về mức ban đầu, điểm ôn luyện của các node được đặt về 0.</li>
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                disabled={isResettingProgress}
+                onClick={() => setShowResetWarningPopup(false)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200/80 active:bg-slate-200 text-slate-600 text-sm font-semibold rounded-2xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              
+              <button
+                disabled={isResettingProgress}
+                onClick={handleConfirmResetProgress}
+                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 active:opacity-95 text-white text-sm font-bold rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isResettingProgress ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  "Xác nhận đổi"
+                )}
               </button>
             </div>
           </div>

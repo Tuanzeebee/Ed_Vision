@@ -16,12 +16,8 @@ import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useToeicScrollReset } from "../../hooks/useToeicScrollReset";
 import { useAuth } from "@/hooks/useAuth";
-import { getToeicIntakeProfile } from "./toeicIntake";
+import { getToeicIntakeProfile, hydrateToeicProfileFromServer, saveToeicIntakeProfile } from "./toeicIntake";
 import { getToeicReservePoints, getToeicPlanSync } from "@/services/api/certificateService";
-import {
-  calculateToeicPracticeScore,
-  type ToeicScoreResult,
-} from "./toeicPracticeScore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface NodeInfo {
@@ -48,6 +44,13 @@ interface SkillMapState {
 interface LearningMapState {
   listening: SkillMapState;
   reading: SkillMapState;
+}
+
+// Simple flat score result — replaces the legacy curved ToeicScoreResult
+interface FlatScoreResult {
+  finalScore: number;
+  partDetails: { partKey: string; earned: number }[];
+  skills: { key: string; totalEarned: number }[];
 }
 
 const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2";
@@ -99,7 +102,7 @@ const LISTENING_NODES: NodeInfo[] = [
       "Hội thoại ngắn giữa 2-3 người — hiểu ý chính, chi tiết và ngầm ý",
     partLabel: "PART 3",
     icon: "🎧",
-    questionsCount: 10,
+    questionsCount: 12,
     scorePerCorrect: 2.5,
     xPos: 80,
     yPos: 215,
@@ -114,7 +117,7 @@ const LISTENING_NODES: NodeInfo[] = [
       "Bài phát biểu ngắn — nắm bắt thông tin quan trọng từ thông báo, quảng cáo",
     partLabel: "PART 4",
     icon: "🎙️",
-    questionsCount: 10,
+    questionsCount: 12,
     scorePerCorrect: 2.5,
     xPos: 265,
     yPos: 115,
@@ -575,8 +578,8 @@ function Mascot({ x, y }: { x: number; y: number }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <g 
-      transform={`translate(${x},${y - 48})`} 
+    <g
+      transform={`translate(${x},${y - 48})`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{ cursor: "pointer" }}
@@ -627,49 +630,49 @@ function Mascot({ x, y }: { x: number; y: number }) {
           dur="2s"
           repeatCount="indefinite"
         />
-        
+
         {/* Jetpack */}
         <rect x="-15" y="-2" width="30" height="22" rx="4" fill="url(#jetpackGrad)" />
         <rect x="-11" y="-5" width="22" height="24" rx="3" fill="#334155" />
         {/* Jetpack Nozzles */}
         <path d="M -13 19 L -7 19 L -8 24 L -12 24 Z" fill="#1e293b" />
         <path d="M 7 19 L 13 19 L 12 24 L 8 24 Z" fill="#1e293b" />
-        
+
         {/* Jetpack Fire Animation */}
         <g transform="translate(-10, 24)">
           <path fill="url(#fireGrad)">
-            <animate 
-              attributeName="d" 
-              values={isHovered 
-                ? "M -3.5 0 L 3.5 0 Q 0 15 0 25 Z; M -3.5 0 L 3.5 0 Q 0 20 0 35 Z; M -3.5 0 L 3.5 0 Q 0 15 0 25 Z" 
-                : "M -2.5 0 L 2.5 0 Q 0 8 0 12 Z; M -2.5 0 L 2.5 0 Q 0 12 0 18 Z; M -2.5 0 L 2.5 0 Q 0 8 0 12 Z"} 
-              dur={isHovered ? "0.05s" : "0.1s"} 
-              repeatCount="indefinite" 
+            <animate
+              attributeName="d"
+              values={isHovered
+                ? "M -3.5 0 L 3.5 0 Q 0 15 0 25 Z; M -3.5 0 L 3.5 0 Q 0 20 0 35 Z; M -3.5 0 L 3.5 0 Q 0 15 0 25 Z"
+                : "M -2.5 0 L 2.5 0 Q 0 8 0 12 Z; M -2.5 0 L 2.5 0 Q 0 12 0 18 Z; M -2.5 0 L 2.5 0 Q 0 8 0 12 Z"}
+              dur={isHovered ? "0.05s" : "0.1s"}
+              repeatCount="indefinite"
             />
           </path>
         </g>
         <g transform="translate(10, 24)">
           <path fill="url(#fireGrad)">
-            <animate 
-              attributeName="d" 
-              values={isHovered 
-                ? "M -3.5 0 L 3.5 0 Q 0 15 0 25 Z; M -3.5 0 L 3.5 0 Q 0 20 0 35 Z; M -3.5 0 L 3.5 0 Q 0 15 0 25 Z" 
-                : "M -2.5 0 L 2.5 0 Q 0 8 0 12 Z; M -2.5 0 L 2.5 0 Q 0 12 0 18 Z; M -2.5 0 L 2.5 0 Q 0 8 0 12 Z"} 
-              dur={isHovered ? "0.06s" : "0.12s"} 
-              repeatCount="indefinite" 
+            <animate
+              attributeName="d"
+              values={isHovered
+                ? "M -3.5 0 L 3.5 0 Q 0 15 0 25 Z; M -3.5 0 L 3.5 0 Q 0 20 0 35 Z; M -3.5 0 L 3.5 0 Q 0 15 0 25 Z"
+                : "M -2.5 0 L 2.5 0 Q 0 8 0 12 Z; M -2.5 0 L 2.5 0 Q 0 12 0 18 Z; M -2.5 0 L 2.5 0 Q 0 8 0 12 Z"}
+              dur={isHovered ? "0.06s" : "0.12s"}
+              repeatCount="indefinite"
             />
           </path>
         </g>
 
         {/* Main Body */}
         <rect x="-10" y="4" width="20" height="18" rx="6" fill="url(#suitGrad)" />
-        
+
         {/* Chest Plate */}
         <rect x="-6" y="7" width="12" height="10" rx="2" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="0.5" />
         <circle cx="-3" cy="10" r="1.5" fill="#3b82f6" />
         <circle cx="3" cy="10" r="1.5" fill="#ef4444" />
         <rect x="-3" y="14" width="6" height="1.5" fill="#94a3b8" />
-        
+
         {/* Belt */}
         <rect x="-10" y="19" width="20" height="3" fill="#64748b" />
         <rect x="-3" y="18.5" width="6" height="4" rx="1" fill="#94a3b8" />
@@ -693,11 +696,11 @@ function Mascot({ x, y }: { x: number; y: number }) {
           <path d="M -16 8 L -9 8 L -8 20 L -17 20 Z" fill="url(#suitGrad)" />
           <circle cx="-12.5" cy="20" r="3.5" fill="#94a3b8" /> {/* Glove */}
         </g>
-        
+
         {/* Right Arm (Waving when hovered) */}
         <g style={{ transformOrigin: '12px 8px', transform: isHovered ? 'rotate(-140deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
           {!isHovered && (
-             <animateTransform
+            <animateTransform
               attributeName="transform"
               type="rotate"
               values="-10 12 8; 5 12 8; -10 12 8"
@@ -706,7 +709,7 @@ function Mascot({ x, y }: { x: number; y: number }) {
             />
           )}
           {isHovered && (
-             <animateTransform
+            <animateTransform
               attributeName="transform"
               type="rotate"
               values="-140 12 8; -110 12 8; -140 12 8"
@@ -717,21 +720,21 @@ function Mascot({ x, y }: { x: number; y: number }) {
           <path d="M 9 8 L 16 8 L 17 20 L 8 20 Z" fill="url(#suitGrad)" />
           <circle cx="12.5" cy="20" r="3.5" fill="#94a3b8" /> {/* Glove */}
         </g>
-        
+
         {/* Helmet Base */}
         <circle cx="0" cy="-6" r="15" fill="url(#helmetGrad)" />
         <ellipse cx="0" cy="9" rx="11" ry="3" fill="#cbd5e1" /> {/* Neck ring */}
-        
+
         {/* Glass Visor */}
         <rect x="-12" y="-13" width="24" height="15" rx="7.5" fill="url(#visorGrad)" />
-        
+
         {/* Glowing Robot Eyes */}
         <rect x="-7" y="-10" width="5.5" height="4.5" rx="1.5" fill="#22d3ee" filter="drop-shadow(0 0 3px #06b6d4)" />
         <rect x="1.5" y="-10" width="5.5" height="4.5" rx="1.5" fill="#22d3ee" filter="drop-shadow(0 0 3px #06b6d4)" />
-        
+
         {/* Visor Glare */}
         <path d="M -10 -11 Q 0 -13 10 -11 Q 6 -7 0 -7 Q -6 -7 -10 -11 Z" fill="rgba(255,255,255,0.25)" />
-        
+
         {/* Hover Text Bubble */}
         {isHovered && (
           <g transform="translate(18, -24)">
@@ -753,7 +756,7 @@ function VideoBackground() {
     // Fade in smoothly when video is ready
     const video = videoRef.current;
     if (!video) return;
-    
+
     const handleCanPlay = () => {
       video.style.transition = "opacity 0.5s ease-in-out";
       video.style.opacity = "1";
@@ -809,61 +812,16 @@ export default function ToeicLearningMapPage() {
   });
   const [selectedNode, setSelectedNode] = useState<number>(0);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [baseScore, setBaseScore] = useState(300);   // Điểm gốc từ intake (KHÔNG bao gồm boost)
-  const [targetScore, setTargetScore] = useState(650);
+  const [globalBaseScore, setGlobalBaseScore] = useState(300);   // Điểm gốc từ intake (KHÔNG bao gồm boost)
+  const [globalTargetScore, setGlobalTargetScore] = useState(650);
+  // Per-skill baselines from server (set after taking a mock exam)
+  const [skillBaselines, setSkillBaselines] = useState<{ listening: number; reading: number }>({ listening: 0, reading: 0 });
+  // Track whether mock exam has been taken per skill
+  const [examsTaken, setExamsTaken] = useState<{ listening: boolean; reading: boolean }>({ listening: false, reading: false });
 
-  // ── Load dữ liệu từ API + merge với localStorage (giống CertificateReview) ─
+  // ── Load dữ liệu từ API (Server is Single Source of Truth) ─
   useEffect(() => {
     let cancelled = false;
-
-    // Đọc localStorage (scoped theo user) để merge với dữ liệu API
-    const localState = loadMapState(userId);
-
-    // Hiển thị ngay với localStorage để map không bao giờ bị treo loading.
-    // API call vẫn chạy ngầm và cập nhật state khi hoàn tất.
-    setMapState(localState);
-    setIsLoaded(true);
-
-    const safeArray = (arr: unknown): number[] =>
-      Array.isArray(arr) ? arr.filter((x) => typeof x === "number") : [];
-
-    const mergeSkillStates = (
-      apiState: SkillMapState,
-      local: SkillMapState,
-    ): SkillMapState => {
-      const apiCompleted = safeArray(apiState?.completedNodes);
-      const localCompleted = safeArray(local?.completedNodes);
-      const apiScores = safeArray(apiState?.nodeScores);
-      const localScores = safeArray(local?.nodeScores);
-
-      // Merge: lấy maximum completions từ cả 2 nguồn
-      const mergedCompleted = Array.from(
-        new Set([...apiCompleted, ...localCompleted]),
-      ).sort((a, b) => a - b);
-
-      const mergedScores: number[] = [];
-      const maxLen = Math.max(apiScores.length, localScores.length);
-      for (let i = 0; i < maxLen; i++) {
-        mergedScores[i] = Math.max(apiScores[i] ?? 0, localScores[i] ?? 0);
-      }
-
-      // Sequential unlock tính lại từ mergedCompleted
-      let unlockedUpTo = 0;
-      for (let i = 0; i < mergedCompleted.length; i++) {
-        if (mergedCompleted[i] === i) {
-          unlockedUpTo = i + 1;
-        } else {
-          break;
-        }
-      }
-      unlockedUpTo = Math.max(
-        unlockedUpTo,
-        apiState?.unlockedUpTo ?? 0,
-        local?.unlockedUpTo ?? 0,
-      );
-
-      return { unlockedUpTo, completedNodes: mergedCompleted, nodeScores: mergedScores };
-    };
 
     Promise.all([
       getToeicReservePoints().catch(() => null),
@@ -914,37 +872,51 @@ export default function ToeicLearningMapPage() {
           const apiReading = buildSkillState([5, 6, 7], READING_NODES.length);
 
           const merged: LearningMapState = {
-            listening: mergeSkillStates(apiListening, localState.listening),
-            reading: mergeSkillStates(apiReading, localState.reading),
+            listening: apiListening,
+            reading: apiReading,
           };
 
           setMapState(merged);
 
-          // Ghi lại merged state vào localStorage (scoped theo user)
+          // Overwrite localStorage with authoritative server data to clear any stale ghost data
           try {
             localStorage.setItem(getMapStorageKey(userId), JSON.stringify(merged));
           } catch { /* ignore quota errors */ }
         } else {
-          // API không khả dụng — dùng localStorage
+          // API không khả dụng — fallback sang localStorage
+          const localState = loadMapState(userId);
           setMapState(localState);
         }
 
-        // Lấy điểm gốc (base) từ intake — KHÔNG bị ảnh hưởng bởi practice sessions
-        const profile = getToeicIntakeProfile();
-        if (profile) {
-          // profile.currentScore là điểm gốc từ lúc intake, không bị mutate
-          setBaseScore(Math.round(profile.currentScore));
-          setTargetScore(
-            planData?.target_score ?? profile.milestoneState.targetScore,
-          );
-        } else if (planData) {
-          // Fallback: API không có profile local → dùng planData
-          // current_score trên server có thể đã bị cộng boost cũ → trừ lại
-          const recoveredBase = Math.round(
-            planData.current_score - (planData.total_boost ?? 0),
-          );
-          setBaseScore(Math.max(10, recoveredBase));
-          setTargetScore(planData.target_score);
+        // Synchronize and load the profile from the server (authoritative score)
+        const localProfile = getToeicIntakeProfile();
+        if (planData) {
+          // Store skill-specific baselines AND whether exam was taken
+          // skillBase is ONLY applied to practice score after the student has taken that skill's exam
+          const lBase = planData.listening_baseline ?? 0;
+          const rBase = planData.reading_baseline ?? 0;
+          setSkillBaselines({ listening: Math.round(lBase), reading: Math.round(rBase) });
+          setExamsTaken({
+            listening: planData.has_taken_listening_exam ?? false,
+            reading: planData.has_taken_reading_exam ?? false,
+          });
+
+          hydrateToeicProfileFromServer(localProfile).then((hydrated) => {
+            if (hydrated) {
+              saveToeicIntakeProfile(hydrated);
+              setGlobalBaseScore(Math.round(hydrated.currentScore));
+              setGlobalTargetScore(hydrated.milestoneState.targetScore);
+            } else {
+              setGlobalBaseScore(Math.round(planData.current_score));
+              setGlobalTargetScore(planData.target_score);
+            }
+          }).catch(() => {
+            setGlobalBaseScore(Math.round(planData.current_score));
+            setGlobalTargetScore(planData.target_score);
+          });
+        } else if (localProfile) {
+          setGlobalBaseScore(Math.round(localProfile.currentScore));
+          setGlobalTargetScore(localProfile.milestoneState.targetScore);
         }
       })
       .finally(() => {
@@ -959,7 +931,9 @@ export default function ToeicLearningMapPage() {
   const skillState = mapState[activeSkill];
 
   // ── Tính điểm TOEIC ôn luyện (per-part cap, chống spam) ──
-  const practiceScore: ToeicScoreResult | null = useMemo(() => {
+  // ── Tính điểm TOEIC ôn luyện riêng biệt từng kỹ năng (chống spam độc lập) ──
+  const practiceScore: FlatScoreResult | null = useMemo(() => {
+    const isListening = activeSkill === "listening";
     const listeningState = mapState.listening;
     const readingState = mapState.reading;
 
@@ -971,59 +945,47 @@ export default function ToeicLearningMapPage() {
       return null;
     }
 
-    // Map node index → part key (bỏ Mock Exam = node cuối)
-    // Listening nodes 0–3 → part1..part4
-    // Reading  nodes 0–2 → part5..part7
-    const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
-    const READING_PART_KEYS  = ["part5", "part6", "part7"];
+    const calculateFlatScore = (state: SkillMapState, partKeys: string[], skillKey: string): FlatScoreResult => {
+      let totalEarned = 0;
+      const partDetails: { partKey: string; earned: number }[] = [];
 
-    const bestCorrectByPart: Record<string, number> = {};
-
-    // Ước lượng best correct từ nodeScores / scorePerCorrect
-    const fillBest = (
-      nodes: NodeInfo[],
-      state: SkillMapState,
-      partKeys: string[],
-    ) => {
-      const practiceNodes = nodes.slice(0, -1); // Bỏ Mock Exam
-      practiceNodes.forEach((node, i) => {
+      for (let i = 0; i < partKeys.length; i++) {
         const partKey = partKeys[i];
-        if (!partKey) return;
-        if (state.completedNodes.includes(i)) {
-          const earned = (state.nodeScores || [])[i] ?? 0;
-          const correct =
-            node.scorePerCorrect > 0
-              ? Math.round(earned / node.scorePerCorrect)
-              : 0;
-          // Lấy MAX (best) — phòng trường hợp merge nhiều lần
-          bestCorrectByPart[partKey] = Math.max(
-            bestCorrectByPart[partKey] ?? 0,
-            correct,
-          );
-        }
-      });
+        const earned = (state.nodeScores || [])[i] ?? 0;
+        totalEarned += earned;
+        partDetails.push({ partKey, earned });
+      }
+
+      // Only add skill_baseline to practice score if the student has taken the mock exam for that skill.
+      // Before the exam: finalScore = earned points only (starts at 0, grows with practice).
+      // After exam (e.g. 490): finalScore = 490 + newly earned points.
+      const examTaken = skillKey === "listening" ? examsTaken.listening : examsTaken.reading;
+      const skillBase = examTaken
+        ? (skillKey === "listening" ? skillBaselines.listening : skillBaselines.reading)
+        : 0;
+
+      return {
+        finalScore: skillBase + totalEarned,
+        partDetails,
+        skills: [{ key: skillKey, totalEarned }],
+      };
     };
 
-    fillBest(LISTENING_NODES, listeningState, LISTENING_PART_KEYS);
-    fillBest(READING_NODES, readingState, READING_PART_KEYS);
+    if (isListening) {
+      const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
+      return calculateFlatScore(listeningState, LISTENING_PART_KEYS, "listening");
+    } else {
+      const READING_PART_KEYS = ["part5", "part6", "part7"];
+      return calculateFlatScore(readingState, READING_PART_KEYS, "reading");
+    }
+  }, [mapState, skillBaselines, examsTaken, activeSkill]);
 
-    // Dải điểm = [baseScore, baseScore + 200]
-    const minBand = baseScore;
-    const maxBand = baseScore + 200;
-
-    return calculateToeicPracticeScore({
-      bestCorrectByPart,
-      minScore: minBand,
-      maxScore: maxBand,
-    });
-  }, [mapState, baseScore]);
-
-  // ── currentScore giờ do per-part cap quyết định, không phải totalBoost ──
-  const currentScore = practiceScore?.finalScore ?? baseScore;
+  const currentScore = practiceScore?.finalScore ?? 0; // 0 = no practice yet
+  const targetScore = globalTargetScore; // each skill independently needs full target
 
   const currentNodeIndex = useMemo(() => {
     const { completedNodes } = skillState;
-    
+
     // Find the first incomplete node
     let firstIncomplete = -1;
     for (let i = 0; i < nodes.length; i++) {
@@ -1067,7 +1029,14 @@ export default function ToeicLearningMapPage() {
   const isSummitNode = (idx: number) => idx === nodes.length - 1;
   const isNodeUnlocked = (idx: number) => {
     if (isSummitNode(idx)) {
-      return currentScore >= targetScore;
+      // Cần đủ 3 điều kiện để mở khóa Mock Exam:
+      // 1. Điểm ôn tập >= điểm mục tiêu
+      // 2. Tất cả các node luyện tập trước đó đã được mở khóa
+      // 3. Node luyện tập cuối cùng (trước Mock Exam) đã hoàn thành
+      const lastPracticeIdx = nodes.length - 2;
+      const lastPracticeUnlocked = lastPracticeIdx <= skillState.unlockedUpTo;
+      const lastPracticeCompleted = skillState.completedNodes.includes(lastPracticeIdx);
+      return currentScore >= targetScore && lastPracticeUnlocked && lastPracticeCompleted;
     }
     return idx <= skillState.unlockedUpTo;
   };
@@ -1100,17 +1069,17 @@ export default function ToeicLearningMapPage() {
   const accentColor = isListening ? "teal" : "emerald";
   const accentCls = isListening
     ? {
-        tab: "bg-cyan-500 text-white shadow-cyan-200",
-        btn: "from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600",
-        score: "text-teal-600",
-        bar: "from-teal-400 to-cyan-400",
-      }
+      tab: "bg-cyan-500 text-white shadow-cyan-200",
+      btn: "from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600",
+      score: "text-teal-600",
+      bar: "from-teal-400 to-cyan-400",
+    }
     : {
-        tab: "bg-emerald-500 text-white shadow-emerald-200",
-        btn: "from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600",
-        score: "text-emerald-600",
-        bar: "from-emerald-400 to-teal-400",
-      };
+      tab: "bg-emerald-500 text-white shadow-emerald-200",
+      btn: "from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600",
+      score: "text-emerald-600",
+      bar: "from-emerald-400 to-teal-400",
+    };
 
   if (!isLoaded) {
     return (
@@ -1176,11 +1145,10 @@ export default function ToeicLearningMapPage() {
                 onClick={() =>
                   navigate(`/student/certificate-review/toeic/skill/${skill}`)
                 }
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm ${
-                  activeSkill === skill
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm ${activeSkill === skill
                     ? accentCls.tab + " shadow-md"
                     : "bg-white text-slate-600 border border-slate-200 hover:border-teal-300"
-                }`}
+                  }`}
               >
                 {icon}
                 {label}
@@ -1211,7 +1179,7 @@ export default function ToeicLearningMapPage() {
                   <p className="text-slate-600 text-xs mt-0.5 drop-shadow">
                     {completedCount}/{totalNodes} node · {completionPercent}%
                     hoàn thành
-                    {totalScoreGained > 0 && ` · +${totalScoreGained.toFixed(1)}đ`}
+                    {totalScoreGained > 0 && ` · +${Math.round(totalScoreGained)}đ`}
                   </p>
                 </div>
                 <div className="text-right">
@@ -1337,13 +1305,8 @@ export default function ToeicLearningMapPage() {
                 <span className="flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 text-teal-400" />+
                   {(() => {
-                    const partKeys = (PART_KEYS_BY_SKILL[activeSkill] ?? []);
-                    const pk = partKeys[selectedNode];
-                    if (!pk || !practiceScore) {
-                      return (selectedNodeData.questionsCount * selectedNodeData.scorePerCorrect).toFixed(1);
-                    }
-                    const pd = practiceScore.partDetails.find((p) => p.partKey === pk);
-                    return pd ? pd.cap.toFixed(1) : (selectedNodeData.questionsCount * selectedNodeData.scorePerCorrect).toFixed(1);
+                    // Điểm max của node = số câu × 5 điểm/câu
+                    return selectedNodeData.questionsCount * 5;
                   })()}{" "}
                   điểm max
                 </span>
@@ -1354,18 +1317,76 @@ export default function ToeicLearningMapPage() {
                 return earned !== null ? (
                   <div className="mb-3 bg-emerald-50 rounded-xl p-3 text-sm text-emerald-700 font-semibold flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />
-                    Đã hoàn thành · +{earned.toFixed(1)} điểm đã tích lũy
+                    Đã hoàn thành · +{Math.round(earned)} điểm đã tích lũy
                   </div>
                 ) : null;
               })()}
 
               {!isNodeUnlocked(selectedNode) && (
-                <div className="mb-3 bg-slate-50 rounded-xl p-3 text-sm text-slate-500 flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  {isSummitNode(selectedNode) 
-                    ? `Đạt đủ điểm mục tiêu (${targetScore}) để mở khóa thi thử` 
-                    : `Hoàn thành node ${selectedNode} để mở khóa node này`}
-                </div>
+                isSummitNode(selectedNode) ? (
+                  <div className="mb-4 bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-slate-700 mb-1">
+                      <Lock className="w-4 h-4 text-amber-500" />
+                      <span>Điều kiện mở khóa Mock Exam:</span>
+                    </div>
+                    <div className="space-y-1.5 pl-6">
+                      <div className="flex items-center gap-2">
+                        {currentScore >= targetScore ? (
+                          <span className="text-emerald-500 font-bold">✓</span>
+                        ) : (
+                          <span className="text-amber-500 font-bold">🔒</span>
+                        )}
+                        <span className={currentScore >= targetScore ? "text-emerald-600 font-semibold" : "text-slate-500"}>
+                          Tiêu chí 1: Điểm ôn tập đạt mục tiêu ({currentScore}/{targetScore} điểm)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const lastPracticeIdx = nodes.length - 2;
+                          const lastPracticeUnlocked = lastPracticeIdx <= skillState.unlockedUpTo;
+                          const lastPartNum = activeSkill === "listening" ? 4 : 7;
+                          return (
+                            <>
+                              {lastPracticeUnlocked ? (
+                                <span className="text-emerald-500 font-bold">✓</span>
+                              ) : (
+                                <span className="text-amber-500 font-bold">🔒</span>
+                              )}
+                              <span className={lastPracticeUnlocked ? "text-emerald-600 font-semibold" : "text-slate-500"}>
+                                Tiêu chí 2: Mở khóa đến phần cuối cùng (Part {lastPartNum})
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const lastPracticeIdx = nodes.length - 2;
+                          const lastPracticeCompleted = skillState.completedNodes.includes(lastPracticeIdx);
+                          const lastPartNum = activeSkill === "listening" ? 4 : 7;
+                          const lastPartQuestions = activeSkill === "listening" ? 12 : 10;
+                          return (
+                            <>
+                              {lastPracticeCompleted ? (
+                                <span className="text-emerald-500 font-bold">✓</span>
+                              ) : (
+                                <span className="text-amber-500 font-bold">🔒</span>
+                              )}
+                              <span className={lastPracticeCompleted ? "text-emerald-600 font-semibold" : "text-slate-500"}>
+                                Tiêu chí 3: Luyện tập đủ {lastPartQuestions} câu ở Part cuối cùng
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-3 bg-slate-50 rounded-xl p-3 text-sm text-slate-500 flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    <span>Hoàn thành node {selectedNode} để mở khóa node này</span>
+                  </div>
+                )
               )}
 
               <div className="flex gap-3">
@@ -1375,31 +1396,27 @@ export default function ToeicLearningMapPage() {
                       onClick={() =>
                         selectedNode === nodes.length - 1
                           ? navigate(
-                              `/student/certificate-review/toeic/exam/${activeSkill}`,
-                            )
+                            `/student/certificate-review/toeic/exam/${activeSkill}`,
+                          )
                           : navigate(
-                              `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
-                            )
+                            `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
+                          )
                       }
                       className={`flex-1 py-3 bg-linear-to-r ${accentCls.btn} text-white rounded-xl font-bold text-sm transition-all shadow-md active:scale-95`}
                     >
                       {selectedNode === nodes.length - 1 ? "🏆 Bắt đầu thi thử" : "🚀 Bắt đầu luyện tập"}
                     </button>
                   )}
-                {isNodeCompleted(selectedNode) && (
+                {isNodeCompleted(selectedNode) && selectedNode !== nodes.length - 1 && (
                   <button
                     onClick={() =>
-                      selectedNode === nodes.length - 1
-                        ? navigate(
-                            `/student/certificate-review/toeic/exam/${activeSkill}`,
-                          )
-                        : navigate(
-                            `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
-                          )
+                      navigate(
+                        `/student/certificate-review/toeic/skill/${activeSkill}/node/${selectedNode}/practice`,
+                      )
                     }
                     className="flex-1 py-3 bg-white border-2 border-emerald-200 text-emerald-600 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-all active:scale-95"
                   >
-                    {selectedNode === nodes.length - 1 ? "🔄 Thi lại" : "🔄 Luyện tập lại"}
+                    🔄 Luyện tập lại
                   </button>
                 )}
                 {selectedNode !== nodes.length - 1 && isNodeUnlocked(nodes.length - 1) && (
@@ -1430,24 +1447,22 @@ export default function ToeicLearningMapPage() {
                       if (isNodeUnlocked(i)) setSelectedNode(i);
                     }}
                     disabled={!isNodeUnlocked(i)}
-                    className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all text-sm border ${
-                      selectedNode === i
+                    className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all text-sm border ${selectedNode === i
                         ? `border-${accentColor}-200 bg-${accentColor}-50`
                         : isNodeUnlocked(i)
                           ? "border-transparent hover:bg-slate-50"
                           : "border-transparent opacity-40 cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold ${
-                        isNodeCompleted(i)
+                      className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold ${isNodeCompleted(i)
                           ? "bg-emerald-100 text-emerald-700"
                           : isNodeCurrent(i)
                             ? "bg-teal-100 text-teal-700"
                             : isNodeUnlocked(i)
                               ? "bg-slate-100 text-slate-700"
                               : "bg-slate-100 text-slate-400"
-                      }`}
+                        }`}
                     >
                       {isNodeCompleted(i)
                         ? "✓"
@@ -1468,7 +1483,7 @@ export default function ToeicLearningMapPage() {
                         const earned = getNodeEarned(i);
                         return earned !== null ? (
                           <span className="text-xs text-emerald-600 font-bold block">
-                            +{earned.toFixed(1)}đ
+                            +{Math.round(earned)}đ
                           </span>
                         ) : null;
                       })()}

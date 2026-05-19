@@ -11,6 +11,7 @@ import type { EnrollmentResponse, ToeicReservePointsResponse } from '@/services/
 import { studyRoomService } from '@/services/student/studyRoomService'
 import { getPersonalStats } from '@/services/api/leaderboardService'
 
+
 export default function CertificateReview() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -73,19 +74,49 @@ export default function CertificateReview() {
     if (!latest) return c
 
     // Tính tiến độ:
-    // - TOEIC: dùng điểm gốc / điểm mục tiêu (clamp 0..100)
-    // - Còn lại: progress_percent từ API hoặc completed_topics / total_topics
     let progress = 0
     if (c.id === 'toeic') {
-      const baseScore = latest.current_score ?? null
-      const targetScore = latest.target_score ?? null
-      if (baseScore && targetScore && targetScore > 0) {
-        progress = Math.max(
-          0,
-          Math.min(100, Math.round((Number(baseScore) / Number(targetScore)) * 100)),
-        )
-      } else if (latest.progress_percent != null) {
-        progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
+      const userId = user?.account_id || user?.id
+      const MAP_STORAGE_KEY_PREFIX = "edvision.toeic.learningmap.v2"
+      const key = userId ? `${MAP_STORAGE_KEY_PREFIX}.${userId}` : MAP_STORAGE_KEY_PREFIX
+      let mapState = {
+        listening: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] },
+        reading: { unlockedUpTo: 0, completedNodes: [], nodeScores: [] }
+      }
+      try {
+        const raw = localStorage.getItem(key)
+        if (raw) mapState = JSON.parse(raw)
+      } catch (e) {}
+
+      const startScore = latest.current_score ?? 300
+      const targetScore = latest.target_score ?? 600
+
+      if (targetScore <= startScore) {
+        progress = latest.progress_percent != null
+          ? Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))
+          : 0
+      } else {
+        let totalListeningEarned = 0
+        if (mapState.listening.nodeScores) {
+          totalListeningEarned = mapState.listening.nodeScores.reduce((sum: number, score: number | null) => sum + (score ?? 0), 0)
+        }
+        const listeningScore = startScore + totalListeningEarned
+
+        let totalReadingEarned = 0
+        if (mapState.reading.nodeScores) {
+          totalReadingEarned = mapState.reading.nodeScores.reduce((sum: number, score: number | null) => sum + (score ?? 0), 0)
+        }
+        const readingScore = startScore + totalReadingEarned
+
+        const totalGap = targetScore - startScore
+
+        const deltaL = Math.max(0, listeningScore - startScore)
+        const deltaR = Math.max(0, readingScore - startScore)
+
+        const lProgress = Math.max(0, Math.min(50, (deltaL / totalGap) * 100))
+        const rProgress = Math.max(0, Math.min(50, (deltaR / totalGap) * 100))
+
+        progress = Math.max(0, Math.min(100, Math.round(lProgress + rProgress)))
       }
     } else if (latest.progress_percent != null) {
       progress = Math.max(0, Math.min(100, Math.round(Number(latest.progress_percent))))

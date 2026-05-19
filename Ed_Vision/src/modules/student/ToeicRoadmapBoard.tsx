@@ -443,7 +443,7 @@ export default function ToeicRoadmapBoard({
             tăng điểm, kèm phần nền tảng khi cần.
           </p>
         </div>
-        {/* Điểm Gốc + Điểm Ôn Tập — compact, side by side */}
+        {/* Điểm Gốc — compact */}
         <div className="flex gap-2 self-end sm:self-auto">
           <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -451,14 +451,6 @@ export default function ToeicRoadmapBoard({
             </p>
             <p className="text-lg font-black text-slate-700">
               {realCurrentScore ?? profile.milestoneState.currentScore}
-            </p>
-          </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-              Điểm Ôn Tập
-            </p>
-            <p className="text-lg font-black text-emerald-700">
-              {realReservePoints !== null ? realReservePoints.toFixed(1) : projectedScore}
             </p>
           </div>
         </div>

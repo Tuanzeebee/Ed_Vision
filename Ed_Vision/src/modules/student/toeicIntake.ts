@@ -266,6 +266,9 @@ export async function hydrateToeicProfileFromServer(
 
     return {
       ...localProfile,
+      currentScore: remote.current_score,
+      targetScore: remote.target_score,
+      recommendedBand: mapToeicScoreToBand(remote.current_score),
       milestoneState: {
         ...localProfile.milestoneState,
         currentScore: remote.current_score,

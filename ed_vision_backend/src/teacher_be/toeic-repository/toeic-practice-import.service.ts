@@ -42,7 +42,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { PrismaService } from '../../prisma/prisma.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,20 +50,34 @@ import { PrismaService } from '../../prisma/prisma.service';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class ToeicPracticeImportDto {
-  @Type(() => Number)
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '' || value === 'undefined' || value === 'null') return undefined;
+    const parsed = Number(value);
+    return isNaN(parsed) ? undefined : parsed;
+  })
   @IsInt()
   @Min(0)
   @Max(990)
-  score_band_min!: number;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(990)
-  score_band_max!: number;
+  score_band_min?: number;
 
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '' || value === 'undefined' || value === 'null') return undefined;
+    const parsed = Number(value);
+    return isNaN(parsed) ? undefined : parsed;
+  })
+  @IsInt()
+  @Min(0)
+  @Max(990)
+  score_band_max?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '' || value === 'undefined' || value === 'null') return undefined;
+    const parsed = Number(value);
+    return isNaN(parsed) ? undefined : parsed;
+  })
   @IsInt()
   @Min(1)
   @Max(7)
@@ -88,8 +102,8 @@ export class ToeicPracticeImportDto {
 export class ToeicPracticeImportResponseDto {
   imported_count!: number;
   skipped_count!: number;
-  score_band_min!: number;
-  score_band_max!: number;
+  score_band_min?: number;
+  score_band_max?: number;
   practice_set_id!: string;
   detected_parts!: number[];
   extracted_image_count!: number;
@@ -152,17 +166,19 @@ export class ToeicPracticeManualItemDto {
 }
 
 export class ToeicPracticeManualSupplementDto {
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(990)
-  score_band_min!: number;
+  score_band_min?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(990)
-  score_band_max!: number;
+  score_band_max?: number;
 
   @IsOptional()
   @IsString()
@@ -714,18 +730,13 @@ export class ToeicPracticeImportService {
     stem: string;
     options: ParsedOption[];
   } {
-    // Lookbehind to allow missing spaces before option letters (e.g. remindB.)
-    // Only allow lowercase letters, numbers, or basic punctuation before the option letter to avoid false positives.
-    const markerRegex = /(?<=^|[\s(a-z0-9.,?!])([A-D])[).:-]\s*/g;
+    const markerRegex = /(?<=^|[\s(a-z0-9.,?!])(?:\(([A-D])\)|([A-D]))[).:-]?\s*/gi;
     const markers = Array.from(line.matchAll(markerRegex));
 
     if (markers.length === 0) {
       return { stem: line.trim(), options: [] };
     }
 
-    // Lookbehind cho phép '(' trước A-D (để bắt option dạng "(A)"), nhưng không
-    // consume ký tự đó → phải tự cắt bỏ '(' / '[' / '{' dangling ở cuối stem,
-    // tránh trường hợp stem = "(" khi dòng chỉ chứa options dạng "(A) ... (B) ...".
     const stem = line
       .slice(0, markers[0].index ?? 0)
       .replace(/[\s([{]+$/u, '')
@@ -741,8 +752,9 @@ export class ToeicPracticeImportService {
 
       if (!optionText) continue;
 
+      const rawKey = marker[1] || marker[2];
       options.push({
-        optionKey: marker[1].toUpperCase(),
+        optionKey: rawKey.toUpperCase(),
         optionText,
         isCorrect: false,
       });
@@ -823,6 +835,69 @@ export class ToeicPracticeImportService {
     if (scoreBandMax <= 600) return 'medium';
     if (scoreBandMax <= 800) return 'hard';
     return 'expert';
+  }
+
+  private calculateHeuristicDifficulty(
+    part: number,
+    stem: string,
+    options: { optionText: string }[],
+  ): {
+    score_band_min: number;
+    score_band_max: number;
+    difficulty_level: string;
+  } {
+    let score = 0; // 0 to 10
+
+    // 1. Part factor (0-4 pts)
+    if (part === 1 || part === 2) score += 1;
+    else if (part === 5) score += 2;
+    else if (part === 6 || part === 3 || part === 4) score += 3;
+    else score += 4; // Part 7
+
+    // 2. Stem length factor (0-3 pts)
+    const wordCount = (stem || '').split(/\s+/).length;
+    if (wordCount > 30) score += 3;
+    else if (wordCount > 15) score += 2;
+    else if (wordCount > 5) score += 1;
+
+    // 3. Option length factor (0-2 pts)
+    const avgOptionLength =
+      options.reduce((sum, opt) => sum + (opt.optionText || '').length, 0) /
+      (options.length || 1);
+    if (avgOptionLength > 40) score += 2;
+    else if (avgOptionLength > 15) score += 1;
+
+    // 4. Vocabulary Rarity (Simulation - 0-1 pts)
+    const advancedSuffixes =
+      /([a-z]{3,}tion|[a-z]{3,}ment|[a-z]{3,}ity|[a-z]{3,}ness)\b/gi;
+    const matches = (stem || '').match(advancedSuffixes);
+    if (matches && matches.length > 1) score += 1;
+
+    if (score <= 3) {
+      return {
+        score_band_min: 0,
+        score_band_max: 400,
+        difficulty_level: 'easy',
+      };
+    } else if (score <= 5) {
+      return {
+        score_band_min: 300,
+        score_band_max: 550,
+        difficulty_level: 'medium',
+      };
+    } else if (score <= 7) {
+      return {
+        score_band_min: 500,
+        score_band_max: 750,
+        difficulty_level: 'hard',
+      };
+    } else {
+      return {
+        score_band_min: 700,
+        score_band_max: 990,
+        difficulty_level: 'expert',
+      };
+    }
   }
 
   private normalizeForFingerprint(input: string): string {
@@ -1844,13 +1919,64 @@ export class ToeicPracticeImportService {
           readingPassage: null,
         });
       }
+    } else if (isListening && importScope === 'full_listening' && parsed.length > 0 && parsed.length < 100) {
+      this.logger.log(
+        `Tự động bổ sung placeholder cho các câu hỏi Listening bị thiếu chữ (${parsed.length}/100 câu)...`,
+      );
+      
+      const existingNumbers = new Set(
+        parsed
+          .map((q) => q.questionNumber)
+          .filter((n): n is number => typeof n === 'number' && n > 0)
+      );
+      
+      for (let i = 1; i <= 100; i++) {
+        if (!existingNumbers.has(i)) {
+          const isPart1 = i <= 6;
+          const isPart2 = i > 6 && i <= 31;
+          const isPart3 = i > 31 && i <= 70;
+          const isPart4 = i > 70;
+          parsed.push({
+            questionNumber: i,
+            detectedPart: isPart1 ? 1 : isPart2 ? 2 : isPart3 ? 3 : 4,
+            stem: isPart1
+              ? `[Part 1 - Câu ${i}: Nhìn vào hình ảnh và chọn mô tả đúng nhất]`
+              : isPart2
+                ? `[Part 2 - Câu ${i}: Nghe câu hỏi và chọn đáp án phù hợp nhất]`
+                : isPart3
+                  ? `[Part 3 - Câu ${i}: Nghe đoạn hội thoại và chọn đáp án đúng]`
+                  : `[Part 4 - Câu ${i}: Nghe bài nói ngắn và chọn đáp án đúng]`,
+            options: isPart2
+              ? ['A', 'B', 'C'].map((k) => ({
+                optionKey: k,
+                optionText: `(${k})`,
+                isCorrect: false,
+              }))
+              : ['A', 'B', 'C', 'D'].map((k) => ({
+                optionKey: k,
+                optionText: `(${k})`,
+                isCorrect: false,
+              })),
+            readingPassage: null,
+          });
+        }
+      }
+      
+      // Sắp xếp lại mảng theo đúng thứ tự câu hỏi tăng dần
+      parsed.sort((a, b) => {
+        const numA = typeof a.questionNumber === 'number' ? a.questionNumber : 0;
+        const numB = typeof b.questionNumber === 'number' ? b.questionNumber : 0;
+        return numA - numB;
+      });
     } else if (parsed.length === 0) {
       throw new BadRequestException(
         'Không phân tích được câu hỏi nào từ file. Vui lòng đảm bảo cấu trúc: Mỗi câu phải bắt đầu bằng số thứ tự (vd: 101.) và có đủ đáp án A, B, C, D in hoa.',
       );
     }
 
-    const difficultyLabel = this.deriveDifficultyLabel(dto.score_band_max);
+    const difficultyLabel = dto.score_band_max !== undefined && dto.score_band_max !== null
+      ? this.deriveDifficultyLabel(dto.score_band_max)
+      : 'medium';
 
     const targetParts =
       importScope === 'single_part'
@@ -1966,6 +2092,13 @@ export class ToeicPracticeImportService {
     const totalReadingQuestions =
       skillArea === 'reading' ? sourceList.length : parsed.length;
 
+    // Track imported question numbers to robustly handle duplicate numbers (common in Part 6/7 column splits)
+    const importedQuestionsMap = new Map<number, {
+      id: number;
+      hasPlaceholder: boolean;
+      fingerprint: string;
+    }>();
+
     this.logger.log(
       `[Import] scope=${importScope} sourceList=${sourceList.length} totalReading=${totalReadingQuestions}`,
     );
@@ -2018,6 +2151,43 @@ export class ToeicPracticeImportService {
         }
       }
 
+      // Enforce unique question numbers in the same batch to avoid 101/100 offset
+      if (importedQuestionsMap.has(questionNumber)) {
+        const existing = importedQuestionsMap.get(questionNumber)!;
+        const isNewPlaceholder = pq.needsReview === true;
+
+        if (existing.hasPlaceholder && !isNewPlaceholder) {
+          // The previously imported question was a fallback placeholder, but this new one is a REAL question.
+          // Delete the old placeholder question and import this new one in its place.
+          this.logger.log(
+            `[Import] Replacing duplicate placeholder question #${questionNumber} with the real question from PDF.`,
+          );
+          try {
+            await this.prisma.toeicPracticeOption.deleteMany({
+              where: { question_id: existing.id },
+            });
+            await this.prisma.toeicPracticeQuestion.delete({
+              where: { id: existing.id },
+            });
+            
+            // Remove from tracking maps and decrement imported count
+            seenInCurrentBatch.delete(existing.fingerprint);
+            questionsNeedingReview.delete(questionNumber);
+            importedQuestionsMap.delete(questionNumber);
+            importedCount--;
+          } catch (deleteErr) {
+            this.logger.warn(`Failed to delete duplicate placeholder question #${questionNumber}: ${String(deleteErr)}`);
+          }
+        } else {
+          // If the existing one is real, or both are placeholders/real, skip the new duplicate.
+          this.logger.warn(
+            `[Import] Skipping duplicate question number #${questionNumber} (already imported ${existing.hasPlaceholder ? 'placeholder' : 'real'}).`,
+          );
+          skippedCount += 1;
+          continue;
+        }
+      }
+
       const fingerprint = this.buildQuestionFingerprint(
         part,
         pq.stem,
@@ -2045,6 +2215,10 @@ export class ToeicPracticeImportService {
           part1Count++;
         }
 
+        const hasBand = dto.score_band_min !== undefined && dto.score_band_min !== null &&
+                        dto.score_band_max !== undefined && dto.score_band_max !== null;
+        const computedDiff = hasBand ? null : this.calculateHeuristicDifficulty(part, pq.stem, pq.options);
+
         const question = await this.prisma.toeicPracticeQuestion.create({
           data: {
             skill_area: skillArea,
@@ -2052,9 +2226,9 @@ export class ToeicPracticeImportService {
             stem: pq.stem,
             reading_passage: part >= 6 ? (pq.readingPassage ?? null) : null,
             context_image: contextImageUrl,
-            score_band_min: dto.score_band_min,
-            score_band_max: dto.score_band_max,
-            difficulty_label: difficultyLabel,
+            score_band_min: hasBand ? dto.score_band_min! : computedDiff!.score_band_min,
+            score_band_max: hasBand ? dto.score_band_max! : computedDiff!.score_band_max,
+            difficulty_label: hasBand ? difficultyLabel : computedDiff!.difficulty_level,
             difficulty_score: 0.3,
             source_slug: practiceSetId,
             source_item_id: questionNumber,
@@ -2075,6 +2249,11 @@ export class ToeicPracticeImportService {
         detectedParts.add(part);
         importedCount++;
         seenInCurrentBatch.add(fingerprint);
+        importedQuestionsMap.set(questionNumber, {
+          id: question.id,
+          hasPlaceholder: pq.needsReview === true,
+          fingerprint,
+        });
         if (pq.needsReview) {
           questionsNeedingReview.add(questionNumber);
         }
@@ -2267,7 +2446,13 @@ export class ToeicPracticeImportService {
   ): Promise<ToeicPracticeManualSupplementResponseDto> {
     void accountId;
 
-    if (dto.score_band_min > dto.score_band_max) {
+    if (
+      dto.score_band_min !== undefined &&
+      dto.score_band_max !== undefined &&
+      dto.score_band_min !== null &&
+      dto.score_band_max !== null &&
+      dto.score_band_min > dto.score_band_max
+    ) {
       throw new BadRequestException(
         'score_band_min phải nhỏ hơn hoặc bằng score_band_max.',
       );
@@ -2280,7 +2465,9 @@ export class ToeicPracticeImportService {
     const practiceSetId =
       dto.practice_set_id?.trim() ||
       `tp-manual-${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const difficultyLabel = this.deriveDifficultyLabel(dto.score_band_max);
+    const difficultyLabel = dto.score_band_max !== undefined && dto.score_band_max !== null
+      ? this.deriveDifficultyLabel(dto.score_band_max)
+      : 'medium';
     const parts = [...new Set(dto.items.map((item) => item.toeic_part))].filter(
       (part) => part >= 1 && part <= 7,
     );
@@ -2352,14 +2539,22 @@ export class ToeicPracticeImportService {
         continue;
       }
 
+      const hasBand = dto.score_band_min !== undefined && dto.score_band_min !== null &&
+                      dto.score_band_max !== undefined && dto.score_band_max !== null;
+      const computedDiff = hasBand ? null : this.calculateHeuristicDifficulty(
+        part,
+        item.stem,
+        normalizedOptions.map(o => ({ optionText: o.optionText }))
+      );
+
       const createdQuestion = await this.prisma.toeicPracticeQuestion.create({
         data: {
           skill_area: this.deriveSkillArea(part),
           part,
           stem: item.stem.trim(),
-          score_band_min: dto.score_band_min,
-          score_band_max: dto.score_band_max,
-          difficulty_label: difficultyLabel,
+          score_band_min: hasBand ? dto.score_band_min! : computedDiff!.score_band_min,
+          score_band_max: hasBand ? dto.score_band_max! : computedDiff!.score_band_max,
+          difficulty_label: hasBand ? difficultyLabel : computedDiff!.difficulty_level,
           difficulty_score: 0.3,
           source_slug: practiceSetId,
           source_item_id: questionNumber,
@@ -3018,5 +3213,56 @@ export class ToeicPracticeImportService {
     );
 
     return mappedCount;
+  }
+
+  async listPracticeSets(): Promise<Array<{
+    practice_set_id: string;
+    skill_area: string;
+    total_items: number;
+    created_at: Date;
+    has_answer_key: boolean;
+  }>> {
+    // Group only by source_slug + skill_area so that questions with different
+    // score_band values (assigned per-question by the heuristic) are NOT split
+    // into separate rows — they all belong to the same practice set.
+    const groups = await this.prisma.toeicPracticeQuestion.groupBy({
+      by: ['source_slug', 'skill_area'],
+      where: { source_slug: { not: null } },
+      _count: { id: true },
+      _min: { created_at: true },
+    });
+
+    const result: Array<{
+      practice_set_id: string;
+      skill_area: string;
+      total_items: number;
+      created_at: Date;
+      has_answer_key: boolean;
+    }> = [];
+
+    for (const g of groups) {
+      const slug = g.source_slug ?? 'unknown';
+      const correctCount = await this.prisma.toeicPracticeOption.count({
+        where: {
+          is_correct: true,
+          question: { source_slug: slug },
+        },
+      });
+      result.push({
+        practice_set_id: slug,
+        skill_area: g.skill_area,
+        total_items: g._count.id,
+        created_at: g._min.created_at ?? new Date(),
+        has_answer_key: correctCount > 0,
+      });
+    }
+    return result.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+  }
+
+  async deletePracticeSet(practiceSetId: string): Promise<{ practice_set_id: string; deleted: boolean }> {
+    await this.prisma.toeicPracticeQuestion.deleteMany({
+      where: { source_slug: practiceSetId },
+    });
+    return { practice_set_id: practiceSetId, deleted: true };
   }
 }
