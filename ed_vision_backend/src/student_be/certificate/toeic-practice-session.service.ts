@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { IsInt, IsObject, IsArray, Min, Max } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
-import { encryptString, encryptRecord } from '../../common/crypto.util';
+import { encryptString, encryptRecord, tryDecryptString } from '../../common/crypto.util';
 import { QuestionPointsCalculatorService } from '../../study-room/services/question-points-calculator.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export class ToeicPracticeSessionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly questionPointsCalculator: QuestionPointsCalculatorService,
-  ) {}
+  ) { }
 
   // ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -330,8 +330,6 @@ export class ToeicPracticeSessionService {
     part: number,
     count = 10,
   ): Promise<GetQuestionsForPartResponseDto> {
-    void count;
-
     if (part < 1 || part > 7) {
       throw new BadRequestException('TOEIC part phải là số từ 1 đến 7.');
     }
@@ -340,10 +338,7 @@ export class ToeicPracticeSessionService {
     const learnerScore = this.resolveLearnerBandScore(enrollment);
     const skillArea = this.deriveSkillArea(part);
 
-    // Target: 10 questions per part.
-    // - If DB has ≥10 valid: random-pick 10, prioritising questions with audio.
-    // - If DB has <10: return all available (no throw).
-    const targetCount = 10;
+    const targetCount = count;
 
     const usedQuestionIds = await this.getUsedQuestionIdSet(
       enrollment.id,
@@ -359,12 +354,8 @@ export class ToeicPracticeSessionService {
         where: {
           part,
           is_published: true,
-          ...(opts.strictBand
-            ? {
-                score_band_min: { lte: learnerScore },
-                score_band_max: { gte: learnerScore },
-              }
-            : {}),
+          // Removed score band filtering completely so all questions in this part
+          // are accessible to all students regardless of their current score band/level.
           ...(opts.excludeUsed && usedQuestionIdList.length > 0
             ? { id: { notIn: usedQuestionIdList } }
             : {}),
@@ -495,7 +486,11 @@ export class ToeicPracticeSessionService {
           if (assigned.has(sibling.id)) continue;
           const sibAudio = sibling.context_audio;
           // Khác URL → sibling thuộc nhóm audio khác, dừng gom.
-          if (sibAudio && sibAudio !== anchorAudio) break;
+          if (sibAudio) {
+            const decSib = tryDecryptString(sibAudio);
+            const decAnchor = tryDecryptString(anchorAudio);
+            if (decSib !== decAnchor) break;
+          }
           group.push(sibling);
           assigned.add(sibling.id);
         }
@@ -644,7 +639,7 @@ export class ToeicPracticeSessionService {
 
     // Accept any reasonable number of questions (1..maxCount) — some TOEIC
     // parts have fewer than 10 items available (e.g. Part 1 Photographs = 6).
-    const maxCount = 10;
+    const maxCount = 20;
     const uniqueQuestionIds = Array.from(
       new Set(
         dto.question_ids
@@ -670,9 +665,12 @@ export class ToeicPracticeSessionService {
       },
     });
 
-    if (questions.length !== uniqueQuestionIds.length) {
+    // Accept session as long as at least 1 valid question is found.
+    // Questions may have been deleted from the DB after being served to the student —
+    // in that case we grade only what's still available instead of rejecting the whole session.
+    if (questions.length === 0) {
       throw new BadRequestException(
-        `Một số câu hỏi không hợp lệ hoặc không thuộc Part ${dto.toeic_part}.`,
+        `Không tìm thấy câu hỏi hợp lệ nào thuộc Part ${dto.toeic_part} trong lần nộp này.`,
       );
     }
 
@@ -720,11 +718,9 @@ export class ToeicPracticeSessionService {
     );
 
     const totalQuestions = uniqueQuestionIds.length;
-    const budget = PART_POINT_BUDGET[dto.toeic_part] ?? 10;
-    // Scale per-correct value by the actual number of questions served so
-    // that parts with fewer than 10 items (e.g. Part 1 Photographs = 6)
-    // can still earn the full part budget when fully correct.
-    const pointsPerCorrect = budget / Math.max(1, totalQuestions);
+
+    // Yêu cầu: 1 câu đúng = +5 điểm, cho tất cả các part
+    const pointsPerCorrect = 5;
     const earnedPoints = correctCount * pointsPerCorrect;
 
     const previousBestAggregate =
@@ -869,13 +865,13 @@ export class ToeicPracticeSessionService {
       this.prisma.toeicPracticePartSession.deleteMany({}),
       resetReservePoints
         ? this.prisma.certificateEnrollment.updateMany({
-            where: { cert_type: 'toeic' },
-            data: { reserve_points: 0 },
-          })
+          where: { cert_type: 'toeic' },
+          data: { reserve_points: 0 },
+        })
         : this.prisma.certificateEnrollment.updateMany({
-            where: { id: -1 },
-            data: { reserve_points: 0 },
-          }),
+          where: { id: -1 },
+          data: { reserve_points: 0 },
+        }),
     ]);
 
     return {

@@ -410,11 +410,12 @@ export class CertificateEnrollmentController {
     @Param('part', ParseIntPipe) part: number,
     @Query('count') count?: string,
   ): Promise<GetQuestionsForPartResponseDto> {
-    const parsedCount = count !== undefined ? Number(count) : 10;
+    const defaultCount = (part === 3 || part === 4) ? 12 : 10;
+    const parsedCount = count !== undefined ? Number(count) : defaultCount;
     const safeCount =
       Number.isFinite(parsedCount) && parsedCount > 0
-        ? Math.min(parsedCount, 10)
-        : 10;
+        ? Math.min(parsedCount, 20)
+        : defaultCount;
     return this.practiceSessionService.getQuestionsForPart(
       req.user.account_id,
       part,
@@ -460,6 +461,16 @@ export class CertificateEnrollmentController {
   @Get('toeic/skill-feedback')
   async getToeicSkillFeedback(@Request() req: AuthenticatedRequest) {
     return this.service.getToeicSkillFeedback(req.user.account_id);
+  }
+
+  /**
+   * POST /student/certificate/toeic/reset-progress
+   * Deletes all TOEIC practice sessions, clears reserve points, and resets topic progress.
+   */
+  @Post('toeic/reset-progress')
+  @HttpCode(HttpStatus.OK)
+  async resetToeicProgress(@Request() req: AuthenticatedRequest) {
+    return this.service.resetToeicProgress(req.user.account_id);
   }
 
   // ── TOEIC Exam Simulation Session ──────────────────────────────────────────

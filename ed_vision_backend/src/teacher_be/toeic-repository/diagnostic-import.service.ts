@@ -156,7 +156,7 @@ export class DiagnosticImportService {
     stem: string;
     options: ParsedOption[];
   } {
-    const markerRegex = /([A-D])[).:-]\s*/g;
+    const markerRegex = /(?:\(([A-D])\)|([A-D]))[).:-]?\s*/gi;
     const markers = Array.from(line.matchAll(markerRegex)).filter((match) => {
       const idx = match.index ?? -1;
       return idx === 0 || /\s/.test(line[idx - 1] ?? '');
@@ -174,8 +174,9 @@ export class DiagnosticImportService {
       const end = nextMarker?.index ?? line.length;
       const optionText = line.slice(start, end).replace(/\s+/g, ' ').trim();
       if (optionText) {
+        const rawKey = marker[1] || marker[2];
         options.push({
-          optionKey: marker[1].toUpperCase(),
+          optionKey: rawKey.toUpperCase(),
           optionText,
           isCorrect: false,
         });
@@ -1290,5 +1291,72 @@ export class DiagnosticImportService {
         (a, b) => a - b,
       ),
     };
+  }
+
+  async listRepositories(): Promise<Array<{
+    id: number;
+    cert_type: string;
+    title: string;
+    slug: string;
+    description: string | null;
+    total_items: number;
+    created_at: Date;
+    has_answer_key: boolean;
+  }>> {
+    const repos = await this.prisma.diagnosticRepository.findMany({
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        cert_type: true,
+        title: true,
+        slug: true,
+        description: true,
+        total_items: true,
+        created_at: true,
+      },
+    });
+
+    const result: Array<{
+      id: number;
+      cert_type: string;
+      title: string;
+      slug: string;
+      description: string | null;
+      total_items: number;
+      created_at: Date;
+      has_answer_key: boolean;
+    }> = [];
+    for (const r of repos) {
+      const correctCount = await this.prisma.diagnosticRepositoryOption.count({
+        where: {
+          is_correct: true,
+          item: { repository_id: r.id },
+        },
+      });
+      result.push({
+        id: r.id,
+        cert_type: r.cert_type,
+        title: r.title,
+        slug: r.slug,
+        description: r.description,
+        total_items: r.total_items,
+        created_at: r.created_at,
+        has_answer_key: correctCount > 0,
+      });
+    }
+    return result;
+  }
+
+  async deleteRepository(slug: string) {
+    const repository = await this.prisma.diagnosticRepository.findUnique({
+      where: { slug },
+    });
+    if (!repository) {
+      throw new BadRequestException(`Không tìm thấy diagnostic repository với mã: ${slug}`);
+    }
+    await this.prisma.diagnosticRepository.delete({
+      where: { slug },
+    });
+    return { slug, deleted: true };
   }
 }

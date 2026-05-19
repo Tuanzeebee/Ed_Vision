@@ -32,7 +32,6 @@ import {
   type ToeicRepositoryDetailResponse,
 } from "@/services/api/certificateService";
 import { getToeicIntakeProfile } from "./toeicIntake";
-import { calculateToeicPracticeScore } from "./toeicPracticeScore";
 
 interface LearningMapState {
   listening: {
@@ -122,6 +121,40 @@ function inferPart(
   return readingBuckets[Math.min(index, readingBuckets.length - 1)] ?? 7;
 }
 
+/** Returns true if option_text is a bare placeholder like "(A)" or "A" */
+function isPlaceholderOptionText(text: string, key: string): boolean {
+  const t = text.trim().toLowerCase();
+  const k = key.toLowerCase();
+  return (
+    t === "" ||
+    t === k ||
+    t === `(${k})` ||
+    t.startsWith(`(${k}) -`) ||
+    t.includes("vui lòng nhập đáp án")
+  );
+}
+
+/** Returns clean question stem — replaces bracketed placeholder with a short instruction.
+ *  Preserves the question number so users know which question they are on. */
+function cleanListeningQuestionStem(stem: string, part: number, questionNumber: number): string {
+  const s = stem.trim();
+  const isPlaceholder =
+    s.startsWith("[") ||
+    s.toLowerCase().includes("nhìn vào hình ảnh") ||
+    s.toLowerCase().includes("chọn mô tả đúng nhất") ||
+    s.toLowerCase().includes("nghe câu hỏi và chọn") ||
+    s.toLowerCase().includes("nghe đoạn hội thoại") ||
+    s.toLowerCase().includes("nghe bài nói ngắn") ||
+    s === "";
+  if (!isPlaceholder) return s; // real question text — return as-is
+  const n = questionNumber;
+  if (part === 1) return `Câu ${n}: Nhìn vào hình ảnh và chọn mô tả đúng nhất.`;
+  if (part === 2) return `Câu ${n}: Nghe câu hỏi và chọn đáp án phù hợp nhất.`;
+  if (part === 3) return `Câu ${n}: Nghe đoạn hội thoại và chọn đáp án đúng.`;
+  if (part === 4) return `Câu ${n}: Nghe bài nói ngắn và chọn đáp án đúng.`;
+  return `Câu ${n}: Chọn đáp án đúng theo nội dung audio.`;
+}
+
 function toExamQuestions(
   detail: ToeicRepositoryDetailResponse,
   examType: "listening" | "reading",
@@ -139,25 +172,36 @@ function toExamQuestions(
         const safeKey = (
           ["A", "B", "C", "D"].includes(raw) ? raw : fallbackKeys[optionIdx]
         ) as AnswerKey;
+        const rawText = String(opt.option_text ?? "").trim();
+        // Strip placeholder option texts ("(A)", "A", etc.) — only show real descriptions
+        const text = isPlaceholderOptionText(rawText, safeKey) ? "" : rawText;
         return {
           key: safeKey,
-          text: String(opt.option_text ?? "").trim(),
+          text,
           isCorrect: Boolean(opt.is_correct),
         };
       })
-      .filter((opt) => opt.text.length > 0);
+      // For listening we keep options even when text is empty (still selectable A/B/C/D)
+      // For reading, options without text are useless — filter them out
+      .filter((opt) => examType === "listening" || opt.text.length > 0);
 
     if (options.length < 2) return acc;
 
     const correct = options.find((opt) => opt.isCorrect)?.key ?? null;
     const part = inferPart(item, examType, idx);
 
+    const rawStem = String(item.stem ?? "").trim();
+    const question =
+      examType === "listening"
+        ? cleanListeningQuestionStem(rawStem, part, item.item_order)
+        : rawStem;
+
     acc.push({
       id: String(item.id),
       part,
       partName: getPartName(part),
       context: item.reading_passage ?? undefined,
-      question: String(item.stem ?? "").trim(),
+      question,
       options: options.map((opt) => ({ key: opt.key, text: opt.text })),
       correctAnswer: correct,
       explanation:
@@ -235,12 +279,12 @@ export default function ToeicExamSimulationPage() {
   const totalQuestions = questions.length;
   const examDurationSeconds = useMemo(() => {
     if (serverDurationSec > 0) return serverDurationSec;
-    if (totalQuestions <= 0) {
-      return isListening ? 45 * 60 : 30 * 60;
-    }
-    const perQuestionSeconds = isListening ? 75 : 65;
-    const floor = isListening ? 20 * 60 : 15 * 60;
-    return Math.max(floor, totalQuestions * perQuestionSeconds);
+    // Chuẩn TOEIC: Listening = 45 phút (2700s) cho 100 câu (27s/câu).
+    // Reading = 75 phút (4500s) cho 100 câu (45s/câu).
+    const perQuestionSeconds = isListening ? 27 : 45;
+    const defaultTotal = 100;
+    const count = totalQuestions > 0 ? totalQuestions : defaultTotal;
+    return count * perQuestionSeconds;
   }, [isListening, totalQuestions, serverDurationSec]);
 
   // Hydrate session state khi phát hiện ?session=xxx trên URL (vd: F5).
@@ -371,11 +415,13 @@ export default function ToeicExamSimulationPage() {
     targetScore: number;
     isUnlocked: boolean;
     loading: boolean;
+    unmetReasons: string[];
   }>({
     currentScore: 300,
     targetScore: 650,
     isUnlocked: false,
     loading: true,
+    unmetReasons: [],
   });
 
   useEffect(() => {
@@ -389,73 +435,89 @@ export default function ToeicExamSimulationPage() {
       if (cancelled) return;
 
       const profile = getToeicIntakeProfile();
-      const baseScore = profile ? Math.round(profile.currentScore) : (planData ? Math.round(planData.current_score - (planData.total_boost ?? 0)) : 300);
-      const targetScore = planData?.target_score ?? (profile?.milestoneState.targetScore ?? 650);
+      // baseScore = skill_baseline ONLY if the student has already taken that skill's exam.
+      // Before first exam: baseScore = 0 (practice score grows purely from earned points).
+      // After exam at X: baseScore = X (so practice score continues from the exam result).
+      let baseScore: number;
+      if (planData) {
+        if (isListening) {
+          const examTaken = planData.has_taken_listening_exam ?? false;
+          baseScore = examTaken ? Math.round(planData.listening_baseline ?? 0) : 0;
+        } else {
+          const examTaken = planData.has_taken_reading_exam ?? false;
+          baseScore = examTaken ? Math.round(planData.reading_baseline ?? 0) : 0;
+        }
+      } else {
+        baseScore = 0;
+      }
+      // Per-skill target = full target_score. Each skill independently needs to reach it.
+      const totalTarget = planData?.target_score ?? (profile?.milestoneState.targetScore ?? 650);
+      const targetScore = totalTarget;
+
+      const LISTENING_PARTS = [1, 2, 3, 4];
+      const READING_PARTS = [5, 6, 7];
+      const skillParts = isListening ? LISTENING_PARTS : READING_PARTS;
+      const lastSkillPart = skillParts[skillParts.length - 1]; // 4 or 7
 
       let finalScore = baseScore;
+      let lastPartCompleted = false;
+
       if (reserveData) {
         const completedParts = new Set(
           Array.isArray(reserveData.completed_parts)
             ? reserveData.completed_parts
             : [],
         );
-        const LISTENING_PART_KEYS = ["part1", "part2", "part3", "part4"];
-        const READING_PART_KEYS  = ["part5", "part6", "part7"];
-        const bestCorrectByPart: Record<string, number> = {};
 
-        const LISTENING_NODES_CONFIG = [
-          { id: 0, scorePerCorrect: 2 },
-          { id: 1, scorePerCorrect: 2.5 },
-          { id: 2, scorePerCorrect: 2.5 },
-          { id: 3, scorePerCorrect: 2.5 },
-        ];
-        const READING_NODES_CONFIG = [
-          { id: 0, scorePerCorrect: 2 },
-          { id: 1, scorePerCorrect: 2.5 },
-          { id: 2, scorePerCorrect: 2.5 },
-        ];
-
-        LISTENING_NODES_CONFIG.forEach((node, i) => {
-          const partKey = LISTENING_PART_KEYS[i];
-          const partNum = i + 1;
-          if (completedParts.has(partNum)) {
-            const session = (reserveData.part_sessions ?? []).find(
-              (s: any) => s.toeic_part === partNum,
+        // Flat +5/question: sum earned_points across all sessions for this skill
+        const sessions: { toeic_part: number; earned_points: number }[] =
+          reserveData.part_sessions ?? [];
+        const earnedByPart: Record<number, number> = {};
+        for (const s of sessions) {
+          if (skillParts.includes(s.toeic_part)) {
+            earnedByPart[s.toeic_part] = Math.max(
+              earnedByPart[s.toeic_part] ?? 0,
+              s.earned_points ?? 0,
             );
-            const earned = session?.earned_points ?? 0;
-            const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
-            bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
           }
-        });
-
-        READING_NODES_CONFIG.forEach((node, i) => {
-          const partKey = READING_PART_KEYS[i];
-          const partNum = i + 5;
-          if (completedParts.has(partNum)) {
-            const session = (reserveData.part_sessions ?? []).find(
-              (s: any) => s.toeic_part === partNum,
-            );
-            const earned = session?.earned_points ?? 0;
-            const correct = node.scorePerCorrect > 0 ? Math.round(earned / node.scorePerCorrect) : 0;
-            bestCorrectByPart[partKey] = Math.max(bestCorrectByPart[partKey] ?? 0, correct);
-          }
-        });
-
-        const practiceResult = calculateToeicPracticeScore({
-          bestCorrectByPart,
-          minScore: baseScore,
-          maxScore: baseScore + 200,
-        });
-        if (practiceResult) {
-          finalScore = practiceResult.finalScore;
         }
+        const totalEarned = Object.values(earnedByPart).reduce((a, b) => a + b, 0);
+        finalScore = baseScore + totalEarned;
+
+        // Last part must be completed (has a session entry)
+        lastPartCompleted = completedParts.has(lastSkillPart);
+      }
+
+      // All 3 criteria: score >= target AND last practice part is unlocked AND completed
+      const allPartsBeforeLastCompleted = isListening
+        ? [1, 2, 3].every((p) =>
+          (reserveData?.completed_parts ?? []).includes(p),
+        )
+        : [5, 6].every((p) =>
+          (reserveData?.completed_parts ?? []).includes(p),
+        );
+
+      const reasons: string[] = [];
+      if (finalScore < targetScore) {
+        reasons.push(`Điểm ôn tập hiện tại của bạn (${finalScore}) chưa đạt mục tiêu (${targetScore} điểm).`);
+      }
+      if (!allPartsBeforeLastCompleted) {
+        reasons.push(
+          isListening
+            ? "Bạn chưa hoàn thành các phần luyện tập trước đó (Part 1, Part 2, Part 3)."
+            : "Bạn chưa hoàn thành các phần luyện tập trước đó (Part 5, Part 6)."
+        );
+      }
+      if (!lastPartCompleted) {
+        reasons.push(`Bạn chưa hoàn thành lượt luyện tập của phần cuối cùng (Part ${lastSkillPart}).`);
       }
 
       setToeicScoreState({
         currentScore: finalScore,
         targetScore,
-        isUnlocked: finalScore >= targetScore,
+        isUnlocked: reasons.length === 0,
         loading: false,
+        unmetReasons: reasons,
       });
     }).catch(() => {
       if (cancelled) return;
@@ -464,6 +526,7 @@ export default function ToeicExamSimulationPage() {
         targetScore: 650,
         isUnlocked: false,
         loading: false,
+        unmetReasons: ["Không thể kết nối hoặc tải thông tin tiến độ từ hệ thống."],
       });
     });
 
@@ -721,11 +784,17 @@ export default function ToeicExamSimulationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-3">
               Bài thi chưa mở khóa
             </h2>
-            <p className="text-gray-600 mb-6">
-              Bạn chưa đạt đủ điểm ôn tập mục tiêu để thi Mock Exam. Vui lòng quay lại phòng luyện tập để tích lũy đủ điểm.
-            </p>
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6 text-sm text-left space-y-2">
+              <p className="font-bold text-center mb-1 text-red-800">Các điều kiện cần hoàn thành:</p>
+              {toeicScoreState.unmetReasons.map((reason, idx) => (
+                <div key={idx} className="flex gap-2 items-start">
+                  <span className="text-red-500 font-bold shrink-0">•</span>
+                  <span>{reason}</span>
+                </div>
+              ))}
+            </div>
             <p className="text-sm text-gray-500 mb-5">
-              Điểm hiện tại: {toeicScoreState.currentScore} / {toeicScoreState.targetScore} điểm.
+              Điểm hiện tại: <strong className="text-slate-800">{toeicScoreState.currentScore}</strong> / {toeicScoreState.targetScore} điểm.
             </p>
             <button
               onClick={handleGoToMap}
@@ -760,15 +829,9 @@ export default function ToeicExamSimulationPage() {
                 </div>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
+            <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">
               TOEIC {isListening ? "Listening" : "Reading"} Exam
             </h1>
-            <p className="text-gray-600 text-center text-sm mb-1">
-              {repositoryTitle}
-            </p>
-            <p className="text-gray-400 text-center text-xs mb-6">
-              Slug: {repositorySlug}
-            </p>
 
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
@@ -867,13 +930,12 @@ export default function ToeicExamSimulationPage() {
               return (
                 <div
                   key={q.id}
-                  className={`bg-white border border-gray-200 shadow-sm rounded-xl p-4 border-l-4 ${
-                    !hasOfficialAnswer
+                  className={`bg-white border border-gray-200 shadow-sm rounded-xl p-4 border-l-4 ${!hasOfficialAnswer
                       ? "border-l-amber-400"
                       : isCorrect
                         ? "border-l-green-500"
                         : "border-l-red-500"
-                  }`}
+                    }`}
                 >
                   <p className="text-sm text-teal-600 font-semibold mb-1">
                     Câu {idx + 1} - {q.partName}
@@ -894,15 +956,14 @@ export default function ToeicExamSimulationPage() {
                       return (
                         <div
                           key={opt.key}
-                          className={`px-3 py-2 rounded-lg text-sm border ${
-                            right
+                          className={`px-3 py-2 rounded-lg text-sm border ${right
                               ? "bg-green-50 border-green-300 text-green-800"
                               : selected && hasOfficialAnswer && !isCorrect
                                 ? "bg-red-50 border-red-300 text-red-800"
                                 : selected && !hasOfficialAnswer
                                   ? "bg-amber-50 border-amber-300 text-amber-800"
                                   : "bg-gray-50 border-gray-200 text-gray-600"
-                          }`}
+                            }`}
                         >
                           <span className="font-bold mr-2">{opt.key}.</span>
                           {opt.text}
@@ -941,29 +1002,18 @@ export default function ToeicExamSimulationPage() {
                       </>
                     )}
                   </div>
-                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <span className="font-bold">Giải thích:</span>{" "}
-                    {q.explanation}
-                  </p>
                 </div>
               );
             })}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex justify-center mt-6">
             <button
               onClick={handleGoToMap}
-              className="py-3 px-5 rounded-xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-700 font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+              className="w-full sm:w-1/2 py-3 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-sm"
             >
               <MapIcon className="w-4 h-4" />
               Về map luyện tập
-            </button>
-            <button
-              onClick={handleRetry}
-              className="py-3 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-sm"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Thi lại
             </button>
           </div>
         </main>
@@ -1117,9 +1167,8 @@ export default function ToeicExamSimulationPage() {
 
           {/* Timer */}
           <div
-            className={`font-mono text-sm font-bold inline-flex items-center gap-1 whitespace-nowrap ${
-              timeLeft <= 60 ? "text-red-500" : "text-teal-600"
-            }`}
+            className={`font-mono text-sm font-bold inline-flex items-center gap-1 whitespace-nowrap ${timeLeft <= 60 ? "text-red-500" : "text-teal-600"
+              }`}
           >
             <Clock className="w-4 h-4" />
             {formatTime(timeLeft)}
@@ -1218,11 +1267,10 @@ export default function ToeicExamSimulationPage() {
                   <button
                     key={opt.key}
                     onClick={() => handleSelectAnswer(opt.key)}
-                    className={`text-left px-4 py-3 rounded-xl border transition-colors ${
-                      isSelected
+                    className={`text-left px-4 py-3 rounded-xl border transition-colors ${isSelected
                         ? "bg-teal-600 border-teal-600 text-white shadow-sm"
                         : "bg-white border-gray-300 text-gray-800 hover:border-teal-500 hover:bg-teal-50"
-                    }`}
+                      }`}
                   >
                     <span className="font-bold mr-2">{opt.key}.</span>
                     {opt.text}
@@ -1230,6 +1278,12 @@ export default function ToeicExamSimulationPage() {
                 );
               })}
             </div>
+            {/* Part 1/2 notice: options are audio-only, no text needed */}
+            {currentQuestion.part <= 2 && examType === "listening" && (
+              <p className="text-xs text-gray-400 mt-2 italic">
+                Chọn đáp án phù hợp với nội dung âm thanh bạn nghe được.
+              </p>
+            )}
             {hasAnswered && (
               <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400" />

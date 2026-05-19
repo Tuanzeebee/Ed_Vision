@@ -15,7 +15,7 @@ import {
   constants as fsConstants,
 } from 'fs/promises';
 import { basename, extname, join } from 'path';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
@@ -101,6 +101,10 @@ type ToeicPlanStateRaw = {
   foundation_completed?: string[];
   foundation_skipped?: boolean;
   first_guide_shown?: boolean;
+  listening_baseline?: number;
+  reading_baseline?: number;
+  has_taken_listening_exam?: boolean;
+  has_taken_reading_exam?: boolean;
 };
 
 type LearningStatus = 'not_started' | 'in_progress' | 'completed';
@@ -461,6 +465,10 @@ export class CertificateEnrollmentService {
       first_guide_shown: Boolean(
         state.first_guide_shown ?? fromMeta.first_guide_shown,
       ),
+      listening_baseline: state.listening_baseline ?? Math.round(resolvedCurrentScore / 2),
+      reading_baseline: state.reading_baseline ?? Math.round(resolvedCurrentScore / 2),
+      has_taken_listening_exam: Boolean(state.has_taken_listening_exam ?? false),
+      has_taken_reading_exam: Boolean(state.has_taken_reading_exam ?? false),
     };
   }
 
@@ -1356,6 +1364,10 @@ export class CertificateEnrollmentService {
         dto.foundation_skipped ?? existingState.foundation_skipped,
       ),
       first_guide_shown: guideCompleted,
+      listening_baseline: dto.listening_baseline !== undefined ? dto.listening_baseline : existingState.listening_baseline,
+      reading_baseline: dto.reading_baseline !== undefined ? dto.reading_baseline : existingState.reading_baseline,
+      has_taken_listening_exam: dto.has_taken_listening_exam !== undefined ? dto.has_taken_listening_exam : existingState.has_taken_listening_exam,
+      has_taken_reading_exam: dto.has_taken_reading_exam !== undefined ? dto.has_taken_reading_exam : existingState.has_taken_reading_exam,
     };
 
     const hasActivity =
@@ -1366,11 +1378,13 @@ export class CertificateEnrollmentService {
         Number(existingState.listening_sessions ?? 0) ||
       Number(nextState.reading_sessions ?? 0) >
         Number(existingState.reading_sessions ?? 0);
-    const progressPercent = toPercent(
-      currentScore,
-      goalStartScore,
-      targetScore,
-    );
+    const progressPercent = dto.progress_percent !== undefined
+      ? Math.max(0, Math.min(100, Math.round(dto.progress_percent)))
+      : toPercent(
+          currentScore,
+          goalStartScore,
+          targetScore,
+        );
 
     let learningStatus =
       (enrollment.learning_status as LearningStatus | undefined) ??
@@ -1413,6 +1427,50 @@ export class CertificateEnrollmentService {
         target_score: updated.target_score,
       },
     );
+  }
+
+  async resetToeicProgress(accountId: number): Promise<{ success: boolean }> {
+    const studentId = await this.getStudentId(accountId);
+    const enrollment = await this.prisma.certificateEnrollment.findFirst({
+      where: { student_id: studentId, cert_type: 'toeic', status: 'active' },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Không tìm thấy enrollment đang hoạt động.');
+    }
+
+    // Preserve the first_guide_shown state if it was already completed
+    let preservePlanState: any = Prisma.DbNull;
+    if (enrollment.toeic_plan_state) {
+      const existing = enrollment.toeic_plan_state as any;
+      if (existing.first_guide_shown) {
+        preservePlanState = {
+          first_guide_shown: true,
+        };
+      }
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.toeicPracticePartSession.deleteMany({
+        where: { enrollment_id: enrollment.id },
+      }),
+      this.prisma.certificateTopicProgress.deleteMany({
+        where: { enrollment_id: enrollment.id },
+      }),
+      this.prisma.certificateEnrollment.update({
+        where: { id: enrollment.id },
+        data: {
+          reserve_points: 0,
+          toeic_plan_state: preservePlanState,
+          progress_percent: 0,
+          learning_status: 'not_started',
+          started_at: null,
+          last_activity_at: null,
+        },
+      }),
+    ]);
+
+    return { success: true };
   }
 
   /**
@@ -2253,7 +2311,7 @@ export class CertificateEnrollmentService {
     stem: string;
     options: ParsedImportOption[];
   } {
-    const markerRegex = /([A-D])[).:-]\s*/g;
+    const markerRegex = /(?:\(([A-D])\)|([A-D]))[).:-]?\s*/gi;
     const markers = Array.from(line.matchAll(markerRegex)).filter((match) => {
       const idx = match.index ?? -1;
       return idx === 0 || /\s/.test(line[idx - 1] ?? '');
@@ -2275,8 +2333,9 @@ export class CertificateEnrollmentService {
 
       if (!optionText) continue;
 
+      const rawKey = marker[1] || marker[2];
       options.push({
-        optionKey: marker[1].toUpperCase(),
+        optionKey: rawKey.toUpperCase(),
         optionText,
         isCorrect: false,
         rationale: null,
@@ -2748,7 +2807,13 @@ export class CertificateEnrollmentService {
           optionsMap: new Map(),
           answerKey: null,
           explanationLines: [],
-          part: currentPart,
+          part: skillArea === 'listening'
+            ? (questionNumber >= 1 && questionNumber <= 6 ? 1
+               : questionNumber >= 7 && questionNumber <= 31 ? 2
+               : questionNumber >= 32 && questionNumber <= 70 ? 3
+               : questionNumber >= 71 && questionNumber <= 100 ? 4
+               : currentPart)
+            : currentPart,
           lastOptionKey: null,
           inExplanation: false,
         };
@@ -2801,8 +2866,9 @@ export class CertificateEnrollmentService {
         continue;
       }
 
-      const optionLineMatch = line.match(/^([A-D])[).:-]\s*(.*)$/i);
-      if (optionLineMatch?.[1]) {
+      const optionLineMatch = line.match(/^(?:\(([A-D])\)|([A-D]))[).:-]?\s*(.*)$/i);
+      const matchedOptKey = optionLineMatch ? (optionLineMatch[1] || optionLineMatch[2]) : null;
+      if (matchedOptKey) {
         const parsedInlineOptions = this.extractInlineOptionsFromLine(line);
         const incoming = parsedInlineOptions.options;
 
@@ -5856,44 +5922,65 @@ export class CertificateEnrollmentService {
     const isListeningExam = repository.skill_area === 'listening';
     const isReadingExam = repository.skill_area === 'reading';
 
-    // Previous scores for the OTHER skill (keep unchanged)
-    const prevListeningScore = isListeningExam
-      ? newSkillScore
-      : Math.round(Number(currentState.current_score ?? 0) / 2);
-    const prevReadingScore = isReadingExam
-      ? newSkillScore
-      : Math.round(Number(currentState.current_score ?? 0) / 2);
+    // 1. Calculate previous individual baseline scores from the state
+    const initialTotalBaseline = Number(currentState.current_score ?? enrollment.current_score ?? 300);
+    const prevListeningBaseline = currentState.listening_baseline ?? Math.round(initialTotalBaseline / 2);
+    const prevReadingBaseline = currentState.reading_baseline ?? Math.round(initialTotalBaseline / 2);
+    const prevHasTakenListening = !!currentState.has_taken_listening_exam;
+    const prevHasTakenReading = !!currentState.has_taken_reading_exam;
 
-    const rawNewTotalScore = Math.min(
-      990,
-      Math.max(10, prevListeningScore + prevReadingScore),
-    );
+    // 2. Update baseline scores based on this mock exam attempt
+    let listening_baseline = prevListeningBaseline;
+    let reading_baseline = prevReadingBaseline;
+    let has_taken_listening_exam = prevHasTakenListening;
+    let has_taken_reading_exam = prevHasTakenReading;
 
-    // Only adopt the new score if it is strictly higher than the current one.
-    const prevTotalScore = Number(currentState.current_score ?? 0);
-    const finalScore =
-      rawNewTotalScore > prevTotalScore ? rawNewTotalScore : prevTotalScore;
+    if (isListeningExam) {
+      listening_baseline = newSkillScore;
+      has_taken_listening_exam = true;
+    }
+    if (isReadingExam) {
+      reading_baseline = newSkillScore;
+      has_taken_reading_exam = true;
+    }
 
-    const gainedScore = Math.max(0, finalScore - prevTotalScore);
+    // 3. Compute the new overall baseline score (current_score)
+    let resolvedCurrentScore = 0;
+    if (!has_taken_listening_exam && !has_taken_reading_exam) {
+      resolvedCurrentScore = listening_baseline + reading_baseline;
+    } else {
+      const lScore = has_taken_listening_exam ? listening_baseline : 0;
+      const rScore = has_taken_reading_exam ? reading_baseline : 0;
+      resolvedCurrentScore = lScore + rScore;
+    }
+    resolvedCurrentScore = Math.min(990, Math.max(10, resolvedCurrentScore));
 
-    const targetScore = Number(currentState.target_score ?? 0);
+    const rawNewTotalScore = resolvedCurrentScore;
+    const prevTotalScore = Number(currentState.current_score ?? enrollment.current_score ?? 0);
+    const gainedScore = Math.max(0, resolvedCurrentScore - prevTotalScore);
+
+    const targetScore = Number(currentState.target_score ?? enrollment.target_score ?? 0);
 
     // Student clears the milestone when their exam score meets/beats the target.
     const canChangeTarget = rawNewTotalScore >= targetScore && targetScore > 0;
 
     const updatedPlan = await this.saveToeicPlanState(accountId, {
-      current_score: finalScore,
+      current_score: resolvedCurrentScore,
       target_score: targetScore,
       total_boost: Number(currentState.total_boost ?? 0),
       listening_sessions: isListeningExam
-        ? Number(currentState.listening_sessions) + 1
-        : Number(currentState.listening_sessions),
+        ? Number(currentState.listening_sessions ?? 0) + 1
+        : Number(currentState.listening_sessions ?? 0),
       reading_sessions: isReadingExam
-        ? Number(currentState.reading_sessions) + 1
-        : Number(currentState.reading_sessions),
+        ? Number(currentState.reading_sessions ?? 0) + 1
+        : Number(currentState.reading_sessions ?? 0),
       foundation_completed: currentState.foundation_completed,
       foundation_skipped: currentState.foundation_skipped,
       first_guide_shown: currentState.first_guide_shown,
+      listening_baseline,
+      reading_baseline,
+      has_taken_listening_exam,
+      has_taken_reading_exam,
       has_activity: true,
     });
 
@@ -5901,6 +5988,7 @@ export class CertificateEnrollmentService {
     // When the student reaches target, reset reserve points for the next cycle.
     const enrollmentPatchData = {
       exam_score: rawNewTotalScore,
+      current_score: resolvedCurrentScore,
       ...(canChangeTarget ? { reserve_points: 0 } : {}),
     } as Prisma.CertificateEnrollmentUpdateManyMutationInput;
 

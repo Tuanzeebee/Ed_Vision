@@ -462,15 +462,26 @@ export class ToeicListeningImportService {
       },
     });
 
-    return repos.map((r) => ({
-      id: r.id,
-      slug: r.slug,
-      title: r.title ?? r.slug,
-      skill_area: r.skill_area ?? 'unknown',
-      total_items: r.total_items ?? 0,
-      is_published: r.is_published ?? false,
-      created_at: r.created_at,
-    }));
+    const result: ToeicRepositoryListItemDto[] = [];
+    for (const r of repos) {
+      const correctCount = await this.prisma.examRepositoryOption.count({
+        where: {
+          is_correct: true,
+          item: { repository_id: r.id },
+        },
+      });
+      result.push({
+        id: r.id,
+        slug: r.slug,
+        title: r.title ?? r.slug,
+        skill_area: r.skill_area ?? 'unknown',
+        total_items: r.total_items ?? 0,
+        is_published: r.is_published ?? false,
+        created_at: r.created_at,
+        has_answer_key: correctCount > 0,
+      });
+    }
+    return result;
   }
 
   // ──────────────────────────────────────────────────────────────────────────

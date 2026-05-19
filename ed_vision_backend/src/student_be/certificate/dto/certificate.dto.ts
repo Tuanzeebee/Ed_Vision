@@ -114,8 +114,34 @@ export class ToeicPlanSyncDto {
   first_guide_shown?: boolean;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  progress_percent?: number;
+
+  @IsOptional()
   @IsBoolean()
   has_activity?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(990)
+  listening_baseline?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(990)
+  reading_baseline?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  has_taken_listening_exam?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  has_taken_reading_exam?: boolean;
 }
 
 export class ToeicPlanSyncResponseDto {
@@ -127,6 +153,10 @@ export class ToeicPlanSyncResponseDto {
   foundation_completed!: string[];
   foundation_skipped!: boolean;
   first_guide_shown!: boolean;
+  listening_baseline?: number;
+  reading_baseline?: number;
+  has_taken_listening_exam?: boolean;
+  has_taken_reading_exam?: boolean;
 }
 
 export class ToeicLeaderboardEntryDto {
@@ -663,6 +693,7 @@ export class ToeicRepositoryListItemDto {
   total_items!: number;
   is_published!: boolean;
   created_at!: Date;
+  has_answer_key?: boolean;
 }
 
 export class ToeicRepositoryDeleteResponseDto {

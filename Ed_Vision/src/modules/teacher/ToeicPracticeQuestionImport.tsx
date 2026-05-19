@@ -15,6 +15,7 @@ import {
   ImageIcon,
   FolderOpen,
   Trash2,
+  FileText,
 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
 import { useRef } from "react";
@@ -49,17 +50,7 @@ type PracticePartSelection =
   | "speaking"
   | "writing";
 
-type ManualOptionKey = "A" | "B" | "C" | "D";
 
-type ManualSupplementRow = {
-  id: string;
-  toeic_part: number;
-  question_number: string;
-  stem: string;
-  reading_passage: string;
-  options: Record<ManualOptionKey, string>;
-  correct_option_key: ManualOptionKey;
-};
 
 function getSelectionConfig(selection: PracticePartSelection): {
   importScope: "single_part" | "full_reading" | "full_listening";
@@ -108,26 +99,7 @@ function getSelectionConfig(selection: PracticePartSelection): {
   };
 }
 
-function createManualRow(
-  toeicPart = 5,
-  questionNumber?: number,
-): ManualSupplementRow {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    toeic_part: toeicPart,
-    question_number:
-      typeof questionNumber === "number" ? String(questionNumber) : "",
-    stem: "",
-    reading_passage: "",
-    options: {
-      A: "",
-      B: "",
-      C: "",
-      D: "",
-    },
-    correct_option_key: "A",
-  };
-}
+
 
 export default function ToeicPracticeQuestionImport() {
   return (
@@ -147,19 +119,11 @@ export function ToeicPracticeQuestionImportBody({
   const [practiceFile, setPracticeFile] = useState<File | null>(null);
   const [practicePartSelection, setPracticePartSelection] =
     useState<PracticePartSelection>(_externalCertType === "ielts" ? "speaking" : "5");
-  const [practiceBandMin, setPracticeBandMin] = useState<number>(0);
-  const [practiceBandMax, setPracticeBandMax] = useState<number>(400);
   const [practiceReplaceExisting, setPracticeReplaceExisting] = useState(false);
   const [isPracticeSubmitting, setIsPracticeSubmitting] = useState(false);
   const [practiceError, setPracticeError] = useState<string | null>(null);
   const [practiceResult, setPracticeResult] =
     useState<ImportPracticeQuestionsResponse | null>(null);
-  const [manualRows, setManualRows] = useState<ManualSupplementRow[]>([]);
-  const [manualSubmitting, setManualSubmitting] = useState(false);
-  const [manualError, setManualError] = useState<string | null>(null);
-  const [manualResult, setManualResult] =
-    useState<ImportPracticeManualSupplementResponse | null>(null);
-
   const [practiceSetId, setPracticeSetId] = useState("");
   const [answerKeyFile, setAnswerKeyFile] = useState<File | null>(null);
   const [isAnswerKeySubmitting, setIsAnswerKeySubmitting] = useState(false);
@@ -269,25 +233,15 @@ export function ToeicPracticeQuestionImportBody({
       return;
     }
 
-    if (practiceBandMin > practiceBandMax) {
-      setPracticeError("Điểm tối thiểu không được lớn hơn điểm tối đa.");
-      return;
-    }
-
     setIsPracticeSubmitting(true);
     setPracticeError(null);
     setPracticeResult(null);
-    setManualError(null);
-    setManualResult(null);
-    setManualRows([]);
 
     try {
       const res = await importToeicPracticeQuestions(
         {
           import_scope: selectionConfig.importScope,
           toeic_part: selectionConfig.toeicPart,
-          score_band_min: practiceBandMin,
-          score_band_max: practiceBandMax,
           replace_existing: practiceReplaceExisting,
         },
         practiceFile,
@@ -295,20 +249,6 @@ export function ToeicPracticeQuestionImportBody({
       setPracticeResult(res);
       setPracticeSetId(res.practice_set_id);
       void loadSetsList();
-
-      const seededRows = res.skipped_duplicates
-        .slice(0, 50)
-        .map((duplicate) =>
-          createManualRow(
-            duplicate.part || defaultManualPart,
-            duplicate.question_number,
-          ),
-        );
-      setManualRows(
-        seededRows.length > 0
-          ? seededRows
-          : [createManualRow(defaultManualPart)],
-      );
 
       if (showPracticeList) {
         void loadPracticeQuestionList();
@@ -441,111 +381,7 @@ export function ToeicPracticeQuestionImportBody({
     }
   };
 
-  const updateManualRow = (
-    rowId: string,
-    updater: (row: ManualSupplementRow) => ManualSupplementRow,
-  ) => {
-    setManualRows((prev) =>
-      prev.map((row) => (row.id === rowId ? updater(row) : row)),
-    );
-  };
 
-  const addManualRow = () => {
-    setManualRows((prev) => [...prev, createManualRow(defaultManualPart)]);
-  };
-
-  const removeManualRow = (rowId: string) => {
-    setManualRows((prev) => prev.filter((row) => row.id !== rowId));
-  };
-
-  const handleManualSupplementSubmit = async () => {
-    if (!practiceResult?.practice_set_id && !practiceSetId.trim()) {
-      setManualError(
-        "Không tìm thấy mã bộ câu hỏi để nạp bổ sung. Vui lòng nạp câu hỏi trước hoặc nhập mã thủ công.",
-      );
-      return;
-    }
-
-    const activeRows = manualRows.filter((row) => row.stem.trim().length > 0);
-    if (activeRows.length === 0) {
-      setManualError("Vui lòng nhập nội dung cho ít nhất 1 câu bổ sung.");
-      return;
-    }
-
-    for (let i = 0; i < activeRows.length; i += 1) {
-      const row = activeRows[i];
-      const filledOptions = (
-        Object.entries(row.options) as Array<[ManualOptionKey, string]>
-      ).filter(([, text]) => text.trim().length > 0);
-
-      if (filledOptions.length < 2) {
-        setManualError(`Câu bổ sung #${i + 1} cần ít nhất 2 đáp án.`);
-        return;
-      }
-
-      if (!filledOptions.some(([key]) => key === row.correct_option_key)) {
-        setManualError(
-          `Câu bổ sung #${i + 1} chưa có nội dung cho đáp án đúng ${row.correct_option_key}.`,
-        );
-        return;
-      }
-    }
-
-    setManualSubmitting(true);
-    setManualError(null);
-    setManualResult(null);
-
-    try {
-      const payloadItems = activeRows.map((row) => {
-        const options = (
-          Object.entries(row.options) as Array<[ManualOptionKey, string]>
-        )
-          .filter(([, text]) => text.trim().length > 0)
-          .map(([key, text]) => ({
-            option_key: key,
-            option_text: text.trim(),
-          }));
-
-        return {
-          toeic_part: row.toeic_part,
-          question_number:
-            row.question_number.trim().length > 0
-              ? Number(row.question_number)
-              : undefined,
-          stem: row.stem.trim(),
-          reading_passage:
-            row.reading_passage.trim().length > 0
-              ? row.reading_passage.trim()
-              : undefined,
-          options,
-          correct_option_key: row.correct_option_key,
-        };
-      });
-
-      const res = await importToeicPracticeManualSupplement({
-        score_band_min: practiceBandMin,
-        score_band_max: practiceBandMax,
-        practice_set_id:
-          practiceSetId.trim() || practiceResult?.practice_set_id,
-        items: payloadItems,
-      });
-
-      setManualResult(res);
-      setPracticeSetId(res.practice_set_id);
-      void loadSetsList();
-      if (showPracticeList) {
-        void loadPracticeQuestionList();
-      }
-    } catch (err: unknown) {
-      const msg =
-        (err as any)?.response?.data?.message ??
-        (err as any)?.message ??
-        "Lỗi khi nạp bổ sung thủ công.";
-      setManualError(Array.isArray(msg) ? msg.join(" ") : String(msg));
-    } finally {
-      setManualSubmitting(false);
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-10">
@@ -605,7 +441,6 @@ export function ToeicPracticeQuestionImportBody({
                     <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       <th className="pb-2 pr-4 text-left">Mã Đề (Slug)</th>
                       <th className="pb-2 pr-4 text-left">Kỹ năng</th>
-                      <th className="pb-2 pr-4 text-center">Band điểm</th>
                       <th className="pb-2 pr-4 text-right">Tổng câu hỏi</th>
                       <th className="pb-2 pr-4 text-left">Ngày nạp</th>
                       <th className="pb-2 pr-4 text-center">Trạng thái</th>
@@ -623,9 +458,6 @@ export function ToeicPracticeQuestionImportBody({
                         </td>
                         <td className="py-2.5 pr-4 text-gray-800 font-medium capitalize">
                           {setItem.skill_area === "listening" ? "Listening 🎧" : "Reading 📖"}
-                        </td>
-                        <td className="py-2.5 pr-4 text-center text-gray-600 whitespace-nowrap">
-                          {setItem.score_band_min} - {setItem.score_band_max}
                         </td>
                         <td className="py-2.5 pr-4 text-right tabular-nums text-gray-600">
                           {setItem.total_items}
@@ -700,10 +532,10 @@ export function ToeicPracticeQuestionImportBody({
           <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-800 space-y-1">
             <p className="font-semibold">Định dạng chấp nhận:</p>
             <p>File câu hỏi: PDF</p>
-            <p>File đáp án: Image, PDF</p>
+            <p>File đáp án: Excel</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Chế độ nạp
@@ -740,43 +572,6 @@ export function ToeicPracticeQuestionImportBody({
                 Đang chọn: {selectionConfig.label}
               </p>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Điểm tối thiểu
-              </label>
-              <select
-                value={practiceBandMin}
-                onChange={(e) => setPracticeBandMin(Number(e.target.value))}
-                className={fieldClass}
-              >
-                {[0, 300, 400, 500, 600, 700, 800].map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Điểm tối đa
-              </label>
-              <select
-                value={practiceBandMax}
-                onChange={(e) => setPracticeBandMax(Number(e.target.value))}
-                className={fieldClass}
-              >
-                {[300, 400, 500, 600, 700, 800, 990].map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 File câu hỏi (PDF)
@@ -924,238 +719,6 @@ export function ToeicPracticeQuestionImportBody({
             </div>
           )}
 
-          <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-sky-800">
-                  Bổ sung thủ công câu hỏi
-                </p>
-                <p className="text-[11px] text-sky-700">
-                  Có thể thêm nhiều câu, chỉ lưu câu mới chưa tồn tại theo
-                  Part + nội dung + đáp án.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addManualRow}
-                className="rounded-lg border border-sky-300 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100"
-              >
-                + Thêm 1 câu
-              </button>
-            </div>
-
-            {manualRows.length === 0 && (
-              <p className="text-xs text-sky-700">
-                Chưa có dòng bổ sung. Bấm "Thêm 1 câu" để bắt đầu.
-              </p>
-            )}
-
-            {!!practiceResult?.skipped_duplicates?.length && (
-              <div className="rounded-md border border-sky-300 bg-white px-3 py-2 text-[11px] text-sky-700">
-                Hệ thống đã seed sẵn{" "}
-                {Math.min(practiceResult.skipped_duplicates.length, 50)} dòng
-                từ danh sách câu bị trùng để bạn bổ sung nhanh.
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {manualRows.map((row, index) => (
-                <div
-                  key={row.id}
-                  className="rounded-lg border border-sky-200 bg-white p-3 space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-gray-700">
-                      Câu bổ sung #{index + 1}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => removeManualRow(row.id)}
-                      className="text-[11px] font-semibold text-red-600 hover:text-red-700"
-                    >
-                      Xóa dòng
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Part
-                      </label>
-                      <select
-                        value={row.toeic_part}
-                        onChange={(e) =>
-                          updateManualRow(row.id, (current) => ({
-                            ...current,
-                            toeic_part: Number(e.target.value),
-                          }))
-                        }
-                        className={fieldClass}
-                      >
-                        {[1, 2, 3, 4, 5, 6, 7].map((part) => (
-                          <option key={part} value={part}>
-                            Part {part}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Số thứ tự câu
-                      </label>
-                      <input
-                        value={row.question_number}
-                        onChange={(e) =>
-                          updateManualRow(row.id, (current) => ({
-                            ...current,
-                            question_number: e.target.value,
-                          }))
-                        }
-                        className={fieldClass}
-                        placeholder="vd: 153"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Đáp án đúng
-                      </label>
-                      <select
-                        value={row.correct_option_key}
-                        onChange={(e) =>
-                          updateManualRow(row.id, (current) => ({
-                            ...current,
-                            correct_option_key: e.target
-                              .value as ManualOptionKey,
-                          }))
-                        }
-                        className={fieldClass}
-                      >
-                        {(["A", "B", "C", "D"] as ManualOptionKey[]).map(
-                          (k) => (
-                            <option key={k} value={k}>
-                              {k}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                      Nội dung câu hỏi
-                    </label>
-                    <textarea
-                      value={row.stem}
-                      onChange={(e) =>
-                        updateManualRow(row.id, (current) => ({
-                          ...current,
-                          stem: e.target.value,
-                        }))
-                      }
-                      className={`${fieldClass} min-h-[70px]`}
-                      placeholder="Nhập nội dung câu hỏi..."
-                    />
-                  </div>
-
-                  {[6, 7].includes(row.toeic_part) && (
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        📄 Đoạn văn (Reading Passage) — Part {row.toeic_part}
-                      </label>
-                      <textarea
-                        value={row.reading_passage}
-                        onChange={(e) =>
-                          updateManualRow(row.id, (current) => ({
-                            ...current,
-                            reading_passage: e.target.value,
-                          }))
-                        }
-                        className={`${fieldClass} min-h-[100px]`}
-                        placeholder="Dán đoạn văn (passage) mà câu hỏi liên quan vào đây... Ví dụ: Questions 131-134 refer to the following email..."
-                      />
-                      <p className="mt-1 text-[10px] text-gray-400">
-                        Đoạn văn sẽ hiển thị cho sinh viên phía trên câu hỏi. Các câu cùng nhóm (ví dụ 131-134) nên dùng chung đoạn văn.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {(["A", "B", "C", "D"] as ManualOptionKey[]).map(
-                      (key) => (
-                        <div key={key}>
-                          <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                            Đáp án {key}
-                          </label>
-                          <input
-                            value={row.options[key]}
-                            onChange={(e) =>
-                              updateManualRow(row.id, (current) => ({
-                                ...current,
-                                options: {
-                                  ...current.options,
-                                  [key]: e.target.value,
-                                },
-                              }))
-                            }
-                            className={fieldClass}
-                            placeholder={`Nhập phương án ${key}`}
-                          />
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {manualError && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{manualError}</span>
-              </div>
-            )}
-
-            {manualResult && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
-                <p className="font-semibold">Nạp bổ sung thành công</p>
-                <p className="mt-1">
-                  Inserted: <strong>{manualResult.inserted_count}</strong> |
-                  Skipped: <strong>{manualResult.skipped_count}</strong>
-                </p>
-                {manualResult.skipped_duplicates.length > 0 && (
-                  <p className="mt-1 text-[11px]">
-                    Trùng và bị bỏ qua:{" "}
-                    {manualResult.skipped_duplicates
-                      .slice(0, 20)
-                      .map((dup) => `P${dup.part}-Q${dup.question_number}`)
-                      .join(", ")}
-                    {manualResult.skipped_duplicates.length > 20
-                      ? " ..."
-                      : ""}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleManualSupplementSubmit}
-              disabled={manualSubmitting || manualRows.length === 0}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {manualSubmitting ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" /> Dang nạp bổ
-                  sung...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4" /> Nạp Câu Bổ Sung Thủ Công
-                </>
-              )}
-            </button>
-          </div>
 
           <button
             onClick={handlePracticeImport}
@@ -1230,11 +793,21 @@ export function ToeicPracticeQuestionImportBody({
             )}
 
             {audioChunkResult && (
-              <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
-                <p className="font-semibold">Tách audio thành công ✓</p>
-                <p className="mt-1 text-xs">
-                  Tổng chunks: <strong>{audioChunkResult.total_chunks}</strong> | Đã gắn tự động: <strong>{audioChunkResult.auto_mapped_count}</strong> câu
+              <div className={`rounded-xl border px-4 py-3 text-sm ${audioChunkResult.total_chunks === -1 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-teal-200 bg-teal-50 text-teal-800"}`}>
+                <p className="font-semibold">
+                  {audioChunkResult.total_chunks === -1 
+                    ? "Đang xử lý nền (Background Processing) ⏳" 
+                    : "Tách audio thành công ✓"}
                 </p>
+                {audioChunkResult.total_chunks === -1 ? (
+                  <p className="mt-1 text-xs">
+                    File audio quá lớn và đang được hệ thống AI xử lý ở chế độ nền để tránh bị ngắt kết nối. Vui lòng kiểm tra lại dữ liệu sau khoảng 2-3 phút.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs">
+                    Tổng chunks: <strong>{audioChunkResult.total_chunks}</strong> | Đã gắn tự động: <strong>{audioChunkResult.auto_mapped_count}</strong> câu
+                  </p>
+                )}
                 <p className="mt-1 text-xs">Mã bộ: <strong>{audioChunkResult.practice_set_id}</strong></p>
               </div>
             )}
@@ -1375,7 +948,7 @@ export function ToeicPracticeQuestionImportBody({
             <label className="block text-xs font-semibold text-gray-600 mb-2">
               File đáp án
             </label>
-            <div 
+            <div
               onClick={() => setShowAnswerKeyGuideModal(true)}
               className="group rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/20 p-5 text-center cursor-pointer transition-all duration-200 hover:border-emerald-500 hover:bg-emerald-50/50 hover:shadow-sm"
             >
@@ -1400,7 +973,7 @@ export function ToeicPracticeQuestionImportBody({
               </div>
 
               {answerKeyFile && (
-                <div 
+                <div
                   onClick={(e) => e.stopPropagation()} // Prevent triggering guide popup when clicking clear/details
                   className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm animate-fadeIn"
                 >
@@ -1500,7 +1073,7 @@ export function ToeicPracticeQuestionImportBody({
             </div>
             <div className="p-6 overflow-y-auto space-y-4 text-sm text-gray-700 bg-gray-50/50">
               <p className="font-medium text-gray-900 text-base">Để hệ thống nhận diện chính xác câu hỏi, file PDF của bạn CẦN tuân thủ các quy tắc sau:</p>
-              
+
               <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-5">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -1568,14 +1141,14 @@ export function ToeicPracticeQuestionImportBody({
                 <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
                 Hướng Dẫn File Đáp Án Đề Ôn Luyện
               </h3>
-              <button 
-                onClick={() => setShowAnswerKeyGuideModal(false)} 
+              <button
+                onClick={() => setShowAnswerKeyGuideModal(false)}
                 className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto space-y-4 text-sm text-slate-600 bg-slate-50/50">
               <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-xs text-amber-900 space-y-1 text-left">
                 <p className="font-bold text-amber-900">⚠️ Thay đổi phương thức nạp đáp án</p>
@@ -1583,7 +1156,7 @@ export function ToeicPracticeQuestionImportBody({
               </div>
 
               <p className="font-bold text-slate-800 text-sm text-left">Cấu trúc bảng dữ liệu Excel/CSV bắt buộc:</p>
-              
+
               <ul className="list-disc ml-6 space-y-2 text-xs text-left">
                 <li><span className="font-semibold text-slate-800">Cột A (Question):</span> Chứa số thứ tự câu hỏi (ví dụ: <code className="bg-slate-100 px-1 rounded font-mono">1</code>, <code className="bg-slate-100 px-1 rounded font-mono">2</code> hoặc số câu gốc <code className="bg-slate-100 px-1 rounded font-mono">101</code>, <code className="bg-slate-100 px-1 rounded font-mono">154</code>).</li>
                 <li><span className="font-semibold text-slate-800">Cột B (Answer):</span> Ký tự đáp án đúng (ví dụ: <code className="bg-slate-100 px-1 rounded font-mono">A</code>, <code className="bg-slate-100 px-1 rounded font-mono">B</code>, <code className="bg-slate-100 px-1 rounded font-mono">C</code>, <code className="bg-slate-100 px-1 rounded font-mono">D</code>).</li>
@@ -1628,21 +1201,21 @@ export function ToeicPracticeQuestionImportBody({
                 </div>
               </div>
             </div>
-            
+
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50">
-              <button 
-                onClick={() => setShowAnswerKeyGuideModal(false)} 
+              <button
+                onClick={() => setShowAnswerKeyGuideModal(false)}
                 className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setShowAnswerKeyGuideModal(false);
                   setTimeout(() => {
                     answerKeyFileInputRef.current?.click();
                   }, 100);
-                }} 
+                }}
                 className="px-6 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all flex items-center gap-2 active:scale-95"
               >
                 <CheckCircle2 className="h-4 w-4" /> Đã Hiểu, Chọn File Ngay

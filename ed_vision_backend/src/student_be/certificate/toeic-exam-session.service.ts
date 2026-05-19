@@ -98,6 +98,34 @@ export interface SubmitExamResultDto {
   }>;
 }
 
+const TOEIC_LISTENING_CONVERSION = [
+  5, 10, 15, 20, 25, 30, 35, 40, 45, 50, // 0-9
+  55, 60, 65, 70, 75, 80, 85, 90, 95, 100, // 10-19
+  105, 110, 115, 120, 125, 130, 135, 140, 145, 150, // 20-29
+  160, 165, 170, 175, 180, 185, 190, 195, 200, 205, // 30-39
+  210, 215, 220, 225, 230, 235, 240, 245, 250, 255, // 40-49
+  260, 270, 275, 280, 285, 290, 295, 300, 305, 310, // 50-59
+  315, 320, 325, 330, 335, 340, 345, 350, 355, 360, // 60-69
+  365, 370, 375, 380, 385, 390, 395, 400, 405, 410, // 70-79
+  415, 420, 425, 430, 435, 440, 445, 450, 455, 460, // 80-89
+  465, 470, 475, 480, 485, 490, 495, 495, 495, 495, // 90-99
+  495 // 100
+];
+
+const TOEIC_READING_CONVERSION = [
+  5, 5, 10, 15, 20, 25, 30, 35, 40, 45, // 0-9
+  50, 55, 60, 65, 70, 75, 80, 85, 90, 95, // 10-19
+  100, 105, 110, 115, 120, 125, 130, 135, 140, 145, // 20-29
+  145, 150, 155, 160, 165, 170, 175, 180, 185, 190, // 30-39
+  195, 200, 205, 210, 215, 220, 225, 230, 235, 240, // 40-49
+  245, 250, 255, 260, 265, 270, 275, 280, 285, 290, // 50-59
+  295, 300, 305, 310, 315, 320, 325, 330, 335, 340, // 60-69
+  345, 350, 355, 360, 365, 370, 375, 380, 385, 390, // 70-79
+  395, 400, 405, 410, 415, 420, 425, 430, 435, 440, // 80-89
+  445, 450, 455, 460, 465, 470, 475, 480, 485, 490, // 90-99
+  495 // 100
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Service
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,12 +153,17 @@ export class ToeicExamSessionService {
     totalQuestions: number,
     hint?: number,
   ): number {
-    // Mặc định: TOEIC chuẩn ~ Listening 45p, Reading 75p, full test 120p.
+    // Chuẩn TOEIC: Listening = 45p (2700s) cho 100 câu (~27s/câu), Reading = 75p (4500s) cho 100 câu (~45s/câu).
     let base: number;
-    if (repoSkillArea === 'listening') base = 45 * 60;
-    else if (repoSkillArea === 'reading') base = 75 * 60;
-    else if (repoSkillArea === 'full') base = 120 * 60;
-    else base = Math.max(30 * 60, totalQuestions * 36); // ~36s/câu
+    if (repoSkillArea === 'listening') {
+      base = totalQuestions > 0 ? totalQuestions * 27 : 45 * 60;
+    } else if (repoSkillArea === 'reading') {
+      base = totalQuestions > 0 ? totalQuestions * 45 : 75 * 60;
+    } else if (repoSkillArea === 'full') {
+      base = totalQuestions > 0 ? totalQuestions * 36 : 120 * 60;
+    } else {
+      base = Math.max(30 * 60, totalQuestions * 36);
+    }
 
     if (typeof hint === 'number' && Number.isFinite(hint) && hint > 0) {
       base = Math.round(hint);
@@ -260,6 +293,24 @@ export class ToeicExamSessionService {
     });
 
     if (active) {
+      const correctDuration = this.resolveDurationSec(
+        repository.skill_area,
+        repository._count.items,
+        dto.duration_sec_hint,
+      );
+
+      // Auto-correct old durations stored in the database
+      if (active.duration_sec !== correctDuration) {
+        this.logger.log(
+          `[ExamSession] Correcting stale session ${active.id} duration to standard ${correctDuration}s`,
+        );
+        await this.prisma.toeicExamSession.update({
+          where: { id: active.id },
+          data: { duration_sec: correctDuration },
+        });
+        active.duration_sec = correctDuration;
+      }
+
       const remaining = this.remainingSec(
         active.started_at,
         active.duration_sec,
@@ -303,7 +354,31 @@ export class ToeicExamSessionService {
     accountId: number,
     sessionId: number,
   ): Promise<ExamSessionStateDto> {
-    await this.loadSessionOrThrow(accountId, sessionId);
+    const session = await this.loadSessionOrThrow(accountId, sessionId);
+    if (!session.submitted_at) {
+      const repo = await this.prisma.examRepository.findUnique({
+        where: { id: session.repository_id },
+        select: {
+          skill_area: true,
+          _count: { select: { items: true } },
+        },
+      });
+      if (repo) {
+        const correctDuration = this.resolveDurationSec(
+          repo.skill_area,
+          repo._count.items,
+        );
+        if (session.duration_sec !== correctDuration) {
+          this.logger.log(
+            `[ExamSession] Auto-correcting session ${session.id} duration to standard ${correctDuration}s`,
+          );
+          await this.prisma.toeicExamSession.update({
+            where: { id: session.id },
+            data: { duration_sec: correctDuration },
+          });
+        }
+      }
+    }
     return this.buildState(sessionId);
   }
 
@@ -419,6 +494,7 @@ export class ToeicExamSessionService {
             items: {
               select: {
                 id: true,
+                media_audio_url: true,
                 options: { select: { option_key: true, is_correct: true } },
               },
             },
@@ -462,9 +538,47 @@ export class ToeicExamSessionService {
       });
     }
 
-    // Quy đổi điểm theo tỉ lệ trên câu chấm được, scale lên 495 (TOEIC half).
-    const scaledScore =
-      gradableCount > 0 ? Math.round((correctCount / gradableCount) * 495) : 0;
+    // Quy đổi điểm chuẩn TOEIC theo S-curve (5–495 điểm/kỹ năng)
+    const skillArea = session.repository?.skill_area; // 'listening' | 'reading' | 'full'
+    let scaledScore = 0;
+
+    if (skillArea === 'listening') {
+      const normalizedRaw = gradableCount > 0 ? Math.round((correctCount / gradableCount) * 100) : 0;
+      scaledScore = TOEIC_LISTENING_CONVERSION[normalizedRaw];
+    } else if (skillArea === 'reading') {
+      const normalizedRaw = gradableCount > 0 ? Math.round((correctCount / gradableCount) * 100) : 0;
+      scaledScore = TOEIC_READING_CONVERSION[normalizedRaw];
+    } else if (skillArea === 'full') {
+      let lisCorrect = 0;
+      let lisGradable = 0;
+      let readCorrect = 0;
+      let readGradable = 0;
+
+      for (const item of session.repository.items) {
+        const correctKey = correctMap.get(item.id) ?? null;
+        const selectedKey = answerMap.get(item.id) ?? null;
+        const isGradable = correctKey !== null;
+        const isCorrect = isGradable && selectedKey === correctKey;
+
+        // Listening items have media_audio_url
+        const isLis = !!item.media_audio_url;
+        if (isLis) {
+          if (isGradable) lisGradable += 1;
+          if (isCorrect) lisCorrect += 1;
+        } else {
+          if (isGradable) readGradable += 1;
+          if (isCorrect) readCorrect += 1;
+        }
+      }
+
+      const lisNormalized = lisGradable > 0 ? Math.round((lisCorrect / lisGradable) * 100) : 0;
+      const readNormalized = readGradable > 0 ? Math.round((readCorrect / readGradable) * 100) : 0;
+
+      scaledScore = TOEIC_LISTENING_CONVERSION[lisNormalized] + TOEIC_READING_CONVERSION[readNormalized];
+    } else {
+      // Fallback
+      scaledScore = gradableCount > 0 ? Math.round((correctCount / gradableCount) * 495) : 0;
+    }
 
     const submittedAt = new Date();
     await this.prisma.toeicExamSession.update({
@@ -477,6 +591,154 @@ export class ToeicExamSessionService {
         total_score: scaledScore,
       },
     });
+
+    // Hydrate enrollment baseline and current score updates
+    try {
+      const student = await this.prisma.student.findUnique({
+        where: { account_id: session.account_id },
+        select: { student_id: true },
+      });
+      if (student) {
+        const enrollment = await this.prisma.certificateEnrollment.findFirst({
+          where: { student_id: student.student_id, cert_type: 'toeic', status: 'active' },
+        });
+        if (enrollment) {
+          const currentState = (enrollment.toeic_plan_state as any) || {};
+          const initialTotalBaseline = Number(currentState.current_score ?? enrollment.current_score ?? 300);
+          const prevListeningBaseline = currentState.listening_baseline ?? Math.round(initialTotalBaseline / 2);
+          const prevReadingBaseline = currentState.reading_baseline ?? Math.round(initialTotalBaseline / 2);
+          const prevHasTakenListening = !!currentState.has_taken_listening_exam;
+          const prevHasTakenReading = !!currentState.has_taken_reading_exam;
+
+          let listening_baseline = prevListeningBaseline;
+          let reading_baseline = prevReadingBaseline;
+          let has_taken_listening_exam = prevHasTakenListening;
+          let has_taken_reading_exam = prevHasTakenReading;
+
+          const isListeningExam = skillArea === 'listening';
+          const isReadingExam = skillArea === 'reading';
+          const isFullExam = skillArea === 'full';
+
+          if (isListeningExam) {
+            listening_baseline = scaledScore;
+            has_taken_listening_exam = true;
+          } else if (isReadingExam) {
+            reading_baseline = scaledScore;
+            has_taken_reading_exam = true;
+          } else if (isFullExam) {
+            let lisCorrect = 0;
+            let lisGradable = 0;
+            let readCorrect = 0;
+            let readGradable = 0;
+
+            for (const item of session.repository.items) {
+              const correctKey = correctMap.get(item.id) ?? null;
+              const selectedKey = answerMap.get(item.id) ?? null;
+              const isGradable = correctKey !== null;
+              const isCorrect = isGradable && selectedKey === correctKey;
+
+              const isLis = !!item.media_audio_url;
+              if (isLis) {
+                if (isGradable) lisGradable += 1;
+                if (isCorrect) lisCorrect += 1;
+              } else {
+                if (isGradable) readGradable += 1;
+                if (isCorrect) readCorrect += 1;
+              }
+            }
+
+            const lisNormalized = lisGradable > 0 ? Math.round((lisCorrect / lisGradable) * 100) : 0;
+            const readNormalized = readGradable > 0 ? Math.round((readCorrect / readGradable) * 100) : 0;
+
+            listening_baseline = TOEIC_LISTENING_CONVERSION[lisNormalized];
+            reading_baseline = TOEIC_READING_CONVERSION[readNormalized];
+            has_taken_listening_exam = true;
+            has_taken_reading_exam = true;
+          }
+
+          let resolvedCurrentScore = 0;
+          if (!has_taken_listening_exam && !has_taken_reading_exam) {
+            resolvedCurrentScore = listening_baseline + reading_baseline;
+          } else {
+            const lScore = has_taken_listening_exam ? listening_baseline : 0;
+            const rScore = has_taken_reading_exam ? reading_baseline : 0;
+            resolvedCurrentScore = lScore + rScore;
+          }
+          resolvedCurrentScore = Math.min(990, Math.max(10, resolvedCurrentScore));
+
+          const targetScore = Number(currentState.target_score ?? enrollment.target_score ?? 600);
+          const canChangeTarget = resolvedCurrentScore >= targetScore && targetScore > 0;
+
+          const nextPlanState = {
+            ...currentState,
+            current_score: resolvedCurrentScore,
+            target_score: targetScore,
+            listening_sessions: isListeningExam || isFullExam
+              ? Number(currentState.listening_sessions ?? 0) + 1
+              : Number(currentState.listening_sessions ?? 0),
+            reading_sessions: isReadingExam || isFullExam
+              ? Number(currentState.reading_sessions ?? 0) + 1
+              : Number(currentState.reading_sessions ?? 0),
+            listening_baseline,
+            reading_baseline,
+            has_taken_listening_exam,
+            has_taken_reading_exam,
+            has_activity: true,
+          };
+
+          // Clean up/Reset practice sessions of completed skill area
+          const partsToReset: number[] = [];
+          if (isListeningExam) {
+            partsToReset.push(1, 2, 3, 4);
+          } else if (isReadingExam) {
+            partsToReset.push(5, 6, 7);
+          } else if (isFullExam) {
+            partsToReset.push(1, 2, 3, 4, 5, 6, 7);
+          }
+
+          if (partsToReset.length > 0) {
+            await this.prisma.toeicPracticePartSession.deleteMany({
+              where: {
+                enrollment_id: enrollment.id,
+                toeic_part: { in: partsToReset },
+              },
+            });
+          }
+
+          // Recalculate reserve points based on remaining practice sessions
+          const remainingSessions = await this.prisma.toeicPracticePartSession.findMany({
+            where: { enrollment_id: enrollment.id },
+            select: { toeic_part: true, earned_points: true },
+          });
+
+          const bestPointsByPart = new Map<number, number>();
+          for (const s of remainingSessions) {
+            const partBest = bestPointsByPart.get(s.toeic_part) ?? 0;
+            if (s.earned_points > partBest) {
+              bestPointsByPart.set(s.toeic_part, s.earned_points);
+            }
+          }
+
+          const recalculatedReserve = [...bestPointsByPart.values()].reduce(
+            (sum, val) => sum + val,
+            0,
+          );
+          const finalReserve = Math.min(recalculatedReserve, targetScore);
+
+          await this.prisma.certificateEnrollment.update({
+            where: { id: enrollment.id },
+            data: {
+              exam_score: scaledScore,
+              current_score: resolvedCurrentScore,
+              toeic_plan_state: nextPlanState,
+              reserve_points: canChangeTarget ? 0 : finalReserve,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      // Ignore sync failures to allow mock submission to always succeed
+    }
 
     const result: SubmitExamResultDto = {
       session_id: sessionId,

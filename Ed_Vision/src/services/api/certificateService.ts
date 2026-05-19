@@ -39,6 +39,7 @@ export interface ToeicPlanSyncPayload {
   foundation_skipped: boolean;
   first_guide_shown?: boolean;
   has_activity?: boolean;
+  progress_percent?: number;
 }
 
 export interface ToeicPlanSyncResponse {
@@ -50,6 +51,10 @@ export interface ToeicPlanSyncResponse {
   foundation_completed: string[];
   foundation_skipped: boolean;
   first_guide_shown: boolean;
+  listening_baseline?: number;
+  reading_baseline?: number;
+  has_taken_listening_exam?: boolean;
+  has_taken_reading_exam?: boolean;
 }
 
 export interface ToeicLeaderboardEntry {
@@ -263,6 +268,13 @@ export async function saveToeicPlanSync(
   const res = await apiClient.patch<ToeicPlanSyncResponse>(
     "/student/certificate/toeic-plan",
     payload,
+  );
+  return res.data;
+}
+
+export async function resetToeicProgress(): Promise<{ success: boolean }> {
+  const res = await apiClient.post<{ success: boolean }>(
+    "/student/certificate/toeic/reset-progress",
   );
   return res.data;
 }
@@ -863,8 +875,6 @@ export interface DiagnosticRepositoryListItem {
 export interface PracticeSetListItem {
   practice_set_id: string;
   skill_area: string;
-  score_band_min: number;
-  score_band_max: number;
   total_items: number;
   created_at: string;
   has_answer_key?: boolean;
@@ -1001,10 +1011,12 @@ export interface ToeicReservePointsResponse {
 
 export async function getToeicPracticeQuestions(
   part: number,
+  count?: number,
 ): Promise<ToeicPracticeQuestionsResponse> {
-  const res = await apiClient.get<ToeicPracticeQuestionsResponse>(
-    `/student/certificate/toeic/practice-questions/${part}`,
-  );
+  const url = count !== undefined
+    ? `/student/certificate/toeic/practice-questions/${part}?count=${count}`
+    : `/student/certificate/toeic/practice-questions/${part}`;
+  const res = await apiClient.get<ToeicPracticeQuestionsResponse>(url);
   return decryptPracticeQuestionsResponse(res.data);
 }
 
@@ -1051,16 +1063,16 @@ export async function getPersonalScores(): Promise<PersonalScoresResponse> {
 export interface ImportPracticeQuestionsPayload {
   toeic_part?: number; // 1-7 (required when import_scope = single_part)
   import_scope?: "single_part" | "full_reading" | "full_listening";
-  score_band_min: number; // e.g. 0
-  score_band_max: number; // e.g. 400
+  score_band_min?: number; // e.g. 0
+  score_band_max?: number; // e.g. 400
   replace_existing?: boolean; // default false (append)
 }
 
 export interface ImportPracticeQuestionsResponse {
   imported_count: number;
   skipped_count: number;
-  score_band_min: number;
-  score_band_max: number;
+  score_band_min?: number;
+  score_band_max?: number;
   practice_set_id: string;
   detected_parts: number[];
   extracted_image_count?: number;
@@ -1090,8 +1102,8 @@ export interface PracticeManualSupplementItem {
 }
 
 export interface ImportPracticeManualSupplementPayload {
-  score_band_min: number;
-  score_band_max: number;
+  score_band_min?: number;
+  score_band_max?: number;
   practice_set_id?: string;
   items: PracticeManualSupplementItem[];
 }
@@ -1152,8 +1164,12 @@ export async function importToeicPracticeQuestions(
   if (payload.import_scope) {
     formData.append("import_scope", payload.import_scope);
   }
-  formData.append("score_band_min", String(payload.score_band_min));
-  formData.append("score_band_max", String(payload.score_band_max));
+  if (typeof payload.score_band_min === "number") {
+    formData.append("score_band_min", String(payload.score_band_min));
+  }
+  if (typeof payload.score_band_max === "number") {
+    formData.append("score_band_max", String(payload.score_band_max));
+  }
   if (typeof payload.replace_existing === "boolean") {
     formData.append("replace_existing", String(payload.replace_existing));
   }
@@ -1256,12 +1272,24 @@ export async function importPracticeAudio(
   const formData = new FormData();
   formData.append("file", file);
   formData.append("practice_set_id", practiceSetId);
-  const res = await apiClient.post<ImportPracticeAudioResponse>(
-    "/teacher/toeic-repository/import-practice-audio",
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
-  );
-  return res.data;
+  try {
+    const res = await apiClient.post<ImportPracticeAudioResponse>(
+      "/teacher/toeic-repository/import-practice-audio",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" }, timeout: 0 },
+    );
+    return res.data;
+  } catch (error: any) {
+    if (error?.response?.status === 524 || error?.status === 524) {
+      // Cloudflare 100s timeout occurred, but backend is still processing
+      return {
+        practice_set_id: practiceSetId,
+        total_chunks: -1,
+        auto_mapped_count: -1,
+      };
+    }
+    throw error;
+  }
 }
 
 // ── Practice Listening Image Import ──────────────────────────────────────────

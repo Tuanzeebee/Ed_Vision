@@ -116,6 +116,35 @@ export class TeacherToeicRepositoryController {
   }
 
   /**
+   * GET /teacher/toeic-repository/diagnostic/list
+   * List all diagnostic repositories.
+   */
+  @Get('diagnostic/list')
+  async listDiagnosticRepositories() {
+    return this.diagnosticImportService.listRepositories();
+  }
+
+  /**
+   * DELETE /teacher/toeic-repository/diagnostic/:slug
+   * Delete a diagnostic repository.
+   */
+  @Delete('diagnostic/:slug')
+  async deleteDiagnosticRepository(
+    @Param('slug') slug: string,
+  ) {
+    return this.diagnosticImportService.deleteRepository(slug);
+  }
+
+  /**
+   * GET /teacher/toeic-repository/practice/list
+   * List practice sets aggregated by source_slug.
+   */
+  @Get('practice/list')
+  async listPracticeSets() {
+    return this.practiceImportService.listPracticeSets();
+  }
+
+  /**
    * DELETE /teacher/toeic-repository/:slug
    * Delete a repository and all its items/options.
    */
@@ -442,17 +471,9 @@ export class TeacherToeicRepositoryController {
       fileFilter: (_req, file, cb) => {
         const ext = extname(file.originalname).toLowerCase();
         const allowed = [
-          '.txt',
-          '.pdf',
-          '.doc',
-          '.docx',
-          '.png',
-          '.jpg',
-          '.jpeg',
-          '.webp',
-          '.bmp',
-          '.tif',
-          '.tiff',
+          '.xlsx',
+          '.xls',
+          '.csv',
         ];
         if (allowed.includes(ext)) {
           cb(null, true);
@@ -460,7 +481,7 @@ export class TeacherToeicRepositoryController {
         }
         cb(
           new BadRequestException(
-            'File đáp án chỉ hỗ trợ TXT, PDF, DOC/DOCX hoặc ảnh (PNG/JPG/WEBP/BMP/TIF).',
+            'File đáp án chỉ hỗ trợ định dạng Excel (.xlsx, .xls) hoặc CSV.',
           ) as any,
           false,
         );
@@ -630,5 +651,16 @@ export class TeacherToeicRepositoryController {
       throw new BadRequestException('Vui lòng cung cấp danh sách id cần xóa.');
     }
     return this.practiceImportService.deletePracticeQuestions(body.ids);
+  }
+
+  @Delete('practice-set/:practiceSetId')
+  async deletePracticeSet(
+    @Param('practiceSetId') practiceSetId: string,
+  ): Promise<{ practice_set_id: string; deleted: boolean }> {
+    const sid = practiceSetId?.trim() ?? '';
+    if (!sid) {
+      throw new BadRequestException('Vui lòng cung cấp practice_set_id.');
+    }
+    return this.practiceImportService.deletePracticeSet(sid);
   }
 }
