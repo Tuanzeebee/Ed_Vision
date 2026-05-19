@@ -31,6 +31,7 @@ import { ieltsAdaptiveApi } from "@/services/ielts-adaptive/api";
 import { LessonStatus, type Lesson, type Roadmap } from "../../types/ielts-adaptive.types";
 import StudentLeaderboard from "./components/StudentLeaderboard";
 import { MasterVocabModal } from "../ielts-adaptive/components/MasterVocabModal";
+import AiInsightSection from "../ielts-adaptive/components/AiInsightSection";
 
 const SKILL_META: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string; label: string }> = {
     reading: { icon: <BookOpen className="w-4 h-4" />, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", label: "Reading" },
@@ -90,23 +91,51 @@ export const IeltsRoadmapPage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isVocabModalOpen, setIsVocabModalOpen] = useState(false);
+    const [streakData, setStreakData] = useState<{ current: number; longest: number; lastStudyDate: string | null } | null>(null);
+
+    const readIncomingBand = (stateValue: unknown, queryValue: string | null) => {
+        if (stateValue !== undefined && stateValue !== null) {
+            return normalizeBand(stateValue as string | number);
+        }
+        if (queryValue != null) {
+            return normalizeBand(queryValue);
+        }
+        return null;
+    };
 
     // ── load ─────────────────────────────────────────────────────────────────
     const loadRoadmap = useCallback(async () => {
         try {
             setLoading(true); setError(null);
-            const placementBand = location.state?.currentBand;
-            if (placementBand && typeof placementBand === "number") {
+            const params = new URLSearchParams(location.search);
+            const incomingCurrentBand = readIncomingBand(location.state?.currentBand, params.get("currentBand"));
+            const incomingTargetBand = readIncomingBand(location.state?.targetBand, params.get("targetBand"));
+            const hasIncomingBands = incomingCurrentBand != null || incomingTargetBand != null;
+
+            if (hasIncomingBands) {
                 try {
                     const existing = await ieltsAdaptiveApi.getMyRoadmap();
                     if (existing?.roadmap) {
-                        await ieltsAdaptiveApi.updateMyTargets({ current_band: placementBand, target_band: existing.roadmap.target_band || placementBand + 1 });
+                        const updatePayload: { current_band?: number; target_band?: number } = {};
+                        if (incomingCurrentBand != null) updatePayload.current_band = incomingCurrentBand;
+                        if (incomingTargetBand != null) updatePayload.target_band = incomingTargetBand;
+                        if (Object.keys(updatePayload).length === 0) {
+                            updatePayload.current_band = existing.roadmap.current_band;
+                            updatePayload.target_band = existing.roadmap.target_band || (existing.roadmap.current_band + 1);
+                        }
+                        await ieltsAdaptiveApi.updateMyTargets(updatePayload);
                     } else {
-                        await ieltsAdaptiveApi.generateMyRoadmap({ current_band: placementBand, target_band: placementBand + 1 });
+                        const baseCurrent = incomingCurrentBand ?? 4.0;
+                        const baseTarget = incomingTargetBand ?? (baseCurrent + 1);
+                        await ieltsAdaptiveApi.generateMyRoadmap({ current_band: baseCurrent, target_band: baseTarget });
                     }
                     setShowPlacementSuccess(true);
                     setTimeout(() => setShowPlacementSuccess(false), 5000);
-                    window.history.replaceState({}, document.title);
+                    if (location.search) {
+                        window.history.replaceState({}, document.title, location.pathname);
+                    } else {
+                        window.history.replaceState({}, document.title);
+                    }
                 } catch (e) { console.error(e); }
             }
             const my = await ieltsAdaptiveApi.getMyRoadmap();
@@ -115,12 +144,21 @@ export const IeltsRoadmapPage: React.FC = () => {
             } else {
                 setRoadmap(await ieltsAdaptiveApi.getRoadmap(0));
             }
+
+            // Fetch streak data
+            try {
+                const streak = await ieltsAdaptiveApi.getMyStreak();
+                setStreakData(streak);
+            } catch (e) {
+                console.error("Failed to load streak data:", e);
+                setStreakData({ current: 0, longest: 0, lastStudyDate: null });
+            }
         } catch (err: any) {
             setError(err.message || "Failed to load roadmap.");
         } finally {
             setLoading(false);
         }
-    }, [location.state]);
+    }, [location.state, location.search, location.pathname]);
 
     useEffect(() => { loadRoadmap(); }, [loadRoadmap]);
 
@@ -180,8 +218,16 @@ export const IeltsRoadmapPage: React.FC = () => {
     const skillKeys = ["reading", "listening", "writing", "speaking", "grammar", "vocabulary"];
     const skillStats = skillKeys.map(sk => {
         const lessons = roadmap?.lessons?.filter(l => l.skill_area === sk) ?? [];
-        const done = lessons.filter(l => l.status === LessonStatus.COMPLETED).length;
-        return { key: sk, total: lessons.length, done, pct: lessons.length > 0 ? Math.round((done / lessons.length) * 100) : 0 };
+        let doneScore = 0;
+        lessons.forEach(l => {
+            if (l.status === LessonStatus.COMPLETED) {
+                doneScore += 1;
+            } else if (l.status === LessonStatus.IN_PROGRESS) {
+                doneScore += 0.5;
+            }
+        });
+        const pct = lessons.length > 0 ? Math.min(100, Math.round((doneScore / lessons.length) * 100)) : 0;
+        return { key: sk, total: lessons.length, done: doneScore, pct };
     });
     const filteredLessons = activeSkill ? (roadmap?.lessons?.filter(l => l.skill_area === activeSkill) ?? []) : [];
 
@@ -334,20 +380,38 @@ export const IeltsRoadmapPage: React.FC = () => {
                     <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl">🔥</div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-slate-800">Streak <span className="text-orange-500">{completedLessons}</span> ngày liên tiếp</span>
-                            <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-bold uppercase">On Fire</span>
+                            <span className="text-sm font-bold text-slate-800">Streak <span className="text-orange-500">{streakData?.current ?? 0}</span> ngày liên tiếp</span>
+                            {(streakData?.current ?? 0) > 0 && (
+                                <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-bold uppercase">On Fire</span>
+                            )}
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Duy trì mỗi ngày để nhận phần thưởng tuần!</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            {(streakData?.current ?? 0) > 0 
+                                ? "Duy trì mỗi ngày để nhận phần thưởng tuần!" 
+                                : "Hoàn thành bài học hôm nay để bắt đầu chuỗi mới!"}
+                        </p>
                     </div>
                     <div className="flex gap-1.5">
                         {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d, i) => {
-                            const isDone = i < completedLessons % 7;
-                            const isToday = i === (new Date().getDay() + 6) % 7;
+                            const currentStreak = streakData?.current ?? 0;
+                            const today = new Date();
+                            const currentDayOfWeek = (today.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+                            const isToday = i === currentDayOfWeek;
+                            
+                            // Calculate if this day should be marked as done
+                            // If current streak is N, mark the last N days including today
+                            let isDone = false;
+                            if (currentStreak > 0) {
+                                const daysAgo = (currentDayOfWeek - i + 7) % 7;
+                                isDone = daysAgo < currentStreak && daysAgo >= 0;
+                            }
+                            
                             return (
-                                <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${isDone ? "bg-orange-50 border-orange-200 text-orange-500" :
+                                <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all ${
+                                    isDone ? "bg-orange-50 border-orange-200 text-orange-500" :
                                     isToday ? "bg-indigo-50/70 border-indigo-300 text-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.2)]" :
-                                        "bg-white/70 border-slate-100 text-slate-300"
-                                    }`}>{d}</div>
+                                    "bg-white/70 border-slate-100 text-slate-300"
+                                }`}>{d}</div>
                             );
                         })}
                     </div>
@@ -399,7 +463,10 @@ export const IeltsRoadmapPage: React.FC = () => {
                                             </div>
                                             <h3 className="text-sm font-bold text-slate-800 mb-0.5">{meta.label}</h3>
                                             <p className="text-[11px] text-slate-500 mb-3">
-                                                {sk.done}/{sk.total} bài · {sk.pct === 100 ? "Đã xong" : sk.pct > 0 ? "Đang ôn" : "Mới bắt đầu"}
+                                                {sk.done % 1 !== 0 
+                                                    ? `Bài ${Math.floor(sk.done) + 1} (Part 1/2) · Đang ôn`
+                                                    : `${sk.done}/${sk.total} bài · ${sk.pct === 100 ? "Đã xong" : sk.pct > 0 ? "Đang ôn" : "Mới bắt đầu"}`
+                                                }
                                             </p>
                                             <div className="h-1 bg-slate-100/70 rounded-full overflow-hidden">
                                                 <div className={`h-full ${meta.color.replace("text-", "bg-")} transition-all duration-1000`} style={{ width: `${sk.pct}%` }} />
@@ -421,13 +488,17 @@ export const IeltsRoadmapPage: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {[
-                                    { icon: "📰", type: "Từ vựng", title: "Academic Word List", desc: "", color: "indigo" },
-                                    { icon: "🧠", type: "Trợ lý AI", title: "Trợ lý AI — Sửa lỗi ngữ pháp", desc: "Nộp bài để AI sửa lỗi; gợi ý thêm sẽ do Gemini cung cấp ở màn hình ngoài", color: "emerald", onClick: handleOpenAiModule },
+                                    { icon: "📖", type: "Từ vựng", title: "Kho từ vựng của tôi", 
+                                      desc: "Từ đã lưu từ tất cả bài học", color: "indigo",
+                                      onClick: () => setIsVocabModalOpen(true) },
+                                    { icon: "🧠", type: "Trợ lý AI", title: "Chat với AI Tutor",
+                                      desc: currentLesson ? `Đang học: ${currentLesson.lesson_title}` : "Hỏi đáp, sửa lỗi ngữ pháp",
+                                      color: "emerald", onClick: handleOpenAiModule },
                                 ].map((rec, i) => (
                                     <div
                                         key={i}
-                                        onClick={rec.onClick || (rec.title.includes("Academic Word List") ? () => setIsVocabModalOpen(true) : undefined)}
-                                        className={`bg-white/85 border border-slate-100/80 rounded-xl p-4 flex items-start gap-4 transition-colors ${rec.onClick || rec.title.includes("Academic Word List") ? "cursor-pointer hover:bg-white group shadow-xs" : "cursor-default"}`}
+                                        onClick={rec.onClick}
+                                        className={`bg-white/85 border border-slate-100/80 rounded-xl p-4 flex items-start gap-4 transition-colors ${typeof rec.onClick === "function" ? "cursor-pointer hover:bg-white group shadow-xs" : "cursor-default"}`}
                                     >
                                         <div className={`w-12 h-12 rounded-xl bg-${rec.color}-50 flex items-center justify-center text-xl shrink-0`}>{rec.icon}</div>
                                         <div className="flex-1 min-w-0">
@@ -435,39 +506,14 @@ export const IeltsRoadmapPage: React.FC = () => {
                                             <h4 className="text-[13px] font-bold text-slate-800">{rec.title}</h4>
                                             <p className="text-[11px] text-slate-400">{rec.desc}</p>
                                         </div>
-                                        <span className={`text-xs font-bold text-indigo-600 transition-opacity shrink-0 ${rec.onClick ? "opacity-0 group-hover:opacity-100" : "opacity-0"}`}>→</span>
+                                        <span className={`text-xs font-bold text-indigo-600 transition-opacity shrink-0 ${typeof rec.onClick === "function" ? "opacity-0 group-hover:opacity-100" : "opacity-0"}`}>→</span>
                                     </div>
                                 ))}
                             </div>
                         </section>
 
                         {/* AI Insight */}
-                        <section
-                            onClick={handleOpenAiModule}
-                            className="bg-white/95 border border-indigo-100/60 rounded-[22px] p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg">✦</div>
-                                <div>
-                                    <p className="text-[12px] font-bold text-slate-800">Trợ lý AI</p>
-                                    <p className="text-[9px] text-slate-400 uppercase tracking-widest">Phân tích thực tế</p>
-                                </div>
-                            </div>
-                            <p className="text-[12px] text-slate-600 leading-relaxed mb-3">
-                                Chào bạn! Hiện tại hệ thống chưa đủ dữ liệu để phân tích chi tiết. Hãy hoàn thành ít nhất 1 bài tập nhé.
-                                Gợi ý bổ sung sẽ được Gemini cung cấp ở màn hình ngoài.
-                            </p>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                <div className="flex items-start gap-2 text-[11px] text-slate-500">
-                                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
-                                    <span>Hoàn thành bài Writing đầu tiên để nhận đánh giá AI.</span>
-                                </div>
-                                <div className="flex items-start gap-2 text-[11px] text-slate-500">
-                                    <Target className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-                                    <span>Tập trung Reading & Listening để xây dựng nền tảng.</span>
-                                </div>
-                            </div>
-                        </section>
+                        <AiInsightSection onNavigateToLesson={handleOpenAiModule} />
 
                         {/* Band Test CTA */}
                         <section className="bg-gradient-to-br from-[#1A4A7A] via-[#1D5A96] to-[#1E3F6E] rounded-[22px] p-6 text-white relative overflow-hidden shadow-[0_18px_40px_rgba(26,74,122,0.28)]">

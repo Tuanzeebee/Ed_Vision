@@ -912,6 +912,122 @@ export async function deleteToeicPracticeSet(
   return res.data;
 }
 
+// ── Exam Viewer (Teacher) ─────────────────────────────────────────────────────
+
+export interface ExamViewerPasswordVerifyResponse {
+  success: boolean;
+  message: string;
+  token: string;
+}
+
+export async function verifyExamViewerPassword(
+  password: string,
+): Promise<ExamViewerPasswordVerifyResponse> {
+  const res = await apiClient.post<ExamViewerPasswordVerifyResponse>(
+    "/teacher/exam-viewer/verify-password",
+    { password },
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicRepositories(
+  skillArea?: string,
+): Promise<ToeicRepositoryListItem[]> {
+  const params = skillArea ? `?skill_area=${skillArea}` : "";
+  const res = await apiClient.get<ToeicRepositoryListItem[]>(
+    `/teacher/exam-viewer/toeic/repositories${params}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicRepositoryDetail(
+  slug: string,
+): Promise<ToeicRepositoryDetailResponse> {
+  const res = await apiClient.get<ToeicRepositoryDetailResponse>(
+    `/teacher/exam-viewer/toeic/repository-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicPracticeSets(): Promise<PracticeSetListItem[]> {
+  const res = await apiClient.get<PracticeSetListItem[]>(
+    "/teacher/exam-viewer/toeic/practice-sets",
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicPracticeDetail(
+  practiceSetId: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/toeic/practice-detail?practice_set_id=${encodeURIComponent(practiceSetId)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicDiagnosticTests(): Promise<DiagnosticRepositoryListItem[]> {
+  const res = await apiClient.get<DiagnosticRepositoryListItem[]>(
+    "/teacher/exam-viewer/toeic/diagnostic-tests",
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicDiagnosticDetail(
+  slug: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/toeic/diagnostic-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsRepositories(
+  skillArea?: string,
+): Promise<IeltsRepositoryListItem[]> {
+  const params = skillArea ? `?skill_area=${skillArea}` : "";
+  const res = await apiClient.get<IeltsRepositoryListItem[]>(
+    `/teacher/exam-viewer/ielts/repositories${params}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsRepositoryDetail(
+  slug: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/ielts/repository-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsDiagnosticTests(): Promise<any[]> {
+  const res = await apiClient.get("/teacher/exam-viewer/ielts/diagnostic-tests");
+  return res.data;
+}
+
+export async function getExamViewerIeltsDiagnosticDetail(
+  slug: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/ielts/diagnostic-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsPracticeSets(): Promise<any[]> {
+  const res = await apiClient.get("/teacher/exam-viewer/ielts/practice-sets");
+  return res.data;
+}
+
+export async function getExamViewerIeltsPracticeDetail(
+  practiceSetId: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/ielts/practice-detail?practice_set_id=${encodeURIComponent(practiceSetId)}`,
+  );
+  return res.data;
+}
+
 export async function listIeltsRepositories(
   skillArea?: string,
 ): Promise<IeltsRepositoryListItem[]> {
@@ -1649,6 +1765,94 @@ export async function importIeltsPracticeQuestions(
   }
   const res = await apiClient.post<IeltsPracticeImportResponse>(
     "/teacher/ielts-repository/import-practice",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+// ── IELTS Practice Questions Import → LearningRepository ───────────────────
+export async function importIeltsPracticeLearningQuestions(
+  payload: IeltsPracticeImportPayload,
+  file: File,
+): Promise<IeltsPracticeImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("skill_area", payload.skill_area);
+  formData.append("band_min", String(payload.band_min));
+  formData.append("band_max", String(payload.band_max));
+  if (typeof payload.replace_existing === "boolean") {
+    formData.append("replace_existing", String(payload.replace_existing));
+  }
+  const res = await apiClient.post<IeltsPracticeImportResponse>(
+    "/teacher/ielts-repository/import-practice-learning",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+// ── IELTS Listening Audio Upload ─────────────────────────────────────────────
+export interface IeltsAudioUploadResponse {
+  repository_id: number;
+  slug: string;
+  audio_url: string;
+  filename: string;
+  section: number;
+  track_number: number;
+  mapped_item_ids: number[];
+}
+
+export async function uploadIeltsListeningAudio(
+  repositorySlug: string,
+  file: File,
+  section?: number,
+): Promise<IeltsAudioUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", repositorySlug);
+  if (section != null) {
+    formData.append("section", String(section));
+  }
+  const res = await apiClient.post<IeltsAudioUploadResponse>(
+    "/teacher/ielts-repository/upload-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+export async function uploadIeltsLearningListeningAudio(
+  repositorySlug: string,
+  file: File,
+  section?: number,
+): Promise<IeltsAudioUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", repositorySlug);
+  if (section != null) {
+    formData.append("section", String(section));
+  }
+  const res = await apiClient.post<IeltsAudioUploadResponse>(
+    "/teacher/ielts-repository/upload-learning-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+export async function importIeltsLearningAnswerKeyFromFile(
+  payload: IeltsAnswerKeyImportPayload,
+  file: File,
+): Promise<IeltsAnswerKeyImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", payload.repository_slug);
+  if (typeof payload.clear_existing === "boolean") {
+    formData.append("clear_existing", String(payload.clear_existing));
+  }
+  const res = await apiClient.post<IeltsAnswerKeyImportResponse>(
+    "/teacher/ielts-repository/import-learning-answer-key",
     formData,
     { headers: { "Content-Type": "multipart/form-data" } },
   );

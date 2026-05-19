@@ -284,11 +284,34 @@ const IeltsSpeakingPage: React.FC = () => {
             question: currentQuestion,
             part,
           });
-          setResult(gradeRes.data);
+          const scoreData = gradeRes.data;
+          if (scoreData.confidence === "low") {
+            throw new Error("Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.");
+          }
+          setResult(scoreData);
           setRecordingState("done");
+
+          if (lessonId) {
+            try {
+              const parsed = Number.parseInt(lessonId, 10);
+              if (!Number.isNaN(parsed)) {
+                const band = scoreData.overallBand || scoreData.bandScore || 6.0;
+                const accuracy = (band / 9) * 100;
+                const isFullyCompleted = part === 3 ||
+                  (part === 1 && !lesson?.lesson_title.toLowerCase().includes("part 2") && !lesson?.lesson_title.toLowerCase().includes("part 3")) ||
+                  (part === 2 && !lesson?.lesson_title.toLowerCase().includes("part 3"));
+                await apiClient.post(`/ielts-adaptive/lesson/${parsed}/complete`, { score: accuracy, isFullyCompleted });
+              }
+            } catch (err) {
+              console.error("Failed to complete speaking lesson:", err);
+            }
+          }
         } catch (err: any) {
           console.error("[Speaking] Error:", err?.response?.data || err);
-          const msg = err?.response?.data?.message || "Xử lý thất bại. Vui lòng thử lại.";
+          let msg = err?.response?.data?.message || err.message || "Xử lý thất bại. Vui lòng thử lại.";
+          if (msg.includes("All grading providers failed") || msg.includes("Hệ thống AI đang quá tải")) {
+            msg = "Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.";
+          }
           setError(msg);
           setRecordingState("idle");
         } finally {
@@ -381,10 +404,178 @@ const IeltsSpeakingPage: React.FC = () => {
     setProcessingStep(null);
   };
 
+  const handleComplete = () => {
+    navigate("/student/certificate-review/ielts");
+  };
+
+  const handleRetry = () => {
+    reset();
+    setFlowStep("practice");
+  };
+
   const timerDisplay = `${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, "0")}`;
 
+  const baseBandValue = lesson?.band_level ? lesson.band_level : null;
+  const bandSummary = baseBandValue != null ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}` : "--";
+
   if (result && recordingState === "done") {
-    return <IeltsSpeakingResult result={result} onRetry={reset} />;
+    return (
+      <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'DM Sans', sans-serif" }}>
+        {/* Header */}
+        <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <button onClick={() => navigate("/student/certificate-review/ielts")} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid #dbeafe", background: "#ffffff", color: "#475569", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              <ArrowLeft size={14} /> Quay lại Roadmap
+            </button>
+            <span style={{ color: "#cbd5f5" }}>|</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+              <span style={{ color: "#94a3b8", fontWeight: 700 }}>IELTS Adaptive</span>
+              <ChevronRight size={12} color="#cbd5f5" />
+              <span style={{ color: "#1d4ed8", fontWeight: 800 }}>Speaking — Band {bandSummary}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", padding: "6px 10px", borderRadius: 999, border: "1px solid #e2e8f0" }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", letterSpacing: ".12em" }}>LESSON PROGRESS</span>
+              <div style={{ width: 90, height: 6, background: "#e2e8f0", borderRadius: 999, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: "100%", background: "#22c55e", borderRadius: 999, transition: "width 0.3s ease" }} />
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#22c55e" }}>100%</span>
+            </div>
+            <button
+              onClick={handleRetry}
+              style={{
+                background: "transparent",
+                border: "1px solid #bfdbfe",
+                color: "#475569",
+                borderRadius: 8,
+                padding: "6px 14px",
+                fontSize: 13,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f8fafc";
+                e.currentTarget.style.borderColor = "#93c5fd";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "#bfdbfe";
+              }}
+            >
+              🔄 Thử lại
+            </button>
+            <button
+              onClick={handleComplete}
+              style={{
+                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 8,
+                padding: "6px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 6px 16px rgba(37, 99, 235, 0.25)",
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: 4
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 20px rgba(37, 99, 235, 0.35)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.25)";
+              }}
+            >
+              ✅ Hoàn thành
+            </button>
+          </div>
+        </div>
+
+        {/* Result Content - Remove duplicate header/footer from component */}
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
+          {/* Overall Score Banner */}
+          <div style={{ background: "linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%)", padding: "28px 32px", borderRadius: 20, marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
+              {/* Big ring */}
+              <div style={{ position: "relative" }}>
+                <svg width={120} height={120} viewBox="0 0 120 120">
+                  <circle cx={60} cy={60} r={52} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={8} />
+                  <motion.circle
+                    cx={60} cy={60} r={52} fill="none"
+                    stroke="#fff" strokeWidth={8} strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 52}
+                    initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - (result.overallBand || 0) / 9) }}
+                    transition={{ duration: 1.4, ease: "easeOut" }}
+                    transform="rotate(-90 60 60)"
+                  />
+                  <text x={60} y={56} textAnchor="middle" style={{ fontFamily: "'Sora',sans-serif", fontSize: 32, fontWeight: 800, fill: "#fff" }}>{(result.overallBand || 0).toFixed(1)}</text>
+                  <text x={60} y={76} textAnchor="middle" style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fill: "rgba(255,255,255,0.8)" }}>BAND</text>
+                </svg>
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 4 }}>
+                  {result.overallBand >= 8.5 ? "Expert" : result.overallBand >= 7.5 ? "Very Good" : result.overallBand >= 6.5 ? "Good" : result.overallBand >= 5.5 ? "Competent" : "Modest"}
+                </div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginBottom: 16, lineHeight: 1.5 }}>
+                  {result.generalFeedback}
+                </div>
+                {/* Mini scores */}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {result.criteria && Object.entries(result.criteria).map(([key, val]: [string, any]) => (
+                    <div key={key} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, padding: "8px 14px", backdropFilter: "blur(8px)" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.06em" }}>{key}</div>
+                      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 800, color: "#fff" }}>{val.band.toFixed(1)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Transcript & Question */}
+          <div style={{ background: "#fff", borderRadius: 14, padding: 20, border: "1px solid #e2e8f0", marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6366f1", textTransform: "uppercase", marginBottom: 8 }}>Part {result.part} Question</div>
+            <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.65, color: "#334155", fontWeight: 500 }}>{result.question}</p>
+            
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#64748b", textTransform: "uppercase", marginBottom: 8 }}>Your Response</div>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.85, color: "#334155" }}>
+              {result.transcript}
+            </p>
+          </div>
+
+          {/* Completion Banner */}
+          <div style={{
+            background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+            borderRadius: 20,
+            padding: "24px 32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "#ffffff",
+            boxShadow: "0 10px 30px rgba(49, 46, 129, 0.25)",
+            border: "1px solid rgba(99, 102, 241, 0.2)",
+            marginTop: 24
+          }}>
+            <div>
+              <h4 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#fff" }}>
+                🎉 Chúc mừng! Bạn đã hoàn thành bài thi Speaking!
+              </h4>
+              <p style={{ margin: 0, fontSize: 13, color: "#c7d2fe", lineHeight: 1.5 }}>
+                Bạn đã xuất sắc hoàn thành bài thi Speaking. Hãy quay lại Roadmap để tiếp tục hành trình học IELTS của bạn.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -399,8 +590,6 @@ const IeltsSpeakingPage: React.FC = () => {
     );
   }
 
-  const baseBandValue = lesson?.band_level ? lesson.band_level : null;
-  const bandSummary = baseBandValue != null ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}` : "--";
   const currentQuestions = QUESTIONS[part] || [];
   const totalQuestions = lessonQuestion ? 1 : currentQuestions.length;
   const practiceProgress = totalQuestions > 0

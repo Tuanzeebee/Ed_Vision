@@ -8,6 +8,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { BandEstimationService } from './band-estimation.service';
 import { EvaluationService } from './evaluation.service';
 import { TestResultRecorderService } from '../../admin_be/program-effectiveness/test-result-recorder.service';
+import { GeminiService } from '../../common/gemini/gemini.service';
+import { StreakTrackerService } from '../../study-room/services/streak-tracker.service';
 import {
   CreateRoadmapDto,
   UpdateRoadmapTargetsDto,
@@ -35,7 +37,9 @@ export class IeltsAdaptiveService {
     private bandEstimation: BandEstimationService,
     private evaluation: EvaluationService,
     private testResultRecorder: TestResultRecorderService,
-  ) {}
+    private gemini: GeminiService,
+    private streakTracker: StreakTrackerService,
+  ) { }
 
   /**
    * Chuyển đổi điểm số nguyên (vd: 450) thành band IELTS (vd: 4.5).
@@ -667,20 +671,25 @@ export class IeltsAdaptiveService {
 
     // Create new lessons
     const createdLessons: any[] = [];
+    const firstBandLevel = lessons[0]?.band_level ?? newBand;
     for (let i = 0; i < lessons.length; i++) {
       const lesson = lessons[i];
+      const bandLevel = lesson.band_level ?? newBand;
       const created = await this.prisma.ieltsLesson.create({
         data: {
           roadmap_id: roadmapId,
           skill_area: lesson.skill_area,
           lesson_title: lesson.lesson_title,
           lesson_order: i,
-          band_level: newBand,
+          band_level: bandLevel,
           flashcard_repo_id: lesson.flashcard_repo_id,
           practice_repo_id: lesson.practice_repo_id,
           mini_test_repo_id: lesson.mini_test_repo_id,
           estimated_minutes: lesson.estimated_minutes,
-          status: i === 0 ? LessonStatus.UNLOCKED : LessonStatus.LOCKED,
+          status:
+            bandLevel === firstBandLevel
+              ? LessonStatus.UNLOCKED
+              : LessonStatus.LOCKED,
           scheduled_date: scheduledDates[i] ?? undefined,
         },
       });
@@ -777,9 +786,44 @@ export class IeltsAdaptiveService {
     }
 
     // ── Build structured content for the frontend ──────────────────────────────
-    const buildRepoContent = (repo: any) => {
+    const buildRepoContent = (repo: any, skillArea?: string) => {
       if (!repo) return null;
       const meta: any = repo.metadata ?? {};
+      
+      // Get all items first
+      let allItems = (repo.items ?? []).map((item: any) => ({
+        id: item.id,
+        item_order: item.item_order,
+        item_type: item.item_type,
+        title: item.title,
+        stem: item.stem,
+        reading_passage: item.reading_passage,
+        media_audio_url: item.media_audio_url,
+        media_image_url: item.media_image_url,
+        hint: item.hint,
+        explanation: item.explanation,
+        estimated_seconds: item.estimated_seconds,
+        score_weight: item.score_weight,
+        metadata: item.metadata,
+        options: (item.options ?? []).map((opt: any) => ({
+          id: opt.id,
+          option_key: opt.option_key,
+          option_text: opt.option_text,
+          is_correct: opt.is_correct,
+          rationale: opt.rationale,
+          sort_order: opt.sort_order,
+        })),
+      }));
+
+      // ── Limit to 10 questions for Listening skill ──
+      if (skillArea?.toLowerCase() === 'listening' && allItems.length > 10) {
+        // Randomly select 10 items to keep variety
+        const shuffled = [...allItems].sort(() => Math.random() - 0.5);
+        allItems = shuffled.slice(0, 10);
+        // Re-sort by item_order to maintain logical flow
+        allItems.sort((a, b) => a.item_order - b.item_order);
+      }
+
       return {
         id: repo.id,
         slug: repo.slug,
@@ -794,30 +838,8 @@ export class IeltsAdaptiveService {
         writing_prompt: meta.content?.writingPrompt ?? null,
         speaking_prompt: meta.content?.speakingPrompt ?? null,
         lesson_template: meta.lessonTemplate ?? null,
-        // Items mapped with clean structure
-        items: (repo.items ?? []).map((item: any) => ({
-          id: item.id,
-          item_order: item.item_order,
-          item_type: item.item_type,
-          title: item.title,
-          stem: item.stem,
-          reading_passage: item.reading_passage,
-          media_audio_url: item.media_audio_url,
-          media_image_url: item.media_image_url,
-          hint: item.hint,
-          explanation: item.explanation,
-          estimated_seconds: item.estimated_seconds,
-          score_weight: item.score_weight,
-          metadata: item.metadata,
-          options: (item.options ?? []).map((opt: any) => ({
-            id: opt.id,
-            option_key: opt.option_key,
-            option_text: opt.option_text,
-            is_correct: opt.is_correct,
-            rationale: opt.rationale,
-            sort_order: opt.sort_order,
-          })),
-        })),
+        // Items mapped with clean structure (limited to 10 for listening)
+        items: allItems,
       };
     };
 
@@ -826,9 +848,9 @@ export class IeltsAdaptiveService {
       flashcard_repo_id: lesson.flashcard_repo_id ?? undefined,
       practice_repo_id: lesson.practice_repo_id ?? undefined,
       mini_test_repo_id: lesson.mini_test_repo_id ?? undefined,
-      flashcardRepo: buildRepoContent(lesson.flashcardRepo) ?? undefined,
-      practiceRepo: buildRepoContent(lesson.practiceRepo) ?? undefined,
-      miniTestRepo: buildRepoContent(lesson.miniTestRepo) ?? undefined,
+      flashcardRepo: buildRepoContent(lesson.flashcardRepo, lesson.skill_area) ?? undefined,
+      practiceRepo: buildRepoContent(lesson.practiceRepo, lesson.skill_area) ?? undefined,
+      miniTestRepo: buildRepoContent(lesson.miniTestRepo, lesson.skill_area) ?? undefined,
       skill_area: lesson.skill_area as SkillArea,
       status: lesson.status as LessonStatus,
       band_level: Number(lesson.band_level),
@@ -896,49 +918,115 @@ export class IeltsAdaptiveService {
    *   2. Load lại lesson kèm roadmap để lấy enrollment_id.
    *   3. Tăng lessons_completed và cập nhật last_practiced_at trong IeltsSkillProgress
    *      tương ứng với kỹ năng của bài học.
+   *   4. Cập nhật streak (chuỗi ngày học liên tiếp) cho account.
    */
-  async completeLesson(lessonId: number): Promise<void> {
+  async completeLesson(lessonId: number, score?: number, isFullyCompleted: boolean = true): Promise<void> {
     await this.prisma.ieltsLesson.update({
       where: { id: lessonId },
-      data: { status: LessonStatus.COMPLETED },
+      data: { status: isFullyCompleted ? LessonStatus.COMPLETED : LessonStatus.IN_PROGRESS },
     });
 
     // Load lesson để lấy thông tin kỹ năng và enrollment
     const lesson = await this.prisma.ieltsLesson.findUnique({
       where: { id: lessonId },
-      include: { roadmap: true },
+      include: { roadmap: { include: { enrollment: { include: { student: true } } } } },
     });
 
     if (lesson) {
-      await this.prisma.ieltsSkillProgress.update({
-        where: {
-          enrollment_id_skill_area: {
-            enrollment_id: lesson.roadmap.enrollment_id,
-            skill_area: lesson.skill_area,
-          },
-        },
-        data: {
-          lessons_completed: { increment: 1 },
-          last_practiced_at: new Date(),
-        },
-      });
-
-      // Kiểm tra nếu tất cả bài cùng band_level đã hoàn thành → mở khoá band tiếp theo
-      const sameBandLessons = await this.prisma.ieltsLesson.findMany({
-        where: {
-          roadmap_id: lesson.roadmap_id,
-          band_level: lesson.band_level,
-        },
-      });
-      const allSameBandCompleted = sameBandLessons.every(
-        (l) => l.status === LessonStatus.COMPLETED,
-      );
-      if (allSameBandCompleted) {
-        await this.unlockNextLesson(lesson.roadmap_id);
+      // Cập nhật streak khi hoàn thành bài học (chỉ tính 1 lần mỗi ngày, dù học TOEIC hay IELTS)
+      if (isFullyCompleted && lesson.roadmap.enrollment?.student?.account_id) {
+        try {
+          await this.streakTracker.updateStreak(
+            lesson.roadmap.enrollment.student.account_id,
+            new Date(),
+          );
+          this.logger.log(
+            `Updated streak for account ${lesson.roadmap.enrollment.student.account_id} after completing IELTS lesson ${lessonId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to update streak for lesson ${lessonId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+          // Don't throw - streak update failure shouldn't block lesson completion
+        }
       }
 
-      // Đồng bộ tiến độ tổng thể lên Dashboard
-      await this.syncOverallProgress(lesson.roadmap.enrollment_id);
+      if (score !== undefined) {
+        // Cập nhật skill progress (total practice count, accuracy trung bình)
+        await this.updateSkillProgress(
+          lesson.roadmap.enrollment_id,
+          lesson.skill_area,
+          score,
+          1,
+        );
+
+        // Tạo IeltsPracticeSession record để lưu lịch sử làm bài Speaking/Writing!
+        const repoId = lesson.practice_repo_id ?? lesson.mini_test_repo_id ?? lesson.flashcard_repo_id ?? 0;
+        await this.prisma.ieltsPracticeSession.create({
+          data: {
+            lesson_id: lesson.id,
+            session_type: lesson.mini_test_repo_id ? 'MINI_TEST' : 'PRACTICE',
+            repository_id: repoId,
+            answers: {},
+            total_questions: 1,
+            correct_count: score >= 50 ? 1 : 0,
+            accuracy_percent: score,
+            total_time_sec: 120,
+            avg_time_per_q: 120,
+            error_analysis: {},
+          },
+        });
+
+        // Chỉ increment lessons_completed cho IeltsSkillProgress khi hoàn thành hoàn toàn bài học
+        if (isFullyCompleted) {
+          await this.prisma.ieltsSkillProgress.update({
+            where: {
+              enrollment_id_skill_area: {
+                enrollment_id: lesson.roadmap.enrollment_id,
+                skill_area: lesson.skill_area,
+              },
+            },
+            data: {
+              lessons_completed: { increment: 1 },
+            },
+          });
+        }
+      } else {
+        // Increment lesson completed count nếu không có score (để giữ logic cũ cho Reading/Listening)
+        if (isFullyCompleted) {
+          await this.prisma.ieltsSkillProgress.update({
+            where: {
+              enrollment_id_skill_area: {
+                enrollment_id: lesson.roadmap.enrollment_id,
+                skill_area: lesson.skill_area,
+              },
+            },
+            data: {
+              lessons_completed: { increment: 1 },
+              last_practiced_at: new Date(),
+            },
+          });
+        }
+      }
+
+      if (isFullyCompleted) {
+        // Kiểm tra nếu tất cả bài cùng band_level đã hoàn thành → mở khoá band tiếp theo
+        const sameBandLessons = await this.prisma.ieltsLesson.findMany({
+          where: {
+            roadmap_id: lesson.roadmap_id,
+            band_level: lesson.band_level,
+          },
+        });
+        const allSameBandCompleted = sameBandLessons.every(
+          (l) => l.status === LessonStatus.COMPLETED,
+        );
+        if (allSameBandCompleted) {
+          await this.unlockNextLesson(lesson.roadmap_id);
+        }
+
+        // Đồng bộ tiến độ tổng thể lên Dashboard
+        await this.syncOverallProgress(lesson.roadmap.enrollment_id);
+      }
     }
   }
 
@@ -1280,24 +1368,40 @@ export class IeltsAdaptiveService {
       const reviewCount = Math.round(questionsPerSkill * 0.35);
       const challengeCount = questionsPerSkill - coreCount - reviewCount;
 
+      // For listening: only select questions whose linked passage has audio_url set.
+      // Seed/generated questions without audio are excluded.
+      const listeningAudioFilter =
+        skill === 'listening'
+          ? { passage: { audio_url: { not: null } } }
+          : {};
+
+      // reading skill also pulls vocabulary questions (alias — same MCQ format,
+      // no dedicated reading question seed exists until teacher imports reading content)
+      const skillFilter =
+        skill === 'reading'
+          ? { skill: { in: ['reading', 'vocabulary'] } }
+          : { skill };
+
       // Core: câu ở mức band hiện tại
       const coreQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill,
+          ...skillFilter,
           bandMin: { lte: currentBand + 0.5 },
           bandMax: { gte: currentBand - 0.5 },
-          status: 'active',
+          status: { in: ['active', 'approved'] },
+          ...listeningAudioFilter,
         },
         orderBy: { usedCount: 'asc' },
-        take: coreCount * 3, // Lấy dư để shuffle
+        take: coreCount * 3,
       });
 
       // Review: câu dễ hơn (band thấp hơn)
       const reviewQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill,
+          ...skillFilter,
           bandMax: { lt: currentBand - 0.4 },
-          status: 'active',
+          status: { in: ['active', 'approved'] },
+          ...listeningAudioFilter,
         },
         orderBy: { usedCount: 'asc' },
         take: reviewCount * 3,
@@ -1306,9 +1410,10 @@ export class IeltsAdaptiveService {
       // Challenge: câu khó hơn (band cao hơn)
       const challengeQ = await this.prisma.ieltsQuestion.findMany({
         where: {
-          skill,
+          ...skillFilter,
           bandMin: { gt: currentBand + 0.4 },
-          status: 'active',
+          status: { in: ['active', 'approved'] },
+          ...listeningAudioFilter,
         },
         orderBy: { usedCount: 'asc' },
         take: challengeCount * 3,
@@ -1405,6 +1510,21 @@ export class IeltsAdaptiveService {
       where: { id: { in: bandTest.question_ids } },
     });
 
+    // ── Resolve passage audio for listening questions ──────────────────────
+    const passageIds = [
+      ...new Set(questions.map((q) => q.passage_id).filter((id): id is string => !!id)),
+    ];
+    const passageMap = new Map<string, { audioUrl: string | null }>();
+    if (passageIds.length > 0) {
+      const passages = await this.prisma.ieltsPassage.findMany({
+        where: { id: { in: passageIds } },
+        select: { id: true, audio_url: true },
+      });
+      for (const p of passages) {
+        passageMap.set(p.id, { audioUrl: p.audio_url ?? null });
+      }
+    }
+
     const orderMap = new Map<string, number>(
       bandTest.question_ids.map((id, index) => [id, index]),
     );
@@ -1448,6 +1568,10 @@ export class IeltsAdaptiveService {
         questionType: q.questionType,
         options: mapOptions(q.options),
         expectedTimeSec: q.expectedTimeSec,
+        contextType: q.contextType ?? 'standalone',
+        mediaAudioUrl: q.passage_id
+          ? (passageMap.get(q.passage_id)?.audioUrl ?? null)
+          : null,
       })),
     };
   }
@@ -1607,7 +1731,7 @@ export class IeltsAdaptiveService {
     });
 
     // Fire-and-forget: record to StudentTestResult for analytics
-    this.recordBandTestResult(bandTest.roadmap.enrollment_id, updated, estimation, totalTime).catch(() => {});
+    this.recordBandTestResult(bandTest.roadmap.enrollment_id, updated, estimation, totalTime).catch(() => { });
 
     return {
       ...updated,
@@ -1812,6 +1936,46 @@ export class IeltsAdaptiveService {
       scoreMin: number,
       scoreMax: number,
     ) => {
+      // ── Special handling for Listening: prioritize repos with audio ──
+      if (skill === SkillArea.LISTENING) {
+        // Try exact match with audio first
+        const exactWithAudio = await this.prisma.learningRepository.findFirst({
+          where: {
+            cert_type: 'ielts',
+            skill_area: skill,
+            content_type: contentType,
+            is_published: true,
+            target_score_min: { lte: scoreMin },
+            target_score_max: { gte: scoreMin },
+            items: {
+              some: {
+                media_audio_url: { not: null },
+              },
+            },
+          },
+          orderBy: { updated_at: 'desc' },
+        });
+        if (exactWithAudio) return exactWithAudio;
+
+        // Fallback: ignore score range, but still require audio
+        const anyWithAudio = await this.prisma.learningRepository.findFirst({
+          where: {
+            cert_type: 'ielts',
+            skill_area: skill,
+            content_type: contentType,
+            is_published: true,
+            items: {
+              some: {
+                media_audio_url: { not: null },
+              },
+            },
+          },
+          orderBy: { updated_at: 'desc' },
+        });
+        if (anyWithAudio) return anyWithAudio;
+      }
+
+      // ── Standard logic for other skills or if no audio found ──
       // Exact match: skill + contentType + score range
       const exact = await this.prisma.learningRepository.findFirst({
         where: {
@@ -2029,5 +2193,95 @@ export class IeltsAdaptiveService {
   async getLearningAnalysisByAccount(accountId: number) {
     const { enrollment } = await this.getOrCreateStudentEnrollment(accountId);
     return this.evaluation.getLearningAnalysis(enrollment.id);
+  }
+
+  /**
+   * Lấy phân tích AI (Gemini) dựa trên tiến độ thực tế các kỹ năng của học viên.
+   */
+  async getAiInsightForAccount(accountId: number): Promise<any> {
+    const skills = await this.getSkillProgressByAccount(accountId);
+    const activeSkills = skills.filter((s) => s.total_practice > 0 || s.lessons_completed > 0);
+
+    if (activeSkills.length === 0) {
+      return null;
+    }
+
+    const summary = activeSkills.map((s) => ({
+      skill: s.skill_area,
+      band: s.current_band,
+      accuracy: s.accuracy_rate,
+      lessons: s.lessons_completed,
+      practice: s.total_practice,
+      trend:
+        s.recent_sessions && s.recent_sessions.length >= 2
+          ? (
+            (s.recent_sessions[s.recent_sessions.length - 1]?.accuracy ?? 0) -
+            (s.recent_sessions[0]?.accuracy ?? 0)
+          ).toFixed(1)
+          : 'N/A',
+      weak_topics: s.weak_topics,
+    }));
+
+    const prompt = `You are an IELTS tutor AI. Analyze this student's skill progress and provide an actionable analysis in Vietnamese.
+Analyze this student's data and return ONLY a JSON object.
+
+Student skill progress data:
+${JSON.stringify(summary)}
+
+Ensure all text/descriptions are in clear, natural Vietnamese and customized based on their actual strengths or weaknesses shown in their scores (e.g. low accuracy vs high accuracy).
+
+Return exactly this JSON format:
+{
+  "summary": "1-2 sentence overall assessment in Vietnamese of their progress.",
+  "weakest_skill": "reading|listening|writing|speaking",
+  "strengths": ["2-3 short, specific strengths or encouraging points"],
+  "improvements": ["2-3 specific actionable tips in Vietnamese for their weak areas"],
+  "today_focus": "One specific task to do today, in Vietnamese.",
+  "encouragement": "One short motivational sentence."
+}`;
+
+    try {
+      const response = await this.gemini.generateJson<any>(prompt);
+      if (!response || typeof response !== 'object') {
+        throw new Error('Gemini did not return a valid object');
+      }
+      return {
+        summary: response.summary || 'Hãy tiếp tục hoàn thành các bài học tiếp theo nhé!',
+        weakest_skill: response.weakest_skill || 'reading',
+        strengths: Array.isArray(response.strengths) ? response.strengths : ['Tập trung học tập tốt'],
+        improvements: Array.isArray(response.improvements) ? response.improvements : ['Luyện tập thêm kỹ năng còn yếu'],
+        today_focus: response.today_focus || 'Làm bài học tiếp theo trong lộ trình',
+        encouragement: response.encouragement || 'Cố lên! Bạn đang đi đúng hướng trên con đường chinh phục IELTS.',
+      };
+    } catch (err) {
+      this.logger.warn(`Failed to generate AI insight with Gemini: ${err.message}`);
+      // Fallback
+      const weakest = activeSkills.sort((a, b) => a.accuracy_rate - b.accuracy_rate)[0]?.skill_area ?? 'reading';
+      return {
+        summary: 'Hãy tiếp tục hoàn thành các bài học tiếp theo để AI phân tích chi tiết kỹ năng của bạn nhé!',
+        weakest_skill: weakest,
+        strengths: ['Tập trung học tập tốt', 'Hoàn thành bài tập đều đặn'],
+        improvements: ['Luyện tập thêm kỹ năng còn yếu', 'Xem kỹ giải thích đáp án'],
+        today_focus: 'Làm bài học tiếp theo trong lộ trình',
+        encouragement: 'Cố lên! Bạn đang đi đúng hướng trên con đường chinh phục IELTS.',
+      };
+    }
+  }
+
+  /**
+   * Lấy thông tin streak (chuỗi ngày học liên tiếp) cho account.
+   * Streak được chia sẻ giữa TOEIC và IELTS - chỉ tính 1 lần mỗi ngày.
+   */
+  async getStreakInfoByAccount(accountId: number): Promise<{
+    current: number;
+    longest: number;
+    lastStudyDate: Date | null;
+  }> {
+    const streakInfo = await this.streakTracker.getStreakInfo(accountId);
+    return {
+      current: streakInfo.currentStreak,
+      longest: streakInfo.longestStreak,
+      lastStudyDate: streakInfo.lastStudyDate,
+    };
   }
 }

@@ -24,6 +24,12 @@ export class PlacementController {
     private readonly speakingService: SpeakingService,
   ) {}
 
+  @Get('available-skills')
+  async availableSkills() {
+    const skills = await this.adaptiveService.getAvailableSkills();
+    return { skills };
+  }
+
   @Post('start')
   async start(@Body() body: { accountId: number; skillsToTest: string[] }) {
     return this.adaptiveService.startPlacementTest(body);

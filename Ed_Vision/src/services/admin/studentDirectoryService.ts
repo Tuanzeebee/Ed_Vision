@@ -76,6 +76,11 @@ export interface StudentStudyStats {
   lastActivityAt?: string
 }
 
+export interface SkillProgressItem {
+  skill: string
+  percent: number
+}
+
 export interface StudentDetail extends StudentDirectoryItem {
   phoneNumber?: string
   dateOfBirth?: string
@@ -91,6 +96,7 @@ export interface StudentDetail extends StudentDirectoryItem {
     writing: number
     speaking: number
   }
+  skillProgressItems?: SkillProgressItem[]
   testResults: StudentTestResultItem[]
   scoreHistory: StudentScoreHistoryItem[]
   recentActivities: StudentActivityItem[]

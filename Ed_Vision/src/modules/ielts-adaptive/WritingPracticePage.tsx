@@ -205,9 +205,21 @@ function CorrectedExample({ ex }: { ex: NonNullable<AiGradingResult["correctedEx
   );
 }
 
-function pickWritingItem(lesson: Lesson | null): LearningRepositoryItem | null {
+function pickWritingItem(lesson: Lesson | null, preferredTaskType?: "task1" | "task2"): LearningRepositoryItem | null {
   if (!lesson) return null;
   const repos = [lesson.practiceRepo, lesson.miniTestRepo, lesson.flashcardRepo].filter(Boolean);
+  
+  if (preferredTaskType) {
+    for (const repo of repos) {
+      const items = repo?.items ?? [];
+      const match = items.find((item) => 
+        WRITING_TYPES.has(item.item_type) && 
+        (item.metadata as any)?.taskType === preferredTaskType
+      );
+      if (match) return match;
+    }
+  }
+
   for (const repo of repos) {
     const items = repo?.items ?? [];
     const writing = items.find((item) => WRITING_TYPES.has(item.item_type));
@@ -274,7 +286,7 @@ export default function WritingPracticePage() {
     loadLesson();
   }, [lessonId]);
 
-  const writingItem = useMemo(() => pickWritingItem(lesson), [lesson]);
+  const writingItem = useMemo(() => pickWritingItem(lesson, taskType), [lesson, taskType]);
 
   // Keep chat history throughout the writing practice session
   // Removed reset on lessonId or writingItem change
@@ -420,18 +432,32 @@ export default function WritingPracticePage() {
     }
   };
 
+  // Set initial taskType and prompt once when lesson loads
   useEffect(() => {
-    if (!writingItem) return;
-    setPrompt(writingItem.stem ?? "");
-    const resolvedTask = resolveTaskType(writingItem);
-    setTaskType(resolvedTask);
-  }, [lesson, writingItem]);
+    const initialItem = pickWritingItem(lesson);
+    if (initialItem) {
+      const resolved = resolveTaskType(initialItem);
+      setTaskType(resolved);
+      setPrompt(initialItem.stem ?? "");
+    }
+  }, [lesson]);
+
+  // Update prompt when taskType changes
+  useEffect(() => {
+    if (!lesson) return;
+    const item = pickWritingItem(lesson, taskType);
+    if (item) {
+      setPrompt(item.stem ?? "");
+    }
+  }, [taskType, lesson]);
 
   const wordCount = countWords(essay);
   const minWords = resolveMinWords(taskType, writingItem);
   const wordOk = wordCount >= minWords;
   const baseBandValue = lesson?.band_level ? lesson.band_level : null;
   const bandSummary = baseBandValue != null ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}` : "--";
+  const hasTask2 = !!pickWritingItem(lesson, "task2");
+  const isFullyCompleted = taskType === "task2" || !hasTask2;
   // Tính lessonProgress trực tiếp
   let lessonProgress = 0;
   if (result) {
@@ -441,8 +467,8 @@ export default function WritingPracticePage() {
     if (taskType === "task1") {
       lessonProgress = Math.round(currentTaskCompletion / 2);
     } else {
-      // Chỉ hiện 50% + nếu đã bắt đầu viết Task 2 (hoặc giả định Task 1 đã xong nếu có chữ)
-      const base = wordCount > 0 ? 50 : 0;
+      // Bắt đầu Task 2 từ 50% tiến trình (do Task 1 đã làm hoặc được bỏ qua)
+      const base = 50;
       lessonProgress = Math.min(100, Math.round(base + currentTaskCompletion / 2));
     }
   }
@@ -464,10 +490,34 @@ export default function WritingPracticePage() {
         word_count: wordCount,
         lesson_id: lessonId ? Number.parseInt(lessonId, 10) : undefined,
       });
+
+      if (data.confidence === "low") {
+        throw new Error("Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.");
+      }
+
       setResult(data);
+
+      if (lessonId && data.bandScore) {
+        try {
+          const parsed = Number.parseInt(lessonId, 10);
+          if (!Number.isNaN(parsed)) {
+            const accuracy = (data.bandScore / 9) * 100;
+            const hasTask2 = !!pickWritingItem(lesson, "task2");
+            const isFullyCompleted = taskType === "task2" || !hasTask2;
+            await ieltsAdaptiveApi.completeLesson(parsed, accuracy, isFullyCompleted);
+          }
+        } catch (err) {
+          console.error("Failed to complete writing lesson:", err);
+        }
+      }
+
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: any) {
-      setError(e?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
+      let errorMsg = e?.response?.data?.message || e?.message || "Có lỗi xảy ra. Vui lòng thử lại.";
+      if (errorMsg.includes("All grading providers failed") || errorMsg.includes("Hệ thống AI đang quá tải")) {
+        errorMsg = "Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.";
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -607,21 +657,83 @@ export default function WritingPracticePage() {
             <Settings size={16} />
           </button>
           {result && (
-            <button
-              onClick={handleReset}
-              style={{
-                background: "transparent",
-                border: "1px solid #bfdbfe",
-                color: "#475569",
-                borderRadius: 8,
-                padding: "6px 14px",
-                fontSize: 13,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              ← Chấm bài mới
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button
+                onClick={handleReset}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #bfdbfe",
+                  color: "#475569",
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                ← Viết lại bài này
+              </button>
+              
+              {taskType === "task1" && (
+                <button
+                  onClick={() => {
+                    setResult(null);
+                    setTaskType("task2");
+                    setEssay("");
+                    setError(null);
+                    setActiveTab("overview");
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "6px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                >
+                  Làm bài Task 2 <ChevronRight size={14} />
+                </button>
+              )}
+
+              {isFullyCompleted && (
+                <button
+                  onClick={handleBackToRoadmap}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "6px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 6px 16px rgba(37, 99, 235, 0.25)",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(37, 99, 235, 0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.25)";
+                  }}
+                >
+                  ✅ Hoàn thành
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -880,6 +992,30 @@ export default function WritingPracticePage() {
             {result && (
               <div ref={resultRef} style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 24 }}>
                 <IeltsWritingResult result={result} essay={essay} />
+                
+                {isFullyCompleted && (
+                  <div style={{
+                    background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+                    borderRadius: 20,
+                    padding: "24px 32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    color: "#ffffff",
+                    boxShadow: "0 10px 30px rgba(49, 46, 129, 0.25)",
+                    border: "1px solid rgba(99, 102, 241, 0.2)",
+                    marginTop: 16
+                  }}>
+                    <div>
+                      <h4 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#fff" }}>
+                        🎉 Chúc mừng! Bạn đã hoàn thành bài học Writing!
+                      </h4>
+                      <p style={{ margin: 0, fontSize: 13, color: "#c7d2fe", lineHeight: 1.5 }}>
+                        Bạn đã xuất sắc hoàn thành toàn bộ bài thi Writing. Hãy quay lại Roadmap để tiếp tục hành trình học IELTS của bạn.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

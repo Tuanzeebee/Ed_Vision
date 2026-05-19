@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { extname, basename, join, resolve } from 'path';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   IeltsOcrImportDto,
@@ -17,6 +18,7 @@ import {
   IeltsPracticeImportResponseDto,
 } from './dto/ielts-import.dto';
 import { IrtRefinementService } from '../../ielts-repository/services/irt-refinement.service';
+import { bootstrapIrt } from '../../ielts-repository/utils/irt-bootstrap.util';
 import { extractTextFromFile } from './ielts-extract-text';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,6 +72,11 @@ type IeltsAnswerKey = string;
 function normaliseAnswerToken(raw: string): string {
   const t = raw.trim().toUpperCase().replace(/\s+/g, ' ');
   if (t === 'NG') return 'NOT GIVEN';
+  // Expand single-letter T/F shorthand (common in compact answer keys) to
+  // TRUE/FALSE.  Safe because IELTS letter answers are limited to A-J,
+  // so T and F can never be ambiguous with a real MCQ option key.
+  if (t === 'T') return 'TRUE';
+  if (t === 'F') return 'FALSE';
   return t;
 }
 
@@ -97,12 +104,25 @@ function preprocessAnswerLine(line: string): string {
   return line
     .replace(/(\d)([MIL])(?=\s|$)/g, (_, d) => `${d}1`)
     .replace(/\bNOTGIVEN\b/gi, 'NOT GIVEN')
-    .replace(/\b([A-J])[a-j]{1,2}\b/g, (_, up) => up);
+    .replace(/\bINEITHER\b/gi, 'IN EITHER')
+    // Collapse "NOT  GIVEN" (multiple spaces) into single-space to prevent
+    // the column splitter from breaking it into two cells.
+    .replace(/\bNOT\s{2,}GIVEN\b/gi, 'NOT GIVEN')
+    .replace(/\b([A-J])[a-j]{1,2}\b/g, (_, up) => up)
+    // Strip OCR pipe / bracket / period / colon noise that lands between a
+    // question number and its answer letter:
+    //   "11 . |T PARAGRAPH 9..."  →  "11 T PARAGRAPH 9..."
+    //   "21 :[B Some text"        →  "21 B Some text"
+    //   "5 |F"                    →  "5 F"
+    // Note: [A-J] covers MCQ keys; T/F added for TRUE/FALSE shorthand.
+    .replace(/\b(\d{1,3})\s*[.):\-–]?\s*[|\[\]{}]+\s*([A-J]|T|F|TRUE|FALSE|YES|NO|NOT\s*GIVEN|NG)\b/gi,
+      (_, num, ans) => `${num} ${ans}`);
 }
 
 /** A single answer-sheet cell after column splitting. */
 type CellShape =
   | { kind: 'pair'; a: number; b: number }
+  | { kind: 'pair-with-answers'; a: number; b: number; ansA: string; ansB: string }
   | { kind: 'token'; num: number; ans: string }
   | { kind: 'word'; num: number; text: string }
   | { kind: 'lonely-letter'; letter: string }
@@ -110,19 +130,35 @@ type CellShape =
   | { kind: 'unknown' };
 
 const CELL_TOKEN_RE =
-  /^(\d{1,3})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J])\s*$/i;
+  /^(\d{1,3})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J]|T|F)\s*$/i;
+/** Free-text answers: allow uppercase/lowercase start, digits, parens, slashes. */
 const CELL_WORD_RE =
-  /^(\d{1,3})\s+([a-z][a-z\-']{1,30}(?:\s+[a-z][a-z\-']{1,30}){0,3})\s*$/;
+  /^(\d{1,3})\s+([\(]?[a-zA-Z][a-zA-Z0-9\-'()\/ ]{0,50})\s*$/;
 const CELL_PAIR_RE =
-  /^(\d{1,3})\s*[&8]\s*(\d{1,3})\s*(?:IN\s+EITHER\s+ORDER)?\s*$/i;
+  /^(\d{1,3})\s*(?:[&8]|and)\s*(\d{1,3})(?:\s|$)/i;
+/** Pair with trailing answer letters: "23&24 IN EITHER ORDER B D" or "23 and 24 B D". */
+const CELL_PAIR_WITH_ANSWERS_RE =
+  /^(\d{1,3})\s*(?:[&8]|and)\s*(\d{1,3})\s*(?:IN\s+EITHER\s+ORDER)?\s+([A-J])\s*[,/&\s]\s*([A-J])\s*$/i;
 const CELL_LETTER_RE = /^([A-J])\s*$/;
 const CELL_HEADER_RE =
-  /^(questions?|reading\s+passage|section|test\s+\d|passage|in\s+either\s+order|answer\s+key)\b/i;
+  /^(questions?|reading\s+passage|section|test\s+\d|passage|answer\s+key)\b/i;
 
 function classifyCell(cell: string): CellShape {
   const c = cell.trim();
   if (!c) return { kind: 'unknown' };
   if (CELL_HEADER_RE.test(c)) return { kind: 'header' };
+
+  // Pair with inline answers first (more specific): "23&24 IN EITHER ORDER B D"
+  const pwa = CELL_PAIR_WITH_ANSWERS_RE.exec(c);
+  if (pwa) {
+    return {
+      kind: 'pair-with-answers',
+      a: parseInt(pwa[1], 10),
+      b: parseInt(pwa[2], 10),
+      ansA: pwa[3].toUpperCase(),
+      ansB: pwa[4].toUpperCase(),
+    };
+  }
 
   const p = CELL_PAIR_RE.exec(c);
   if (p) return { kind: 'pair', a: parseInt(p[1], 10), b: parseInt(p[2], 10) };
@@ -131,10 +167,27 @@ function classifyCell(cell: string): CellShape {
   if (t) return { kind: 'token', num: parseInt(t[1], 10), ans: normaliseAnswerToken(t[2]) };
 
   const w = CELL_WORD_RE.exec(c);
-  if (w) return { kind: 'word', num: parseInt(w[1], 10), text: w[2].trim() };
+  if (w) {
+    const text = w[2].trim();
+    // Guard: reject if extracted text is just a number or looks like noise
+    if (text.length >= 1 && !/^\d+$/.test(text)) {
+      return { kind: 'word', num: parseInt(w[1], 10), text };
+    }
+  }
 
   const l = CELL_LETTER_RE.exec(c);
   if (l) return { kind: 'lonely-letter', letter: l[1].toUpperCase() };
+
+  // Fallback: "<number> <anything>" — catches answers with special characters,
+  // digits, or mixed formatting that stricter regexes missed.
+  const fallback = /^(\d{1,3})\s*[.):\-–]?\s+(.{2,40})$/.exec(c);
+  if (fallback) {
+    const num = parseInt(fallback[1], 10);
+    const text = fallback[2].trim();
+    if (num >= 1 && num <= 40 && !/^\d+$/.test(text)) {
+      return { kind: 'word', num, text };
+    }
+  }
 
   return { kind: 'unknown' };
 }
@@ -157,6 +210,12 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
   const pendingPairNumbers: number[] = [];
   let leftLast = 0;
   let rightLast = 0;
+
+  // ── Sequential numbering state ──────────────────────────────────────────
+  // When a "Questions X-Y" header is detected, we track the expected next
+  // question number.  Unnumbered answer lines are assigned sequentially.
+  let seqNext: number | null = null;
+  let seqEnd: number | null = null;
 
   /**
    * Apply an entry to the map, preferring longer / more informative answers
@@ -192,6 +251,39 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
     if (/[.…]{4,}/.test(rawLine)) continue;
 
     const processed = preprocessAnswerLine(rawLine.replace(/\s+$/, ''));
+
+    // Detect "Questions X-Y" header → start sequential numbering.
+    const qHeaderMatch = /Questions?\s+(\d{1,3})\s*[-–]\s*(\d{1,3})/i.exec(processed);
+    if (qHeaderMatch) {
+      seqNext = parseInt(qHeaderMatch[1], 10);
+      seqEnd = parseInt(qHeaderMatch[2], 10);
+      continue;
+    }
+
+    // Skip known noise headers ("Reading Passage X," etc.).
+    if (/^Reading\s+Passage/i.test(processed.trim())) continue;
+
+    // ── Try sequential assignment for unnumbered answer lines ────────────
+    // If we have a seqNext counter active and the line is a bare answer
+    // (no leading number), assign it to the next sequential question.
+    if (seqNext !== null && seqEnd !== null && seqNext <= seqEnd) {
+      const trimmed = processed.trim();
+      const isBareAnswer =
+        /^(TRUE|FALSE|NOT\s*GIVEN|YES|NO|[A-J]|T|F)\s*$/i.test(trimmed) ||
+        /^[a-z][a-z\-']{1,25}$/i.test(trimmed);
+      const startsWithNumber = /^\d{1,3}\s/.test(trimmed);
+      // Garbled chars from PDF font extraction (single special chars)
+      const isGarbage = trimmed.length <= 3 && /[^a-zA-Z0-9]/.test(trimmed);
+
+      if (isBareAnswer && !startsWithNumber && !isGarbage) {
+        const ans = normaliseAnswerToken(trimmed);
+        if (!map.has(seqNext)) {
+          applyEntry(seqNext, ans);
+        }
+        seqNext++;
+        continue;
+      }
+    }
 
     // Split into cells by 2+ consecutive spaces — the canonical answer-key
     // column separator after Tesseract preserves inter-word spacing.
@@ -234,6 +326,16 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
         case 'unknown':
           return;
 
+        case 'pair-with-answers': {
+          // Pair with inline answers: "23&24 IN EITHER ORDER B D"
+          if (shape.b === shape.a + 1 && shape.a >= 1 && shape.a <= 200) {
+            applyEntry(shape.a, shape.ansA);
+            applyEntry(shape.b, shape.ansB);
+            setColLast(shape.b);
+          }
+          return;
+        }
+
         case 'pair': {
           // Register a pair like 23&24 / 25&26.
           const { a, b } = shape;
@@ -259,14 +361,25 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
           }
           applyEntry(num, shape.ans);
           setColLast(num);
+          // Sync sequential counter when a numbered entry is found.
+          if (seqEnd !== null && num >= 1 && num <= seqEnd) {
+            seqNext = num + 1;
+          }
           return;
         }
 
         case 'word': {
           const { num, text } = shape;
-          if (text.length < 2 || isStopword(text)) return;
+          if (text.length < 2) return;
+          // Only reject single-word stopwords (e.g. stray "the", "in").
+          // Multi-word answers like "in advance" are valid IELTS gap-fill answers.
+          if (!text.includes(' ') && isStopword(text)) return;
           applyEntry(num, text);
           setColLast(num);
+          // Sync sequential counter when a numbered entry is found.
+          if (seqEnd !== null && num >= 1 && num <= seqEnd) {
+            seqNext = num + 1;
+          }
           return;
         }
 
@@ -280,6 +393,91 @@ function extractAnswerKeyMap(rawText: string): Map<number, IeltsAnswerKey> {
         }
       }
     });
+  }
+
+  // ── Secondary sweep ──────────────────────────────────────────────────────────
+  // Scan every line for <number> <answer> patterns to catch entries the
+  // cell-based parser missed (garbled column splits, unusual formatting).
+  // Only fills in question numbers that are still missing from the map.
+  const TOKEN_SWEEP_RE =
+    /\b(\d{1,2})\s*[.):\-–]?\s+(TRUE|FALSE|NOT\s*GIVEN|NG|YES|NO|[A-J]|T|F)\b/gi;
+  const WORD_SWEEP_RE =
+    /\b(\d{1,2})\s+([a-zA-Z][a-zA-Z\-']{1,25})\b/g;
+  const PAIR_SWEEP_RE =
+    /\b(\d{1,2})\s*(?:[&]|and)\s*(\d{1,2})(?:\s+IN\s+EITHER\s+ORDER)?\s+([A-J])\s*[,/&\s]\s*([A-J])\b/gi;
+  /** Pair header without inline answers: "9 and 10" or "23&24 IN EITHER ORDER" */
+  const PAIR_HEADER_SWEEP_RE =
+    /\b(\d{1,2})\s*(?:[&8]|and)\s*(\d{1,2})\b/i;
+  /**
+   * OCR-fused pair: "23824" where "&" was read as "8".
+   * Detects patterns like 2-digit + "8" + 2-digit where second = first + 1.
+   */
+  const FUSED_PAIR_RE = /(\d{1,2})8(\d{1,2})/g;
+
+  // Track pending pair numbers from the secondary sweep for multi-line pairs
+  const sweepPendingPairs: number[] = [];
+
+  for (let li = 0; li < rawLines.length; li++) {
+    const line = rawLines[li].trim();
+    if (!line) continue;
+
+    // Pair sweep: "9&10 B C" or "23 and 24 IN EITHER ORDER B D"
+    let pm;
+    while ((pm = PAIR_SWEEP_RE.exec(line)) !== null) {
+      const a = parseInt(pm[1], 10);
+      const b = parseInt(pm[2], 10);
+      if (a >= 1 && a <= 40 && b === a + 1) {
+        if (!map.has(a)) applyEntry(a, pm[3].toUpperCase());
+        if (!map.has(b)) applyEntry(b, pm[4].toUpperCase());
+      }
+    }
+
+    // Pair header sweep (no inline answers): "9 and 10" or "23&24 IN EITHER ORDER"
+    // Collect the pair numbers and look for standalone letters on following lines.
+    const ph = PAIR_HEADER_SWEEP_RE.exec(line);
+    if (ph) {
+      const a = parseInt(ph[1], 10);
+      const b = parseInt(ph[2], 10);
+      if (a >= 1 && a <= 40 && b === a + 1 && !map.has(a) && !map.has(b)) {
+        sweepPendingPairs.push(a, b);
+      }
+    }
+
+    // Fused pair sweep: OCR merges "23&24" → "23824".
+    let fp;
+    while ((fp = FUSED_PAIR_RE.exec(line)) !== null) {
+      const a = parseInt(fp[1], 10);
+      const b = parseInt(fp[2], 10);
+      if (a >= 1 && a <= 40 && b === a + 1 && !map.has(a) && !map.has(b)) {
+        sweepPendingPairs.push(a, b);
+      }
+    }
+
+    // Assign standalone letters to pending pair numbers
+    if (sweepPendingPairs.length > 0 && /^[A-J]$/i.test(line)) {
+      const num = sweepPendingPairs.shift()!;
+      if (!map.has(num)) applyEntry(num, line.toUpperCase());
+      continue;
+    }
+
+    // Token sweep: "19 C" or "37 TRUE"
+    let tm;
+    while ((tm = TOKEN_SWEEP_RE.exec(line)) !== null) {
+      const num = parseInt(tm[1], 10);
+      if (num >= 1 && num <= 40 && !map.has(num)) {
+        applyEntry(num, normaliseAnswerToken(tm[2]));
+      }
+    }
+
+    // Word sweep: "19 population" or "37 habitat"
+    let wm;
+    while ((wm = WORD_SWEEP_RE.exec(line)) !== null) {
+      const num = parseInt(wm[1], 10);
+      const text = wm[2].trim();
+      if (num >= 1 && num <= 40 && !map.has(num) && text.length >= 2 && !isStopword(text)) {
+        applyEntry(num, text);
+      }
+    }
   }
 
   return map;
@@ -962,7 +1160,67 @@ function parseIeltsQuestionsFromText(
     return an - bn;
   });
 
-  return questions;
+  // ── Hard cap at 40 questions ──────────────────────────────────────────────
+  // IELTS Reading and Listening both have exactly 40 questions.
+  // Remove any false-positive questions with number > 40 (OCR artifacts,
+  // page footers, passage text lines starting with numbers).
+  const MAX_IELTS_QUESTIONS = 40;
+  const capped = questions.filter(
+    (q) => q.questionNumber === null || q.questionNumber <= MAX_IELTS_QUESTIONS,
+  );
+
+  // Deduplicate by question number — keep the first (most likely real) entry.
+  const deduped: ParsedIeltsQuestion[] = [];
+  const usedNumbers = new Set<number>();
+  for (const q of capped) {
+    if (q.questionNumber !== null) {
+      if (usedNumbers.has(q.questionNumber)) continue;
+      usedNumbers.add(q.questionNumber);
+    }
+    deduped.push(q);
+  }
+
+  // ── Guarantee full 40-question coverage ──────────────────────────────────
+  // IELTS Reading & Listening both have exactly 40 questions.  If the OCR
+  // missed some "Questions X-Y" group headers, the placeholder-synthesis
+  // step above won't have created entries for those numbers.  We fill any
+  // remaining gap (1–40) with a generic placeholder so the imported
+  // repository always has exactly 40 slots.  The correct answer can still
+  // be populated later via the answer-key import flow.
+  for (let n = 1; n <= MAX_IELTS_QUESTIONS; n++) {
+    if (usedNumbers.has(n)) continue;
+    const correctKey = answerKeyMap.get(n);
+    const inferredSection =
+      skillArea === 'listening'
+        ? (n <= 10 ? 1 : n <= 20 ? 2 : n <= 30 ? 3 : 4)
+        : null;
+    deduped.push({
+      questionNumber: n,
+      section: inferredSection,
+      stem: `[Câu ${n}]`,
+      context: null,
+      questionType: 'fill-blank',
+      options: [
+        {
+          optionKey: 'A',
+          optionText: typeof correctKey === 'string' ? correctKey : '(blank)',
+          isCorrect: !!correctKey,
+          rationale: null,
+        },
+      ],
+      explanation: null,
+    });
+    usedNumbers.add(n);
+  }
+
+  // Re-sort after gap fill so questions are in order 1..40.
+  deduped.sort((a, b) => {
+    const an = a.questionNumber ?? 1e9;
+    const bn = b.questionNumber ?? 1e9;
+    return an - bn;
+  });
+
+  return deduped;
 }
 
 /** Heuristic: is this line a pure answer-key block? */
@@ -1011,6 +1269,32 @@ export class IeltsImportService {
       case 'short-answer': return 'short_answer';
       default: return 'mcq';
     }
+  }
+
+  private mapLearningItemType(type: ParsedIeltsQuestion['questionType']): string {
+    switch (type) {
+      case 'fill-blank': return 'gap_fill';
+      case 'short-answer': return 'short_answer';
+      case 'true-false': return 'true_false_ng';
+      case 'matching': return 'matching';
+      default: return 'single_choice';
+    }
+  }
+
+  private buildPracticeStem(parsed: ParsedIeltsQuestion, fallbackIndex: number): string {
+    const qNum = parsed.questionNumber ?? fallbackIndex;
+    const rawStem = parsed.stem?.trim() ?? '';
+    if (rawStem && rawStem !== `[Câu ${qNum}]`) return rawStem;
+
+    if (parsed.questionType === 'fill-blank' || parsed.questionType === 'short-answer') {
+      return `Question ${qNum}: Complete the sentence with a suitable word.`;
+    }
+
+    if (parsed.questionType === 'true-false') {
+      return `Question ${qNum}: Decide if the following statement is TRUE, FALSE or NOT GIVEN.`;
+    }
+
+    return `Question ${qNum}`;
   }
 
   async importPractice(
@@ -1094,6 +1378,157 @@ export class IeltsImportService {
       skill_area: skillArea,
       band_min: dto.band_min,
       band_max: dto.band_max,
+      source_filename: basename(file.originalname || file.path),
+    };
+  }
+
+  async importPracticeLearning(
+    accountId: number,
+    dto: IeltsPracticeImportDto,
+    file: Express.Multer.File,
+  ): Promise<IeltsPracticeImportResponseDto> {
+    if (!file) throw new BadRequestException('File là bắt buộc.');
+
+    const skillArea = this.resolveSkillArea(dto.skill_area, file.originalname);
+    const rawText = await extractTextFromFile(file);
+
+    if (!rawText || rawText.trim().length < 20) {
+      throw new BadRequestException('Không trích xuất được văn bản từ file.');
+    }
+
+    const parsedQuestions = parseIeltsQuestionsFromText(rawText, skillArea);
+
+    this.logger.log(`[DEBUG] OCR/Text length: ${rawText.length}`);
+    this.logger.log(`[DEBUG] Raw preview: ${rawText.substring(0, 300)}`);
+    this.logger.log(`[DEBUG] Parsed questions count: ${parsedQuestions.length}`);
+
+    if (parsedQuestions.length === 0) {
+      const cleanedPreview = cleanOcrText(rawText).substring(0, 400);
+      this.logger.warn(`[DEBUG] Cleaned text preview: ${cleanedPreview}`);
+      throw new BadRequestException(
+        'Không phân tích được câu hỏi từ file. ' +
+          `Preview: ${rawText.substring(0, 100)}...`,
+      );
+    }
+
+    const bandMin = dto.band_min ?? 4.0;
+    const bandMax = dto.band_max ?? 9.0;
+    const scoreMin = Math.round(bandMin * 100);
+    const scoreMax = Math.round(bandMax * 100);
+
+    const baseSlug = `ielts-${skillArea}-practice-${scoreMin}-${scoreMax}`;
+    const slug = dto.replace_existing ? baseSlug : `${baseSlug}-${Date.now()}`;
+    const title = `IELTS ${this.capitalise(skillArea)} Practice (Band ${bandMin}–${bandMax})`;
+
+    let repositoryId: number;
+    let repositorySlug: string;
+
+    if (dto.replace_existing) {
+      const repo = await this.prisma.learningRepository.upsert({
+        where: { slug: baseSlug },
+        create: {
+          cert_type: 'ielts',
+          title,
+          slug: baseSlug,
+          content_type: 'practice',
+          skill_area: skillArea,
+          is_published: true,
+          total_items: 0,
+          target_score_min: scoreMin,
+          target_score_max: scoreMax,
+          metadata: {
+            source: 'practice_learning_import',
+            source_file: basename(file.originalname || file.path),
+            created_by: accountId,
+            band_min: bandMin,
+            band_max: bandMax,
+          },
+        },
+        update: {
+          title,
+          content_type: 'practice',
+          skill_area: skillArea,
+          is_published: true,
+          target_score_min: scoreMin,
+          target_score_max: scoreMax,
+          metadata: {
+            source: 'practice_learning_import',
+            source_file: basename(file.originalname || file.path),
+            created_by: accountId,
+            band_min: bandMin,
+            band_max: bandMax,
+          },
+        },
+        select: { id: true, slug: true },
+      });
+
+      repositoryId = repo.id;
+      repositorySlug = repo.slug;
+
+      await this.prisma.learningRepositoryOption.deleteMany({
+        where: { item: { repository_id: repositoryId } },
+      });
+      await this.prisma.learningRepositoryItem.deleteMany({
+        where: { repository_id: repositoryId } },
+      );
+    } else {
+      const repo = await this.prisma.learningRepository.create({
+        data: {
+          cert_type: 'ielts',
+          title,
+          slug,
+          content_type: 'practice',
+          skill_area: skillArea,
+          is_published: true,
+          total_items: 0,
+          target_score_min: scoreMin,
+          target_score_max: scoreMax,
+          metadata: {
+            source: 'practice_learning_import',
+            source_file: basename(file.originalname || file.path),
+            created_by: accountId,
+            band_min: bandMin,
+            band_max: bandMax,
+          },
+        },
+        select: { id: true, slug: true },
+      });
+
+      repositoryId = repo.id;
+      repositorySlug = repo.slug;
+    }
+
+    const { importedCount, skippedCount } =
+      await this.saveQuestionsToLearningRepository(
+        repositoryId,
+        skillArea,
+        parsedQuestions,
+        {
+          source: 'practice_learning_import',
+          filename: file.originalname || file.path,
+          accountId,
+          bandMin,
+          bandMax,
+        },
+      );
+
+    await this.prisma.learningRepository.update({
+      where: { id: repositoryId },
+      data: {
+        total_items: importedCount,
+        estimated_minutes: Math.max(1, Math.ceil(importedCount / 2)),
+        pass_score: Math.max(1, Math.ceil(importedCount * 0.7)),
+      },
+    });
+
+    return {
+      slug: repositorySlug,
+      imported_count: importedCount,
+      skipped_count: skippedCount,
+      total_detected: parsedQuestions.length,
+      skill_area: skillArea,
+      band_min: bandMin,
+      band_max: bandMax,
       source_filename: basename(file.originalname || file.path),
     };
   }
@@ -1223,103 +1658,114 @@ export class IeltsImportService {
     }
 
     const rawText = await extractTextFromFile(file);
+
+    // ── Diagnostic logging ──
+    this.logger.log(`[AK] Raw text length: ${rawText.length} chars`);
+    this.logger.log(`[AK] Raw text preview (first 600 chars):\n${rawText.substring(0, 600)}`);
+
     const answerKeyMap = extractAnswerKeyMap(rawText);
 
-    const itemsFull = await this.prisma.examRepositoryItem.findMany({
-      where: { repository_id: repository.id },
-      select: {
-        id: true,
-        item_type: true,
-        metadata: true,
-        options: { select: { id: true, option_key: true, option_text: true } },
-      },
+    this.logger.log(`[AK] Answer key map size: ${answerKeyMap.size}`);
+    const sortedEntries = [...answerKeyMap.entries()].sort((a, b) => a[0] - b[0]);
+    this.logger.log(`[AK] Answer key entries: ${sortedEntries.map(([k, v]) => `${k}=${v}`).join(', ')}`);
+    const missingFromAk: number[] = [];
+    for (let i = 1; i <= 40; i++) {
+      if (!answerKeyMap.has(i)) missingFromAk.push(i);
+    }
+    if (missingFromAk.length > 0) {
+      this.logger.warn(`[AK] Missing from answer key map: ${missingFromAk.join(', ')}`);
+    }
+
+    // ── Find IeltsQuestion records by topicTag "repo:SLUG" ──
+    const repoTag = `repo:${repository.slug}`;
+    const ieltsQuestions = await this.prisma.ieltsQuestion.findMany({
+      where: { topicTags: { has: repoTag } },
     });
 
-    // If requested, clear all existing is_correct flags before re-applying.
-    if (dto.clear_existing) {
-      await this.prisma.examRepositoryOption.updateMany({
-        where: { item: { repository_id: repository.id } },
-        data: { is_correct: false },
-      });
-    }
+    this.logger.log(`[AK] Found ${ieltsQuestions.length} IeltsQuestion records with tag "${repoTag}"`);
 
     let updatedCount = 0;
     let skippedCount = 0;
     const unknownNumbers: number[] = [];
 
-    for (const item of itemsFull) {
-      const meta = item.metadata as Record<string, unknown> | null;
-      const qNum =
-        typeof meta?.question_number === 'number' ? (meta.question_number as number) : null;
+    for (const question of ieltsQuestions) {
+      // Extract question number from topicTags: "qnum:7" → 7
+      const qnumTag = question.topicTags.find(t => t.startsWith('qnum:'));
+      const qNum = qnumTag ? parseInt(qnumTag.split(':')[1], 10) : null;
 
-      if (qNum === null) { skippedCount++; continue; }
-
-      const correctKey = answerKeyMap.get(qNum);
-      if (!correctKey) { skippedCount++; unknownNumbers.push(qNum); continue; }
-
-      // Reset existing flags for this item before re-applying.
-      await this.prisma.examRepositoryOption.updateMany({
-        where: { item_id: item.id },
-        data: { is_correct: false },
-      });
-
-      const upper = correctKey.toUpperCase();
-      const isLetterAnswer = /^[A-J]$/.test(upper);
-      const isBooleanAnswer = /^(TRUE|FALSE|YES|NO|NOT GIVEN)$/.test(upper);
-
-      // 1) Try direct option_key match (letters, TRUE/FALSE/NG, YES/NO/NG).
-      let matchingOpt =
-        item.options.find((o) => o.option_key.toUpperCase() === upper) ?? null;
-
-      // 2) For boolean answers, also accept option_text equality.
-      if (!matchingOpt && isBooleanAnswer) {
-        matchingOpt =
-          item.options.find((o) => (o.option_text ?? '').toUpperCase() === upper) ?? null;
-      }
-
-      // 3) Free-text answers (gap-fill / short-answer).  Update the placeholder
-      //    option's text and mark it correct.
-      if (
-        !matchingOpt &&
-        !isLetterAnswer &&
-        !isBooleanAnswer &&
-        (item.item_type === 'fill_blank' || item.item_type === 'short_answer') &&
-        item.options.length > 0
-      ) {
-        const placeholder = item.options[0];
-        await this.prisma.examRepositoryOption.update({
-          where: { id: placeholder.id },
-          data: {
-            option_text: correctKey,
-            is_correct: true,
-          },
-        });
-        updatedCount++;
+      if (qNum === null) {
+        skippedCount++;
         continue;
       }
 
-      if (matchingOpt) {
-        await this.prisma.examRepositoryOption.update({
-          where: { id: matchingOpt.id },
-          data: { is_correct: true },
-        });
-        updatedCount++;
-      } else {
+      const correctKey = answerKeyMap.get(qNum);
+      if (!correctKey) {
+        this.logger.warn(`[AK] Q${qNum}: no answer in answer key map — skipping`);
         skippedCount++;
+        unknownNumbers.push(qNum);
+        continue;
       }
+
+      // Determine the correct answer and update options accordingly.
+      const upper = correctKey.toUpperCase();
+      const isBooleanAns = /^(TRUE|FALSE|YES|NO|NOT GIVEN)$/i.test(upper);
+      const isLetterAns = /^[A-J]$/.test(upper);
+      const currentOptions = (question.options as { key: string; text: string }[] | null) ?? [];
+
+      let newOptions = currentOptions;
+      let newCorrectAnswer = correctKey;
+
+      if (question.questionType === 'true_false_ng') {
+        // T/F/NG: correctAnswer is the value (TRUE, FALSE, NOT GIVEN)
+        newCorrectAnswer = upper;
+        // Ensure options exist
+        if (newOptions.length === 0) {
+          const keys = /^(YES|NO)$/i.test(upper)
+            ? ['YES', 'NO', 'NOT GIVEN']
+            : ['TRUE', 'FALSE', 'NOT GIVEN'];
+          newOptions = keys.map(k => ({ key: k, text: k }));
+        }
+      } else if (question.questionType === 'gap_fill') {
+        // Gap-fill: correctAnswer is the free-text word
+        newCorrectAnswer = correctKey;
+        newOptions = []; // No selectable options
+      } else {
+        // MCQ / matching: correctAnswer is the letter (A-G)
+        newCorrectAnswer = upper;
+        // If no options exist yet for matching, build A-J placeholder
+        if (newOptions.length === 0 && isLetterAns) {
+          const maxLetter = upper.charCodeAt(0) - 64; // A=1, B=2, ...
+          const count = Math.max(maxLetter + 2, 7); // At least up to the answer + 2
+          newOptions = Array.from({ length: Math.min(count, 10) }, (_, i) => ({
+            key: String.fromCharCode(65 + i),
+            text: String.fromCharCode(65 + i),
+          }));
+        }
+      }
+
+      await this.prisma.ieltsQuestion.update({
+        where: { id: question.id },
+        data: {
+          correctAnswer: newCorrectAnswer,
+          options: newOptions as any,
+          status: 'approved',
+        },
+      });
+
+      updatedCount++;
     }
 
-    const totalConfigured = await this.prisma.examRepositoryOption.count({
-      where: { item: { repository_id: repository.id }, is_correct: true },
-    });
+    this.logger.log(`[AK] SUMMARY: total_questions=${ieltsQuestions.length}, applied=${updatedCount}, skipped=${skippedCount}, ak_map_size=${answerKeyMap.size}`);
+    if (unknownNumbers.length > 0) {
+      this.logger.warn(`[AK] Question numbers not in answer key: [${unknownNumbers.join(', ')}]`);
+    }
 
     return {
       repository_id: repository.id,
       slug: repository.slug,
       updated_count: updatedCount,
       skipped_count: skippedCount,
-      answer_key_complete: totalConfigured >= itemsFull.length && itemsFull.length > 0,
-      // Aliases consumed by the frontend (IeltsAnswerKeyImportResponse).
+      answer_key_complete: updatedCount >= ieltsQuestions.length && ieltsQuestions.length > 0,
       skill_area:
         ((await this.prisma.examRepository.findUnique({
           where: { id: repository.id },
@@ -1328,8 +1774,138 @@ export class IeltsImportService {
       source_filename: basename(file.originalname || file.path),
       total_answers_detected: answerKeyMap.size,
       applied_items: updatedCount,
-      unanswered_items: Math.max(0, itemsFull.length - updatedCount),
+      unanswered_items: Math.max(0, ieltsQuestions.length - updatedCount),
       unknown_question_numbers: unknownNumbers,
+    } as IeltsAnswerKeyImportResponseDto;
+  }
+
+  async importLearningAnswerKey(
+    dto: IeltsAnswerKeyImportDto,
+    file: Express.Multer.File,
+  ): Promise<IeltsAnswerKeyImportResponseDto> {
+    if (!file) throw new BadRequestException('File đáp án là bắt buộc.');
+
+    const repository = await this.prisma.learningRepository.findUnique({
+      where: { slug: dto.repository_slug.trim() },
+      select: { id: true, slug: true, skill_area: true },
+    });
+
+    if (!repository) {
+      throw new BadRequestException(
+        `Không tìm thấy learning repository: ${dto.repository_slug}`,
+      );
+    }
+
+    const rawText = await extractTextFromFile(file);
+    const answerKeyMap = extractAnswerKeyMap(rawText);
+
+    const items = await this.prisma.learningRepositoryItem.findMany({
+      where: { repository_id: repository.id },
+      orderBy: { item_order: 'asc' },
+      select: {
+        id: true,
+        item_order: true,
+        metadata: true,
+        options: {
+          orderBy: { sort_order: 'asc' },
+          select: { id: true, option_key: true },
+        },
+      },
+    });
+
+    if (items.length === 0) {
+      throw new BadRequestException(
+        'Repository hiện chưa có câu hỏi để gán đáp án.',
+      );
+    }
+
+    const clearExisting = dto.clear_existing !== false;
+    if (clearExisting) {
+      await this.prisma.learningRepositoryOption.updateMany({
+        where: { item: { repository_id: repository.id } },
+        data: { is_correct: false },
+      });
+    }
+
+    const repositoryQuestionNumbers = new Set<number>();
+    const matchedQuestionNumbers = new Set<number>();
+    let appliedItems = 0;
+
+    const normalizeKey = (val: string) =>
+      val.trim().toUpperCase().replace(/\s+/g, ' ');
+
+    for (const item of items) {
+      const meta = (item.metadata as Record<string, unknown> | null) ?? {};
+      const qNumRaw = meta.question_number;
+      const qNum =
+        typeof qNumRaw === 'number'
+          ? qNumRaw
+          : typeof item.item_order === 'number'
+            ? item.item_order
+            : null;
+
+      if (typeof qNum === 'number') {
+        repositoryQuestionNumbers.add(qNum);
+      }
+
+      if (typeof qNum !== 'number') continue;
+
+      const mappedAnswer = answerKeyMap.get(qNum);
+      if (!mappedAnswer) continue;
+
+      const normalized = normalizeKey(normaliseAnswerToken(mappedAnswer));
+      const matchedOption = item.options.find(
+        (option) => normalizeKey(option.option_key) === normalized,
+      );
+
+      if (matchedOption) {
+        await this.prisma.learningRepositoryOption.updateMany({
+          where: { item_id: item.id },
+          data: { is_correct: false },
+        });
+        await this.prisma.learningRepositoryOption.update({
+          where: { id: matchedOption.id },
+          data: { is_correct: true },
+        });
+      } else {
+        await this.prisma.learningRepositoryItem.update({
+          where: { id: item.id },
+          data: {
+            metadata: {
+              ...(meta as Record<string, unknown>),
+              correctAnswer: normalized,
+            },
+          },
+        });
+      }
+
+      appliedItems += 1;
+      matchedQuestionNumbers.add(qNum);
+    }
+
+    const unansweredItems = await this.prisma.learningRepositoryItem.count({
+      where: {
+        repository_id: repository.id,
+        options: { none: { is_correct: true } },
+      },
+    });
+
+    const unknownQuestionNumbers = [...answerKeyMap.keys()]
+      .filter((questionNumber) => !repositoryQuestionNumbers.has(questionNumber))
+      .sort((a, b) => a - b);
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      updated_count: appliedItems,
+      skipped_count: Math.max(0, items.length - appliedItems),
+      answer_key_complete: appliedItems >= items.length && items.length > 0,
+      skill_area: repository.skill_area ?? 'unknown',
+      source_filename: basename(file.originalname || file.path),
+      total_answers_detected: answerKeyMap.size,
+      applied_items: appliedItems,
+      unanswered_items: unansweredItems,
+      unknown_question_numbers: unknownQuestionNumbers,
     } as IeltsAnswerKeyImportResponseDto;
   }
 
@@ -1365,6 +1941,58 @@ export class IeltsImportService {
 
     const audioUrl = `/uploads/IELTS/ielts-listening/${slug}/audio/${filename}`;
     const mappedItemIds = await this.mapAudioToItems(repository.id, section, audioUrl);
+
+    // ── Also update IeltsPassage.audio_url for placement questions ──
+    // Find IeltsQuestion records tagged with this repo slug that belong to the
+    // target section, then update their linked IeltsPassage records.
+    await this.mapAudioToPlacementPassages(slug, section, audioUrl);
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      audio_url: audioUrl,
+      filename,
+      section,
+      track_number: trackNumber,
+      mapped_item_ids: mappedItemIds,
+    };
+  }
+
+  async uploadLearningListeningAudio(
+    dto: IeltsListeningAudioUploadDto,
+    file: Express.Multer.File,
+  ): Promise<IeltsListeningAudioUploadResponseDto> {
+    const { writeFile, mkdir } = await import('fs/promises');
+    const slug = dto.repository_slug.trim();
+
+    const repository = await this.prisma.learningRepository.findFirst({
+      where: { slug, cert_type: 'ielts', content_type: 'practice' },
+      select: { id: true, slug: true },
+    });
+
+    if (!repository) {
+      throw new BadRequestException(`Không tìm thấy learning repository: ${slug}`);
+    }
+
+    const section = dto.section ?? this.inferSectionFromFilename(file.originalname);
+    const trackNumber = dto.track_number ?? 1;
+
+    const audioRelDir = join('IELTS', 'learning-listening', slug, 'audio');
+    const audioAbsDir = resolve(join(process.cwd(), 'uploads', ...audioRelDir.split(/[\\/]/)));
+    if (!existsSync(audioAbsDir)) await mkdir(audioAbsDir, { recursive: true });
+
+    const ext = extname(file.originalname).toLowerCase() || '.mp3';
+    const filename = `${slug}_sec${section}_${String(trackNumber).padStart(3, '0')}${ext}`;
+    const destPath = join(audioAbsDir, filename);
+    const srcBuffer = await readFile(file.path);
+    await writeFile(destPath, srcBuffer);
+
+    const audioUrl = `/uploads/IELTS/learning-listening/${slug}/audio/${filename}`;
+    const mappedItemIds = await this.mapAudioToLearningItems(
+      repository.id,
+      section,
+      audioUrl,
+    );
 
     return {
       repository_id: repository.id,
@@ -1483,6 +2111,20 @@ export class IeltsImportService {
     return m ? parseInt(m[1], 10) : 1;
   }
 
+  /**
+   * Infer IELTS Listening section from question number.
+   * Standard layout: Section 1 = Q1–10, Section 2 = Q11–20,
+   * Section 3 = Q21–30, Section 4 = Q31–40.
+   */
+  private inferSectionFromQuestionNumber(qNum: number | null): number | null {
+    if (qNum === null || qNum < 1) return null;
+    if (qNum <= 10) return 1;
+    if (qNum <= 20) return 2;
+    if (qNum <= 30) return 3;
+    if (qNum <= 40) return 4;
+    return null;
+  }
+
   private async mapAudioToItems(
     repositoryId: number,
     section: number,
@@ -1511,6 +2153,89 @@ export class IeltsImportService {
     return ids;
   }
 
+  private async mapAudioToLearningItems(
+    repositoryId: number,
+    section: number,
+    audioUrl: string,
+  ): Promise<number[]> {
+    const items = await this.prisma.learningRepositoryItem.findMany({
+      where: { repository_id: repositoryId },
+      orderBy: { item_order: 'asc' },
+      select: { id: true, metadata: true },
+    });
+
+    const sectionItems = items.filter((item) => {
+      const meta = item.metadata as Record<string, unknown> | null;
+      return meta?.section === section;
+    });
+
+    if (sectionItems.length === 0) return [];
+
+    const ids = sectionItems.map((i) => i.id);
+    await this.prisma.learningRepositoryItem.updateMany({
+      where: { id: { in: ids } },
+      data: { media_audio_url: audioUrl },
+    });
+
+    this.logger.log(
+      `Mapped audio "${audioUrl}" to ${ids.length} learning items in section ${section}`,
+    );
+    return ids;
+  }
+
+  /**
+   * Update IeltsPassage.audio_url for placement-pool questions.
+   *
+   * Questions are identified by topicTag "repo:<slug>".  The section is
+   * inferred from the question number (Q1–10 → Section 1, etc.).
+   * All distinct passage_ids belonging to the matched questions are updated.
+   */
+  private async mapAudioToPlacementPassages(
+    repoSlug: string,
+    section: number,
+    audioUrl: string,
+  ): Promise<void> {
+    const repoTag = `repo:${repoSlug}`;
+
+    // Find all IeltsQuestion records tagged with this repo + matching section
+    const questions = await this.prisma.ieltsQuestion.findMany({
+      where: {
+        topicTags: { has: repoTag },
+        skill: 'listening',
+        passage_id: { not: null },
+      },
+      select: { id: true, topicTags: true, passage_id: true },
+    });
+
+    // Filter to questions in the target section by their question number
+    const passageIds = new Set<string>();
+    for (const q of questions) {
+      const qnumTag = q.topicTags.find((t) => t.startsWith('qnum:'));
+      const qNum = qnumTag ? parseInt(qnumTag.split(':')[1], 10) : null;
+      const qSection = this.inferSectionFromQuestionNumber(qNum);
+      if (qSection === section && q.passage_id) {
+        passageIds.add(q.passage_id);
+      }
+    }
+
+    if (passageIds.size === 0) {
+      this.logger.log(
+        `[Audio→Passage] No placement passages found for repo="${repoSlug}" section=${section}`,
+      );
+      return;
+    }
+
+    // Update all matching passages with the audio URL
+    await this.prisma.ieltsPassage.updateMany({
+      where: { id: { in: [...passageIds] } },
+      data: { audio_url: audioUrl },
+    });
+
+    this.logger.log(
+      `[Audio→Passage] Updated ${passageIds.size} IeltsPassage(s) with audio "${audioUrl}" for section ${section}`,
+    );
+  }
+
   private async saveQuestionsToRepositoryAndPlacement(
     repositoryId: number,
     skillArea: 'listening' | 'reading',
@@ -1525,66 +2250,75 @@ export class IeltsImportService {
   ): Promise<{ importedCount: number; skippedCount: number }> {
     let importedCount = 0;
     let skippedCount = 0;
-    let nextOrder = 1;
+
+    // Get the repository slug for tagging IeltsQuestion records.
+    const repo = await this.prisma.examRepository.findUnique({
+      where: { id: repositoryId },
+      select: { slug: true },
+    });
+    const repoSlug = repo?.slug ?? `repo-${repositoryId}`;
 
     const passageCache = new Map<string, string>();
 
+    // ── For Listening: pre-create one IeltsPassage per section (1–4) ──
+    // This allows audio to be attached later via uploadListeningAudio.
+    const sectionPassageMap = new Map<number, string>();
+    if (skillArea === 'listening') {
+      const sections = new Set(
+        parsedQuestions
+          .map((q) => q.section ?? this.inferSectionFromQuestionNumber(q.questionNumber))
+          .filter((s): s is number => s !== null),
+      );
+      for (const sec of sections) {
+        const passage = await this.prisma.ieltsPassage.create({
+          data: {
+            skill: 'listening',
+            title: `${repoSlug} – Section ${sec}`,
+            content: `IELTS Listening Section ${sec}`,
+            band_min: config.bandMin,
+            band_max: config.bandMax,
+          },
+          select: { id: true },
+        });
+        sectionPassageMap.set(sec, passage.id);
+        // Also cache by section key for consistency
+        passageCache.set(`__section_${sec}`, passage.id);
+      }
+    }
+
     for (const parsed of parsedQuestions) {
-      if (!parsed.stem || (parsed.options.length === 0 && parsed.questionType === 'mcq')) {
+      // Skip questions without any identifiable content.
+      if (!parsed.questionNumber && !parsed.stem) {
         skippedCount++;
         continue;
       }
 
-      this.logger.log(`[AI] Refining IRT for Q${parsed.questionNumber || nextOrder}...`);
+      // ── IRT bootstrap with per-question difficulty spread ─────────────────
+      // Instead of assigning the same irt_b (band midpoint) to every question,
+      // we spread difficulty linearly across the imported band range based on
+      // question number. For Listening this mirrors the standard IELTS structure:
+      //   Section 1 (Q1–10)  → easiest  (band_min)
+      //   Section 4 (Q31–40) → hardest  (band_max)
+      // For Reading a similar pattern holds (questions increase in difficulty).
+      // We map each question's number onto [band_min, band_max] and convert to θ.
+      const irtQNum = parsed.questionNumber ?? (importedCount + 1);
+      const totalQ = parsedQuestions.length || 40;
+      // Linear interpolation: question 1 → bandMin, question totalQ → bandMax
+      const frac = Math.max(0, Math.min(1, (irtQNum - 1) / Math.max(totalQ - 1, 1)));
+      const spreadBand = config.bandMin + frac * (config.bandMax - config.bandMin);
+      const heuristicIrt = bootstrapIrt(spreadBand, this.mapPlacementType(parsed.questionType));
+      const irt = { irt_b: heuristicIrt.irt_b, confidence: 'low' as const };
 
-      const irt = await this.irtRefinement.refineIrtB({
-        questionText: parsed.stem,
-        questionType: parsed.questionType,
-        passageContext: parsed.context ?? undefined,
-        options: parsed.options.map(o => o.optionText),
-        answerKey: parsed.options.find(o => o.isCorrect)?.optionKey,
-        targetBand: (config.bandMin + config.bandMax) / 2,
-      });
-
-      this.logger.log(`[AI] Refined irt_b: ${irt.irt_b} (${irt.confidence})`);
-
-      const repositoryItem = await this.prisma.examRepositoryItem.create({
-        data: {
-          repository_id: repositoryId,
-          item_order: nextOrder,
-          item_type: this.mapItemType(parsed.questionType),
-          stem: parsed.stem,
-          reading_passage: parsed.context ?? null,
-          score_weight: 1,
-          estimated_seconds: this.estimateSeconds(skillArea, parsed.questionType),
-          metadata: {
-            source: config.source,
-            source_file: basename(config.filename),
-            section: parsed.section,
-            question_number: parsed.questionNumber ?? null,
-            question_type: parsed.questionType,
-            irt_b: irt.irt_b,
-            irt_confidence: irt.confidence,
-          },
-        },
-        select: { id: true },
-      });
-
-      if (parsed.options.length > 0) {
-        await this.prisma.examRepositoryOption.createMany({
-          data: parsed.options.map((opt, idx) => ({
-            item_id: repositoryItem.id,
-            option_key: opt.optionKey,
-            option_text: opt.optionText,
-            is_correct: opt.isCorrect,
-            rationale: opt.rationale ?? null,
-            sort_order: idx + 1,
-          })),
-        });
-      }
-
+      // ── Create IeltsPassage for passage content ──
       let passageId: string | null = null;
-      if (parsed.context && parsed.context.trim().length > 50) {
+
+      if (skillArea === 'listening') {
+        // For listening: use the pre-created section passage
+        const sec = parsed.section ?? this.inferSectionFromQuestionNumber(parsed.questionNumber);
+        if (sec !== null && sectionPassageMap.has(sec)) {
+          passageId = sectionPassageMap.get(sec)!;
+        }
+      } else if (parsed.context && parsed.context.trim().length > 50) {
         const contextKey = parsed.context.trim();
         if (passageCache.has(contextKey)) {
           passageId = passageCache.get(contextKey)!;
@@ -1604,31 +2338,199 @@ export class IeltsImportService {
         }
       }
 
+      // ── Build options for IeltsQuestion based on question type ──
+      const isGapFill = parsed.questionType === 'fill-blank' || parsed.questionType === 'short-answer';
+      const isTrueFalse = parsed.questionType === 'true-false';
+
+      let ieltsOptions: { key: string; text: string }[];
+      let ieltsCorrectAnswer: string;
+
+      if (isGapFill) {
+        // Gap-fill: no selectable options — frontend renders text input.
+        ieltsOptions = [];
+        ieltsCorrectAnswer = parsed.options.find(o => o.isCorrect)?.optionText || '';
+      } else if (isTrueFalse) {
+        // T/F/NG or Y/N/NG: use the value as key.
+        const variant = parsed.tfVariant ?? 'tf';
+        const keys = variant === 'yn'
+          ? ['YES', 'NO', 'NOT GIVEN']
+          : ['TRUE', 'FALSE', 'NOT GIVEN'];
+        ieltsOptions = keys.map(k => ({ key: k, text: k }));
+        ieltsCorrectAnswer = parsed.options.find(o => o.isCorrect)?.optionKey || '';
+      } else {
+        // MCQ / matching: keep letter keys with option text.
+        ieltsOptions = parsed.options.map(o => ({ key: o.optionKey, text: o.optionText }));
+        ieltsCorrectAnswer = parsed.options.find(o => o.isCorrect)?.optionKey || '';
+      }
+
+      // ── Build meaningful questionText ──
+      // Use the OCR stem if available; otherwise describe the question.
+      const qNum = parsed.questionNumber ?? importedCount + 1;
+      let questionText = parsed.stem;
+      if (!questionText || questionText === `[Câu ${qNum}]`) {
+        // No real stem — use a descriptive fallback based on type.
+        if (isGapFill) {
+          questionText = `Question ${qNum}: Complete the sentence with a suitable word.`;
+        } else if (isTrueFalse) {
+          questionText = `Question ${qNum}: Decide if the following statement is TRUE, FALSE or NOT GIVEN.`;
+        } else {
+          questionText = `Question ${qNum}`;
+        }
+      }
+
+      // ── Create IeltsQuestion directly (no ExamRepositoryItem) ──
+      // topicTags encode the repo slug and question number for answer key matching.
       await this.prisma.ieltsQuestion.create({
         data: {
           skill: skillArea,
           questionType: this.mapPlacementType(parsed.questionType),
-          questionText: parsed.stem,
-          options: parsed.options.map(o => ({ key: o.optionKey, text: o.optionText })) as any,
-          correctAnswer: parsed.options.find(o => o.isCorrect)?.optionKey || 'A',
+          questionText,
+          options: ieltsOptions as any,
+          correctAnswer: ieltsCorrectAnswer,
           explanation: parsed.explanation,
           bandMin: config.bandMin,
           bandMax: config.bandMax,
+          expectedTimeSec: this.estimateSeconds(skillArea, parsed.questionType),
           irtA: 1.0,
           irtB: irt.irt_b,
           irtC: 0.25,
           isPlacement: true,
-          status: 'approved',
+          // 'approved' is required by the placement query (status = 'approved').
+          // Questions without a correct answer are saved as 'draft' until the
+          // answer key import fills them in (importAnswerKey updates status too).
+          status: ieltsCorrectAnswer ? 'approved' : 'draft',
           passage_id: passageId,
           contextType: skillArea === 'listening' ? 'audio' : (passageId ? 'passage' : 'standalone'),
+          topicTags: [`repo:${repoSlug}`, `qnum:${qNum}`],
         },
       });
 
       importedCount++;
-      nextOrder++;
+    }
 
-      this.logger.log(`[WAIT] Sleeping 2000ms to avoid rate limits...`);
-      await this.sleep(2000);
+    return { importedCount, skippedCount };
+  }
+
+  private async saveQuestionsToLearningRepository(
+    repositoryId: number,
+    skillArea: 'listening' | 'reading',
+    parsedQuestions: ParsedIeltsQuestion[],
+    config: {
+      source: string;
+      filename: string;
+      accountId: number;
+      bandMin: number;
+      bandMax: number;
+    },
+  ): Promise<{ importedCount: number; skippedCount: number }> {
+    let importedCount = 0;
+    let skippedCount = 0;
+    let itemOrder = 1;
+
+    for (const parsed of parsedQuestions) {
+      if (!parsed.questionNumber && !parsed.stem && parsed.options.length === 0) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const itemType = this.mapLearningItemType(parsed.questionType);
+      const section =
+        skillArea === 'listening'
+          ? parsed.section ?? this.inferSectionFromQuestionNumber(parsed.questionNumber)
+          : null;
+
+      const stem = this.buildPracticeStem(parsed, itemOrder);
+      const readingPassage =
+        skillArea === 'reading' ? parsed.context ?? null : null;
+
+      const metaBase: Prisma.InputJsonObject = {
+        source: config.source,
+        source_file: basename(config.filename),
+        question_number: parsed.questionNumber ?? null,
+        section: section ?? null,
+        question_type: parsed.questionType,
+        band_min: config.bandMin,
+        band_max: config.bandMax,
+      };
+      let meta: Prisma.InputJsonObject = metaBase;
+
+      let optionsPayload: Array<{
+        option_key: string;
+        option_text: string;
+        is_correct: boolean;
+        sort_order: number;
+      }> = [];
+
+      if (parsed.questionType === 'true-false') {
+        const variant = parsed.tfVariant ?? 'tf';
+        const keys = variant === 'yn'
+          ? ['YES', 'NO', 'NOT GIVEN']
+          : ['TRUE', 'FALSE', 'NOT GIVEN'];
+        const correctKey = parsed.options.find((o) => o.isCorrect)?.optionKey ?? '';
+        optionsPayload = keys.map((k, idx) => ({
+          option_key: k,
+          option_text: k,
+          is_correct: correctKey ? k.toUpperCase() === correctKey.toUpperCase() : false,
+          sort_order: idx + 1,
+        }));
+      } else if (parsed.questionType === 'matching') {
+        optionsPayload = parsed.options.map((o, idx) => ({
+          option_key: o.optionKey,
+          option_text: o.optionText,
+          is_correct: true,
+          sort_order: idx + 1,
+        }));
+      } else if (parsed.questionType === 'fill-blank' || parsed.questionType === 'short-answer') {
+        const correctText = parsed.options.find((o) => o.isCorrect)?.optionText || '';
+        if (correctText) {
+          meta = { ...metaBase, correctAnswer: correctText };
+        }
+        if (parsed.options.length > 0) {
+          optionsPayload = parsed.options.map((o, idx) => ({
+            option_key: o.optionKey,
+            option_text: o.optionText,
+            is_correct: o.isCorrect,
+            sort_order: idx + 1,
+          }));
+        }
+      } else {
+        optionsPayload = parsed.options.map((o, idx) => ({
+          option_key: o.optionKey,
+          option_text: o.optionText,
+          is_correct: o.isCorrect,
+          sort_order: idx + 1,
+        }));
+      }
+
+      const createdItem = await this.prisma.learningRepositoryItem.create({
+        data: {
+          repository_id: repositoryId,
+          item_order: itemOrder,
+          item_type: itemType,
+          stem,
+          reading_passage: readingPassage,
+          explanation: parsed.explanation ?? null,
+          score_weight: 1,
+          estimated_seconds: this.estimateSeconds(skillArea, parsed.questionType),
+          metadata: meta,
+        },
+        select: { id: true },
+      });
+
+      if (optionsPayload.length > 0) {
+        await this.prisma.learningRepositoryOption.createMany({
+          data: optionsPayload.map((opt) => ({
+            item_id: createdItem.id,
+            option_key: opt.option_key,
+            option_text: opt.option_text,
+            is_correct: opt.is_correct,
+            sort_order: opt.sort_order,
+          })),
+        });
+      }
+
+      importedCount += 1;
+      itemOrder += 1;
     }
 
     return { importedCount, skippedCount };

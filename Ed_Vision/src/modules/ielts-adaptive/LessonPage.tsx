@@ -24,6 +24,7 @@ import IeltsChatPanel from './components/IeltsChatPanel';
 import IeltsVocabPanel, { type VocabWord } from './components/IeltsVocabPanel';
 import FloatingVocabCard from './components/FloatingVocabCard';
 import { syncToMasterVocab } from './components/MasterVocabModal';
+import AudioPlayer from './components/AudioPlayer';
 
 const QUICK_ACTIONS_CONFIG = {
     writing: [
@@ -796,6 +797,18 @@ export const LessonPage: React.FC = () => {
 
                                 {/* Câu hỏi & Đáp án */}
                                 <div className="w-[420px] flex flex-col shrink-0">
+                                    {/* Listening Audio Player — only when skill is listening and audio URL exists */}
+                                    {skillKey === 'listening' && currentItem?.media_audio_url && (
+                                        <div className="mb-4">
+                                            <AudioPlayer
+                                                key={currentItem.id}
+                                                url={currentItem.media_audio_url}
+                                                autoPlay={true}
+                                                label="Nghe và trả lời câu hỏi"
+                                            />
+                                        </div>
+                                    )}
+
                                     <div className="bg-white rounded-[32px] border border-blue-100 p-8 shadow-xl shadow-blue-900/5 flex flex-col h-full overflow-hidden">
                                         <div className="flex items-center justify-between mb-6 shrink-0">
                                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">CÂU HỎI & ĐÁP ÁN</p>

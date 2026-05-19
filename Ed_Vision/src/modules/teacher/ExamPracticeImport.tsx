@@ -7,6 +7,8 @@ import { DiagnosticImportBody } from "./DiagnosticImport";
 import { VocabularyImportBody } from "./VocabularyImport";
 import { GrammarImportBody } from "./GrammarImport";
 import IeltsRepositoryImport from "../../pages/IeltsRepositoryImport";
+import { IeltsDiagnosticImportBody } from "./IeltsDiagnosticImport";
+import { IeltsPracticeListeningImportBody } from "./IeltsPracticeListeningImport";
 
 type ImportMode = "" | "exam" | "practice" | "diagnostic" | "vocabulary" | "grammar";
 type CertType = "" | "toeic" | "ielts";
@@ -178,7 +180,11 @@ export default function ExamPracticeImport() {
             key={`${importMode}-${certType}`}
             className="animate-[fadeIn_0.3s_ease-out]"
           >
-            {certType === "ielts" ? (
+            {certType === "ielts" && importMode === "diagnostic" ? (
+              <IeltsDiagnosticImportBody />
+            ) : certType === "ielts" && importMode === "practice" ? (
+              <IeltsPracticeListeningImportBody />
+            ) : certType === "ielts" ? (
               <IeltsRepositoryImport mode={importMode} />
             ) : importMode === "exam" ? (
               <ToeicRepositoryImportBody certType="toeic" />

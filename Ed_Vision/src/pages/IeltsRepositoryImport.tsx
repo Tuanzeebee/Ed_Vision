@@ -334,7 +334,16 @@ export default function IeltsRepositoryImport({ mode }: { mode: string }) {
             {examAkResult && (
               <div className="bg-green-50 p-4 rounded-xl space-y-2 text-sm">
                 <p className="font-bold text-green-800">✅ Answer key applied</p>
-                <ResultBadge ok={true} label={`${examAkResult.applied_items} items`} />
+                <div className="flex flex-wrap gap-2">
+                  <ResultBadge ok={true} label={`${examAkResult.applied_items} applied`} />
+                  <ResultBadge ok={examAkResult.total_answers_detected >= 40} label={`${examAkResult.total_answers_detected} detected in file`} />
+                  <ResultBadge ok={examAkResult.unanswered_items === 0} label={`${examAkResult.unanswered_items} unanswered`} />
+                </div>
+                {examAkResult.unknown_question_numbers?.length > 0 && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    Missing answer for Q: {examAkResult.unknown_question_numbers.join(', ')}
+                  </p>
+                )}
               </div>
             )}
           </SectionCard>

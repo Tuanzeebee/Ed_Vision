@@ -43,11 +43,18 @@ export function SpeakingRecorder({
     setStatus(s)
   }
 
+  const getSupportedMimeType = () => {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+    return types.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
+  };
+
   const startRecording = async () => {
     setError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const mimeType = getSupportedMimeType();
+      const options = mimeType ? { mimeType } : {};
+      const recorder = new MediaRecorder(stream, options)
       mediaRecorderRef.current = recorder
       chunksRef.current = []
 
@@ -55,7 +62,7 @@ export function SpeakingRecorder({
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
 
-      recorder.start(100)
+      recorder.start(250)
       startTimeRef.current = Date.now()
       updateStatus('recording')
       setSeconds(MAX_SECONDS)
@@ -70,8 +77,11 @@ export function SpeakingRecorder({
         })
       }, 1000)
 
-    } catch (err) {
-      setError('Không thể truy cập microphone. Hãy cho phép quyền microphone.')
+    } catch (err: any) {
+      const msg = err?.name === 'NotSupportedError'
+        ? 'Trình duyệt không hỗ trợ ghi âm. Hãy thử Chrome hoặc Edge.'
+        : 'Không thể truy cập microphone. Hãy cho phép quyền microphone.';
+      setError(msg)
     }
   }
 
@@ -82,12 +92,16 @@ export function SpeakingRecorder({
     const recorder = mediaRecorderRef.current
     if (!recorder) return
 
+    // Flush last chunk before stopping
+    if (recorder.state === 'recording') recorder.requestData();
+
     recorder.onstop = async () => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const finalMime = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(chunksRef.current, { type: finalMime });
       const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000);
 
       // ✅ Detect audio rỗng tại FE luôn — không cần gọi server
-      if (blob.size < 5000) {
+      if (blob.size < 1000) {
         recorder.stream.getTracks().forEach((t) => t.stop());
 
         if (retryCount < MAX_RETRIES) {
@@ -117,7 +131,8 @@ export function SpeakingRecorder({
 
       try {
         const formData = new FormData();
-        formData.append('audio', blob, 'speaking.webm');
+        const ext = finalMime.includes('mp4') ? 'mp4' : finalMime.includes('ogg') ? 'ogg' : 'webm';
+        formData.append('audio', blob, `speaking.${ext}`);
         formData.append('sessionId', sessionId);
         formData.append('questionId', questionId);
         formData.append('speakingPrompt', speakingPrompt);

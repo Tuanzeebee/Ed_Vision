@@ -85,6 +85,10 @@ export interface StudentDetailResponse extends StudentDirectoryItem {
     writing: number;
     speaking: number;
   };
+  skillProgressItems?: {
+    skill: string;
+    percent: number;
+  }[];
 
   // Test history
   testResults: StudentTestResultItem[];

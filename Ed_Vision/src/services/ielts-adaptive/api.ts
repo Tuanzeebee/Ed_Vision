@@ -72,6 +72,20 @@ export const ieltsAdaptiveApi = {
     return response.data;
   },
 
+  getAiInsight: async (accountId?: number) => {
+    const response = await apiClient.get(`${API_PREFIX}/me/ai-insight`, {
+      params: accountId ? { accountId } : undefined,
+    });
+    return response.data;
+  },
+
+  getMyStreak: async (accountId?: number) => {
+    const response = await apiClient.get(`${API_PREFIX}/me/streak`, {
+      params: accountId ? { accountId } : undefined,
+    });
+    return response.data;
+  },
+
   // Legacy compatibility helpers
   getRoadmap: async (enrollmentId: number) => {
     const response = await apiClient.get(
@@ -84,8 +98,11 @@ export const ieltsAdaptiveApi = {
     await apiClient.post(`${API_PREFIX}/roadmap/${roadmapId}/unlock-next`);
   },
 
-  completeLesson: async (lessonId: number) => {
-    await apiClient.post(`${API_PREFIX}/lesson/${lessonId}/complete`);
+  completeLesson: async (lessonId: number, score?: number, isFullyCompleted?: boolean) => {
+    await apiClient.post(`${API_PREFIX}/lesson/${lessonId}/complete`, {
+      score,
+      isFullyCompleted,
+    });
   },
 
   getBandTest: async (testId: string) => {

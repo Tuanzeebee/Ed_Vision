@@ -104,9 +104,9 @@ async function extractPdfScanOcr(filePath: string): Promise<string> {
         try {
           const page = await pdfDoc.getPage(p);
 
-          // scale 4.0 ≈ 400 dpi — clearer for small bold numerals in IELTS
-          // answer-key sheets without exploding memory for the question paper.
-          const viewport = page.getViewport({ scale: 4.0 });
+          // scale 3.0 ≈ 300 dpi — higher resolution for better OCR accuracy.
+          // The previous 2.0 (200 dpi) caused answer key entries to be garbled.
+          const viewport = page.getViewport({ scale: 3.0 });
           const W = Math.round(viewport.width);
           const H = Math.round(viewport.height);
           const canvas = createCanvas(W, H);
@@ -130,31 +130,12 @@ async function extractPdfScanOcr(filePath: string): Promise<string> {
             },
           }).promise;
 
-          // 1) Full-page OCR (best for paragraphs spanning the full width).
+          // Single full-page OCR pass — sufficient for IELTS question papers.
+          // Column-split OCR removed: it tripled processing time per page and
+          // the downstream parser already deduplicates by question number.
           const fullBuf: Buffer = canvas.toBuffer('image/png');
           const { data: fullOcr } = await worker.recognize(fullBuf);
           if (fullOcr?.text?.trim()) parts.push(fullOcr.text);
-
-          // 2) Column-split OCR — IELTS answer-key sheets and several
-          //    question pages are laid out as two side-by-side columns.
-          //    Tesseract's reading order in 2-column mode is unreliable
-          //    at the multi-column boundary, so we additionally OCR each
-          //    half independently and append the result.  The downstream
-          //    parser deduplicates by question number.
-          try {
-            const mid = Math.round(W * 0.5);
-            const leftC = createCanvas(mid, H);
-            leftC.getContext('2d').drawImage(canvas, 0, 0, mid, H, 0, 0, mid, H);
-            const rightC = createCanvas(W - mid, H);
-            rightC.getContext('2d').drawImage(canvas, mid, 0, W - mid, H, 0, 0, W - mid, H);
-
-            const { data: lOcr } = await worker.recognize(leftC.toBuffer('image/png'));
-            if (lOcr?.text?.trim()) parts.push(lOcr.text);
-            const { data: rOcr } = await worker.recognize(rightC.toBuffer('image/png'));
-            if (rOcr?.text?.trim()) parts.push(rOcr.text);
-          } catch (splitErr) {
-            logger.warn(`[OCR] Page ${p} column-split failed: ${String(splitErr)}`);
-          }
         } catch (pageErr) {
           logger.warn(`[OCR] Page ${p} failed: ${String(pageErr)}`);
         }

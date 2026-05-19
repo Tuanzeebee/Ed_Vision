@@ -1,9 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Volume2 } from 'lucide-react';
 
-// Hardcoded fallback demo audio for development (English speech sample)
-const DEMO_AUDIO_URL = 'https://ia800501.us.archive.org/8/items/testmp3testfile/mpthreetest.mp3';
-
 interface AudioPlayerProps {
     url?: string | null;
     autoPlay?: boolean;
@@ -16,11 +13,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, autoPlay = true, label }
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
 
-    const src = url || DEMO_AUDIO_URL;
+    const src = url ?? null;
 
     useEffect(() => {
         const audio = audioRef.current;
-        if (!audio) return;
+        if (!audio || !src) return;
 
         const onPlay = () => setPlaying(true);
         const onPause = () => setPlaying(false);
@@ -81,7 +78,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ url, autoPlay = true, label }
 
     return (
         <div className="bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 mb-2">
-            <audio ref={audioRef} src={src} preload="metadata" />
+            <audio ref={audioRef} src={src ?? undefined} preload="metadata" />
             <div className="flex items-center gap-3">
                 <Volume2 className="w-5 h-5 text-purple-500 shrink-0" />
                 <div className="flex-1 min-w-0">
