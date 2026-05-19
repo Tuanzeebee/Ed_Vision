@@ -786,9 +786,44 @@ export class IeltsAdaptiveService {
     }
 
     // ── Build structured content for the frontend ──────────────────────────────
-    const buildRepoContent = (repo: any) => {
+    const buildRepoContent = (repo: any, skillArea?: string) => {
       if (!repo) return null;
       const meta: any = repo.metadata ?? {};
+      
+      // Get all items first
+      let allItems = (repo.items ?? []).map((item: any) => ({
+        id: item.id,
+        item_order: item.item_order,
+        item_type: item.item_type,
+        title: item.title,
+        stem: item.stem,
+        reading_passage: item.reading_passage,
+        media_audio_url: item.media_audio_url,
+        media_image_url: item.media_image_url,
+        hint: item.hint,
+        explanation: item.explanation,
+        estimated_seconds: item.estimated_seconds,
+        score_weight: item.score_weight,
+        metadata: item.metadata,
+        options: (item.options ?? []).map((opt: any) => ({
+          id: opt.id,
+          option_key: opt.option_key,
+          option_text: opt.option_text,
+          is_correct: opt.is_correct,
+          rationale: opt.rationale,
+          sort_order: opt.sort_order,
+        })),
+      }));
+
+      // ── Limit to 10 questions for Listening skill ──
+      if (skillArea?.toLowerCase() === 'listening' && allItems.length > 10) {
+        // Randomly select 10 items to keep variety
+        const shuffled = [...allItems].sort(() => Math.random() - 0.5);
+        allItems = shuffled.slice(0, 10);
+        // Re-sort by item_order to maintain logical flow
+        allItems.sort((a, b) => a.item_order - b.item_order);
+      }
+
       return {
         id: repo.id,
         slug: repo.slug,
@@ -803,30 +838,8 @@ export class IeltsAdaptiveService {
         writing_prompt: meta.content?.writingPrompt ?? null,
         speaking_prompt: meta.content?.speakingPrompt ?? null,
         lesson_template: meta.lessonTemplate ?? null,
-        // Items mapped with clean structure
-        items: (repo.items ?? []).map((item: any) => ({
-          id: item.id,
-          item_order: item.item_order,
-          item_type: item.item_type,
-          title: item.title,
-          stem: item.stem,
-          reading_passage: item.reading_passage,
-          media_audio_url: item.media_audio_url,
-          media_image_url: item.media_image_url,
-          hint: item.hint,
-          explanation: item.explanation,
-          estimated_seconds: item.estimated_seconds,
-          score_weight: item.score_weight,
-          metadata: item.metadata,
-          options: (item.options ?? []).map((opt: any) => ({
-            id: opt.id,
-            option_key: opt.option_key,
-            option_text: opt.option_text,
-            is_correct: opt.is_correct,
-            rationale: opt.rationale,
-            sort_order: opt.sort_order,
-          })),
-        })),
+        // Items mapped with clean structure (limited to 10 for listening)
+        items: allItems,
       };
     };
 
@@ -835,9 +848,9 @@ export class IeltsAdaptiveService {
       flashcard_repo_id: lesson.flashcard_repo_id ?? undefined,
       practice_repo_id: lesson.practice_repo_id ?? undefined,
       mini_test_repo_id: lesson.mini_test_repo_id ?? undefined,
-      flashcardRepo: buildRepoContent(lesson.flashcardRepo) ?? undefined,
-      practiceRepo: buildRepoContent(lesson.practiceRepo) ?? undefined,
-      miniTestRepo: buildRepoContent(lesson.miniTestRepo) ?? undefined,
+      flashcardRepo: buildRepoContent(lesson.flashcardRepo, lesson.skill_area) ?? undefined,
+      practiceRepo: buildRepoContent(lesson.practiceRepo, lesson.skill_area) ?? undefined,
+      miniTestRepo: buildRepoContent(lesson.miniTestRepo, lesson.skill_area) ?? undefined,
       skill_area: lesson.skill_area as SkillArea,
       status: lesson.status as LessonStatus,
       band_level: Number(lesson.band_level),
@@ -1923,6 +1936,46 @@ export class IeltsAdaptiveService {
       scoreMin: number,
       scoreMax: number,
     ) => {
+      // ── Special handling for Listening: prioritize repos with audio ──
+      if (skill === SkillArea.LISTENING) {
+        // Try exact match with audio first
+        const exactWithAudio = await this.prisma.learningRepository.findFirst({
+          where: {
+            cert_type: 'ielts',
+            skill_area: skill,
+            content_type: contentType,
+            is_published: true,
+            target_score_min: { lte: scoreMin },
+            target_score_max: { gte: scoreMin },
+            items: {
+              some: {
+                media_audio_url: { not: null },
+              },
+            },
+          },
+          orderBy: { updated_at: 'desc' },
+        });
+        if (exactWithAudio) return exactWithAudio;
+
+        // Fallback: ignore score range, but still require audio
+        const anyWithAudio = await this.prisma.learningRepository.findFirst({
+          where: {
+            cert_type: 'ielts',
+            skill_area: skill,
+            content_type: contentType,
+            is_published: true,
+            items: {
+              some: {
+                media_audio_url: { not: null },
+              },
+            },
+          },
+          orderBy: { updated_at: 'desc' },
+        });
+        if (anyWithAudio) return anyWithAudio;
+      }
+
+      // ── Standard logic for other skills or if no audio found ──
       // Exact match: skill + contentType + score range
       const exact = await this.prisma.learningRepository.findFirst({
         where: {
