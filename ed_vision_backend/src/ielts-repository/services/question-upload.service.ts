@@ -70,7 +70,7 @@ export class QuestionUploadService {
           skill: 'reading',
           band_min: Math.max(4, band - 1),
           band_max: Math.min(9, band + 1),
-          status: 'approved', // Auto-approve
+          status: 'active', // Auto-approve
         },
       });
 
@@ -98,7 +98,7 @@ export class QuestionUploadService {
             irtA: irt.irt_a,
             irtB: irt.irt_b,
             irtC: irt.irt_c,
-            status: 'approved',
+            status: 'active',
             contextType: 'passage',
           },
         });
@@ -129,7 +129,7 @@ export class QuestionUploadService {
           audio_url: meta.audioUrl ?? null,
           band_min: Math.max(4, band - 1),
           band_max: Math.min(9, band + 1),
-          status: 'approved',
+          status: 'active',
         },
       });
 
@@ -157,7 +157,7 @@ export class QuestionUploadService {
             irtA: irt.irt_a,
             irtB: irt.irt_b,
             irtC: irt.irt_c,
-            status: 'approved',
+            status: 'active',
             contextType: 'audio',
           },
         });
@@ -188,7 +188,7 @@ export class QuestionUploadService {
             content: task.chartDescription,
             band_min: Math.max(4, band - 1),
             band_max: Math.min(9, band + 1),
-            status: 'approved',
+            status: 'active',
           },
         });
         passageId = passage.id;
@@ -214,7 +214,7 @@ export class QuestionUploadService {
           irtA: irt.irt_a,
           irtB: irt.irt_b,
           irtC: irt.irt_c,
-          status: 'approved',
+          status: 'active',
           contextType: task.chartDescription ? 'passage' : 'standalone',
         },
       });
@@ -243,7 +243,7 @@ export class QuestionUploadService {
           content: part2Cue,
           band_min: Math.max(4, band - 1),
           band_max: Math.min(9, band + 1),
-          status: 'approved',
+          status: 'active',
         },
       });
       part2PassageId = passage.id;
@@ -270,7 +270,7 @@ export class QuestionUploadService {
           irtA: irt.irt_a,
           irtB: irt.irt_b,
           irtC: irt.irt_c,
-          status: 'approved',
+          status: 'active',
           contextType: q.questionType === 'part2' ? 'passage' : 'standalone',
           topicTags: q.topic ? [q.topic] : [],
         },

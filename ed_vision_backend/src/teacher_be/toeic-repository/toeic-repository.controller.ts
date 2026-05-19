@@ -55,6 +55,7 @@ import {
   DiagnosticImportDto,
   DiagnosticImportResponseDto,
 } from './diagnostic-import.service';
+import { ExamViewerService } from '../exam-viewer/exam-viewer.service';
 
 type AuthenticatedRequest = ExpressRequest & {
   user?: {
@@ -102,7 +103,26 @@ export class TeacherToeicRepositoryController {
     private readonly practiceImportService: ToeicPracticeImportService,
     private readonly practiceSessionService: ToeicPracticeSessionService,
     private readonly diagnosticImportService: DiagnosticImportService,
+    private readonly examViewerService: ExamViewerService,
   ) {}
+
+  /**
+   * GET /teacher/toeic-repository/diagnostic/list
+   * List diagnostic (khảo sát) repositories — same source as Exam Viewer.
+   */
+  @Get('diagnostic/list')
+  async listDiagnosticRepositories() {
+    return this.examViewerService.getToeicDiagnosticTests();
+  }
+
+  /**
+   * GET /teacher/toeic-repository/practice/list
+   * List practice sets grouped by import batch (source_slug).
+   */
+  @Get('practice/list')
+  async listPracticeSets() {
+    return this.examViewerService.getToeicPracticeSets();
+  }
 
   /**
    * GET /teacher/toeic-repository/list

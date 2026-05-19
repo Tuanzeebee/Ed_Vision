@@ -22,9 +22,10 @@ import {
 const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 12;
 const SEM_TARGET = 0.45;
-const SKILL_QUOTA_MIN = 3;
-const SKILL_QUOTA_MAX = 6;
-const SPEAKING_QUOTA = 1; // Speaking chỉ hỏi đúng 1 câu/test
+const SKILL_QUOTA_MIN = 2;
+const SKILL_QUOTA_MAX = 7; // 3×7 + 1 speaking = 22 > MAX_QUESTIONS(20) → quotas never exhaust before test ends
+const SPEAKING_QUOTA = 1;       // Speaking chỉ hỏi đúng 1 câu/test
+const SPEAKING_FORCE_AFTER = 7; // Force speaking by this question order if not yet served
 const SPEAKING_SKILL = 'speaking';
 const IRT_SKILLS = ['reading', 'listening', 'writing', 'vocabulary'];
 const INITIAL_BAND = 5.0;
@@ -128,6 +129,19 @@ export class AdaptiveService {
     private readonly prisma: PrismaService,
     private readonly testResultRecorder: TestResultRecorderService,
   ) {}
+
+  async getAvailableSkills(): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ skill: string }[]>`
+      SELECT DISTINCT q.skill
+      FROM ielts_questions q
+      LEFT JOIN ielts_passages p ON q.passage_id = p.id
+      WHERE q.is_placement = true AND q.status = 'approved'
+        AND q.irt_a IS NOT NULL AND q.irt_b IS NOT NULL
+        AND (q.skill != 'listening' OR (q.passage_id IS NOT NULL AND p.audio_url IS NOT NULL))
+      ORDER BY q.skill
+    `;
+    return rows.map((r) => r.skill);
+  }
 
   async startPlacementTest(input: StartTestInput): Promise<StartTestResult> {
     const existing = await this.prisma.ieltsPlacementSession.findFirst({
@@ -462,14 +476,18 @@ export class AdaptiveService {
       });
     } catch (err) {
       const error = err as Error;
-      if (error.message === 'SPEAKING_SKIP') {
-        currentSkillsAnswered[SPEAKING_SKILL] = SPEAKING_QUOTA;
-        await this.prisma.ieltsPlacementSession.update({
-          where: { id: input.sessionId },
-          data: {
-            skillsAnswered: currentSkillsAnswered,
-          } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
-        });
+      const isQuotaExhausted =
+        error.message === 'SPEAKING_SKIP' ||
+        error.message.includes('đủ quota tối đa') ||
+        error.message.includes('quota');
+      if (isQuotaExhausted) {
+        if (error.message === 'SPEAKING_SKIP') {
+          currentSkillsAnswered[SPEAKING_SKILL] = SPEAKING_QUOTA;
+          await this.prisma.ieltsPlacementSession.update({
+            where: { id: input.sessionId },
+            data: { skillsAnswered: currentSkillsAnswered } as Prisma.IeltsPlacementSessionUncheckedUpdateInput,
+          });
+        }
         await this.finalizeResult(input.sessionId, estimate, allAnswersSoFar);
         return {
           isCorrect,
@@ -569,13 +587,17 @@ export class AdaptiveService {
       prioritySkills.length > 0 ? prioritySkills : allowedSkills;
 
     const speakingDue =
-      targetSkills.includes(SPEAKING_SKILL) &&
+      skillsTested.includes(SPEAKING_SKILL) &&
       (skillsAnswered[SPEAKING_SKILL] ?? 0) < SPEAKING_QUOTA;
+
+    // Force speaking after SPEAKING_FORCE_AFTER questions regardless of other quotas
+    const speakingForced =
+      speakingDue && questionOrder > SPEAKING_FORCE_AFTER;
 
     if (
       speakingDue &&
-      targetSkills.length === 1 &&
-      targetSkills[0] === SPEAKING_SKILL
+      (speakingForced ||
+        (targetSkills.length === 1 && targetSkills[0] === SPEAKING_SKILL))
     ) {
       return this.selectSpeakingQuestion({
         currentTheta,
@@ -584,7 +606,31 @@ export class AdaptiveService {
       });
     }
 
-    const irtTargetSkills = targetSkills.filter((s) => s !== SPEAKING_SKILL);
+    // ── Force least-served skill during priority phase ───────────────────────
+    // Without this, IRT picks freely among all priority skills and biases toward
+    // whichever skill has more questions in the DB (e.g. reading/grammar).
+    let forcedSkill: string | null = null;
+    let nonSpeakingPriority: string[] = [];
+    if (prioritySkills.length > 0) {
+      nonSpeakingPriority = prioritySkills.filter(
+        (s) => s !== SPEAKING_SKILL,
+      );
+      if (nonSpeakingPriority.length > 0) {
+        // Sort by count ascending; among ties use cyclic selection
+        const sorted = [...nonSpeakingPriority].sort(
+          (a, b) => (skillsAnswered[a] ?? 0) - (skillsAnswered[b] ?? 0),
+        );
+        const minCount = skillsAnswered[sorted[0]] ?? 0;
+        const tied = sorted.filter(
+          (s) => (skillsAnswered[s] ?? 0) === minCount,
+        );
+        forcedSkill = tied[questionOrder % tied.length];
+      }
+    }
+
+    const irtTargetSkills = forcedSkill
+      ? [forcedSkill]
+      : targetSkills.filter((s) => s !== SPEAKING_SKILL);
     const finalTargetSkills =
       irtTargetSkills.length > 0 ? irtTargetSkills : targetSkills;
 
@@ -595,21 +641,84 @@ export class AdaptiveService {
 
     if (nonSpeakingSkills.length > 0) {
       const rows = await this.prisma.$queryRaw<any[]>`
-        SELECT id, question_text, question_type, options, expected_time_sec,
-               band_min, band_max, irt_a, irt_b, irt_c, passage_id, context_type, skill
-        FROM ielts_questions
-        WHERE skill = ANY(${nonSpeakingSkills}::text[])
-          AND status = 'approved' AND is_placement = true
-          AND question_type = ANY(${ALLOWED_TYPES}::text[])
-          AND irt_a IS NOT NULL AND irt_b IS NOT NULL
-          AND id != ALL(${usedQuestionIds}::uuid[])
+        SELECT q.id, q.question_text, q.question_type, q.options, q.expected_time_sec,
+               q.band_min, q.band_max, q.irt_a, q.irt_b, q.irt_c, q.passage_id, q.context_type, q.skill
+        FROM ielts_questions q
+        LEFT JOIN ielts_passages p ON q.passage_id = p.id
+        WHERE q.skill = ANY(${nonSpeakingSkills}::text[])
+          AND q.status = 'approved' AND q.is_placement = true
+          AND q.question_type = ANY(${ALLOWED_TYPES}::text[])
+          AND q.irt_a IS NOT NULL AND q.irt_b IS NOT NULL
+          AND q.id != ALL(${usedQuestionIds}::uuid[])
+          AND (q.skill != 'listening' OR (q.passage_id IS NOT NULL AND p.audio_url IS NOT NULL))
       `;
       candidates.push(...rows);
     }
 
+    // ── If forced skill has no candidates (e.g. listening has no audio questions),
+    //    fall back to other priority skills so the test doesn't get stuck ───────
+    if (candidates.length === 0 && forcedSkill && nonSpeakingPriority.length > 1) {
+      const widened = nonSpeakingPriority.filter((s) => s !== forcedSkill);
+      if (widened.length > 0) {
+        const widenedRows = await this.prisma.$queryRaw<any[]>`
+          SELECT q.id, q.question_text, q.question_type, q.options, q.expected_time_sec,
+                 q.band_min, q.band_max, q.irt_a, q.irt_b, q.irt_c, q.passage_id, q.context_type, q.skill
+          FROM ielts_questions q
+          LEFT JOIN ielts_passages p ON q.passage_id = p.id
+          WHERE q.skill = ANY(${widened}::text[])
+            AND q.status = 'approved' AND q.is_placement = true
+            AND q.question_type = ANY(${ALLOWED_TYPES}::text[])
+            AND q.irt_a IS NOT NULL AND q.irt_b IS NOT NULL
+            AND q.id != ALL(${usedQuestionIds}::uuid[])
+            AND (q.skill != 'listening' OR (q.passage_id IS NOT NULL AND p.audio_url IS NOT NULL))
+        `;
+        candidates.push(...widenedRows);
+      }
+    }
+
+    if (candidates.length === 0) {
+      // ── Fallback tier 1: same skill filter, relax question_type constraint ───
+      if (nonSpeakingSkills.length > 0) {
+        const bandRelaxRows = await this.prisma.$queryRaw<any[]>`
+          SELECT q.id, q.question_text, q.question_type, q.options, q.expected_time_sec,
+                 q.band_min, q.band_max, q.irt_a, q.irt_b, q.irt_c, q.passage_id, q.context_type, q.skill
+          FROM ielts_questions q
+          LEFT JOIN ielts_passages p ON q.passage_id = p.id
+          WHERE q.skill = ANY(${nonSpeakingSkills}::text[])
+            AND q.status = 'approved' AND q.is_placement = true
+            AND q.irt_a IS NOT NULL AND q.irt_b IS NOT NULL
+            AND q.id != ALL(${usedQuestionIds}::uuid[])
+            AND (q.skill != 'listening' OR (q.passage_id IS NOT NULL AND p.audio_url IS NOT NULL))
+          LIMIT 20
+        `;
+        candidates.push(...bandRelaxRows);
+      }
+    }
+
+    if (candidates.length === 0) {
+      // ── Fallback tier 2: any allowed skill in the session (skill pool empty) ──
+      const allSessionSkills = skillsTested.filter((s) => s !== SPEAKING_SKILL);
+      if (allSessionSkills.length > 0) {
+        const anySkillRows = await this.prisma.$queryRaw<any[]>`
+          SELECT q.id, q.question_text, q.question_type, q.options, q.expected_time_sec,
+                 q.band_min, q.band_max, q.irt_a, q.irt_b, q.irt_c, q.passage_id, q.context_type, q.skill
+          FROM ielts_questions q
+          LEFT JOIN ielts_passages p ON q.passage_id = p.id
+          WHERE q.skill = ANY(${allSessionSkills}::text[])
+            AND q.status = 'approved' AND q.is_placement = true
+            AND q.question_type = ANY(${ALLOWED_TYPES}::text[])
+            AND q.irt_a IS NOT NULL AND q.irt_b IS NOT NULL
+            AND q.id != ALL(${usedQuestionIds}::uuid[])
+            AND (q.skill != 'listening' OR (q.passage_id IS NOT NULL AND p.audio_url IS NOT NULL))
+          LIMIT 20
+        `;
+        candidates.push(...anySkillRows);
+      }
+    }
+
     if (candidates.length === 0) {
       throw new Error(
-        `Pool placement không đủ câu cho theta=${currentTheta.toFixed(2)}, skills=${finalTargetSkills.join(',')}.`,
+        `Pool placement không đủ câu cho theta=${currentTheta.toFixed(2)}, skills=${finalTargetSkills.join(',')}. Vui lòng nạp thêm câu hỏi placement vào hệ thống.`,
       );
     }
 
@@ -827,20 +936,19 @@ export class AdaptiveService {
     estimate: ThetaEstimate,
     allAnswers: any[],
   ): Promise<void> {
-    const bySkill: Record<string, ItemResponse[]> = {
-      reading: [],
-      listening: [],
-      writing: [],
-      speaking: [],
-    };
+    // Build bySkill dynamically from the answers themselves so any skill
+    // (including 'vocabulary') is correctly bucketed without hardcoding.
+    const bySkill: Record<string, ItemResponse[]> = {};
 
     for (const ans of allAnswers) {
       if (!ans.skill) continue;
+      const resultSkill = ans.skill;
       const irtA = ans.irtASnapshot ?? ans.irtA;
       const irtB = ans.irtBSnapshot ?? ans.irtB;
       const irtC = ans.irtCSnapshot ?? ans.irtC;
       if (irtA == null) continue;
-      bySkill[ans.skill]?.push({
+      if (!bySkill[resultSkill]) bySkill[resultSkill] = [];
+      bySkill[resultSkill].push({
         correct: ans.isCorrect ?? false,
         params: {
           a: Number(irtA) || 1.0,
@@ -867,14 +975,11 @@ export class AdaptiveService {
       };
     }
 
-    const skillBands: Record<string, number | null> = {
-      reading: bySkill.reading.length > 0 ? skillEstimates.reading.band : null,
-      listening:
-        bySkill.listening.length > 0 ? skillEstimates.listening.band : null,
-      writing: bySkill.writing.length > 0 ? skillEstimates.writing.band : null,
-      speaking:
-        bySkill.speaking.length > 0 ? skillEstimates.speaking.band : null,
-    };
+    const skillBands: Record<string, number | null> = {};
+    for (const skill of Object.keys(bySkill)) {
+      skillBands[skill] =
+        bySkill[skill].length > 0 ? skillEstimates[skill].band : null;
+    }
 
     const skillWeights: Record<string, number> = {
       reading: 0.3,

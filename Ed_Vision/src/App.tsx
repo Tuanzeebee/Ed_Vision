@@ -78,6 +78,7 @@ import CalendarOverview from "./modules/teacher/CalendarOverview";
 import ToeicRepositoryImport from "./modules/teacher/ToeicRepositoryImport";
 import ToeicPracticeQuestionImport from "./modules/teacher/ToeicPracticeQuestionImport";
 import ExamPracticeImport from "./modules/teacher/ExamPracticeImport";
+import ExamViewer from "./modules/teacher/ExamViewer";
 import StudentSurvey from "./modules/survey/StudentSurvey";
 import SettingGradeTable from "./modules/teacher/SettingGradeTable";
 import IELTSAssessment from "@/modules/student/IELTSAssessment";
@@ -264,6 +265,7 @@ function App() {
           <Route path="/teacher/toeic-repository-import" element={<ProtectedRoute permission="teacher_dashboard"><ToeicRepositoryImport /></ProtectedRoute>} />
           <Route path="/teacher/toeic-practice-import" element={<ProtectedRoute permission="teacher_dashboard"><ToeicPracticeQuestionImport /></ProtectedRoute>} />
           <Route path="/teacher/exam-practice-import" element={<ProtectedRoute permission="teacher_dashboard"><ExamPracticeImport /></ProtectedRoute>} />
+          <Route path="/teacher/exam-viewer" element={<ProtectedRoute permission="teacher_dashboard"><ExamViewer /></ProtectedRoute>} />
 
           {/* Booking Scheduler Route */}
           <Route path="/booking/scheduler" element={<ProtectedRoute permission="booking_scheduler"><BookingScheduler /></ProtectedRoute>} />

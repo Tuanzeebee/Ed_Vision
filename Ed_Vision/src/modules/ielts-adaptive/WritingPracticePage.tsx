@@ -456,6 +456,8 @@ export default function WritingPracticePage() {
   const wordOk = wordCount >= minWords;
   const baseBandValue = lesson?.band_level ? lesson.band_level : null;
   const bandSummary = baseBandValue != null ? `${baseBandValue.toFixed(1)}→${(baseBandValue + 0.5).toFixed(1)}` : "--";
+  const hasTask2 = !!pickWritingItem(lesson, "task2");
+  const isFullyCompleted = taskType === "task2" || !hasTask2;
   // Tính lessonProgress trực tiếp
   let lessonProgress = 0;
   if (result) {
@@ -488,6 +490,11 @@ export default function WritingPracticePage() {
         word_count: wordCount,
         lesson_id: lessonId ? Number.parseInt(lessonId, 10) : undefined,
       });
+
+      if (data.confidence === "low") {
+        throw new Error("Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.");
+      }
+
       setResult(data);
 
       if (lessonId && data.bandScore) {
@@ -506,7 +513,11 @@ export default function WritingPracticePage() {
 
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: any) {
-      setError(e?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
+      let errorMsg = e?.response?.data?.message || e?.message || "Có lỗi xảy ra. Vui lòng thử lại.";
+      if (errorMsg.includes("All grading providers failed") || errorMsg.includes("Hệ thống AI đang quá tải")) {
+        errorMsg = "Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút.";
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -689,6 +700,37 @@ export default function WritingPracticePage() {
                   }}
                 >
                   Làm bài Task 2 <ChevronRight size={14} />
+                </button>
+              )}
+
+              {isFullyCompleted && (
+                <button
+                  onClick={handleBackToRoadmap}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "6px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 6px 16px rgba(37, 99, 235, 0.25)",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(37, 99, 235, 0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.25)";
+                  }}
+                >
+                  ✅ Hoàn thành
                 </button>
               )}
             </div>
@@ -951,8 +993,7 @@ export default function WritingPracticePage() {
               <div ref={resultRef} style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 24 }}>
                 <IeltsWritingResult result={result} essay={essay} />
                 
-                {/* Qua Task 2 Banner/Button */}
-                {taskType === "task1" && (
+                {isFullyCompleted && (
                   <div style={{
                     background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
                     borderRadius: 20,
@@ -967,47 +1008,12 @@ export default function WritingPracticePage() {
                   }}>
                     <div>
                       <h4 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#fff" }}>
-                        🎉 Đã hoàn thành 50% bài học (Task 1)!
+                        🎉 Chúc mừng! Bạn đã hoàn thành bài học Writing!
                       </h4>
                       <p style={{ margin: 0, fontSize: 13, color: "#c7d2fe", lineHeight: 1.5 }}>
-                        Bạn đã xuất sắc hoàn thành phần thi Task 1. Hãy tiếp tục với Task 2 để hoàn thành toàn bộ lộ trình bài học viết này nhé.
+                        Bạn đã xuất sắc hoàn thành toàn bộ bài thi Writing. Hãy quay lại Roadmap để tiếp tục hành trình học IELTS của bạn.
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setResult(null);
-                        setTaskType("task2");
-                        setEssay("");
-                        setError(null);
-                        setActiveTab("overview");
-                      }}
-                      style={{
-                        background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-                        color: "#ffffff",
-                        border: "none",
-                        borderRadius: 12,
-                        padding: "12px 24px",
-                        fontSize: 14,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        boxShadow: "0 4px 15px rgba(99, 102, 241, 0.4)",
-                        transition: "all 0.2s ease",
-                        flexShrink: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                        e.currentTarget.style.boxShadow = "0 6px 20px rgba(99, 102, 241, 0.6)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 4px 15px rgba(99, 102, 241, 0.4)";
-                      }}
-                    >
-                      Làm bài Task 2 <ChevronRight size={16} />
-                    </button>
                   </div>
                 )}
               </div>

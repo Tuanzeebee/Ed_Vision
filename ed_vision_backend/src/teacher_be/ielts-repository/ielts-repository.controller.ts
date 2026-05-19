@@ -140,7 +140,7 @@ export class IeltsRepositoryController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: ieltsUploadStorage,
-      limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
       fileFilter: (_req, file, cb) => {
         const allowed = ['.pdf', '.txt', '.csv', '.docx', '.png', '.jpg', '.jpeg'];
         if (allowed.includes(extname(file.originalname).toLowerCase())) {
@@ -202,6 +202,42 @@ export class IeltsRepositoryController {
     return this.service.importPractice(accountId, dto, file);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /teacher/ielts-repository/import-practice-learning
+  // Import practice questions into LearningRepository (for roadmap usage).
+  // ─────────────────────────────────────────────────────────────────────────
+  @Post('import-practice-learning')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: ieltsUploadStorage,
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['.pdf', '.txt', '.xlsx', '.xls', '.docx', '.png', '.jpg', '.jpeg'];
+        if (allowed.includes(extname(file.originalname).toLowerCase())) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'Hỗ trợ định dạng: PDF, TXT, DOCX, XLSX, XLS, Ảnh (PNG/JPG).',
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async importPracticeLearning(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: IeltsPracticeImportDto,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<IeltsPracticeImportResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng đính kèm file.');
+    }
+    const accountId = req.user?.account_id ?? 0;
+    return this.service.importPracticeLearning(accountId, dto, file);
+  }
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // POST /teacher/ielts-repository/upload-audio
@@ -241,6 +277,74 @@ export class IeltsRepositoryController {
       throw new BadRequestException('Vui lòng đính kèm file audio.');
     }
     return this.service.uploadListeningAudio(dto, file);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /teacher/ielts-repository/upload-learning-audio
+  // Upload Listening audio for LearningRepository practice sets.
+  // ─────────────────────────────────────────────────────────────────────────
+  @Post('upload-learning-audio')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: ieltsAudioStorage,
+      limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['.mp3', '.wav', '.m4a', '.ogg', '.aac', '.flac'];
+        if (allowed.includes(extname(file.originalname).toLowerCase())) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'Chỉ hỗ trợ file âm thanh: MP3, WAV, M4A, OGG, AAC, FLAC.',
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async uploadLearningListeningAudio(
+    @Body() dto: IeltsListeningAudioUploadDto,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<IeltsListeningAudioUploadResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng đính kèm file audio.');
+    }
+    return this.service.uploadLearningListeningAudio(dto, file);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /teacher/ielts-repository/import-learning-answer-key
+  // Apply answer key to LearningRepository practice set.
+  // ─────────────────────────────────────────────────────────────────────────
+  @Post('import-learning-answer-key')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: ieltsUploadStorage,
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['.pdf', '.txt', '.csv', '.docx', '.png', '.jpg', '.jpeg'];
+        if (allowed.includes(extname(file.originalname).toLowerCase())) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'File đáp án hỗ trợ: PDF, TXT, CSV, DOCX, Ảnh (PNG/JPG).',
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async importLearningAnswerKey(
+    @Body() dto: IeltsAnswerKeyImportDto,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<IeltsAnswerKeyImportResponseDto> {
+    if (!file) {
+      throw new BadRequestException('Vui lòng đính kèm file đáp án.');
+    }
+    return this.service.importLearningAnswerKey(dto, file);
   }
 
   // ─────────────────────────────────────────────────────────────────────────

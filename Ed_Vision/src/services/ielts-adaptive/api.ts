@@ -79,6 +79,13 @@ export const ieltsAdaptiveApi = {
     return response.data;
   },
 
+  getMyStreak: async (accountId?: number) => {
+    const response = await apiClient.get(`${API_PREFIX}/me/streak`, {
+      params: accountId ? { accountId } : undefined,
+    });
+    return response.data;
+  },
+
   // Legacy compatibility helpers
   getRoadmap: async (enrollmentId: number) => {
     const response = await apiClient.get(
