@@ -902,6 +902,122 @@ export async function deleteToeicPracticeSet(
   return res.data;
 }
 
+// ── Exam Viewer (Teacher) ─────────────────────────────────────────────────────
+
+export interface ExamViewerPasswordVerifyResponse {
+  success: boolean;
+  message: string;
+  token: string;
+}
+
+export async function verifyExamViewerPassword(
+  password: string,
+): Promise<ExamViewerPasswordVerifyResponse> {
+  const res = await apiClient.post<ExamViewerPasswordVerifyResponse>(
+    "/teacher/exam-viewer/verify-password",
+    { password },
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicRepositories(
+  skillArea?: string,
+): Promise<ToeicRepositoryListItem[]> {
+  const params = skillArea ? `?skill_area=${skillArea}` : "";
+  const res = await apiClient.get<ToeicRepositoryListItem[]>(
+    `/teacher/exam-viewer/toeic/repositories${params}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicRepositoryDetail(
+  slug: string,
+): Promise<ToeicRepositoryDetailResponse> {
+  const res = await apiClient.get<ToeicRepositoryDetailResponse>(
+    `/teacher/exam-viewer/toeic/repository-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicPracticeSets(): Promise<PracticeSetListItem[]> {
+  const res = await apiClient.get<PracticeSetListItem[]>(
+    "/teacher/exam-viewer/toeic/practice-sets",
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicPracticeDetail(
+  practiceSetId: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/toeic/practice-detail?practice_set_id=${encodeURIComponent(practiceSetId)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicDiagnosticTests(): Promise<DiagnosticRepositoryListItem[]> {
+  const res = await apiClient.get<DiagnosticRepositoryListItem[]>(
+    "/teacher/exam-viewer/toeic/diagnostic-tests",
+  );
+  return res.data;
+}
+
+export async function getExamViewerToeicDiagnosticDetail(
+  slug: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/toeic/diagnostic-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsRepositories(
+  skillArea?: string,
+): Promise<IeltsRepositoryListItem[]> {
+  const params = skillArea ? `?skill_area=${skillArea}` : "";
+  const res = await apiClient.get<IeltsRepositoryListItem[]>(
+    `/teacher/exam-viewer/ielts/repositories${params}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsRepositoryDetail(
+  slug: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/ielts/repository-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsDiagnosticTests(): Promise<any[]> {
+  const res = await apiClient.get("/teacher/exam-viewer/ielts/diagnostic-tests");
+  return res.data;
+}
+
+export async function getExamViewerIeltsDiagnosticDetail(
+  slug: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/ielts/diagnostic-detail?slug=${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function getExamViewerIeltsPracticeSets(): Promise<any[]> {
+  const res = await apiClient.get("/teacher/exam-viewer/ielts/practice-sets");
+  return res.data;
+}
+
+export async function getExamViewerIeltsPracticeDetail(
+  practiceSetId: string,
+): Promise<any> {
+  const res = await apiClient.get(
+    `/teacher/exam-viewer/ielts/practice-detail?practice_set_id=${encodeURIComponent(practiceSetId)}`,
+  );
+  return res.data;
+}
+
 export async function listIeltsRepositories(
   skillArea?: string,
 ): Promise<IeltsRepositoryListItem[]> {

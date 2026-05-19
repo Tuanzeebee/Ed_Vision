@@ -12,6 +12,7 @@ import { GradeStructureModule } from './grade-structure/grade-structure.module';
 import { GpaMetricsModule } from './gpa-metrics/gpa-metrics.module';
 import { TeacherToeicRepositoryModule } from './toeic-repository/toeic-repository.module';
 import { IeltsRepositoryModule } from './ielts-repository/ielts-repository.module';
+import { ExamViewerModule } from './exam-viewer/exam-viewer.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { IeltsRepositoryModule } from './ielts-repository/ielts-repository.modul
     GpaMetricsModule,
     TeacherToeicRepositoryModule,
     IeltsRepositoryModule,
+    ExamViewerModule,
   ],
   exports: [
     DashboardModule,
@@ -43,6 +45,7 @@ import { IeltsRepositoryModule } from './ielts-repository/ielts-repository.modul
     GpaMetricsModule,
     TeacherToeicRepositoryModule,
     IeltsRepositoryModule,
+    ExamViewerModule,
   ],
 })
 export class TeacherBeModule {}

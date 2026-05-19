@@ -14,6 +14,7 @@ import {
   ClipboardCheck,
   FileUp,
   Dumbbell,
+  Eye,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -174,6 +175,16 @@ export default function Sidebar({
         >
           <FileUp className="w-4 h-4" />
           <span>{t("sidebar.examPracticeImport")}</span>
+        </NavLink>
+
+        <NavLink
+          to="/teacher/exam-viewer"
+          className={({ isActive }) =>
+            `flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-all duration-150 active:scale-95 cursor-pointer ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-100"}`
+          }
+        >
+          <Eye className="w-4 h-4" />
+          <span>{t("sidebar.examViewer")}</span>
         </NavLink>
 
         <NavLink
