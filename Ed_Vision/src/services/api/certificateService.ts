@@ -1627,6 +1627,27 @@ export async function importIeltsPracticeQuestions(
   return res.data;
 }
 
+// ── IELTS Practice Questions Import → LearningRepository ───────────────────
+export async function importIeltsPracticeLearningQuestions(
+  payload: IeltsPracticeImportPayload,
+  file: File,
+): Promise<IeltsPracticeImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("skill_area", payload.skill_area);
+  formData.append("band_min", String(payload.band_min));
+  formData.append("band_max", String(payload.band_max));
+  if (typeof payload.replace_existing === "boolean") {
+    formData.append("replace_existing", String(payload.replace_existing));
+  }
+  const res = await apiClient.post<IeltsPracticeImportResponse>(
+    "/teacher/ielts-repository/import-practice-learning",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
 // ── IELTS Listening Audio Upload ─────────────────────────────────────────────
 export interface IeltsAudioUploadResponse {
   repository_id: number;
@@ -1651,6 +1672,43 @@ export async function uploadIeltsListeningAudio(
   }
   const res = await apiClient.post<IeltsAudioUploadResponse>(
     "/teacher/ielts-repository/upload-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+export async function uploadIeltsLearningListeningAudio(
+  repositorySlug: string,
+  file: File,
+  section?: number,
+): Promise<IeltsAudioUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", repositorySlug);
+  if (section != null) {
+    formData.append("section", String(section));
+  }
+  const res = await apiClient.post<IeltsAudioUploadResponse>(
+    "/teacher/ielts-repository/upload-learning-audio",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return res.data;
+}
+
+export async function importIeltsLearningAnswerKeyFromFile(
+  payload: IeltsAnswerKeyImportPayload,
+  file: File,
+): Promise<IeltsAnswerKeyImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("repository_slug", payload.repository_slug);
+  if (typeof payload.clear_existing === "boolean") {
+    formData.append("clear_existing", String(payload.clear_existing));
+  }
+  const res = await apiClient.post<IeltsAnswerKeyImportResponse>(
+    "/teacher/ielts-repository/import-learning-answer-key",
     formData,
     { headers: { "Content-Type": "multipart/form-data" } },
   );

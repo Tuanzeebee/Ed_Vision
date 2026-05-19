@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { extname, basename, join, resolve } from 'path';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   IeltsOcrImportDto,
@@ -1270,6 +1271,32 @@ export class IeltsImportService {
     }
   }
 
+  private mapLearningItemType(type: ParsedIeltsQuestion['questionType']): string {
+    switch (type) {
+      case 'fill-blank': return 'gap_fill';
+      case 'short-answer': return 'short_answer';
+      case 'true-false': return 'true_false_ng';
+      case 'matching': return 'matching';
+      default: return 'single_choice';
+    }
+  }
+
+  private buildPracticeStem(parsed: ParsedIeltsQuestion, fallbackIndex: number): string {
+    const qNum = parsed.questionNumber ?? fallbackIndex;
+    const rawStem = parsed.stem?.trim() ?? '';
+    if (rawStem && rawStem !== `[Câu ${qNum}]`) return rawStem;
+
+    if (parsed.questionType === 'fill-blank' || parsed.questionType === 'short-answer') {
+      return `Question ${qNum}: Complete the sentence with a suitable word.`;
+    }
+
+    if (parsed.questionType === 'true-false') {
+      return `Question ${qNum}: Decide if the following statement is TRUE, FALSE or NOT GIVEN.`;
+    }
+
+    return `Question ${qNum}`;
+  }
+
   async importPractice(
     accountId: number,
     dto: IeltsPracticeImportDto,
@@ -1351,6 +1378,157 @@ export class IeltsImportService {
       skill_area: skillArea,
       band_min: dto.band_min,
       band_max: dto.band_max,
+      source_filename: basename(file.originalname || file.path),
+    };
+  }
+
+  async importPracticeLearning(
+    accountId: number,
+    dto: IeltsPracticeImportDto,
+    file: Express.Multer.File,
+  ): Promise<IeltsPracticeImportResponseDto> {
+    if (!file) throw new BadRequestException('File là bắt buộc.');
+
+    const skillArea = this.resolveSkillArea(dto.skill_area, file.originalname);
+    const rawText = await extractTextFromFile(file);
+
+    if (!rawText || rawText.trim().length < 20) {
+      throw new BadRequestException('Không trích xuất được văn bản từ file.');
+    }
+
+    const parsedQuestions = parseIeltsQuestionsFromText(rawText, skillArea);
+
+    this.logger.log(`[DEBUG] OCR/Text length: ${rawText.length}`);
+    this.logger.log(`[DEBUG] Raw preview: ${rawText.substring(0, 300)}`);
+    this.logger.log(`[DEBUG] Parsed questions count: ${parsedQuestions.length}`);
+
+    if (parsedQuestions.length === 0) {
+      const cleanedPreview = cleanOcrText(rawText).substring(0, 400);
+      this.logger.warn(`[DEBUG] Cleaned text preview: ${cleanedPreview}`);
+      throw new BadRequestException(
+        'Không phân tích được câu hỏi từ file. ' +
+          `Preview: ${rawText.substring(0, 100)}...`,
+      );
+    }
+
+    const bandMin = dto.band_min ?? 4.0;
+    const bandMax = dto.band_max ?? 9.0;
+    const scoreMin = Math.round(bandMin * 100);
+    const scoreMax = Math.round(bandMax * 100);
+
+    const baseSlug = `ielts-${skillArea}-practice-${scoreMin}-${scoreMax}`;
+    const slug = dto.replace_existing ? baseSlug : `${baseSlug}-${Date.now()}`;
+    const title = `IELTS ${this.capitalise(skillArea)} Practice (Band ${bandMin}–${bandMax})`;
+
+    let repositoryId: number;
+    let repositorySlug: string;
+
+    if (dto.replace_existing) {
+      const repo = await this.prisma.learningRepository.upsert({
+        where: { slug: baseSlug },
+        create: {
+          cert_type: 'ielts',
+          title,
+          slug: baseSlug,
+          content_type: 'practice',
+          skill_area: skillArea,
+          is_published: true,
+          total_items: 0,
+          target_score_min: scoreMin,
+          target_score_max: scoreMax,
+          metadata: {
+            source: 'practice_learning_import',
+            source_file: basename(file.originalname || file.path),
+            created_by: accountId,
+            band_min: bandMin,
+            band_max: bandMax,
+          },
+        },
+        update: {
+          title,
+          content_type: 'practice',
+          skill_area: skillArea,
+          is_published: true,
+          target_score_min: scoreMin,
+          target_score_max: scoreMax,
+          metadata: {
+            source: 'practice_learning_import',
+            source_file: basename(file.originalname || file.path),
+            created_by: accountId,
+            band_min: bandMin,
+            band_max: bandMax,
+          },
+        },
+        select: { id: true, slug: true },
+      });
+
+      repositoryId = repo.id;
+      repositorySlug = repo.slug;
+
+      await this.prisma.learningRepositoryOption.deleteMany({
+        where: { item: { repository_id: repositoryId } },
+      });
+      await this.prisma.learningRepositoryItem.deleteMany({
+        where: { repository_id: repositoryId } },
+      );
+    } else {
+      const repo = await this.prisma.learningRepository.create({
+        data: {
+          cert_type: 'ielts',
+          title,
+          slug,
+          content_type: 'practice',
+          skill_area: skillArea,
+          is_published: true,
+          total_items: 0,
+          target_score_min: scoreMin,
+          target_score_max: scoreMax,
+          metadata: {
+            source: 'practice_learning_import',
+            source_file: basename(file.originalname || file.path),
+            created_by: accountId,
+            band_min: bandMin,
+            band_max: bandMax,
+          },
+        },
+        select: { id: true, slug: true },
+      });
+
+      repositoryId = repo.id;
+      repositorySlug = repo.slug;
+    }
+
+    const { importedCount, skippedCount } =
+      await this.saveQuestionsToLearningRepository(
+        repositoryId,
+        skillArea,
+        parsedQuestions,
+        {
+          source: 'practice_learning_import',
+          filename: file.originalname || file.path,
+          accountId,
+          bandMin,
+          bandMax,
+        },
+      );
+
+    await this.prisma.learningRepository.update({
+      where: { id: repositoryId },
+      data: {
+        total_items: importedCount,
+        estimated_minutes: Math.max(1, Math.ceil(importedCount / 2)),
+        pass_score: Math.max(1, Math.ceil(importedCount * 0.7)),
+      },
+    });
+
+    return {
+      slug: repositorySlug,
+      imported_count: importedCount,
+      skipped_count: skippedCount,
+      total_detected: parsedQuestions.length,
+      skill_area: skillArea,
+      band_min: bandMin,
+      band_max: bandMax,
       source_filename: basename(file.originalname || file.path),
     };
   }
@@ -1601,6 +1779,136 @@ export class IeltsImportService {
     } as IeltsAnswerKeyImportResponseDto;
   }
 
+  async importLearningAnswerKey(
+    dto: IeltsAnswerKeyImportDto,
+    file: Express.Multer.File,
+  ): Promise<IeltsAnswerKeyImportResponseDto> {
+    if (!file) throw new BadRequestException('File đáp án là bắt buộc.');
+
+    const repository = await this.prisma.learningRepository.findUnique({
+      where: { slug: dto.repository_slug.trim() },
+      select: { id: true, slug: true, skill_area: true },
+    });
+
+    if (!repository) {
+      throw new BadRequestException(
+        `Không tìm thấy learning repository: ${dto.repository_slug}`,
+      );
+    }
+
+    const rawText = await extractTextFromFile(file);
+    const answerKeyMap = extractAnswerKeyMap(rawText);
+
+    const items = await this.prisma.learningRepositoryItem.findMany({
+      where: { repository_id: repository.id },
+      orderBy: { item_order: 'asc' },
+      select: {
+        id: true,
+        item_order: true,
+        metadata: true,
+        options: {
+          orderBy: { sort_order: 'asc' },
+          select: { id: true, option_key: true },
+        },
+      },
+    });
+
+    if (items.length === 0) {
+      throw new BadRequestException(
+        'Repository hiện chưa có câu hỏi để gán đáp án.',
+      );
+    }
+
+    const clearExisting = dto.clear_existing !== false;
+    if (clearExisting) {
+      await this.prisma.learningRepositoryOption.updateMany({
+        where: { item: { repository_id: repository.id } },
+        data: { is_correct: false },
+      });
+    }
+
+    const repositoryQuestionNumbers = new Set<number>();
+    const matchedQuestionNumbers = new Set<number>();
+    let appliedItems = 0;
+
+    const normalizeKey = (val: string) =>
+      val.trim().toUpperCase().replace(/\s+/g, ' ');
+
+    for (const item of items) {
+      const meta = (item.metadata as Record<string, unknown> | null) ?? {};
+      const qNumRaw = meta.question_number;
+      const qNum =
+        typeof qNumRaw === 'number'
+          ? qNumRaw
+          : typeof item.item_order === 'number'
+            ? item.item_order
+            : null;
+
+      if (typeof qNum === 'number') {
+        repositoryQuestionNumbers.add(qNum);
+      }
+
+      if (typeof qNum !== 'number') continue;
+
+      const mappedAnswer = answerKeyMap.get(qNum);
+      if (!mappedAnswer) continue;
+
+      const normalized = normalizeKey(normaliseAnswerToken(mappedAnswer));
+      const matchedOption = item.options.find(
+        (option) => normalizeKey(option.option_key) === normalized,
+      );
+
+      if (matchedOption) {
+        await this.prisma.learningRepositoryOption.updateMany({
+          where: { item_id: item.id },
+          data: { is_correct: false },
+        });
+        await this.prisma.learningRepositoryOption.update({
+          where: { id: matchedOption.id },
+          data: { is_correct: true },
+        });
+      } else {
+        await this.prisma.learningRepositoryItem.update({
+          where: { id: item.id },
+          data: {
+            metadata: {
+              ...(meta as Record<string, unknown>),
+              correctAnswer: normalized,
+            },
+          },
+        });
+      }
+
+      appliedItems += 1;
+      matchedQuestionNumbers.add(qNum);
+    }
+
+    const unansweredItems = await this.prisma.learningRepositoryItem.count({
+      where: {
+        repository_id: repository.id,
+        options: { none: { is_correct: true } },
+      },
+    });
+
+    const unknownQuestionNumbers = [...answerKeyMap.keys()]
+      .filter((questionNumber) => !repositoryQuestionNumbers.has(questionNumber))
+      .sort((a, b) => a - b);
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      updated_count: appliedItems,
+      skipped_count: Math.max(0, items.length - appliedItems),
+      answer_key_complete: appliedItems >= items.length && items.length > 0,
+      skill_area: repository.skill_area ?? 'unknown',
+      source_filename: basename(file.originalname || file.path),
+      total_answers_detected: answerKeyMap.size,
+      applied_items: appliedItems,
+      unanswered_items: unansweredItems,
+      unknown_question_numbers: unknownQuestionNumbers,
+    } as IeltsAnswerKeyImportResponseDto;
+  }
+
   async uploadListeningAudio(
     dto: IeltsListeningAudioUploadDto,
     file: Express.Multer.File,
@@ -1638,6 +1946,53 @@ export class IeltsImportService {
     // Find IeltsQuestion records tagged with this repo slug that belong to the
     // target section, then update their linked IeltsPassage records.
     await this.mapAudioToPlacementPassages(slug, section, audioUrl);
+
+    return {
+      repository_id: repository.id,
+      slug: repository.slug,
+      audio_url: audioUrl,
+      filename,
+      section,
+      track_number: trackNumber,
+      mapped_item_ids: mappedItemIds,
+    };
+  }
+
+  async uploadLearningListeningAudio(
+    dto: IeltsListeningAudioUploadDto,
+    file: Express.Multer.File,
+  ): Promise<IeltsListeningAudioUploadResponseDto> {
+    const { writeFile, mkdir } = await import('fs/promises');
+    const slug = dto.repository_slug.trim();
+
+    const repository = await this.prisma.learningRepository.findFirst({
+      where: { slug, cert_type: 'ielts', content_type: 'practice' },
+      select: { id: true, slug: true },
+    });
+
+    if (!repository) {
+      throw new BadRequestException(`Không tìm thấy learning repository: ${slug}`);
+    }
+
+    const section = dto.section ?? this.inferSectionFromFilename(file.originalname);
+    const trackNumber = dto.track_number ?? 1;
+
+    const audioRelDir = join('IELTS', 'learning-listening', slug, 'audio');
+    const audioAbsDir = resolve(join(process.cwd(), 'uploads', ...audioRelDir.split(/[\\/]/)));
+    if (!existsSync(audioAbsDir)) await mkdir(audioAbsDir, { recursive: true });
+
+    const ext = extname(file.originalname).toLowerCase() || '.mp3';
+    const filename = `${slug}_sec${section}_${String(trackNumber).padStart(3, '0')}${ext}`;
+    const destPath = join(audioAbsDir, filename);
+    const srcBuffer = await readFile(file.path);
+    await writeFile(destPath, srcBuffer);
+
+    const audioUrl = `/uploads/IELTS/learning-listening/${slug}/audio/${filename}`;
+    const mappedItemIds = await this.mapAudioToLearningItems(
+      repository.id,
+      section,
+      audioUrl,
+    );
 
     return {
       repository_id: repository.id,
@@ -1795,6 +2150,36 @@ export class IeltsImportService {
     });
 
     this.logger.log(`Mapped audio "${audioUrl}" to ${ids.length} items in section ${section}`);
+    return ids;
+  }
+
+  private async mapAudioToLearningItems(
+    repositoryId: number,
+    section: number,
+    audioUrl: string,
+  ): Promise<number[]> {
+    const items = await this.prisma.learningRepositoryItem.findMany({
+      where: { repository_id: repositoryId },
+      orderBy: { item_order: 'asc' },
+      select: { id: true, metadata: true },
+    });
+
+    const sectionItems = items.filter((item) => {
+      const meta = item.metadata as Record<string, unknown> | null;
+      return meta?.section === section;
+    });
+
+    if (sectionItems.length === 0) return [];
+
+    const ids = sectionItems.map((i) => i.id);
+    await this.prisma.learningRepositoryItem.updateMany({
+      where: { id: { in: ids } },
+      data: { media_audio_url: audioUrl },
+    });
+
+    this.logger.log(
+      `Mapped audio "${audioUrl}" to ${ids.length} learning items in section ${section}`,
+    );
     return ids;
   }
 
@@ -2021,6 +2406,131 @@ export class IeltsImportService {
       });
 
       importedCount++;
+    }
+
+    return { importedCount, skippedCount };
+  }
+
+  private async saveQuestionsToLearningRepository(
+    repositoryId: number,
+    skillArea: 'listening' | 'reading',
+    parsedQuestions: ParsedIeltsQuestion[],
+    config: {
+      source: string;
+      filename: string;
+      accountId: number;
+      bandMin: number;
+      bandMax: number;
+    },
+  ): Promise<{ importedCount: number; skippedCount: number }> {
+    let importedCount = 0;
+    let skippedCount = 0;
+    let itemOrder = 1;
+
+    for (const parsed of parsedQuestions) {
+      if (!parsed.questionNumber && !parsed.stem && parsed.options.length === 0) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const itemType = this.mapLearningItemType(parsed.questionType);
+      const section =
+        skillArea === 'listening'
+          ? parsed.section ?? this.inferSectionFromQuestionNumber(parsed.questionNumber)
+          : null;
+
+      const stem = this.buildPracticeStem(parsed, itemOrder);
+      const readingPassage =
+        skillArea === 'reading' ? parsed.context ?? null : null;
+
+      const metaBase: Prisma.InputJsonObject = {
+        source: config.source,
+        source_file: basename(config.filename),
+        question_number: parsed.questionNumber ?? null,
+        section: section ?? null,
+        question_type: parsed.questionType,
+        band_min: config.bandMin,
+        band_max: config.bandMax,
+      };
+      let meta: Prisma.InputJsonObject = metaBase;
+
+      let optionsPayload: Array<{
+        option_key: string;
+        option_text: string;
+        is_correct: boolean;
+        sort_order: number;
+      }> = [];
+
+      if (parsed.questionType === 'true-false') {
+        const variant = parsed.tfVariant ?? 'tf';
+        const keys = variant === 'yn'
+          ? ['YES', 'NO', 'NOT GIVEN']
+          : ['TRUE', 'FALSE', 'NOT GIVEN'];
+        const correctKey = parsed.options.find((o) => o.isCorrect)?.optionKey ?? '';
+        optionsPayload = keys.map((k, idx) => ({
+          option_key: k,
+          option_text: k,
+          is_correct: correctKey ? k.toUpperCase() === correctKey.toUpperCase() : false,
+          sort_order: idx + 1,
+        }));
+      } else if (parsed.questionType === 'matching') {
+        optionsPayload = parsed.options.map((o, idx) => ({
+          option_key: o.optionKey,
+          option_text: o.optionText,
+          is_correct: true,
+          sort_order: idx + 1,
+        }));
+      } else if (parsed.questionType === 'fill-blank' || parsed.questionType === 'short-answer') {
+        const correctText = parsed.options.find((o) => o.isCorrect)?.optionText || '';
+        if (correctText) {
+          meta = { ...metaBase, correctAnswer: correctText };
+        }
+        if (parsed.options.length > 0) {
+          optionsPayload = parsed.options.map((o, idx) => ({
+            option_key: o.optionKey,
+            option_text: o.optionText,
+            is_correct: o.isCorrect,
+            sort_order: idx + 1,
+          }));
+        }
+      } else {
+        optionsPayload = parsed.options.map((o, idx) => ({
+          option_key: o.optionKey,
+          option_text: o.optionText,
+          is_correct: o.isCorrect,
+          sort_order: idx + 1,
+        }));
+      }
+
+      const createdItem = await this.prisma.learningRepositoryItem.create({
+        data: {
+          repository_id: repositoryId,
+          item_order: itemOrder,
+          item_type: itemType,
+          stem,
+          reading_passage: readingPassage,
+          explanation: parsed.explanation ?? null,
+          score_weight: 1,
+          estimated_seconds: this.estimateSeconds(skillArea, parsed.questionType),
+          metadata: meta,
+        },
+        select: { id: true },
+      });
+
+      if (optionsPayload.length > 0) {
+        await this.prisma.learningRepositoryOption.createMany({
+          data: optionsPayload.map((opt) => ({
+            item_id: createdItem.id,
+            option_key: opt.option_key,
+            option_text: opt.option_text,
+            is_correct: opt.is_correct,
+            sort_order: opt.sort_order,
+          })),
+        });
+      }
+
+      importedCount += 1;
+      itemOrder += 1;
     }
 
     return { importedCount, skippedCount };
