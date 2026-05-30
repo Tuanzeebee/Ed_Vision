@@ -1,0 +1,217 @@
+.recipe-editor {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  overflow-y: auto;
+
+  &__section {
+    border: 1px solid var(--default-border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background: var(--island-bg-color);
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary-color);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-primary-color);
+    }
+
+    input,
+    textarea {
+      padding: 0.4rem 0.5rem;
+      border: 1px solid var(--default-border-color);
+      border-radius: 0.375rem;
+      font-size: 0.8rem;
+      background: var(--input-bg-color);
+      color: var(--text-primary-color);
+      outline: none;
+      font-family: inherit;
+      resize: vertical;
+
+      &:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 1px var(--color-primary);
+      }
+    }
+  }
+
+  &__item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+
+    span {
+      flex: 1;
+      font-size: 0.8rem;
+      color: var(--text-primary-color);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.15rem;
+    color: var(--color-danger);
+    font-size: 0.9rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+
+  &__add-row {
+    display: flex;
+    gap: 0.35rem;
+    align-items: stretch;
+
+    input {
+      flex: 1;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--default-border-color);
+      border-radius: 0.375rem;
+      font-size: 0.8rem;
+      background: var(--input-bg-color);
+      color: var(--text-primary-color);
+      outline: none;
+
+      &:focus {
+        border-color: var(--color-primary);
+      }
+    }
+  }
+
+  &__add-btn {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__dep-row {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+
+    select {
+      flex: 1;
+      padding: 0.35rem 0.4rem;
+      border: 1px solid var(--default-border-color);
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      background: var(--input-bg-color);
+      color: var(--text-primary-color);
+      outline: none;
+
+      &:focus {
+        border-color: var(--color-primary);
+      }
+    }
+
+    .recipe-editor__arrow-icon {
+      color: var(--text-primary-color);
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+  }
+
+  &__generate-btn {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__info {
+    font-size: 0.7rem;
+    color: var(--text-primary-color);
+    opacity: 0.7;
+    text-align: center;
+    line-height: 1.4;
+    padding: 0 0.5rem;
+  }
+
+  &__dep-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-primary-color);
+
+    .recipe-editor__arrow-icon {
+      color: var(--color-primary);
+    }
+
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
